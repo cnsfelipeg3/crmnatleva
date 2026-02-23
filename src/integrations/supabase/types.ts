@@ -387,6 +387,128 @@ export type Database = {
           },
         ]
       }
+      hotel_contact_directory: {
+        Row: {
+          created_at: string
+          emails: string[] | null
+          hotel_name_normalized: string
+          id: string
+          last_used_at: string | null
+          notes: string | null
+          phones: string[] | null
+          preferred_language: string | null
+          reservation_portal_url: string | null
+          whatsapp: string[] | null
+        }
+        Insert: {
+          created_at?: string
+          emails?: string[] | null
+          hotel_name_normalized: string
+          id?: string
+          last_used_at?: string | null
+          notes?: string | null
+          phones?: string[] | null
+          preferred_language?: string | null
+          reservation_portal_url?: string | null
+          whatsapp?: string[] | null
+        }
+        Update: {
+          created_at?: string
+          emails?: string[] | null
+          hotel_name_normalized?: string
+          id?: string
+          last_used_at?: string | null
+          notes?: string | null
+          phones?: string[] | null
+          preferred_language?: string | null
+          reservation_portal_url?: string | null
+          whatsapp?: string[] | null
+        }
+        Relationships: []
+      }
+      lodging_confirmation_tasks: {
+        Row: {
+          assigned_to_user_id: string | null
+          confirmed_at: string | null
+          confirmed_by_user_id: string | null
+          contact_details: string | null
+          contact_method: string | null
+          created_at: string
+          created_by: string
+          evidence_attachment_ids: string[] | null
+          hotel_checkin_datetime_utc: string | null
+          hotel_name: string | null
+          hotel_reservation_code: string | null
+          id: string
+          issue_resolution: string | null
+          issue_type: string | null
+          last_notified_at: string | null
+          milestone: string
+          notes: string | null
+          sale_id: string
+          scheduled_at_utc: string | null
+          status: string
+          updated_at: string
+          urgency_level: string
+        }
+        Insert: {
+          assigned_to_user_id?: string | null
+          confirmed_at?: string | null
+          confirmed_by_user_id?: string | null
+          contact_details?: string | null
+          contact_method?: string | null
+          created_at?: string
+          created_by?: string
+          evidence_attachment_ids?: string[] | null
+          hotel_checkin_datetime_utc?: string | null
+          hotel_name?: string | null
+          hotel_reservation_code?: string | null
+          id?: string
+          issue_resolution?: string | null
+          issue_type?: string | null
+          last_notified_at?: string | null
+          milestone?: string
+          notes?: string | null
+          sale_id: string
+          scheduled_at_utc?: string | null
+          status?: string
+          updated_at?: string
+          urgency_level?: string
+        }
+        Update: {
+          assigned_to_user_id?: string | null
+          confirmed_at?: string | null
+          confirmed_by_user_id?: string | null
+          contact_details?: string | null
+          contact_method?: string | null
+          created_at?: string
+          created_by?: string
+          evidence_attachment_ids?: string[] | null
+          hotel_checkin_datetime_utc?: string | null
+          hotel_name?: string | null
+          hotel_reservation_code?: string | null
+          id?: string
+          issue_resolution?: string | null
+          issue_type?: string | null
+          last_notified_at?: string | null
+          milestone?: string
+          notes?: string | null
+          sale_id?: string
+          scheduled_at_utc?: string | null
+          status?: string
+          updated_at?: string
+          urgency_level?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lodging_confirmation_tasks_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       passengers: {
         Row: {
           address_cep: string | null
@@ -528,6 +650,8 @@ export type Database = {
           emission_source: string | null
           emission_status: string | null
           flight_class: string | null
+          hotel_checkin_date: string | null
+          hotel_checkout_date: string | null
           hotel_meal_plan: string | null
           hotel_name: string | null
           hotel_reservation_code: string | null
@@ -572,6 +696,8 @@ export type Database = {
           emission_source?: string | null
           emission_status?: string | null
           flight_class?: string | null
+          hotel_checkin_date?: string | null
+          hotel_checkout_date?: string | null
           hotel_meal_plan?: string | null
           hotel_name?: string | null
           hotel_reservation_code?: string | null
@@ -616,6 +742,8 @@ export type Database = {
           emission_source?: string | null
           emission_status?: string | null
           flight_class?: string | null
+          hotel_checkin_date?: string | null
+          hotel_checkout_date?: string | null
           hotel_meal_plan?: string | null
           hotel_name?: string | null
           hotel_reservation_code?: string | null
