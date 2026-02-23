@@ -17,9 +17,10 @@ interface Props {
   onChange: (iata: string, name?: string) => void;
   placeholder?: string;
   className?: string;
+  "data-testid"?: string;
 }
 
-export default function AirportAutocomplete({ value, onChange, placeholder = "GRU", className }: Props) {
+export default function AirportAutocomplete({ value, onChange, placeholder = "GRU", className, "data-testid": testId }: Props) {
   const [query, setQuery] = useState(value || "");
   const [results, setResults] = useState<AirportResult[]>([]);
   const [open, setOpen] = useState(false);
@@ -80,6 +81,7 @@ export default function AirportAutocomplete({ value, onChange, placeholder = "GR
   return (
     <div ref={containerRef} className="relative">
       <Input
+        data-testid={testId}
         value={query}
         onChange={(e) => handleInputChange(e.target.value)}
         onFocus={() => results.length > 0 && setOpen(true)}
