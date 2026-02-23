@@ -5,7 +5,10 @@ import {
   PieChart, Pie, Cell,
 } from "recharts";
 
-const PIE_COLORS = ["hsl(152, 38%, 16%)", "hsl(38, 92%, 50%)", "hsl(210, 80%, 52%)", "hsl(152, 60%, 40%)", "hsl(0, 72%, 51%)", "hsl(280, 60%, 50%)"];
+const PIE_COLORS = [
+  "hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(280, 60%, 50%)",
+];
 
 interface Sale {
   destination_iata: string | null;
@@ -40,7 +43,6 @@ export default function CommercialSection({ filtered, segments, sellerNames }: P
     return Object.entries(c).map(([name, value]) => ({ name, value }));
   }, [filtered]);
 
-  // Itinerary type distribution using segments
   const itineraryData = useMemo(() => {
     const saleSegments: Record<string, Segment[]> = {};
     segments.forEach(seg => {
@@ -80,46 +82,46 @@ export default function CommercialSection({ filtered, segments, sellerNames }: P
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-serif text-foreground">Comercial</h2>
+      <h2 className="section-title">Comercial</h2>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-5 glass-card">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Top Destinos</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4 tracking-tight">Top Destinos</h3>
           {destData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={destData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(148, 12%, 89%)" />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={50} />
-                <Tooltip />
-                <Bar dataKey="vendas" fill="hsl(152, 38%, 16%)" radius={[0, 4, 4, 0]} name="Vendas" />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={50} />
+                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
+                <Bar dataKey="vendas" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} name="Vendas" />
               </BarChart>
             </ResponsiveContainer>
           ) : <NoData />}
         </Card>
 
         <Card className="p-5 glass-card">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Mix de Produtos</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4 tracking-tight">Mix de Produtos</h3>
           {productData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
-                <Pie data={productData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                <Pie data={productData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={{ fontSize: 10 }}>
                   {productData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
           ) : <NoData />}
         </Card>
 
         <Card className="p-5 glass-card">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Tipo de Itinerário</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4 tracking-tight">Tipo de Itinerário</h3>
           {itineraryData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
-                <Pie data={itineraryData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={80} label>
+                <Pie data={itineraryData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={80} label={{ fontSize: 10 }}>
                   {itineraryData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
-                <Tooltip />
+                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
               </PieChart>
             </ResponsiveContainer>
           ) : <NoData />}
@@ -128,14 +130,14 @@ export default function CommercialSection({ filtered, segments, sellerNames }: P
 
       {sellerRanking.length > 0 && (
         <Card className="p-5 glass-card">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Vendas por Vendedor</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4 tracking-tight">Vendas por Vendedor</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={sellerRanking}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(148, 12%, 89%)" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Bar dataKey="vendas" fill="hsl(152, 60%, 40%)" radius={[4, 4, 0, 0]} name="Vendas" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+              <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+              <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
+              <Bar dataKey="vendas" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} name="Vendas" />
             </BarChart>
           </ResponsiveContainer>
         </Card>

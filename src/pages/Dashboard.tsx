@@ -112,7 +112,6 @@ export default function Dashboard() {
     return result;
   }, [sales, periodCutoff, seller, destination, product, profiles]);
 
-  // Previous period for comparison
   const previous = useMemo(() => {
     if (!periodCutoff) return [];
     const months = period === "30d" ? 1 : period === "90d" ? 3 : 12;
@@ -128,18 +127,20 @@ export default function Dashboard() {
       <div className="p-6 space-y-6">
         <Skeleton className="h-10 w-60" />
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
+          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Skeleton className="h-64" />
-          <Skeleton className="h-64" />
+          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-8 animate-fade-in">
+    <div className="p-6 space-y-8 animate-fade-in relative">
+      <div className="fixed inset-0 pointer-events-none opacity-[0.015] bg-grid-pattern" />
+
       <DashboardFilters
         period={period} setPeriod={setPeriod}
         seller={seller} setSeller={setSeller}
@@ -148,28 +149,16 @@ export default function Dashboard() {
         sellers={sellersList} destinations={destinationsList}
       />
 
-      {/* 1. Visão Geral */}
       <KpiCards filtered={filtered} previous={previous} />
 
-      {/* 2. Financeiro */}
+      <div className="glow-line" />
+
       <FinancialSection filtered={filtered} sellerNames={sellerNames} />
-
-      {/* 3. Comercial */}
       <CommercialSection filtered={filtered} segments={segments} sellerNames={sellerNames} />
-
-      {/* 4. Operacional */}
       <OperationalSection checkinTasks={checkinTasks} lodgingTasks={lodgingTasks} />
-
-      {/* 5. Clientes */}
       <ClientsSection clients={clients} filtered={filtered} periodStart={periodCutoff} />
-
-      {/* 6. Geográfico */}
       <GeographicSection filtered={filtered} />
-
-      {/* 7. Milhas */}
       <MilesSection filtered={filtered} costItems={costItems} />
-
-      {/* 8. Alertas + Insights */}
       <AlertsSection filtered={filtered} sellerNames={sellerNames} />
     </div>
   );
