@@ -4,21 +4,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2 } from "lucide-react";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
+import { useToast } from "@/hooks/use-toast";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function SaleDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [sale, setSale] = useState<any>(null);
   const [segments, setSegments] = useState<FlightSegment[]>([]);
   const [costItems, setCostItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summary, setSummary] = useState("");
+  const [generatingSummary, setGeneratingSummary] = useState(false);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchData = async () => {
       const { data: saleData } = await supabase.from("sales").select("*").eq("id", id).single();
       setSale(saleData);
 
@@ -30,8 +39,31 @@ export default function SaleDetail() {
 
       setLoading(false);
     };
-    if (id) fetch();
+    if (id) fetchData();
   }, [id]);
+
+  const handleGenerateSummary = async () => {
+    setGeneratingSummary(true);
+    setSummaryOpen(true);
+    setSummary("");
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-summary", {
+        body: { sale: { ...sale, segments, costItems } },
+      });
+      if (error) throw error;
+      setSummary(data.summary || "Erro ao gerar resumo.");
+    } catch (err: any) {
+      setSummary("Erro ao gerar resumo: " + (err.message || "Tente novamente."));
+      toast({ title: "Erro ao gerar resumo", variant: "destructive" });
+    } finally {
+      setGeneratingSummary(false);
+    }
+  };
+
+  const copySummary = () => {
+    navigator.clipboard.writeText(summary);
+    toast({ title: "Resumo copiado!" });
+  };
 
   if (loading) return <div className="p-6 text-center text-muted-foreground animate-fade-in">Carregando...</div>;
   if (!sale) return (
@@ -43,7 +75,7 @@ export default function SaleDetail() {
 
   return (
     <div className="p-6 space-y-5 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate("/sales")}><ArrowLeft className="w-4 h-4" /></Button>
           <div>
@@ -51,12 +83,38 @@ export default function SaleDetail() {
             <p className="text-sm text-muted-foreground">{sale.display_id} · {sale.close_date || "Sem data"}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm"><Copy className="w-4 h-4 mr-1" /> Duplicar</Button>
-          <Button variant="outline" size="sm"><FileText className="w-4 h-4 mr-1" /> Resumo NatLeva</Button>
+          <Button size="sm" onClick={handleGenerateSummary}>
+            <FileText className="w-4 h-4 mr-1" /> Resumo NatLeva
+          </Button>
           <Badge variant="outline" className="self-center">{sale.status}</Badge>
         </div>
       </div>
+
+      {/* Summary Dialog */}
+      <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" /> Resumo NatLeva
+            </DialogTitle>
+          </DialogHeader>
+          {generatingSummary ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-6 h-6 animate-spin text-primary mr-2" />
+              <span className="text-muted-foreground">Gerando resumo com IA...</span>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Textarea value={summary} readOnly rows={16} className="text-sm font-mono" />
+              <Button onClick={copySummary} className="w-full">
+                <Copy className="w-4 h-4 mr-1" /> Copiar Resumo
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Financial */}
@@ -112,7 +170,6 @@ export default function SaleDetail() {
             {sale.miles_program && <div className="flex justify-between"><span className="text-muted-foreground">Milhas</span><Badge variant="outline">{sale.miles_program}</Badge></div>}
           </div>
 
-          {/* Flight segments timeline */}
           {segments.length > 0 && (
             <div className="mt-4 pt-3 border-t border-border space-y-3">
               <FlightTimeline segments={segments} direction="ida" />

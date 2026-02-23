@@ -2,3 +2,6 @@ project_id = "mexlhkqcmiaktjxsyvod"
 
 [functions.extract-sale-data]
 verify_jwt = false
+
+[functions.generate-summary]
+verify_jwt = false

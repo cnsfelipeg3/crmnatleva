@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
-import { DollarSign, TrendingUp, Users, Plane, Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DollarSign, TrendingUp, Users, Plane, Target, Plus, List, ArrowRight } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
@@ -12,6 +14,7 @@ const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
 export default function Dashboard() {
   const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     supabase.from("sales").select("*").order("created_at", { ascending: false }).then(({ data }) => {
@@ -47,11 +50,24 @@ export default function Dashboard() {
   const productData = Object.entries(productCount).map(([name, value]) => ({ name, value }));
   const pieColors = ["hsl(152, 38%, 16%)", "hsl(38, 92%, 50%)", "hsl(210, 80%, 52%)", "hsl(152, 60%, 40%)"];
 
+  // Recent sales
+  const recentSales = sales.slice(0, 5);
+
   return (
     <div className="p-6 space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-serif text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Visão geral NatLeva</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-serif text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Visão geral NatLeva</p>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => navigate("/sales/new")}>
+            <Plus className="w-4 h-4 mr-1" /> Nova Venda
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate("/passengers")}>
+            <Users className="w-4 h-4 mr-1" /> Passageiros
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -60,7 +76,7 @@ export default function Dashboard() {
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {kpis.map(k => (
-              <Card key={k.label} className="p-4 glass-card">
+              <Card key={k.label} className="p-4 glass-card hover:shadow-md transition-shadow">
                 <div className="flex items-center gap-2 mb-2">
                   <k.icon className={`w-4 h-4 ${k.color}`} />
                   <span className="text-xs text-muted-foreground font-medium">{k.label}</span>
@@ -70,8 +86,9 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card className="p-5 glass-card">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Charts */}
+            <Card className="p-5 glass-card lg:col-span-1">
               <h3 className="text-sm font-semibold text-foreground mb-4">Top Destinos</h3>
               {destData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={220}>
@@ -86,7 +103,7 @@ export default function Dashboard() {
               ) : <p className="text-sm text-muted-foreground text-center py-8">Sem dados</p>}
             </Card>
 
-            <Card className="p-5 glass-card">
+            <Card className="p-5 glass-card lg:col-span-1">
               <h3 className="text-sm font-semibold text-foreground mb-4">Mix de Produtos</h3>
               {productData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={220}>
@@ -98,6 +115,43 @@ export default function Dashboard() {
                   </PieChart>
                 </ResponsiveContainer>
               ) : <p className="text-sm text-muted-foreground text-center py-8">Sem dados</p>}
+            </Card>
+
+            {/* Recent Sales */}
+            <Card className="p-5 glass-card lg:col-span-1">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-foreground">Vendas Recentes</h3>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/sales")}>
+                  <List className="w-3.5 h-3.5 mr-1" /> Ver todas
+                </Button>
+              </div>
+              {recentSales.length > 0 ? (
+                <div className="space-y-2">
+                  {recentSales.map(sale => (
+                    <div
+                      key={sale.id}
+                      className="flex items-center justify-between p-2.5 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                      onClick={() => navigate(`/sales/${sale.id}`)}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground truncate">{sale.name}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono">{sale.display_id} · {sale.origin_iata || "?"} → {sale.destination_iata || "?"}</p>
+                      </div>
+                      <div className="text-right shrink-0 ml-2">
+                        <p className="text-xs font-semibold text-success">{fmt(sale.received_value || 0)}</p>
+                        <p className="text-[10px] text-muted-foreground">{sale.status}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-sm text-muted-foreground mb-3">Nenhuma venda ainda</p>
+                  <Button size="sm" onClick={() => navigate("/sales/new")}>
+                    <Plus className="w-4 h-4 mr-1" /> Criar Primeira Venda
+                  </Button>
+                </div>
+              )}
             </Card>
           </div>
         </>
