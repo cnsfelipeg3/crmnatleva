@@ -1,15 +1,9 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import logoNatleva from "@/assets/logo-natleva.png";
 import {
-  LayoutDashboard,
-  Plus,
-  List,
-  Settings,
-  LogOut,
-  Plane,
-  ChevronLeft,
-  ChevronRight,
+  LayoutDashboard, Plus, List, Settings, LogOut, Plane, Users,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -18,13 +12,13 @@ const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/sales/new", icon: Plus, label: "Nova Venda" },
   { to: "/sales", icon: List, label: "Vendas" },
+  { to: "/passengers", icon: Users, label: "Passageiros" },
   { to: "/settings", icon: Settings, label: "Configurações" },
 ];
 
 export default function AppSidebar() {
-  const { user, logout } = useAuth();
+  const { profile, role, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
-  const location = useLocation();
 
   return (
     <aside
@@ -61,14 +55,14 @@ export default function AppSidebar() {
       </nav>
 
       <div className="border-t border-sidebar-border p-3 space-y-2">
-        {!collapsed && user && (
+        {!collapsed && profile && (
           <div className="px-2 mb-2">
-            <p className="text-xs font-semibold truncate">{user.name}</p>
-            <p className="text-xs text-sidebar-foreground/50 capitalize">{user.role}</p>
+            <p className="text-xs font-semibold truncate">{profile.full_name || profile.email}</p>
+            <p className="text-xs text-sidebar-foreground/50 capitalize">{role}</p>
           </div>
         )}
         <button
-          onClick={logout}
+          onClick={signOut}
           className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground w-full transition-colors"
         >
           <LogOut className="w-4 h-4 shrink-0" />

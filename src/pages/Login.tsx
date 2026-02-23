@@ -10,18 +10,34 @@ import { Plane } from "lucide-react";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [error, setError] = useState("");
-  const { login } = useAuth();
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (login(email, password)) {
-      navigate("/dashboard");
+    setLoading(true);
+
+    if (isSignUp) {
+      const { error: err } = await signUp(email, password, fullName);
+      if (err) {
+        setError(err);
+      } else {
+        navigate("/dashboard");
+      }
     } else {
-      setError("E-mail ou senha inválidos. Tente: admin@natleva.com / 123456");
+      const { error: err } = await signIn(email, password);
+      if (err) {
+        setError(err);
+      } else {
+        navigate("/dashboard");
+      }
     }
+    setLoading(false);
   };
 
   return (
@@ -45,12 +61,8 @@ export default function Login() {
         </div>
         <div className="relative z-10 text-center px-12">
           <img src={logoNatleva} alt="NatLeva Viagens" className="h-16 mx-auto mb-8 brightness-0 invert" />
-          <h1 className="text-3xl font-serif text-primary-foreground mb-4">
-            Sistema Interno
-          </h1>
-          <p className="text-primary-foreground/70 text-lg">
-            CRM de Vendas & Inteligência Operacional
-          </p>
+          <h1 className="text-3xl font-serif text-primary-foreground mb-4">Sistema Interno</h1>
+          <p className="text-primary-foreground/70 text-lg">CRM de Vendas & Inteligência Operacional</p>
         </div>
       </div>
 
@@ -60,10 +72,26 @@ export default function Login() {
           <div className="lg:hidden mb-8 text-center">
             <img src={logoNatleva} alt="NatLeva" className="h-12 mx-auto mb-4" />
           </div>
-          <h2 className="text-2xl font-serif text-foreground mb-1">Bem-vindo de volta</h2>
-          <p className="text-muted-foreground mb-8">Acesse sua conta NatLeva</p>
+          <h2 className="text-2xl font-serif text-foreground mb-1">
+            {isSignUp ? "Criar conta" : "Bem-vindo de volta"}
+          </h2>
+          <p className="text-muted-foreground mb-8">
+            {isSignUp ? "Cadastre-se na NatLeva" : "Acesse sua conta NatLeva"}
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {isSignUp && (
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Nome completo</Label>
+                <Input
+                  id="fullName"
+                  placeholder="Seu nome"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required={isSignUp}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
               <Input
@@ -84,21 +112,23 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
               />
             </div>
 
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+            {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <Button type="submit" className="w-full">
-              Entrar
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Carregando..." : isSignUp ? "Criar conta" : "Entrar"}
             </Button>
           </form>
 
-          <p className="mt-6 text-xs text-muted-foreground text-center">
-            Demo: admin@natleva.com / 123456
-          </p>
+          <button
+            onClick={() => { setIsSignUp(!isSignUp); setError(""); }}
+            className="mt-4 text-sm text-muted-foreground hover:text-foreground w-full text-center transition-colors"
+          >
+            {isSignUp ? "Já tem conta? Entrar" : "Não tem conta? Criar agora"}
+          </button>
         </div>
       </div>
     </div>
