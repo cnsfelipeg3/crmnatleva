@@ -8,3 +8,12 @@ verify_jwt = false
 
 [functions.amadeus-search]
 verify_jwt = false
+
+[functions.hotel-search]
+verify_jwt = false
+
+[functions.checkin-generate]
+verify_jwt = false
+
+[functions.lodging-generate]
+verify_jwt = false

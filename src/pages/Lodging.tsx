@@ -389,7 +389,7 @@ export default function Lodging() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-serif text-foreground flex items-center gap-2">
-            <Hotel className="w-6 h-6" /> Hospedagem
+            <Hotel className="w-6 h-6" /> Confirmar Hospedagens
           </h1>
           <p className="text-sm text-muted-foreground">Confirmações de reserva de hotel</p>
         </div>
