@@ -408,9 +408,8 @@ export default function SaleDetail() {
             </div>
 
             {segments.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-border space-y-3">
-                <FlightTimeline segments={segments} direction="ida" />
-                <FlightTimeline segments={segments} direction="volta" />
+              <div className="mt-4 pt-3 border-t border-border">
+                <FlightTimeline segments={segments} showAll />
               </div>
             )}
           </Card>

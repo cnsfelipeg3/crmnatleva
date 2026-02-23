@@ -18,16 +18,25 @@ Analise MINUCIOSAMENTE as imagens e/ou texto fornecidos e extraia TODAS as infor
 
 IMPORTANTE: Extraia ABSOLUTAMENTE TUDO que puder identificar. Não omita nenhuma informação que possa preencher algum campo do formulário de vendas. Analise cada detalhe: nomes, datas, valores, códigos, endereços, documentos, formas de pagamento, detalhes de hotel, segmentos de voo, conexões, etc.
 
+REGRA CRÍTICA SOBRE ITINERÁRIOS AÉREOS:
+- NÃO assuma automaticamente que é ida/volta simples.
+- Sempre ordene os trechos por DATA de partida (cronológico).
+- Se houver 3+ trechos com destinos intermediários diferentes, classifique como MULTI-CITY.
+- Somente classifique como ida/volta se: exatamente 2 trechos e o segundo retorna ao aeroporto de origem do primeiro.
+- Para cada segmento, NÃO preencha "direction" como "ida" ou "volta" — deixe em branco ou use "leg1", "leg2", "leg3", etc. O frontend classificará automaticamente.
+- origin_iata global = aeroporto de partida do PRIMEIRO trecho cronológico.
+- destination_iata global = aeroporto de chegada do ÚLTIMO trecho cronológico.
+
 Retorne APENAS um JSON válido com a seguinte estrutura (preencha TODOS os campos que você conseguir identificar):
 {
   "confidence": 0.0 a 1.0,
   "fields": {
     "sale_name": {"value": "sugestão de nome para a venda (ex: Viagem João - MIA Jan/26)", "confidence": 0.0-1.0},
     "passenger_names": [{"value": "nome completo", "confidence": 0.0-1.0}],
-    "origin_iata": {"value": "XXX", "confidence": 0.0-1.0},
-    "destination_iata": {"value": "XXX", "confidence": 0.0-1.0},
-    "departure_date": {"value": "YYYY-MM-DD", "confidence": 0.0-1.0},
-    "return_date": {"value": "YYYY-MM-DD", "confidence": 0.0-1.0},
+    "origin_iata": {"value": "XXX (aeroporto de partida do PRIMEIRO trecho)", "confidence": 0.0-1.0},
+    "destination_iata": {"value": "XXX (aeroporto de chegada do ÚLTIMO trecho)", "confidence": 0.0-1.0},
+    "departure_date": {"value": "YYYY-MM-DD (data do primeiro trecho)", "confidence": 0.0-1.0},
+    "return_date": {"value": "YYYY-MM-DD (data do último trecho, se diferente)", "confidence": 0.0-1.0},
     "airline": {"value": "nome ou código IATA", "confidence": 0.0-1.0},
     "locators": [{"value": "XXX", "confidence": 0.0-1.0}],
     "flight_class": {"value": "econômica/executiva/primeira", "confidence": 0.0-1.0},
@@ -59,7 +68,7 @@ Retorne APENAS um JSON válido com a seguinte estrutura (preencha TODOS os campo
     "emission_source": {"value": "site/app usado para emitir (ex: Smiles, Livelo, 123milhas, MaxMilhas, Decolar)", "confidence": 0.0-1.0},
     "observations": {"value": "notas relevantes detectadas", "confidence": 0.0-1.0},
     "flight_segments": [{
-      "direction": "ida|volta",
+      "direction": "",
       "airline": "XX",
       "flight_number": "XX000",
       "origin_iata": "XXX",
@@ -97,7 +106,8 @@ REGRAS:
 5. Se houver informações conflitantes, liste em "conflicts".
 6. Sugira um nome para a venda em "sale_name" baseado no destino e nome do passageiro principal.
 7. "received_value" = valor cobrado do cliente final. "cash_value"/"air_cash" = valor pago pela agência.
-8. Omita campos que não conseguir identificar - não invente dados.`;
+8. Omita campos que não conseguir identificar - não invente dados.
+9. CRÍTICO: flight_segments devem ser ordenados por departure_date cronologicamente. NÃO assuma ida/volta — o sistema classifica automaticamente.`;
 
     const content: any[] = [
       { type: "text", text: systemPrompt },
