@@ -1,8 +1,7 @@
-import { useEffect } from "react";
-import { MapContainer, TileLayer, Polyline, CircleMarker, Tooltip, useMap } from "react-leaflet";
+import { useEffect, useRef } from "react";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Common airports lat/lon (fallback dataset)
 const AIRPORT_COORDS: Record<string, [number, number]> = {
   GRU: [-23.4356, -46.4731], CGH: [-23.6261, -46.6564], GIG: [-22.8090, -43.2506],
   SDU: [-22.9104, -43.1631], BSB: [-15.8711, -47.9186], CNF: [-19.6244, -43.9719],
@@ -12,7 +11,6 @@ const AIRPORT_COORDS: Record<string, [number, number]> = {
   NAT: [-5.7681, -35.3764], MCZ: [-9.5108, -35.7917], AJU: [-10.9840, -37.0703],
   SLZ: [-2.5853, -44.2341], THE: [-5.0594, -42.8236], CGB: [-15.6528, -56.1167],
   CGR: [-20.4686, -54.6725], GYN: [-16.6319, -49.2206], PMW: [-10.2915, -48.3572],
-  // International
   MIA: [25.7959, -80.2870], JFK: [40.6413, -73.7781], LAX: [33.9425, -118.4081],
   EWR: [40.6895, -74.1745], ORD: [41.9742, -87.9073], ATL: [33.6367, -84.4281],
   LHR: [51.4700, -0.4543], CDG: [49.0097, 2.5479], FCO: [41.8003, 12.2389],
@@ -38,97 +36,88 @@ interface RoutesMapProps {
   height?: string;
 }
 
-function FitBounds({ routes }: { routes: Route[] }) {
-  const map = useMap();
-  useEffect(() => {
-    const points: [number, number][] = [];
-    routes.forEach(r => {
-      const o = AIRPORT_COORDS[r.origin];
-      const d = AIRPORT_COORDS[r.destination];
-      if (o) points.push(o);
-      if (d) points.push(d);
-    });
-    if (points.length >= 2) {
-      map.fitBounds(points, { padding: [30, 30] });
-    }
-  }, [routes, map]);
-  return null;
-}
-
 export default function RoutesMap({ routes, height = "360px" }: RoutesMapProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+
   const validRoutes = routes.filter(
     r => AIRPORT_COORDS[r.origin] && AIRPORT_COORDS[r.destination]
   );
 
-  const airportCounts: Record<string, number> = {};
-  validRoutes.forEach(r => {
-    airportCounts[r.origin] = (airportCounts[r.origin] || 0) + r.count;
-    airportCounts[r.destination] = (airportCounts[r.destination] || 0) + r.count;
-  });
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
 
-  const maxCount = Math.max(...validRoutes.map(r => r.count), 1);
+    const map = L.map(containerRef.current, { scrollWheelZoom: false }).setView([-14, -51], 4);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; <a href="https://carto.com">CARTO</a>',
+    }).addTo(map);
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    // Clear existing layers (except tile layer)
+    map.eachLayer(layer => {
+      if (!(layer instanceof L.TileLayer)) map.removeLayer(layer);
+    });
+
+    const airportCounts: Record<string, number> = {};
+    const maxCount = Math.max(...validRoutes.map(r => r.count), 1);
+
+    validRoutes.forEach(r => {
+      airportCounts[r.origin] = (airportCounts[r.origin] || 0) + r.count;
+      airportCounts[r.destination] = (airportCounts[r.destination] || 0) + r.count;
+
+      const o = AIRPORT_COORDS[r.origin];
+      const d = AIRPORT_COORDS[r.destination];
+      const opacity = 0.3 + (r.count / maxCount) * 0.7;
+      const weight = 1 + (r.count / maxCount) * 4;
+
+      L.polyline([o, d], {
+        color: "hsl(152, 38%, 16%)",
+        weight,
+        opacity,
+        dashArray: "6 4",
+      }).bindTooltip(`${r.origin} → ${r.destination}: ${r.count} venda(s)`).addTo(map);
+    });
+
+    const maxAirport = Math.max(...Object.values(airportCounts), 1);
+    Object.entries(airportCounts).forEach(([iata, count]) => {
+      const coords = AIRPORT_COORDS[iata];
+      if (!coords) return;
+      const radius = 4 + (count / maxAirport) * 10;
+      L.circleMarker(coords, {
+        radius,
+        fillColor: "hsl(38, 92%, 50%)",
+        fillOpacity: 0.85,
+        color: "hsl(152, 38%, 16%)",
+        weight: 1.5,
+      }).bindTooltip(`<strong>${iata}</strong>: ${count} voo(s)`).addTo(map);
+    });
+
+    // Fit bounds
+    const points: [number, number][] = [];
+    validRoutes.forEach(r => {
+      points.push(AIRPORT_COORDS[r.origin]);
+      points.push(AIRPORT_COORDS[r.destination]);
+    });
+    if (points.length >= 2) {
+      map.fitBounds(points as L.LatLngBoundsExpression, { padding: [30, 30] });
+    }
+  }, [validRoutes]);
 
   return (
-    <div style={{ height }} className="rounded-lg overflow-hidden border border-border">
-      <MapContainer
-        center={[-14, -51]}
-        zoom={4}
-        style={{ height: "100%", width: "100%" }}
-        scrollWheelZoom={false}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://carto.com">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        />
-        <FitBounds routes={validRoutes} />
-
-        {validRoutes.map((r, i) => {
-          const o = AIRPORT_COORDS[r.origin];
-          const d = AIRPORT_COORDS[r.destination];
-          if (!o || !d) return null;
-          const opacity = 0.3 + (r.count / maxCount) * 0.7;
-          const weight = 1 + (r.count / maxCount) * 4;
-          return (
-            <Polyline
-              key={i}
-              positions={[o, d]}
-              pathOptions={{
-                color: "hsl(152, 38%, 16%)",
-                weight,
-                opacity,
-                dashArray: "6 4",
-              }}
-            >
-              <Tooltip>
-                {r.origin} → {r.destination}: {r.count} venda(s)
-              </Tooltip>
-            </Polyline>
-          );
-        })}
-
-        {Object.entries(airportCounts).map(([iata, count]) => {
-          const coords = AIRPORT_COORDS[iata];
-          if (!coords) return null;
-          const radius = 4 + (count / Math.max(...Object.values(airportCounts), 1)) * 10;
-          return (
-            <CircleMarker
-              key={iata}
-              center={coords}
-              radius={radius}
-              pathOptions={{
-                fillColor: "hsl(38, 92%, 50%)",
-                fillOpacity: 0.85,
-                color: "hsl(152, 38%, 16%)",
-                weight: 1.5,
-              }}
-            >
-              <Tooltip>
-                <strong>{iata}</strong>: {count} voo(s)
-              </Tooltip>
-            </CircleMarker>
-          );
-        })}
-      </MapContainer>
-    </div>
+    <div
+      ref={containerRef}
+      style={{ height }}
+      className="rounded-lg overflow-hidden border border-border"
+    />
   );
 }

@@ -18,6 +18,7 @@ import {
 } from "recharts";
 
 const RoutesMap = lazy(() => import("@/components/RoutesMap"));
+const ClientDistributionMap = lazy(() => import("@/components/ClientDistributionMap"));
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -203,6 +204,14 @@ export default function Dashboard() {
               </div>
             </Card>
           )}
+
+          {/* Client Distribution Map */}
+          <Card className="p-5 glass-card">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Distribuição de Clientes por Região</h3>
+            <Suspense fallback={<div className="h-[320px] flex items-center justify-center text-muted-foreground">Carregando mapa...</div>}>
+              <ClientDistributionMap />
+            </Suspense>
+          </Card>
 
           {/* Charts row 1: Monthly + Margin */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
