@@ -128,6 +128,7 @@ export default function NewSale() {
         };
         setForm(prev => ({
           ...prev,
+          name: get("sale_name") || prev.name,
           origin_iata: get("origin_iata") || prev.origin_iata,
           destination_iata: get("destination_iata") || prev.destination_iata,
           departure_date: get("departure_date") || prev.departure_date,
@@ -138,10 +139,26 @@ export default function NewSale() {
           miles_program: get("miles_program") || prev.miles_program,
           hotel_name: get("hotel_name") || prev.hotel_name,
           hotel_reservation_code: get("hotel_code") || prev.hotel_reservation_code,
-          air_miles_qty: get("miles_quantity") || prev.air_miles_qty,
-          air_taxes: get("taxes") || prev.air_taxes,
-          air_cash: get("cash_value") || prev.air_cash,
+          hotel_room: get("hotel_room") || prev.hotel_room,
+          hotel_meal_plan: get("hotel_meal_plan") || prev.hotel_meal_plan,
           connections: get("connections") || prev.connections,
+          payment_method: get("payment_method") || prev.payment_method,
+          observations: get("observations") || prev.observations,
+          emission_source: get("emission_source") || prev.emission_source,
+          adults: f.adults?.value ? Number(f.adults.value) : prev.adults,
+          children: f.children?.value ? Number(f.children.value) : prev.children,
+          children_ages: f.children_ages?.value ? (Array.isArray(f.children_ages.value) ? f.children_ages.value.join(", ") : String(f.children_ages.value)) : prev.children_ages,
+          received_value: get("received_value") || prev.received_value,
+          air_cash: get("air_cash") || get("cash_value") || prev.air_cash,
+          air_miles_qty: get("air_miles_qty") || get("miles_quantity") || prev.air_miles_qty,
+          air_miles_price: get("air_miles_price") || prev.air_miles_price,
+          air_taxes: get("air_taxes") || get("taxes") || prev.air_taxes,
+          air_emission_source: get("emission_source") || prev.air_emission_source,
+          air_miles_program: get("miles_program") || prev.air_miles_program,
+          hotel_cash: get("hotel_cash") || prev.hotel_cash,
+          hotel_miles_qty: get("hotel_miles_qty") || prev.hotel_miles_qty,
+          hotel_miles_price: get("hotel_miles_price") || prev.hotel_miles_price,
+          hotel_taxes: get("hotel_taxes") || prev.hotel_taxes,
         }));
 
         // Fill flight segments if extracted

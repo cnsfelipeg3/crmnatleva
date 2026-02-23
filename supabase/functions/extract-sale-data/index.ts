@@ -14,33 +14,50 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const systemPrompt = `Você é um assistente de extração de dados para uma agência de viagens chamada NatLeva.
-Analise as imagens e/ou texto fornecidos e extraia informações de venda de viagem.
+Analise MINUCIOSAMENTE as imagens e/ou texto fornecidos e extraia TODAS as informações possíveis de venda de viagem.
 
-Retorne APENAS um JSON válido com a seguinte estrutura (preencha apenas campos que você conseguir identificar):
+IMPORTANTE: Extraia ABSOLUTAMENTE TUDO que puder identificar. Não omita nenhuma informação que possa preencher algum campo do formulário de vendas. Analise cada detalhe: nomes, datas, valores, códigos, endereços, documentos, formas de pagamento, detalhes de hotel, segmentos de voo, conexões, etc.
+
+Retorne APENAS um JSON válido com a seguinte estrutura (preencha TODOS os campos que você conseguir identificar):
 {
   "confidence": 0.0 a 1.0,
   "fields": {
-    "passenger_names": [{"value": "nome", "confidence": 0.0-1.0}],
+    "sale_name": {"value": "sugestão de nome para a venda (ex: Viagem João - MIA Jan/26)", "confidence": 0.0-1.0},
+    "passenger_names": [{"value": "nome completo", "confidence": 0.0-1.0}],
     "origin_iata": {"value": "XXX", "confidence": 0.0-1.0},
     "destination_iata": {"value": "XXX", "confidence": 0.0-1.0},
     "departure_date": {"value": "YYYY-MM-DD", "confidence": 0.0-1.0},
     "return_date": {"value": "YYYY-MM-DD", "confidence": 0.0-1.0},
-    "airline": {"value": "nome", "confidence": 0.0-1.0},
+    "airline": {"value": "nome ou código IATA", "confidence": 0.0-1.0},
     "locators": [{"value": "XXX", "confidence": 0.0-1.0}],
-    "flight_class": {"value": "classe", "confidence": 0.0-1.0},
-    "miles_program": {"value": "programa", "confidence": 0.0-1.0},
+    "flight_class": {"value": "econômica/executiva/primeira", "confidence": 0.0-1.0},
+    "miles_program": {"value": "programa de milhas", "confidence": 0.0-1.0},
     "miles_quantity": {"value": 0, "confidence": 0.0-1.0},
     "taxes": {"value": 0.0, "confidence": 0.0-1.0},
     "cash_value": {"value": 0.0, "confidence": 0.0-1.0},
-    "hotel_name": {"value": "nome", "confidence": 0.0-1.0},
-    "hotel_code": {"value": "código", "confidence": 0.0-1.0},
-    "payment_method": {"value": "método", "confidence": 0.0-1.0},
+    "payment_method": {"value": "PIX/cartão/transferência/boleto", "confidence": 0.0-1.0},
     "adults": {"value": 0, "confidence": 0.0-1.0},
     "children": {"value": 0, "confidence": 0.0-1.0},
+    "children_ages": {"value": [0], "confidence": 0.0-1.0},
     "cpf": [{"value": "XXX.XXX.XXX-XX", "confidence": 0.0-1.0}],
     "phone": [{"value": "+55 XX XXXXX-XXXX", "confidence": 0.0-1.0}],
     "passport": [{"value": "XXXXXXX", "confidence": 0.0-1.0}],
     "connections": [{"value": "XXX", "confidence": 0.0-1.0}],
+    "hotel_name": {"value": "nome do hotel", "confidence": 0.0-1.0},
+    "hotel_code": {"value": "código da reserva", "confidence": 0.0-1.0},
+    "hotel_room": {"value": "tipo de quarto (standard/superior/suíte/etc)", "confidence": 0.0-1.0},
+    "hotel_meal_plan": {"value": "regime alimentação (café/meia pensão/all inclusive/etc)", "confidence": 0.0-1.0},
+    "received_value": {"value": 0.0, "confidence": 0.0-1.0},
+    "air_cash": {"value": 0.0, "confidence": 0.0-1.0},
+    "air_miles_qty": {"value": 0, "confidence": 0.0-1.0},
+    "air_miles_price": {"value": 0.0, "confidence": 0.0-1.0},
+    "air_taxes": {"value": 0.0, "confidence": 0.0-1.0},
+    "hotel_cash": {"value": 0.0, "confidence": 0.0-1.0},
+    "hotel_miles_qty": {"value": 0, "confidence": 0.0-1.0},
+    "hotel_miles_price": {"value": 0.0, "confidence": 0.0-1.0},
+    "hotel_taxes": {"value": 0.0, "confidence": 0.0-1.0},
+    "emission_source": {"value": "site/app usado para emitir (ex: Smiles, Livelo, 123milhas, MaxMilhas, Decolar)", "confidence": 0.0-1.0},
+    "observations": {"value": "notas relevantes detectadas", "confidence": 0.0-1.0},
     "flight_segments": [{
       "direction": "ida|volta",
       "airline": "XX",
@@ -52,15 +69,35 @@ Retorne APENAS um JSON válido com a seguinte estrutura (preencha apenas campos 
       "arrival_time": "HH:MM",
       "class": "classe",
       "confidence": 0.0-1.0
+    }],
+    "passenger_details": [{
+      "full_name": "nome completo",
+      "cpf": "XXX.XXX.XXX-XX",
+      "phone": "+55 XX XXXXX-XXXX",
+      "passport_number": "XXXXXXX",
+      "birth_date": "YYYY-MM-DD",
+      "address_city": "cidade",
+      "address_state": "UF",
+      "address_cep": "XXXXX-XXX",
+      "address_street": "rua",
+      "address_number": "número",
+      "address_neighborhood": "bairro",
+      "confidence": 0.0-1.0
     }]
   },
   "raw_text": "texto detectado nas imagens",
   "conflicts": []
 }
 
-Identifique automaticamente: códigos IATA, localizadores, programas de milhas, companhias aéreas, datas, nomes, CPFs, passaportes, valores monetários, segmentos de voo com conexão.
-Se houver informações conflitantes, liste em "conflicts".
-Omita campos que não conseguir identificar - não invente dados.`;
+REGRAS:
+1. Identifique automaticamente: códigos IATA, localizadores, programas de milhas, companhias aéreas, datas, nomes, CPFs, passaportes, valores monetários, segmentos de voo com conexão, endereços, telefones, formas de pagamento.
+2. Se encontrar valores como "R$ 5.400" ou "5400 reais" ou "valor total: 5.4k", interprete como valor monetário.
+3. Se encontrar informações de hotel (nome, check-in, check-out, tipo de quarto, regime alimentação), extraia tudo.
+4. Se encontrar detalhes de passageiros (nome, CPF, telefone, endereço, passaporte, data nascimento), extraia em passenger_details.
+5. Se houver informações conflitantes, liste em "conflicts".
+6. Sugira um nome para a venda em "sale_name" baseado no destino e nome do passageiro principal.
+7. "received_value" = valor cobrado do cliente final. "cash_value"/"air_cash" = valor pago pela agência.
+8. Omita campos que não conseguir identificar - não invente dados.`;
 
     const content: any[] = [
       { type: "text", text: systemPrompt },
@@ -119,7 +156,6 @@ Omita campos que não conseguir identificar - não invente dados.`;
     const data = await response.json();
     const aiResponse = data.choices?.[0]?.message?.content || "";
 
-    // Try to parse JSON from the response
     let extracted;
     try {
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
