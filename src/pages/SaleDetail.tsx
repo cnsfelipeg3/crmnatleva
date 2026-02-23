@@ -4,11 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X } from "lucide-react";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,10 +31,16 @@ export default function SaleDetail() {
   const [summary, setSummary] = useState("");
   const [generatingSummary, setGeneratingSummary] = useState(false);
 
+  // Edit mode
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<any>({});
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       const { data: saleData } = await supabase.from("sales").select("*").eq("id", id).single();
       setSale(saleData);
+      if (saleData) setEditForm(saleData);
 
       const { data: segData } = await supabase.from("flight_segments").select("*").eq("sale_id", id).order("segment_order");
       setSegments((segData || []) as FlightSegment[]);
@@ -41,6 +52,65 @@ export default function SaleDetail() {
     };
     if (id) fetchData();
   }, [id]);
+
+  const startEdit = () => {
+    setEditForm({ ...sale });
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditForm({ ...sale });
+    setEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    setSaving(true);
+    try {
+      const receivedValue = parseFloat(editForm.received_value) || 0;
+      const totalCost = parseFloat(editForm.total_cost) || 0;
+      const profit = receivedValue - totalCost;
+      const margin = receivedValue > 0 ? (profit / receivedValue) * 100 : 0;
+
+      const { error } = await supabase.from("sales").update({
+        name: editForm.name,
+        status: editForm.status,
+        close_date: editForm.close_date || null,
+        payment_method: editForm.payment_method || null,
+        origin_iata: editForm.origin_iata || null,
+        destination_iata: editForm.destination_iata || null,
+        departure_date: editForm.departure_date || null,
+        return_date: editForm.return_date || null,
+        airline: editForm.airline || null,
+        flight_class: editForm.flight_class || null,
+        locators: editForm.locators || [],
+        miles_program: editForm.miles_program || null,
+        hotel_name: editForm.hotel_name || null,
+        hotel_room: editForm.hotel_room || null,
+        hotel_meal_plan: editForm.hotel_meal_plan || null,
+        hotel_reservation_code: editForm.hotel_reservation_code || null,
+        adults: parseInt(editForm.adults) || 1,
+        children: parseInt(editForm.children) || 0,
+        received_value: receivedValue,
+        total_cost: totalCost,
+        profit,
+        margin: parseFloat(margin.toFixed(2)),
+        observations: editForm.observations || null,
+      }).eq("id", id);
+
+      if (error) throw error;
+
+      const updated = { ...editForm, profit, margin: parseFloat(margin.toFixed(2)) };
+      setSale(updated);
+      setEditing(false);
+      toast({ title: "Venda atualizada!" });
+    } catch (err: any) {
+      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateEdit = (field: string, value: any) => setEditForm((f: any) => ({ ...f, [field]: value }));
 
   const handleGenerateSummary = async () => {
     setGeneratingSummary(true);
@@ -84,10 +154,22 @@ export default function SaleDetail() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm"><Copy className="w-4 h-4 mr-1" /> Duplicar</Button>
-          <Button size="sm" onClick={handleGenerateSummary}>
-            <FileText className="w-4 h-4 mr-1" /> Resumo NatLeva
-          </Button>
+          {editing ? (
+            <>
+              <Button variant="outline" size="sm" onClick={cancelEdit}><X className="w-4 h-4 mr-1" /> Cancelar</Button>
+              <Button size="sm" onClick={handleSaveEdit} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                Salvar
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={startEdit}><Pencil className="w-4 h-4 mr-1" /> Editar</Button>
+              <Button size="sm" onClick={handleGenerateSummary}>
+                <FileText className="w-4 h-4 mr-1" /> Resumo NatLeva
+              </Button>
+            </>
+          )}
           <Badge variant="outline" className="self-center">{sale.status}</Badge>
         </div>
       </div>
@@ -116,102 +198,154 @@ export default function SaleDetail() {
         </DialogContent>
       </Dialog>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Financial */}
-        <Card className="p-5 glass-card">
-          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-accent" /> Financeiro
-          </h3>
-          <div className="space-y-3">
-            <div className="flex justify-between"><span className="text-muted-foreground text-sm">Valor Recebido</span><span className="font-semibold text-success">{fmt(sale.received_value || 0)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground text-sm">Custo Total</span><span className="font-medium">{fmt(sale.total_cost || 0)}</span></div>
-            <div className="border-t border-border pt-2 flex justify-between"><span className="text-muted-foreground text-sm">Lucro</span><span className="font-bold text-primary">{fmt(sale.profit || 0)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground text-sm">Margem</span><span className="font-bold text-accent">{(sale.margin || 0).toFixed(1)}%</span></div>
-            {sale.payment_method && <div className="flex justify-between"><span className="text-muted-foreground text-sm">Pagamento</span><span className="text-sm">{sale.payment_method}</span></div>}
-          </div>
-
-          {costItems.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-border space-y-2">
-              <h4 className="text-xs font-semibold text-muted-foreground">Detalhamento de Custos</h4>
-              {costItems.map((ci: any) => (
-                <div key={ci.id} className="text-xs bg-muted/50 rounded p-2 space-y-1">
-                  <div className="flex justify-between"><span className="font-medium capitalize">{ci.category}</span><span className="font-semibold">{fmt(ci.total_item_cost || 0)}</span></div>
-                  {ci.cash_value > 0 && <div className="flex justify-between text-muted-foreground"><span>Cash</span><span>{fmt(ci.cash_value)}</span></div>}
-                  {ci.miles_cost_brl > 0 && <div className="flex justify-between text-muted-foreground"><span>Milhas ({ci.miles_quantity?.toLocaleString()} × R${ci.miles_price_per_thousand})</span><span>{fmt(ci.miles_cost_brl)}</span></div>}
-                  {ci.taxes > 0 && <div className="flex justify-between text-muted-foreground"><span>Taxas{ci.taxes_included_in_cash ? " (incl.)" : ""}</span><span>{fmt(ci.taxes)}</span></div>}
-                  {ci.miles_program && <div className="text-muted-foreground">Programa: {ci.miles_program}</div>}
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        {/* Flight */}
-        <Card className="p-5 glass-card">
-          <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Plane className="w-4 h-4 text-primary" /> Aéreo
-          </h3>
-          <div className="flex items-center justify-center gap-4 py-3">
-            <div className="text-center">
-              <p className="text-2xl font-bold font-mono text-primary">{sale.origin_iata || "?"}</p>
-            </div>
-            <div className="flex-1 border-t border-dashed border-border relative">
-              <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground bg-card" />
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-bold font-mono text-primary">{sale.destination_iata || "?"}</p>
-            </div>
-          </div>
-          <div className="space-y-2 text-sm">
-            {sale.departure_date && <div className="flex justify-between"><span className="text-muted-foreground">Ida</span><span>{sale.departure_date}</span></div>}
-            {sale.return_date && <div className="flex justify-between"><span className="text-muted-foreground">Volta</span><span>{sale.return_date}</span></div>}
-            {sale.airline && <div className="flex justify-between"><span className="text-muted-foreground">Companhia</span><span>{sale.airline}</span></div>}
-            {sale.locators?.length > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Localizador</span><span className="font-mono font-semibold">{sale.locators.join(", ")}</span></div>}
-            {sale.miles_program && <div className="flex justify-between"><span className="text-muted-foreground">Milhas</span><Badge variant="outline">{sale.miles_program}</Badge></div>}
-          </div>
-
-          {segments.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-border space-y-3">
-              <FlightTimeline segments={segments} direction="ida" />
-              <FlightTimeline segments={segments} direction="volta" />
-            </div>
-          )}
-        </Card>
-
-        {/* PAX & Hotel */}
-        <div className="space-y-4">
-          <Card className="p-5 glass-card">
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <Users className="w-4 h-4 text-info" /> Passageiros
-            </h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Adultos</span><span>{sale.adults}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Crianças</span><span>{sale.children}</span></div>
-              {sale.children_ages?.length > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Idades</span><span>{sale.children_ages.join(", ")} anos</span></div>}
-              <div className="flex justify-between font-semibold border-t border-border pt-2"><span>PAX Total</span><span>{(sale.adults || 0) + (sale.children || 0)}</span></div>
+      {editing ? (
+        /* Edit mode */
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card className="p-5 glass-card space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Dados Gerais</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={editForm.name || ""} onChange={e => updateEdit("name", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Status</Label>
+                <Select value={editForm.status} onValueChange={v => updateEdit("status", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["Rascunho", "Pendente", "Em andamento", "Emitido", "Fechado"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1"><Label className="text-xs">Data Fechamento</Label><Input type="date" value={editForm.close_date || ""} onChange={e => updateEdit("close_date", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Pagamento</Label><Input value={editForm.payment_method || ""} onChange={e => updateEdit("payment_method", e.target.value)} /></div>
             </div>
           </Card>
+          <Card className="p-5 glass-card space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Aéreo</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label className="text-xs">Origem</Label><Input value={editForm.origin_iata || ""} onChange={e => updateEdit("origin_iata", e.target.value.toUpperCase())} maxLength={3} className="font-mono" /></div>
+              <div className="space-y-1"><Label className="text-xs">Destino</Label><Input value={editForm.destination_iata || ""} onChange={e => updateEdit("destination_iata", e.target.value.toUpperCase())} maxLength={3} className="font-mono" /></div>
+              <div className="space-y-1"><Label className="text-xs">Ida</Label><Input type="date" value={editForm.departure_date || ""} onChange={e => updateEdit("departure_date", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Volta</Label><Input type="date" value={editForm.return_date || ""} onChange={e => updateEdit("return_date", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Companhia</Label><Input value={editForm.airline || ""} onChange={e => updateEdit("airline", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Localizador</Label><Input value={editForm.locators?.join(", ") || ""} onChange={e => updateEdit("locators", e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean))} className="font-mono" /></div>
+            </div>
+          </Card>
+          <Card className="p-5 glass-card space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Financeiro</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label className="text-xs">Valor Recebido</Label><Input type="number" step="0.01" value={editForm.received_value || ""} onChange={e => updateEdit("received_value", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Custo Total</Label><Input type="number" step="0.01" value={editForm.total_cost || ""} onChange={e => updateEdit("total_cost", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Adultos</Label><Input type="number" min={1} value={editForm.adults || 1} onChange={e => updateEdit("adults", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Crianças</Label><Input type="number" min={0} value={editForm.children || 0} onChange={e => updateEdit("children", e.target.value)} /></div>
+            </div>
+          </Card>
+          <Card className="p-5 glass-card space-y-4">
+            <h3 className="text-sm font-semibold text-foreground">Hotel & Obs</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1"><Label className="text-xs">Hotel</Label><Input value={editForm.hotel_name || ""} onChange={e => updateEdit("hotel_name", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Quarto</Label><Input value={editForm.hotel_room || ""} onChange={e => updateEdit("hotel_room", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Código Reserva</Label><Input value={editForm.hotel_reservation_code || ""} onChange={e => updateEdit("hotel_reservation_code", e.target.value)} className="font-mono" /></div>
+              <div className="space-y-1"><Label className="text-xs">Milhas</Label><Input value={editForm.miles_program || ""} onChange={e => updateEdit("miles_program", e.target.value)} /></div>
+            </div>
+            <div className="space-y-1"><Label className="text-xs">Observações</Label><Textarea value={editForm.observations || ""} onChange={e => updateEdit("observations", e.target.value)} rows={3} /></div>
+          </Card>
+        </div>
+      ) : (
+        /* View mode */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Financial */}
+          <Card className="p-5 glass-card">
+            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-accent" /> Financeiro
+            </h3>
+            <div className="space-y-3">
+              <div className="flex justify-between"><span className="text-muted-foreground text-sm">Valor Recebido</span><span className="font-semibold text-success">{fmt(sale.received_value || 0)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground text-sm">Custo Total</span><span className="font-medium">{fmt(sale.total_cost || 0)}</span></div>
+              <div className="border-t border-border pt-2 flex justify-between"><span className="text-muted-foreground text-sm">Lucro</span><span className="font-bold text-primary">{fmt(sale.profit || 0)}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground text-sm">Margem</span><span className="font-bold text-accent">{(sale.margin || 0).toFixed(1)}%</span></div>
+              {sale.payment_method && <div className="flex justify-between"><span className="text-muted-foreground text-sm">Pagamento</span><span className="text-sm">{sale.payment_method}</span></div>}
+            </div>
 
-          {sale.hotel_name && (
+            {costItems.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-border space-y-2">
+                <h4 className="text-xs font-semibold text-muted-foreground">Detalhamento de Custos</h4>
+                {costItems.map((ci: any) => (
+                  <div key={ci.id} className="text-xs bg-muted/50 rounded p-2 space-y-1">
+                    <div className="flex justify-between"><span className="font-medium capitalize">{ci.category}</span><span className="font-semibold">{fmt(ci.total_item_cost || 0)}</span></div>
+                    {ci.cash_value > 0 && <div className="flex justify-between text-muted-foreground"><span>Cash</span><span>{fmt(ci.cash_value)}</span></div>}
+                    {ci.miles_cost_brl > 0 && <div className="flex justify-between text-muted-foreground"><span>Milhas ({ci.miles_quantity?.toLocaleString()} × R${ci.miles_price_per_thousand})</span><span>{fmt(ci.miles_cost_brl)}</span></div>}
+                    {ci.taxes > 0 && <div className="flex justify-between text-muted-foreground"><span>Taxas{ci.taxes_included_in_cash ? " (incl.)" : ""}</span><span>{fmt(ci.taxes)}</span></div>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Flight */}
+          <Card className="p-5 glass-card">
+            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Plane className="w-4 h-4 text-primary" /> Aéreo
+            </h3>
+            <div className="flex items-center justify-center gap-4 py-3">
+              <div className="text-center">
+                <p className="text-2xl font-bold font-mono text-primary">{sale.origin_iata || "?"}</p>
+              </div>
+              <div className="flex-1 border-t border-dashed border-border relative">
+                <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground bg-card" />
+              </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold font-mono text-primary">{sale.destination_iata || "?"}</p>
+              </div>
+            </div>
+            <div className="space-y-2 text-sm">
+              {sale.departure_date && <div className="flex justify-between"><span className="text-muted-foreground">Ida</span><span>{sale.departure_date}</span></div>}
+              {sale.return_date && <div className="flex justify-between"><span className="text-muted-foreground">Volta</span><span>{sale.return_date}</span></div>}
+              {sale.airline && <div className="flex justify-between"><span className="text-muted-foreground">Companhia</span><span>{sale.airline}</span></div>}
+              {sale.locators?.length > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Localizador</span><span className="font-mono font-semibold">{sale.locators.join(", ")}</span></div>}
+              {sale.miles_program && <div className="flex justify-between"><span className="text-muted-foreground">Milhas</span><Badge variant="outline">{sale.miles_program}</Badge></div>}
+            </div>
+
+            {segments.length > 0 && (
+              <div className="mt-4 pt-3 border-t border-border space-y-3">
+                <FlightTimeline segments={segments} direction="ida" />
+                <FlightTimeline segments={segments} direction="volta" />
+              </div>
+            )}
+          </Card>
+
+          {/* PAX & Hotel */}
+          <div className="space-y-4">
             <Card className="p-5 glass-card">
               <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                <Hotel className="w-4 h-4 text-accent" /> Hotel
+                <Users className="w-4 h-4 text-info" /> Passageiros
               </h3>
-              <p className="text-sm font-medium">{sale.hotel_name}</p>
-              {sale.hotel_room && <p className="text-xs text-muted-foreground">{sale.hotel_room}</p>}
-              {sale.hotel_meal_plan && <p className="text-xs text-muted-foreground">{sale.hotel_meal_plan}</p>}
-              {sale.hotel_reservation_code && <p className="text-xs font-mono mt-1">{sale.hotel_reservation_code}</p>}
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Adultos</span><span>{sale.adults}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Crianças</span><span>{sale.children}</span></div>
+                {sale.children_ages?.length > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Idades</span><span>{sale.children_ages.join(", ")} anos</span></div>}
+                <div className="flex justify-between font-semibold border-t border-border pt-2"><span>PAX Total</span><span>{(sale.adults || 0) + (sale.children || 0)}</span></div>
+              </div>
             </Card>
-          )}
 
-          {sale.observations && (
-            <Card className="p-5 glass-card">
-              <h3 className="text-sm font-semibold text-foreground mb-2">Observações</h3>
-              <p className="text-sm text-muted-foreground">{sale.observations}</p>
-            </Card>
-          )}
+            {sale.hotel_name && (
+              <Card className="p-5 glass-card">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <Hotel className="w-4 h-4 text-accent" /> Hotel
+                </h3>
+                <p className="text-sm font-medium">{sale.hotel_name}</p>
+                {sale.hotel_room && <p className="text-xs text-muted-foreground">{sale.hotel_room}</p>}
+                {sale.hotel_meal_plan && <p className="text-xs text-muted-foreground">{sale.hotel_meal_plan}</p>}
+                {sale.hotel_reservation_code && <p className="text-xs font-mono mt-1">{sale.hotel_reservation_code}</p>}
+              </Card>
+            )}
+
+            {sale.observations && (
+              <Card className="p-5 glass-card">
+                <h3 className="text-sm font-semibold text-foreground mb-2">Observações</h3>
+                <p className="text-sm text-muted-foreground">{sale.observations}</p>
+              </Card>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
