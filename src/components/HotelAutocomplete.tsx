@@ -98,6 +98,7 @@ export default function HotelAutocomplete({ value, onChange, onSelect, className
     <div ref={containerRef} className="relative">
       <div className="relative">
         <Input
+          data-testid="input-hotel"
           value={query}
           onChange={(e) => handleChange(e.target.value)}
           onKeyDown={handleKeyDown}

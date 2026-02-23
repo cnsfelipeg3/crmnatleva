@@ -41,6 +41,7 @@ export default function AppSidebar() {
           <NavLink
             key={item.to}
             to={item.to}
+            data-testid={`nav-${item.to.replace(/\//g, "").replace(/\s/g, "-") || "home"}`}
             className={({ isActive }) =>
               cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",

@@ -506,7 +506,7 @@ export default function NewSale() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nome da Venda *</Label>
-                <Input value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Ex: Roma - Família Silva" />
+                <Input data-testid="input-sale-name" value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Ex: Roma - Família Silva" />
               </div>
               <div className="space-y-2">
                 <Label>Data de Fechamento</Label>
@@ -567,8 +567,8 @@ export default function NewSale() {
           <div className="space-y-5 max-w-2xl">
             <h2 className="text-lg font-serif text-foreground">Aéreo</h2>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Origem (IATA)</Label><AirportAutocomplete value={form.origin_iata} onChange={(iata) => updateForm("origin_iata", iata)} placeholder="GRU" /></div>
-              <div className="space-y-2"><Label>Destino (IATA)</Label><AirportAutocomplete value={form.destination_iata} onChange={(iata) => updateForm("destination_iata", iata)} placeholder="FCO" /></div>
+              <div className="space-y-2"><Label>Origem (IATA)</Label><AirportAutocomplete data-testid="input-origin" value={form.origin_iata} onChange={(iata) => updateForm("origin_iata", iata)} placeholder="GRU" /></div>
+              <div className="space-y-2"><Label>Destino (IATA)</Label><AirportAutocomplete data-testid="input-destination" value={form.destination_iata} onChange={(iata) => updateForm("destination_iata", iata)} placeholder="FCO" /></div>
               <div className="space-y-2"><Label>Data Ida</Label><Input type="date" value={form.departure_date} onChange={(e) => updateForm("departure_date", e.target.value)} /></div>
               <div className="space-y-2"><Label>Data Volta</Label><Input type="date" value={form.return_date} onChange={(e) => updateForm("return_date", e.target.value)} /></div>
               <div className="space-y-2"><Label>Companhia Aérea</Label><AirlineAutocomplete value={form.airline} onChange={(iata) => updateForm("airline", iata)} /></div>
@@ -714,7 +714,7 @@ export default function NewSale() {
             <h2 className="text-lg font-serif text-foreground">Financeiro</h2>
             <div className="space-y-2">
               <Label>Valor Recebido (R$)</Label>
-              <Input type="number" step="0.01" value={form.received_value} onChange={(e) => updateForm("received_value", e.target.value)} />
+              <Input data-testid="input-received-value" type="number" step="0.01" value={form.received_value} onChange={(e) => updateForm("received_value", e.target.value)} />
             </div>
 
             {/* Air costs */}
@@ -792,7 +792,7 @@ export default function NewSale() {
                 <span className="text-muted-foreground">Segmentos</span><span>{segments.filter(s => s.origin_iata).length} trecho(s)</span>
               </div>
             </div>
-            <Button className="w-full" size="lg" onClick={handleSave} disabled={saving}>
+            <Button data-testid="btn-save-sale" className="w-full" size="lg" onClick={handleSave} disabled={saving}>
               {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...</> : <><Check className="w-4 h-4 mr-2" /> Salvar Venda</>}
             </Button>
           </div>
