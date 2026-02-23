@@ -15,6 +15,7 @@ import SettingsIndex from "@/pages/settings/SettingsIndex";
 import GenericSettingsList from "@/pages/settings/GenericSettingsList";
 import Checkin from "@/pages/Checkin";
 import Lodging from "@/pages/Lodging";
+import ClientDetail from "@/pages/ClientDetail";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ function AppRoutes() {
         <Route path="/sales/:id" element={<SaleDetail />} />
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/hospedagem" element={<Lodging />} />
+        <Route path="/clients/:id" element={<ClientDetail />} />
         <Route path="/passengers" element={<Passengers />} />
         <Route path="/settings" element={<SettingsIndex />} />
         <Route path="/settings/sellers" element={<GenericSettingsList title="Vendedores" defaultItems={["Admin NatLeva"]} />} />

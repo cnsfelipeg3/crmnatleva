@@ -21,6 +21,7 @@ import {
   ExternalLink, Eye, Plane, User, Phone, FileText, Search,
   RefreshCw, Loader2, Shield,
 } from "lucide-react";
+import AirlineLogo from "@/components/AirlineLogo";
 
 interface CheckinTask {
   id: string;
@@ -283,7 +284,7 @@ export default function Checkin() {
 
         {/* Flight info */}
         <div className="flex items-center gap-2 mb-2">
-          <Plane className="w-4 h-4 text-muted-foreground shrink-0" />
+          {airline ? <AirlineLogo iata={airline} size={20} /> : <Plane className="w-4 h-4 text-muted-foreground shrink-0" />}
           <span className="text-sm font-semibold text-foreground">{origin} → {dest}</span>
           {airline && <span className="text-xs text-muted-foreground">{airline}</span>}
           {flightNum && <span className="text-xs font-mono text-muted-foreground">{flightNum}</span>}

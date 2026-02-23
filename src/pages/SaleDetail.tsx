@@ -21,6 +21,8 @@ import AirportAutocomplete from "@/components/AirportAutocomplete";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import FlightEnrichmentDialog from "@/components/FlightEnrichmentDialog";
 import HotelAutocomplete from "@/components/HotelAutocomplete";
+import AirlineLogo, { AirlineLogosStack } from "@/components/AirlineLogo";
+import ClientAutocomplete from "@/components/ClientAutocomplete";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -35,6 +37,7 @@ export default function SaleDetail() {
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summary, setSummary] = useState("");
   const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [clientName, setClientName] = useState("");
 
   // Edit mode
   const [editing, setEditing] = useState(false);
@@ -46,7 +49,14 @@ export default function SaleDetail() {
     const fetchData = async () => {
       const { data: saleData } = await supabase.from("sales").select("*").eq("id", id).single();
       setSale(saleData);
-      if (saleData) setEditForm(saleData);
+      if (saleData) {
+        setEditForm(saleData);
+        // Fetch client name
+        if (saleData.client_id) {
+          const { data: clientData } = await supabase.from("clients").select("display_name").eq("id", saleData.client_id).single();
+          if (clientData) setClientName(clientData.display_name);
+        }
+      }
 
       const { data: segData } = await supabase.from("flight_segments").select("*").eq("sale_id", id).order("segment_order");
       setSegments((segData || []) as FlightSegment[]);
@@ -80,6 +90,7 @@ export default function SaleDetail() {
       const { error } = await supabase.from("sales").update({
         name: editForm.name,
         status: editForm.status,
+        client_id: editForm.client_id || null,
         close_date: editForm.close_date || null,
         payment_method: editForm.payment_method || null,
         origin_iata: editForm.origin_iata || null,
@@ -182,7 +193,14 @@ export default function SaleDetail() {
           <Button variant="ghost" size="sm" onClick={() => navigate("/sales")}><ArrowLeft className="w-4 h-4" /></Button>
           <div>
             <h1 className="text-2xl font-serif text-foreground">{sale.name}</h1>
-            <p className="text-sm text-muted-foreground">{sale.display_id} · {formatDateBR(sale.close_date)}</p>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>{sale.display_id} · {formatDateBR(sale.close_date)}</span>
+              {sale.client_id && clientName && (
+                <button onClick={() => navigate(`/clients/${sale.client_id}`)} className="text-primary hover:underline text-xs font-medium">
+                  👤 {clientName}
+                </button>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -237,6 +255,24 @@ export default function SaleDetail() {
             <h3 className="text-sm font-semibold text-foreground">Dados Gerais</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1"><Label className="text-xs">Nome</Label><Input value={editForm.name || ""} onChange={e => updateEdit("name", e.target.value)} /></div>
+              <div className="space-y-1">
+                <Label className="text-xs">Cliente</Label>
+                <ClientAutocomplete
+                  value={editForm.client_id || null}
+                  displayValue={clientName}
+                  onChange={(clientId, client) => {
+                    updateEdit("client_id", clientId);
+                    setClientName(client?.display_name || "");
+                  }}
+                  onCreateNew={async (name) => {
+                    const { data } = await supabase.from("clients").insert({ display_name: name, created_by: undefined }).select("id, display_name").single();
+                    if (data) {
+                      updateEdit("client_id", (data as any).id);
+                      setClientName((data as any).display_name);
+                    }
+                  }}
+                />
+              </div>
               <div className="space-y-1"><Label className="text-xs">Status</Label>
                 <Select value={editForm.status} onValueChange={v => updateEdit("status", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -366,7 +402,7 @@ export default function SaleDetail() {
             <div className="space-y-2 text-sm">
               {sale.departure_date && <div className="flex justify-between"><span className="text-muted-foreground">Ida</span><span>{formatDateBR(sale.departure_date)}</span></div>}
               {sale.return_date && <div className="flex justify-between"><span className="text-muted-foreground">Volta</span><span>{formatDateBR(sale.return_date)}</span></div>}
-              {sale.airline && <div className="flex justify-between"><span className="text-muted-foreground">Companhia</span><span>{sale.airline}</span></div>}
+              {sale.airline && <div className="flex justify-between items-center"><span className="text-muted-foreground">Companhia</span><span className="flex items-center gap-1.5"><AirlineLogo iata={sale.airline} size={18} />{sale.airline}</span></div>}
               {sale.locators?.length > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Localizador</span><span className="font-mono font-semibold">{sale.locators.join(", ")}</span></div>}
               {sale.miles_program && <div className="flex justify-between"><span className="text-muted-foreground">Milhas</span><Badge variant="outline">{sale.miles_program}</Badge></div>}
             </div>

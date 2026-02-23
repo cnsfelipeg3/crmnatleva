@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Search, Plus, Download, Eye, Plane, Hotel, Filter, X } from "lucide-react";
+import AirlineLogo from "@/components/AirlineLogo";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -27,7 +28,7 @@ interface SaleRow {
   departure_date: string | null; adults: number; children: number;
   products: string[]; received_value: number; margin: number; score: number;
   airline: string | null; locators: string[]; seller_id: string | null;
-  created_at: string;
+  created_at: string; client_id: string | null;
 }
 
 export default function Sales() {
@@ -167,15 +168,26 @@ export default function Sales() {
                   <tr key={sale.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/sales/${sale.id}`)}>
                     <td className="px-4 py-3">
                       <p className="font-medium text-foreground">{sale.name}</p>
-                      <p className="text-xs text-muted-foreground">{sale.display_id} · {formatDateBR(sale.close_date)}</p>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span>{sale.display_id} · {formatDateBR(sale.close_date)}</span>
+                        {sale.client_id && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); navigate(`/clients/${sale.client_id}`); }}
+                            className="text-primary hover:underline font-medium"
+                          >
+                            👤
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-mono text-xs">{sale.origin_iata || "?"} → {sale.destination_iata || "?"}</span>
                     </td>
                     <td className="px-4 py-3">{(sale.adults || 0) + (sale.children || 0)}</td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-1">
-                        {sale.products?.includes("Aéreo") && <Plane className="w-3.5 h-3.5 text-primary" />}
+                      <div className="flex gap-1 items-center">
+                        {sale.airline && <AirlineLogo iata={sale.airline} size={18} />}
+                        {sale.products?.includes("Aéreo") && !sale.airline && <Plane className="w-3.5 h-3.5 text-primary" />}
                         {sale.products?.includes("Hotel") && <Hotel className="w-3.5 h-3.5 text-accent" />}
                       </div>
                     </td>
