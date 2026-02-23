@@ -16,6 +16,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
+import AirportAutocomplete from "@/components/AirportAutocomplete";
+import AirlineAutocomplete from "@/components/AirlineAutocomplete";
+import FlightEnrichmentDialog from "@/components/FlightEnrichmentDialog";
 
 const steps = [
   { id: 1, label: "Upload & IA" },
@@ -81,6 +84,7 @@ export default function NewSale() {
   ]);
 
   const [saving, setSaving] = useState(false);
+  const [enrichmentOpen, setEnrichmentOpen] = useState(false);
 
   const updateForm = (field: string, value: any) => setForm(f => ({ ...f, [field]: value }));
 
@@ -524,11 +528,11 @@ export default function NewSale() {
           <div className="space-y-5 max-w-2xl">
             <h2 className="text-lg font-serif text-foreground">Aéreo</h2>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Origem (IATA)</Label><Input value={form.origin_iata} onChange={(e) => updateForm("origin_iata", e.target.value.toUpperCase())} placeholder="GRU" maxLength={3} className="font-mono" /></div>
-              <div className="space-y-2"><Label>Destino (IATA)</Label><Input value={form.destination_iata} onChange={(e) => updateForm("destination_iata", e.target.value.toUpperCase())} placeholder="FCO" maxLength={3} className="font-mono" /></div>
+              <div className="space-y-2"><Label>Origem (IATA)</Label><AirportAutocomplete value={form.origin_iata} onChange={(iata) => updateForm("origin_iata", iata)} placeholder="GRU" /></div>
+              <div className="space-y-2"><Label>Destino (IATA)</Label><AirportAutocomplete value={form.destination_iata} onChange={(iata) => updateForm("destination_iata", iata)} placeholder="FCO" /></div>
               <div className="space-y-2"><Label>Data Ida</Label><Input type="date" value={form.departure_date} onChange={(e) => updateForm("departure_date", e.target.value)} /></div>
               <div className="space-y-2"><Label>Data Volta</Label><Input type="date" value={form.return_date} onChange={(e) => updateForm("return_date", e.target.value)} /></div>
-              <div className="space-y-2"><Label>Companhia Aérea</Label><Input value={form.airline} onChange={(e) => updateForm("airline", e.target.value)} /></div>
+              <div className="space-y-2"><Label>Companhia Aérea</Label><AirlineAutocomplete value={form.airline} onChange={(iata) => updateForm("airline", iata)} /></div>
               <div className="space-y-2"><Label>Classe</Label>
                 <Select value={form.flight_class} onValueChange={(v) => updateForm("flight_class", v)}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -553,6 +557,25 @@ export default function NewSale() {
           <div className="space-y-5">
             <h2 className="text-lg font-serif text-foreground">Segmentos de Voo</h2>
             <p className="text-sm text-muted-foreground">Detalhe cada trecho do voo para conexões.</p>
+
+            {/* Amadeus enrichment button */}
+            {form.origin_iata && form.destination_iata && form.departure_date && (
+              <Button variant="outline" onClick={() => setEnrichmentOpen(true)} className="w-full">
+                <Plane className="w-4 h-4 mr-2" /> Enriquecer com Amadeus
+              </Button>
+            )}
+
+            <FlightEnrichmentDialog
+              open={enrichmentOpen}
+              onOpenChange={setEnrichmentOpen}
+              origin={form.origin_iata}
+              destination={form.destination_iata}
+              departureDate={form.departure_date}
+              returnDate={form.return_date}
+              airline={form.airline}
+              currentSegments={segments}
+              onApply={(newSegs) => setSegments(newSegs)}
+            />
 
             {/* Preview timeline */}
             {segments.filter(s => s.origin_iata && s.destination_iata).length > 0 && (
