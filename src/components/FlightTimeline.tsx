@@ -1,5 +1,6 @@
 import { Plane, Clock, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatTimeBR } from "@/lib/dateFormat";
 
 export interface FlightSegment {
   id?: string;
@@ -69,7 +70,7 @@ export default function FlightTimeline({ segments, direction }: Props) {
                 <div className="text-center w-16 shrink-0">
                   <p className="text-lg font-bold font-mono text-primary">{seg.origin_iata}</p>
                   {seg.departure_time && (
-                    <p className="text-xs text-muted-foreground">{seg.departure_time}</p>
+                    <p className="text-xs text-muted-foreground">{formatTimeBR(seg.departure_time)}</p>
                   )}
                 </div>
 
@@ -101,7 +102,7 @@ export default function FlightTimeline({ segments, direction }: Props) {
                 <div className="text-center w-16 shrink-0">
                   <p className="text-lg font-bold font-mono text-primary">{seg.destination_iata}</p>
                   {seg.arrival_time && (
-                    <p className="text-xs text-muted-foreground">{seg.arrival_time}</p>
+                    <p className="text-xs text-muted-foreground">{formatTimeBR(seg.arrival_time)}</p>
                   )}
                 </div>
               </div>
