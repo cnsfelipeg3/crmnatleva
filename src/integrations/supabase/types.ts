@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      airline_checkin_rules: {
+        Row: {
+          airline_iata: string
+          airline_name: string
+          app_deeplink: string | null
+          checkin_url: string | null
+          created_at: string
+          default_window_hours: number
+          earliest_checkin_hours: number
+          id: string
+          latest_checkin_minutes_before_departure: number
+          notes: string | null
+        }
+        Insert: {
+          airline_iata: string
+          airline_name?: string
+          app_deeplink?: string | null
+          checkin_url?: string | null
+          created_at?: string
+          default_window_hours?: number
+          earliest_checkin_hours?: number
+          id?: string
+          latest_checkin_minutes_before_departure?: number
+          notes?: string | null
+        }
+        Update: {
+          airline_iata?: string
+          airline_name?: string
+          app_deeplink?: string | null
+          checkin_url?: string | null
+          created_at?: string
+          default_window_hours?: number
+          earliest_checkin_hours?: number
+          id?: string
+          latest_checkin_minutes_before_departure?: number
+          notes?: string | null
+        }
+        Relationships: []
+      }
       attachments: {
         Row: {
           category: string
@@ -92,6 +131,87 @@ export type Database = {
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checkin_tasks: {
+        Row: {
+          assigned_to_user_id: string | null
+          checkin_due_datetime_utc: string | null
+          checkin_open_datetime_utc: string | null
+          completed_at: string | null
+          completed_by_user_id: string | null
+          created_at: string
+          created_by: string
+          departure_datetime_utc: string | null
+          direction: string
+          evidence_attachment_ids: string[] | null
+          id: string
+          last_notified_at: string | null
+          notes: string | null
+          priority_score: number
+          sale_id: string
+          seat_info: string | null
+          segment_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to_user_id?: string | null
+          checkin_due_datetime_utc?: string | null
+          checkin_open_datetime_utc?: string | null
+          completed_at?: string | null
+          completed_by_user_id?: string | null
+          created_at?: string
+          created_by?: string
+          departure_datetime_utc?: string | null
+          direction?: string
+          evidence_attachment_ids?: string[] | null
+          id?: string
+          last_notified_at?: string | null
+          notes?: string | null
+          priority_score?: number
+          sale_id: string
+          seat_info?: string | null
+          segment_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to_user_id?: string | null
+          checkin_due_datetime_utc?: string | null
+          checkin_open_datetime_utc?: string | null
+          completed_at?: string | null
+          completed_by_user_id?: string | null
+          created_at?: string
+          created_by?: string
+          departure_datetime_utc?: string | null
+          direction?: string
+          evidence_attachment_ids?: string[] | null
+          id?: string
+          last_notified_at?: string | null
+          notes?: string | null
+          priority_score?: number
+          sale_id?: string
+          seat_info?: string | null
+          segment_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkin_tasks_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkin_tasks_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "flight_segments"
             referencedColumns: ["id"]
           },
         ]
