@@ -1,1 +1,4 @@
 project_id = "mexlhkqcmiaktjxsyvod"
+
+[functions.extract-sale-data]
+verify_jwt = false
