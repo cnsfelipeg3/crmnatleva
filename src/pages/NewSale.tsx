@@ -19,6 +19,7 @@ import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline"
 import AirportAutocomplete from "@/components/AirportAutocomplete";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import FlightEnrichmentDialog from "@/components/FlightEnrichmentDialog";
+import HotelAutocomplete from "@/components/HotelAutocomplete";
 
 const steps = [
   { id: 1, label: "Upload & IA" },
@@ -71,6 +72,8 @@ export default function NewSale() {
     airline: "", flight_class: "", locator: "", connections: "", miles_program: "",
     emission_source: "",
     hotel_name: "", hotel_room: "", hotel_meal_plan: "", hotel_reservation_code: "",
+    hotel_checkin_date: "", hotel_checkout_date: "",
+    hotel_city: "", hotel_country: "", hotel_address: "", hotel_lat: 0, hotel_lng: 0, hotel_place_id: "",
     received_value: "", 
     // Cost items
     air_cash: "", air_miles_qty: "", air_miles_price: "", air_taxes: "",
@@ -262,6 +265,14 @@ export default function NewSale() {
         hotel_room: form.hotel_room || null,
         hotel_meal_plan: form.hotel_meal_plan || null,
         hotel_reservation_code: form.hotel_reservation_code || null,
+        hotel_checkin_date: form.hotel_checkin_date || null,
+        hotel_checkout_date: form.hotel_checkout_date || null,
+        hotel_city: form.hotel_city || null,
+        hotel_country: form.hotel_country || null,
+        hotel_address: form.hotel_address || null,
+        hotel_lat: form.hotel_lat || null,
+        hotel_lng: form.hotel_lng || null,
+        hotel_place_id: form.hotel_place_id || null,
         adults: form.adults,
         children: form.children,
         children_ages: form.children_ages ? form.children_ages.split(",").map(a => parseInt(a.trim())).filter(Boolean) : [],
@@ -346,6 +357,17 @@ export default function NewSale() {
       }
 
       toast({ title: "Venda salva com sucesso!" });
+
+      // Auto-generate checkin and lodging tasks
+      try {
+        await Promise.all([
+          supabase.functions.invoke("checkin-generate"),
+          supabase.functions.invoke("lodging-generate"),
+        ]);
+      } catch (genErr) {
+        console.warn("Auto-generate tasks warning:", genErr);
+      }
+
       navigate("/sales");
     } catch (err: any) {
       console.error(err);
@@ -647,7 +669,25 @@ export default function NewSale() {
           <div className="space-y-5 max-w-2xl">
             <h2 className="text-lg font-serif text-foreground">Hotel</h2>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Hotel</Label><Input value={form.hotel_name} onChange={(e) => updateForm("hotel_name", e.target.value)} /></div>
+              <div className="col-span-2 space-y-2">
+                <Label>Hotel</Label>
+                <HotelAutocomplete
+                  value={form.hotel_name}
+                  onChange={(name) => updateForm("hotel_name", name)}
+                  onSelect={(hotel) => {
+                    updateForm("hotel_name", hotel.name);
+                    updateForm("hotel_city", hotel.city);
+                    updateForm("hotel_country", hotel.country);
+                    updateForm("hotel_address", hotel.address);
+                    updateForm("hotel_lat", hotel.lat);
+                    updateForm("hotel_lng", hotel.lng);
+                    updateForm("hotel_place_id", hotel.place_id);
+                  }}
+                />
+                {form.hotel_city && (
+                  <p className="text-[10px] text-muted-foreground">📍 {[form.hotel_city, form.hotel_country].filter(Boolean).join(", ")}</p>
+                )}
+              </div>
               <div className="space-y-2"><Label>Quarto</Label><Input value={form.hotel_room} onChange={(e) => updateForm("hotel_room", e.target.value)} /></div>
               <div className="space-y-2"><Label>Alimentação</Label>
                 <Select value={form.hotel_meal_plan} onValueChange={(v) => updateForm("hotel_meal_plan", v)}>
@@ -662,6 +702,8 @@ export default function NewSale() {
                 </Select>
               </div>
               <div className="space-y-2"><Label>Código Reserva</Label><Input value={form.hotel_reservation_code} onChange={(e) => updateForm("hotel_reservation_code", e.target.value)} className="font-mono" /></div>
+              <div className="space-y-2"><Label>Check-in</Label><Input type="date" value={form.hotel_checkin_date} onChange={(e) => updateForm("hotel_checkin_date", e.target.value)} /></div>
+              <div className="space-y-2"><Label>Check-out</Label><Input type="date" value={form.hotel_checkout_date} onChange={(e) => updateForm("hotel_checkout_date", e.target.value)} /></div>
             </div>
           </div>
         )}

@@ -650,10 +650,16 @@ export type Database = {
           emission_source: string | null
           emission_status: string | null
           flight_class: string | null
+          hotel_address: string | null
           hotel_checkin_date: string | null
           hotel_checkout_date: string | null
+          hotel_city: string | null
+          hotel_country: string | null
+          hotel_lat: number | null
+          hotel_lng: number | null
           hotel_meal_plan: string | null
           hotel_name: string | null
+          hotel_place_id: string | null
           hotel_reservation_code: string | null
           hotel_room: string | null
           id: string
@@ -696,10 +702,16 @@ export type Database = {
           emission_source?: string | null
           emission_status?: string | null
           flight_class?: string | null
+          hotel_address?: string | null
           hotel_checkin_date?: string | null
           hotel_checkout_date?: string | null
+          hotel_city?: string | null
+          hotel_country?: string | null
+          hotel_lat?: number | null
+          hotel_lng?: number | null
           hotel_meal_plan?: string | null
           hotel_name?: string | null
+          hotel_place_id?: string | null
           hotel_reservation_code?: string | null
           hotel_room?: string | null
           id?: string
@@ -742,10 +754,16 @@ export type Database = {
           emission_source?: string | null
           emission_status?: string | null
           flight_class?: string | null
+          hotel_address?: string | null
           hotel_checkin_date?: string | null
           hotel_checkout_date?: string | null
+          hotel_city?: string | null
+          hotel_country?: string | null
+          hotel_lat?: number | null
+          hotel_lng?: number | null
           hotel_meal_plan?: string | null
           hotel_name?: string | null
+          hotel_place_id?: string | null
           hotel_reservation_code?: string | null
           hotel_room?: string | null
           id?: string
