@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.lodging-generate]
 verify_jwt = false
+
+[functions.backfill-passengers]
+verify_jwt = false
