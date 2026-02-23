@@ -16,6 +16,9 @@ import {
 import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X } from "lucide-react";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import { useToast } from "@/hooks/use-toast";
+import AirportAutocomplete from "@/components/AirportAutocomplete";
+import AirlineAutocomplete from "@/components/AirlineAutocomplete";
+import FlightEnrichmentDialog from "@/components/FlightEnrichmentDialog";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -35,6 +38,7 @@ export default function SaleDetail() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
+  const [enrichmentOpen, setEnrichmentOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -220,13 +224,29 @@ export default function SaleDetail() {
           <Card className="p-5 glass-card space-y-4">
             <h3 className="text-sm font-semibold text-foreground">Aéreo</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label className="text-xs">Origem</Label><Input value={editForm.origin_iata || ""} onChange={e => updateEdit("origin_iata", e.target.value.toUpperCase())} maxLength={3} className="font-mono" /></div>
-              <div className="space-y-1"><Label className="text-xs">Destino</Label><Input value={editForm.destination_iata || ""} onChange={e => updateEdit("destination_iata", e.target.value.toUpperCase())} maxLength={3} className="font-mono" /></div>
+              <div className="space-y-1"><Label className="text-xs">Origem</Label><AirportAutocomplete value={editForm.origin_iata || ""} onChange={(iata) => updateEdit("origin_iata", iata)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Destino</Label><AirportAutocomplete value={editForm.destination_iata || ""} onChange={(iata) => updateEdit("destination_iata", iata)} /></div>
               <div className="space-y-1"><Label className="text-xs">Ida</Label><Input type="date" value={editForm.departure_date || ""} onChange={e => updateEdit("departure_date", e.target.value)} /></div>
               <div className="space-y-1"><Label className="text-xs">Volta</Label><Input type="date" value={editForm.return_date || ""} onChange={e => updateEdit("return_date", e.target.value)} /></div>
-              <div className="space-y-1"><Label className="text-xs">Companhia</Label><Input value={editForm.airline || ""} onChange={e => updateEdit("airline", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Companhia</Label><AirlineAutocomplete value={editForm.airline || ""} onChange={(iata) => updateEdit("airline", iata)} /></div>
               <div className="space-y-1"><Label className="text-xs">Localizador</Label><Input value={editForm.locators?.join(", ") || ""} onChange={e => updateEdit("locators", e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean))} className="font-mono" /></div>
             </div>
+            {editForm.origin_iata && editForm.destination_iata && editForm.departure_date && (
+              <Button variant="outline" size="sm" onClick={() => setEnrichmentOpen(true)} className="w-full mt-2">
+                <Plane className="w-4 h-4 mr-2" /> Enriquecer com Amadeus
+              </Button>
+            )}
+            <FlightEnrichmentDialog
+              open={enrichmentOpen}
+              onOpenChange={setEnrichmentOpen}
+              origin={editForm.origin_iata || ""}
+              destination={editForm.destination_iata || ""}
+              departureDate={editForm.departure_date || ""}
+              returnDate={editForm.return_date}
+              airline={editForm.airline}
+              currentSegments={segments}
+              onApply={(newSegs) => setSegments(newSegs)}
+            />
           </Card>
           <Card className="p-5 glass-card space-y-4">
             <h3 className="text-sm font-semibold text-foreground">Financeiro</h3>
