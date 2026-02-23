@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Search, Plus, AlertTriangle, User } from "lucide-react";
+import { Search, Plus, AlertTriangle, User, RefreshCw, Loader2, Plane } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import AIExtractButton from "@/components/AIExtractButton";
+import { useNavigate } from "react-router-dom";
 
 interface Passenger {
   id: string;
@@ -28,6 +29,12 @@ interface Passenger {
   address_neighborhood: string | null;
   address_city: string | null;
   address_state: string | null;
+}
+
+interface SaleLink {
+  sale_id: string;
+  sale_name: string;
+  sale_display_id: string;
 }
 
 function formatCpf(v: string) {
@@ -61,11 +68,15 @@ function isPassportExpiringSoon(expiry: string | null): boolean {
 
 export default function Passengers() {
   const [passengers, setPassengers] = useState<Passenger[]>([]);
+  const [saleLinks, setSaleLinks] = useState<Record<string, SaleLink[]>>({});
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailPax, setDetailPax] = useState<Passenger | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     full_name: "", cpf: "", birth_date: "", passport_number: "",
@@ -79,9 +90,45 @@ export default function Passengers() {
     if (error) { console.error(error); return; }
     setPassengers((data || []) as Passenger[]);
     setLoading(false);
+
+    // Fetch sale links for all passengers
+    const { data: links } = await supabase
+      .from("sale_passengers")
+      .select("passenger_id, sale_id, sales:sale_id(name, display_id)");
+    
+    if (links) {
+      const map: Record<string, SaleLink[]> = {};
+      for (const link of links as any[]) {
+        const pId = link.passenger_id;
+        if (!map[pId]) map[pId] = [];
+        map[pId].push({
+          sale_id: link.sale_id,
+          sale_name: link.sales?.name || "",
+          sale_display_id: link.sales?.display_id || "",
+        });
+      }
+      setSaleLinks(map);
+    }
   };
 
   useEffect(() => { fetchPassengers(); }, []);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("backfill-passengers");
+      if (error) throw error;
+      toast({
+        title: "Sincronização concluída!",
+        description: `${data.created} criados, ${data.linked} vinculados, ${data.skipped} atualizados`,
+      });
+      await fetchPassengers();
+    } catch (err: any) {
+      toast({ title: "Erro na sincronização", description: err.message, variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleCepLookup = async (cep: string) => {
     const clean = cep.replace(/\D/g, "");
@@ -156,101 +203,104 @@ export default function Passengers() {
 
   return (
     <div className="p-6 space-y-5 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-serif text-foreground">Passageiros</h1>
           <p className="text-sm text-muted-foreground">{passengers.length} passageiros cadastrados</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Passageiro</Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Cadastrar Passageiro</DialogTitle>
-            </DialogHeader>
-
-            {/* AI Extraction */}
-            <AIExtractButton onExtracted={handleAIExtract} compact />
-
-            <form onSubmit={handleSubmit} className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label>Nome Completo *</Label>
-                <Input value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} required />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
+            {syncing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+            Sincronizar das Vendas
+          </Button>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Passageiro</Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Cadastrar Passageiro</DialogTitle>
+              </DialogHeader>
+              <AIExtractButton onExtracted={handleAIExtract} compact />
+              <form onSubmit={handleSubmit} className="space-y-4 pt-2">
                 <div className="space-y-2">
-                  <Label>CPF</Label>
-                  <Input value={form.cpf} onChange={(e) => setForm(f => ({ ...f, cpf: formatCpf(e.target.value) }))} placeholder="000.000.000-00" />
+                  <Label>Nome Completo *</Label>
+                  <Input value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} required />
                 </div>
-                <div className="space-y-2">
-                  <Label>Data de Nascimento</Label>
-                  <Input type="date" value={form.birth_date} onChange={(e) => setForm(f => ({ ...f, birth_date: e.target.value }))} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Telefone com DDD</Label>
-                <Input value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} placeholder="(11) 99999-9999" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Passaporte</Label>
-                  <Input value={form.passport_number} onChange={(e) => setForm(f => ({ ...f, passport_number: e.target.value }))} />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>CPF</Label>
+                    <Input value={form.cpf} onChange={(e) => setForm(f => ({ ...f, cpf: formatCpf(e.target.value) }))} placeholder="000.000.000-00" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Data de Nascimento</Label>
+                    <Input type="date" value={form.birth_date} onChange={(e) => setForm(f => ({ ...f, birth_date: e.target.value }))} />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Vencimento Passaporte</Label>
-                  <Input type="date" value={form.passport_expiry} onChange={(e) => setForm(f => ({ ...f, passport_expiry: e.target.value }))} />
+                  <Label>Telefone com DDD</Label>
+                  <Input value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} placeholder="(11) 99999-9999" />
                 </div>
-              </div>
-              <div className="border-t pt-3">
-                <h4 className="text-sm font-semibold mb-3">Endereço</h4>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label>CEP</Label>
-                    <Input
-                      value={form.address_cep}
-                      onChange={(e) => {
-                        const v = formatCep(e.target.value);
-                        setForm(f => ({ ...f, address_cep: v }));
-                        if (v.replace(/\D/g, "").length === 8) handleCepLookup(v);
-                      }}
-                      placeholder="00000-000"
-                    />
+                    <Label>Passaporte</Label>
+                    <Input value={form.passport_number} onChange={(e) => setForm(f => ({ ...f, passport_number: e.target.value }))} />
                   </div>
-                  <div className="space-y-2 col-span-2">
-                    <Label>Rua</Label>
-                    <Input value={form.address_street} onChange={(e) => setForm(f => ({ ...f, address_street: e.target.value }))} />
+                  <div className="space-y-2">
+                    <Label>Vencimento Passaporte</Label>
+                    <Input type="date" value={form.passport_expiry} onChange={(e) => setForm(f => ({ ...f, passport_expiry: e.target.value }))} />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3 mt-3">
-                  <div className="space-y-2">
-                    <Label>Número</Label>
-                    <Input value={form.address_number} onChange={(e) => setForm(f => ({ ...f, address_number: e.target.value }))} />
+                <div className="border-t pt-3">
+                  <h4 className="text-sm font-semibold mb-3">Endereço</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-2">
+                      <Label>CEP</Label>
+                      <Input
+                        value={form.address_cep}
+                        onChange={(e) => {
+                          const v = formatCep(e.target.value);
+                          setForm(f => ({ ...f, address_cep: v }));
+                          if (v.replace(/\D/g, "").length === 8) handleCepLookup(v);
+                        }}
+                        placeholder="00000-000"
+                      />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label>Rua</Label>
+                      <Input value={form.address_street} onChange={(e) => setForm(f => ({ ...f, address_street: e.target.value }))} />
+                    </div>
                   </div>
-                  <div className="space-y-2 col-span-2">
-                    <Label>Complemento</Label>
-                    <Input value={form.address_complement} onChange={(e) => setForm(f => ({ ...f, address_complement: e.target.value }))} />
+                  <div className="grid grid-cols-3 gap-3 mt-3">
+                    <div className="space-y-2">
+                      <Label>Número</Label>
+                      <Input value={form.address_number} onChange={(e) => setForm(f => ({ ...f, address_number: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2 col-span-2">
+                      <Label>Complemento</Label>
+                      <Input value={form.address_complement} onChange={(e) => setForm(f => ({ ...f, address_complement: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3 mt-3">
+                    <div className="space-y-2">
+                      <Label>Bairro</Label>
+                      <Input value={form.address_neighborhood} onChange={(e) => setForm(f => ({ ...f, address_neighborhood: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Cidade</Label>
+                      <Input value={form.address_city} onChange={(e) => setForm(f => ({ ...f, address_city: e.target.value }))} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>UF</Label>
+                      <Input value={form.address_state} onChange={(e) => setForm(f => ({ ...f, address_state: e.target.value }))} maxLength={2} />
+                    </div>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3 mt-3">
-                  <div className="space-y-2">
-                    <Label>Bairro</Label>
-                    <Input value={form.address_neighborhood} onChange={(e) => setForm(f => ({ ...f, address_neighborhood: e.target.value }))} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Cidade</Label>
-                    <Input value={form.address_city} onChange={(e) => setForm(f => ({ ...f, address_city: e.target.value }))} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>UF</Label>
-                    <Input value={form.address_state} onChange={(e) => setForm(f => ({ ...f, address_state: e.target.value }))} maxLength={2} />
-                  </div>
-                </div>
-              </div>
-              <Button type="submit" className="w-full">Salvar Passageiro</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <Button type="submit" className="w-full">Salvar Passageiro</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="relative max-w-md">
@@ -261,13 +311,23 @@ export default function Passengers() {
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          {search ? "Nenhum passageiro encontrado." : "Nenhum passageiro cadastrado ainda."}
+        <div className="text-center py-16 space-y-3">
+          <User className="w-10 h-10 text-muted-foreground/40 mx-auto" />
+          <p className="text-muted-foreground">{search ? "Nenhum passageiro encontrado." : "Nenhum passageiro cadastrado ainda."}</p>
+          {!search && (
+            <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
+              <RefreshCw className="w-4 h-4 mr-1" /> Sincronizar das Vendas
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((p) => (
-            <Card key={p.id} className="p-4 glass-card">
+            <Card
+              key={p.id}
+              className="p-4 glass-card cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => setDetailPax(p)}
+            >
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <User className="w-5 h-5 text-primary" />
@@ -280,6 +340,11 @@ export default function Passengers() {
                     <p className="text-xs text-muted-foreground">{p.address_city}/{p.address_state}</p>
                   )}
                   <div className="flex gap-1 mt-2 flex-wrap">
+                    {(saleLinks[p.id]?.length || 0) > 0 && (
+                      <Badge variant="secondary" className="text-[10px]">
+                        <Plane className="w-3 h-3 mr-0.5" /> {saleLinks[p.id].length} viagem(ns)
+                      </Badge>
+                    )}
                     {p.passport_number && (
                       <Badge variant="outline" className="text-[10px]">
                         Passaporte: {p.passport_number}
@@ -287,7 +352,7 @@ export default function Passengers() {
                     )}
                     {isPassportExpiringSoon(p.passport_expiry) && (
                       <Badge variant="destructive" className="text-[10px] flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3" /> Passaporte vencendo
+                        <AlertTriangle className="w-3 h-3" /> Vencendo
                       </Badge>
                     )}
                   </div>
@@ -297,6 +362,52 @@ export default function Passengers() {
           ))}
         </div>
       )}
+
+      {/* Detail dialog */}
+      <Dialog open={!!detailPax} onOpenChange={(open) => !open && setDetailPax(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" />
+              {detailPax?.full_name}
+            </DialogTitle>
+          </DialogHeader>
+          {detailPax && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                {detailPax.cpf && <><span className="text-muted-foreground">CPF</span><span className="font-mono">{detailPax.cpf}</span></>}
+                {detailPax.birth_date && <><span className="text-muted-foreground">Nascimento</span><span>{detailPax.birth_date}</span></>}
+                {detailPax.phone && <><span className="text-muted-foreground">Telefone</span><span>{detailPax.phone}</span></>}
+                {detailPax.passport_number && <><span className="text-muted-foreground">Passaporte</span><span className="font-mono">{detailPax.passport_number}</span></>}
+                {detailPax.passport_expiry && <><span className="text-muted-foreground">Validade</span><span>{detailPax.passport_expiry}</span></>}
+                {detailPax.address_city && <><span className="text-muted-foreground">Cidade</span><span>{detailPax.address_city}/{detailPax.address_state}</span></>}
+                {detailPax.address_street && <><span className="text-muted-foreground">Endereço</span><span>{detailPax.address_street}, {detailPax.address_number}</span></>}
+              </div>
+
+              {/* Linked sales */}
+              {(saleLinks[detailPax.id]?.length || 0) > 0 && (
+                <div className="border-t pt-3">
+                  <h4 className="text-sm font-semibold mb-2 flex items-center gap-1">
+                    <Plane className="w-4 h-4" /> Viagens Vinculadas
+                  </h4>
+                  <div className="space-y-1">
+                    {saleLinks[detailPax.id].map((link) => (
+                      <button
+                        key={link.sale_id}
+                        onClick={() => { setDetailPax(null); navigate(`/sales/${link.sale_id}`); }}
+                        className="w-full text-left px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted text-sm transition-colors flex items-center justify-between"
+                      >
+                        <span className="font-medium">{link.sale_name}</span>
+                        <Badge variant="outline" className="text-[10px]">{link.sale_display_id}</Badge>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

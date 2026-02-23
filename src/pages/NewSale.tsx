@@ -362,6 +362,63 @@ export default function NewSale() {
         });
       }
 
+      // Auto-upsert passengers from extraction
+      if (extraction?.fields) {
+        const paxDetails: any[] = (extraction.fields as any).passenger_details || [];
+        const paxNames: any[] = (extraction.fields as any).passenger_names || [];
+        const paxList: { full_name: string; cpf?: string; phone?: string; passport_number?: string; birth_date?: string }[] = [];
+
+        for (const d of paxDetails) {
+          const name = d.full_name || d.value;
+          if (name && typeof name === "string" && name.trim().length >= 2) {
+            paxList.push({ full_name: name.trim(), cpf: d.cpf, phone: d.phone, passport_number: d.passport_number, birth_date: d.birth_date });
+          }
+        }
+        if (paxList.length === 0) {
+          for (const n of paxNames) {
+            const name = n.value || n;
+            if (name && typeof name === "string" && name.trim().length >= 2) {
+              paxList.push({ full_name: name.trim() });
+            }
+          }
+        }
+
+        for (const pax of paxList) {
+          const cleanCpf = pax.cpf?.replace(/\D/g, "") || null;
+          let passengerId: string | null = null;
+
+          // Match by CPF
+          if (cleanCpf && cleanCpf.length === 11) {
+            const { data: byCpf } = await supabase.from("passengers").select("id").eq("cpf", cleanCpf).maybeSingle();
+            if (byCpf) passengerId = byCpf.id;
+          }
+          // Match by name
+          if (!passengerId) {
+            const { data: byName } = await supabase.from("passengers").select("id, full_name").ilike("full_name", pax.full_name).maybeSingle();
+            if (byName) passengerId = byName.id;
+          }
+          // Create if not found
+          if (!passengerId) {
+            const { data: newPax } = await supabase.from("passengers").insert({
+              full_name: pax.full_name,
+              cpf: cleanCpf && cleanCpf.length === 11 ? cleanCpf : null,
+              phone: pax.phone || null,
+              passport_number: pax.passport_number || null,
+              birth_date: pax.birth_date || null,
+              created_by: user?.id,
+            }).select("id").single();
+            if (newPax) passengerId = newPax.id;
+          }
+          // Link to sale
+          if (passengerId) {
+            const { data: existingLink } = await supabase.from("sale_passengers").select("id").eq("sale_id", saleId).eq("passenger_id", passengerId).maybeSingle();
+            if (!existingLink) {
+              await supabase.from("sale_passengers").insert({ sale_id: saleId, passenger_id: passengerId });
+            }
+          }
+        }
+      }
+
       toast({ title: "Venda salva com sucesso!" });
 
       // Auto-generate checkin and lodging tasks
