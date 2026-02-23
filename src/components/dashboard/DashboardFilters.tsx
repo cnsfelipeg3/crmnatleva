@@ -1,0 +1,73 @@
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Plus, Filter } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+interface Props {
+  period: string;
+  setPeriod: (v: string) => void;
+  seller: string;
+  setSeller: (v: string) => void;
+  destination: string;
+  setDestination: (v: string) => void;
+  product: string;
+  setProduct: (v: string) => void;
+  sellers: string[];
+  destinations: string[];
+}
+
+export default function DashboardFilters({
+  period, setPeriod, seller, setSeller, destination, setDestination,
+  product, setProduct, sellers, destinations,
+}: Props) {
+  const navigate = useNavigate();
+
+  return (
+    <div className="flex items-center justify-between flex-wrap gap-3">
+      <div>
+        <h1 className="text-2xl font-serif text-foreground">Dashboard</h1>
+        <p className="text-sm text-muted-foreground">Visão estratégica NatLeva</p>
+      </div>
+      <div className="flex gap-2 items-center flex-wrap">
+        <Select value={period} onValueChange={setPeriod}>
+          <SelectTrigger className="w-[130px] h-9 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todo período</SelectItem>
+            <SelectItem value="30d">Últimos 30 dias</SelectItem>
+            <SelectItem value="90d">Últimos 90 dias</SelectItem>
+            <SelectItem value="12m">Último ano</SelectItem>
+          </SelectContent>
+        </Select>
+        {sellers.length > 0 && (
+          <Select value={seller} onValueChange={setSeller}>
+            <SelectTrigger className="w-[140px] h-9 text-xs"><SelectValue placeholder="Vendedor" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos vendedores</SelectItem>
+              {sellers.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+        {destinations.length > 0 && (
+          <Select value={destination} onValueChange={setDestination}>
+            <SelectTrigger className="w-[120px] h-9 text-xs"><SelectValue placeholder="Destino" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos destinos</SelectItem>
+              {destinations.slice(0, 15).map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+        <Select value={product} onValueChange={setProduct}>
+          <SelectTrigger className="w-[110px] h-9 text-xs"><SelectValue placeholder="Produto" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="Aéreo">Aéreo</SelectItem>
+            <SelectItem value="Hotel">Hotel</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button size="sm" onClick={() => navigate("/sales/new")}>
+          <Plus className="w-4 h-4 mr-1" /> Nova Venda
+        </Button>
+      </div>
+    </div>
+  );
+}

@@ -1,26 +1,15 @@
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  DollarSign, TrendingUp, Users, Plane, Target, Plus, List,
-  AlertTriangle, FileWarning, ShieldAlert, Clock,
-} from "lucide-react";
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, LineChart, Line, Legend,
-} from "recharts";
-
-const RoutesMap = lazy(() => import("@/components/RoutesMap"));
-const ClientDistributionMap = lazy(() => import("@/components/ClientDistributionMap"));
-
-const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+import DashboardFilters from "@/components/dashboard/DashboardFilters";
+import KpiCards from "@/components/dashboard/KpiCards";
+import FinancialSection from "@/components/dashboard/FinancialSection";
+import CommercialSection from "@/components/dashboard/CommercialSection";
+import OperationalSection from "@/components/dashboard/OperationalSection";
+import ClientsSection from "@/components/dashboard/ClientsSection";
+import GeographicSection from "@/components/dashboard/GeographicSection";
+import MilesSection from "@/components/dashboard/MilesSection";
+import AlertsSection from "@/components/dashboard/AlertsSection";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface Sale {
   id: string; name: string; display_id: string; status: string;
@@ -32,331 +21,156 @@ interface Sale {
   created_at: string; close_date: string | null;
   emission_status: string | null; hotel_name: string | null;
   is_international: boolean | null; miles_program: string | null;
-  seller_id: string | null;
+  seller_id: string | null; client_id: string | null;
+}
+
+interface Profile { id: string; full_name: string; }
+interface Client { id: string; display_name: string; created_at: string; }
+interface Segment { sale_id: string; origin_iata: string; destination_iata: string; }
+interface CostItem {
+  sale_id: string; category: string; miles_quantity: number | null;
+  miles_price_per_thousand: number | null; miles_program: string | null;
+  cash_value: number | null; total_item_cost: number | null;
+}
+interface CheckinTask {
+  status: string; checkin_open_datetime_utc: string | null;
+  completed_at: string | null; created_at: string;
+}
+interface LodgingTask {
+  status: string; milestone: string;
+  scheduled_at_utc: string | null; issue_type: string | null;
 }
 
 export default function Dashboard() {
   const [sales, setSales] = useState<Sale[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [segments, setSegments] = useState<Segment[]>([]);
+  const [costItems, setCostItems] = useState<CostItem[]>([]);
+  const [checkinTasks, setCheckinTasks] = useState<CheckinTask[]>([]);
+  const [lodgingTasks, setLodgingTasks] = useState<LodgingTask[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [period, setPeriod] = useState("all");
-  const navigate = useNavigate();
+  const [seller, setSeller] = useState("all");
+  const [destination, setDestination] = useState("all");
+  const [product, setProduct] = useState("all");
 
   useEffect(() => {
-    supabase.from("sales").select("*").order("created_at", { ascending: false }).then(({ data }) => {
-      setSales((data || []) as Sale[]);
+    Promise.all([
+      supabase.from("sales").select("*").order("created_at", { ascending: false }),
+      supabase.from("profiles").select("id, full_name"),
+      supabase.from("clients").select("id, display_name, created_at"),
+      supabase.from("flight_segments").select("sale_id, origin_iata, destination_iata"),
+      supabase.from("cost_items").select("sale_id, category, miles_quantity, miles_price_per_thousand, miles_program, cash_value, total_item_cost"),
+      supabase.from("checkin_tasks").select("status, checkin_open_datetime_utc, completed_at, created_at"),
+      supabase.from("lodging_confirmation_tasks").select("status, milestone, scheduled_at_utc, issue_type"),
+    ]).then(([salesRes, profilesRes, clientsRes, segmentsRes, costsRes, checkinRes, lodgingRes]) => {
+      setSales((salesRes.data || []) as Sale[]);
+      setProfiles((profilesRes.data || []) as Profile[]);
+      setClients((clientsRes.data || []) as Client[]);
+      setSegments((segmentsRes.data || []) as Segment[]);
+      setCostItems((costsRes.data || []) as CostItem[]);
+      setCheckinTasks((checkinRes.data || []) as CheckinTask[]);
+      setLodgingTasks((lodgingRes.data || []) as LodgingTask[]);
       setLoading(false);
     });
   }, []);
 
-  const filtered = useMemo(() => {
-    if (period === "all") return sales;
+  const sellerNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    profiles.forEach(p => { map[p.id] = p.full_name; });
+    return map;
+  }, [profiles]);
+
+  const sellersList = useMemo(() =>
+    profiles.map(p => p.full_name).filter(Boolean).sort(),
+  [profiles]);
+
+  const destinationsList = useMemo(() => {
+    const s = new Set<string>();
+    sales.forEach(sale => { if (sale.destination_iata) s.add(sale.destination_iata); });
+    return Array.from(s).sort();
+  }, [sales]);
+
+  const periodCutoff = useMemo(() => {
+    if (period === "all") return null;
     const now = new Date();
-    const months = period === "30d" ? 1 : period === "90d" ? 3 : period === "12m" ? 12 : 0;
-    const cutoff = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
-    return sales.filter(s => new Date(s.created_at) >= cutoff);
-  }, [sales, period]);
+    const months = period === "30d" ? 1 : period === "90d" ? 3 : 12;
+    return new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+  }, [period]);
 
-  const totalRevenue = filtered.reduce((s, v) => s + (v.received_value || 0), 0);
-  const totalCost = filtered.reduce((s, v) => s + (v.total_cost || 0), 0);
-  const totalProfit = totalRevenue - totalCost;
-  const avgMargin = filtered.length > 0 ? filtered.reduce((s, v) => s + (v.margin || 0), 0) / filtered.length : 0;
-  const avgTicket = filtered.length > 0 ? totalRevenue / filtered.length : 0;
-  const totalPax = filtered.reduce((s, v) => s + (v.adults || 0) + (v.children || 0), 0);
+  const filtered = useMemo(() => {
+    let result = sales;
+    if (periodCutoff) result = result.filter(s => new Date(s.created_at) >= periodCutoff);
+    if (seller !== "all") {
+      const sellerId = profiles.find(p => p.full_name === seller)?.id;
+      if (sellerId) result = result.filter(s => s.seller_id === sellerId);
+    }
+    if (destination !== "all") result = result.filter(s => s.destination_iata === destination);
+    if (product !== "all") result = result.filter(s => (s.products || []).includes(product));
+    return result;
+  }, [sales, periodCutoff, seller, destination, product, profiles]);
 
-  const kpis = [
-    { label: "Receita", value: fmt(totalRevenue), icon: DollarSign, color: "text-success" },
-    { label: "Lucro", value: fmt(totalProfit), icon: TrendingUp, color: "text-primary" },
-    { label: "Margem", value: `${avgMargin.toFixed(1)}%`, icon: Target, color: "text-accent" },
-    { label: "Ticket Médio", value: fmt(avgTicket), icon: DollarSign, color: "text-info" },
-    { label: "PAX", value: totalPax.toString(), icon: Users, color: "text-primary" },
-    { label: "Vendas", value: filtered.length.toString(), icon: Plane, color: "text-success" },
-  ];
-
-  // Monthly revenue/cost/profit
-  const monthlyData = useMemo(() => {
-    const map: Record<string, { month: string; receita: number; custo: number; lucro: number; margem: number; count: number }> = {};
-    filtered.forEach(s => {
+  // Previous period for comparison
+  const previous = useMemo(() => {
+    if (!periodCutoff) return [];
+    const months = period === "30d" ? 1 : period === "90d" ? 3 : 12;
+    const prevCutoff = new Date(periodCutoff.getFullYear(), periodCutoff.getMonth() - months, periodCutoff.getDate());
+    return sales.filter(s => {
       const d = new Date(s.created_at);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-      if (!map[key]) map[key] = { month: key, receita: 0, custo: 0, lucro: 0, margem: 0, count: 0 };
-      map[key].receita += s.received_value || 0;
-      map[key].custo += s.total_cost || 0;
-      map[key].lucro += (s.received_value || 0) - (s.total_cost || 0);
-      map[key].count++;
+      return d >= prevCutoff && d < periodCutoff;
     });
-    return Object.values(map).sort((a, b) => a.month.localeCompare(b.month)).map(m => ({
-      ...m, margem: m.receita > 0 ? (m.lucro / m.receita) * 100 : 0,
-    }));
-  }, [filtered]);
+  }, [sales, periodCutoff, period]);
 
-  // Destinations
-  const destData = useMemo(() => {
-    const c: Record<string, number> = {};
-    filtered.forEach(s => { if (s.destination_iata) c[s.destination_iata] = (c[s.destination_iata] || 0) + 1; });
-    return Object.entries(c).map(([name, vendas]) => ({ name, vendas })).sort((a, b) => b.vendas - a.vendas).slice(0, 8);
-  }, [filtered]);
-
-  // Products
-  const productData = useMemo(() => {
-    const c: Record<string, number> = {};
-    filtered.forEach(s => (s.products || []).forEach(p => (c[p] = (c[p] || 0) + 1)));
-    return Object.entries(c).map(([name, value]) => ({ name, value }));
-  }, [filtered]);
-
-  // Miles vs Cash
-  const milesVsCash = useMemo(() => {
-    let milesCount = 0, cashCount = 0;
-    filtered.forEach(s => {
-      if (s.miles_program) milesCount++; else cashCount++;
-    });
-    return [
-      { name: "Milhas", value: milesCount },
-      { name: "R$ (Cash)", value: cashCount },
-    ].filter(d => d.value > 0);
-  }, [filtered]);
-
-  // Routes for map
-  const routes = useMemo(() => {
-    const c: Record<string, { count: number; revenue: number }> = {};
-    filtered.forEach(s => {
-      if (s.origin_iata && s.destination_iata) {
-        const k = `${s.origin_iata}-${s.destination_iata}`;
-        if (!c[k]) c[k] = { count: 0, revenue: 0 };
-        c[k].count++;
-        c[k].revenue += s.received_value || 0;
-      }
-    });
-    return Object.entries(c).map(([k, v]) => {
-      const [origin, destination] = k.split("-");
-      return { origin, destination, ...v };
-    }).sort((a, b) => b.count - a.count);
-  }, [filtered]);
-
-  // Alerts
-  const alerts = useMemo(() => {
-    const a: { type: string; icon: any; msg: string; saleId: string }[] = [];
-    filtered.forEach(s => {
-      if ((s.margin || 0) < 10 && s.received_value > 0) a.push({ type: "warning", icon: AlertTriangle, msg: `${s.display_id} — Margem baixa: ${(s.margin || 0).toFixed(1)}%`, saleId: s.id });
-      if (s.status === "Emitido" && (!s.locators || s.locators.length === 0 || s.locators.every(l => !l))) a.push({ type: "error", icon: FileWarning, msg: `${s.display_id} — Localizador vazio (status Emitido)`, saleId: s.id });
-      if (s.is_international && !s.hotel_name && s.products?.includes("Hotel")) a.push({ type: "info", icon: ShieldAlert, msg: `${s.display_id} — Internacional sem hotel`, saleId: s.id });
-    });
-    return a.slice(0, 10);
-  }, [filtered]);
-
-  const pieColors = ["hsl(152, 38%, 16%)", "hsl(38, 92%, 50%)", "hsl(210, 80%, 52%)", "hsl(152, 60%, 40%)", "hsl(0, 72%, 51%)"];
-
-  const recentSales = filtered.slice(0, 5);
-
-  return (
-    <div className="p-6 space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-serif text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Visão geral NatLeva</p>
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <Skeleton className="h-10 w-60" />
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
-        <div className="flex gap-2 items-center">
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-[130px] h-9 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todo período</SelectItem>
-              <SelectItem value="30d">Últimos 30 dias</SelectItem>
-              <SelectItem value="90d">Últimos 90 dias</SelectItem>
-              <SelectItem value="12m">Último ano</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button size="sm" onClick={() => navigate("/sales/new")}>
-            <Plus className="w-4 h-4 mr-1" /> Nova Venda
-          </Button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Skeleton className="h-64" />
+          <Skeleton className="h-64" />
         </div>
       </div>
+    );
+  }
 
-      {loading ? (
-        <div className="text-center py-12 text-muted-foreground">Carregando...</div>
-      ) : (
-        <>
-          {/* KPIs */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            {kpis.map(k => (
-              <Card key={k.label} className="p-4 glass-card hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-2 mb-2">
-                  <k.icon className={`w-4 h-4 ${k.color}`} />
-                  <span className="text-xs text-muted-foreground font-medium">{k.label}</span>
-                </div>
-                <p className="text-lg font-bold text-foreground">{k.value}</p>
-              </Card>
-            ))}
-          </div>
+  return (
+    <div className="p-6 space-y-8 animate-fade-in">
+      <DashboardFilters
+        period={period} setPeriod={setPeriod}
+        seller={seller} setSeller={setSeller}
+        destination={destination} setDestination={setDestination}
+        product={product} setProduct={setProduct}
+        sellers={sellersList} destinations={destinationsList}
+      />
 
-          {/* Map */}
-          {routes.length > 0 && (
-            <Card className="p-5 glass-card">
-              <h3 className="text-sm font-semibold text-foreground mb-3">Mapa de Rotas</h3>
-              <Suspense fallback={<div className="h-[360px] flex items-center justify-center text-muted-foreground">Carregando mapa...</div>}>
-                <RoutesMap routes={routes} />
-              </Suspense>
-              {/* Top routes */}
-              <div className="mt-3 flex flex-wrap gap-2">
-                {routes.slice(0, 5).map((r, i) => (
-                  <Badge key={i} variant="outline" className="text-xs font-mono">
-                    {r.origin} → {r.destination} ({r.count})
-                  </Badge>
-                ))}
-              </div>
-            </Card>
-          )}
+      {/* 1. Visão Geral */}
+      <KpiCards filtered={filtered} previous={previous} />
 
-          {/* Client Distribution Map */}
-          <Card className="p-5 glass-card">
-            <h3 className="text-sm font-semibold text-foreground mb-3">Distribuição de Clientes por Região</h3>
-            <Suspense fallback={<div className="h-[320px] flex items-center justify-center text-muted-foreground">Carregando mapa...</div>}>
-              <ClientDistributionMap />
-            </Suspense>
-          </Card>
+      {/* 2. Financeiro */}
+      <FinancialSection filtered={filtered} sellerNames={sellerNames} />
 
-          {/* Charts row 1: Monthly + Margin */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card className="p-5 glass-card">
-              <h3 className="text-sm font-semibold text-foreground mb-4">Receita × Custo × Lucro (mensal)</h3>
-              {monthlyData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(148, 12%, 89%)" />
-                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v: number) => fmt(v)} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    <Bar dataKey="receita" fill="hsl(152, 60%, 40%)" name="Receita" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="custo" fill="hsl(38, 92%, 50%)" name="Custo" radius={[3, 3, 0, 0]} />
-                    <Bar dataKey="lucro" fill="hsl(152, 38%, 16%)" name="Lucro" radius={[3, 3, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : <p className="text-sm text-muted-foreground text-center py-8">Sem dados</p>}
-            </Card>
+      {/* 3. Comercial */}
+      <CommercialSection filtered={filtered} segments={segments} sellerNames={sellerNames} />
 
-            <Card className="p-5 glass-card">
-              <h3 className="text-sm font-semibold text-foreground mb-4">Margem % (mensal)</h3>
-              {monthlyData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={240}>
-                  <LineChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(148, 12%, 89%)" />
-                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} unit="%" />
-                    <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
-                    <Line type="monotone" dataKey="margem" stroke="hsl(38, 92%, 50%)" strokeWidth={2} dot={{ r: 4 }} name="Margem %" />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : <p className="text-sm text-muted-foreground text-center py-8">Sem dados</p>}
-            </Card>
-          </div>
+      {/* 4. Operacional */}
+      <OperationalSection checkinTasks={checkinTasks} lodgingTasks={lodgingTasks} />
 
-          {/* Charts row 2: Destinations + Products + Miles */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <Card className="p-5 glass-card">
-              <h3 className="text-sm font-semibold text-foreground mb-4">Top Destinos</h3>
-              {destData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={destData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(148, 12%, 89%)" />
-                    <XAxis type="number" tick={{ fontSize: 12 }} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={50} />
-                    <Tooltip />
-                    <Bar dataKey="vendas" fill="hsl(152, 38%, 16%)" radius={[0, 4, 4, 0]} name="Vendas" />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : <p className="text-sm text-muted-foreground text-center py-8">Sem dados</p>}
-            </Card>
+      {/* 5. Clientes */}
+      <ClientsSection clients={clients} filtered={filtered} periodStart={periodCutoff} />
 
-            <Card className="p-5 glass-card">
-              <h3 className="text-sm font-semibold text-foreground mb-4">Mix de Produtos</h3>
-              {productData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie data={productData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                      {productData.map((_, i) => <Cell key={i} fill={pieColors[i % pieColors.length]} />)}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : <p className="text-sm text-muted-foreground text-center py-8">Sem dados</p>}
-            </Card>
+      {/* 6. Geográfico */}
+      <GeographicSection filtered={filtered} />
 
-            <Card className="p-5 glass-card">
-              <h3 className="text-sm font-semibold text-foreground mb-4">Milhas vs Cash</h3>
-              {milesVsCash.length > 0 ? (
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie data={milesVsCash} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={80} label>
-                      {milesVsCash.map((_, i) => <Cell key={i} fill={pieColors[i % pieColors.length]} />)}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : <p className="text-sm text-muted-foreground text-center py-8">Sem dados</p>}
-            </Card>
-          </div>
+      {/* 7. Milhas */}
+      <MilesSection filtered={filtered} costItems={costItems} />
 
-          {/* Bottom row: Recent Sales + Alerts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card className="p-5 glass-card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-foreground">Vendas Recentes</h3>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/sales")}>
-                  <List className="w-3.5 h-3.5 mr-1" /> Ver todas
-                </Button>
-              </div>
-              {recentSales.length > 0 ? (
-                <div className="space-y-2">
-                  {recentSales.map(sale => (
-                    <div
-                      key={sale.id}
-                      className="flex items-center justify-between p-2.5 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
-                      onClick={() => navigate(`/sales/${sale.id}`)}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground truncate">{sale.name}</p>
-                        <p className="text-[10px] text-muted-foreground font-mono">{sale.display_id} · {sale.origin_iata || "?"} → {sale.destination_iata || "?"}</p>
-                      </div>
-                      <div className="text-right shrink-0 ml-2">
-                        <p className="text-xs font-semibold text-success">{fmt(sale.received_value || 0)}</p>
-                        <p className="text-[10px] text-muted-foreground">{sale.status}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-sm text-muted-foreground mb-3">Nenhuma venda ainda</p>
-                  <Button size="sm" onClick={() => navigate("/sales/new")}>
-                    <Plus className="w-4 h-4 mr-1" /> Criar Primeira Venda
-                  </Button>
-                </div>
-              )}
-            </Card>
-
-            <Card className="p-5 glass-card">
-              <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-warning" /> Alertas de Qualidade
-              </h3>
-              {alerts.length > 0 ? (
-                <div className="space-y-2">
-                  {alerts.map((a, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer transition-colors text-sm"
-                      onClick={() => navigate(`/sales/${a.saleId}`)}
-                    >
-                      <a.icon className="w-4 h-4 text-warning shrink-0" />
-                      <span className="text-foreground truncate">{a.msg}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-8">Nenhum alerta ativo 🎉</p>
-              )}
-            </Card>
-          </div>
-        </>
-      )}
+      {/* 8. Alertas + Insights */}
+      <AlertsSection filtered={filtered} sellerNames={sellerNames} />
     </div>
   );
 }
