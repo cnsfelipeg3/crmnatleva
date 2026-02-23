@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { formatDateBR } from "@/lib/dateFormat";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -154,7 +155,7 @@ export default function SaleDetail() {
           <Button variant="ghost" size="sm" onClick={() => navigate("/sales")}><ArrowLeft className="w-4 h-4" /></Button>
           <div>
             <h1 className="text-2xl font-serif text-foreground">{sale.name}</h1>
-            <p className="text-sm text-muted-foreground">{sale.display_id} · {sale.close_date || "Sem data"}</p>
+            <p className="text-sm text-muted-foreground">{sale.display_id} · {formatDateBR(sale.close_date)}</p>
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -316,8 +317,8 @@ export default function SaleDetail() {
               </div>
             </div>
             <div className="space-y-2 text-sm">
-              {sale.departure_date && <div className="flex justify-between"><span className="text-muted-foreground">Ida</span><span>{sale.departure_date}</span></div>}
-              {sale.return_date && <div className="flex justify-between"><span className="text-muted-foreground">Volta</span><span>{sale.return_date}</span></div>}
+              {sale.departure_date && <div className="flex justify-between"><span className="text-muted-foreground">Ida</span><span>{formatDateBR(sale.departure_date)}</span></div>}
+              {sale.return_date && <div className="flex justify-between"><span className="text-muted-foreground">Volta</span><span>{formatDateBR(sale.return_date)}</span></div>}
               {sale.airline && <div className="flex justify-between"><span className="text-muted-foreground">Companhia</span><span>{sale.airline}</span></div>}
               {sale.locators?.length > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Localizador</span><span className="font-mono font-semibold">{sale.locators.join(", ")}</span></div>}
               {sale.miles_program && <div className="flex justify-between"><span className="text-muted-foreground">Milhas</span><Badge variant="outline">{sale.miles_program}</Badge></div>}

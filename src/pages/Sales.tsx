@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatDateBR } from "@/lib/dateFormat";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -166,7 +167,7 @@ export default function Sales() {
                   <tr key={sale.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/sales/${sale.id}`)}>
                     <td className="px-4 py-3">
                       <p className="font-medium text-foreground">{sale.name}</p>
-                      <p className="text-xs text-muted-foreground">{sale.display_id} · {sale.close_date || "—"}</p>
+                      <p className="text-xs text-muted-foreground">{sale.display_id} · {formatDateBR(sale.close_date)}</p>
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-mono text-xs">{sale.origin_iata || "?"} → {sale.destination_iata || "?"}</span>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatDateBR, formatDateTimeBR } from "@/lib/dateFormat";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -58,11 +59,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }>
   CANCELADO: { label: "Cancelado", color: "bg-gray-100 text-gray-500 dark:bg-gray-900/30 dark:text-gray-400", icon: XCircle },
 };
 
-function formatDateBR(dateStr: string | null): string {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" });
-}
+// Using shared formatDateBR from @/lib/dateFormat
 
 function getTimeRemaining(checkin: string | null): string {
   if (!checkin) return "—";

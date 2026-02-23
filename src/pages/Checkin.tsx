@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatDateBR, formatTimeBR } from "@/lib/dateFormat";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -289,7 +290,7 @@ export default function Checkin() {
         </div>
 
         <div className="text-xs text-muted-foreground mb-2 space-y-0.5">
-          {depDate && <p>📅 {depDate} {depTime && `às ${depTime}`}</p>}
+          {depDate && <p>📅 {formatDateBR(depDate)} {depTime && `às ${formatTimeBR(depTime)}`}</p>}
           {locators.length > 0 && (
             <p className="flex items-center gap-1">
               📋 PNR: <span className="font-mono font-bold text-foreground">{locators.join(", ")}</span>
