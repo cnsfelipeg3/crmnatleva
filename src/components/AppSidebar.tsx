@@ -3,9 +3,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import logoNatleva from "@/assets/logo-natleva.png";
 import {
   LayoutDashboard, Plus, List, Settings, LogOut, Plane, Users,
-  ChevronLeft, ChevronRight, ClipboardCheck, Hotel,
+  ChevronLeft, ChevronRight, ClipboardCheck, Hotel, Sun, Moon,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -21,6 +21,17 @@ const navItems = [
 export default function AppSidebar() {
   const { profile, role, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+
+  useEffect(() => {
+    if (dark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [dark]);
 
   return (
     <aside
@@ -70,6 +81,13 @@ export default function AppSidebar() {
         >
           <LogOut className="w-4 h-4 shrink-0" />
           {!collapsed && <span>Sair</span>}
+        </button>
+        <button
+          onClick={() => setDark(!dark)}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground w-full transition-colors"
+        >
+          {dark ? <Sun className="w-4 h-4 shrink-0" /> : <Moon className="w-4 h-4 shrink-0" />}
+          {!collapsed && <span>{dark ? "Tema Claro" : "Tema Escuro"}</span>}
         </button>
         <button
           onClick={() => setCollapsed(!collapsed)}
