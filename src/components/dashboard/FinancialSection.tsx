@@ -68,36 +68,36 @@ export default function FinancialSection({ filtered, sellerNames }: Props) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-serif text-foreground">Financeiro</h2>
+      <h2 className="section-title">Financeiro</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-5 glass-card">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Receita × Custo × Lucro (mensal)</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4 tracking-tight">Receita × Custo × Lucro (mensal)</h3>
           {monthlyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(148, 12%, 89%)" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number) => fmt(v)} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="receita" fill="hsl(152, 60%, 40%)" name="Receita" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="custo" fill="hsl(38, 92%, 50%)" name="Custo" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="lucro" fill="hsl(152, 38%, 16%)" name="Lucro" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="receita" fill="hsl(var(--chart-1))" name="Receita" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="custo" fill="hsl(var(--chart-2))" name="Custo" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="lucro" fill="hsl(var(--chart-3))" name="Lucro" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : <NoData />}
         </Card>
 
         <Card className="p-5 glass-card">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Margem % (mensal)</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4 tracking-tight">Margem % (mensal)</h3>
           {monthlyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(148, 12%, 89%)" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} unit="%" />
-                <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} />
-                <Line type="monotone" dataKey="margem" stroke="hsl(38, 92%, 50%)" strokeWidth={2} dot={{ r: 4 }} name="Margem %" />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="%" />
+                <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
+                <Line type="monotone" dataKey="margem" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4, fill: 'hsl(var(--chart-2))' }} name="Margem %" />
               </LineChart>
             </ResponsiveContainer>
           ) : <NoData />}
@@ -106,30 +106,30 @@ export default function FinancialSection({ filtered, sellerNames }: Props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="p-5 glass-card">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Lucro por Vendedor</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4 tracking-tight">Lucro por Vendedor</h3>
           {sellerProfit.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={sellerProfit} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(148, 12%, 89%)" />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={100} />
-                <Tooltip formatter={(v: number) => fmt(v)} />
-                <Bar dataKey="lucro" fill="hsl(152, 38%, 16%)" radius={[0, 4, 4, 0]} name="Lucro" />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={100} />
+                <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
+                <Bar dataKey="lucro" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} name="Lucro" />
               </BarChart>
             </ResponsiveContainer>
           ) : <NoData />}
         </Card>
 
         <Card className="p-5 glass-card">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Lucro por Destino (Top 8)</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4 tracking-tight">Lucro por Destino (Top 8)</h3>
           {destProfit.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={destProfit} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(148, 12%, 89%)" />
-                <XAxis type="number" tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={50} />
-                <Tooltip formatter={(v: number) => fmt(v)} />
-                <Bar dataKey="lucro" fill="hsl(210, 80%, 52%)" radius={[0, 4, 4, 0]} name="Lucro" />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={50} />
+                <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
+                <Bar dataKey="lucro" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} name="Lucro" />
               </BarChart>
             </ResponsiveContainer>
           ) : <NoData />}

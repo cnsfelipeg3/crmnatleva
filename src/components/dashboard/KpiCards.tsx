@@ -43,10 +43,10 @@ export default function KpiCards({ filtered, previous }: Props) {
   const kpis = [
     { label: "Receita Total", value: fmt(totalRevenue), icon: DollarSign, color: "text-success", change: pctChange(totalRevenue, prevRevenue) },
     { label: "Custo Total", value: fmt(totalCost), icon: DollarSign, color: "text-warning", change: null },
-    { label: "Lucro Total", value: fmt(totalProfit), icon: TrendingUp, color: "text-primary", change: pctChange(totalProfit, prevProfit) },
+    { label: "Lucro Total", value: fmt(totalProfit), icon: TrendingUp, color: "text-accent", change: pctChange(totalProfit, prevProfit) },
     { label: "Margem Média", value: `${avgMargin.toFixed(1)}%`, icon: Target, color: "text-accent", change: null },
     { label: "Total Vendas", value: filtered.length.toString(), icon: Plane, color: "text-info", change: pctChange(filtered.length, previous.length) },
-    { label: "Ticket Médio", value: fmt(avgTicket), icon: DollarSign, color: "text-primary", change: null },
+    { label: "Ticket Médio", value: fmt(avgTicket), icon: DollarSign, color: "text-accent", change: null },
     { label: "Milhas", value: `${milesPct.toFixed(0)}%`, icon: Coins, color: "text-warning", change: null },
     { label: "Internacional", value: `${intlPct.toFixed(0)}%`, icon: Globe, color: "text-info", change: null },
   ];
@@ -54,12 +54,18 @@ export default function KpiCards({ filtered, previous }: Props) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
       {kpis.map(k => (
-        <Card key={k.label} className="p-3.5 glass-card hover:shadow-md transition-shadow group">
+        <Card key={k.label} className="p-3.5 glass-card group relative overflow-hidden">
+          {/* Subtle top glow line */}
+          <div className="absolute top-0 left-2 right-2 h-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--glow-primary) / 0.4), transparent)' }}
+          />
           <div className="flex items-center gap-1.5 mb-1.5">
-            <k.icon className={`w-3.5 h-3.5 ${k.color}`} />
-            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">{k.label}</span>
+            <div className="p-1 rounded-md bg-muted/50">
+              <k.icon className={`w-3.5 h-3.5 ${k.color}`} />
+            </div>
+            <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{k.label}</span>
           </div>
-          <p className="text-base font-bold text-foreground leading-tight">{k.value}</p>
+          <p className="text-base font-bold text-foreground leading-tight font-sans">{k.value}</p>
           {k.change !== null && (
             <div className={`flex items-center gap-0.5 mt-1 text-[10px] font-medium ${k.change >= 0 ? "text-success" : "text-destructive"}`}>
               {k.change >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
