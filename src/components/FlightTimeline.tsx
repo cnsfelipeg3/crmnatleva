@@ -1,6 +1,7 @@
 import { Plane, Clock, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTimeBR } from "@/lib/dateFormat";
+import AirlineLogo from "@/components/AirlineLogo";
 
 export interface FlightSegment {
   id?: string;
@@ -78,7 +79,7 @@ export default function FlightTimeline({ segments, direction }: Props) {
                 <div className="flex-1 relative">
                   <div className="border-t-2 border-primary border-dashed" />
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2">
-                    <Plane className="w-4 h-4 text-primary" />
+                    {seg.airline ? <AirlineLogo iata={seg.airline} size={18} /> : <Plane className="w-4 h-4 text-primary" />}
                   </div>
                   <div className="flex justify-center mt-1">
                     <div className="text-center">

@@ -53,6 +53,33 @@ export type Database = {
         }
         Relationships: []
       }
+      airline_logos: {
+        Row: {
+          airline_iata: string
+          airline_icao: string | null
+          airline_name: string | null
+          logo_url: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          airline_iata: string
+          airline_icao?: string | null
+          airline_name?: string | null
+          logo_url: string
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          airline_iata?: string
+          airline_icao?: string | null
+          airline_name?: string | null
+          logo_url?: string
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attachments: {
         Row: {
           category: string
@@ -215,6 +242,124 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      client_contacts: {
+        Row: {
+          client_id: string
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          role: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          role?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contacts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_notes: {
+        Row: {
+          author_id: string | null
+          client_id: string
+          content: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          author_id?: string | null
+          client_id: string
+          content: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          author_id?: string | null
+          client_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          city: string | null
+          client_type: string
+          country: string | null
+          created_at: string
+          created_by: string | null
+          display_name: string
+          email: string | null
+          id: string
+          observations: string | null
+          phone: string | null
+          state: string | null
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          city?: string | null
+          client_type?: string
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_name: string
+          email?: string | null
+          id?: string
+          observations?: string | null
+          phone?: string | null
+          state?: string | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          city?: string | null
+          client_type?: string
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          display_name?: string
+          email?: string | null
+          id?: string
+          observations?: string | null
+          phone?: string | null
+          state?: string | null
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       cost_items: {
         Row: {
@@ -638,6 +783,7 @@ export type Database = {
           airline: string | null
           children: number | null
           children_ages: number[] | null
+          client_id: string | null
           close_date: string | null
           connections: string[] | null
           created_at: string
@@ -690,6 +836,7 @@ export type Database = {
           airline?: string | null
           children?: number | null
           children_ages?: number[] | null
+          client_id?: string | null
           close_date?: string | null
           connections?: string[] | null
           created_at?: string
@@ -742,6 +889,7 @@ export type Database = {
           airline?: string | null
           children?: number | null
           children_ages?: number[] | null
+          client_id?: string | null
           close_date?: string | null
           connections?: string[] | null
           created_at?: string
@@ -789,7 +937,15 @@ export type Database = {
           total_cost?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "sales_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
