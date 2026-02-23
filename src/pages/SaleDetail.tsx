@@ -20,6 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import FlightEnrichmentDialog from "@/components/FlightEnrichmentDialog";
+import HotelAutocomplete from "@/components/HotelAutocomplete";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -93,6 +94,14 @@ export default function SaleDetail() {
         hotel_room: editForm.hotel_room || null,
         hotel_meal_plan: editForm.hotel_meal_plan || null,
         hotel_reservation_code: editForm.hotel_reservation_code || null,
+        hotel_checkin_date: editForm.hotel_checkin_date || null,
+        hotel_checkout_date: editForm.hotel_checkout_date || null,
+        hotel_city: editForm.hotel_city || null,
+        hotel_country: editForm.hotel_country || null,
+        hotel_address: editForm.hotel_address || null,
+        hotel_lat: editForm.hotel_lat || null,
+        hotel_lng: editForm.hotel_lng || null,
+        hotel_place_id: editForm.hotel_place_id || null,
         adults: parseInt(editForm.adults) || 1,
         children: parseInt(editForm.children) || 0,
         received_value: receivedValue,
@@ -108,6 +117,24 @@ export default function SaleDetail() {
       setSale(updated);
       setEditing(false);
       toast({ title: "Venda atualizada!" });
+
+      // Auto-sync checkin and lodging tasks
+      try {
+        // If sale is cancelled, cancel all related tasks
+        if (editForm.status === "Cancelado") {
+          await Promise.all([
+            supabase.from("checkin_tasks").update({ status: "CANCELADO" }).eq("sale_id", id).not("status", "in", '("CONCLUIDO","CANCELADO")'),
+            supabase.from("lodging_confirmation_tasks").update({ status: "CANCELADO" }).eq("sale_id", id).not("status", "in", '("CONFIRMADO","CANCELADO")'),
+          ]);
+        } else {
+          await Promise.all([
+            supabase.functions.invoke("checkin-generate"),
+            supabase.functions.invoke("lodging-generate"),
+          ]);
+        }
+      } catch (syncErr) {
+        console.warn("Task sync warning:", syncErr);
+      }
     } catch (err: any) {
       toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
     } finally {
@@ -214,7 +241,7 @@ export default function SaleDetail() {
                 <Select value={editForm.status} onValueChange={v => updateEdit("status", v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {["Rascunho", "Pendente", "Em andamento", "Emitido", "Fechado"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    {["Rascunho", "Pendente", "Em andamento", "Emitido", "Fechado", "Cancelado"].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -261,9 +288,29 @@ export default function SaleDetail() {
           <Card className="p-5 glass-card space-y-4">
             <h3 className="text-sm font-semibold text-foreground">Hotel & Obs</h3>
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1"><Label className="text-xs">Hotel</Label><Input value={editForm.hotel_name || ""} onChange={e => updateEdit("hotel_name", e.target.value)} /></div>
+              <div className="col-span-2 space-y-1">
+                <Label className="text-xs">Hotel</Label>
+                <HotelAutocomplete
+                  value={editForm.hotel_name || ""}
+                  onChange={(name) => updateEdit("hotel_name", name)}
+                  onSelect={(hotel) => {
+                    updateEdit("hotel_name", hotel.name);
+                    updateEdit("hotel_city", hotel.city);
+                    updateEdit("hotel_country", hotel.country);
+                    updateEdit("hotel_address", hotel.address);
+                    updateEdit("hotel_lat", hotel.lat);
+                    updateEdit("hotel_lng", hotel.lng);
+                    updateEdit("hotel_place_id", hotel.place_id);
+                  }}
+                />
+                {editForm.hotel_city && (
+                  <p className="text-[10px] text-muted-foreground">📍 {[editForm.hotel_city, editForm.hotel_country].filter(Boolean).join(", ")}</p>
+                )}
+              </div>
               <div className="space-y-1"><Label className="text-xs">Quarto</Label><Input value={editForm.hotel_room || ""} onChange={e => updateEdit("hotel_room", e.target.value)} /></div>
               <div className="space-y-1"><Label className="text-xs">Código Reserva</Label><Input value={editForm.hotel_reservation_code || ""} onChange={e => updateEdit("hotel_reservation_code", e.target.value)} className="font-mono" /></div>
+              <div className="space-y-1"><Label className="text-xs">Check-in</Label><Input type="date" value={editForm.hotel_checkin_date || ""} onChange={e => updateEdit("hotel_checkin_date", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Check-out</Label><Input type="date" value={editForm.hotel_checkout_date || ""} onChange={e => updateEdit("hotel_checkout_date", e.target.value)} /></div>
               <div className="space-y-1"><Label className="text-xs">Milhas</Label><Input value={editForm.miles_program || ""} onChange={e => updateEdit("miles_program", e.target.value)} /></div>
             </div>
             <div className="space-y-1"><Label className="text-xs">Observações</Label><Textarea value={editForm.observations || ""} onChange={e => updateEdit("observations", e.target.value)} rows={3} /></div>
@@ -352,9 +399,12 @@ export default function SaleDetail() {
                   <Hotel className="w-4 h-4 text-accent" /> Hotel
                 </h3>
                 <p className="text-sm font-medium">{sale.hotel_name}</p>
-                {sale.hotel_room && <p className="text-xs text-muted-foreground">{sale.hotel_room}</p>}
-                {sale.hotel_meal_plan && <p className="text-xs text-muted-foreground">{sale.hotel_meal_plan}</p>}
-                {sale.hotel_reservation_code && <p className="text-xs font-mono mt-1">{sale.hotel_reservation_code}</p>}
+                {sale.hotel_city && <p className="text-xs text-muted-foreground">📍 {[sale.hotel_city, sale.hotel_country].filter(Boolean).join(", ")}</p>}
+                {sale.hotel_room && <p className="text-xs text-muted-foreground">🛏️ {sale.hotel_room}</p>}
+                {sale.hotel_meal_plan && <p className="text-xs text-muted-foreground">🍽️ {sale.hotel_meal_plan}</p>}
+                {sale.hotel_reservation_code && <p className="text-xs font-mono mt-1">📋 {sale.hotel_reservation_code}</p>}
+                {sale.hotel_checkin_date && <p className="text-xs text-muted-foreground">📅 Check-in: {formatDateBR(sale.hotel_checkin_date)}</p>}
+                {sale.hotel_checkout_date && <p className="text-xs text-muted-foreground">📅 Check-out: {formatDateBR(sale.hotel_checkout_date)}</p>}
               </Card>
             )}
 
