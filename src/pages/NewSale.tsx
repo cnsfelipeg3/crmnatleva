@@ -20,6 +20,7 @@ import AirportAutocomplete from "@/components/AirportAutocomplete";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import FlightEnrichmentDialog from "@/components/FlightEnrichmentDialog";
 import HotelAutocomplete from "@/components/HotelAutocomplete";
+import { classifyItinerary, assignDirections } from "@/lib/itineraryClassifier";
 
 const steps = [
   { id: 1, label: "Upload & IA" },
@@ -166,9 +167,9 @@ export default function NewSale() {
 
         // Fill flight segments if extracted
         if (f.flight_segments && Array.isArray(f.flight_segments)) {
-          const extracted = f.flight_segments.map((s: any, i: number) => ({
+          const rawSegments = f.flight_segments.map((s: any, i: number) => ({
             ...defaultSegment,
-            direction: s.direction || "ida",
+            direction: "ida" as const,
             segment_order: i + 1,
             airline: s.airline || "",
             flight_number: s.flight_number || "",
@@ -179,7 +180,12 @@ export default function NewSale() {
             arrival_time: s.arrival_time || "",
             flight_class: s.class || "",
           }));
-          if (extracted.length > 0) setSegments(extracted);
+          if (rawSegments.length > 0) {
+            // Classify and assign correct directions
+            const classification = classifyItinerary(rawSegments);
+            const withDirections = assignDirections(rawSegments, classification);
+            setSegments(withDirections as FlightSegment[]);
+          }
         }
       }
 
@@ -619,9 +625,7 @@ export default function NewSale() {
             {/* Preview timeline */}
             {segments.filter(s => s.origin_iata && s.destination_iata).length > 0 && (
               <Card className="p-4 bg-muted/30">
-                <FlightTimeline segments={segments} direction="ida" />
-                <div className="my-3 border-t border-border" />
-                <FlightTimeline segments={segments} direction="volta" />
+                <FlightTimeline segments={segments} showAll />
               </Card>
             )}
 
