@@ -13,6 +13,7 @@ import NewSale from "@/pages/NewSale";
 import Passengers from "@/pages/Passengers";
 import SettingsIndex from "@/pages/settings/SettingsIndex";
 import GenericSettingsList from "@/pages/settings/GenericSettingsList";
+import Checkin from "@/pages/Checkin";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ function AppRoutes() {
         <Route path="/sales" element={<Sales />} />
         <Route path="/sales/new" element={<NewSale />} />
         <Route path="/sales/:id" element={<SaleDetail />} />
+        <Route path="/checkin" element={<Checkin />} />
         <Route path="/passengers" element={<Passengers />} />
         <Route path="/settings" element={<SettingsIndex />} />
         <Route path="/settings/sellers" element={<GenericSettingsList title="Vendedores" defaultItems={["Admin NatLeva"]} />} />
