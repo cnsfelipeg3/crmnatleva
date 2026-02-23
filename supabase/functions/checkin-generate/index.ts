@@ -52,7 +52,11 @@ serve(async (req) => {
         if (!seg.departure_date) continue;
 
         // Build departure datetime
-        const timeStr = seg.departure_time || "12:00";
+        let timeStr = seg.departure_time || "12:00";
+        // Normalize time: ensure HH:MM format, handle HH:MM:SS from DB
+        if (timeStr.split(":").length >= 3) {
+          timeStr = timeStr.split(":").slice(0, 2).join(":");
+        }
         const depDatetime = new Date(`${seg.departure_date}T${timeStr}:00Z`);
         
         // Skip if already departed more than 24h ago
