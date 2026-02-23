@@ -11,6 +11,7 @@ import {
 import { Search, Plus, AlertTriangle, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import AIExtractButton from "@/components/AIExtractButton";
 
 interface Passenger {
   id: string;
@@ -66,7 +67,6 @@ export default function Passengers() {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Form state
   const [form, setForm] = useState({
     full_name: "", cpf: "", birth_date: "", passport_number: "",
     passport_expiry: "", phone: "", address_cep: "", address_street: "",
@@ -99,6 +99,22 @@ export default function Passengers() {
         }));
       }
     } catch { /* ignore */ }
+  };
+
+  const handleAIExtract = (fields: Record<string, any>) => {
+    const get = (key: string) => {
+      const v = fields[key];
+      if (!v) return "";
+      if (Array.isArray(v)) return v[0]?.value?.toString() || "";
+      return v.value?.toString() || "";
+    };
+    setForm(f => ({
+      ...f,
+      full_name: get("passenger_names") || f.full_name,
+      cpf: get("cpf") || f.cpf,
+      phone: get("phone") || f.phone,
+      passport_number: get("passport") || f.passport_number,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -153,6 +169,10 @@ export default function Passengers() {
             <DialogHeader>
               <DialogTitle>Cadastrar Passageiro</DialogTitle>
             </DialogHeader>
+
+            {/* AI Extraction */}
+            <AIExtractButton onExtracted={handleAIExtract} compact />
+
             <form onSubmit={handleSubmit} className="space-y-4 pt-2">
               <div className="space-y-2">
                 <Label>Nome Completo *</Label>
@@ -259,7 +279,7 @@ export default function Passengers() {
                   {p.address_city && (
                     <p className="text-xs text-muted-foreground">{p.address_city}/{p.address_state}</p>
                   )}
-                  <div className="flex gap-1 mt-2">
+                  <div className="flex gap-1 mt-2 flex-wrap">
                     {p.passport_number && (
                       <Badge variant="outline" className="text-[10px]">
                         Passaporte: {p.passport_number}
