@@ -665,6 +665,7 @@ export type Database = {
           address_state: string | null
           address_street: string | null
           birth_date: string | null
+          categoria: string | null
           cpf: string | null
           created_at: string
           created_by: string | null
@@ -673,6 +674,7 @@ export type Database = {
           passport_expiry: string | null
           passport_number: string | null
           phone: string | null
+          rg: string | null
           updated_at: string
         }
         Insert: {
@@ -685,6 +687,7 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           birth_date?: string | null
+          categoria?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -693,6 +696,7 @@ export type Database = {
           passport_expiry?: string | null
           passport_number?: string | null
           phone?: string | null
+          rg?: string | null
           updated_at?: string
         }
         Update: {
@@ -705,6 +709,7 @@ export type Database = {
           address_state?: string | null
           address_street?: string | null
           birth_date?: string | null
+          categoria?: string | null
           cpf?: string | null
           created_at?: string
           created_by?: string | null
@@ -713,6 +718,7 @@ export type Database = {
           passport_expiry?: string | null
           passport_number?: string | null
           phone?: string | null
+          rg?: string | null
           updated_at?: string
         }
         Relationships: []

@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.backfill-passengers]
 verify_jwt = false
+
+[functions.import-monday-data]
+verify_jwt = false
