@@ -14,6 +14,182 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts_payable: {
+        Row: {
+          category_id: string | null
+          cost_item_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          installment_number: number | null
+          installment_total: number | null
+          is_recurring: boolean | null
+          notes: string | null
+          paid_date: string | null
+          payment_method: string | null
+          recurrence_interval: string | null
+          sale_id: string | null
+          status: string
+          supplier_id: string | null
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          category_id?: string | null
+          cost_item_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          installment_number?: number | null
+          installment_total?: number | null
+          is_recurring?: boolean | null
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          recurrence_interval?: string | null
+          sale_id?: string | null
+          status?: string
+          supplier_id?: string | null
+          updated_at?: string
+          value?: number
+        }
+        Update: {
+          category_id?: string | null
+          cost_item_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          installment_number?: number | null
+          installment_total?: number | null
+          is_recurring?: boolean | null
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          recurrence_interval?: string | null
+          sale_id?: string | null
+          status?: string
+          supplier_id?: string | null
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_payable_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_payable_cost_item_id_fkey"
+            columns: ["cost_item_id"]
+            isOneToOne: false
+            referencedRelation: "cost_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_payable_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_payable_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts_receivable: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          fee_percent: number | null
+          fee_value: number | null
+          gross_value: number
+          id: string
+          installment_number: number | null
+          installment_total: number | null
+          net_value: number
+          notes: string | null
+          payment_method: string | null
+          received_date: string | null
+          sale_id: string | null
+          seller_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          fee_percent?: number | null
+          fee_value?: number | null
+          gross_value?: number
+          id?: string
+          installment_number?: number | null
+          installment_total?: number | null
+          net_value?: number
+          notes?: string | null
+          payment_method?: string | null
+          received_date?: string | null
+          sale_id?: string | null
+          seller_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          fee_percent?: number | null
+          fee_value?: number | null
+          gross_value?: number
+          id?: string
+          installment_number?: number | null
+          installment_total?: number | null
+          net_value?: number
+          notes?: string | null
+          payment_method?: string | null
+          received_date?: string | null
+          sale_id?: string | null
+          seller_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_receivable_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_receivable_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       airline_checkin_rules: {
         Row: {
           airline_iata: string
@@ -158,6 +334,44 @@ export type Database = {
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chart_of_accounts: {
+        Row: {
+          code: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          parent_id: string | null
+          type: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          parent_id?: string | null
+          type: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          parent_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -361,6 +575,39 @@ export type Database = {
         }
         Relationships: []
       }
+      commission_rules: {
+        Row: {
+          commission_type: string
+          commission_value: number
+          created_at: string
+          id: string
+          is_active: boolean | null
+          min_margin_percent: number | null
+          product_type: string | null
+          seller_id: string | null
+        }
+        Insert: {
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          min_margin_percent?: number | null
+          product_type?: string | null
+          seller_id?: string | null
+        }
+        Update: {
+          commission_type?: string
+          commission_value?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          min_margin_percent?: number | null
+          product_type?: string | null
+          seller_id?: string | null
+        }
+        Relationships: []
+      }
       cost_items: {
         Row: {
           cash_value: number | null
@@ -419,6 +666,131 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      credit_card_items: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          credit_card_id: string
+          description: string | null
+          id: string
+          installment_number: number | null
+          installment_total: number | null
+          is_refund: boolean | null
+          notes: string | null
+          sale_id: string | null
+          status: string | null
+          supplier_id: string | null
+          transaction_date: string
+          value: number
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          credit_card_id: string
+          description?: string | null
+          id?: string
+          installment_number?: number | null
+          installment_total?: number | null
+          is_refund?: boolean | null
+          notes?: string | null
+          sale_id?: string | null
+          status?: string | null
+          supplier_id?: string | null
+          transaction_date?: string
+          value?: number
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          credit_card_id?: string
+          description?: string | null
+          id?: string
+          installment_number?: number | null
+          installment_total?: number | null
+          is_refund?: boolean | null
+          notes?: string | null
+          sale_id?: string | null
+          status?: string | null
+          supplier_id?: string | null
+          transaction_date?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_card_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_card_items_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_card_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_card_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_cards: {
+        Row: {
+          bank: string | null
+          card_type: string | null
+          closing_day: number | null
+          created_at: string
+          credit_limit: number | null
+          default_fee_percent: number | null
+          due_day: number | null
+          id: string
+          is_active: boolean | null
+          last_digits: string | null
+          nickname: string
+          responsible: string | null
+        }
+        Insert: {
+          bank?: string | null
+          card_type?: string | null
+          closing_day?: number | null
+          created_at?: string
+          credit_limit?: number | null
+          default_fee_percent?: number | null
+          due_day?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_digits?: string | null
+          nickname: string
+          responsible?: string | null
+        }
+        Update: {
+          bank?: string | null
+          card_type?: string | null
+          closing_day?: number | null
+          created_at?: string
+          credit_limit?: number | null
+          default_fee_percent?: number | null
+          due_day?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_digits?: string | null
+          nickname?: string
+          responsible?: string | null
+        }
+        Relationships: []
       }
       extraction_runs: {
         Row: {
@@ -723,6 +1095,42 @@ export type Database = {
         }
         Relationships: []
       }
+      payment_fee_rules: {
+        Row: {
+          acquirer: string | null
+          created_at: string
+          fee_fixed: number | null
+          fee_percent: number
+          id: string
+          installments: number | null
+          is_active: boolean | null
+          notes: string | null
+          payment_method: string
+        }
+        Insert: {
+          acquirer?: string | null
+          created_at?: string
+          fee_fixed?: number | null
+          fee_percent?: number
+          id?: string
+          installments?: number | null
+          is_active?: boolean | null
+          notes?: string | null
+          payment_method: string
+        }
+        Update: {
+          acquirer?: string | null
+          created_at?: string
+          fee_fixed?: number | null
+          fee_percent?: number
+          id?: string
+          installments?: number | null
+          is_active?: boolean | null
+          notes?: string | null
+          payment_method?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -952,6 +1360,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      suppliers: {
+        Row: {
+          bank_account: string | null
+          bank_agency: string | null
+          bank_name: string | null
+          bank_pix_key: string | null
+          category: string | null
+          cnpj: string | null
+          contact_name: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          payment_conditions: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          bank_account?: string | null
+          bank_agency?: string | null
+          bank_name?: string | null
+          bank_pix_key?: string | null
+          category?: string | null
+          cnpj?: string | null
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          payment_conditions?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bank_account?: string | null
+          bank_agency?: string | null
+          bank_name?: string | null
+          bank_pix_key?: string | null
+          category?: string | null
+          cnpj?: string | null
+          contact_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          payment_conditions?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
