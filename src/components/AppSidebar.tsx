@@ -7,6 +7,7 @@ import {
   AlertTriangle, DollarSign, ChevronDown,
   ArrowUpRight, ArrowDownRight, Wallet, CreditCard, FileText, Building2,
   Percent, FolderTree, Users2, BarChart3, Cog,
+  UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const [financeOpen, setFinanceOpen] = useState(false);
+  const [rhOpen, setRhOpen] = useState(false);
 
   const isCollapsed = mobile ? false : collapsed;
 
@@ -60,9 +62,9 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     }
   }, [dark]);
 
-  // Auto-open finance section if on a finance route
   useEffect(() => {
     if (window.location.pathname.startsWith("/financeiro")) setFinanceOpen(true);
+    if (window.location.pathname.startsWith("/rh")) setRhOpen(true);
   }, []);
 
   const renderNavItem = (item: typeof navItems[0], indent = false) => (
@@ -143,6 +145,45 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         {financeOpen && !isCollapsed && (
           <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
             {financeItems.map((item) => renderNavItem(item, true))}
+          </div>
+        )}
+
+        {/* RH section */}
+        <button
+          onClick={() => setRhOpen(!rhOpen)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
+            rhOpen
+              ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
+              : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+          )}
+        >
+          <Users2 className={cn("w-5 h-5 shrink-0", rhOpen && "text-sidebar-primary")} />
+          {!isCollapsed && (
+            <>
+              <span className="flex-1 text-left">RH</span>
+              <ChevronDown className={cn("w-4 h-4 transition-transform", rhOpen && "rotate-180")} />
+            </>
+          )}
+        </button>
+
+        {rhOpen && !isCollapsed && (
+          <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
+            {[
+              { to: "/rh", icon: BarChart3, label: "Visão Geral" },
+              { to: "/rh/colaboradores", icon: UserCheck, label: "Colaboradores" },
+              { to: "/rh/ponto", icon: Clock, label: "Ponto" },
+              { to: "/rh/folha", icon: Receipt, label: "Folha & Pagamentos" },
+              { to: "/rh/metas", icon: Target, label: "Metas & Bônus" },
+              { to: "/rh/desempenho", icon: Star, label: "Desempenho" },
+              { to: "/rh/feedbacks", icon: MessageSquare, label: "Feedbacks & 1:1" },
+              { to: "/rh/advertencias", icon: ShieldAlert, label: "Advertências" },
+              { to: "/rh/documentos", icon: FileArchive, label: "Contratos & Docs" },
+              { to: "/rh/permissoes", icon: Shield, label: "Permissões" },
+              { to: "/rh/clima", icon: Smile, label: "Clima do Time" },
+              { to: "/rh/relatorios", icon: PieChart, label: "Relatórios" },
+              { to: "/rh/config", icon: Cog, label: "Configurações" },
+            ].map((item) => renderNavItem(item, true))}
           </div>
         )}
 

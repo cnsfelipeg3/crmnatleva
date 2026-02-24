@@ -22,6 +22,21 @@ import Pendencias from "@/pages/Pendencias";
 import Viagens from "@/pages/Viagens";
 import NotFound from "@/pages/NotFound";
 
+// RH
+import RHIndex from "@/pages/rh/RHIndex";
+import Colaboradores from "@/pages/rh/Colaboradores";
+import Ponto from "@/pages/rh/Ponto";
+import FolhaPagamentos from "@/pages/rh/FolhaPagamentos";
+import MetasBonus from "@/pages/rh/MetasBonus";
+import Desempenho from "@/pages/rh/Desempenho";
+import FeedbacksRH from "@/pages/rh/FeedbacksRH";
+import Advertencias from "@/pages/rh/Advertencias";
+import ContratosDocumentos from "@/pages/rh/ContratosDocumentos";
+import PermissoesAcessos from "@/pages/rh/PermissoesAcessos";
+import ClimaTime from "@/pages/rh/ClimaTime";
+import RelatoriosRH from "@/pages/rh/RelatoriosRH";
+import ConfiguracoesRH from "@/pages/rh/ConfiguracoesRH";
+
 // Financeiro
 import FinanceiroIndex from "@/pages/financeiro/FinanceiroIndex";
 import ContasReceber from "@/pages/financeiro/ContasReceber";
@@ -77,6 +92,21 @@ function AppRoutes() {
         <Route path="/financeiro/plano-contas" element={<PlanoContas />} />
         <Route path="/financeiro/comissoes" element={<Comissoes />} />
         <Route path="/financeiro/dre" element={<DREReport />} />
+
+        {/* RH */}
+        <Route path="/rh" element={<RHIndex />} />
+        <Route path="/rh/colaboradores" element={<Colaboradores />} />
+        <Route path="/rh/ponto" element={<Ponto />} />
+        <Route path="/rh/folha" element={<FolhaPagamentos />} />
+        <Route path="/rh/metas" element={<MetasBonus />} />
+        <Route path="/rh/desempenho" element={<Desempenho />} />
+        <Route path="/rh/feedbacks" element={<FeedbacksRH />} />
+        <Route path="/rh/advertencias" element={<Advertencias />} />
+        <Route path="/rh/documentos" element={<ContratosDocumentos />} />
+        <Route path="/rh/permissoes" element={<PermissoesAcessos />} />
+        <Route path="/rh/clima" element={<ClimaTime />} />
+        <Route path="/rh/relatorios" element={<RelatoriosRH />} />
+        <Route path="/rh/config" element={<ConfiguracoesRH />} />
 
         <Route path="/settings" element={<SettingsIndex />} />
         <Route path="/settings/sellers" element={<GenericSettingsList title="Vendedores" defaultItems={["Admin NatLeva"]} />} />
