@@ -22,6 +22,18 @@ import Pendencias from "@/pages/Pendencias";
 import Viagens from "@/pages/Viagens";
 import NotFound from "@/pages/NotFound";
 
+// Financeiro
+import FinanceiroIndex from "@/pages/financeiro/FinanceiroIndex";
+import ContasReceber from "@/pages/financeiro/ContasReceber";
+import ContasPagar from "@/pages/financeiro/ContasPagar";
+import FluxoCaixa from "@/pages/financeiro/FluxoCaixa";
+import CartaoCredito from "@/pages/financeiro/CartaoCredito";
+import Fornecedores from "@/pages/financeiro/Fornecedores";
+import TaxasTarifas from "@/pages/financeiro/TaxasTarifas";
+import PlanoContas from "@/pages/financeiro/PlanoContas";
+import Comissoes from "@/pages/financeiro/Comissoes";
+import DREReport from "@/pages/financeiro/DREReport";
+
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -53,6 +65,19 @@ function AppRoutes() {
         <Route path="/birthdays" element={<Birthdays />} />
         <Route path="/import" element={<ImportData />} />
         <Route path="/pendencias" element={<Pendencias />} />
+
+        {/* Financeiro */}
+        <Route path="/financeiro" element={<FinanceiroIndex />} />
+        <Route path="/financeiro/receber" element={<ContasReceber />} />
+        <Route path="/financeiro/pagar" element={<ContasPagar />} />
+        <Route path="/financeiro/fluxo" element={<FluxoCaixa />} />
+        <Route path="/financeiro/cartoes" element={<CartaoCredito />} />
+        <Route path="/financeiro/fornecedores" element={<Fornecedores />} />
+        <Route path="/financeiro/taxas" element={<TaxasTarifas />} />
+        <Route path="/financeiro/plano-contas" element={<PlanoContas />} />
+        <Route path="/financeiro/comissoes" element={<Comissoes />} />
+        <Route path="/financeiro/dre" element={<DREReport />} />
+
         <Route path="/settings" element={<SettingsIndex />} />
         <Route path="/settings/sellers" element={<GenericSettingsList title="Vendedores" defaultItems={["Admin NatLeva"]} />} />
         <Route path="/settings/airlines" element={<GenericSettingsList title="Companhias Aéreas" defaultItems={["LATAM", "GOL", "Azul", "TAP", "Emirates", "Qatar Airways", "Turkish Airlines"]} />} />
