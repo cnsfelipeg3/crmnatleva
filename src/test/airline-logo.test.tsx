@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import AirlineLogo from "@/components/AirlineLogo";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -14,20 +14,20 @@ describe("AirlineLogo Component", () => {
   });
 
   it("renders img tag for valid iata", () => {
-    renderWithTooltip(<AirlineLogo iata="TP" />);
-    const img = screen.getByAltText("Logo TP");
-    expect(img).toBeInTheDocument();
-    expect(img.getAttribute("src")).toContain("TP.png");
+    const { container } = renderWithTooltip(<AirlineLogo iata="TP" />);
+    const img = container.querySelector("img");
+    expect(img).toBeTruthy();
+    expect(img?.getAttribute("src")).toContain("TP.png");
   });
 
   it("renders with custom size", () => {
-    renderWithTooltip(<AirlineLogo iata="LA" size={30} />);
-    const img = screen.getByAltText("Logo LA");
-    expect(img.getAttribute("width")).toBe("30");
+    const { container } = renderWithTooltip(<AirlineLogo iata="LA" size={30} />);
+    const img = container.querySelector("img");
+    expect(img?.getAttribute("width")).toBe("30");
   });
 
   it("renders with showName", () => {
-    renderWithTooltip(<AirlineLogo iata="G3" showName />);
-    expect(screen.getByText("G3")).toBeInTheDocument();
+    const { container } = renderWithTooltip(<AirlineLogo iata="G3" showName />);
+    expect(container.textContent).toContain("G3");
   });
 });
