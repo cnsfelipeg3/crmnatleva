@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import AIExtractButton from "@/components/AIExtractButton";
 import { useNavigate } from "react-router-dom";
+import { smartCapitalizeName } from "@/lib/nameUtils";
 
 interface Passenger {
   id: string;
@@ -165,8 +166,17 @@ export default function Passengers() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const capitalizedName = smartCapitalizeName(form.full_name);
+    if (!capitalizedName || capitalizedName.length < 2) {
+      toast({ title: "Nome inválido", description: "O nome deve ter pelo menos 2 caracteres.", variant: "destructive" });
+      return;
+    }
+    if (/\d/.test(capitalizedName)) {
+      toast({ title: "Nome inválido", description: "O nome não deve conter números.", variant: "destructive" });
+      return;
+    }
     const { error } = await supabase.from("passengers").insert({
-      full_name: form.full_name,
+      full_name: capitalizedName,
       cpf: form.cpf || null,
       birth_date: form.birth_date || null,
       passport_number: form.passport_number || null,
@@ -224,7 +234,12 @@ export default function Passengers() {
               <form onSubmit={handleSubmit} className="space-y-4 pt-2">
                 <div className="space-y-2">
                   <Label>Nome Completo *</Label>
-                  <Input value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} required />
+                  <Input 
+                    value={form.full_name} 
+                    onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} 
+                    onBlur={(e) => setForm(f => ({ ...f, full_name: smartCapitalizeName(e.target.value) }))}
+                    required 
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">

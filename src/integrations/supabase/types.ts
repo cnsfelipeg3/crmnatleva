@@ -985,6 +985,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      smart_capitalize_name: { Args: { input_name: string }; Returns: string }
     }
     Enums: {
       app_role:
