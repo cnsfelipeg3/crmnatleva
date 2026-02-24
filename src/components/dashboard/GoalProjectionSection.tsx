@@ -53,23 +53,24 @@ export default function GoalProjectionSection({ filtered, allSales }: Props) {
       if (connIdx >= 0) data[connIdx].projecao = cumulative;
     }
 
-    // Last 3 months average for goal estimation
-    const monthlyRevenues: number[] = [];
-    for (let m = 1; m <= 3; m++) {
-      const targetMonth = (currentMonth - m + 12) % 12;
-      const targetYear = currentMonth - m < 0 ? currentYear - 1 : currentYear;
-      let monthRev = 0;
-      allSales.forEach(s => {
-        const d = new Date(s.created_at);
-        if (d.getMonth() === targetMonth && d.getFullYear() === targetYear) {
-          monthRev += s.received_value || 0;
-        }
-      });
-      if (monthRev > 0) monthlyRevenues.push(monthRev);
-    }
+    // Calculate MONTHLY average from all historical sales (not period-filtered)
+    // Group all sales by year-month to get true monthly revenues
+    const monthlyMap: Record<string, number> = {};
+    allSales.forEach(s => {
+      const d = new Date(s.created_at);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      // Exclude current month from historical average
+      if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) return;
+      monthlyMap[key] = (monthlyMap[key] || 0) + (s.received_value || 0);
+    });
     
-    const suggestedGoal = monthlyRevenues.length > 0
-      ? monthlyRevenues.reduce((a, b) => a + b, 0) / monthlyRevenues.length * 1.1 // 10% growth
+    const monthlyRevenues = Object.values(monthlyMap).filter(v => v > 0);
+    
+    // Use last 6 months max for relevance, sorted by most recent
+    const recentMonthlyRevenues = monthlyRevenues.slice(-6);
+    
+    const suggestedGoal = recentMonthlyRevenues.length > 0
+      ? (recentMonthlyRevenues.reduce((a, b) => a + b, 0) / recentMonthlyRevenues.length) * 1.1 // 10% growth over monthly avg
       : projected;
 
     return {

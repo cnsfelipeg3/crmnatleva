@@ -43,8 +43,8 @@ function getTripStatus(dep: string | null, ret: string | null): TripStatus {
   const depDate = dep.slice(0, 10);
   const retDate = ret?.slice(0, 10);
 
-  // Return date before departure = error
-  if (retDate && retDate < depDate) return "erro_data";
+  // Return date before departure = treat as past trip (data was likely entered wrong)
+  if (retDate && retDate < depDate) return "finalizada";
 
   // WITH return date: standard logic
   if (retDate) {
