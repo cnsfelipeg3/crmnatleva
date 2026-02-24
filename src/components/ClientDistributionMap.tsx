@@ -143,7 +143,12 @@ export default function ClientDistributionMap() {
     // Attribution in bottom right
     L.control.attribution({ position: 'bottomright', prefix: '' }).addTo(map);
 
-    return () => { map.remove(); mapRef.current = null; };
+    // Fix for lazy-loaded / Suspense components: invalidate size after render
+    setTimeout(() => map.invalidateSize(), 200);
+    const ro = new ResizeObserver(() => map.invalidateSize());
+    ro.observe(containerRef.current);
+
+    return () => { ro.disconnect(); map.remove(); mapRef.current = null; };
   }, []);
 
   // Switch tile layer
