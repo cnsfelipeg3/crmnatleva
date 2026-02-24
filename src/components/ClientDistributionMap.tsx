@@ -2,11 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { MapPin } from "lucide-react";
 
-// Major Brazilian cities lat/lon
 const CITY_COORDS: Record<string, [number, number]> = {
   "São Paulo": [-23.5505, -46.6333], "Rio de Janeiro": [-22.9068, -43.1729],
   "Brasília": [-15.7975, -47.8919], "Belo Horizonte": [-19.9167, -43.9345],
@@ -26,11 +24,7 @@ const CITY_COORDS: Record<string, [number, number]> = {
 };
 
 interface CityData {
-  city: string;
-  state: string;
-  clients: number;
-  sales: number;
-  revenue: number;
+  city: string; state: string; clients: number; sales: number; revenue: number;
 }
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -46,19 +40,14 @@ export default function ClientDistributionMap() {
       const { data: passengers } = await supabase
         .from("passengers")
         .select("id, address_city, address_state");
-
       const { data: salePassengers } = await supabase
         .from("sale_passengers")
         .select("passenger_id, sale_id");
-
       const { data: sales } = await supabase
         .from("sales")
         .select("id, received_value");
 
-      if (!passengers || !salePassengers || !sales) {
-        setLoading(false);
-        return;
-      }
+      if (!passengers || !salePassengers || !sales) { setLoading(false); return; }
 
       const salesMap = new Map(sales.map(s => [s.id, s.received_value || 0]));
       const passengerSales = new Map<string, Set<string>>();
@@ -71,9 +60,7 @@ export default function ClientDistributionMap() {
       passengers.forEach(p => {
         if (!p.address_city) return;
         const key = `${p.address_city}|${p.address_state || ""}`;
-        if (!cityMap[key]) {
-          cityMap[key] = { city: p.address_city, state: p.address_state || "", clients: 0, sales: 0, revenue: 0 };
-        }
+        if (!cityMap[key]) cityMap[key] = { city: p.address_city, state: p.address_state || "", clients: 0, sales: 0, revenue: 0 };
         cityMap[key].clients++;
         const pSales = passengerSales.get(p.id);
         if (pSales) {
@@ -82,25 +69,29 @@ export default function ClientDistributionMap() {
         }
       });
 
-      const sorted = Object.values(cityMap).sort((a, b) => b.clients - a.clients);
-      setCityData(sorted);
+      setCityData(Object.values(cityMap).sort((a, b) => b.clients - a.clients));
       setLoading(false);
     }
     fetchData();
   }, []);
 
-  // Init map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    const map = L.map(containerRef.current, { scrollWheelZoom: false }).setView([-14, -51], 4);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    const map = L.map(containerRef.current, {
+      scrollWheelZoom: true,
+      zoomControl: true,
+      dragging: true,
+      doubleClickZoom: true,
+      touchZoom: true,
+    }).setView([-14, -51], 4);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
       attribution: '&copy; <a href="https://carto.com">CARTO</a>',
+      maxZoom: 18,
     }).addTo(map);
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; };
   }, []);
 
-  // Draw markers
   useEffect(() => {
     const map = mapRef.current;
     if (!map || cityData.length === 0) return;
@@ -119,22 +110,20 @@ export default function ClientDistributionMap() {
         radius,
         fillColor: "hsl(210, 80%, 52%)",
         fillOpacity: 0.7,
-        color: "hsl(152, 38%, 16%)",
+        color: "hsl(160, 60%, 30%)",
         weight: 1.5,
-      }).bindTooltip(
-        `<strong>${c.city}</strong> - ${c.state}<br/>` +
-        `Clientes: ${c.clients}<br/>` +
-        `Vendas: ${c.sales}<br/>` +
-        `Receita: ${fmt(c.revenue)}`
+      }).bindPopup(
+        `<div style="font-family: sans-serif; font-size: 12px;">
+          <strong>${c.city}</strong> - ${c.state}<br/>
+          Clientes: ${c.clients}<br/>
+          Vendas: ${c.sales}<br/>
+          Receita: ${fmt(c.revenue)}
+        </div>`
       ).addTo(map);
     });
 
-    const points = cityData
-      .map(c => CITY_COORDS[c.city])
-      .filter(Boolean) as [number, number][];
-    if (points.length >= 2) {
-      map.fitBounds(points as L.LatLngBoundsExpression, { padding: [30, 30] });
-    }
+    const points = cityData.map(c => CITY_COORDS[c.city]).filter(Boolean) as [number, number][];
+    if (points.length >= 2) map.fitBounds(points as L.LatLngBoundsExpression, { padding: [30, 30] });
   }, [cityData]);
 
   if (loading) return <div className="text-center py-8 text-muted-foreground text-sm">Carregando distribuição...</div>;
@@ -142,11 +131,7 @@ export default function ClientDistributionMap() {
 
   return (
     <div className="space-y-4">
-      <div
-        ref={containerRef}
-        style={{ height: "320px" }}
-        className="rounded-lg overflow-hidden border border-border"
-      />
+      <div ref={containerRef} style={{ height: "360px" }} className="rounded-lg overflow-hidden border border-border" />
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>

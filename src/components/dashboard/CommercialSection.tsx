@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { iataToCityName, iataToLabel, normalizeProducts } from "@/lib/iataUtils";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
+  PieChart, Pie, Cell as PieCell,
 } from "recharts";
 
 const PIE_COLORS = [
@@ -34,13 +35,16 @@ export default function CommercialSection({ filtered, segments, sellerNames }: P
   const destData = useMemo(() => {
     const c: Record<string, number> = {};
     filtered.forEach(s => { if (s.destination_iata) c[s.destination_iata] = (c[s.destination_iata] || 0) + 1; });
-    return Object.entries(c).map(([name, vendas]) => ({ name, vendas })).sort((a, b) => b.vendas - a.vendas).slice(0, 10);
+    return Object.entries(c)
+      .map(([iata, vendas]) => ({ name: iataToLabel(iata), vendas }))
+      .sort((a, b) => b.vendas - a.vendas)
+      .slice(0, 10);
   }, [filtered]);
 
   const productData = useMemo(() => {
     const c: Record<string, number> = {};
-    filtered.forEach(s => (s.products || []).forEach(p => (c[p] = (c[p] || 0) + 1)));
-    return Object.entries(c).map(([name, value]) => ({ name, value }));
+    filtered.forEach(s => normalizeProducts(s.products || []).forEach(p => (c[p] = (c[p] || 0) + 1)));
+    return Object.entries(c).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
   }, [filtered]);
 
   const itineraryData = useMemo(() => {
@@ -87,11 +91,11 @@ export default function CommercialSection({ filtered, segments, sellerNames }: P
         <Card className="p-5 glass-card">
           <h3 className="text-sm font-semibold text-foreground mb-4 tracking-tight">Top Destinos</h3>
           {destData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={260}>
               <BarChart data={destData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
                 <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={50} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} width={110} />
                 <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
                 <Bar dataKey="vendas" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} name="Vendas" />
               </BarChart>
@@ -102,10 +106,10 @@ export default function CommercialSection({ filtered, segments, sellerNames }: P
         <Card className="p-5 glass-card">
           <h3 className="text-sm font-semibold text-foreground mb-4 tracking-tight">Mix de Produtos</h3>
           {productData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={260}>
               <PieChart>
-                <Pie data={productData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={{ fontSize: 10 }}>
-                  {productData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                <Pie data={productData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={{ stroke: 'hsl(var(--muted-foreground))' }}>
+                  {productData.map((_, i) => <PieCell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
                 <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
               </PieChart>
@@ -116,10 +120,10 @@ export default function CommercialSection({ filtered, segments, sellerNames }: P
         <Card className="p-5 glass-card">
           <h3 className="text-sm font-semibold text-foreground mb-4 tracking-tight">Tipo de Itinerário</h3>
           {itineraryData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie data={itineraryData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={80} label={{ fontSize: 10 }}>
-                  {itineraryData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                  {itineraryData.map((_, i) => <PieCell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
                 <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
               </PieChart>
