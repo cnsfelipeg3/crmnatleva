@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.import-monday-data]
 verify_jwt = false
+
+[functions.data-cleanup]
+verify_jwt = false

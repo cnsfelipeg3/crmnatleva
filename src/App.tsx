@@ -18,6 +18,7 @@ import Checkin from "@/pages/Checkin";
 import Lodging from "@/pages/Lodging";
 import ClientDetail from "@/pages/ClientDetail";
 import ImportData from "@/pages/ImportData";
+import Pendencias from "@/pages/Pendencias";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ function AppRoutes() {
         <Route path="/passengers" element={<Passengers />} />
         <Route path="/birthdays" element={<Birthdays />} />
         <Route path="/import" element={<ImportData />} />
+        <Route path="/pendencias" element={<Pendencias />} />
         <Route path="/settings" element={<SettingsIndex />} />
         <Route path="/settings/sellers" element={<GenericSettingsList title="Vendedores" defaultItems={["Admin NatLeva"]} />} />
         <Route path="/settings/airlines" element={<GenericSettingsList title="Companhias Aéreas" defaultItems={["LATAM", "GOL", "Azul", "TAP", "Emirates", "Qatar Airways", "Turkish Airlines"]} />} />
