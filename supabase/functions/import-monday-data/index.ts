@@ -98,14 +98,10 @@ serve(async (req) => {
         if (data) existingId = data.id;
       }
 
-      // Check by normalized name
+      // Check by normalized name using ilike for exact match
       if (!existingId) {
-        const normalized = normalizeName(fullName);
-        const { data: byName } = await sb.from("passengers").select("id, full_name").limit(500);
-        if (byName) {
-          const match = byName.find(r => normalizeName(r.full_name) === normalized);
-          if (match) existingId = match.id;
-        }
+        const { data: byName } = await sb.from("passengers").select("id").ilike("full_name", fullName).limit(1);
+        if (byName && byName.length > 0) existingId = byName[0].id;
       }
 
       if (existingId) {
@@ -243,15 +239,12 @@ serve(async (req) => {
           const normalized = normalizeName(pName);
           let paxId = paxNameToId[normalized];
 
-          // If not found in map, search DB
+          // If not found in map, search DB by ilike
           if (!paxId) {
-            const { data: allPax } = await sb.from("passengers").select("id, full_name").limit(1000);
-            if (allPax) {
-              const match = allPax.find(p => normalizeName(p.full_name) === normalized);
-              if (match) {
-                paxId = match.id;
-                paxNameToId[normalized] = match.id;
-              }
+            const { data: byName } = await sb.from("passengers").select("id").ilike("full_name", pName.trim()).limit(1);
+            if (byName && byName.length > 0) {
+              paxId = byName[0].id;
+              paxNameToId[normalized] = byName[0].id;
             }
           }
 

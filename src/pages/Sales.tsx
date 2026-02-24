@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { formatDateBR } from "@/lib/dateFormat";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAll";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,11 +42,10 @@ export default function Sales() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    supabase.from("sales").select("*").order("created_at", { ascending: false }).then(({ data, error }) => {
-      if (error) console.error(error);
-      setSales((data || []) as SaleRow[]);
+    fetchAllRows("sales", "*", { order: { column: "created_at", ascending: false } }).then((data) => {
+      setSales(data as SaleRow[]);
       setLoading(false);
-    });
+    }).catch(err => { console.error(err); setLoading(false); });
   }, []);
 
   const statuses = useMemo(() => [...new Set(sales.map(s => s.status))], [sales]);

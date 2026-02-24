@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAll";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,9 +87,8 @@ export default function Passengers() {
   });
 
   const fetchPassengers = async () => {
-    const { data, error } = await supabase.from("passengers").select("*").order("created_at", { ascending: false });
-    if (error) { console.error(error); return; }
-    setPassengers((data || []) as Passenger[]);
+    const data = await fetchAllRows("passengers", "*", { order: { column: "created_at", ascending: false } });
+    setPassengers(data as Passenger[]);
     setLoading(false);
 
     // Fetch sale links for all passengers
