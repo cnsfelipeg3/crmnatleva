@@ -976,6 +976,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      deduplicate_passengers: { Args: never; Returns: Json }
+      deduplicate_sales: { Args: never; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
