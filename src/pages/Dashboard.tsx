@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAll";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
@@ -10,6 +10,12 @@ import ClientsSection from "@/components/dashboard/ClientsSection";
 import GeographicSection from "@/components/dashboard/GeographicSection";
 import MilesSection from "@/components/dashboard/MilesSection";
 import AlertsSection from "@/components/dashboard/AlertsSection";
+import ValueRangeSection from "@/components/dashboard/ValueRangeSection";
+import FunnelSection from "@/components/dashboard/FunnelSection";
+import SeasonalitySection from "@/components/dashboard/SeasonalitySection";
+import RegionSection from "@/components/dashboard/RegionSection";
+import MarginAnalysisSection from "@/components/dashboard/MarginAnalysisSection";
+import SellerRankingSection from "@/components/dashboard/SellerRankingSection";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Sale {
@@ -52,10 +58,15 @@ export default function Dashboard() {
   const [lodgingTasks, setLodgingTasks] = useState<LodgingTask[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Filters
   const [period, setPeriod] = useState("all");
   const [seller, setSeller] = useState("all");
   const [destination, setDestination] = useState("all");
   const [product, setProduct] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [valueRange, setValueRange] = useState("all");
+  const [marginRange, setMarginRange] = useState("all");
+  const [region, setRegion] = useState("all");
 
   useEffect(() => {
     Promise.all([
@@ -94,52 +105,131 @@ export default function Dashboard() {
     return Array.from(s).sort();
   }, [sales]);
 
+  const statusList = useMemo(() => {
+    const s = new Set<string>();
+    sales.forEach(sale => { if (sale.status) s.add(sale.status); });
+    return Array.from(s).sort();
+  }, [sales]);
+
   const periodCutoff = useMemo(() => {
     if (period === "all") return null;
     const now = new Date();
-    const months = period === "30d" ? 1 : period === "90d" ? 3 : 12;
-    return new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+    const daysMap: Record<string, number> = {
+      "today": 0, "yesterday": 1, "7d": 7, "30d": 30, "90d": 90, "this_month": 0, "last_month": 0, "12m": 365,
+    };
+    if (period === "this_month") return new Date(now.getFullYear(), now.getMonth(), 1);
+    if (period === "last_month") return new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const days = daysMap[period] ?? 30;
+    return new Date(now.getTime() - days * 86400000);
   }, [period]);
+
+  const periodEnd = useMemo(() => {
+    if (period === "last_month") {
+      const now = new Date();
+      return new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+    }
+    if (period === "yesterday") {
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      return new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59);
+    }
+    return null;
+  }, [period]);
+
+  // Region classifier
+  const getRegion = useCallback((iata: string | null) => {
+    if (!iata) return "Desconhecido";
+    const europeAirports = ["LIS","CDG","FCO","BCN","MAD","LHR","AMS","FRA","MUC","ZRH","VIE","PRG","DUB","CPH","OSL","ARN","HEL","WAW","BUD","ATH","IST","MXP","NAP","VCE","GVA","BRU","LUX","EDI"];
+    const naAirports = ["JFK","MIA","MCO","LAX","SFO","EWR","BOS","ATL","ORD","DFW","IAH","SEA","YYZ","YVR","YUL","LAS","PHX","DEN","IAD","DCA"];
+    const saAirports = ["GRU","GIG","BSB","CNF","SSA","REC","FOR","POA","CWB","BEL","MAO","FLN","VCP","SDU","CGH","NAT","MCZ","AJU","SLZ","THE","CGB","GYN","VIX","JPA","PMW","PVH","BPS","IOS","ILZ","LDB","MGF","UDI","PPB","RAO","SJP","MDE","BOG","SCL","EZE","LIM","MVD","UIO","CCS","ASU","GYE"];
+    const meAirports = ["DXB","DOH","AUH","JED","RUH","AMM","TLV","CAI","BAH","KWI","MCT"];
+    const asiaAirports = ["NRT","HND","ICN","PEK","PVG","HKG","SIN","BKK","KUL","DEL","BOM","TPE","MNL","CGK","DPS"];
+    const caribAirports = ["CUN","PUJ","SXM","AUA","CUR","NAS","MBJ","HAV","SJU","BGI","UVF"];
+    const africaAirports = ["JNB","CPT","NBO","CMN","CAI","LOS","ADD","DAR","MPM"];
+    if (europeAirports.includes(iata)) return "Europa";
+    if (naAirports.includes(iata)) return "América do Norte";
+    if (saAirports.includes(iata)) return "América do Sul";
+    if (meAirports.includes(iata)) return "Oriente Médio";
+    if (asiaAirports.includes(iata)) return "Ásia";
+    if (caribAirports.includes(iata)) return "Caribe";
+    if (africaAirports.includes(iata)) return "África";
+    return "Outros";
+  }, []);
 
   const filtered = useMemo(() => {
     let result = sales;
     if (periodCutoff) result = result.filter(s => new Date(s.created_at) >= periodCutoff);
+    if (periodEnd) result = result.filter(s => new Date(s.created_at) <= periodEnd);
     if (seller !== "all") {
       const sellerId = profiles.find(p => p.full_name === seller)?.id;
       if (sellerId) result = result.filter(s => s.seller_id === sellerId);
     }
     if (destination !== "all") result = result.filter(s => s.destination_iata === destination);
     if (product !== "all") result = result.filter(s => (s.products || []).includes(product));
+    if (status !== "all") result = result.filter(s => s.status === status);
+    if (region !== "all") result = result.filter(s => getRegion(s.destination_iata) === region);
+    if (valueRange !== "all") {
+      const ranges: Record<string, [number, number]> = {
+        "0-5k": [0, 5000], "5k-10k": [5000, 10000], "10k-20k": [10000, 20000],
+        "20k-35k": [20000, 35000], "35k-60k": [35000, 60000], "60k+": [60000, Infinity],
+      };
+      const [min, max] = ranges[valueRange] || [0, Infinity];
+      result = result.filter(s => (s.received_value || 0) >= min && (s.received_value || 0) < max);
+    }
+    if (marginRange !== "all") {
+      const ranges: Record<string, [number, number]> = {
+        "neg": [-Infinity, 0], "0-10": [0, 10], "10-20": [10, 20], "20-30": [20, 30], "30+": [30, Infinity],
+      };
+      const [min, max] = ranges[marginRange] || [-Infinity, Infinity];
+      result = result.filter(s => (s.margin || 0) >= min && (s.margin || 0) < max);
+    }
     return result;
-  }, [sales, periodCutoff, seller, destination, product, profiles]);
+  }, [sales, periodCutoff, periodEnd, seller, destination, product, profiles, status, region, valueRange, marginRange, getRegion]);
 
   const previous = useMemo(() => {
     if (!periodCutoff) return [];
-    const months = period === "30d" ? 1 : period === "90d" ? 3 : 12;
-    const prevCutoff = new Date(periodCutoff.getFullYear(), periodCutoff.getMonth() - months, periodCutoff.getDate());
+    const diff = Date.now() - periodCutoff.getTime();
+    const prevCutoff = new Date(periodCutoff.getTime() - diff);
     return sales.filter(s => {
       const d = new Date(s.created_at);
       return d >= prevCutoff && d < periodCutoff;
     });
-  }, [sales, periodCutoff, period]);
+  }, [sales, periodCutoff]);
+
+  const activeFilterCount = useMemo(() => {
+    let c = 0;
+    if (period !== "all") c++;
+    if (seller !== "all") c++;
+    if (destination !== "all") c++;
+    if (product !== "all") c++;
+    if (status !== "all") c++;
+    if (valueRange !== "all") c++;
+    if (marginRange !== "all") c++;
+    if (region !== "all") c++;
+    return c;
+  }, [period, seller, destination, product, status, valueRange, marginRange, region]);
+
+  const clearAllFilters = useCallback(() => {
+    setPeriod("all"); setSeller("all"); setDestination("all"); setProduct("all");
+    setStatus("all"); setValueRange("all"); setMarginRange("all"); setRegion("all");
+  }, []);
 
   if (loading) {
     return (
       <div className="p-4 md:p-6 space-y-6">
         <Skeleton className="h-10 w-60" />
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 md:gap-3">
-          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-20 md:h-24 rounded-xl" />)}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Skeleton className="h-64 rounded-xl" />
-          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-72 rounded-xl" />
+          <Skeleton className="h-72 rounded-xl" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 md:space-y-8 animate-fade-in relative">
+    <div className="p-4 md:p-6 space-y-5 md:space-y-6 animate-fade-in relative">
       <div className="fixed inset-0 pointer-events-none opacity-[0.015] bg-grid-pattern" />
 
       <DashboardFilters
@@ -147,20 +237,57 @@ export default function Dashboard() {
         seller={seller} setSeller={setSeller}
         destination={destination} setDestination={setDestination}
         product={product} setProduct={setProduct}
-        sellers={sellersList} destinations={destinationsList}
+        status={status} setStatus={setStatus}
+        valueRange={valueRange} setValueRange={setValueRange}
+        marginRange={marginRange} setMarginRange={setMarginRange}
+        region={region} setRegion={setRegion}
+        sellers={sellersList} destinations={destinationsList} statuses={statusList}
+        activeFilterCount={activeFilterCount}
+        onClearAll={clearAllFilters}
+        totalSales={sales.length}
+        filteredCount={filtered.length}
       />
 
-      <KpiCards filtered={filtered} previous={previous} />
+      <KpiCards filtered={filtered} previous={previous} clients={clients} />
 
       <div className="glow-line" />
 
+      {/* Financeiro + Margem */}
       <FinancialSection filtered={filtered} sellerNames={sellerNames} />
+      <MarginAnalysisSection filtered={filtered} sellerNames={sellerNames} getRegion={getRegion} />
+
+      <div className="glow-line" />
+
+      {/* Comercial + Funil */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <FunnelSection filtered={filtered} />
+        <ValueRangeSection filtered={filtered} />
+      </div>
+
       <CommercialSection filtered={filtered} segments={segments} sellerNames={sellerNames} />
+      <RegionSection filtered={filtered} getRegion={getRegion} />
+
+      <div className="glow-line" />
+
+      {/* Vendedores */}
+      <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
+
+      <div className="glow-line" />
+
+      {/* Sazonalidade */}
+      <SeasonalitySection filtered={filtered} allSales={sales} />
+
+      <div className="glow-line" />
+
+      {/* Operacional + Clientes */}
       <OperationalSection checkinTasks={checkinTasks} lodgingTasks={lodgingTasks} />
       <ClientsSection clients={clients} filtered={filtered} periodStart={periodCutoff} />
       <GeographicSection filtered={filtered} />
       <MilesSection filtered={filtered} costItems={costItems} />
-      <AlertsSection filtered={filtered} sellerNames={sellerNames} />
+
+      <div className="glow-line" />
+
+      <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
     </div>
   );
 }
