@@ -125,10 +125,10 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         <Skeleton className="h-10 w-60" />
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
-          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 md:gap-3">
+          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-20 md:h-24 rounded-xl" />)}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Skeleton className="h-64 rounded-xl" />
@@ -139,7 +139,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-6 space-y-8 animate-fade-in relative">
+    <div className="p-4 md:p-6 space-y-6 md:space-y-8 animate-fade-in relative">
       <div className="fixed inset-0 pointer-events-none opacity-[0.015] bg-grid-pattern" />
 
       <DashboardFilters

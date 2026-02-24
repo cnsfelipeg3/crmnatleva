@@ -23,17 +23,17 @@ export default function DashboardFilters({
   const navigate = useNavigate();
 
   return (
-    <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-lg bg-accent/10 border border-accent/20">
           <Activity className="w-5 h-5 text-accent" />
         </div>
         <div>
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Dashboard</h1>
-          <p className="text-xs text-muted-foreground font-mono tracking-wider">VISÃO ESTRATÉGICA</p>
+          <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Dashboard</h1>
+          <p className="text-[10px] sm:text-xs text-muted-foreground font-mono tracking-wider">VISÃO ESTRATÉGICA</p>
         </div>
       </div>
-      <div className="flex gap-2 items-center flex-wrap">
+      <div className="flex gap-2 items-center flex-wrap w-full sm:w-auto">
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="w-[130px] h-9 text-xs glass-card"><SelectValue /></SelectTrigger>
           <SelectContent>
