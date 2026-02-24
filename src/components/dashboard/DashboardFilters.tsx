@@ -1,7 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Activity, X, Filter, SlidersHorizontal } from "lucide-react";
+import { Plus, Activity, X, Filter, SlidersHorizontal, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -20,6 +20,8 @@ interface Props {
   onClearAll: () => void;
   totalSales: number;
   filteredCount: number;
+  ceoMode?: boolean;
+  onToggleCeoMode?: () => void;
 }
 
 const STRATEGIC_PRESETS = [
@@ -36,6 +38,7 @@ export default function DashboardFilters({
   marginRange, setMarginRange, region, setRegion,
   sellers, destinations, statuses,
   activeFilterCount, onClearAll, totalSales, filteredCount,
+  ceoMode, onToggleCeoMode,
 }: Props) {
   const navigate = useNavigate();
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -57,13 +60,26 @@ export default function DashboardFilters({
             <Activity className="w-5 h-5 text-accent" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Centro de Comando</h1>
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
+              {ceoMode ? "👑 Modo CEO" : "Centro de Comando"}
+            </h1>
             <p className="text-[10px] sm:text-xs text-muted-foreground font-mono tracking-wider">
-              INTELIGÊNCIA ESTRATÉGICA • {filteredCount} de {totalSales} vendas
+              {ceoMode ? "VISÃO ESTRATÉGICA EXECUTIVA" : "INTELIGÊNCIA ESTRATÉGICA"} • {filteredCount} de {totalSales} vendas
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {onToggleCeoMode && (
+            <Button
+              variant={ceoMode ? "default" : "outline"}
+              size="sm"
+              className={`text-xs gap-1.5 ${ceoMode ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}`}
+              onClick={onToggleCeoMode}
+            >
+              <Crown className="w-3.5 h-3.5" />
+              CEO
+            </Button>
+          )}
           {activeFilterCount > 0 && (
             <Button variant="ghost" size="sm" onClick={onClearAll} className="text-xs text-muted-foreground hover:text-destructive">
               <X className="w-3.5 h-3.5 mr-1" /> Limpar ({activeFilterCount})
@@ -76,160 +92,163 @@ export default function DashboardFilters({
       </div>
 
       {/* Primary Filters Row */}
-      <div className="flex gap-2 items-center flex-wrap">
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-[140px] h-8 text-xs glass-card"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todo período</SelectItem>
-            <SelectItem value="today">Hoje</SelectItem>
-            <SelectItem value="yesterday">Ontem</SelectItem>
-            <SelectItem value="7d">Últimos 7 dias</SelectItem>
-            <SelectItem value="30d">Últimos 30 dias</SelectItem>
-            <SelectItem value="90d">Últimos 90 dias</SelectItem>
-            <SelectItem value="this_month">Este mês</SelectItem>
-            <SelectItem value="last_month">Mês anterior</SelectItem>
-            <SelectItem value="12m">Último ano</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {sellers.length > 0 && (
-          <Select value={seller} onValueChange={setSeller}>
-            <SelectTrigger className="w-[140px] h-8 text-xs glass-card"><SelectValue placeholder="Vendedor" /></SelectTrigger>
+      {!ceoMode && (
+        <div className="flex gap-2 items-center flex-wrap">
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-[140px] h-8 text-xs glass-card"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos vendedores</SelectItem>
-              {sellers.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              <SelectItem value="all">Todo período</SelectItem>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="yesterday">Ontem</SelectItem>
+              <SelectItem value="7d">Últimos 7 dias</SelectItem>
+              <SelectItem value="30d">Últimos 30 dias</SelectItem>
+              <SelectItem value="90d">Últimos 90 dias</SelectItem>
+              <SelectItem value="this_month">Este mês</SelectItem>
+              <SelectItem value="last_month">Mês anterior</SelectItem>
+              <SelectItem value="12m">Último ano</SelectItem>
             </SelectContent>
           </Select>
-        )}
 
-        <Select value={product} onValueChange={setProduct}>
-          <SelectTrigger className="w-[110px] h-8 text-xs glass-card"><SelectValue placeholder="Produto" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Produtos</SelectItem>
-            <SelectItem value="Aéreo">Aéreo</SelectItem>
-            <SelectItem value="Hotel">Hotel</SelectItem>
-            <SelectItem value="Seguro">Seguro</SelectItem>
-            <SelectItem value="Passeios">Passeios</SelectItem>
-            <SelectItem value="Cruzeiro">Cruzeiro</SelectItem>
-          </SelectContent>
-        </Select>
+          {sellers.length > 0 && (
+            <Select value={seller} onValueChange={setSeller}>
+              <SelectTrigger className="w-[140px] h-8 text-xs glass-card"><SelectValue placeholder="Vendedor" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos vendedores</SelectItem>
+                {sellers.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
 
-        <Select value={region} onValueChange={setRegion}>
-          <SelectTrigger className="w-[130px] h-8 text-xs glass-card"><SelectValue placeholder="Região" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas regiões</SelectItem>
-            <SelectItem value="Europa">🌍 Europa</SelectItem>
-            <SelectItem value="América do Norte">🗽 América do Norte</SelectItem>
-            <SelectItem value="América do Sul">🌎 América do Sul</SelectItem>
-            <SelectItem value="Oriente Médio">🕌 Oriente Médio</SelectItem>
-            <SelectItem value="Ásia">🏯 Ásia</SelectItem>
-            <SelectItem value="Caribe">🏖 Caribe</SelectItem>
-            <SelectItem value="África">🌍 África</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select value={product} onValueChange={setProduct}>
+            <SelectTrigger className="w-[130px] h-8 text-xs glass-card"><SelectValue placeholder="Produto" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Produtos</SelectItem>
+              <SelectItem value="Passagem Aérea">Passagem Aérea</SelectItem>
+              <SelectItem value="Hotel">Hotel</SelectItem>
+              <SelectItem value="Seguro Viagem">Seguro Viagem</SelectItem>
+              <SelectItem value="Passeios">Passeios</SelectItem>
+              <SelectItem value="Cruzeiro">Cruzeiro</SelectItem>
+              <SelectItem value="Transfer">Transfer</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {/* Advanced Filters */}
-        <Sheet open={advancedOpen} onOpenChange={setAdvancedOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 glass-card relative">
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Avançados</span>
-              {activeFilterCount > 2 && (
-                <Badge className="absolute -top-1.5 -right-1.5 h-4 w-4 p-0 flex items-center justify-center text-[9px] bg-accent text-accent-foreground">
-                  {activeFilterCount}
-                </Badge>
-              )}
-            </Button>
-          </SheetTrigger>
-          <SheetContent className="w-[340px] sm:w-[400px]">
-            <SheetHeader>
-              <SheetTitle className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-accent" /> Filtros Avançados
-              </SheetTitle>
-            </SheetHeader>
-            <div className="mt-6 space-y-5">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Status</label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos status</SelectItem>
-                    {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+          <Select value={region} onValueChange={setRegion}>
+            <SelectTrigger className="w-[130px] h-8 text-xs glass-card"><SelectValue placeholder="Região" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas regiões</SelectItem>
+              <SelectItem value="Europa">🌍 Europa</SelectItem>
+              <SelectItem value="América do Norte">🗽 América do Norte</SelectItem>
+              <SelectItem value="América do Sul">🌎 América do Sul</SelectItem>
+              <SelectItem value="Oriente Médio">🕌 Oriente Médio</SelectItem>
+              <SelectItem value="Ásia">🏯 Ásia</SelectItem>
+              <SelectItem value="Caribe">🏖 Caribe</SelectItem>
+              <SelectItem value="África">🌍 África</SelectItem>
+            </SelectContent>
+          </Select>
 
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Destino</label>
-                <Select value={destination} onValueChange={setDestination}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos destinos</SelectItem>
-                    {destinations.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+          {/* Advanced Filters */}
+          <Sheet open={advancedOpen} onOpenChange={setAdvancedOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 glass-card relative">
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Avançados</span>
+                {activeFilterCount > 2 && (
+                  <Badge className="absolute -top-1.5 -right-1.5 h-4 w-4 p-0 flex items-center justify-center text-[9px] bg-accent text-accent-foreground">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-[340px] sm:w-[400px]">
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-accent" /> Filtros Avançados
+                </SheetTitle>
+              </SheetHeader>
+              <div className="mt-6 space-y-5">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Status</label>
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos status</SelectItem>
+                      {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Faixa de Valor</label>
-                <Select value={valueRange} onValueChange={setValueRange}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas faixas</SelectItem>
-                    <SelectItem value="0-5k">Até R$ 5.000</SelectItem>
-                    <SelectItem value="5k-10k">R$ 5.000 – 10.000</SelectItem>
-                    <SelectItem value="10k-20k">R$ 10.000 – 20.000</SelectItem>
-                    <SelectItem value="20k-35k">R$ 20.000 – 35.000</SelectItem>
-                    <SelectItem value="35k-60k">R$ 35.000 – 60.000</SelectItem>
-                    <SelectItem value="60k+">R$ 60.000+</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Destino</label>
+                  <Select value={destination} onValueChange={setDestination}>
+                    <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos destinos</SelectItem>
+                      {destinations.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div>
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Faixa de Margem</label>
-                <Select value={marginRange} onValueChange={setMarginRange}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todas margens</SelectItem>
-                    <SelectItem value="neg">Negativa (prejuízo)</SelectItem>
-                    <SelectItem value="0-10">0% – 10%</SelectItem>
-                    <SelectItem value="10-20">10% – 20%</SelectItem>
-                    <SelectItem value="20-30">20% – 30%</SelectItem>
-                    <SelectItem value="30+">30%+</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Faixa de Valor</label>
+                  <Select value={valueRange} onValueChange={setValueRange}>
+                    <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas faixas</SelectItem>
+                      <SelectItem value="0-5k">Até R$ 5.000</SelectItem>
+                      <SelectItem value="5k-10k">R$ 5.000 – 10.000</SelectItem>
+                      <SelectItem value="10k-20k">R$ 10.000 – 20.000</SelectItem>
+                      <SelectItem value="20k-35k">R$ 20.000 – 35.000</SelectItem>
+                      <SelectItem value="35k-60k">R$ 35.000 – 60.000</SelectItem>
+                      <SelectItem value="60k+">R$ 60.000+</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="pt-3 border-t border-border">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 block">Presets Estratégicos</label>
-                <div className="flex flex-wrap gap-2">
-                  {STRATEGIC_PRESETS.map(p => (
-                    <Button
-                      key={p.label}
-                      variant="outline"
-                      size="sm"
-                      className="text-xs h-7"
-                      onClick={() => { applyPreset(p); setAdvancedOpen(false); }}
-                    >
-                      {p.label}
-                    </Button>
-                  ))}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Faixa de Margem</label>
+                  <Select value={marginRange} onValueChange={setMarginRange}>
+                    <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas margens</SelectItem>
+                      <SelectItem value="neg">Negativa (prejuízo)</SelectItem>
+                      <SelectItem value="0-10">0% – 10%</SelectItem>
+                      <SelectItem value="10-20">10% – 20%</SelectItem>
+                      <SelectItem value="20-30">20% – 30%</SelectItem>
+                      <SelectItem value="30+">30%+</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="pt-3 border-t border-border">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 block">Presets Estratégicos</label>
+                  <div className="flex flex-wrap gap-2">
+                    {STRATEGIC_PRESETS.map(p => (
+                      <Button
+                        key={p.label}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={() => { applyPreset(p); setAdvancedOpen(false); }}
+                      >
+                        {p.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-border flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => { onClearAll(); setAdvancedOpen(false); }}>
+                    Limpar Tudo
+                  </Button>
+                  <Button size="sm" className="flex-1 text-xs" onClick={() => setAdvancedOpen(false)}>
+                    Aplicar
+                  </Button>
                 </div>
               </div>
-
-              <div className="pt-3 border-t border-border flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1 text-xs" onClick={() => { onClearAll(); setAdvancedOpen(false); }}>
-                  Limpar Tudo
-                </Button>
-                <Button size="sm" className="flex-1 text-xs" onClick={() => setAdvancedOpen(false)}>
-                  Aplicar
-                </Button>
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
-      </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+      )}
     </div>
   );
 }

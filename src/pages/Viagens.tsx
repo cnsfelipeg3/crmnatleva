@@ -12,8 +12,9 @@ import { useNavigate } from "react-router-dom";
 import RoutesMap from "@/components/RoutesMap";
 import {
   Plane, Globe, AlertTriangle, Users, DollarSign, MapPin,
-  Clock, Shield, Eye, ExternalLink, Radio, Zap,
+  Clock, Shield, Eye, ExternalLink, Radio, Zap, Info,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -30,23 +31,54 @@ interface Sale {
 interface Profile { id: string; full_name: string; }
 interface Segment { sale_id: string; origin_iata: string; destination_iata: string; }
 
-type TripStatus = "em_viagem" | "proxima" | "embarque_amanha" | "retorno_hoje" | "futura" | "finalizada";
+type TripStatus = "em_viagem" | "proxima" | "embarque_amanha" | "retorno_hoje" | "futura" | "finalizada" | "erro_data" | "sem_data";
 
 function getTripStatus(dep: string | null, ret: string | null): TripStatus {
-  if (!dep) return "futura";
+  // No departure date at all
+  if (!dep) return "sem_data";
+
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
   const tomorrow = new Date(now.getTime() + 86400000).toISOString().slice(0, 10);
   const depDate = dep.slice(0, 10);
   const retDate = ret?.slice(0, 10);
 
-  if (retDate && retDate < today) return "finalizada";
-  if (retDate === today) return "retorno_hoje";
-  if (depDate <= today && (!retDate || retDate >= today)) return "em_viagem";
-  if (depDate === tomorrow) return "embarque_amanha";
-  const in7days = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 10);
-  if (depDate <= in7days) return "proxima";
-  return "futura";
+  // Return date before departure = error
+  if (retDate && retDate < depDate) return "erro_data";
+
+  // WITH return date: standard logic
+  if (retDate) {
+    if (retDate < today) return "finalizada";
+    if (retDate === today) return "retorno_hoje";
+    if (depDate <= today) return "em_viagem";
+    if (depDate === tomorrow) return "embarque_amanha";
+    const in7days = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 10);
+    if (depDate <= in7days) return "proxima";
+    return "futura";
+  }
+
+  // WITHOUT return date: 30-day rule
+  const depTime = new Date(depDate).getTime();
+  const diffDays = Math.floor((now.getTime() - depTime) / 86400000);
+
+  if (diffDays > 30) return "finalizada"; // Auto-close after 30 days
+  if (diffDays >= 0 && diffDays <= 30) {
+    if (depDate === today) return "em_viagem";
+    if (diffDays > 0) return "em_viagem";
+  }
+  if (depDate > today) {
+    if (depDate === tomorrow) return "embarque_amanha";
+    const in7days = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 10);
+    if (depDate <= in7days) return "proxima";
+    return "futura";
+  }
+
+  return "em_viagem";
+}
+
+function getDaysSinceDeparture(dep: string | null): number | null {
+  if (!dep) return null;
+  return Math.floor((Date.now() - new Date(dep.slice(0, 10)).getTime()) / 86400000);
 }
 
 const STATUS_CONFIG: Record<TripStatus, { label: string; color: string; icon: typeof Plane }> = {
@@ -56,9 +88,11 @@ const STATUS_CONFIG: Record<TripStatus, { label: string; color: string; icon: ty
   retorno_hoje: { label: "Retorna Hoje", color: "bg-orange-500/15 text-orange-400 border-orange-500/30", icon: MapPin },
   futura: { label: "Futura", color: "bg-muted text-muted-foreground border-border", icon: Globe },
   finalizada: { label: "Finalizada", color: "bg-muted/50 text-muted-foreground/50 border-border/50", icon: Shield },
+  erro_data: { label: "Erro de Data", color: "bg-red-500/15 text-red-400 border-red-500/30", icon: AlertTriangle },
+  sem_data: { label: "Sem Data", color: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20", icon: Info },
 };
 
-type FilterMode = "all" | "em_viagem" | "48h" | "7d" | "critico";
+type FilterMode = "all" | "em_viagem" | "48h" | "7d" | "critico" | "sem_data";
 
 export default function Viagens() {
   const [sales, setSales] = useState<Sale[]>([]);
@@ -89,11 +123,20 @@ export default function Viagens() {
   }, [profiles]);
 
   const tripsWithStatus = useMemo(() => {
-    return sales
-      .filter(s => s.departure_date)
-      .map(s => ({ ...s, tripStatus: getTripStatus(s.departure_date, s.return_date) }))
-      .filter(s => s.tripStatus !== "finalizada" || filterMode === "all");
-  }, [sales, filterMode]);
+    return sales.map(s => ({
+      ...s,
+      tripStatus: getTripStatus(s.departure_date, s.return_date),
+      daysSinceDep: getDaysSinceDeparture(s.departure_date),
+    }));
+  }, [sales]);
+
+  // Status correction log
+  const correctionLog = useMemo(() => {
+    const autoFinalized = tripsWithStatus.filter(t => t.tripStatus === "finalizada" && !t.return_date && (t.daysSinceDep ?? 0) > 30);
+    const noDate = tripsWithStatus.filter(t => t.tripStatus === "sem_data");
+    const dateErrors = tripsWithStatus.filter(t => t.tripStatus === "erro_data");
+    return { autoFinalized: autoFinalized.length, noDate: noDate.length, dateErrors: dateErrors.length };
+  }, [tripsWithStatus]);
 
   const filtered = useMemo(() => {
     const now = new Date();
@@ -101,12 +144,17 @@ export default function Viagens() {
     const in7d = new Date(now.getTime() + 7 * 86400000).toISOString().slice(0, 10);
     const today = now.toISOString().slice(0, 10);
 
+    let base = tripsWithStatus;
+
     switch (filterMode) {
-      case "em_viagem": return tripsWithStatus.filter(t => t.tripStatus === "em_viagem");
-      case "48h": return tripsWithStatus.filter(t => t.departure_date && t.departure_date.slice(0, 10) <= in48h && t.departure_date.slice(0, 10) >= today);
-      case "7d": return tripsWithStatus.filter(t => t.departure_date && t.departure_date.slice(0, 10) <= in7d && t.departure_date.slice(0, 10) >= today);
-      case "critico": return tripsWithStatus.filter(t => ["em_viagem", "embarque_amanha", "retorno_hoje"].includes(t.tripStatus));
-      default: return tripsWithStatus;
+      case "em_viagem": return base.filter(t => t.tripStatus === "em_viagem");
+      case "48h": return base.filter(t => t.departure_date && t.departure_date.slice(0, 10) <= in48h && t.departure_date.slice(0, 10) >= today);
+      case "7d": return base.filter(t => t.departure_date && t.departure_date.slice(0, 10) <= in7d && t.departure_date.slice(0, 10) >= today);
+      case "critico": return base.filter(t => ["em_viagem", "embarque_amanha", "retorno_hoje", "erro_data"].includes(t.tripStatus));
+      case "sem_data": return base.filter(t => t.tripStatus === "sem_data" || t.tripStatus === "erro_data");
+      default:
+        // "all" hides finalized by default
+        return base.filter(t => t.tripStatus !== "finalizada");
     }
   }, [tripsWithStatus, filterMode]);
 
@@ -118,19 +166,12 @@ export default function Viagens() {
     const activeRevenue = active.reduce((s, v) => s + (v.received_value || 0), 0);
     const returningToday = tripsWithStatus.filter(t => t.tripStatus === "retorno_hoje");
     const pax = active.reduce((s, v) => s + (v.adults || 0) + (v.children || 0), 0);
-    return {
-      emViagem: active.length,
-      next7d: next7d.length,
-      countries: countries.size,
-      activeRevenue,
-      returningToday: returningToday.length,
-      pax,
-    };
+    return { emViagem: active.length, next7d: next7d.length, countries: countries.size, activeRevenue, returningToday: returningToday.length, pax };
   }, [tripsWithStatus]);
 
   // Routes for map
   const routes = useMemo(() => {
-    const active = filtered.filter(t => t.tripStatus !== "finalizada" && t.origin_iata && t.destination_iata);
+    const active = filtered.filter(t => !["finalizada", "sem_data", "erro_data"].includes(t.tripStatus) && t.origin_iata && t.destination_iata);
     const map: Record<string, { origin: string; destination: string; count: number; revenue: number }> = {};
     active.forEach(s => {
       const key = `${s.origin_iata}-${s.destination_iata}`;
@@ -152,13 +193,15 @@ export default function Viagens() {
     if (highValue.length > 0) items.push({ icon: DollarSign, text: `${highValue.length} viagem(s) acima de R$ 50k ativa(s)`, severity: "red" });
     const intl = tripsWithStatus.filter(t => t.tripStatus === "em_viagem" && t.is_international);
     if (intl.length > 0) items.push({ icon: Globe, text: `${intl.length} viagem(s) internacional(is) em andamento`, severity: "blue" });
+    if (correctionLog.autoFinalized > 0) items.push({ icon: Shield, text: `${correctionLog.autoFinalized} viagem(s) encerrada(s) automaticamente (>30 dias sem retorno)`, severity: "yellow" });
+    if (correctionLog.noDate > 0) items.push({ icon: Info, text: `${correctionLog.noDate} venda(s) sem data de embarque`, severity: "yellow" });
+    if (correctionLog.dateErrors > 0) items.push({ icon: AlertTriangle, text: `${correctionLog.dateErrors} venda(s) com erro de data (retorno < ida)`, severity: "red" });
     return items;
-  }, [tripsWithStatus]);
+  }, [tripsWithStatus, correctionLog]);
 
   const daysUntil = (dateStr: string | null) => {
     if (!dateStr) return null;
-    const diff = Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
-    return diff;
+    return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
   };
 
   if (loading) return (
@@ -181,13 +224,13 @@ export default function Viagens() {
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Torre de Controle</h1>
-            <p className="text-[10px] text-muted-foreground font-mono tracking-wider">MONITORAMENTO DE VIAGENS EM TEMPO REAL</p>
+            <p className="text-[10px] text-muted-foreground font-mono tracking-wider">MONITORAMENTO EM TEMPO REAL • REGRA 30 DIAS ATIVA</p>
           </div>
         </div>
         <div className="flex gap-1.5 flex-wrap">
           {([
-            ["all", "Todas"], ["em_viagem", "🟢 Em Viagem"], ["48h", "⚡ 48h"],
-            ["7d", "📅 7 dias"], ["critico", "🔴 Crítico"],
+            ["all", "Ativas"], ["em_viagem", "🟢 Em Viagem"], ["48h", "⚡ 48h"],
+            ["7d", "📅 7 dias"], ["critico", "🔴 Crítico"], ["sem_data", "⚠️ Pendências"],
           ] as [FilterMode, string][]).map(([key, label]) => (
             <Button
               key={key}
@@ -224,13 +267,12 @@ export default function Viagens() {
 
       {/* Alerts + Map */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-        {/* Alerts */}
         <Card className="p-4 glass-card lg:col-span-1">
           <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
             <Zap className="w-4 h-4 text-yellow-400" /> Alertas
           </h3>
           <div className="space-y-2">
-            {alerts.length === 0 && <p className="text-xs text-muted-foreground">Nenhum alerta no momento ✅</p>}
+            {alerts.length === 0 && <p className="text-xs text-muted-foreground">Nenhum alerta ✅</p>}
             {alerts.map((a, i) => (
               <div key={i} className={`flex items-start gap-2 p-2 rounded-lg border ${
                 a.severity === "red" ? "bg-red-500/5 border-red-500/20" :
@@ -246,7 +288,6 @@ export default function Viagens() {
           </div>
         </Card>
 
-        {/* Map */}
         <Card className="glass-card lg:col-span-3 overflow-hidden">
           <div className="p-3 pb-0">
             <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
@@ -279,27 +320,40 @@ export default function Viagens() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.slice(0, 50).map(trip => {
+              {filtered.slice(0, 80).map(trip => {
                 const cfg = STATUS_CONFIG[trip.tripStatus];
                 const days = daysUntil(trip.tripStatus === "em_viagem" ? trip.return_date : trip.departure_date);
                 return (
                   <TableRow key={trip.id} className="cursor-pointer hover:bg-muted/30" onClick={() => setSelectedSale(trip)}>
                     <TableCell>
-                      <Badge variant="outline" className={`text-[9px] ${cfg.color}`}>
-                        <cfg.icon className="w-2.5 h-2.5 mr-0.5" />
-                        {cfg.label}
-                      </Badge>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="outline" className={`text-[9px] ${cfg.color}`}>
+                            <cfg.icon className="w-2.5 h-2.5 mr-0.5" />
+                            {cfg.label}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {trip.tripStatus === "finalizada" && !trip.return_date && (trip.daysSinceDep ?? 0) > 30 && (
+                            <p className="text-xs">Encerrada automaticamente ({trip.daysSinceDep} dias sem retorno)</p>
+                          )}
+                          {trip.tripStatus === "erro_data" && <p className="text-xs">Data de retorno anterior à ida</p>}
+                          {trip.tripStatus === "sem_data" && <p className="text-xs">Preencha a data de embarque</p>}
+                        </TooltipContent>
+                      </Tooltip>
                     </TableCell>
                     <TableCell className="text-xs font-medium">{trip.name}</TableCell>
                     <TableCell className="text-xs">{iataToCityName(trip.destination_iata)}</TableCell>
                     <TableCell className="text-xs font-mono">{formatDateBR(trip.departure_date)}</TableCell>
-                    <TableCell className="text-xs font-mono">{formatDateBR(trip.return_date)}</TableCell>
+                    <TableCell className="text-xs font-mono">{trip.return_date ? formatDateBR(trip.return_date) : <span className="text-muted-foreground/50">—</span>}</TableCell>
                     <TableCell className="text-xs text-center">
-                      {days !== null && (
+                      {trip.tripStatus === "em_viagem" && !trip.return_date && trip.daysSinceDep !== null ? (
+                        <span className="text-yellow-400 text-[9px]">{trip.daysSinceDep}d sem retorno</span>
+                      ) : days !== null ? (
                         <span className={days <= 1 ? "text-yellow-400 font-bold" : days <= 3 ? "text-blue-400" : "text-muted-foreground"}>
                           {days > 0 ? `${days}d` : days === 0 ? "Hoje" : "—"}
                         </span>
-                      )}
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-xs text-right font-medium">{fmt(trip.received_value || 0)}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{sellerNames[trip.seller_id || ""] || "—"}</TableCell>
@@ -340,11 +394,14 @@ export default function Viagens() {
                 {selectedSale.airline && <div><span className="text-muted-foreground text-xs">Cia Aérea</span><p>{selectedSale.airline}</p></div>}
                 <div><span className="text-muted-foreground text-xs">Vendedor</span><p>{sellerNames[selectedSale.seller_id || ""] || "—"}</p></div>
                 {selectedSale.locators?.length > 0 && (
-                  <div className="col-span-2"><span className="text-muted-foreground text-xs">Localizadores</span><p className="font-mono">{selectedSale.locators.join(", ")}</p></div>
+                  <div className="col-span-2">
+                    <span className="text-muted-foreground text-xs">Localizadores</span>
+                    <p className="font-mono text-xs">{selectedSale.locators.join(", ")}</p>
+                  </div>
                 )}
               </div>
-              <Button className="w-full" onClick={() => navigate(`/sales/${selectedSale.id}`)}>
-                <Eye className="w-4 h-4 mr-2" /> Abrir Venda
+              <Button className="w-full" onClick={() => { setSelectedSale(null); navigate(`/sales/${selectedSale.id}`); }}>
+                <ExternalLink className="w-4 h-4 mr-2" /> Abrir Venda
               </Button>
             </div>
           )}

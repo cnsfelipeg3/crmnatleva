@@ -59,6 +59,7 @@ export default function Dashboard() {
   const [checkinTasks, setCheckinTasks] = useState<CheckinTask[]>([]);
   const [lodgingTasks, setLodgingTasks] = useState<LodgingTask[]>([]);
   const [loading, setLoading] = useState(true);
+  const [ceoMode, setCeoMode] = useState(false);
 
   // Filters
   const [period, setPeriod] = useState("all");
@@ -113,6 +114,26 @@ export default function Dashboard() {
     return Array.from(s).sort();
   }, [sales]);
 
+  // Region classifier
+  const getRegion = useCallback((iata: string | null) => {
+    if (!iata) return "Desconhecido";
+    const europeAirports = ["LIS","CDG","FCO","BCN","MAD","LHR","AMS","FRA","MUC","ZRH","VIE","PRG","DUB","CPH","OSL","ARN","HEL","WAW","BUD","ATH","IST","MXP","NAP","VCE","GVA","BRU","LUX","EDI"];
+    const naAirports = ["JFK","MIA","MCO","LAX","SFO","EWR","BOS","ATL","ORD","DFW","IAH","SEA","YYZ","YVR","YUL","LAS","PHX","DEN","IAD","DCA"];
+    const saAirports = ["GRU","GIG","BSB","CNF","SSA","REC","FOR","POA","CWB","BEL","MAO","FLN","VCP","SDU","CGH","NAT","MCZ","AJU","SLZ","THE","CGB","GYN","VIX","JPA","PMW","PVH","BPS","IOS","ILZ","LDB","MGF","UDI","PPB","RAO","SJP","MDE","BOG","SCL","EZE","LIM","MVD","UIO","CCS","ASU","GYE"];
+    const meAirports = ["DXB","DOH","AUH","JED","RUH","AMM","TLV","CAI","BAH","KWI","MCT"];
+    const asiaAirports = ["NRT","HND","ICN","PEK","PVG","HKG","SIN","BKK","KUL","DEL","BOM","TPE","MNL","CGK","DPS"];
+    const caribAirports = ["CUN","PUJ","SXM","AUA","CUR","NAS","MBJ","HAV","SJU","BGI","UVF"];
+    const africaAirports = ["JNB","CPT","NBO","CMN","CAI","LOS","ADD","DAR","MPM"];
+    if (europeAirports.includes(iata)) return "Europa";
+    if (naAirports.includes(iata)) return "América do Norte";
+    if (saAirports.includes(iata)) return "América do Sul";
+    if (meAirports.includes(iata)) return "Oriente Médio";
+    if (asiaAirports.includes(iata)) return "Ásia";
+    if (caribAirports.includes(iata)) return "Caribe";
+    if (africaAirports.includes(iata)) return "África";
+    return "Outros";
+  }, []);
+
   const periodCutoff = useMemo(() => {
     if (period === "all") return null;
     const now = new Date();
@@ -136,26 +157,6 @@ export default function Dashboard() {
     }
     return null;
   }, [period]);
-
-  // Region classifier
-  const getRegion = useCallback((iata: string | null) => {
-    if (!iata) return "Desconhecido";
-    const europeAirports = ["LIS","CDG","FCO","BCN","MAD","LHR","AMS","FRA","MUC","ZRH","VIE","PRG","DUB","CPH","OSL","ARN","HEL","WAW","BUD","ATH","IST","MXP","NAP","VCE","GVA","BRU","LUX","EDI"];
-    const naAirports = ["JFK","MIA","MCO","LAX","SFO","EWR","BOS","ATL","ORD","DFW","IAH","SEA","YYZ","YVR","YUL","LAS","PHX","DEN","IAD","DCA"];
-    const saAirports = ["GRU","GIG","BSB","CNF","SSA","REC","FOR","POA","CWB","BEL","MAO","FLN","VCP","SDU","CGH","NAT","MCZ","AJU","SLZ","THE","CGB","GYN","VIX","JPA","PMW","PVH","BPS","IOS","ILZ","LDB","MGF","UDI","PPB","RAO","SJP","MDE","BOG","SCL","EZE","LIM","MVD","UIO","CCS","ASU","GYE"];
-    const meAirports = ["DXB","DOH","AUH","JED","RUH","AMM","TLV","CAI","BAH","KWI","MCT"];
-    const asiaAirports = ["NRT","HND","ICN","PEK","PVG","HKG","SIN","BKK","KUL","DEL","BOM","TPE","MNL","CGK","DPS"];
-    const caribAirports = ["CUN","PUJ","SXM","AUA","CUR","NAS","MBJ","HAV","SJU","BGI","UVF"];
-    const africaAirports = ["JNB","CPT","NBO","CMN","CAI","LOS","ADD","DAR","MPM"];
-    if (europeAirports.includes(iata)) return "Europa";
-    if (naAirports.includes(iata)) return "América do Norte";
-    if (saAirports.includes(iata)) return "América do Sul";
-    if (meAirports.includes(iata)) return "Oriente Médio";
-    if (asiaAirports.includes(iata)) return "Ásia";
-    if (caribAirports.includes(iata)) return "Caribe";
-    if (africaAirports.includes(iata)) return "África";
-    return "Outros";
-  }, []);
 
   const filtered = useMemo(() => {
     let result = sales;
@@ -248,58 +249,75 @@ export default function Dashboard() {
         onClearAll={clearAllFilters}
         totalSales={sales.length}
         filteredCount={filtered.length}
+        ceoMode={ceoMode}
+        onToggleCeoMode={() => setCeoMode(!ceoMode)}
       />
 
-      <KpiCards filtered={filtered} previous={previous} clients={clients} />
+      <KpiCards filtered={filtered} previous={previous} clients={clients} ceoMode={ceoMode} />
 
-      <div className="glow-line" />
+      {/* CEO Mode: Show only strategic sections */}
+      {ceoMode ? (
+        <>
+          <GoalProjectionSection filtered={filtered} allSales={sales} />
+          <div className="glow-line" />
+          <FinancialSection filtered={filtered} sellerNames={sellerNames} />
+          <div className="glow-line" />
+          <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
+          <div className="glow-line" />
+          <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+        </>
+      ) : (
+        <>
+          <div className="glow-line" />
 
-      {/* Financeiro + Margem */}
-      <FinancialSection filtered={filtered} sellerNames={sellerNames} />
-      <MarginAnalysisSection filtered={filtered} sellerNames={sellerNames} getRegion={getRegion} />
+          {/* Financeiro + Margem */}
+          <FinancialSection filtered={filtered} sellerNames={sellerNames} />
+          <MarginAnalysisSection filtered={filtered} sellerNames={sellerNames} getRegion={getRegion} />
 
-      <div className="glow-line" />
+          <div className="glow-line" />
 
-      {/* Comercial + Funil */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <FunnelSection filtered={filtered} />
-        <ValueRangeSection filtered={filtered} />
-      </div>
+          {/* Comercial + Funil */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <FunnelSection filtered={filtered} />
+            <ValueRangeSection filtered={filtered} />
+          </div>
 
-      <CommercialSection filtered={filtered} segments={segments} sellerNames={sellerNames} />
-      <RegionSection filtered={filtered} getRegion={getRegion} />
+          <CommercialSection filtered={filtered} segments={segments} sellerNames={sellerNames} />
+          <RegionSection filtered={filtered} getRegion={getRegion} />
 
-      <div className="glow-line" />
+          <div className="glow-line" />
 
-      {/* Vendedores */}
-      <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
+          {/* Vendedores */}
+          <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
 
-      <div className="glow-line" />
+          <div className="glow-line" />
 
-      {/* Sazonalidade */}
-      <SeasonalitySection filtered={filtered} allSales={sales} />
+          {/* Sazonalidade */}
+          <SeasonalitySection filtered={filtered} allSales={sales} />
 
-      <div className="glow-line" />
+          <div className="glow-line" />
 
-      {/* Projeção de Meta */}
-      <GoalProjectionSection filtered={filtered} allSales={sales} />
+          {/* Projeção de Meta */}
+          <GoalProjectionSection filtered={filtered} allSales={sales} />
 
-      <div className="glow-line" />
+          <div className="glow-line" />
 
-      {/* Heatmaps */}
-      <HeatmapSection filtered={filtered} />
+          {/* Heatmaps */}
+          <HeatmapSection filtered={filtered} />
 
-      <div className="glow-line" />
+          <div className="glow-line" />
 
-      {/* Operacional + Clientes */}
-      <OperationalSection checkinTasks={checkinTasks} lodgingTasks={lodgingTasks} />
-      <ClientsSection clients={clients} filtered={filtered} periodStart={periodCutoff} />
-      <GeographicSection filtered={filtered} />
-      <MilesSection filtered={filtered} costItems={costItems} />
+          {/* Operacional + Clientes */}
+          <OperationalSection checkinTasks={checkinTasks} lodgingTasks={lodgingTasks} />
+          <ClientsSection clients={clients} filtered={filtered} periodStart={periodCutoff} />
+          <GeographicSection filtered={filtered} />
+          <MilesSection filtered={filtered} costItems={costItems} />
 
-      <div className="glow-line" />
+          <div className="glow-line" />
 
-      <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+          <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+        </>
+      )}
     </div>
   );
 }
