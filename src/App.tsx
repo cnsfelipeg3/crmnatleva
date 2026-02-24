@@ -11,6 +11,7 @@ import Sales from "@/pages/Sales";
 import SaleDetail from "@/pages/SaleDetail";
 import NewSale from "@/pages/NewSale";
 import Passengers from "@/pages/Passengers";
+import Birthdays from "@/pages/Birthdays";
 import SettingsIndex from "@/pages/settings/SettingsIndex";
 import GenericSettingsList from "@/pages/settings/GenericSettingsList";
 import Checkin from "@/pages/Checkin";
@@ -45,6 +46,7 @@ function AppRoutes() {
         <Route path="/hospedagem" element={<Lodging />} />
         <Route path="/clients/:id" element={<ClientDetail />} />
         <Route path="/passengers" element={<Passengers />} />
+        <Route path="/birthdays" element={<Birthdays />} />
         <Route path="/settings" element={<SettingsIndex />} />
         <Route path="/settings/sellers" element={<GenericSettingsList title="Vendedores" defaultItems={["Admin NatLeva"]} />} />
         <Route path="/settings/airlines" element={<GenericSettingsList title="Companhias Aéreas" defaultItems={["LATAM", "GOL", "Azul", "TAP", "Emirates", "Qatar Airways", "Turkish Airlines"]} />} />

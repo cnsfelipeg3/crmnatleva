@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import logoNatleva from "@/assets/logo-natleva.png";
 import {
   LayoutDashboard, Plus, List, Settings, LogOut, Plane, Users,
-  ChevronLeft, ChevronRight, ClipboardCheck, Hotel, Sun, Moon,
+  ChevronLeft, ChevronRight, ClipboardCheck, Hotel, Sun, Moon, Cake,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ const navItems = [
   { to: "/checkin", icon: ClipboardCheck, label: "Fazer Check-in" },
   { to: "/hospedagem", icon: Hotel, label: "Confirmar Hospedagens" },
   { to: "/passengers", icon: Users, label: "Passageiros" },
+  { to: "/birthdays", icon: Cake, label: "Aniversariantes" },
   { to: "/settings", icon: Settings, label: "Configurações" },
 ];
 
