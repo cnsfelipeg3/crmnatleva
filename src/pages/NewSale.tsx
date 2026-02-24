@@ -21,6 +21,7 @@ import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import FlightEnrichmentDialog from "@/components/FlightEnrichmentDialog";
 import HotelAutocomplete from "@/components/HotelAutocomplete";
 import { classifyItinerary, assignDirections } from "@/lib/itineraryClassifier";
+import { smartCapitalizeName } from "@/lib/nameUtils";
 
 const steps = [
   { id: 1, label: "Upload & IA" },
@@ -247,7 +248,7 @@ export default function NewSale() {
       if (hotelTotal > 0 || form.hotel_name) products.push("Hotel");
 
       const { data: saleData, error: saleError } = await supabase.from("sales").insert({
-        name: form.name,
+        name: smartCapitalizeName(form.name),
         seller_id: user?.id,
         close_date: form.close_date || null,
         payment_method: form.payment_method || null,
@@ -400,7 +401,7 @@ export default function NewSale() {
           // Create if not found
           if (!passengerId) {
             const { data: newPax } = await supabase.from("passengers").insert({
-              full_name: pax.full_name,
+              full_name: smartCapitalizeName(pax.full_name),
               cpf: cleanCpf && cleanCpf.length === 11 ? cleanCpf : null,
               phone: pax.phone || null,
               passport_number: pax.passport_number || null,

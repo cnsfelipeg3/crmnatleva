@@ -57,6 +57,21 @@ function normalizeName(name: string): string {
   return name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
 }
 
+const PREPOSITIONS = new Set(["de", "da", "do", "das", "dos", "e"]);
+
+function smartCapitalizeName(name: string): string {
+  const cleaned = name.trim().replace(/\s+/g, " ");
+  if (!cleaned) return "";
+  return cleaned.split(" ").map((word, index) => {
+    const lower = word.toLowerCase();
+    if (index > 0 && PREPOSITIONS.has(lower)) return lower;
+    if (word.includes("-")) {
+      return word.split("-").map(p => p.length > 0 ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : p).join("-");
+    }
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  }).join(" ");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -125,8 +140,8 @@ serve(async (req) => {
         paxNameToId[normalizeName(fullName)] = existingId;
         paxUpdated++;
       } else {
-        const { data: newPax, error } = await sb.from("passengers").insert({
-          full_name: fullName,
+      const { data: newPax, error } = await sb.from("passengers").insert({
+          full_name: smartCapitalizeName(fullName),
           cpf, phone, birth_date: birthDate,
           passport_number: passportNumber, passport_expiry: passportExpiry,
           address_city: city, address_state: state,
@@ -151,6 +166,7 @@ serve(async (req) => {
         .replace(/^\(.*?\)\s*/i, "")
         .trim();
       if (!saleName || saleName.length < 2) saleName = rawName;
+      saleName = smartCapitalizeName(saleName);
 
       const departureDate = parseDate(sale.departure_date);
       const returnDate = parseDate(sale.return_date);
@@ -251,7 +267,7 @@ serve(async (req) => {
           // If still not found, create passenger with just name
           if (!paxId) {
             const { data: created } = await sb.from("passengers").insert({
-              full_name: pName.trim(),
+              full_name: smartCapitalizeName(pName.trim()),
             }).select("id").single();
             if (created) {
               paxId = created.id;
