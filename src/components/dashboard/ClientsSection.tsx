@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { Users, UserPlus, Repeat, Crown } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -14,9 +15,13 @@ interface Client {
 
 interface Sale {
   id: string;
+  display_id: string;
+  name: string;
   client_id: string | null;
   received_value: number;
   created_at: string;
+  status: string;
+  margin: number;
 }
 
 interface Props {
@@ -27,26 +32,32 @@ interface Props {
 
 export default function ClientsSection({ clients, filtered, periodStart }: Props) {
   const navigate = useNavigate();
+  const [drilldown, setDrilldown] = useState<{ label: string; sales: Sale[] } | null>(null);
 
-  const activeClients = useMemo(() => {
-    const ids = new Set(filtered.filter(s => s.client_id).map(s => s.client_id!));
-    return ids.size;
+  const activeClientIds = useMemo(() => {
+    return new Set(filtered.filter(s => s.client_id).map(s => s.client_id!));
   }, [filtered]);
+
+  const activeClients = activeClientIds.size;
 
   const newClients = useMemo(() => {
     if (!periodStart) return clients.length;
     return clients.filter(c => new Date(c.created_at) >= periodStart).length;
   }, [clients, periodStart]);
 
-  const recurrentPct = useMemo(() => {
-    const clientSales: Record<string, number> = {};
+  const recurrentData = useMemo(() => {
+    const clientSales: Record<string, Sale[]> = {};
     filtered.forEach(s => {
-      if (s.client_id) clientSales[s.client_id] = (clientSales[s.client_id] || 0) + 1;
+      if (s.client_id) {
+        if (!clientSales[s.client_id]) clientSales[s.client_id] = [];
+        clientSales[s.client_id].push(s);
+      }
     });
     const total = Object.keys(clientSales).length;
-    if (total === 0) return 0;
-    const recurrent = Object.values(clientSales).filter(c => c > 1).length;
-    return (recurrent / total) * 100;
+    const recurrentSales = Object.values(clientSales).filter(c => c.length > 1).flat();
+    const recurrent = Object.values(clientSales).filter(c => c.length > 1).length;
+    const pct = total > 0 ? (recurrent / total) * 100 : 0;
+    return { pct, recurrentSales };
   }, [filtered]);
 
   const topClients = useMemo(() => {
@@ -62,10 +73,12 @@ export default function ClientsSection({ clients, filtered, periodStart }: Props
     return Object.values(map).sort((a, b) => b.receita - a.receita).slice(0, 10);
   }, [filtered, clients]);
 
+  const activeSales = useMemo(() => filtered.filter(s => s.client_id && activeClientIds.has(s.client_id)), [filtered, activeClientIds]);
+
   const stats = [
-    { label: "Clientes Ativos", value: activeClients, icon: Users, color: "text-primary" },
-    { label: "Novos no Período", value: newClients, icon: UserPlus, color: "text-success" },
-    { label: "Recorrentes", value: `${recurrentPct.toFixed(0)}%`, icon: Repeat, color: "text-info" },
+    { label: "Clientes Ativos", value: activeClients, icon: Users, color: "text-primary", sales: activeSales },
+    { label: "Novos no Período", value: newClients, icon: UserPlus, color: "text-success", sales: filtered },
+    { label: "Recorrentes", value: `${recurrentData.pct.toFixed(0)}%`, icon: Repeat, color: "text-info", sales: recurrentData.recurrentSales },
   ];
 
   return (
@@ -73,12 +86,16 @@ export default function ClientsSection({ clients, filtered, periodStart }: Props
       <h2 className="text-lg font-serif text-foreground">Clientes</h2>
       <div className="grid grid-cols-3 gap-3">
         {stats.map(s => (
-          <Card key={s.label} className="p-3.5 glass-card">
+          <Card key={s.label} className="p-3.5 glass-card cursor-pointer hover:ring-1 hover:ring-accent/30 transition-all group"
+            onClick={() => setDrilldown({ label: s.label, sales: s.sales })}>
             <div className="flex items-center gap-1.5 mb-1.5">
               <s.icon className={`w-3.5 h-3.5 ${s.color}`} />
               <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">{s.label}</span>
             </div>
             <p className="text-lg font-bold text-foreground">{s.value}</p>
+            <div className="text-[9px] text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              Clique para detalhes →
+            </div>
           </Card>
         ))}
       </div>
@@ -118,6 +135,42 @@ export default function ClientsSection({ clients, filtered, periodStart }: Props
           </div>
         </Card>
       )}
+
+      {/* Drill-down dialog */}
+      <Dialog open={!!drilldown} onOpenChange={() => setDrilldown(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{drilldown?.label} — {drilldown?.sales.length} vendas</DialogTitle>
+          </DialogHeader>
+          {drilldown && (
+            <>
+              <div className="flex gap-4 text-xs text-muted-foreground mb-3">
+                <span>Receita: <strong className="text-foreground">{fmt(drilldown.sales.reduce((s, v) => s + (v.received_value || 0), 0))}</strong></span>
+              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">ID</TableHead>
+                    <TableHead className="text-xs">Nome</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                    <TableHead className="text-xs text-right">Valor</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {drilldown.sales.slice(0, 100).map(s => (
+                    <TableRow key={s.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setDrilldown(null); navigate(`/sales/${s.id}`); }}>
+                      <TableCell className="text-xs font-mono">{s.display_id}</TableCell>
+                      <TableCell className="text-xs">{s.name}</TableCell>
+                      <TableCell className="text-xs">{s.status}</TableCell>
+                      <TableCell className="text-xs text-right">{fmt(s.received_value || 0)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
