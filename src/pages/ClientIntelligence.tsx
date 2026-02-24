@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,14 +10,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, ScatterChart, Scatter, CartesianGrid,
-  LineChart, Line, Legend, RadarChart, Radar, PolarGrid,
-  PolarAngleAxis, PolarRadiusAxis,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Legend,
 } from "recharts";
 import {
   Users, DollarSign, TrendingUp, Target, Crown, AlertTriangle,
-  Search, ArrowUpDown, Download, ChevronRight, Star, Zap, Shield,
-  Heart, BarChart3, Layers, Filter, X, Eye, Award, Activity,
-  UserCheck, Clock, Plane, Brain, Sparkles, ArrowUp, ArrowDown,
+  Search, Download, ChevronRight, Star, Zap, Shield,
+  BarChart3, Layers, Activity, Clock, Plane, Brain, Sparkles,
+  ArrowUp, ArrowDown, Award,
 } from "lucide-react";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -39,16 +37,46 @@ interface Sale {
   created_at: string; close_date: string | null;
   client_id: string | null; seller_id: string | null;
   is_international: boolean | null;
+  origin_city: string | null; destination_city: string | null;
 }
 
-interface ClientRow {
-  id: string; display_name: string; city: string | null; state: string | null;
-  tags: string[]; created_at: string; client_type: string;
+// Normalize name for grouping
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s*\(.*?\)\s*/g, "")
+    .replace(/\s*-\s*(tassia|tássia|check-in|volta cancelada|cancelad[ao]|organico|orgânico).*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Filter out non-person entries
+function isPerson(name: string): boolean {
+  const blacklist = ["kiwif", "kiwify", "banco", "nubank", "teste", "test", "admin", "sistema"];
+  const lower = name.toLowerCase();
+  return !blacklist.some(b => lower.includes(b)) && name.length > 3;
+}
+
+function getRegion(iata: string | null): string {
+  if (!iata) return "Desconhecido";
+  const eu = ["LIS","CDG","FCO","BCN","MAD","LHR","AMS","FRA","MUC","ZRH","VIE","PRG","IST","MXP","NAP","VCE","GVA"];
+  const na = ["JFK","MIA","MCO","LAX","SFO","EWR","BOS","ATL","ORD","DFW","YYZ","LAS","PHX","DEN"];
+  const me = ["DXB","DOH","AUH","JED","RUH","AMM"];
+  const asia = ["NRT","HND","ICN","PEK","SIN","BKK","HKG","KUL","DPS","TPE"];
+  const carib = ["CUN","PUJ","SXM","AUA","CUR","NAS","MBJ","SJU"];
+  const africa = ["JNB","CPT","NBO","CMN","CAI"];
+  if (eu.includes(iata)) return "Europa";
+  if (na.includes(iata)) return "América do Norte";
+  if (me.includes(iata)) return "Oriente Médio";
+  if (asia.includes(iata)) return "Ásia";
+  if (carib.includes(iata)) return "Caribe";
+  if (africa.includes(iata)) return "África";
+  return "Brasil";
 }
 
 interface ClientAnalysis {
-  id: string; name: string; city: string | null; state: string | null;
-  tags: string[]; type: string;
+  key: string; name: string; saleIds: string[];
   totalRevenue: number; totalProfit: number; avgMargin: number;
   totalTrips: number; avgTicket: number; frequency: number;
   lastTrip: string | null; nextTrip: string | null;
@@ -57,27 +85,12 @@ interface ClientAnalysis {
   scoreRisk: number; scoreLoyalty: number; overallScore: number;
   status: string; daysInactive: number;
   revenue12m: number; revenue24m: number;
-}
-
-function getRegion(iata: string | null): string {
-  if (!iata) return "Desconhecido";
-  const eu = ["LIS","CDG","FCO","BCN","MAD","LHR","AMS","FRA","MUC","ZRH","VIE","PRG","IST","MXP"];
-  const na = ["JFK","MIA","MCO","LAX","SFO","EWR","BOS","ATL","ORD","DFW","YYZ","LAS"];
-  const me = ["DXB","DOH","AUH","JED","RUH"];
-  const asia = ["NRT","HND","ICN","PEK","SIN","BKK","HKG"];
-  const carib = ["CUN","PUJ","SXM","AUA","CUR","NAS"];
-  if (eu.includes(iata)) return "Europa";
-  if (na.includes(iata)) return "América do Norte";
-  if (me.includes(iata)) return "Oriente Médio";
-  if (asia.includes(iata)) return "Ásia";
-  if (carib.includes(iata)) return "Caribe";
-  return "Brasil";
+  originCity: string | null; isInternational: boolean;
 }
 
 export default function ClientIntelligence() {
   const navigate = useNavigate();
   const [sales, setSales] = useState<Sale[]>([]);
-  const [clients, setClients] = useState<ClientRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<keyof ClientAnalysis>("totalRevenue");
@@ -86,33 +99,50 @@ export default function ClientIntelligence() {
   const [activeTab, setActiveTab] = useState("dashboard");
 
   useEffect(() => {
-    Promise.all([
-      fetchAllRows("sales", "*", { order: { column: "created_at", ascending: false } }),
-      fetchAllRows("clients", "id, display_name, city, state, tags, created_at, client_type"),
-    ]).then(([s, c]) => {
-      setSales(s as Sale[]);
-      setClients(c as ClientRow[]);
-      setLoading(false);
-    });
+    fetchAllRows("sales", "*", { order: { column: "created_at", ascending: false } })
+      .then((data) => {
+        setSales(data as Sale[]);
+        setLoading(false);
+      });
   }, []);
 
+  // Group sales by normalized client name
   const analysisData = useMemo<ClientAnalysis[]>(() => {
     const now = new Date();
     const m12 = new Date(now.getTime() - 365 * 86400000);
     const m24 = new Date(now.getTime() - 730 * 86400000);
 
-    return clients.map(client => {
-      const cs = sales.filter(s => s.client_id === client.id);
+    // Group by normalized name
+    const groups: Record<string, Sale[]> = {};
+    const displayNames: Record<string, string> = {};
+
+    sales.forEach(sale => {
+      if (!sale.name || !isPerson(sale.name)) return;
+      const key = normalizeName(sale.name);
+      if (!key || key.length < 3) return;
+      if (!groups[key]) {
+        groups[key] = [];
+        displayNames[key] = sale.name; // keep first (best) name
+      }
+      // Keep the longer/better-formatted display name
+      if (sale.name.length > displayNames[key].length) displayNames[key] = sale.name;
+      groups[key].push(sale);
+    });
+
+    return Object.entries(groups).map(([key, cs]) => {
       const totalRevenue = cs.reduce((a, s) => a + (s.received_value || 0), 0);
       const totalCost = cs.reduce((a, s) => a + (s.total_cost || 0), 0);
       const totalProfit = totalRevenue - totalCost;
       const avgMargin = cs.length > 0 ? cs.reduce((a, s) => a + (s.margin || 0), 0) / cs.length : 0;
       const avgTicket = cs.length > 0 ? totalRevenue / cs.length : 0;
 
-      // Destinations
+      // Destinations, regions, products
       const destMap: Record<string, number> = {};
       const regionMap: Record<string, number> = {};
       const productMap: Record<string, number> = {};
+      let hasInternational = false;
+      let originCity: string | null = null;
+
       cs.forEach(s => {
         if (s.destination_iata) {
           destMap[s.destination_iata] = (destMap[s.destination_iata] || 0) + 1;
@@ -120,7 +150,10 @@ export default function ClientIntelligence() {
           regionMap[r] = (regionMap[r] || 0) + 1;
         }
         (s.products || []).forEach(p => { productMap[p] = (productMap[p] || 0) + 1; });
+        if (s.is_international) hasInternational = true;
+        if (s.origin_city && !originCity) originCity = s.origin_city;
       });
+
       const topDestination = Object.entries(destMap).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
       const topRegion = Object.entries(regionMap).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
       const topProduct = Object.entries(productMap).sort((a, b) => b[1] - a[1])[0]?.[0] || "—";
@@ -133,28 +166,33 @@ export default function ClientIntelligence() {
       const nextTrip = futureDates[0]?.toISOString().slice(0, 10) || null;
       const daysInactive = lastTrip ? Math.floor((now.getTime() - new Date(lastTrip).getTime()) / 86400000) : 9999;
 
-      // Frequency (trips per year)
+      // Frequency
       const firstDate = dates.length > 0 ? new Date(Math.min(...dates.map(d => d.getTime()))) : null;
-      const yearsActive = firstDate ? Math.max(1, (now.getTime() - firstDate.getTime()) / (365 * 86400000)) : 1;
+      const yearsActive = firstDate ? Math.max(0.5, (now.getTime() - firstDate.getTime()) / (365 * 86400000)) : 1;
       const frequency = cs.length / yearsActive;
 
       // Revenue windows
       const revenue12m = cs.filter(s => s.close_date && new Date(s.close_date) >= m12).reduce((a, s) => a + (s.received_value || 0), 0);
       const revenue24m = cs.filter(s => s.close_date && new Date(s.close_date) >= m24).reduce((a, s) => a + (s.received_value || 0), 0);
 
-      // LTV (simple: avg annual revenue * 5 years projected)
-      const annualRevenue = totalRevenue / Math.max(yearsActive, 1);
+      // LTV
+      const annualRevenue = totalRevenue / Math.max(yearsActive, 0.5);
       const ltv = annualRevenue * 5;
 
-      // Scores (0-100)
-      const scoreValue = Math.min(100, (totalRevenue / 100000) * 100);
-      const scorePotential = Math.min(100, (avgTicket / 15000) * 50 + (frequency > 2 ? 30 : frequency > 1 ? 20 : 10) + (avgMargin > 20 ? 20 : avgMargin > 10 ? 10 : 0));
+      // Scores
+      const scoreValue = Math.min(100, (totalRevenue / 80000) * 100);
+      const scorePotential = Math.min(100,
+        (avgTicket / 12000) * 40 +
+        (frequency > 2 ? 30 : frequency > 1 ? 20 : 10) +
+        (avgMargin > 20 ? 30 : avgMargin > 10 ? 20 : 10)
+      );
       const scoreRisk = Math.min(100, daysInactive > 365 ? 90 : daysInactive > 180 ? 70 : daysInactive > 90 ? 50 : daysInactive > 60 ? 30 : 10);
-      const scoreLoyalty = Math.min(100, (cs.length / 10) * 40 + (frequency > 2 ? 30 : frequency > 1 ? 20 : 10) + (yearsActive > 3 ? 30 : yearsActive > 1 ? 20 : 10));
-      const overallScore = Math.round((scoreValue * 0.3 + scorePotential * 0.25 + (100 - scoreRisk) * 0.25 + scoreLoyalty * 0.2));
-
-      // Churn risk
-      const churnRisk = scoreRisk;
+      const scoreLoyalty = Math.min(100,
+        (cs.length / 8) * 40 +
+        (frequency > 2 ? 30 : frequency > 1 ? 20 : 10) +
+        (yearsActive > 2 ? 30 : yearsActive > 1 ? 20 : 10)
+      );
+      const overallScore = Math.round(scoreValue * 0.3 + scorePotential * 0.25 + (100 - scoreRisk) * 0.25 + scoreLoyalty * 0.2);
 
       // Status
       let status = "Ativo";
@@ -162,72 +200,68 @@ export default function ClientIntelligence() {
       else if (daysInactive > 365) status = "Perdido";
       else if (daysInactive > 180) status = "Em Risco";
       else if (daysInactive > 90) status = "Inativo";
-      else if (overallScore > 70 && totalRevenue > 20000) status = "VIP";
+      if (overallScore > 65 && totalRevenue > 15000 && cs.length >= 2) status = "VIP";
 
       return {
-        id: client.id, name: client.display_name, city: client.city, state: client.state,
-        tags: client.tags || [], type: client.client_type,
+        key, name: displayNames[key], saleIds: cs.map(s => s.id),
         totalRevenue, totalProfit, avgMargin, totalTrips: cs.length,
         avgTicket, frequency, lastTrip, nextTrip, topDestination, topRegion, topProduct,
-        ltv, churnRisk, scoreValue, scorePotential, scoreRisk, scoreLoyalty, overallScore,
+        ltv, churnRisk: scoreRisk, scoreValue, scorePotential, scoreRisk, scoreLoyalty, overallScore,
         status, daysInactive, revenue12m, revenue24m,
+        originCity, isInternational: hasInternational,
       };
-    });
-  }, [clients, sales]);
+    }).sort((a, b) => b.totalRevenue - a.totalRevenue);
+  }, [sales]);
 
   // Global KPIs
   const kpis = useMemo(() => {
     const active = analysisData.filter(c => c.totalTrips > 0);
     const totalRevenue = active.reduce((a, c) => a + c.totalRevenue, 0);
     const totalProfit = active.reduce((a, c) => a + c.totalProfit, 0);
-    const avgTicket = active.length > 0 ? totalRevenue / active.reduce((a, c) => a + c.totalTrips, 0) : 0;
+    const totalTrips = active.reduce((a, c) => a + c.totalTrips, 0);
+    const avgTicket = totalTrips > 0 ? totalRevenue / totalTrips : 0;
     const avgMargin = active.length > 0 ? active.reduce((a, c) => a + c.avgMargin, 0) / active.length : 0;
     const avgFreq = active.length > 0 ? active.reduce((a, c) => a + c.frequency, 0) / active.length : 0;
     const vips = analysisData.filter(c => c.status === "VIP").length;
-    const inactive90 = analysisData.filter(c => c.daysInactive > 90 && c.totalTrips > 0).length;
+    const inactive90 = analysisData.filter(c => c.daysInactive > 90 && c.daysInactive < 9999).length;
     const rev12m = active.reduce((a, c) => a + c.revenue12m, 0);
     const rev24m = active.reduce((a, c) => a + c.revenue24m, 0);
-    return {
-      totalClients: active.length, totalRevenue, totalProfit, avgTicket, avgMargin,
-      avgFreq, vips, inactive90, rev12m, rev24m,
-    };
+    return { totalClients: active.length, totalRevenue, totalProfit, avgTicket, avgMargin, avgFreq, vips, inactive90, rev12m, rev24m };
   }, [analysisData]);
 
   // Rankings
   const rankings = useMemo(() => ({
     byRevenue: [...analysisData].filter(c => c.totalTrips > 0).sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 10),
     byProfit: [...analysisData].filter(c => c.totalTrips > 0).sort((a, b) => b.totalProfit - a.totalProfit).slice(0, 10),
-    byMargin: [...analysisData].filter(c => c.totalTrips > 0).sort((a, b) => b.avgMargin - a.avgMargin).slice(0, 10),
-    byFrequency: [...analysisData].filter(c => c.totalTrips > 0).sort((a, b) => b.frequency - a.frequency).slice(0, 10),
+    byMargin: [...analysisData].filter(c => c.totalTrips >= 2).sort((a, b) => b.avgMargin - a.avgMargin).slice(0, 10),
+    byFrequency: [...analysisData].filter(c => c.totalTrips >= 2).sort((a, b) => b.frequency - a.frequency).slice(0, 10),
     byTicket: [...analysisData].filter(c => c.totalTrips > 0).sort((a, b) => b.avgTicket - a.avgTicket).slice(0, 10),
   }), [analysisData]);
 
-  // Cross analysis data
+  // Cross analysis
   const crossData = useMemo(() => {
     const active = analysisData.filter(c => c.totalTrips > 0);
-    // Region x Margin
-    const regionMargin: Record<string, { total: number; count: number }> = {};
+
+    const regionMargin: Record<string, { total: number; count: number; rev: number }> = {};
     active.forEach(c => {
       const r = c.topRegion;
-      if (!regionMargin[r]) regionMargin[r] = { total: 0, count: 0 };
+      if (!regionMargin[r]) regionMargin[r] = { total: 0, count: 0, rev: 0 };
       regionMargin[r].total += c.avgMargin;
       regionMargin[r].count++;
+      regionMargin[r].rev += c.totalRevenue;
     });
-    const regionMarginData = Object.entries(regionMargin).map(([r, d]) => ({
-      region: r, margin: d.total / d.count,
-    })).sort((a, b) => b.margin - a.margin);
+    const regionMarginData = Object.entries(regionMargin)
+      .map(([r, d]) => ({ region: r, margin: d.total / d.count, receita: d.rev, clientes: d.count }))
+      .sort((a, b) => b.margin - a.margin);
 
-    // Scatter: Ticket x Margin
-    const scatterData = active.map(c => ({
+    const scatterData = active.filter(c => c.avgTicket > 0).map(c => ({
       name: c.name, ticket: c.avgTicket, margin: c.avgMargin, trips: c.totalTrips,
     }));
 
-    // Status distribution
     const statusDist: Record<string, number> = {};
     analysisData.forEach(c => { statusDist[c.status] = (statusDist[c.status] || 0) + 1; });
     const statusData = Object.entries(statusDist).map(([s, v]) => ({ name: s, value: v }));
 
-    // LTV distribution
     const ltvBuckets = [
       { name: "< 10k", min: 0, max: 10000, count: 0 },
       { name: "10k-50k", min: 10000, max: 50000, count: 0 },
@@ -240,15 +274,28 @@ export default function ClientIntelligence() {
       if (b) b.count++;
     });
 
-    return { regionMarginData, scatterData, statusData, ltvBuckets };
+    // Trips bracket analysis
+    const tripBrackets = [
+      { name: "1 viagem", min: 1, max: 1, count: 0, rev: 0 },
+      { name: "2-3", min: 2, max: 3, count: 0, rev: 0 },
+      { name: "4-6", min: 4, max: 6, count: 0, rev: 0 },
+      { name: "7-10", min: 7, max: 10, count: 0, rev: 0 },
+      { name: "10+", min: 11, max: 999, count: 0, rev: 0 },
+    ];
+    active.forEach(c => {
+      const b = tripBrackets.find(b => c.totalTrips >= b.min && c.totalTrips <= b.max);
+      if (b) { b.count++; b.rev += c.totalRevenue; }
+    });
+
+    return { regionMarginData, scatterData, statusData, ltvBuckets, tripBrackets };
   }, [analysisData]);
 
-  // Filtered & sorted table data
+  // Filtered & sorted table
   const tableData = useMemo(() => {
     let data = [...analysisData];
     if (search) {
       const q = search.toLowerCase();
-      data = data.filter(c => c.name.toLowerCase().includes(q) || c.city?.toLowerCase().includes(q) || c.topDestination.toLowerCase().includes(q));
+      data = data.filter(c => c.name.toLowerCase().includes(q) || c.topDestination.toLowerCase().includes(q) || c.originCity?.toLowerCase().includes(q));
     }
     if (statusFilter !== "all") data = data.filter(c => c.status === statusFilter);
     data.sort((a, b) => {
@@ -274,11 +321,10 @@ export default function ClientIntelligence() {
     "Novo": "bg-info/20 text-info border-info/30",
   };
 
-  const ScoreBar = ({ value, color }: { value: number; color: string }) => (
-    <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-      <div className={`h-full rounded-full ${color}`} style={{ width: `${value}%` }} />
-    </div>
-  );
+  // Navigate to first sale of this client
+  const goToClient = (c: ClientAnalysis) => {
+    if (c.saleIds.length > 0) navigate(`/sales/${c.saleIds[0]}`);
+  };
 
   if (loading) {
     return (
@@ -300,21 +346,20 @@ export default function ClientIntelligence() {
             <Brain className="w-6 h-6 text-primary" />
             Inteligência de Clientes
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Central estratégica da carteira NatLeva</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {analysisData.length} clientes analisados · {sales.length} vendas processadas
+          </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => {
-            const csv = ["Nome,Receita,Lucro,Margem,Viagens,Ticket Médio,Score,Status,LTV"]
-              .concat(tableData.map(c => `"${c.name}",${c.totalRevenue},${c.totalProfit},${c.avgMargin.toFixed(1)},${c.totalTrips},${c.avgTicket.toFixed(0)},${c.overallScore},${c.status},${c.ltv.toFixed(0)}`))
-              .join("\n");
-            const blob = new Blob([csv], { type: "text/csv" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url; a.download = "inteligencia-clientes.csv"; a.click();
-          }}>
-            <Download className="w-4 h-4 mr-1" /> Exportar
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" onClick={() => {
+          const csv = ["Nome,Receita,Lucro,Margem,Viagens,Ticket,Score,Status,LTV,Destino Top,Região"]
+            .concat(tableData.map(c => `"${c.name}",${c.totalRevenue.toFixed(2)},${c.totalProfit.toFixed(2)},${c.avgMargin.toFixed(1)},${c.totalTrips},${c.avgTicket.toFixed(2)},${c.overallScore},${c.status},${c.ltv.toFixed(2)},${c.topDestination},${c.topRegion}`))
+            .join("\n");
+          const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a"); a.href = url; a.download = "inteligencia-clientes.csv"; a.click();
+        }}>
+          <Download className="w-4 h-4 mr-1" /> Exportar
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -325,9 +370,8 @@ export default function ClientIntelligence() {
           <TabsTrigger value="cross"><Sparkles className="w-3.5 h-3.5 mr-1" /> Cruzamentos</TabsTrigger>
         </TabsList>
 
-        {/* ===== DASHBOARD TAB ===== */}
+        {/* ===== DASHBOARD ===== */}
         <TabsContent value="dashboard" className="space-y-5 mt-4">
-          {/* KPI Cards */}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {[
               { label: "Clientes Ativos", value: kpis.totalClients.toString(), icon: Users, color: "text-primary" },
@@ -341,7 +385,7 @@ export default function ClientIntelligence() {
               { label: "Receita 12m", value: fmt(kpis.rev12m), icon: DollarSign, color: "text-success" },
               { label: "Receita 24m", value: fmt(kpis.rev24m), icon: DollarSign, color: "text-info" },
             ].map(k => (
-              <Card key={k.label} className="p-3.5 glass-card cursor-pointer hover:scale-[1.02] transition-transform">
+              <Card key={k.label} className="p-3.5 glass-card">
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <k.icon className={`w-4 h-4 ${k.color}`} />
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{k.label}</span>
@@ -351,14 +395,14 @@ export default function ClientIntelligence() {
             ))}
           </div>
 
-          {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Status Distribution */}
+            {/* Status Pie */}
             <Card className="p-5 glass-card">
               <h3 className="section-title text-sm mb-4"><Shield className="w-4 h-4 text-primary" /> Distribuição por Status</h3>
               <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
-                  <Pie data={crossData.statusData} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                  <Pie data={crossData.statusData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={3} dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
                     {crossData.statusData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Pie>
                   <Tooltip formatter={(v: number) => [v, "Clientes"]} />
@@ -366,7 +410,7 @@ export default function ClientIntelligence() {
               </ResponsiveContainer>
             </Card>
 
-            {/* LTV Distribution */}
+            {/* LTV */}
             <Card className="p-5 glass-card">
               <h3 className="section-title text-sm mb-4"><Zap className="w-4 h-4 text-warning" /> Distribuição de LTV</h3>
               <ResponsiveContainer width="100%" height={260}>
@@ -381,8 +425,21 @@ export default function ClientIntelligence() {
             </Card>
           </div>
 
-          {/* Top 5 Quick Insights */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Recurrence & Quick Lists */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* Trip frequency */}
+            <Card className="p-5 glass-card">
+              <h3 className="section-title text-sm mb-4"><Activity className="w-4 h-4 text-info" /> Recorrência</h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={crossData.tripBrackets}>
+                  <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
+                  <YAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10 }} />
+                  <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8 }} />
+                  <Bar dataKey="count" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} name="Clientes" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+
             {/* Top Revenue */}
             <Card className="p-4 glass-card">
               <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
@@ -390,28 +447,11 @@ export default function ClientIntelligence() {
               </h3>
               <div className="space-y-2">
                 {rankings.byRevenue.slice(0, 5).map((c, i) => (
-                  <div key={c.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded-lg p-1.5 transition-colors"
-                    onClick={() => navigate(`/clients/${c.id}`)}>
-                    <span className="text-xs font-mono text-muted-foreground w-5">{i + 1}.</span>
+                  <div key={c.key} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded-lg p-1.5 transition-colors"
+                    onClick={() => goToClient(c)}>
+                    <span className="text-xs font-mono text-muted-foreground w-5">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
                     <span className="text-xs font-medium text-foreground flex-1 truncate">{c.name}</span>
                     <span className="text-xs font-mono text-success">{fmt(c.totalRevenue)}</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-
-            {/* Top Profit */}
-            <Card className="p-4 glass-card">
-              <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-primary" /> Top 5 Lucro
-              </h3>
-              <div className="space-y-2">
-                {rankings.byProfit.slice(0, 5).map((c, i) => (
-                  <div key={c.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded-lg p-1.5 transition-colors"
-                    onClick={() => navigate(`/clients/${c.id}`)}>
-                    <span className="text-xs font-mono text-muted-foreground w-5">{i + 1}.</span>
-                    <span className="text-xs font-medium text-foreground flex-1 truncate">{c.name}</span>
-                    <span className="text-xs font-mono text-primary">{fmt(c.totalProfit)}</span>
                   </div>
                 ))}
               </div>
@@ -424,30 +464,33 @@ export default function ClientIntelligence() {
               </h3>
               <div className="space-y-2">
                 {analysisData.filter(c => c.status === "Em Risco" || c.status === "Inativo")
-                  .sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 5).map((c, i) => (
-                    <div key={c.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded-lg p-1.5 transition-colors"
-                      onClick={() => navigate(`/clients/${c.id}`)}>
+                  .sort((a, b) => b.totalRevenue - a.totalRevenue).slice(0, 5).map(c => (
+                    <div key={c.key} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded-lg p-1.5 transition-colors"
+                      onClick={() => goToClient(c)}>
                       <Badge variant="outline" className={`text-[9px] px-1 ${statusColors[c.status]}`}>{c.status}</Badge>
                       <span className="text-xs font-medium text-foreground flex-1 truncate">{c.name}</span>
                       <span className="text-[10px] text-muted-foreground">{c.daysInactive}d</span>
                     </div>
                   ))}
+                {analysisData.filter(c => c.status === "Em Risco" || c.status === "Inativo").length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-4">Nenhum cliente em risco 🎉</p>
+                )}
               </div>
             </Card>
           </div>
         </TabsContent>
 
-        {/* ===== RANKINGS TAB ===== */}
+        {/* ===== RANKINGS ===== */}
         <TabsContent value="rankings" className="space-y-5 mt-4">
           {Object.entries(rankings).map(([key, data]) => {
-            const titles: Record<string, { title: string; icon: any; field: keyof ClientAnalysis; format: (v: number) => string }> = {
+            const meta: Record<string, { title: string; icon: any; field: keyof ClientAnalysis; format: (v: number) => string }> = {
               byRevenue: { title: "Top 10 por Receita", icon: DollarSign, field: "totalRevenue", format: fmt },
               byProfit: { title: "Top 10 por Lucro", icon: TrendingUp, field: "totalProfit", format: fmt },
-              byMargin: { title: "Top 10 por Margem", icon: Target, field: "avgMargin", format: pct },
-              byFrequency: { title: "Top 10 por Frequência", icon: Activity, field: "frequency", format: (v) => `${v.toFixed(1)}/ano` },
+              byMargin: { title: "Top 10 por Margem (≥2 viagens)", icon: Target, field: "avgMargin", format: pct },
+              byFrequency: { title: "Top 10 por Frequência (≥2 viagens)", icon: Activity, field: "frequency", format: (v) => `${v.toFixed(1)}/ano` },
               byTicket: { title: "Top 10 por Ticket Médio", icon: Award, field: "avgTicket", format: fmt },
             };
-            const t = titles[key];
+            const t = meta[key];
             const Icon = t.icon;
 
             return (
@@ -456,11 +499,11 @@ export default function ClientIntelligence() {
                 <div className="space-y-1.5">
                   {data.map((c, i) => {
                     const val = c[t.field] as number;
-                    const maxVal = data[0]?.[t.field] as number || 1;
-                    const pctWidth = (val / maxVal) * 100;
+                    const maxVal = (data[0]?.[t.field] as number) || 1;
+                    const pctW = Math.max(5, (val / maxVal) * 100);
                     return (
-                      <div key={c.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
-                        onClick={() => navigate(`/clients/${c.id}`)}>
+                      <div key={c.key} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                        onClick={() => goToClient(c)}>
                         <span className={`text-sm font-mono w-6 text-center ${i < 3 ? "text-primary font-bold" : "text-muted-foreground"}`}>
                           {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}`}
                         </span>
@@ -468,9 +511,10 @@ export default function ClientIntelligence() {
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-medium text-foreground truncate">{c.name}</span>
                             <Badge variant="outline" className={`text-[9px] ${statusColors[c.status]}`}>{c.status}</Badge>
+                            <span className="text-[10px] text-muted-foreground">{c.totalTrips} viagens</span>
                           </div>
                           <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-                            <div className="h-full rounded-full bg-primary/60" style={{ width: `${pctWidth}%` }} />
+                            <div className="h-full rounded-full bg-primary/60 transition-all" style={{ width: `${pctW}%` }} />
                           </div>
                         </div>
                         <span className="text-sm font-mono font-semibold text-foreground shrink-0">{t.format(val)}</span>
@@ -484,19 +528,18 @@ export default function ClientIntelligence() {
           })}
         </TabsContent>
 
-        {/* ===== TABLE TAB ===== */}
+        {/* ===== TABLE ===== */}
         <TabsContent value="table" className="space-y-4 mt-4">
           <div className="flex flex-wrap gap-2 items-center">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input placeholder="Buscar cliente, cidade, destino..." value={search} onChange={e => setSearch(e.target.value)}
-                className="pl-9 h-9" />
+              <Input placeholder="Buscar cliente, destino, cidade..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9" />
             </div>
-            <div className="flex gap-1">
-              {["all", "VIP", "Ativo", "Inativo", "Em Risco", "Novo"].map(s => (
+            <div className="flex gap-1 flex-wrap">
+              {["all", "VIP", "Ativo", "Inativo", "Em Risco", "Perdido"].map(s => (
                 <Button key={s} variant={statusFilter === s ? "default" : "outline"} size="sm" className="h-8 text-xs"
                   onClick={() => setStatusFilter(s)}>
-                  {s === "all" ? "Todos" : s}
+                  {s === "all" ? `Todos (${analysisData.length})` : `${s} (${analysisData.filter(c => c.status === s).length})`}
                 </Button>
               ))}
             </div>
@@ -507,23 +550,17 @@ export default function ClientIntelligence() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    {[
-                      { key: "name" as const, label: "Nome" },
-                      { key: "totalRevenue" as const, label: "Receita" },
-                      { key: "totalProfit" as const, label: "Lucro" },
-                      { key: "avgMargin" as const, label: "Margem" },
-                      { key: "totalTrips" as const, label: "Viagens" },
-                      { key: "avgTicket" as const, label: "Ticket" },
-                      { key: "frequency" as const, label: "Freq." },
-                      { key: "overallScore" as const, label: "Score" },
-                      { key: "ltv" as const, label: "LTV" },
-                      { key: "status" as const, label: "Status" },
-                    ].map(col => (
-                      <th key={col.key} className="px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground"
-                        onClick={() => toggleSort(col.key)}>
+                    {([
+                      ["name", "Nome"], ["totalRevenue", "Receita"], ["totalProfit", "Lucro"],
+                      ["avgMargin", "Margem"], ["totalTrips", "Viagens"], ["avgTicket", "Ticket"],
+                      ["frequency", "Freq."], ["overallScore", "Score"], ["ltv", "LTV"],
+                      ["topDestination", "Destino"], ["status", "Status"],
+                    ] as [keyof ClientAnalysis, string][]).map(([k, label]) => (
+                      <th key={k} className="px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground cursor-pointer hover:text-foreground whitespace-nowrap"
+                        onClick={() => toggleSort(k)}>
                         <span className="flex items-center gap-1">
-                          {col.label}
-                          {sortBy === col.key && (sortDir === "desc" ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />)}
+                          {label}
+                          {sortBy === k && (sortDir === "desc" ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />)}
                         </span>
                       </th>
                     ))}
@@ -531,30 +568,33 @@ export default function ClientIntelligence() {
                 </thead>
                 <tbody>
                   {tableData.slice(0, 100).map(c => (
-                    <tr key={c.id} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors"
-                      onClick={() => navigate(`/clients/${c.id}`)}>
+                    <tr key={c.key} className="border-b border-border/50 hover:bg-muted/30 cursor-pointer transition-colors"
+                      onClick={() => goToClient(c)}>
                       <td className="px-3 py-2.5">
-                        <div className="font-medium text-foreground truncate max-w-[180px]">{c.name}</div>
-                        <div className="text-[10px] text-muted-foreground">{[c.city, c.state].filter(Boolean).join("/") || "—"}</div>
+                        <div className="font-medium text-foreground truncate max-w-[200px]">{c.name}</div>
+                        {c.originCity && <div className="text-[10px] text-muted-foreground">{c.originCity}</div>}
                       </td>
-                      <td className="px-3 py-2.5 font-mono text-xs text-success">{fmt(c.totalRevenue)}</td>
-                      <td className="px-3 py-2.5 font-mono text-xs text-primary">{fmt(c.totalProfit)}</td>
-                      <td className="px-3 py-2.5 font-mono text-xs">{pct(c.avgMargin)}</td>
+                      <td className="px-3 py-2.5 font-mono text-xs text-success whitespace-nowrap">{fmt(c.totalRevenue)}</td>
+                      <td className="px-3 py-2.5 font-mono text-xs text-primary whitespace-nowrap">{fmt(c.totalProfit)}</td>
+                      <td className="px-3 py-2.5 font-mono text-xs whitespace-nowrap">{pct(c.avgMargin)}</td>
                       <td className="px-3 py-2.5 font-mono text-xs text-center">{c.totalTrips}</td>
-                      <td className="px-3 py-2.5 font-mono text-xs">{fmt(c.avgTicket)}</td>
+                      <td className="px-3 py-2.5 font-mono text-xs whitespace-nowrap">{fmt(c.avgTicket)}</td>
                       <td className="px-3 py-2.5 font-mono text-xs">{c.frequency.toFixed(1)}</td>
                       <td className="px-3 py-2.5">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5">
                           <span className={`text-xs font-bold ${c.overallScore > 70 ? "text-success" : c.overallScore > 40 ? "text-warning" : "text-destructive"}`}>
                             {c.overallScore}
                           </span>
-                          <div className="w-12 h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div className="w-10 h-1.5 rounded-full bg-muted overflow-hidden">
                             <div className={`h-full rounded-full ${c.overallScore > 70 ? "bg-success" : c.overallScore > 40 ? "bg-warning" : "bg-destructive"}`}
                               style={{ width: `${c.overallScore}%` }} />
                           </div>
                         </div>
                       </td>
-                      <td className="px-3 py-2.5 font-mono text-xs">{fmt(c.ltv)}</td>
+                      <td className="px-3 py-2.5 font-mono text-xs whitespace-nowrap">{fmt(c.ltv)}</td>
+                      <td className="px-3 py-2.5">
+                        <span className="font-mono text-xs">{c.topDestination}</span>
+                      </td>
                       <td className="px-3 py-2.5">
                         <Badge variant="outline" className={`text-[10px] ${statusColors[c.status]}`}>{c.status}</Badge>
                       </td>
@@ -569,10 +609,10 @@ export default function ClientIntelligence() {
           </Card>
         </TabsContent>
 
-        {/* ===== CROSS ANALYSIS TAB ===== */}
+        {/* ===== CROSS ANALYSIS ===== */}
         <TabsContent value="cross" className="space-y-5 mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Scatter: Ticket x Margin */}
+            {/* Scatter */}
             <Card className="p-5 glass-card">
               <h3 className="section-title text-sm mb-4"><Sparkles className="w-4 h-4 text-primary" /> Ticket Médio vs Margem</h3>
               <ResponsiveContainer width="100%" height={300}>
@@ -584,9 +624,9 @@ export default function ClientIntelligence() {
                     tickFormatter={(v) => `${v}%`} />
                   <Tooltip cursor={{ strokeDasharray: "3 3" }}
                     contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 11 }}
-                    formatter={(v: number, name: string) => [name === "ticket" ? fmt(v) : `${v.toFixed(1)}%`, name === "ticket" ? "Ticket" : "Margem"]}
+                    formatter={(v: number, name: string) => [name === "Ticket" ? fmt(v) : `${v.toFixed(1)}%`, name]}
                     labelFormatter={(_, payload) => payload?.[0]?.payload?.name || ""} />
-                  <Scatter data={crossData.scatterData} fill="hsl(var(--primary))" fillOpacity={0.6} />
+                  <Scatter data={crossData.scatterData} fill="hsl(var(--primary))" fillOpacity={0.5} name="Clientes" />
                 </ScatterChart>
               </ResponsiveContainer>
             </Card>
@@ -606,49 +646,47 @@ export default function ClientIntelligence() {
               </ResponsiveContainer>
             </Card>
 
-            {/* VIP Analysis */}
+            {/* VIP Radar + Insights */}
             <Card className="p-5 glass-card lg:col-span-2">
-              <h3 className="section-title text-sm mb-4"><Crown className="w-4 h-4 text-primary" /> Análise VIP — Radar de Performance</h3>
+              <h3 className="section-title text-sm mb-4"><Crown className="w-4 h-4 text-primary" /> Análise VIP — Radar + Insights</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <ResponsiveContainer width="100%" height={300}>
-                  <RadarChart cx="50%" cy="50%" outerRadius="80%"
-                    data={[
-                      { subject: "Receita", vip: 0, geral: 0 },
-                      { subject: "Margem", vip: 0, geral: 0 },
-                      { subject: "Frequência", vip: 0, geral: 0 },
-                      { subject: "Ticket", vip: 0, geral: 0 },
-                      { subject: "Fidelidade", vip: 0, geral: 0 },
-                    ].map(item => {
+                <ResponsiveContainer width="100%" height={280}>
+                  <RadarChart cx="50%" cy="50%" outerRadius="75%"
+                    data={(() => {
                       const vips = analysisData.filter(c => c.status === "VIP");
                       const all = analysisData.filter(c => c.totalTrips > 0);
+                      if (all.length === 0) return [];
                       const maxRev = Math.max(...all.map(c => c.totalRevenue), 1);
-                      switch (item.subject) {
-                        case "Receita":
-                          item.vip = vips.length ? (vips.reduce((a, c) => a + c.totalRevenue, 0) / vips.length / maxRev) * 100 : 0;
-                          item.geral = all.length ? (all.reduce((a, c) => a + c.totalRevenue, 0) / all.length / maxRev) * 100 : 0;
-                          break;
-                        case "Margem":
-                          item.vip = vips.length ? vips.reduce((a, c) => a + c.avgMargin, 0) / vips.length : 0;
-                          item.geral = all.length ? all.reduce((a, c) => a + c.avgMargin, 0) / all.length : 0;
-                          break;
-                        case "Frequência":
-                          item.vip = vips.length ? Math.min(100, (vips.reduce((a, c) => a + c.frequency, 0) / vips.length) * 25) : 0;
-                          item.geral = all.length ? Math.min(100, (all.reduce((a, c) => a + c.frequency, 0) / all.length) * 25) : 0;
-                          break;
-                        case "Ticket":
-                          item.vip = vips.length ? Math.min(100, (vips.reduce((a, c) => a + c.avgTicket, 0) / vips.length) / 200) : 0;
-                          item.geral = all.length ? Math.min(100, (all.reduce((a, c) => a + c.avgTicket, 0) / all.length) / 200) : 0;
-                          break;
-                        case "Fidelidade":
-                          item.vip = vips.length ? vips.reduce((a, c) => a + c.scoreLoyalty, 0) / vips.length : 0;
-                          item.geral = all.length ? all.reduce((a, c) => a + c.scoreLoyalty, 0) / all.length : 0;
-                          break;
-                      }
-                      return item;
-                    })}>
+                      return [
+                        {
+                          subject: "Receita",
+                          vip: vips.length ? (vips.reduce((a, c) => a + c.totalRevenue, 0) / vips.length / maxRev) * 100 : 0,
+                          geral: (all.reduce((a, c) => a + c.totalRevenue, 0) / all.length / maxRev) * 100,
+                        },
+                        {
+                          subject: "Margem",
+                          vip: vips.length ? vips.reduce((a, c) => a + c.avgMargin, 0) / vips.length : 0,
+                          geral: all.reduce((a, c) => a + c.avgMargin, 0) / all.length,
+                        },
+                        {
+                          subject: "Frequência",
+                          vip: vips.length ? Math.min(100, (vips.reduce((a, c) => a + c.frequency, 0) / vips.length) * 25) : 0,
+                          geral: Math.min(100, (all.reduce((a, c) => a + c.frequency, 0) / all.length) * 25),
+                        },
+                        {
+                          subject: "Ticket",
+                          vip: vips.length ? Math.min(100, (vips.reduce((a, c) => a + c.avgTicket, 0) / vips.length) / 200) : 0,
+                          geral: Math.min(100, (all.reduce((a, c) => a + c.avgTicket, 0) / all.length) / 200),
+                        },
+                        {
+                          subject: "Fidelidade",
+                          vip: vips.length ? vips.reduce((a, c) => a + c.scoreLoyalty, 0) / vips.length : 0,
+                          geral: all.reduce((a, c) => a + c.scoreLoyalty, 0) / all.length,
+                        },
+                      ];
+                    })()}>
                     <PolarGrid stroke="hsl(var(--border))" />
                     <PolarAngleAxis dataKey="subject" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
-                    <PolarRadiusAxis tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 9 }} />
                     <Radar name="VIP" dataKey="vip" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.2} />
                     <Radar name="Geral" dataKey="geral" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted-foreground))" fillOpacity={0.1} />
                     <Legend />
@@ -656,38 +694,39 @@ export default function ClientIntelligence() {
                 </ResponsiveContainer>
 
                 <div className="space-y-3">
-                  <h4 className="text-sm font-semibold text-foreground">Insights Automáticos</h4>
+                  <h4 className="text-sm font-semibold text-foreground">🧠 Insights Automáticos</h4>
                   {(() => {
                     const insights: { icon: any; text: string; color: string }[] = [];
                     const vips = analysisData.filter(c => c.status === "VIP");
                     const atRisk = analysisData.filter(c => c.status === "Em Risco");
+                    const lost = analysisData.filter(c => c.status === "Perdido");
                     const top = rankings.byRevenue[0];
-                    const avgAll = kpis.avgTicket;
-                    
-                    if (vips.length > 0) {
+                    const active = analysisData.filter(c => c.totalTrips > 0);
+
+                    if (vips.length > 0 && kpis.totalRevenue > 0) {
                       const vipRev = vips.reduce((a, c) => a + c.totalRevenue, 0);
-                      const vipPct = (vipRev / kpis.totalRevenue * 100).toFixed(0);
-                      insights.push({ icon: Crown, text: `${vips.length} clientes VIP representam ${vipPct}% da receita total`, color: "text-primary" });
+                      insights.push({ icon: Crown, text: `${vips.length} clientes VIP geram ${((vipRev / kpis.totalRevenue) * 100).toFixed(0)}% da receita total`, color: "text-primary" });
                     }
+                    if (top) insights.push({ icon: Star, text: `"${top.name}" é o mais valioso: ${fmt(top.totalRevenue)} em ${top.totalTrips} viagens`, color: "text-success" });
                     if (atRisk.length > 0) {
-                      insights.push({ icon: AlertTriangle, text: `${atRisk.length} clientes em risco — avaliar retenção urgente`, color: "text-destructive" });
+                      const atRiskRev = atRisk.reduce((a, c) => a + c.totalRevenue, 0);
+                      insights.push({ icon: AlertTriangle, text: `${atRisk.length} clientes em risco com ${fmt(atRiskRev)} de receita histórica — priorizar retenção`, color: "text-destructive" });
                     }
-                    if (top) {
-                      insights.push({ icon: Star, text: `${top.name} é o cliente mais valioso: ${fmt(top.totalRevenue)}`, color: "text-success" });
-                    }
-                    const highTicketLowMargin = analysisData.filter(c => c.avgTicket > avgAll * 1.5 && c.avgMargin < 10);
-                    if (highTicketLowMargin.length > 0) {
-                      insights.push({ icon: Zap, text: `${highTicketLowMargin.length} clientes com ticket alto mas margem < 10% — potencial de otimização`, color: "text-warning" });
-                    }
-                    const growthPotential = analysisData.filter(c => c.scorePotential > 60 && c.totalTrips < 3);
-                    if (growthPotential.length > 0) {
-                      insights.push({ icon: TrendingUp, text: `${growthPotential.length} clientes com alto potencial para upsell`, color: "text-info" });
-                    }
-                    
+                    if (lost.length > 0) insights.push({ icon: Shield, text: `${lost.length} clientes perdidos (>1 ano sem viagem) — considerar reativação`, color: "text-muted-foreground" });
+
+                    const highTicketLowMargin = active.filter(c => c.avgTicket > kpis.avgTicket * 1.5 && c.avgMargin < 10);
+                    if (highTicketLowMargin.length > 0) insights.push({ icon: Zap, text: `${highTicketLowMargin.length} clientes com ticket alto e margem < 10% — otimizar precificação`, color: "text-warning" });
+
+                    const recurring = active.filter(c => c.totalTrips >= 3);
+                    if (recurring.length > 0) insights.push({ icon: Activity, text: `${recurring.length} clientes recorrentes (3+ viagens) — oportunidade para programas de fidelidade`, color: "text-info" });
+
+                    const singleTrip = active.filter(c => c.totalTrips === 1 && c.avgTicket > kpis.avgTicket);
+                    if (singleTrip.length > 0) insights.push({ icon: TrendingUp, text: `${singleTrip.length} clientes de 1 viagem com ticket acima da média — potencial de recompra`, color: "text-accent" });
+
                     return insights.map((ins, i) => (
                       <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg bg-muted/30 border border-border/30">
                         <ins.icon className={`w-4 h-4 mt-0.5 shrink-0 ${ins.color}`} />
-                        <span className="text-xs text-foreground">{ins.text}</span>
+                        <span className="text-xs text-foreground leading-relaxed">{ins.text}</span>
                       </div>
                     ));
                   })()}
