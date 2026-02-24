@@ -13,6 +13,7 @@ const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/sales/new", icon: Plus, label: "Nova Venda" },
   { to: "/sales", icon: List, label: "Vendas" },
+  { to: "/viagens", icon: Plane, label: "Viagens" },
   { to: "/checkin", icon: ClipboardCheck, label: "Fazer Check-in" },
   { to: "/hospedagem", icon: Hotel, label: "Confirmar Hospedagens" },
   { to: "/passengers", icon: Users, label: "Passageiros" },

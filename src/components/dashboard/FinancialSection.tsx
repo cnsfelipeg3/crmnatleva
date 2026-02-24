@@ -2,26 +2,18 @@ import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, Legend,
+  AreaChart, Area, Legend,
 } from "recharts";
 import { iataToLabel } from "@/lib/iataUtils";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 interface Sale {
-  received_value: number;
-  total_cost: number;
-  profit: number;
-  margin: number;
-  created_at: string;
-  destination_iata: string | null;
-  seller_id: string | null;
+  received_value: number; total_cost: number; profit: number; margin: number;
+  created_at: string; destination_iata: string | null; seller_id: string | null;
 }
 
-interface Props {
-  filtered: Sale[];
-  sellerNames: Record<string, string>;
-}
+interface Props { filtered: Sale[]; sellerNames: Record<string, string>; }
 
 export default function FinancialSection({ filtered, sellerNames }: Props) {
   const monthlyData = useMemo(() => {
@@ -94,13 +86,31 @@ export default function FinancialSection({ filtered, sellerNames }: Props) {
           <h3 className="text-sm font-semibold text-foreground mb-4 tracking-tight">Margem % (mensal)</h3>
           {monthlyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
-              <LineChart data={monthlyData}>
+              <AreaChart data={monthlyData}>
+                <defs>
+                  <linearGradient id="margemGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="%" />
-                <Tooltip formatter={(v: number) => `${v.toFixed(1)}%`} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
-                <Line type="monotone" dataKey="margem" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4, fill: 'hsl(var(--chart-2))' }} name="Margem %" />
-              </LineChart>
+                <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} unit="%" domain={['auto', 'auto']} />
+                <Tooltip
+                  formatter={(v: number) => `${v.toFixed(1)}%`}
+                  contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="margem"
+                  stroke="hsl(var(--chart-2))"
+                  fill="url(#margemGrad)"
+                  strokeWidth={2.5}
+                  dot={{ r: 4, fill: 'hsl(var(--chart-2))', strokeWidth: 2, stroke: 'hsl(var(--card))' }}
+                  activeDot={{ r: 6, fill: 'hsl(var(--chart-2))' }}
+                  name="Margem %"
+                />
+              </AreaChart>
             </ResponsiveContainer>
           ) : <NoData />}
         </Card>
