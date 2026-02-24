@@ -248,14 +248,15 @@ export default function Viagens() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
         {[
-          { label: "Em Viagem", value: kpis.emViagem, icon: Plane, color: "text-green-400" },
-          { label: "Próx. 7 dias", value: kpis.next7d, icon: Clock, color: "text-blue-400" },
-          { label: "Países Ativos", value: kpis.countries, icon: Globe, color: "text-accent" },
-          { label: "Receita Ativa", value: fmt(kpis.activeRevenue), icon: DollarSign, color: "text-success" },
-          { label: "Retornam Hoje", value: kpis.returningToday, icon: MapPin, color: "text-orange-400" },
-          { label: "Passageiros Fora", value: kpis.pax, icon: Users, color: "text-info" },
+          { label: "Em Viagem", value: kpis.emViagem, icon: Plane, color: "text-green-400", filter: "em_viagem" as FilterMode },
+          { label: "Próx. 7 dias", value: kpis.next7d, icon: Clock, color: "text-blue-400", filter: "7d" as FilterMode },
+          { label: "Países Ativos", value: kpis.countries, icon: Globe, color: "text-accent", filter: "em_viagem" as FilterMode },
+          { label: "Receita Ativa", value: fmt(kpis.activeRevenue), icon: DollarSign, color: "text-success", filter: "em_viagem" as FilterMode },
+          { label: "Retornam Hoje", value: kpis.returningToday, icon: MapPin, color: "text-orange-400", filter: "critico" as FilterMode },
+          { label: "Passageiros Fora", value: kpis.pax, icon: Users, color: "text-info", filter: "em_viagem" as FilterMode },
         ].map(k => (
-          <Card key={k.label} className="p-3 glass-card">
+          <Card key={k.label} className="p-3 glass-card cursor-pointer hover:ring-1 hover:ring-accent/30 transition-all"
+            onClick={() => setFilterMode(k.filter)}>
             <div className="flex items-center gap-1.5 mb-1">
               <k.icon className={`w-3.5 h-3.5 ${k.color}`} />
               <span className="text-[9px] text-muted-foreground uppercase tracking-wider">{k.label}</span>
