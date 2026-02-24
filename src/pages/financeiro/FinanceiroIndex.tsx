@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useNavigate } from "react-router-dom";
@@ -29,6 +30,8 @@ const COLORS = [
 export default function FinanceiroIndex() {
   const navigate = useNavigate();
   const [drilldown, setDrilldown] = useState<{ label: string; items: any[] } | null>(null);
+  const [period, setPeriod] = useState("current");
+  const [paymentFilter, setPaymentFilter] = useState("all");
 
   const { data: sales = [] } = useQuery({
     queryKey: ["fin-sales"],
@@ -69,14 +72,21 @@ export default function FinanceiroIndex() {
   }, [profiles]);
 
   const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
 
   const monthSales = useMemo(() =>
     sales.filter((s: any) => {
       const d = new Date(s.created_at);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    }), [sales, currentMonth, currentYear]);
+      if (period === "current") return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      if (period === "last") {
+        const lm = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+        const ly = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+        return d.getMonth() === lm && d.getFullYear() === ly;
+      }
+      if (period === "quarter") return Math.floor(d.getMonth() / 3) === Math.floor(now.getMonth() / 3) && d.getFullYear() === now.getFullYear();
+      if (period === "year") return d.getFullYear() === now.getFullYear();
+      return true;
+    }).filter((s: any) => paymentFilter === "all" || s.payment_method === paymentFilter),
+  [sales, period, paymentFilter]);
 
   const receitaBruta = useMemo(() => monthSales.reduce((s: number, v: any) => s + (v.received_value || 0), 0), [monthSales]);
   const custoTotal = useMemo(() => monthSales.reduce((s: number, v: any) => s + (v.total_cost || 0), 0), [monthSales]);
@@ -237,10 +247,31 @@ export default function FinanceiroIndex() {
 
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-[1600px] mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight font-display">Centro Financeiro</h1>
           <p className="text-sm text-muted-foreground">Visão executiva e operacional</p>
+        </div>
+        <div className="flex gap-2">
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="current">Mês Atual</SelectItem>
+              <SelectItem value="last">Mês Anterior</SelectItem>
+              <SelectItem value="quarter">Trimestre</SelectItem>
+              <SelectItem value="year">Ano</SelectItem>
+              <SelectItem value="all">Todo período</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Pagamento: Todos</SelectItem>
+              {[...new Set(sales.map((s: any) => s.payment_method).filter(Boolean))].map((pm: string) => (
+                <SelectItem key={pm} value={pm}>{pm}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

@@ -4,7 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, Gift, MessageCircle, Cake, PartyPopper } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Gift, MessageCircle, Cake, PartyPopper, Download, Filter } from "lucide-react";
 
 interface BirthdayPassenger {
   id: string;
@@ -57,10 +58,14 @@ function buildWhatsAppUrl(phone: string, name: string): string {
   return `https://wa.me/${number}?text=${message}`;
 }
 
+const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
 export default function Birthdays() {
   const [passengers, setPassengers] = useState<BirthdayPassenger[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [monthFilter, setMonthFilter] = useState("all");
+  const [proximityFilter, setProximityFilter] = useState("all");
 
   useEffect(() => {
     const fetch = async () => {
@@ -80,29 +85,61 @@ export default function Birthdays() {
       const q = search.toLowerCase();
       list = list.filter((p) => p.full_name.toLowerCase().includes(q));
     }
+    if (monthFilter !== "all") {
+      const m = parseInt(monthFilter);
+      list = list.filter(p => parseInt(p.birth_date.split("-")[1]) === m);
+    }
+    if (proximityFilter === "today") list = list.filter(p => getDaysUntilBirthday(p.birth_date) === 0);
+    else if (proximityFilter === "week") list = list.filter(p => getDaysUntilBirthday(p.birth_date) <= 7);
+    else if (proximityFilter === "month") list = list.filter(p => getDaysUntilBirthday(p.birth_date) <= 30);
+
     return list.sort((a, b) => getDaysUntilBirthday(a.birth_date) - getDaysUntilBirthday(b.birth_date));
-  }, [passengers, search]);
+  }, [passengers, search, monthFilter, proximityFilter]);
+
+  const todayCount = passengers.filter(p => p.birth_date && getDaysUntilBirthday(p.birth_date) === 0).length;
+  const weekCount = passengers.filter(p => p.birth_date && getDaysUntilBirthday(p.birth_date) <= 7).length;
 
   return (
     <div className="p-6 space-y-5 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-serif text-foreground flex items-center gap-2">
-          <Cake className="w-6 h-6 text-primary" />
-          Aniversariantes
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {sorted.length} passageiros com data de nascimento cadastrada
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight font-display flex items-center gap-2">
+            <Cake className="w-6 h-6 text-primary" />
+            Aniversariantes
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {sorted.length} passageiros • {todayCount > 0 && <span className="text-primary font-semibold">{todayCount} hoje!</span>} {weekCount > 0 && <span className="text-accent-foreground">{weekCount} esta semana</span>}
+          </p>
+        </div>
       </div>
 
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+      {/* Filters */}
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={monthFilter} onValueChange={setMonthFilter}>
+          <SelectTrigger className="w-[130px]"><SelectValue placeholder="Mês" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos meses</SelectItem>
+            {MONTHS.map((m, i) => <SelectItem key={i} value={String(i + 1)}>{m}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={proximityFilter} onValueChange={setProximityFilter}>
+          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Proximidade" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="today">Hoje</SelectItem>
+            <SelectItem value="week">Próx. 7 dias</SelectItem>
+            <SelectItem value="month">Próx. 30 dias</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {loading ? (

@@ -73,6 +73,8 @@ export default function Passengers() {
   const [passengers, setPassengers] = useState<Passenger[]>([]);
   const [saleLinks, setSaleLinks] = useState<Record<string, SaleLink[]>>({});
   const [search, setSearch] = useState("");
+  const [stateFilter, setStateFilter] = useState("all");
+  const [docFilter, setDocFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [detailPax, setDetailPax] = useState<Passenger | null>(null);
   const [loading, setLoading] = useState(true);
@@ -203,12 +205,18 @@ export default function Passengers() {
     fetchPassengers();
   };
 
-  const filtered = passengers.filter(
-    (p) =>
-      p.full_name.toLowerCase().includes(search.toLowerCase()) ||
-      p.cpf?.includes(search) ||
-      p.phone?.includes(search)
-  );
+  const states = [...new Set(passengers.map(p => p.address_state).filter(Boolean))].sort() as string[];
+
+  const filtered = passengers.filter((p) => {
+    const matchSearch = !search || p.full_name.toLowerCase().includes(search.toLowerCase()) || p.cpf?.includes(search) || p.phone?.includes(search);
+    const matchState = stateFilter === "all" || p.address_state === stateFilter;
+    const matchDoc = docFilter === "all" ||
+      (docFilter === "sem-cpf" && !p.cpf) ||
+      (docFilter === "sem-phone" && !p.phone) ||
+      (docFilter === "sem-passaporte" && !p.passport_number) ||
+      (docFilter === "passaporte-vencendo" && isPassportExpiringSoon(p.passport_expiry));
+    return matchSearch && matchState && matchDoc;
+  });
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-5 animate-fade-in">
@@ -317,9 +325,22 @@ export default function Passengers() {
         </div>
       </div>
 
-      <div className="relative w-full sm:max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input placeholder="Buscar por nome, CPF, telefone..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Buscar por nome, CPF, telefone..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <select value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} className="h-9 rounded-md border border-input bg-background px-3 text-sm">
+          <option value="all">Todos estados</option>
+          {states.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select value={docFilter} onChange={(e) => setDocFilter(e.target.value)} className="h-9 rounded-md border border-input bg-background px-3 text-sm">
+          <option value="all">Todos documentos</option>
+          <option value="sem-cpf">Sem CPF</option>
+          <option value="sem-phone">Sem telefone</option>
+          <option value="sem-passaporte">Sem passaporte</option>
+          <option value="passaporte-vencendo">Passaporte vencendo</option>
+        </select>
       </div>
 
       {loading ? (
