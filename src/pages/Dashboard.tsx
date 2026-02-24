@@ -16,6 +16,8 @@ import SeasonalitySection from "@/components/dashboard/SeasonalitySection";
 import RegionSection from "@/components/dashboard/RegionSection";
 import MarginAnalysisSection from "@/components/dashboard/MarginAnalysisSection";
 import SellerRankingSection from "@/components/dashboard/SellerRankingSection";
+import GoalProjectionSection from "@/components/dashboard/GoalProjectionSection";
+import HeatmapSection from "@/components/dashboard/HeatmapSection";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Sale {
@@ -276,6 +278,16 @@ export default function Dashboard() {
 
       {/* Sazonalidade */}
       <SeasonalitySection filtered={filtered} allSales={sales} />
+
+      <div className="glow-line" />
+
+      {/* Projeção de Meta */}
+      <GoalProjectionSection filtered={filtered} allSales={sales} />
+
+      <div className="glow-line" />
+
+      {/* Heatmaps */}
+      <HeatmapSection filtered={filtered} />
 
       <div className="glow-line" />
 

@@ -19,6 +19,7 @@ import Lodging from "@/pages/Lodging";
 import ClientDetail from "@/pages/ClientDetail";
 import ImportData from "@/pages/ImportData";
 import Pendencias from "@/pages/Pendencias";
+import Viagens from "@/pages/Viagens";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ function AppRoutes() {
         <Route path="/sales" element={<Sales />} />
         <Route path="/sales/new" element={<NewSale />} />
         <Route path="/sales/:id" element={<SaleDetail />} />
+        <Route path="/viagens" element={<Viagens />} />
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/hospedagem" element={<Lodging />} />
         <Route path="/clients/:id" element={<ClientDetail />} />

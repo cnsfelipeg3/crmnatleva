@@ -1,14 +1,13 @@
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { iataToCityName, iataToLabel, normalizeProducts } from "@/lib/iataUtils";
-import {
-  PieChart, Pie, Cell as PieCell,
-} from "recharts";
+import { iataToLabel, normalizeProducts } from "@/lib/iataUtils";
+import { PieChart, Pie, Cell as PieCell } from "recharts";
 
 const PIE_COLORS = [
   "hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))",
   "hsl(var(--chart-4))", "hsl(var(--chart-5))", "hsl(280, 60%, 50%)",
+  "hsl(200, 50%, 45%)", "hsl(340, 55%, 50%)",
 ];
 
 interface Sale {
@@ -19,11 +18,7 @@ interface Sale {
   created_at: string;
 }
 
-interface Segment {
-  sale_id: string;
-  origin_iata: string;
-  destination_iata: string;
-}
+interface Segment { sale_id: string; origin_iata: string; destination_iata: string; }
 
 interface Props {
   filtered: Sale[];
@@ -41,10 +36,26 @@ export default function CommercialSection({ filtered, segments, sellerNames }: P
       .slice(0, 10);
   }, [filtered]);
 
+  // Group small product slices into "Outros"
   const productData = useMemo(() => {
     const c: Record<string, number> = {};
     filtered.forEach(s => normalizeProducts(s.products || []).forEach(p => (c[p] = (c[p] || 0) + 1)));
-    return Object.entries(c).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    const all = Object.entries(c).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    const total = all.reduce((s, v) => s + v.value, 0);
+    
+    // Keep items with >= 3% share, group rest as "Outros"
+    const threshold = total * 0.03;
+    const major: typeof all = [];
+    let othersCount = 0;
+    all.forEach(item => {
+      if (item.value >= threshold) {
+        major.push(item);
+      } else {
+        othersCount += item.value;
+      }
+    });
+    if (othersCount > 0) major.push({ name: "Outros", value: othersCount });
+    return major;
   }, [filtered]);
 
   const itineraryData = useMemo(() => {
@@ -70,19 +81,20 @@ export default function CommercialSection({ filtered, segments, sellerNames }: P
     ].filter(d => d.value > 0);
   }, [filtered, segments]);
 
-  const sellerRanking = useMemo(() => {
-    const map: Record<string, { name: string; vendas: number; receita: number }> = {};
-    filtered.forEach(s => {
-      const sid = s.seller_id || "sem";
-      const name = sellerNames[sid] || "Sem vendedor";
-      if (!map[sid]) map[sid] = { name, vendas: 0, receita: 0 };
-      map[sid].vendas++;
-      map[sid].receita += s.received_value || 0;
-    });
-    return Object.values(map).sort((a, b) => b.vendas - a.vendas).slice(0, 8);
-  }, [filtered, sellerNames]);
-
   const NoData = () => <p className="text-sm text-muted-foreground text-center py-8">Sem dados</p>;
+
+  const renderCustomLabel = ({ name, percent, cx, cy, midAngle, innerRadius, outerRadius }: any) => {
+    if (percent < 0.04) return null; // Don't render label for <4%
+    const RADIAN = Math.PI / 180;
+    const radius = outerRadius + 20;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    return (
+      <text x={x} y={y} fill="hsl(var(--muted-foreground))" textAnchor={x > cx ? "start" : "end"} dominantBaseline="central" fontSize={10}>
+        {name} {(percent * 100).toFixed(0)}%
+      </text>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -108,10 +120,23 @@ export default function CommercialSection({ filtered, segments, sellerNames }: P
           {productData.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
-                <Pie data={productData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={{ stroke: 'hsl(var(--muted-foreground))' }}>
+                <Pie
+                  data={productData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={40}
+                  outerRadius={75}
+                  label={renderCustomLabel}
+                  labelLine={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 0.5 }}
+                >
                   {productData.map((_, i) => <PieCell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                 </Pie>
-                <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
+                <Tooltip
+                  formatter={(value: number, name: string) => [`${value} vendas`, name]}
+                  contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }}
+                />
               </PieChart>
             </ResponsiveContainer>
           ) : <NoData />}
@@ -131,21 +156,6 @@ export default function CommercialSection({ filtered, segments, sellerNames }: P
           ) : <NoData />}
         </Card>
       </div>
-
-      {sellerRanking.length > 0 && (
-        <Card className="p-5 glass-card">
-          <h3 className="text-sm font-semibold text-foreground mb-4 tracking-tight">Vendas por Vendedor</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={sellerRanking}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
-              <XAxis dataKey="name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-              <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-              <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
-              <Bar dataKey="vendas" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} name="Vendas" />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      )}
     </div>
   );
 }
