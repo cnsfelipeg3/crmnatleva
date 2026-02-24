@@ -89,6 +89,7 @@ serve(async (req) => {
       const address = p.address?.trim() || null;
       const complement = p.complement?.trim() || null;
       const email = p.email?.trim() || null;
+      const gender = p.gender?.trim() || null;
 
       // Check existing by CPF first
       let existingId: string | null = null;
@@ -146,7 +147,14 @@ serve(async (req) => {
     // ========== 2. IMPORT SALES ==========
     for (const sale of (saleRows || [])) {
       if (!sale.name || sale.name.trim().length < 2) continue;
-      if (sale.name === "teste") continue;
+      const rawName = sale.name.trim();
+      if (rawName === "teste") continue;
+      // Clean sale name: remove suffixes like "- Tassia", "(VINI E TASSIA)", "(Check-in ...)"
+      let saleName = rawName
+        .replace(/\s*-\s*(Tassia|TASSIA)$/i, "")
+        .replace(/^\(.*?\)\s*/i, "")
+        .trim();
+      if (!saleName || saleName.length < 2) saleName = rawName;
 
       const departureDate = parseDate(sale.departure_date);
       const returnDate = parseDate(sale.return_date);
@@ -187,7 +195,7 @@ serve(async (req) => {
       const childrenAges = childrenAgesRaw ? childrenAgesRaw.split(",").map((a: string) => parseInt(a.trim())).filter((n: number) => !isNaN(n)) : [];
 
       const { data: newSale, error: saleError } = await sb.from("sales").insert({
-        name: sale.name.trim(),
+        name: saleName,
         status: "Concluída",
         departure_date: departureDate,
         return_date: returnDate,
