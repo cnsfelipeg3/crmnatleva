@@ -154,10 +154,10 @@ export default function Comissoes() {
           <div className="space-y-3">
             <div>
               <Label className="text-xs">Vendedor (vazio = todos)</Label>
-              <Select value={form.seller_id} onValueChange={(v) => setForm({ ...form, seller_id: v })}>
+              <Select value={form.seller_id || "__all__"} onValueChange={(v) => setForm({ ...form, seller_id: v === "__all__" ? "" : v })}>
                 <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="__all__">Todos</SelectItem>
                   {profiles.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
                 </SelectContent>
               </Select>
