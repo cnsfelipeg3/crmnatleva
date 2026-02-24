@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAll";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import KpiCards from "@/components/dashboard/KpiCards";
 import FinancialSection from "@/components/dashboard/FinancialSection";
@@ -58,21 +59,21 @@ export default function Dashboard() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("sales").select("*").order("created_at", { ascending: false }),
-      supabase.from("profiles").select("id, full_name"),
-      supabase.from("clients").select("id, display_name, created_at"),
-      supabase.from("flight_segments").select("sale_id, origin_iata, destination_iata"),
-      supabase.from("cost_items").select("sale_id, category, miles_quantity, miles_price_per_thousand, miles_program, cash_value, total_item_cost"),
-      supabase.from("checkin_tasks").select("status, checkin_open_datetime_utc, completed_at, created_at"),
-      supabase.from("lodging_confirmation_tasks").select("status, milestone, scheduled_at_utc, issue_type"),
-    ]).then(([salesRes, profilesRes, clientsRes, segmentsRes, costsRes, checkinRes, lodgingRes]) => {
-      setSales((salesRes.data || []) as Sale[]);
-      setProfiles((profilesRes.data || []) as Profile[]);
-      setClients((clientsRes.data || []) as Client[]);
-      setSegments((segmentsRes.data || []) as Segment[]);
-      setCostItems((costsRes.data || []) as CostItem[]);
-      setCheckinTasks((checkinRes.data || []) as CheckinTask[]);
-      setLodgingTasks((lodgingRes.data || []) as LodgingTask[]);
+      fetchAllRows("sales", "*", { order: { column: "created_at", ascending: false } }),
+      fetchAllRows("profiles", "id, full_name"),
+      fetchAllRows("clients", "id, display_name, created_at"),
+      fetchAllRows("flight_segments", "sale_id, origin_iata, destination_iata"),
+      fetchAllRows("cost_items", "sale_id, category, miles_quantity, miles_price_per_thousand, miles_program, cash_value, total_item_cost"),
+      fetchAllRows("checkin_tasks", "status, checkin_open_datetime_utc, completed_at, created_at"),
+      fetchAllRows("lodging_confirmation_tasks", "status, milestone, scheduled_at_utc, issue_type"),
+    ]).then(([salesData, profilesData, clientsData, segmentsData, costsData, checkinData, lodgingData]) => {
+      setSales(salesData as Sale[]);
+      setProfiles(profilesData as Profile[]);
+      setClients(clientsData as Client[]);
+      setSegments(segmentsData as Segment[]);
+      setCostItems(costsData as CostItem[]);
+      setCheckinTasks(checkinData as CheckinTask[]);
+      setLodgingTasks(lodgingData as LodgingTask[]);
       setLoading(false);
     });
   }, []);
