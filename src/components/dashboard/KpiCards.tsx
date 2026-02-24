@@ -52,9 +52,9 @@ export default function KpiCards({ filtered, previous }: Props) {
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 md:gap-3">
       {kpis.map(k => (
-        <Card key={k.label} className="p-3.5 glass-card group relative overflow-hidden">
+        <Card key={k.label} className="p-2.5 md:p-3.5 glass-card group relative overflow-hidden">
           {/* Subtle top glow line */}
           <div className="absolute top-0 left-2 right-2 h-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-300"
             style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--glow-primary) / 0.4), transparent)' }}
@@ -65,7 +65,7 @@ export default function KpiCards({ filtered, previous }: Props) {
             </div>
             <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{k.label}</span>
           </div>
-          <p className="text-base font-bold text-foreground leading-tight font-sans">{k.value}</p>
+          <p className="text-sm md:text-base font-bold text-foreground leading-tight font-sans truncate">{k.value}</p>
           {k.change !== null && (
             <div className={`flex items-center gap-0.5 mt-1 text-[10px] font-medium ${k.change >= 0 ? "text-success" : "text-destructive"}`}>
               {k.change >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
