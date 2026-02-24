@@ -119,36 +119,56 @@ export default function ClientDistributionMap() {
     fetchData();
   }, []);
 
-  // Initialize map
+  // Initialize map - delayed to ensure container has dimensions
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    if (!containerRef.current) return;
+    // Prevent double-init
+    if (mapRef.current) { mapRef.current.invalidateSize(); return; }
 
+    const el = containerRef.current;
     const isDark = document.documentElement.classList.contains("dark");
     const initialStyle = isDark ? "dark" : "light";
     setMapStyle(initialStyle);
 
-    const map = L.map(containerRef.current, {
-      scrollWheelZoom: true,
-      zoomControl: false,
-      dragging: true,
-      doubleClickZoom: true,
-      touchZoom: true,
-      attributionControl: false,
-    }).setView([-14, -51], 4);
+    // Wait until the container actually has layout dimensions
+    const initMap = () => {
+      if (!el || el.clientWidth === 0 || el.clientHeight === 0) {
+        requestAnimationFrame(initMap);
+        return;
+      }
 
-    const tile = L.tileLayer(TILE_LAYERS[initialStyle].url, { maxZoom: 18 }).addTo(map);
-    tileRef.current = tile;
-    mapRef.current = map;
+      const map = L.map(el, {
+        scrollWheelZoom: true,
+        zoomControl: false,
+        dragging: true,
+        doubleClickZoom: true,
+        touchZoom: true,
+        attributionControl: false,
+      }).setView([-14, -51], 4);
 
-    // Attribution in bottom right
-    L.control.attribution({ position: 'bottomright', prefix: '' }).addTo(map);
+      const tile = L.tileLayer(TILE_LAYERS[initialStyle].url, { maxZoom: 18 }).addTo(map);
+      tileRef.current = tile;
+      mapRef.current = map;
 
-    // Fix for lazy-loaded / Suspense components: invalidate size after render
-    setTimeout(() => map.invalidateSize(), 200);
-    const ro = new ResizeObserver(() => map.invalidateSize());
-    ro.observe(containerRef.current);
+      L.control.attribution({ position: 'bottomright', prefix: '' }).addTo(map);
 
-    return () => { ro.disconnect(); map.remove(); mapRef.current = null; };
+      // Multiple invalidateSize calls to cover various render timings
+      requestAnimationFrame(() => map.invalidateSize());
+      setTimeout(() => map.invalidateSize(), 100);
+      setTimeout(() => map.invalidateSize(), 500);
+      setTimeout(() => map.invalidateSize(), 1500);
+    };
+
+    // Start init on next frame to let layout settle
+    requestAnimationFrame(initMap);
+
+    const ro = new ResizeObserver(() => mapRef.current?.invalidateSize());
+    ro.observe(el);
+
+    return () => {
+      ro.disconnect();
+      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
+    };
   }, []);
 
   // Switch tile layer

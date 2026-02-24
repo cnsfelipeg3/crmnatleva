@@ -18,6 +18,7 @@ import MarginAnalysisSection from "@/components/dashboard/MarginAnalysisSection"
 import SellerRankingSection from "@/components/dashboard/SellerRankingSection";
 import GoalProjectionSection from "@/components/dashboard/GoalProjectionSection";
 import HeatmapSection from "@/components/dashboard/HeatmapSection";
+import OriginSection from "@/components/dashboard/OriginSection";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Sale {
@@ -284,6 +285,11 @@ export default function Dashboard() {
 
           <CommercialSection filtered={filtered} segments={segments} sellerNames={sellerNames} />
           <RegionSection filtered={filtered} getRegion={getRegion} />
+
+          <div className="glow-line" />
+
+          {/* Origens */}
+          <OriginSection filtered={filtered} sellerNames={sellerNames} />
 
           <div className="glow-line" />
 

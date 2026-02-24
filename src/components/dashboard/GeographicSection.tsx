@@ -1,9 +1,10 @@
-import { Suspense, lazy, useMemo } from "react";
+import { Suspense, lazy, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Map, Globe } from "lucide-react";
+import ClientDistributionMap from "@/components/ClientDistributionMap";
 
 const RoutesMap = lazy(() => import("@/components/RoutesMap"));
-const ClientDistributionMap = lazy(() => import("@/components/ClientDistributionMap"));
 
 interface Sale {
   origin_iata: string | null;
@@ -16,6 +17,8 @@ interface Props {
 }
 
 export default function GeographicSection({ filtered }: Props) {
+  const [showDistMap, setShowDistMap] = useState(true);
+
   const routes = useMemo(() => {
     const c: Record<string, { count: number; revenue: number }> = {};
     filtered.forEach(s => {
@@ -38,11 +41,17 @@ export default function GeographicSection({ filtered }: Props) {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-serif text-foreground">Geográfico</h2>
+      <h2 className="section-title">
+        <Globe className="w-5 h-5 text-primary" />
+        Geográfico
+      </h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {routes.length > 0 && (
           <Card className="p-5 glass-card">
-            <h3 className="text-sm font-semibold text-foreground mb-3">Mapa de Rotas Aéreas</h3>
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Map className="w-4 h-4 text-primary" />
+              Mapa de Rotas Aéreas
+            </h3>
             <Suspense fallback={<MapFallback />}>
               <RoutesMap routes={routes} height="300px" />
             </Suspense>
@@ -57,10 +66,11 @@ export default function GeographicSection({ filtered }: Props) {
         )}
 
         <Card className="p-5 glass-card">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Distribuição de Clientes</h3>
-          <Suspense fallback={<MapFallback />}>
-            <ClientDistributionMap />
-          </Suspense>
+          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+            <Globe className="w-4 h-4 text-accent" />
+            Distribuição de Clientes
+          </h3>
+          {showDistMap && <ClientDistributionMap />}
         </Card>
       </div>
     </div>
