@@ -4,6 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend,
 } from "recharts";
+import { iataToLabel } from "@/lib/iataUtils";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -55,10 +56,11 @@ export default function FinancialSection({ filtered, sellerNames }: Props) {
   }, [filtered, sellerNames]);
 
   const destProfit = useMemo(() => {
-    const map: Record<string, { name: string; lucro: number }> = {};
+    const map: Record<string, { iata: string; name: string; lucro: number }> = {};
     filtered.forEach(s => {
       const d = s.destination_iata || "N/A";
-      if (!map[d]) map[d] = { name: d, lucro: 0 };
+      if (d === "N/A") return;
+      if (!map[d]) map[d] = { iata: d, name: iataToLabel(d), lucro: 0 };
       map[d].lucro += (s.received_value || 0) - (s.total_cost || 0);
     });
     return Object.values(map).sort((a, b) => b.lucro - a.lucro).slice(0, 8);
@@ -127,7 +129,7 @@ export default function FinancialSection({ filtered, sellerNames }: Props) {
               <BarChart data={destProfit} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
                 <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={50} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} width={110} />
                 <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
                 <Bar dataKey="lucro" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} name="Lucro" />
               </BarChart>
