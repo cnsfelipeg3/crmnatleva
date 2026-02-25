@@ -1180,8 +1180,9 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
       <div className="flex flex-1 overflow-hidden">
         <div ref={reactFlowWrapper} className="flex-1 relative" onDragOver={onDragOver} onDrop={onDrop}>
           {/* Watermark NatLeva */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-            <img src={natlevaLogo} alt="" className="w-72 h-auto opacity-[0.04] select-none" draggable={false} />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 1 }}>
+            <img src={natlevaLogo} alt="" className="w-48 h-auto select-none grayscale" draggable={false}
+              style={{ opacity: 0.06, filter: "grayscale(100%) brightness(1.2)" }} />
           </div>
           <ReactFlow
             nodes={nodesWithStatus}
