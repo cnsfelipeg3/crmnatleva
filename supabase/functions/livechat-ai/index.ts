@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,6 +13,58 @@ serve(async (req) => {
     const { messages, clientContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // Fetch knowledge base and rules from DB
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const sb = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch active knowledge base entries
+    const { data: kbEntries } = await sb
+      .from("ai_knowledge_base")
+      .select("title, category, content_text, file_url, file_type")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    // Fetch AI config/rules
+    const { data: configData } = await sb
+      .from("ai_config")
+      .select("config_key, config_value");
+
+    const config: Record<string, string> = {};
+    (configData || []).forEach((c: any) => { config[c.config_key] = c.config_value; });
+
+    // Build knowledge base context
+    let knowledgeBlock = "";
+    if (kbEntries && kbEntries.length > 0) {
+      const kbTexts = kbEntries
+        .filter((e: any) => e.content_text)
+        .map((e: any) => `### ${e.title} [${e.category}]\n${e.content_text}`)
+        .join("\n\n");
+      if (kbTexts) {
+        knowledgeBlock = `\n## BASE DE CONHECIMENTO (USE COMO REFERÊNCIA PRIORITÁRIA)\n${kbTexts}\n`;
+      }
+    }
+
+    // Build rules block
+    let rulesBlock = "";
+    const tone = config["ai_tone"] || "premium";
+    const formality = config["ai_formality"] || "formal";
+    const guidelines = config["ai_guidelines"] || "";
+    const forbidden = config["ai_forbidden"] || "";
+    const greetingTemplate = config["ai_greeting_template"] || "";
+    const closingTemplate = config["ai_closing_template"] || "";
+
+    rulesBlock = `
+## REGRAS DE COMPORTAMENTO
+- Tom de voz: ${tone}
+- Formalidade: ${formality}
+${guidelines ? `- Diretrizes: ${guidelines}` : ""}
+${forbidden ? `- NUNCA FAZER: ${forbidden}` : ""}
+${greetingTemplate ? `- Template de saudação: ${greetingTemplate}` : ""}
+${closingTemplate ? `- Template de encerramento: ${closingTemplate}` : ""}
+`;
 
     const contextBlock = clientContext ? `
 ## CONTEXTO DO CLIENTE
@@ -33,13 +86,18 @@ serve(async (req) => {
 
 Seu papel é analisar mensagens de clientes e gerar respostas profissionais para os vendedores enviarem.
 
-## REGRAS
+${rulesBlock}
+
+${knowledgeBlock}
+
+## REGRAS GERAIS
 1. NUNCA envie respostas diretamente ao cliente. Você gera SUGESTÕES para o vendedor.
 2. Adapte o tom conforme o perfil do cliente (VIP = premium e exclusivo, Econômico = objetivo e claro).
 3. Seja caloroso, profissional e consultivo.
 4. Use emojis com moderação (1-2 por mensagem).
 5. Sempre tente avançar o funil de vendas naturalmente.
 6. Se o cliente mencionar destino, período ou número de pessoas, destaque isso.
+7. PRIORIZE o conteúdo da Base de Conhecimento ao responder.
 
 ## FORMATO DE RESPOSTA (JSON)
 Responda SEMPRE em JSON válido com esta estrutura:
