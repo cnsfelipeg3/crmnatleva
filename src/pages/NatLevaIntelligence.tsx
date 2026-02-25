@@ -16,12 +16,14 @@ import {
   Plus, Trash2, Upload, FileText, Settings2, Save, BookOpen,
   History, Sparkles, AlertTriangle, Target, DollarSign, Users,
   TrendingUp, Shield, Zap, ChevronRight, Mic, MicOff, Paperclip, X,
-  Image, FileSpreadsheet, Link2,
+  Image, FileSpreadsheet, Link2, Download, ImagePlus, FileDown, Table,
 } from "lucide-react";
 import { toast } from "sonner";
+import { exportChatAsPDF, exportChatAsXLSX, exportTableFromContent } from "@/lib/chatExport";
 
-type Msg = { role: "user" | "assistant"; content: string; attachments?: AttachmentInfo[] };
+type Msg = { role: "user" | "assistant"; content: string; attachments?: AttachmentInfo[]; images?: GeneratedImage[] };
 type AttachmentInfo = { name: string; type: string; url?: string; content?: string };
+type GeneratedImage = { type: string; image_url: { url: string } };
 type Conversation = {
   id: string;
   conversation_id: string;
@@ -87,6 +89,7 @@ export default function NatLevaIntelligence() {
   // File attachments state
   const [pendingAttachments, setPendingAttachments] = useState<AttachmentInfo[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
 
   // Load conversations
   useEffect(() => {
@@ -255,6 +258,50 @@ export default function NatLevaIntelligence() {
     setPendingAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+  // ── Image Generation ──
+  const generateImage = useCallback(async (prompt: string) => {
+    setGeneratingImage(true);
+    try {
+      const IMG_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/natleva-image-gen`;
+      const resp = await fetch(IMG_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Erro" }));
+        if (resp.status === 429) toast.error("Rate limit atingido. Aguarde.");
+        else if (resp.status === 402) toast.error("Créditos insuficientes.");
+        else toast.error(err.error || "Erro ao gerar imagem");
+        setGeneratingImage(false);
+        return null;
+      }
+
+      const data = await resp.json();
+      setGeneratingImage(false);
+      return data;
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro de conexão ao gerar imagem");
+      setGeneratingImage(false);
+      return null;
+    }
+  }, []);
+
+  // ── Download generated image ──
+  const downloadImage = (dataUrl: string, name?: string) => {
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = name || `natleva-imagem-${Date.now()}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const saveConversation = useCallback(async (msgs: Msg[], convId?: string) => {
     if (!user) return;
     const title = msgs.find(m => m.role === "user")?.content.slice(0, 80) || "Nova conversa";
@@ -284,6 +331,10 @@ export default function NatLevaIntelligence() {
     if (isRecording) stopRecording();
 
     const cleanText = text.replace(/\s*🎙️.*$/, "").trim();
+
+    // Check if user wants to generate an image
+    const imageGenPatterns = /^(gere?|crie?|cria|faça?|faz|desenhe?|gerar|criar|fazer|desenhar)\s+(uma?\s+)?(imagem|foto|ilustração|banner|logo|arte|design|poster|cartaz|thumbnail|capa)/i;
+    const isImageRequest = imageGenPatterns.test(cleanText);
     const attachments = pendingAttachments.length > 0 ? [...pendingAttachments] : undefined;
 
     // Build display content
@@ -303,6 +354,36 @@ export default function NatLevaIntelligence() {
     let assistantContent = "";
 
     try {
+      // If it's an image generation request, use the image gen endpoint in parallel with chat
+      if (isImageRequest) {
+        // Show generating state
+        setMessages(prev => [...prev, { role: "assistant", content: "🎨 Gerando imagem... aguarde um momento." }]);
+
+        const imageResult = await generateImage(cleanText);
+
+        if (imageResult && imageResult.images && imageResult.images.length > 0) {
+          const imgMsg: Msg = {
+            role: "assistant",
+            content: imageResult.text || "✅ Imagem gerada com sucesso! Clique para baixar.",
+            images: imageResult.images,
+          };
+          const finalMessages = [...newMessages, imgMsg];
+          setMessages(finalMessages);
+          await saveConversation(finalMessages, currentConvId || undefined);
+        } else {
+          // Fallback: send to regular chat if image gen failed
+          setMessages(prev => prev.map((m, i) =>
+            i === prev.length - 1 ? { ...m, content: imageResult?.text || "Não foi possível gerar a imagem. Tente reformular o pedido." } : m
+          ));
+          const finalMessages = [...newMessages, { role: "assistant" as const, content: imageResult?.text || "Não foi possível gerar a imagem." }];
+          await saveConversation(finalMessages, currentConvId || undefined);
+        }
+        setLoading(false);
+        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+        return;
+      }
+
+      // Regular chat flow
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/natleva-intelligence`;
       const resp = await fetch(CHAT_URL, {
         method: "POST",
@@ -566,6 +647,9 @@ export default function NatLevaIntelligence() {
                   <p className="text-xs text-muted-foreground/60 max-w-lg mb-2">
                     🎙️ Use o microfone para falar • 📎 Anexe imagens, PDFs e planilhas • 🔗 Cole links para análise
                   </p>
+                  <p className="text-xs text-muted-foreground/60 max-w-lg mb-2">
+                    🎨 Gere imagens com IA • 📄 Exporte conversas em PDF • 📊 Exporte tabelas em planilhas
+                  </p>
                   <p className="text-xs text-muted-foreground/60 max-w-lg mb-6">
                     Vendas • Financeiro • RH • Clientes • Metas • Performance • Fornecedores • Check-in • Hospedagens
                   </p>
@@ -594,16 +678,69 @@ export default function NatLevaIntelligence() {
                       : "bg-muted/50 border border-border/30 rounded-bl-md"
                   }`}>
                     {msg.role === "assistant" ? (
-                      <div className="prose prose-sm dark:prose-invert max-w-none
-                        prose-headings:text-foreground prose-h1:text-lg prose-h1:font-bold prose-h1:mt-4 prose-h1:mb-2
-                        prose-h2:text-base prose-h2:font-bold prose-h2:mt-5 prose-h2:mb-2 prose-h2:border-b prose-h2:border-border/30 prose-h2:pb-1
-                        prose-h3:text-sm prose-h3:font-semibold prose-h3:mt-3 prose-h3:mb-1
-                        prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:text-sm
-                        prose-li:text-muted-foreground prose-li:leading-relaxed prose-li:text-sm
-                        prose-strong:text-foreground prose-table:text-xs
-                        prose-ul:my-1 prose-ol:my-1">
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
-                      </div>
+                      <>
+                        <div className="prose prose-sm dark:prose-invert max-w-none
+                          prose-headings:text-foreground prose-h1:text-lg prose-h1:font-bold prose-h1:mt-4 prose-h1:mb-2
+                          prose-h2:text-base prose-h2:font-bold prose-h2:mt-5 prose-h2:mb-2 prose-h2:border-b prose-h2:border-border/30 prose-h2:pb-1
+                          prose-h3:text-sm prose-h3:font-semibold prose-h3:mt-3 prose-h3:mb-1
+                          prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:text-sm
+                          prose-li:text-muted-foreground prose-li:leading-relaxed prose-li:text-sm
+                          prose-strong:text-foreground prose-table:text-xs
+                          prose-ul:my-1 prose-ol:my-1">
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        </div>
+
+                        {/* Generated images */}
+                        {msg.images && msg.images.length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            {msg.images.map((img, idx) => (
+                              <div key={idx} className="relative group">
+                                <img
+                                  src={img.image_url.url}
+                                  alt="Imagem gerada pela IA"
+                                  className="rounded-xl max-w-full border border-border/30 shadow-sm"
+                                />
+                                <button
+                                  onClick={() => downloadImage(img.image_url.url)}
+                                  className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-background"
+                                  title="Baixar imagem"
+                                >
+                                  <Download className="w-4 h-4 text-foreground" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Action buttons for assistant messages */}
+                        {msg.content.length > 100 && !loading && (
+                          <div className="flex flex-wrap gap-1.5 mt-3 pt-2 border-t border-border/20">
+                            <button
+                              onClick={() => exportChatAsPDF(messages, "NatLeva Intelligence")}
+                              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/80 px-2 py-1 rounded-md transition-colors"
+                              title="Exportar conversa como PDF"
+                            >
+                              <FileDown className="w-3 h-3" /> PDF
+                            </button>
+                            <button
+                              onClick={() => exportChatAsXLSX(messages, "NatLeva Intelligence")}
+                              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/80 px-2 py-1 rounded-md transition-colors"
+                              title="Exportar conversa como planilha"
+                            >
+                              <FileSpreadsheet className="w-3 h-3" /> Planilha
+                            </button>
+                            {msg.content.includes("|") && msg.content.includes("---") && (
+                              <button
+                                onClick={() => exportTableFromContent(msg.content)}
+                                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/80 px-2 py-1 rounded-md transition-colors"
+                                title="Exportar tabela como planilha"
+                              >
+                                <Table className="w-3 h-3" /> Exportar Tabela
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                     )}
@@ -623,7 +760,7 @@ export default function NatLevaIntelligence() {
                   </div>
                   <div className="bg-muted/50 border border-border/30 rounded-2xl rounded-bl-md px-4 py-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin" /> Consultando dados e analisando...
+                      <Loader2 className="w-4 h-4 animate-spin" /> {generatingImage ? "🎨 Gerando imagem..." : "Consultando dados e analisando..."}
                     </div>
                   </div>
                 </div>
@@ -699,7 +836,7 @@ export default function NatLevaIntelligence() {
                 </Button>
               </form>
               <p className="text-[10px] text-muted-foreground/50 mt-1.5 text-center">
-                🎙️ Microfone • 📎 Imagens, PDFs, planilhas • 🔗 Links são interpretados automaticamente
+                🎙️ Microfone • 📎 Arquivos • 🔗 Links • 🎨 "Gere uma imagem de..." • 📄 Exporte PDF/Planilha
               </p>
             </div>
           </div>

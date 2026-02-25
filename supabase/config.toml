@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.natleva-intelligence]
 verify_jwt = false
+
+[functions.natleva-image-gen]
+verify_jwt = false
