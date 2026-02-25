@@ -75,6 +75,197 @@ type NodeConfig = Record<string, any>;
 
 // ─── TEMPLATES ───
 const TEMPLATES = [
+  // ═══════════════════════════════════════════
+  // MAIN FLOW COMERCIAL NATLEVA (WHATSAPP)
+  // ═══════════════════════════════════════════
+  {
+    name: "🚀 Main Flow Comercial NatLeva",
+    category: "comercial",
+    description: "Funil completo WhatsApp: Recepção → Qualificação → Orçamento → Proposta → Negociação → Fechamento → Pós-venda",
+    nodes: [
+      // ── [A] TRIGGER INICIAL ──
+      { id: "a1", type: "trigger", label: "📩 Nova msg WhatsApp", position: { x: 500, y: 0 }, config: { trigger_type: "new_message", keywords: [] } },
+      { id: "a2", type: "action_funnel", label: "→ Novo Lead", position: { x: 500, y: 130 }, config: { funnel_stage: "novo_lead" } },
+      { id: "a3", type: "condition", label: "Origem = Quiz?", position: { x: 500, y: 270 }, config: { field: "keyword", operator: "contains", value: "quiz" } },
+      { id: "a4", type: "action_tag", label: "🏷️ Tag Quiz", position: { x: 250, y: 420 }, config: { tags: ["Quiz", "Orgânico"] } },
+      { id: "a5", type: "action_tag", label: "🏷️ Tag Tráfego", position: { x: 750, y: 420 }, config: { tags: ["Tráfego"] } },
+      { id: "a6", type: "condition", label: "Cliente existe no CRM?", position: { x: 500, y: 560 }, config: { field: "tag", operator: "exists", value: "CRM" } },
+      { id: "a7", type: "message", label: "Criar lead básico", position: { x: 250, y: 710 }, config: { text: "(Ação interna: criar cliente com nome do contato WhatsApp)" } },
+
+      // ── [B] RECEPÇÃO & ENCANTAMENTO ──
+      { id: "b1", type: "action_funnel", label: "→ Recepção & Conexão", position: { x: 500, y: 850 }, config: { funnel_stage: "recepcao" } },
+      { id: "b2", type: "ai_agent", label: "🧠 IA Recepção Premium", position: { x: 500, y: 990 }, config: { persona: "sdr", objective: "qualificar", style: "premium", send_mode: "suggest", system_prompt: "Você é um concierge de viagens premium da NatLeva. Agradeça o contato com elegância, crie uma conexão genuína e pergunte 1-2 informações iniciais (destino e período). Seja acolhedor, objetivo e encantador. Nunca bombardeie de perguntas." } },
+      { id: "b3", type: "message", label: "💬 Qual destino?", position: { x: 500, y: 1130 }, config: { text: "(IA gerou + aprovação) Ex: 'Olá {nome}! ✨ Que bom ter você aqui. Me conta: qual destino está no seu radar?'" } },
+      { id: "b4", type: "message", label: "📅 Período aproximado?", position: { x: 500, y: 1270 }, config: { text: "E tem algum período em mente? Pode ser uma janela flexível também 😉" } },
+      { id: "b5", type: "message", label: "👥 Quantas pessoas?", position: { x: 500, y: 1410 }, config: { text: "Quantas pessoas vão na viagem? (adultos e crianças com idades, se houver)" } },
+
+      // ── Tags de destino detectado ──
+      { id: "b6", type: "condition", label: "Destino = Dubai?", position: { x: 500, y: 1560 }, config: { field: "keyword", operator: "contains", value: "dubai" } },
+      { id: "b7", type: "action_tag", label: "🏷️ Dubai + Internacional", position: { x: 200, y: 1710 }, config: { tags: ["Dubai", "Oriente Médio", "Internacional", "Alto Ticket"] } },
+      { id: "b8", type: "condition", label: "Destino = Europa?", position: { x: 700, y: 1710 }, config: { field: "keyword", operator: "contains", value: "europa" } },
+      { id: "b9", type: "action_tag", label: "🏷️ Europa", position: { x: 450, y: 1860 }, config: { tags: ["Europa", "Internacional"] } },
+      { id: "b10", type: "action_tag", label: "🏷️ Outro destino", position: { x: 900, y: 1860 }, config: { tags: ["Destino a classificar"] } },
+
+      // ── [C] QUALIFICAÇÃO COMPLETA ──
+      { id: "c1", type: "action_funnel", label: "→ Qualificação", position: { x: 500, y: 2050 }, config: { funnel_stage: "qualificacao" } },
+      { id: "c2", type: "ai_agent", label: "🧠 IA Qualificação NatLeva", position: { x: 500, y: 2190 }, config: { persona: "vendas", objective: "qualificar", style: "premium", send_mode: "suggest", system_prompt: "Colete dados de qualificação com elegância: cidade de origem, datas, qtd pessoas, preferência de hotel (3-5 estrelas), estilo (econômico/conforto/premium), experiências desejadas, faixa de orçamento, forma de pagamento e observações. Pergunte de forma natural, não como formulário.", context_fields: ["last_message", "chat_history", "client_name", "client_score", "funnel_stage", "tags"] } },
+      { id: "c3", type: "condition", label: "Faltou info essencial?", position: { x: 500, y: 2350 }, config: { field: "tag", operator: "not_contains", value: "Qualificado" } },
+      { id: "c4", type: "action_funnel", label: "→ Aguardando Info", position: { x: 200, y: 2500 }, config: { funnel_stage: "aguardando_info" } },
+      { id: "c5", type: "action_tag", label: "🏷️ Falta Info", position: { x: 200, y: 2640 }, config: { tags: ["Falta Info"] } },
+      { id: "c6", type: "message", label: "⏳ Cobrar info (timer 12h)", position: { x: 200, y: 2780 }, config: { text: "Olá {nome}! 😊 Só me faltam algumas informações para montar a melhor opção pra você. Consegue me passar?" } },
+
+      // ── [D] VIP / PRIORIDADE ──
+      { id: "d1", type: "condition", label: "É VIP? (score ≥ 70)", position: { x: 500, y: 2500 }, config: { field: "score", operator: "greater_than", value: "70" } },
+      { id: "d2", type: "action_tag", label: "🏷️ VIP + Prioridade", position: { x: 250, y: 2670 }, config: { tags: ["VIP", "Prioridade Alta", "Responder Hoje"] } },
+      { id: "d3", type: "handoff", label: "👑 → Vendedor Sênior", position: { x: 250, y: 2820 }, config: { queue: "vendas_vip", notify: true } },
+      { id: "d4", type: "condition", label: "Viagem < 15 dias?", position: { x: 700, y: 2670 }, config: { field: "inactive_days", operator: "less_than", value: "15" } },
+      { id: "d5", type: "action_tag", label: "🏷️ Urgente", position: { x: 500, y: 2820 }, config: { tags: ["Urgente", "Responder Hoje"] } },
+
+      // ── [E] ORÇAMENTO EM PREPARAÇÃO ──
+      { id: "e1", type: "action_funnel", label: "→ Orçamento Preparação", position: { x: 700, y: 2960 }, config: { funnel_stage: "orcamento_preparacao" } },
+      { id: "e2", type: "message", label: "💎 Msg 'estou preparando'", position: { x: 700, y: 3100 }, config: { text: "Perfeito {nome}, já entendi o cenário! 🎯 Vou preparar as melhores opções com calma e te retorno com uma proposta bem redonda. Se surgir qualquer detalhe — datas, hotel, voo — me avise por aqui!" } },
+      { id: "e3", type: "message", label: "⏱️ Lembrete interno (2-4h)", position: { x: 700, y: 3240 }, config: { text: "(Tarefa interna: lembrete ao vendedor para finalizar proposta em até 4h)" } },
+      { id: "e4", type: "ai_agent", label: "🧠 IA Follow-up 24h", position: { x: 700, y: 3380 }, config: { persona: "vendas", objective: "responder", style: "premium", send_mode: "suggest", system_prompt: "Se passaram 24h sem envio de proposta. Gere um follow-up elegante mantendo o cliente engajado. Dê uma dica do destino ou um diferencial do roteiro em preparação." } },
+
+      // ── [F] PROPOSTA ENVIADA ──
+      { id: "f1", type: "action_funnel", label: "→ Proposta Enviada", position: { x: 700, y: 3550 }, config: { funnel_stage: "proposta_enviada" } },
+      { id: "f2", type: "ai_agent", label: "🧠 IA Entrega de Proposta", position: { x: 700, y: 3690 }, config: { persona: "vendas", objective: "vender", style: "premium", send_mode: "suggest", system_prompt: "Gere mensagem de entrega da proposta: resumo do roteiro, por que faz sentido, opções A/B (bom/melhor), CTA leve como 'Quer que eu ajuste algo?'. Tom: consultivo, premium, sem pressão." } },
+      { id: "f3", type: "action_tag", label: "🏷️ Proposta", position: { x: 700, y: 3830 }, config: { tags: ["Proposta Enviada"] } },
+      { id: "f4", type: "condition", label: "Cliente respondeu?", position: { x: 700, y: 3970 }, config: { field: "last_response", operator: "exists", value: "" } },
+
+      // Follow-up proposta (sem resposta)
+      { id: "f5", type: "message", label: "⏱️ Follow-up 12h", position: { x: 1000, y: 4130 }, config: { text: "{nome}, viu a proposta? 😊 Estou aqui se quiser ajustar qualquer detalhe — hotel, voo, roteiro... é só me dizer!" } },
+      { id: "f6", type: "message", label: "⏱️ Follow-up 48h", position: { x: 1000, y: 4270 }, config: { text: "Só passando para saber se tem alguma dúvida sobre a proposta, {nome}. Se preferir, posso montar opções diferentes. 🙂" } },
+
+      // ── [G] NEGOCIAÇÃO & DÚVIDAS ──
+      { id: "g1", type: "action_funnel", label: "→ Negociação", position: { x: 450, y: 4130 }, config: { funnel_stage: "negociacao" } },
+      { id: "g2", type: "condition", label: "Objeção = Preço?", position: { x: 450, y: 4280 }, config: { field: "keyword", operator: "contains", value: "caro,preço,desconto,barato" } },
+      { id: "g3", type: "ai_agent", label: "🧠 IA Objeção Preço", position: { x: 150, y: 4440 }, config: { persona: "vendas", objective: "vender", style: "premium", send_mode: "suggest", system_prompt: "O cliente levantou objeção de preço. Responda com valor: mostre o que está incluso, compare com mercado, sugira alternativas mais acessíveis sem desvalorizar. Ofereça opções de parcelamento. Tom: consultivo e empático." } },
+      { id: "g4", type: "condition", label: "Dúvida = Hotel/Voo?", position: { x: 650, y: 4440 }, config: { field: "keyword", operator: "contains", value: "hotel,voo,conexão,quarto" } },
+      { id: "g5", type: "ai_agent", label: "🧠 IA Ajuste Hotel/Voo", position: { x: 400, y: 4600 }, config: { persona: "concierge", objective: "responder", style: "premium", send_mode: "suggest", system_prompt: "O cliente tem dúvida ou quer ajustar hotel/voo. Responda com detalhes, sugira alternativas e pergunte preferências específicas." } },
+      { id: "g6", type: "condition", label: "Dúvida = Pagamento?", position: { x: 850, y: 4600 }, config: { field: "keyword", operator: "contains", value: "parcelamento,cartão,pix,pagamento" } },
+      { id: "g7", type: "ai_agent", label: "🧠 IA Pagamento", position: { x: 650, y: 4760 }, config: { persona: "vendas", objective: "responder", style: "premium", send_mode: "suggest", system_prompt: "Responda sobre formas de pagamento: PIX, cartão, parcelamento. Explique condições de forma clara e objetiva." } },
+      { id: "g8", type: "ai_agent", label: "🧠 IA Docs/Visto", position: { x: 1050, y: 4760 }, config: { persona: "documentos", objective: "responder", style: "premium", send_mode: "suggest", system_prompt: "Responda sobre documentação: passaporte, visto, prazos. Seja preciso e oriente os próximos passos." } },
+
+      // ── [H] FECHAMENTO ──
+      { id: "h1", type: "action_funnel", label: "→ Fechado ✅", position: { x: 500, y: 4950 }, config: { funnel_stage: "fechado" } },
+      { id: "h2", type: "action_tag", label: "🏷️ Fechado + Status", position: { x: 500, y: 5090 }, config: { tags: ["Fechado", "Emissão Pendente"] } },
+      { id: "h3", type: "message", label: "🎉 Confirmação + Próximos passos", position: { x: 500, y: 5230 }, config: { text: "Maravilha {nome}! 🎉✨ Venda confirmada! Agora vou cuidar de tudo com muito carinho. Próximos passos:\n\n✅ Emissão de aéreos e hotel\n📋 Documentação necessária\n📲 Suporte NatLeva em todas as etapas\n\nFique tranquilo(a), estamos juntos nessa jornada! 🌍" } },
+      { id: "h4", type: "message", label: "📋 Solicitar docs", position: { x: 500, y: 5380 }, config: { text: "Para a emissão, vou precisar dos seguintes dados de cada passageiro:\n\n📌 Nome completo (como no documento)\n📌 Data de nascimento\n📌 CPF\n📌 Passaporte (se internacional)\n\nPode me enviar por aqui mesmo! 📎" } },
+
+      // ── [I] PÓS-VENDA ──
+      { id: "i1", type: "action_funnel", label: "→ Pós-venda/Operação", position: { x: 500, y: 5550 }, config: { funnel_stage: "pos_venda" } },
+      { id: "i2", type: "message", label: "📩 Msg pré-embarque", position: { x: 300, y: 5700 }, config: { text: "Faltam poucos dias {nome}! 🛫✨ Seu check-in abre em breve. Já separei todas as informações. Qualquer dúvida de última hora, estamos aqui!" } },
+      { id: "i3", type: "message", label: "🌍 Durante viagem", position: { x: 500, y: 5700 }, config: { text: "E aí {nome}, como está sendo a viagem? 🌟 Se precisar de qualquer suporte — restaurante, passeio, transfer — é só chamar!" } },
+      { id: "i4", type: "ai_agent", label: "🧠 IA NPS + Upsell", position: { x: 700, y: 5700 }, config: { persona: "pos_venda", objective: "pos_venda", style: "premium", send_mode: "suggest", system_prompt: "O cliente voltou de viagem. Pergunte como foi a experiência (NPS), agradeça a confiança e sonde próximos destinos. Tom: caloroso, genuíno." } },
+
+      // ── [J] SEM RESPOSTA / REATIVAÇÃO ──
+      { id: "j1", type: "condition", label: "Sem resposta 12h?", position: { x: 1100, y: 4950 }, config: { field: "inactive_days", operator: "greater_than", value: "0.5" } },
+      { id: "j2", type: "ai_agent", label: "🧠 IA Reativação 12h", position: { x: 1100, y: 5100 }, config: { persona: "reativacao", objective: "responder", style: "premium", send_mode: "suggest", system_prompt: "Reativação sutil após 12h sem resposta. Mensagem curta e leve, sem pressão." } },
+      { id: "j3", type: "message", label: "⏱️ 24h: Valor + dica", position: { x: 1100, y: 5250 }, config: { text: "{nome}, achei uma dica incrível sobre {destino}! 💡 Quer que eu compartilhe enquanto finalizamos os detalhes?" } },
+      { id: "j4", type: "message", label: "⏱️ 48h: Pausar?", position: { x: 1100, y: 5400 }, config: { text: "Oi {nome}! Tudo bem? Posso pausar o orçamento e retomar quando for melhor pra você? A porta está sempre aberta! 😊" } },
+      { id: "j5", type: "condition", label: "Ainda sem retorno 7d?", position: { x: 1100, y: 5560 }, config: { field: "inactive_days", operator: "greater_than", value: "7" } },
+      { id: "j6", type: "action_funnel", label: "→ Perdido", position: { x: 1300, y: 5710 }, config: { funnel_stage: "perdido" } },
+      { id: "j7", type: "action_tag", label: "🏷️ Sem retorno", position: { x: 1300, y: 5850 }, config: { tags: ["Sem retorno", "Reativar futuro"] } },
+      { id: "j8", type: "ai_agent", label: "🧠 IA Reativação VIP 7d", position: { x: 900, y: 5710 }, config: { persona: "reativacao", objective: "vender", style: "premium", send_mode: "suggest", system_prompt: "Última tentativa de reativação elegante. Se for VIP, usar abordagem personalizada. Manter porta aberta sem desespero." } },
+    ],
+    edges: [
+      // [A] Trigger → Novo Lead → Quiz?
+      { source: "a1", target: "a2", sourceHandle: "out" },
+      { source: "a2", target: "a3", sourceHandle: "out" },
+      { source: "a3", target: "a4", sourceHandle: "yes", label: "Sim" },
+      { source: "a3", target: "a5", sourceHandle: "no", label: "Não" },
+      { source: "a4", target: "a6", sourceHandle: "out" },
+      { source: "a5", target: "a6", sourceHandle: "out" },
+      { source: "a6", target: "a7", sourceHandle: "no", label: "Não" },
+      { source: "a6", target: "b1", sourceHandle: "yes", label: "Sim" },
+      { source: "a7", target: "b1", sourceHandle: "out" },
+
+      // [B] Recepção → IA → Perguntas → Destino
+      { source: "b1", target: "b2", sourceHandle: "out" },
+      { source: "b2", target: "b3", sourceHandle: "out" },
+      { source: "b3", target: "b4", sourceHandle: "out" },
+      { source: "b4", target: "b5", sourceHandle: "out" },
+      { source: "b5", target: "b6", sourceHandle: "out" },
+      { source: "b6", target: "b7", sourceHandle: "yes", label: "Sim" },
+      { source: "b6", target: "b8", sourceHandle: "no", label: "Não" },
+      { source: "b8", target: "b9", sourceHandle: "yes", label: "Sim" },
+      { source: "b8", target: "b10", sourceHandle: "no", label: "Não" },
+      { source: "b7", target: "c1", sourceHandle: "out" },
+      { source: "b9", target: "c1", sourceHandle: "out" },
+      { source: "b10", target: "c1", sourceHandle: "out" },
+
+      // [C] Qualificação → Faltou info?
+      { source: "c1", target: "c2", sourceHandle: "out" },
+      { source: "c2", target: "c3", sourceHandle: "out" },
+      { source: "c3", target: "c4", sourceHandle: "yes", label: "Falta" },
+      { source: "c4", target: "c5", sourceHandle: "out" },
+      { source: "c5", target: "c6", sourceHandle: "out" },
+      { source: "c3", target: "d1", sourceHandle: "no", label: "OK" },
+
+      // [D] VIP check
+      { source: "d1", target: "d2", sourceHandle: "yes", label: "VIP" },
+      { source: "d2", target: "d3", sourceHandle: "out" },
+      { source: "d3", target: "e1", sourceHandle: "out" },
+      { source: "d1", target: "d4", sourceHandle: "no", label: "Normal" },
+      { source: "d4", target: "d5", sourceHandle: "yes", label: "Urgente" },
+      { source: "d5", target: "e1", sourceHandle: "out" },
+      { source: "d4", target: "e1", sourceHandle: "no", label: "Normal" },
+
+      // [E] Orçamento
+      { source: "e1", target: "e2", sourceHandle: "out" },
+      { source: "e2", target: "e3", sourceHandle: "out" },
+      { source: "e3", target: "e4", sourceHandle: "out" },
+      { source: "e4", target: "f1", sourceHandle: "out" },
+
+      // [F] Proposta
+      { source: "f1", target: "f2", sourceHandle: "out" },
+      { source: "f2", target: "f3", sourceHandle: "out" },
+      { source: "f3", target: "f4", sourceHandle: "out" },
+      { source: "f4", target: "g1", sourceHandle: "yes", label: "Respondeu" },
+      { source: "f4", target: "f5", sourceHandle: "no", label: "Sem resposta" },
+      { source: "f5", target: "f6", sourceHandle: "out" },
+      { source: "f6", target: "j1", sourceHandle: "out" },
+
+      // [G] Negociação
+      { source: "g1", target: "g2", sourceHandle: "out" },
+      { source: "g2", target: "g3", sourceHandle: "yes", label: "Preço" },
+      { source: "g2", target: "g4", sourceHandle: "no", label: "Outro" },
+      { source: "g4", target: "g5", sourceHandle: "yes", label: "Hotel/Voo" },
+      { source: "g4", target: "g6", sourceHandle: "no", label: "Outro" },
+      { source: "g6", target: "g7", sourceHandle: "yes", label: "Pagamento" },
+      { source: "g6", target: "g8", sourceHandle: "no", label: "Docs" },
+      // All negotiation IAs → Fechamento
+      { source: "g3", target: "h1", sourceHandle: "out" },
+      { source: "g5", target: "h1", sourceHandle: "out" },
+      { source: "g7", target: "h1", sourceHandle: "out" },
+      { source: "g8", target: "h1", sourceHandle: "out" },
+
+      // [H] Fechamento
+      { source: "h1", target: "h2", sourceHandle: "out" },
+      { source: "h2", target: "h3", sourceHandle: "out" },
+      { source: "h3", target: "h4", sourceHandle: "out" },
+      { source: "h4", target: "i1", sourceHandle: "out" },
+
+      // [I] Pós-venda
+      { source: "i1", target: "i2", sourceHandle: "out" },
+      { source: "i1", target: "i3", sourceHandle: "out" },
+      { source: "i1", target: "i4", sourceHandle: "out" },
+
+      // [J] Sem retorno / Reativação
+      { source: "j1", target: "j2", sourceHandle: "yes", label: "Sem retorno" },
+      { source: "j2", target: "j3", sourceHandle: "out" },
+      { source: "j3", target: "j4", sourceHandle: "out" },
+      { source: "j4", target: "j5", sourceHandle: "out" },
+      { source: "j5", target: "j6", sourceHandle: "yes", label: "Perdido" },
+      { source: "j5", target: "j8", sourceHandle: "no", label: "Tentar" },
+      { source: "j6", target: "j7", sourceHandle: "out" },
+    ],
+  },
+
+  // ═══════════════════════════════
+  // TEMPLATES MENORES (existentes)
+  // ═══════════════════════════════
   {
     name: "Qualificação Dubai",
     category: "qualificacao",
@@ -676,11 +867,15 @@ function ConfigPanel({ node, onUpdate, onClose, onDelete, onDuplicate }: {
                 <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="novo_lead">Novo Lead</SelectItem>
+                  <SelectItem value="recepcao">Recepção & Conexão</SelectItem>
                   <SelectItem value="qualificacao">Qualificação</SelectItem>
-                  <SelectItem value="orcamento_enviado">Orçamento Enviado</SelectItem>
-                  <SelectItem value="negociacao">Negociação</SelectItem>
+                  <SelectItem value="aguardando_info">Aguardando Informações</SelectItem>
+                  <SelectItem value="orcamento_preparacao">Orçamento em Preparação</SelectItem>
+                  <SelectItem value="proposta_enviada">Proposta Enviada</SelectItem>
+                  <SelectItem value="negociacao">Negociação & Dúvidas</SelectItem>
                   <SelectItem value="fechado">Fechado</SelectItem>
-                  <SelectItem value="pos_venda">Pós-venda</SelectItem>
+                  <SelectItem value="pos_venda">Pós-venda / Operação</SelectItem>
+                  <SelectItem value="perdido">Perdido / Sem retorno</SelectItem>
                 </SelectContent>
               </Select>
             </div>
