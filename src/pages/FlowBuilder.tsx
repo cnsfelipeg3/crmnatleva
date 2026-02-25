@@ -1189,7 +1189,7 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
             deleteKeyCode={["Backspace", "Delete"]}
             multiSelectionKeyCode="Shift"
             selectionOnDrag
-            panOnScroll
+            zoomOnScroll
             className="bg-background"
             defaultEdgeOptions={{ type: "smart", markerEnd: { type: MarkerType.ArrowClosed }, style: { strokeWidth: 2 } }}
             connectionLineStyle={{ strokeWidth: 2, stroke: "hsl(var(--primary))" }}
