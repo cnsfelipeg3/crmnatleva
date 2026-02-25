@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import natlevaLogo from "@/assets/logo-natleva.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -797,21 +798,24 @@ function NodeLibrary() {
 
   return (
     <Panel position="top-left" className="!m-3">
-      <Card className="w-52 shadow-xl border-border/50 backdrop-blur-sm bg-card/95">
-        <CardHeader className="p-2.5 pb-1">
-          <CardTitle className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Blocos</CardTitle>
+      <Card className="w-56 shadow-2xl border-border/40 backdrop-blur-md bg-card/95 rounded-2xl overflow-hidden">
+        <CardHeader className="p-3 pb-1.5 bg-gradient-to-r from-primary/5 to-transparent">
+          <CardTitle className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold flex items-center gap-1.5">
+            <GripVertical className="w-3 h-3" /> Blocos disponíveis
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-2 pt-0 space-y-0.5">
           {NODE_LIBRARY.map((n) => (
             <div key={n.type} draggable onDragStart={(e) => onDragStart(e, n.type)}
-              className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-accent/10 cursor-grab active:cursor-grabbing transition-all duration-150 text-xs group">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center shadow-sm transition-transform group-hover:scale-110"
-                style={{ background: `linear-gradient(135deg, ${n.color}, ${n.color}cc)` }}>
-                <n.icon className="w-3.5 h-3.5 text-white" />
+              className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-accent/15 cursor-grab active:cursor-grabbing transition-all duration-200 text-xs group border border-transparent hover:border-border/40 hover:shadow-sm">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-md transition-all duration-200 group-hover:scale-110 group-hover:shadow-lg relative"
+                style={{ background: `linear-gradient(145deg, ${n.color}, ${n.color}bb)` }}>
+                <n.icon className="w-4 h-4 text-white drop-shadow-sm" />
+                <span className="absolute -top-1 -right-1 text-[10px] leading-none">{n.emoji}</span>
               </div>
-              <div>
-                <span className="font-medium block text-xs">{n.label}</span>
-                <span className="text-[9px] text-muted-foreground">{n.description.split(" ").slice(0, 3).join(" ")}</span>
+              <div className="flex-1 min-w-0">
+                <span className="font-semibold block text-xs leading-tight">{n.label}</span>
+                <span className="text-[9px] text-muted-foreground leading-tight">{n.description.split(" ").slice(0, 4).join(" ")}</span>
               </div>
             </div>
           ))}
@@ -1174,7 +1178,11 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
 
       {/* CANVAS */}
       <div className="flex flex-1 overflow-hidden">
-        <div ref={reactFlowWrapper} className="flex-1" onDragOver={onDragOver} onDrop={onDrop}>
+        <div ref={reactFlowWrapper} className="flex-1 relative" onDragOver={onDragOver} onDrop={onDrop}>
+          {/* Watermark NatLeva */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+            <img src={natlevaLogo} alt="" className="w-72 h-auto opacity-[0.04] select-none" draggable={false} />
+          </div>
           <ReactFlow
             nodes={nodesWithStatus}
             edges={edges}
