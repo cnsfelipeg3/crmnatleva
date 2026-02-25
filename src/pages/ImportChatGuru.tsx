@@ -12,6 +12,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 
+function parseCSVLine(line: string): string[] {
+  const values: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+        current += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === "," && !inQuotes) {
+      values.push(current);
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  values.push(current);
+  return values;
+}
+
 interface ParsedMessage {
   created: string;
   chat_id: string;
@@ -83,10 +108,19 @@ export default function ImportChatGuru() {
 
     try {
       for (const file of files) {
-        const data = await file.arrayBuffer();
-        const workbook = XLSX.read(new Uint8Array(data), { type: "array", cellDates: false });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[][];
+        let rows: any[][];
+        
+        if (file.name.endsWith(".csv")) {
+          // Read CSV as UTF-8 text to preserve accented characters
+          const text = await file.text();
+          const lines = text.split(/\r?\n/).filter(line => line.trim());
+          rows = lines.map(line => parseCSVLine(line));
+        } else {
+          const data = await file.arrayBuffer();
+          const workbook = XLSX.read(new Uint8Array(data), { type: "array", cellDates: false });
+          const sheet = workbook.Sheets[workbook.SheetNames[0]];
+          rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" }) as any[][];
+        }
 
         if (rows.length < 2) continue;
 
