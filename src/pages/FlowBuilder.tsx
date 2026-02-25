@@ -1246,8 +1246,9 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
       await supabase.from("automation_edges").delete().eq("flow_id", flowId);
       await supabase.from("automation_nodes").delete().eq("flow_id", flowId);
       if (nodes.length > 0) {
+        const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
         const nodeRows = nodes.map((n) => ({
-          id: n.id.startsWith("new-") ? undefined : n.id,
+          id: isValidUUID(n.id) ? n.id : undefined,
           flow_id: flowId, node_type: (n.data as any)?.nodeType || n.type || "trigger",
           label: (n.data as any)?.label || "", config: (n.data as any)?.config || {},
           position_x: n.position.x, position_y: n.position.y,

@@ -8,7 +8,7 @@ import {
   ArrowUpRight, ArrowDownRight, Wallet, CreditCard, FileText, Building2,
   Percent, FolderTree, Users2, BarChart3, Cog,
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
-  GitBranch, Plug, Zap,
+  GitBranch, Plug, Zap, BookOpen,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -153,6 +153,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/livechat/flows", icon: GitBranch, label: "Automação / Agentes" },
               { to: "/livechat/integration", icon: Zap, label: "WhatsApp API" },
               { to: "/livechat/integrations", icon: Plug, label: "Integrações de IA" },
+              { to: "/livechat/knowledge-base", icon: BookOpen, label: "Base de Conhecimento" },
             ].map((item) => renderNavItem(item, true))}
           </div>
         )}
