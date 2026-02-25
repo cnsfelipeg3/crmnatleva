@@ -19,7 +19,7 @@ import {
   History, Sparkles, AlertTriangle, Target, DollarSign, Users,
   TrendingUp, Shield, Zap, ChevronRight, Mic, MicOff, Paperclip, X,
   Image, FileSpreadsheet, Link2, Download, ImagePlus, FileDown, Table,
-  Volume2, VolumeX, Radio, Cpu, Globe,
+  Volume2, VolumeX, Radio, Cpu, Globe, MapPin, LocateFixed,
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportChatAsPDF, exportChatAsXLSX, exportTableFromContent } from "@/lib/chatExport";
@@ -138,6 +138,14 @@ export default function NatLevaIntelligence() {
   // Orchestrator state
   const [currentRoute, setCurrentRoute] = useState<RouteInfo | null>(null);
 
+  // Geolocation state
+  const [userLocation, setUserLocation] = useState<{ city: string; state?: string; lat: number; lon: number } | null>(null);
+  const [geoConsent, setGeoConsent] = useState<"pending" | "granted" | "denied" | "dismissed">(
+    () => (localStorage.getItem("natleva_geo_consent") as any) || "pending"
+  );
+  const [showGeoDialog, setShowGeoDialog] = useState(false);
+  const [geoLoading, setGeoLoading] = useState(false);
+
   // Load conversations
   useEffect(() => {
     if (!user) return;
@@ -177,6 +185,67 @@ export default function NatLevaIntelligence() {
       window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
     }
   }, []);
+
+  // Show geo consent dialog on first visit (after a brief delay)
+  useEffect(() => {
+    if (geoConsent === "pending" && messages.length === 0) {
+      const timer = setTimeout(() => setShowGeoDialog(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [geoConsent, messages.length]);
+
+  // If consent was previously granted, fetch location on mount
+  useEffect(() => {
+    if (geoConsent === "granted" && !userLocation) {
+      fetchGeolocation();
+    }
+  }, [geoConsent]);
+
+  const fetchGeolocation = useCallback(async () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocalização não suportada neste navegador.");
+      return;
+    }
+    setGeoLoading(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, enableHighAccuracy: false });
+      });
+      const { latitude, longitude } = position.coords;
+      // Reverse geocode using free Nominatim API
+      const geoResp = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=pt-BR`,
+        { headers: { "User-Agent": "NatLeva-CRM/1.0" } }
+      );
+      if (geoResp.ok) {
+        const geoData = await geoResp.json();
+        const city = geoData.address?.city || geoData.address?.town || geoData.address?.municipality || geoData.address?.village || "Desconhecida";
+        const state = geoData.address?.state || undefined;
+        setUserLocation({ city, state, lat: latitude, lon: longitude });
+        toast.success(`📍 Localização detectada: ${city}${state ? `, ${state}` : ""}`);
+      } else {
+        setUserLocation({ city: "Desconhecida", lat: latitude, lon: longitude });
+      }
+    } catch (err: any) {
+      console.error("Geolocation error:", err);
+      if (err?.code === 1) {
+        toast.error("Permissão de localização negada no navegador.");
+        setGeoConsent("denied");
+        localStorage.setItem("natleva_geo_consent", "denied");
+      } else {
+        toast.error("Não foi possível obter sua localização.");
+      }
+    }
+    setGeoLoading(false);
+  }, []);
+
+  const handleGeoConsent = (choice: "granted" | "denied" | "dismissed") => {
+    setShowGeoDialog(false);
+    if (choice === "dismissed") return; // ask later
+    setGeoConsent(choice);
+    localStorage.setItem("natleva_geo_consent", choice);
+    if (choice === "granted") fetchGeolocation();
+  };
 
   // ── Speech Recognition ──
   const startRecording = useCallback(() => {
@@ -351,6 +420,7 @@ export default function NatLevaIntelligence() {
           messages: newMessages.map(m => ({
             role: m.role, content: m.content, attachments: m.attachments,
           })),
+          userLocation: userLocation ? { city: userLocation.city, state: userLocation.state } : undefined,
         }),
       });
 
@@ -570,6 +640,51 @@ export default function NatLevaIntelligence() {
   };
 
   return (
+    <>
+    {/* Geolocation Consent Dialog */}
+    <Dialog open={showGeoDialog} onOpenChange={(open) => { if (!open) handleGeoConsent("dismissed"); }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <MapPin className="w-5 h-5 text-primary" />
+            Localização para Personalização
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Para oferecer um atendimento mais personalizado, a NatLeva gostaria de saber sua localização (cidade).
+          </p>
+          <p className="text-xs text-muted-foreground/70">
+            Seus dados serão usados apenas para melhorar sua experiência — como recomendar voos e pacotes de saída da sua cidade.
+          </p>
+          <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground space-y-1.5">
+            <p className="font-medium text-foreground/80">✨ Benefícios:</p>
+            <ul className="list-disc list-inside space-y-0.5">
+              <li>Recomendações de voos saindo da sua cidade</li>
+              <li>Pacotes e destinos relevantes para sua região</li>
+              <li>Alertas contextuais sobre sua localidade</li>
+              <li>Atendimento mais ágil e proativo</li>
+            </ul>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 pt-1">
+            <Button onClick={() => handleGeoConsent("granted")} className="flex-1 gap-2" disabled={geoLoading}>
+              {geoLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
+              Permitir
+            </Button>
+            <Button variant="outline" onClick={() => handleGeoConsent("denied")} className="flex-1">
+              Negar
+            </Button>
+            <Button variant="ghost" onClick={() => handleGeoConsent("dismissed")} className="text-xs text-muted-foreground">
+              Perguntar depois
+            </Button>
+          </div>
+          <p className="text-[10px] text-muted-foreground/50 text-center">
+            Em conformidade com a LGPD. Você pode revogar a qualquer momento.
+          </p>
+        </div>
+      </DialogContent>
+    </Dialog>
+
     <div className="flex h-[calc(100vh-64px)] overflow-hidden">
       {/* Sidebar */}
       <div className="w-72 border-r border-border/40 flex flex-col bg-muted/20 shrink-0 hidden lg:flex">
@@ -653,6 +768,7 @@ export default function NatLevaIntelligence() {
                 </h3>
                 <p className="text-[10px] text-muted-foreground">
                   Orquestrador Multi-IA • Voz • Arquivos • Links • Imagens • Aprendizado contínuo
+                  {userLocation && <span className="ml-1">• 📍 {userLocation.city}</span>}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -712,6 +828,20 @@ export default function NatLevaIntelligence() {
                   <p className="text-xs text-muted-foreground/60 max-w-lg mb-1">
                     🌐 Busca em tempo real: DuckDuckGo • Wikipedia • Google News — <span className="text-emerald-600 font-medium">100% gratuito, sem API key</span>
                   </p>
+                  {userLocation && (
+                    <p className="text-xs text-muted-foreground/60 max-w-lg mb-1 flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-primary/60" />
+                      📍 Sua localização: <span className="font-medium text-foreground/70">{userLocation.city}{userLocation.state ? `, ${userLocation.state}` : ""}</span>
+                    </p>
+                  )}
+                  {geoConsent !== "granted" && (
+                    <button
+                      onClick={() => setShowGeoDialog(true)}
+                      className="text-xs text-primary/70 hover:text-primary flex items-center gap-1 mb-1 transition-colors"
+                    >
+                      <LocateFixed className="w-3 h-3" /> Ativar localização para recomendações personalizadas
+                    </button>
+                  )}
                   <p className="text-xs text-muted-foreground/60 max-w-lg mb-6">
                     Vendas • Financeiro • RH • Clientes • Metas • Performance • Fornecedores • Check-in • Hospedagens
                   </p>
@@ -1164,6 +1294,7 @@ export default function NatLevaIntelligence() {
         )}
       </div>
     </div>
+    </>
   );
 }
 

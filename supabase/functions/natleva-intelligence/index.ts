@@ -104,7 +104,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, mode } = await req.json();
+    const { messages, mode, userLocation } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -332,9 +332,14 @@ serve(async (req) => {
       learningContext = `\n\n🧠 CONTEXTO DE APRENDIZADO (padrões desta conversa):\nO usuário já fez ${userMessages.length} perguntas nesta conversa. Tópicos abordados: ${topics}\nAdapte o nível de detalhe e foco com base no que o usuário já perguntou.`;
     }
 
+    // ── User location context ──
+    const locationContext = userLocation?.city
+      ? `\n\n📍 LOCALIZAÇÃO DO USUÁRIO:\n- Cidade: ${userLocation.city}${userLocation.state ? `\n- Estado: ${userLocation.state}` : ""}\nUse esta informação para personalizar recomendações de voos, pacotes e destinos com saídas da cidade do usuário. Exemplo: "Para você, de ${userLocation.city}, recomendo saída de...". Não pergunte a cidade de origem quando já souber.`
+      : "";
+
     // ── Build system prompt ──
     const systemPrompt = `Você é a NatLeva Intelligence 2.0 — o ORQUESTRADOR DE INTELIGÊNCIA ARTIFICIAL da agência de turismo NatLeva.
-Você é um sistema cognitivo empresarial com ACESSO TOTAL E IRRESTRITO a todos os dados do sistema em tempo real.
+Você é um sistema cognitivo empresarial com ACESSO TOTAL E IRRESTRITO a todos os dados do sistema em tempo real.${locationContext}
 
 🧠 ARQUITETURA DO ORQUESTRADOR:
 - Motor atual: ${route.label} (${route.model})
