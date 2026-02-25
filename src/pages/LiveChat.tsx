@@ -261,9 +261,14 @@ function ConversationList({
             </div>
             LiveChat
           </h2>
-          <Button size="icon" variant="outline" className="h-8 w-8 rounded-lg">
-            <Plus className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button size="icon" variant="outline" className="h-8 w-8 rounded-lg" onClick={() => window.location.href = "/livechat/integration"} title="Fazer Integração">
+              <Zap className="w-4 h-4" />
+            </Button>
+            <Button size="icon" variant="outline" className="h-8 w-8 rounded-lg">
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

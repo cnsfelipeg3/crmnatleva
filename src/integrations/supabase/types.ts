@@ -1616,6 +1616,47 @@ export type Database = {
           },
         ]
       }
+      message_queue: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          payload: Json
+          retry_count: number
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json
+          retry_count?: number
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json
+          retry_count?: number
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_queue_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       passengers: {
         Row: {
           address_cep: string | null
@@ -2414,35 +2455,83 @@ export type Database = {
           },
         ]
       }
+      webhook_logs: {
+        Row: {
+          error_message: string | null
+          event_type: string
+          id: string
+          payload: Json | null
+          received_at: string
+          status: string
+        }
+        Insert: {
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          received_at?: string
+          status?: string
+        }
+        Update: {
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          received_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       whatsapp_config: {
         Row: {
           access_token: string | null
+          app_id: string | null
+          app_secret: string | null
+          configured_by: string | null
           connection_status: string | null
+          environment: string
           id: string
+          last_error: string | null
+          last_event_at: string | null
           phone_number_id: string | null
           updated_at: string
           updated_by: string | null
           verify_token: string | null
+          waba_id: string | null
           webhook_url: string | null
         }
         Insert: {
           access_token?: string | null
+          app_id?: string | null
+          app_secret?: string | null
+          configured_by?: string | null
           connection_status?: string | null
+          environment?: string
           id?: string
+          last_error?: string | null
+          last_event_at?: string | null
           phone_number_id?: string | null
           updated_at?: string
           updated_by?: string | null
           verify_token?: string | null
+          waba_id?: string | null
           webhook_url?: string | null
         }
         Update: {
           access_token?: string | null
+          app_id?: string | null
+          app_secret?: string | null
+          configured_by?: string | null
           connection_status?: string | null
+          environment?: string
           id?: string
+          last_error?: string | null
+          last_event_at?: string | null
           phone_number_id?: string | null
           updated_at?: string
           updated_by?: string | null
           verify_token?: string | null
+          waba_id?: string | null
           webhook_url?: string | null
         }
         Relationships: []
