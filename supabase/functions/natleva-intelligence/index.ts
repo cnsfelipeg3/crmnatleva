@@ -6,6 +6,40 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Extract URLs from text
+function extractUrls(text: string): string[] {
+  const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
+  return (text.match(urlRegex) || []).slice(0, 3); // max 3 URLs per message
+}
+
+// Fetch URL content as text (best effort)
+async function fetchUrlContent(url: string): Promise<string> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const resp = await fetch(url, {
+      headers: { "User-Agent": "NatLeva-Intelligence/1.0" },
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!resp.ok) return `[Erro ao acessar ${url}: HTTP ${resp.status}]`;
+    const contentType = resp.headers.get("content-type") || "";
+    if (contentType.includes("text/html") || contentType.includes("text/plain") || contentType.includes("application/json")) {
+      const text = await resp.text();
+      // Strip HTML tags for cleaner content
+      const cleaned = text.replace(/<script[\s\S]*?<\/script>/gi, "")
+        .replace(/<style[\s\S]*?<\/style>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return cleaned.slice(0, 15000); // limit to 15k chars
+    }
+    return `[Conteúdo binário de ${url}, tipo: ${contentType}]`;
+  } catch (e) {
+    return `[Não foi possível acessar ${url}: ${e instanceof Error ? e.message : "erro desconhecido"}]`;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -23,7 +57,7 @@ serve(async (req) => {
       salesRes, clientsRes, employeesRes, suppliersRes, goalsRes,
       payrollRes, receivableRes, payableRes, creditCardsRes,
       flightsRes, passengersRes, configRes, knowledgeRes,
-      performanceRes, warningsRes, feedbacksRes, lodgingRes, checkinRes,
+      performanceRes, feedbacksRes, lodgingRes, checkinRes,
     ] = await Promise.all([
       supabase.from("sales").select("name, status, received_value, total_cost, profit, margin, close_date, departure_date, destination_iata, origin_iata, airline, products, seller_id, client_id, adults, children, hotel_name, payment_method").order("created_at", { ascending: false }).limit(500),
       supabase.from("clients").select("id, display_name, email, phone, city, state, tags").limit(500),
@@ -39,7 +73,6 @@ serve(async (req) => {
       supabase.from("ai_config").select("config_key, config_value"),
       supabase.from("ai_knowledge_base").select("title, description, category, content_text").eq("is_active", true).limit(50),
       supabase.from("performance_scores").select("employee_id, period_month, overall_score").order("period_month", { ascending: false }).limit(50),
-      supabase.from("warnings").select("employee_id, warning_type, severity, status, date_issued").limit(50),
       supabase.from("feedbacks").select("employee_id, feedback_type, points, status, meeting_date").limit(50),
       supabase.from("lodging_confirmation_tasks").select("hotel_name, status, urgency_level, milestone").limit(100),
       supabase.from("checkin_tasks").select("status, direction, priority_score").limit(100),
@@ -59,7 +92,6 @@ serve(async (req) => {
     const config = configRes.data || [];
     const knowledge = knowledgeRes.data || [];
     const performance = performanceRes.data || [];
-    const warnings = warningsRes.data || [];
     const feedbacks = feedbacksRes.data || [];
     const lodging = lodgingRes.data || [];
     const checkin = checkinRes.data || [];
@@ -68,19 +100,15 @@ serve(async (req) => {
     const configMap: Record<string, string> = {};
     config.forEach((c: any) => { configMap[c.config_key] = c.config_value; });
 
-    // ── Compute financial summaries ──
+    // ── Compute summaries ──
     const totalRevenue = sales.reduce((a: number, s: any) => a + (s.received_value || 0), 0);
     const totalCost = sales.reduce((a: number, s: any) => a + (s.total_cost || 0), 0);
     const totalProfit = sales.reduce((a: number, s: any) => a + (s.profit || 0), 0);
     const avgMargin = sales.length > 0 ? sales.reduce((a: number, s: any) => a + (s.margin || 0), 0) / sales.length : 0;
     const totalReceivablePending = receivable.filter((r: any) => r.status === "pendente").reduce((a: number, r: any) => a + (r.gross_value || 0), 0);
     const totalPayablePending = payable.filter((p: any) => p.status === "pendente").reduce((a: number, p: any) => a + (p.value || 0), 0);
-
-    // ── Employee summaries ──
     const activeEmployees = employees.filter((e: any) => e.status === "ativo");
     const totalPayrollLast = payroll.length > 0 ? payroll.slice(0, activeEmployees.length).reduce((a: number, p: any) => a + (p.net_total || 0), 0) : 0;
-
-    // ── Goals summary ──
     const activeGoals = goals.filter((g: any) => g.status === "em_andamento");
     const goalsProgress = activeGoals.map((g: any) => ({
       title: g.title,
@@ -88,22 +116,54 @@ serve(async (req) => {
       target: g.target_value,
       current: g.current_value || 0,
     }));
-
-    // ── Destinations ranking ──
     const destCount: Record<string, number> = {};
     sales.forEach((s: any) => { if (s.destination_iata) destCount[s.destination_iata] = (destCount[s.destination_iata] || 0) + 1; });
     const topDestinations = Object.entries(destCount).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([d, c]) => `${d}: ${c} vendas`).join(", ");
-
-    // ── Status distribution ──
     const statusCount: Record<string, number> = {};
     sales.forEach((s: any) => { statusCount[s.status] = (statusCount[s.status] || 0) + 1; });
-
-    // ── Checkin/Lodging summary ──
     const checkinPending = checkin.filter((c: any) => c.status === "PENDENTE").length;
     const lodgingPending = lodging.filter((l: any) => l.status === "PENDENTE").length;
-
-    // ── Knowledge base context ──
     const knowledgeContext = knowledge.map((k: any) => `[${k.category}] ${k.title}: ${k.content_text || k.description || ""}`).join("\n\n");
+
+    // ── Process attachments and URLs from latest user message ──
+    const lastUserMsg = [...(messages || [])].reverse().find((m: any) => m.role === "user");
+    let attachmentContext = "";
+    let urlContext = "";
+
+    if (lastUserMsg) {
+      // Process file attachments
+      const attachments = lastUserMsg.attachments || [];
+      if (attachments.length > 0) {
+        const attachmentTexts: string[] = [];
+        for (const att of attachments) {
+          if (att.content && !att.type?.startsWith("image/")) {
+            attachmentTexts.push(`📎 Arquivo "${att.name}" (${att.type}):\n${att.content}`);
+          } else if (att.url) {
+            attachmentTexts.push(`📎 Arquivo "${att.name}" (${att.type}) enviado como anexo. URL: ${att.url}`);
+          }
+          // Images with base64 content will be handled via multimodal
+        }
+        if (attachmentTexts.length > 0) {
+          attachmentContext = "\n\n📎 ARQUIVOS ANEXADOS PELO USUÁRIO:\n" + attachmentTexts.join("\n\n");
+        }
+      }
+
+      // Process URLs found in message
+      const urls = extractUrls(lastUserMsg.content || "");
+      if (urls.length > 0) {
+        const urlContents = await Promise.all(urls.map(fetchUrlContent));
+        const urlTexts = urls.map((url: string, i: number) => `🔗 Conteúdo de ${url}:\n${urlContents[i]}`);
+        urlContext = "\n\n🔗 CONTEÚDO DOS LINKS ENVIADOS:\n" + urlTexts.join("\n\n");
+      }
+    }
+
+    // ── Extract learning context from conversation patterns ──
+    let learningContext = "";
+    if (messages && messages.length > 4) {
+      const userMessages = messages.filter((m: any) => m.role === "user").map((m: any) => m.content);
+      const topics = userMessages.join(" ").slice(0, 2000);
+      learningContext = `\n\n🧠 CONTEXTO DE APRENDIZADO (padrões desta conversa):\nO usuário já fez ${userMessages.length} perguntas nesta conversa. Tópicos abordados: ${topics}\nAdapte o nível de detalhe e foco com base no que o usuário já perguntou. Se ele faz perguntas operacionais, seja mais prático. Se estratégicas, seja mais analítico.`;
+    }
 
     // ── Build system prompt ──
     const systemPrompt = `Você é a NatLeva Intelligence — o sistema operacional inteligente da agência de turismo NatLeva.
@@ -127,8 +187,15 @@ SUAS FUNÇÕES:
 💡 Mentora da equipe — Cria planos de desenvolvimento individual
 🚀 Motor de melhoria contínua — Sugere processos e otimizações
 
+CAPACIDADES ESPECIAIS:
+📎 Você pode receber e interpretar ARQUIVOS (imagens, PDFs, planilhas, CSVs) enviados pelo usuário
+🔗 Quando o usuário enviar LINKS, o conteúdo será extraído e disponibilizado para você analisar
+🧠 Você aprende com cada interação — adapte suas respostas ao estilo e padrões do usuário
+🎙️ O usuário pode falar por áudio (transcrito automaticamente) — seja natural e conversacional
+
 Responda SEMPRE em português do Brasil. Use markdown rico (títulos, listas, negrito, tabelas, emojis).
 Seja proativa: mesmo quando perguntada algo simples, adicione insights e sugestões de ação.
+Quando receber arquivos ou links, analise profundamente e cruze com os dados internos.
 
 ═══════════════════════════════════
 📊 DADOS DO SISTEMA EM TEMPO REAL
@@ -161,7 +228,6 @@ Seja proativa: mesmo quando perguntada algo simples, adicione insights e sugest�
 - Departamentos: ${[...new Set(activeEmployees.map((e: any) => e.department))].join(", ")}
 - Cargos: ${[...new Set(activeEmployees.map((e: any) => e.position))].join(", ")}
 - Folha de pagamento última referência: R$ ${totalPayrollLast.toLocaleString("pt-BR")}
-- Advertências abertas: ${warnings.filter((w: any) => w.status === "aberta").length}
 - Feedbacks pendentes: ${feedbacks.filter((f: any) => f.status === "aberto").length}
 
 🎯 METAS:
@@ -181,7 +247,37 @@ ${activeEmployees.slice(0, 20).map((e: any) => `- ${e.full_name} | ${e.position}
 
 ÚLTIMAS 20 VENDAS:
 ${sales.slice(0, 20).map((s: any) => `- ${s.name} | ${s.status} | R$ ${(s.received_value || 0).toLocaleString("pt-BR")} | Margem: ${(s.margin || 0).toFixed(1)}% | ${s.destination_iata || "?"} | ${s.close_date || "?"}`).join("\n")}
-`;
+${attachmentContext}${urlContext}${learningContext}`;
+
+    // ── Build messages for AI, handling multimodal (images) ──
+    const aiMessages: any[] = [{ role: "system", content: systemPrompt }];
+
+    for (const msg of (messages || [])) {
+      if (msg.role === "user") {
+        // Check for image attachments for multimodal
+        const imageAttachments = (msg.attachments || []).filter((a: any) => a.type?.startsWith("image/") && a.content);
+
+        if (imageAttachments.length > 0) {
+          // Multimodal message with images
+          const contentParts: any[] = [{ type: "text", text: msg.content || "Analise esta imagem:" }];
+          for (const img of imageAttachments) {
+            // Extract base64 data from data URL
+            const base64Match = img.content.match(/^data:([^;]+);base64,(.+)$/);
+            if (base64Match) {
+              contentParts.push({
+                type: "image_url",
+                image_url: { url: img.content },
+              });
+            }
+          }
+          aiMessages.push({ role: "user", content: contentParts });
+        } else {
+          aiMessages.push({ role: "user", content: msg.content });
+        }
+      } else {
+        aiMessages.push({ role: msg.role, content: msg.content });
+      }
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -191,10 +287,7 @@ ${sales.slice(0, 20).map((s: any) => `- ${s.name} | ${s.status} | R$ ${(s.receiv
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...(messages || []),
-        ],
+        messages: aiMessages,
         stream: true,
       }),
     });

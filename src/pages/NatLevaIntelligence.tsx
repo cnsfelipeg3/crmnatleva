@@ -11,16 +11,17 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import {
   Brain, Send, Loader2, RefreshCw, MessageCircle, Lightbulb,
   Plus, Trash2, Upload, FileText, Settings2, Save, BookOpen,
   History, Sparkles, AlertTriangle, Target, DollarSign, Users,
-  TrendingUp, Shield, Zap, ChevronRight,
+  TrendingUp, Shield, Zap, ChevronRight, Mic, MicOff, Paperclip, X,
+  Image, FileSpreadsheet, Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Msg = { role: "user" | "assistant"; content: string; attachments?: AttachmentInfo[] };
+type AttachmentInfo = { name: string; type: string; url?: string; content?: string };
 type Conversation = {
   id: string;
   conversation_id: string;
@@ -52,6 +53,16 @@ const SUGGESTIONS = [
   { icon: Zap, text: "Quais gargalos operacionais devo resolver primeiro?" },
 ];
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ACCEPTED_TYPES = [
+  "image/png", "image/jpeg", "image/webp", "image/gif",
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
+  "text/csv",
+  "text/plain",
+];
+
 export default function NatLevaIntelligence() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("chat");
@@ -67,6 +78,15 @@ export default function NatLevaIntelligence() {
   const [showNewKB, setShowNewKB] = useState(false);
   const [newKB, setNewKB] = useState({ title: "", description: "", category: "geral", content_text: "" });
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Voice recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // File attachments state
+  const [pendingAttachments, setPendingAttachments] = useState<AttachmentInfo[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
 
   // Load conversations
   useEffect(() => {
@@ -100,6 +120,141 @@ export default function NatLevaIntelligence() {
       });
   }, []);
 
+  // ── Speech Recognition ──
+  const startRecording = useCallback(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("Seu navegador não suporta reconhecimento de voz. Use Chrome ou Edge.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "pt-BR";
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    recognition.maxAlternatives = 1;
+
+    let finalTranscript = "";
+    let interimTranscript = "";
+
+    recognition.onresult = (event: any) => {
+      finalTranscript = "";
+      interimTranscript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      setInput(prev => {
+        const base = prev.replace(/\s*🎙️.*$/, ""); // remove interim marker
+        const prefix = base ? base + " " : "";
+        if (interimTranscript) {
+          return prefix + finalTranscript + " 🎙️" + interimTranscript;
+        }
+        return prefix + finalTranscript;
+      });
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error("Speech recognition error:", event.error);
+      if (event.error === "not-allowed") {
+        toast.error("Permissão de microfone negada. Permita o acesso ao microfone.");
+      }
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      // Clean up interim markers
+      setInput(prev => prev.replace(/\s*🎙️.*$/, ""));
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
+    toast.info("🎙️ Gravando... Fale agora!");
+  }, []);
+
+  const stopRecording = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setIsRecording(false);
+  }, []);
+
+  // ── File Upload ──
+  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingFiles(true);
+    const newAttachments: AttachmentInfo[] = [];
+
+    for (const file of Array.from(files)) {
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`${file.name} excede 10MB`);
+        continue;
+      }
+
+      try {
+        // For images, convert to base64 for Gemini multimodal
+        if (file.type.startsWith("image/")) {
+          const base64 = await fileToBase64(file);
+          newAttachments.push({
+            name: file.name,
+            type: file.type,
+            content: base64,
+          });
+        } else if (file.type === "text/csv" || file.type === "text/plain") {
+          // Read text files directly
+          const text = await file.text();
+          newAttachments.push({
+            name: file.name,
+            type: file.type,
+            content: text.slice(0, 50000), // limit to 50k chars
+          });
+        } else {
+          // PDFs and spreadsheets: upload to storage and let backend handle
+          const filePath = `chat-uploads/${user?.id}/${Date.now()}-${file.name}`;
+          const { error: uploadError } = await supabase.storage
+            .from("ai-knowledge-base")
+            .upload(filePath, file);
+
+          if (uploadError) {
+            toast.error(`Erro ao enviar ${file.name}`);
+            console.error(uploadError);
+            continue;
+          }
+
+          const { data: urlData } = supabase.storage
+            .from("ai-knowledge-base")
+            .getPublicUrl(filePath);
+
+          newAttachments.push({
+            name: file.name,
+            type: file.type,
+            url: urlData.publicUrl,
+          });
+        }
+      } catch (err) {
+        console.error("File upload error:", err);
+        toast.error(`Erro ao processar ${file.name}`);
+      }
+    }
+
+    setPendingAttachments(prev => [...prev, ...newAttachments]);
+    setUploadingFiles(false);
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, [user]);
+
+  const removeAttachment = (index: number) => {
+    setPendingAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const saveConversation = useCallback(async (msgs: Msg[], convId?: string) => {
     if (!user) return;
     const title = msgs.find(m => m.role === "user")?.content.slice(0, 80) || "Nova conversa";
@@ -117,18 +272,32 @@ export default function NatLevaIntelligence() {
         messages: msgs as any,
       });
     }
-    // Refresh list
     const { data } = await supabase.from("ai_chat_history")
       .select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(50);
     if (data) setConversations(data as any);
   }, [user]);
 
   const sendMessage = useCallback(async (text: string) => {
-    if (!text.trim() || loading) return;
-    const userMsg: Msg = { role: "user", content: text.trim() };
+    if ((!text.trim() && pendingAttachments.length === 0) || loading) return;
+
+    // Stop recording if active
+    if (isRecording) stopRecording();
+
+    const cleanText = text.replace(/\s*🎙️.*$/, "").trim();
+    const attachments = pendingAttachments.length > 0 ? [...pendingAttachments] : undefined;
+
+    // Build display content
+    let displayContent = cleanText;
+    if (attachments) {
+      const fileNames = attachments.map(a => `📎 ${a.name}`).join("\n");
+      displayContent = displayContent ? `${displayContent}\n\n${fileNames}` : fileNames;
+    }
+
+    const userMsg: Msg = { role: "user", content: displayContent, attachments };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
+    setPendingAttachments([]);
     setLoading(true);
 
     let assistantContent = "";
@@ -141,7 +310,13 @@ export default function NatLevaIntelligence() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({
+          messages: newMessages.map(m => ({
+            role: m.role,
+            content: m.content,
+            attachments: m.attachments,
+          })),
+        }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -210,7 +385,6 @@ export default function NatLevaIntelligence() {
         }
       }
 
-      // Save after complete
       const finalMessages = [...newMessages, { role: "assistant" as const, content: assistantContent }];
       setMessages(finalMessages);
       await saveConversation(finalMessages, currentConvId || undefined);
@@ -220,11 +394,12 @@ export default function NatLevaIntelligence() {
     }
     setLoading(false);
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-  }, [messages, loading, currentConvId, saveConversation]);
+  }, [messages, loading, currentConvId, saveConversation, pendingAttachments, isRecording, stopRecording]);
 
   const newConversation = () => {
     setMessages([]);
     setCurrentConvId(null);
+    setPendingAttachments([]);
   };
 
   const loadConversation = (conv: Conversation) => {
@@ -287,6 +462,12 @@ export default function NatLevaIntelligence() {
   ];
 
   const KB_CATEGORIES = ["geral", "cultura", "processos", "vendas", "treinamento", "politicas", "metas", "playbook", "manual"];
+
+  const getAttachmentIcon = (type: string) => {
+    if (type.startsWith("image/")) return <Image className="w-3.5 h-3.5" />;
+    if (type.includes("spreadsheet") || type.includes("excel") || type === "text/csv") return <FileSpreadsheet className="w-3.5 h-3.5" />;
+    return <FileText className="w-3.5 h-3.5" />;
+  };
 
   return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden">
@@ -362,7 +543,7 @@ export default function NatLevaIntelligence() {
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-semibold text-foreground">NatLeva Intelligence</h3>
-                <p className="text-[10px] text-muted-foreground">Acesso total ao sistema • Vendas • Financeiro • RH • Clientes • Metas</p>
+                <p className="text-[10px] text-muted-foreground">Acesso total • Voz • Arquivos • Links • Aprendizado contínuo</p>
               </div>
               <div className="flex items-center gap-1">
                 <Button variant="ghost" size="sm" onClick={newConversation} className="text-xs gap-1">
@@ -381,6 +562,9 @@ export default function NatLevaIntelligence() {
                   <h4 className="text-lg font-bold text-foreground mb-1">NatLeva Intelligence</h4>
                   <p className="text-sm text-muted-foreground max-w-lg mb-2">
                     Seu motor cognitivo com acesso completo a todos os dados do sistema.
+                  </p>
+                  <p className="text-xs text-muted-foreground/60 max-w-lg mb-2">
+                    🎙️ Use o microfone para falar • 📎 Anexe imagens, PDFs e planilhas • 🔗 Cole links para análise
                   </p>
                   <p className="text-xs text-muted-foreground/60 max-w-lg mb-6">
                     Vendas • Financeiro • RH • Clientes • Metas • Performance • Fornecedores • Check-in • Hospedagens
@@ -421,7 +605,7 @@ export default function NatLevaIntelligence() {
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
                       </div>
                     ) : (
-                      <p className="text-sm">{msg.content}</p>
+                      <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                     )}
                   </div>
                   {msg.role === "user" && (
@@ -447,17 +631,76 @@ export default function NatLevaIntelligence() {
               <div ref={chatEndRef} />
             </div>
 
-            {/* Input */}
+            {/* Pending attachments preview */}
+            {pendingAttachments.length > 0 && (
+              <div className="px-4 pt-2 flex flex-wrap gap-2">
+                {pendingAttachments.map((att, i) => (
+                  <div key={i} className="flex items-center gap-1.5 bg-muted/60 border border-border/40 rounded-lg px-2.5 py-1.5 text-xs text-foreground">
+                    {getAttachmentIcon(att.type)}
+                    <span className="truncate max-w-[120px]">{att.name}</span>
+                    <button onClick={() => removeAttachment(i)} className="p-0.5 hover:text-destructive">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Input area */}
             <div className="p-4 border-t border-border/40 shrink-0">
-              <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="flex gap-2">
-                <Input value={input} onChange={(e) => setInput(e.target.value)}
-                  placeholder="Pergunte sobre vendas, financeiro, equipe, clientes, metas..."
-                  disabled={loading} className="flex-1" />
-                <Button type="submit" disabled={loading || !input.trim()} size="icon"
-                  className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 shrink-0">
+              <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="flex items-end gap-2">
+                {/* File upload */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept={ACCEPTED_TYPES.join(",")}
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={loading || uploadingFiles}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="shrink-0 text-muted-foreground hover:text-foreground h-10 w-10"
+                  title="Anexar arquivo (imagem, PDF, planilha)"
+                >
+                  {uploadingFiles ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                </Button>
+
+                {/* Text input */}
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Pergunte, cole links, ou use o microfone..."
+                  disabled={loading}
+                  className="flex-1"
+                />
+
+                {/* Mic button */}
+                <Button
+                  type="button"
+                  variant={isRecording ? "destructive" : "ghost"}
+                  size="icon"
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={loading}
+                  className={`shrink-0 h-10 w-10 ${isRecording ? "animate-pulse" : "text-muted-foreground hover:text-foreground"}`}
+                  title={isRecording ? "Parar gravação" : "Gravar áudio"}
+                >
+                  {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </Button>
+
+                {/* Send */}
+                <Button type="submit" disabled={loading || (!input.trim() && pendingAttachments.length === 0)} size="icon"
+                  className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 shrink-0 h-10 w-10">
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </Button>
               </form>
+              <p className="text-[10px] text-muted-foreground/50 mt-1.5 text-center">
+                🎙️ Microfone • 📎 Imagens, PDFs, planilhas • 🔗 Links são interpretados automaticamente
+              </p>
             </div>
           </div>
         )}
@@ -528,7 +771,6 @@ export default function NatLevaIntelligence() {
               )}
             </div>
 
-            {/* New KB Dialog */}
             <Dialog open={showNewKB} onOpenChange={setShowNewKB}>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
@@ -623,4 +865,13 @@ export default function NatLevaIntelligence() {
       </div>
     </div>
   );
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
