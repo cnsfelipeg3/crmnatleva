@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { analyzeClients, getSegmento, type ClientAnalysis, type ClientSale } from "@/lib/clientScoring";
@@ -22,8 +23,9 @@ import {
   Search, Download, ChevronRight, Star, Zap, Shield,
   BarChart3, Layers, Activity, Clock, Plane, Brain, Sparkles,
   ArrowUp, ArrowDown, Award, HeartCrack, Timer,
-  TrendingDown, UserX, CalendarX, Lightbulb, Gem, Eye,
+  TrendingDown, UserX, CalendarX, Lightbulb, Gem, Eye, Loader2, RefreshCw, Wand2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const pct = (v: number) => `${v.toFixed(1)}%`;
@@ -55,6 +57,9 @@ export default function ClientIntelligence() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [drilldown, setDrilldown] = useState<{ label: string; clients: ClientAnalysis[] } | null>(null);
   const [selectedClient, setSelectedClient] = useState<ClientAnalysis | null>(null);
+  const [aiContent, setAiContent] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiGenerated, setAiGenerated] = useState(false);
 
   useEffect(() => {
     fetchAllRows("sales", "*", { order: { column: "created_at", ascending: false } })
@@ -199,6 +204,107 @@ export default function ClientIntelligence() {
   const allClusters = useMemo(() => [...new Set(analysisData.map(c => c.cluster))].sort(), [analysisData]);
   const allSegmentos = useMemo(() => [...new Set(analysisData.map(c => c.segmento))].sort(), [analysisData]);
 
+  const generateAiInsights = useCallback(async () => {
+    if (analysisData.length === 0) return;
+    setAiLoading(true);
+    setAiContent("");
+    setAiGenerated(true);
+
+    const active = analysisData.filter(c => c.totalTrips > 0);
+    const segDist: Record<string, number> = {};
+    analysisData.forEach(c => { segDist[c.segmento] = (segDist[c.segmento] || 0) + 1; });
+    const clusterDist: Record<string, { count: number; rev: number }> = {};
+    active.forEach(c => {
+      if (!clusterDist[c.cluster]) clusterDist[c.cluster] = { count: 0, rev: 0 };
+      clusterDist[c.cluster].count++; clusterDist[c.cluster].rev += c.totalRevenue;
+    });
+
+    const inactive6m = analysisData.filter(c => c.daysInactive >= 180 && c.daysInactive < 9999 && c.totalTrips > 0);
+    const inactiveBuckets = [
+      { name: "6-9m", min: 180, max: 270 }, { name: "9-12m", min: 270, max: 365 },
+      { name: "12-18m", min: 365, max: 540 }, { name: "18m+", min: 540, max: 99999 },
+    ].map(b => ({ name: b.name, count: inactive6m.filter(c => c.daysInactive >= b.min && c.daysInactive < b.max).length }));
+
+    const regionMargin: Record<string, { total: number; count: number; rev: number }> = {};
+    active.forEach(c => {
+      const r = c.topRegion;
+      if (!regionMargin[r]) regionMargin[r] = { total: 0, count: 0, rev: 0 };
+      regionMargin[r].total += c.avgMargin; regionMargin[r].count++; regionMargin[r].rev += c.totalRevenue;
+    });
+    const topRegions = Object.entries(regionMargin).map(([r, d]) => ({ region: r, margin: d.total / d.count, rev: d.rev })).sort((a, b) => b.rev - a.rev).slice(0, 8);
+
+    const topRisk = [...inactive6m].sort((a, b) => b.ltv - a.ltv).slice(0, 5).map(c => ({
+      name: c.name, ltv: c.ltv, daysInactive: c.daysInactive, freq: c.frequency, ticket: c.avgTicket,
+    }));
+
+    const metrics = {
+      totalClients: kpis.totalClients, totalRevenue: kpis.totalRevenue, totalProfit: kpis.totalProfit,
+      avgTicket: kpis.avgTicket, avgMargin: kpis.avgMargin, avgFreq: kpis.avgFreq,
+      avgScore: kpis.avgScore, totalLtv: kpis.totalLtv, rev12m: kpis.rev12m,
+      segments: Object.entries(segDist).map(([name, count]) => ({ name, count, pct: ((count / analysisData.length) * 100).toFixed(1) })),
+      clusters: Object.entries(clusterDist).map(([name, d]) => ({ name, count: d.count, rev: d.rev })),
+      inactive6m: inactive6m.length,
+      lostRevenue: inactive6m.reduce((a, c) => a + c.estimatedAnnualRevenue, 0),
+      inactiveBuckets,
+      topClients: rankings.byRevenue.map(c => ({ name: c.name, revenue: c.totalRevenue, margin: c.avgMargin, score: c.scoreNatLeva, segment: c.segmento, cluster: c.cluster, daysInactive: c.daysInactive, ltv: c.ltv })),
+      topRisk,
+      topRegions,
+    };
+
+    try {
+      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/client-intelligence-ai`;
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ metrics }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        const err = await resp.json().catch(() => ({ error: "Erro desconhecido" }));
+        toast.error(err.error || "Erro ao gerar análise");
+        setAiLoading(false);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let accumulated = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              accumulated += content;
+              setAiContent(accumulated);
+            }
+          } catch { /* partial */ }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro de conexão ao gerar análise IA");
+    }
+    setAiLoading(false);
+  }, [analysisData, kpis, rankings]);
+
   if (loading) {
     return (
       <div className="p-4 md:p-6 space-y-6">
@@ -242,6 +348,7 @@ export default function ClientIntelligence() {
           <TabsTrigger value="rankings"><Award className="w-3.5 h-3.5 mr-1" /> Rankings</TabsTrigger>
           <TabsTrigger value="table"><Layers className="w-3.5 h-3.5 mr-1" /> Tabela</TabsTrigger>
           <TabsTrigger value="cross"><Sparkles className="w-3.5 h-3.5 mr-1" /> Cruzamentos</TabsTrigger>
+          <TabsTrigger value="ai" className="bg-gradient-to-r from-primary/10 to-accent/10 data-[state=active]:from-primary/20 data-[state=active]:to-accent/20"><Wand2 className="w-3.5 h-3.5 mr-1" /> IA Estratégica</TabsTrigger>
         </TabsList>
 
         {/* ===== DASHBOARD ===== */}
@@ -840,6 +947,76 @@ export default function ClientIntelligence() {
               </div>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* ===== IA ESTRATÉGICA ===== */}
+        <TabsContent value="ai" className="space-y-5 mt-4">
+          <Card className="glass-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Wand2 className="w-5 h-5 text-primary" />
+                  Conclusões e Plano Estratégico por IA
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Análise completa da carteira com plano de ação detalhado, estratégias de fidelização, programa de comunidade e projeção de impacto.
+                </p>
+              </div>
+              <Button
+                onClick={generateAiInsights}
+                disabled={aiLoading || analysisData.length === 0}
+                className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"
+              >
+                {aiLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analisando...</>
+                ) : aiGenerated ? (
+                  <><RefreshCw className="w-4 h-4 mr-2" /> Regenerar Análise</>
+                ) : (
+                  <><Wand2 className="w-4 h-4 mr-2" /> Gerar Análise Estratégica</>
+                )}
+              </Button>
+            </div>
+
+            {!aiGenerated && !aiLoading && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-4">
+                  <Brain className="w-10 h-10 text-primary" />
+                </div>
+                <h4 className="text-lg font-semibold text-foreground mb-2">Motor de Inteligência Artificial</h4>
+                <p className="text-sm text-muted-foreground max-w-md mb-6">
+                  A IA vai analisar seus {analysisData.length} clientes, {sales.length} vendas, métricas de churn, 
+                  segmentação e clusters para gerar um plano estratégico personalizado com ações práticas.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-muted-foreground">
+                  {["Diagnóstico da carteira", "Mapa mental estratégico", "Plano por segmento", "Programa de fidelidade",
+                    "Estratégias anti-churn", "Comunidade VIP", "Plano 90 dias", "Projeção de impacto"].map(item => (
+                    <div key={item} className="flex items-center gap-1.5 p-2 rounded-lg bg-muted/30 border border-border/30">
+                      <Lightbulb className="w-3 h-3 text-warning shrink-0" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(aiContent || aiLoading) && (
+              <div className="prose prose-sm dark:prose-invert max-w-none mt-4 
+                prose-headings:text-foreground prose-h2:text-lg prose-h2:font-bold prose-h2:mt-8 prose-h2:mb-3 prose-h2:border-b prose-h2:border-border/30 prose-h2:pb-2
+                prose-h3:text-base prose-h3:font-semibold prose-h3:mt-5 prose-h3:mb-2
+                prose-p:text-muted-foreground prose-p:leading-relaxed
+                prose-li:text-muted-foreground prose-li:leading-relaxed
+                prose-strong:text-foreground
+                prose-ul:my-2 prose-ol:my-2">
+                <ReactMarkdown>{aiContent}</ReactMarkdown>
+                {aiLoading && (
+                  <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Gerando análise estratégica...
+                  </div>
+                )}
+              </div>
+            )}
+          </Card>
         </TabsContent>
       </Tabs>
 

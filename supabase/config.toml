@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.data-cleanup]
 verify_jwt = false
+
+[functions.client-intelligence-ai]
+verify_jwt = false
