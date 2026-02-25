@@ -7,7 +7,7 @@ import {
   ReactFlow, Background, Controls, MiniMap, Panel,
   addEdge, useNodesState, useEdgesState,
   Connection, Edge, Node, MarkerType,
-  BackgroundVariant,
+  BackgroundVariant, Handle, Position,
   type NodeTypes,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -128,16 +128,27 @@ const TEMPLATES = [
 function FlowNode({ data, selected }: { data: any; selected: boolean }) {
   const def = NODE_LIBRARY.find((n) => n.type === data.nodeType) || NODE_LIBRARY[0];
   const Icon = def.icon;
+  const isCondition = data.nodeType === "condition";
+  const isTrigger = data.nodeType === "trigger";
   const providerKey = data.nodeType === "ai_agent" ? (data.config?.provider || "natleva") : null;
   const provBadge = providerKey ? PROVIDER_BADGES[providerKey] : null;
 
   return (
     <div
       className={cn(
-        "rounded-xl border-2 bg-card shadow-lg min-w-[180px] max-w-[220px] transition-all",
+        "rounded-xl border-2 bg-card shadow-lg min-w-[180px] max-w-[220px] transition-all relative",
         selected ? "border-primary ring-2 ring-primary/30 shadow-xl" : "border-border hover:border-primary/50"
       )}
     >
+      {/* Target handle (top) — all except trigger */}
+      {!isTrigger && (
+        <Handle
+          type="target"
+          position={Position.Top}
+          className="!w-3 !h-3 !bg-primary !border-2 !border-background !-top-1.5 !rounded-full"
+        />
+      )}
+
       <div className="flex items-center gap-2 px-3 py-2 rounded-t-[10px]" style={{ background: def.color + "20" }}>
         <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: def.color }}>
           <Icon className="w-4 h-4 text-white" />
@@ -157,6 +168,34 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
           {data.description || def.description}
         </p>
       </div>
+
+      {/* Source handles */}
+      {isCondition ? (
+        <>
+          <Handle
+            type="source"
+            position={Position.Bottom}
+            id="yes"
+            className="!w-3 !h-3 !border-2 !border-background !-bottom-1.5 !rounded-full"
+            style={{ background: "hsl(142 71% 45%)", left: "30%" }}
+          />
+          <span className="absolute text-[8px] font-bold pointer-events-none" style={{ bottom: -14, left: "23%", color: "hsl(142 71% 45%)" }}>Sim</span>
+          <Handle
+            type="source"
+            position={Position.Bottom}
+            id="no"
+            className="!w-3 !h-3 !border-2 !border-background !-bottom-1.5 !rounded-full"
+            style={{ background: "hsl(0 72% 51%)", left: "70%" }}
+          />
+          <span className="absolute text-[8px] font-bold pointer-events-none" style={{ bottom: -14, left: "65%", color: "hsl(0 72% 51%)" }}>Não</span>
+        </>
+      ) : (
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          className="!w-3 !h-3 !bg-primary !border-2 !border-background !-bottom-1.5 !rounded-full"
+        />
+      )}
     </div>
   );
 }
@@ -789,17 +828,21 @@ export default function FlowBuilder() {
       data: { label: n.label, nodeType: n.node_type, config: n.config, description: getNodeDescription(n.node_type, n.config) },
     }));
 
-    const rfEdges: Edge[] = (edgesData || []).map((e: any) => ({
-      id: e.id,
-      source: e.source_node_id,
-      target: e.target_node_id,
-      sourceHandle: e.source_handle,
-      targetHandle: e.target_handle,
-      label: e.label,
-      markerEnd: { type: MarkerType.ArrowClosed },
-      style: { strokeWidth: 2 },
-      animated: true,
-    }));
+    const rfEdges: Edge[] = (edgesData || []).map((e: any) => {
+      const isYes = e.source_handle === "yes";
+      const isNo = e.source_handle === "no";
+      return {
+        id: e.id,
+        source: e.source_node_id,
+        target: e.target_node_id,
+        sourceHandle: e.source_handle,
+        targetHandle: e.target_handle,
+        label: e.label,
+        markerEnd: { type: MarkerType.ArrowClosed, color: isYes ? "hsl(142 71% 45%)" : isNo ? "hsl(0 72% 51%)" : undefined },
+        style: isYes ? { stroke: "hsl(142 71% 45%)", strokeWidth: 2.5 } : isNo ? { stroke: "hsl(0 72% 51%)", strokeWidth: 2.5 } : { strokeWidth: 2 },
+        animated: true,
+      };
+    });
 
     setNodes(rfNodes);
     setEdges(rfEdges);
@@ -844,16 +887,20 @@ export default function FlowBuilder() {
       data: { label: n.label, nodeType: n.type, config: n.config, description: getNodeDescription(n.type, n.config) },
     }));
 
-    const rfEdges: Edge[] = template.edges.map((e, i) => ({
-      id: `e-${i}`,
-      source: e.source,
-      target: e.target,
-      sourceHandle: (e as any).sourceHandle,
-      label: (e as any).label,
-      markerEnd: { type: MarkerType.ArrowClosed },
-      style: { strokeWidth: 2 },
-      animated: true,
-    }));
+    const rfEdges: Edge[] = template.edges.map((e, i) => {
+      const isYes = (e as any).sourceHandle === "yes";
+      const isNo = (e as any).sourceHandle === "no";
+      return {
+        id: `e-${i}`,
+        source: e.source,
+        target: e.target,
+        sourceHandle: (e as any).sourceHandle,
+        label: (e as any).label,
+        markerEnd: { type: MarkerType.ArrowClosed, color: isYes ? "hsl(142 71% 45%)" : isNo ? "hsl(0 72% 51%)" : undefined },
+        style: isYes ? { stroke: "hsl(142 71% 45%)", strokeWidth: 2.5 } : isNo ? { stroke: "hsl(0 72% 51%)", strokeWidth: 2.5 } : { strokeWidth: 2 },
+        animated: true,
+      };
+    });
 
     setNodes(rfNodes);
     setEdges(rfEdges);
@@ -934,7 +981,21 @@ export default function FlowBuilder() {
 
   // Connect edges
   const onConnect = useCallback((params: Connection) => {
-    setEdges((eds) => addEdge({ ...params, markerEnd: { type: MarkerType.ArrowClosed }, style: { strokeWidth: 2 }, animated: true }, eds));
+    const isYes = params.sourceHandle === "yes";
+    const isNo = params.sourceHandle === "no";
+    const edgeStyle = isYes
+      ? { stroke: "hsl(142 71% 45%)", strokeWidth: 2.5 }
+      : isNo
+      ? { stroke: "hsl(0 72% 51%)", strokeWidth: 2.5 }
+      : { strokeWidth: 2 };
+    const label = isYes ? "Sim" : isNo ? "Não" : undefined;
+    setEdges((eds) => addEdge({
+      ...params,
+      label,
+      markerEnd: { type: MarkerType.ArrowClosed, color: isYes ? "hsl(142 71% 45%)" : isNo ? "hsl(0 72% 51%)" : undefined },
+      style: edgeStyle,
+      animated: true,
+    }, eds));
   }, [setEdges]);
 
   // Drop new node
@@ -1037,6 +1098,9 @@ export default function FlowBuilder() {
             onPaneClick={onPaneClick}
             nodeTypes={nodeTypes}
             fitView
+            snapToGrid
+            snapGrid={[16, 16]}
+            deleteKeyCode={["Backspace", "Delete"]}
             className="bg-muted/30"
             defaultEdgeOptions={{ markerEnd: { type: MarkerType.ArrowClosed }, style: { strokeWidth: 2 }, animated: true }}
           >
