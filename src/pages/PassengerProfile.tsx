@@ -192,6 +192,7 @@ export default function PassengerProfile() {
     if (!passenger) return;
     setEditForm({ ...passenger });
     setEditing(true);
+    setActiveTab("dados");
   };
 
   const handleCepLookup = async (cep: string) => {
