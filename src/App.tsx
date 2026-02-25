@@ -26,6 +26,7 @@ import NatLevaIntelligence from "@/pages/NatLevaIntelligence";
 import NotFound from "@/pages/NotFound";
 import UserLocations from "@/pages/settings/UserLocations";
 import LiveChat from "@/pages/LiveChat";
+import WhatsAppIntegration from "@/pages/WhatsAppIntegration";
 
 // RH
 import RHIndex from "@/pages/rh/RHIndex";
@@ -89,6 +90,7 @@ function AppRoutes() {
         <Route path="/import" element={<ImportData />} />
         <Route path="/pendencias" element={<Pendencias />} />
         <Route path="/livechat" element={<LiveChat />} />
+        <Route path="/livechat/integration" element={<WhatsAppIntegration />} />
 
         {/* Financeiro */}
         <Route path="/financeiro" element={<FinanceiroIndex />} />
