@@ -12,6 +12,7 @@ const items = [
   { label: "Produtos", icon: Package, path: "/settings/products" },
   { label: "Permissões", icon: Shield, path: "/settings/permissions" },
   { label: "Regras de Cálculo", icon: Calculator, path: "/settings/calc-rules" },
+  { label: "Localizações", icon: MapPin, path: "/settings/user-locations" },
 ];
 
 export default function SettingsIndex() {
