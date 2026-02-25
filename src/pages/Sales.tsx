@@ -78,6 +78,16 @@ export default function Sales() {
 
   const hasFilters = statusFilter !== "all" || destFilter || periodFilter !== "all";
 
+  const totals = useMemo(() => {
+    const t = (list: SaleRow[]) => ({
+      count: list.length,
+      pax: list.reduce((s, r) => s + (r.adults || 0) + (r.children || 0), 0),
+      revenue: list.reduce((s, r) => s + (r.received_value || 0), 0),
+      margin: list.length ? list.reduce((s, r) => s + (r.margin || 0), 0) / list.length : 0,
+    });
+    return { all: t(sales), filtered: t(filtered) };
+  }, [sales, filtered]);
+
   const handleExport = () => {
     const headers = ["ID", "Nome", "Status", "Origem", "Destino", "PAX", "Receita", "Margem%", "Data"];
     const rows = filtered.map(s => [
@@ -238,6 +248,31 @@ export default function Sales() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </Card>
+          {/* Summary footer */}
+          <Card className="glass-card p-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Vendas {hasFilters ? "(filtradas)" : ""}</p>
+                <p className="text-lg font-bold text-foreground">{totals.filtered.count}</p>
+                {hasFilters && <p className="text-[10px] text-muted-foreground">de {totals.all.count} total</p>}
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">PAX Total</p>
+                <p className="text-lg font-bold text-foreground">{totals.filtered.pax}</p>
+                {hasFilters && <p className="text-[10px] text-muted-foreground">de {totals.all.pax} total</p>}
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Receita Total</p>
+                <p className="text-lg font-bold text-foreground">{fmt(totals.filtered.revenue)}</p>
+                {hasFilters && <p className="text-[10px] text-muted-foreground">de {fmt(totals.all.revenue)} total</p>}
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Margem Média</p>
+                <p className={cn("text-lg font-bold", totals.filtered.margin > 25 ? "text-success" : "text-foreground")}>{totals.filtered.margin.toFixed(1)}%</p>
+                {hasFilters && <p className="text-[10px] text-muted-foreground">geral: {totals.all.margin.toFixed(1)}%</p>}
+              </div>
             </div>
           </Card>
         </>
