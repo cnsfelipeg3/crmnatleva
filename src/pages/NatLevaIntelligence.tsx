@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
@@ -67,6 +68,7 @@ const ACCEPTED_TYPES = [
 
 export default function NatLevaIntelligence() {
   const { user } = useAuth();
+  const navigateTo = useNavigate();
   const [activeTab, setActiveTab] = useState("chat");
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
@@ -687,7 +689,36 @@ export default function NatLevaIntelligence() {
                           prose-li:text-muted-foreground prose-li:leading-relaxed prose-li:text-sm
                           prose-strong:text-foreground prose-table:text-xs
                           prose-ul:my-1 prose-ol:my-1">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          <ReactMarkdown
+                            components={{
+                              a: ({ href, children, ...props }) => {
+                                const isInternal = href && (
+                                  href.startsWith("/") ||
+                                  href.includes("crmnatleva.lovable.app") ||
+                                  href.includes("preview--")
+                                );
+                                if (isInternal) {
+                                  const path = href.startsWith("/") ? href : new URL(href).pathname;
+                                  return (
+                                    <button
+                                      onClick={() => navigateTo(path)}
+                                      className="text-primary underline underline-offset-2 hover:text-primary/80 font-medium cursor-pointer transition-colors"
+                                      {...(props as any)}
+                                    >
+                                      {children}
+                                    </button>
+                                  );
+                                }
+                                return (
+                                  <a href={href} target="_blank" rel="noopener noreferrer"
+                                    className="text-primary underline underline-offset-2 hover:text-primary/80"
+                                    {...props}>
+                                    {children}
+                                  </a>
+                                );
+                              },
+                            }}
+                          >{msg.content}</ReactMarkdown>
                         </div>
 
                         {/* Generated images */}

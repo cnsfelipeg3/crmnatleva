@@ -64,7 +64,7 @@ serve(async (req) => {
       hotelDirectoryRes, timeEntriesRes, teamCheckinsRes,
       salePassengersRes, paymentFeeRulesRes, profilesRes,
     ] = await Promise.all([
-      supabase.from("sales").select("name, status, received_value, total_cost, profit, margin, close_date, departure_date, destination_iata, origin_iata, airline, products, seller_id, client_id, adults, children, hotel_name, payment_method, flight_class, is_international, return_date, emission_status, locators, hotel_reservation_code, hotel_checkin_date, hotel_checkout_date, display_id").order("created_at", { ascending: false }).limit(500),
+      supabase.from("sales").select("id, name, status, received_value, total_cost, profit, margin, close_date, departure_date, destination_iata, origin_iata, airline, products, seller_id, client_id, adults, children, hotel_name, payment_method, flight_class, is_international, return_date, emission_status, locators, hotel_reservation_code, hotel_checkin_date, hotel_checkout_date, display_id").order("created_at", { ascending: false }).limit(500),
       supabase.from("clients").select("id, display_name, email, phone, city, state, tags, client_type, country, observations").limit(500),
       supabase.from("employees").select("id, full_name, position, department, status, base_salary, hire_date, commission_enabled, email, phone, contract_type, work_regime, work_schedule_start, work_schedule_end, lunch_duration_minutes, manager_id").limit(100),
       supabase.from("suppliers").select("id, name, category, email, phone, cnpj, contact_name, payment_conditions, notes").limit(200),
@@ -238,6 +238,26 @@ CAPACIDADES:
 Responda SEMPRE em português do Brasil. Use markdown rico (títulos, listas, negrito, tabelas, emojis).
 Seja proativa: adicione insights e sugestões. Cruze dados entre módulos para análises profundas.
 
+🔗 GERAÇÃO DE LINKS INTERNOS:
+Quando mencionar vendas, clientes ou outros registros, SEMPRE inclua links clicáveis usando o formato markdown.
+Use os seguintes padrões de URL (BASE_URL = "${Deno.env.get("BASE_URL") || "https://crmnatleva.lovable.app"}"):
+- Venda: [V-2025-001](BASE_URL/sales/{id_da_venda}) — use o UUID real do campo id
+- Cliente: [Nome do Cliente](BASE_URL/clients/{id_do_cliente}) — use o UUID real do campo id
+- Dashboard: [Dashboard](BASE_URL/dashboard)
+- Viagens: [Viagens](BASE_URL/viagens)
+- Check-in: [Check-in](BASE_URL/checkin)
+- Hospedagem: [Hospedagem](BASE_URL/hospedagem)
+- Financeiro: [Financeiro](BASE_URL/financeiro)
+- Contas a Receber: [Contas a Receber](BASE_URL/financeiro/receber)
+- Contas a Pagar: [Contas a Pagar](BASE_URL/financeiro/pagar)
+- RH: [RH](BASE_URL/rh)
+- Colaboradores: [Colaboradores](BASE_URL/rh/colaboradores)
+- Passageiros: [Passageiros](BASE_URL/passengers)
+- Pendências: [Pendências](BASE_URL/pendencias)
+
+IMPORTANTE: Sempre que referenciar uma venda ou cliente específico, inclua o link com o ID real.
+Exemplo: "A venda [V-2025-042](/sales/abc123-uuid) do cliente [João Silva](/clients/def456-uuid) tem margem de 15%."
+
 ═══════════════════════════════════════════
 📊 DADOS COMPLETOS DO SISTEMA EM TEMPO REAL
 ═══════════════════════════════════════════
@@ -314,8 +334,8 @@ ${knowledgeContext ? `\n📚 BASE DE CONHECIMENTO NATLEVA:\n${knowledgeContext}`
 COLABORADORES:
 ${activeEmployees.slice(0, 20).map((e: any) => `- ${e.full_name} | ${e.position} | ${e.department} | R$ ${(e.base_salary || 0).toLocaleString("pt-BR")} | ${e.contract_type} | ${e.work_regime || "?"} | Comissão: ${e.commission_enabled ? "Sim" : "Não"}`).join("\n")}
 
-ÚLTIMAS 30 VENDAS:
-${sales.slice(0, 30).map((s: any) => `- ${s.display_id} ${s.name} | ${s.status} | R$ ${(s.received_value || 0).toLocaleString("pt-BR")} | Margem: ${(s.margin || 0).toFixed(1)}% | ${s.origin_iata || "?"} → ${s.destination_iata || "?"} | ${s.close_date || "?"} | ${s.airline || "?"} | ${s.flight_class || "?"} | ${s.payment_method || "?"} | Hotel: ${s.hotel_name || "N/A"}`).join("\n")}
+ÚLTIMAS 30 VENDAS (com IDs para links):
+${sales.slice(0, 30).map((s: any) => `- [${s.display_id}](/sales/${s.id}) ${s.name} | ${s.status} | R$ ${(s.received_value || 0).toLocaleString("pt-BR")} | Margem: ${(s.margin || 0).toFixed(1)}% | ${s.origin_iata || "?"} → ${s.destination_iata || "?"} | ${s.close_date || "?"} | ${s.airline || "?"} | ${s.flight_class || "?"} | ${s.payment_method || "?"} | Hotel: ${s.hotel_name || "N/A"} | client_id: ${s.client_id || "?"}`).join("\n")}
 
 CONTAS A RECEBER DETALHADAS (últimas 20):
 ${receivable.slice(0, 20).map((r: any) => `- ${r.description || "?"} | R$ ${(r.gross_value || 0).toLocaleString("pt-BR")} (líq R$ ${(r.net_value || 0).toLocaleString("pt-BR")}) | ${r.status} | Venc: ${r.due_date || "?"} | ${r.payment_method || "?"}`).join("\n")}
@@ -328,6 +348,9 @@ ${performance.slice(0, 20).map((p: any) => `- Emp ${p.employee_id?.slice(0, 8)} 
 
 FOLHA DE PAGAMENTO:
 ${payroll.slice(0, 20).map((p: any) => `- Emp ${p.employee_id?.slice(0, 8)} | ${p.reference_month} | Base: R$ ${(p.base_salary || 0).toLocaleString("pt-BR")} | Comissão: R$ ${(p.commission_value || 0).toLocaleString("pt-BR")} | Bônus: R$ ${(p.bonus_value || 0).toLocaleString("pt-BR")} | Líquido: R$ ${(p.net_total || 0).toLocaleString("pt-BR")} | ${p.status}`).join("\n") || "- Sem dados"}
+
+CLIENTES DETALHADOS (com IDs para links):
+${clients.slice(0, 50).map((c: any) => `- [${c.display_name}](/clients/${c.id}) | ${c.client_type} | ${c.city || "?"}, ${c.state || "?"} | ${c.email || "?"} | ${c.phone || "?"} | Tags: ${(c.tags || []).join(", ") || "nenhuma"}`).join("\n")}
 
 NOTAS DE CLIENTES RECENTES:
 ${clientNotes.slice(0, 10).map((n: any) => `- Cliente ${n.client_id?.slice(0, 8)}: ${n.content?.slice(0, 100)}...`).join("\n") || "- Sem notas"}
