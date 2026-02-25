@@ -12,19 +12,22 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Brain, Send, Loader2, RefreshCw, MessageCircle, Lightbulb,
   Plus, Trash2, Upload, FileText, Settings2, Save, BookOpen,
   History, Sparkles, AlertTriangle, Target, DollarSign, Users,
   TrendingUp, Shield, Zap, ChevronRight, Mic, MicOff, Paperclip, X,
   Image, FileSpreadsheet, Link2, Download, ImagePlus, FileDown, Table,
+  Volume2, VolumeX, Radio, Cpu,
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportChatAsPDF, exportChatAsXLSX, exportTableFromContent } from "@/lib/chatExport";
 
-type Msg = { role: "user" | "assistant"; content: string; attachments?: AttachmentInfo[]; images?: GeneratedImage[] };
+type Msg = { role: "user" | "assistant"; content: string; attachments?: AttachmentInfo[]; images?: GeneratedImage[]; route?: RouteInfo };
 type AttachmentInfo = { name: string; type: string; url?: string; content?: string };
 type GeneratedImage = { type: string; image_url: { url: string } };
+type RouteInfo = { model: string; label: string; reason: string };
 type Conversation = {
   id: string;
   conversation_id: string;
@@ -52,11 +55,11 @@ const SUGGESTIONS = [
   { icon: Users, text: "Crie um plano de desenvolvimento para cada membro da equipe" },
   { icon: TrendingUp, text: "Analise meu fluxo de caixa e sugira otimizações" },
   { icon: Shield, text: "Quais clientes VIP estão em risco de churn e o que fazer?" },
-  { icon: Sparkles, text: "Crie um programa de fidelidade com níveis e presentes por LTV" },
+  { icon: Sparkles, text: "Gere uma imagem de um banner promocional da NatLeva para Instagram" },
   { icon: Zap, text: "Quais gargalos operacionais devo resolver primeiro?" },
 ];
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ACCEPTED_TYPES = [
   "image/png", "image/jpeg", "image/webp", "image/gif",
   "application/pdf",
@@ -65,6 +68,42 @@ const ACCEPTED_TYPES = [
   "text/csv",
   "text/plain",
 ];
+
+// ── TTS Engine ──
+function speakText(text: string, onEnd?: () => void) {
+  if (!("speechSynthesis" in window)) {
+    toast.error("Seu navegador não suporta síntese de voz.");
+    return;
+  }
+  window.speechSynthesis.cancel();
+  // Strip markdown
+  const clean = text
+    .replace(/#{1,6}\s/g, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/`{1,3}[^`]*`{1,3}/g, m => m.replace(/`/g, ""))
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^\s*[-*]\s/gm, "")
+    .replace(/\|[^|]*\|/g, "")
+    .replace(/═+/g, "")
+    .slice(0, 3000);
+
+  const utterance = new SpeechSynthesisUtterance(clean);
+  utterance.lang = "pt-BR";
+  utterance.rate = 1.05;
+  utterance.pitch = 1;
+  // Try to find a good Portuguese voice
+  const voices = window.speechSynthesis.getVoices();
+  const ptVoice = voices.find(v => v.lang.startsWith("pt") && v.name.includes("Google")) ||
+    voices.find(v => v.lang.startsWith("pt"));
+  if (ptVoice) utterance.voice = ptVoice;
+  if (onEnd) utterance.onend = onEnd;
+  window.speechSynthesis.speak(utterance);
+}
+
+function stopSpeaking() {
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+}
 
 export default function NatLevaIntelligence() {
   const { user } = useAuth();
@@ -91,7 +130,13 @@ export default function NatLevaIntelligence() {
   // File attachments state
   const [pendingAttachments, setPendingAttachments] = useState<AttachmentInfo[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState(false);
-  const [generatingImage, setGeneratingImage] = useState(false);
+
+  // TTS state
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Orchestrator state
+  const [currentRoute, setCurrentRoute] = useState<RouteInfo | null>(null);
 
   // Load conversations
   useEffect(() => {
@@ -125,6 +170,14 @@ export default function NatLevaIntelligence() {
       });
   }, []);
 
+  // Load voices
+  useEffect(() => {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
+  }, []);
+
   // ── Speech Recognition ──
   const startRecording = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -153,7 +206,7 @@ export default function NatLevaIntelligence() {
         }
       }
       setInput(prev => {
-        const base = prev.replace(/\s*🎙️.*$/, ""); // remove interim marker
+        const base = prev.replace(/\s*🎙️.*$/, "");
         const prefix = base ? base + " " : "";
         if (interimTranscript) {
           return prefix + finalTranscript + " 🎙️" + interimTranscript;
@@ -172,7 +225,6 @@ export default function NatLevaIntelligence() {
 
     recognition.onend = () => {
       setIsRecording(false);
-      // Clean up interim markers
       setInput(prev => prev.replace(/\s*🎙️.*$/, ""));
     };
 
@@ -205,44 +257,18 @@ export default function NatLevaIntelligence() {
       }
 
       try {
-        // For images, convert to base64 for Gemini multimodal
         if (file.type.startsWith("image/")) {
           const base64 = await fileToBase64(file);
-          newAttachments.push({
-            name: file.name,
-            type: file.type,
-            content: base64,
-          });
+          newAttachments.push({ name: file.name, type: file.type, content: base64 });
         } else if (file.type === "text/csv" || file.type === "text/plain") {
-          // Read text files directly
           const text = await file.text();
-          newAttachments.push({
-            name: file.name,
-            type: file.type,
-            content: text.slice(0, 50000), // limit to 50k chars
-          });
+          newAttachments.push({ name: file.name, type: file.type, content: text.slice(0, 50000) });
         } else {
-          // PDFs and spreadsheets: upload to storage and let backend handle
           const filePath = `chat-uploads/${user?.id}/${Date.now()}-${file.name}`;
-          const { error: uploadError } = await supabase.storage
-            .from("ai-knowledge-base")
-            .upload(filePath, file);
-
-          if (uploadError) {
-            toast.error(`Erro ao enviar ${file.name}`);
-            console.error(uploadError);
-            continue;
-          }
-
-          const { data: urlData } = supabase.storage
-            .from("ai-knowledge-base")
-            .getPublicUrl(filePath);
-
-          newAttachments.push({
-            name: file.name,
-            type: file.type,
-            url: urlData.publicUrl,
-          });
+          const { error: uploadError } = await supabase.storage.from("ai-knowledge-base").upload(filePath, file);
+          if (uploadError) { toast.error(`Erro ao enviar ${file.name}`); continue; }
+          const { data: urlData } = supabase.storage.from("ai-knowledge-base").getPublicUrl(filePath);
+          newAttachments.push({ name: file.name, type: file.type, url: urlData.publicUrl });
         }
       } catch (err) {
         console.error("File upload error:", err);
@@ -252,47 +278,12 @@ export default function NatLevaIntelligence() {
 
     setPendingAttachments(prev => [...prev, ...newAttachments]);
     setUploadingFiles(false);
-    // Reset input
     if (fileInputRef.current) fileInputRef.current.value = "";
   }, [user]);
 
   const removeAttachment = (index: number) => {
     setPendingAttachments(prev => prev.filter((_, i) => i !== index));
   };
-
-  // ── Image Generation ──
-  const generateImage = useCallback(async (prompt: string) => {
-    setGeneratingImage(true);
-    try {
-      const IMG_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/natleva-image-gen`;
-      const resp = await fetch(IMG_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ prompt }),
-      });
-
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: "Erro" }));
-        if (resp.status === 429) toast.error("Rate limit atingido. Aguarde.");
-        else if (resp.status === 402) toast.error("Créditos insuficientes.");
-        else toast.error(err.error || "Erro ao gerar imagem");
-        setGeneratingImage(false);
-        return null;
-      }
-
-      const data = await resp.json();
-      setGeneratingImage(false);
-      return data;
-    } catch (e) {
-      console.error(e);
-      toast.error("Erro de conexão ao gerar imagem");
-      setGeneratingImage(false);
-      return null;
-    }
-  }, []);
 
   // ── Download generated image ──
   const downloadImage = (dataUrl: string, name?: string) => {
@@ -315,10 +306,7 @@ export default function NatLevaIntelligence() {
       const newId = crypto.randomUUID();
       setCurrentConvId(newId);
       await supabase.from("ai_chat_history").insert({
-        user_id: user.id,
-        conversation_id: newId,
-        title,
-        messages: msgs as any,
+        user_id: user.id, conversation_id: newId, title, messages: msgs as any,
       });
     }
     const { data } = await supabase.from("ai_chat_history")
@@ -329,17 +317,13 @@ export default function NatLevaIntelligence() {
   const sendMessage = useCallback(async (text: string) => {
     if ((!text.trim() && pendingAttachments.length === 0) || loading) return;
 
-    // Stop recording if active
     if (isRecording) stopRecording();
+    stopSpeaking();
+    setCurrentRoute(null);
 
     const cleanText = text.replace(/\s*🎙️.*$/, "").trim();
-
-    // Check if user wants to generate an image
-    const imageGenPatterns = /^(gere?|crie?|cria|faça?|faz|desenhe?|gerar|criar|fazer|desenhar)\s+(uma?\s+)?(imagem|foto|ilustração|banner|logo|arte|design|poster|cartaz|thumbnail|capa)/i;
-    const isImageRequest = imageGenPatterns.test(cleanText);
     const attachments = pendingAttachments.length > 0 ? [...pendingAttachments] : undefined;
 
-    // Build display content
     let displayContent = cleanText;
     if (attachments) {
       const fileNames = attachments.map(a => `📎 ${a.name}`).join("\n");
@@ -356,36 +340,6 @@ export default function NatLevaIntelligence() {
     let assistantContent = "";
 
     try {
-      // If it's an image generation request, use the image gen endpoint in parallel with chat
-      if (isImageRequest) {
-        // Show generating state
-        setMessages(prev => [...prev, { role: "assistant", content: "🎨 Gerando imagem... aguarde um momento." }]);
-
-        const imageResult = await generateImage(cleanText);
-
-        if (imageResult && imageResult.images && imageResult.images.length > 0) {
-          const imgMsg: Msg = {
-            role: "assistant",
-            content: imageResult.text || "✅ Imagem gerada com sucesso! Clique para baixar.",
-            images: imageResult.images,
-          };
-          const finalMessages = [...newMessages, imgMsg];
-          setMessages(finalMessages);
-          await saveConversation(finalMessages, currentConvId || undefined);
-        } else {
-          // Fallback: send to regular chat if image gen failed
-          setMessages(prev => prev.map((m, i) =>
-            i === prev.length - 1 ? { ...m, content: imageResult?.text || "Não foi possível gerar a imagem. Tente reformular o pedido." } : m
-          ));
-          const finalMessages = [...newMessages, { role: "assistant" as const, content: imageResult?.text || "Não foi possível gerar a imagem." }];
-          await saveConversation(finalMessages, currentConvId || undefined);
-        }
-        setLoading(false);
-        setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-        return;
-      }
-
-      // Regular chat flow
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/natleva-intelligence`;
       const resp = await fetch(CHAT_URL, {
         method: "POST",
@@ -395,15 +349,32 @@ export default function NatLevaIntelligence() {
         },
         body: JSON.stringify({
           messages: newMessages.map(m => ({
-            role: m.role,
-            content: m.content,
-            attachments: m.attachments,
+            role: m.role, content: m.content, attachments: m.attachments,
           })),
         }),
       });
 
-      if (!resp.ok || !resp.body) {
+      if (!resp.ok) {
         const err = await resp.json().catch(() => ({ error: "Erro desconhecido" }));
+        
+        // Check if it's an image response (non-streaming JSON)
+        if (err.type === "image" && err.images?.length > 0) {
+          const route = err.route as RouteInfo;
+          setCurrentRoute(route);
+          const imgMsg: Msg = {
+            role: "assistant",
+            content: err.text || "✅ Imagem gerada com sucesso!",
+            images: err.images,
+            route,
+          };
+          const finalMessages = [...newMessages, imgMsg];
+          setMessages(finalMessages);
+          await saveConversation(finalMessages, currentConvId || undefined);
+          setLoading(false);
+          setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+          return;
+        }
+        
         if (resp.status === 429) toast.error("Rate limit atingido. Aguarde alguns segundos.");
         else if (resp.status === 402) toast.error("Créditos insuficientes. Adicione créditos nas configurações.");
         else toast.error(err.error || "Erro ao conectar com IA");
@@ -411,9 +382,38 @@ export default function NatLevaIntelligence() {
         return;
       }
 
+      // Check content-type for image responses (non-streaming JSON)
+      const contentType = resp.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data = await resp.json();
+        if (data.type === "image" && data.images?.length > 0) {
+          const route = data.route as RouteInfo;
+          setCurrentRoute(route);
+          const imgMsg: Msg = {
+            role: "assistant",
+            content: data.text || "✅ Imagem gerada com sucesso!",
+            images: data.images,
+            route,
+          };
+          const finalMessages = [...newMessages, imgMsg];
+          setMessages(finalMessages);
+          await saveConversation(finalMessages, currentConvId || undefined);
+          setLoading(false);
+          setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+          return;
+        }
+      }
+
+      if (!resp.body) {
+        toast.error("Erro: sem resposta da IA");
+        setLoading(false);
+        return;
+      }
+
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let textBuffer = "";
+      let routeDetected = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -430,15 +430,21 @@ export default function NatLevaIntelligence() {
           if (jsonStr === "[DONE]") break;
           try {
             const parsed = JSON.parse(jsonStr);
+            // Check for route metadata
+            if (parsed.route && !routeDetected) {
+              setCurrentRoute(parsed.route);
+              routeDetected = true;
+              continue;
+            }
             const content = parsed.choices?.[0]?.delta?.content;
             if (content) {
               assistantContent += content;
               setMessages(prev => {
                 const last = prev[prev.length - 1];
                 if (last?.role === "assistant") {
-                  return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantContent } : m);
+                  return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantContent, route: currentRoute || undefined } : m);
                 }
-                return [...prev, { role: "assistant", content: assistantContent }];
+                return [...prev, { role: "assistant", content: assistantContent, route: currentRoute || undefined }];
               });
             }
           } catch { /* partial */ }
@@ -453,6 +459,7 @@ export default function NatLevaIntelligence() {
           if (jsonStr === "[DONE]") continue;
           try {
             const parsed = JSON.parse(jsonStr);
+            if (parsed.route && !routeDetected) { setCurrentRoute(parsed.route); routeDetected = true; continue; }
             const content = parsed.choices?.[0]?.delta?.content;
             if (content) {
               assistantContent += content;
@@ -468,27 +475,37 @@ export default function NatLevaIntelligence() {
         }
       }
 
-      const finalMessages = [...newMessages, { role: "assistant" as const, content: assistantContent }];
+      const finalRoute = currentRoute || undefined;
+      const finalMessages = [...newMessages, { role: "assistant" as const, content: assistantContent, route: finalRoute }];
       setMessages(finalMessages);
       await saveConversation(finalMessages, currentConvId || undefined);
+
+      // TTS: speak response if voice mode is on
+      if (voiceMode && assistantContent) {
+        setIsSpeaking(true);
+        speakText(assistantContent, () => setIsSpeaking(false));
+      }
     } catch (e) {
       console.error(e);
       toast.error("Erro de conexão com a IA");
     }
     setLoading(false);
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-  }, [messages, loading, currentConvId, saveConversation, pendingAttachments, isRecording, stopRecording]);
+  }, [messages, loading, currentConvId, saveConversation, pendingAttachments, isRecording, stopRecording, voiceMode, currentRoute]);
 
   const newConversation = () => {
     setMessages([]);
     setCurrentConvId(null);
     setPendingAttachments([]);
+    setCurrentRoute(null);
+    stopSpeaking();
   };
 
   const loadConversation = (conv: Conversation) => {
     setMessages((conv.messages as any) || []);
     setCurrentConvId(conv.conversation_id);
     setActiveTab("chat");
+    setCurrentRoute(null);
   };
 
   const deleteConversation = async (convId: string) => {
@@ -563,7 +580,7 @@ export default function NatLevaIntelligence() {
             </div>
             <div>
               <h2 className="text-sm font-bold text-foreground">NatLeva Intelligence</h2>
-              <p className="text-[10px] text-muted-foreground">Motor Cognitivo</p>
+              <p className="text-[10px] text-muted-foreground">Orquestrador Multi-IA 2.0</p>
             </div>
           </div>
           <Button onClick={newConversation} variant="outline" size="sm" className="w-full gap-2">
@@ -619,16 +636,44 @@ export default function NatLevaIntelligence() {
         {/* Chat view */}
         {(activeTab === "chat" || activeTab === "history") && activeTab === "chat" && (
           <div className="flex-1 flex flex-col min-h-0">
-            {/* Chat header */}
+            {/* Chat header with orchestrator status */}
             <div className="p-3 border-b border-border/40 flex items-center gap-3 shrink-0">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
                 <Brain className="w-4 h-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-foreground">NatLeva Intelligence</h3>
-                <p className="text-[10px] text-muted-foreground">Acesso total • Voz • Arquivos • Links • Aprendizado contínuo</p>
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  NatLeva Intelligence 2.0
+                  {currentRoute && (
+                    <Badge variant="outline" className="text-[9px] font-normal gap-1 animate-in fade-in">
+                      <Cpu className="w-2.5 h-2.5" />
+                      {currentRoute.label}
+                    </Badge>
+                  )}
+                </h3>
+                <p className="text-[10px] text-muted-foreground">
+                  Orquestrador Multi-IA • Voz • Arquivos • Links • Imagens • Aprendizado contínuo
+                </p>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
+                {/* Voice mode toggle */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      if (isSpeaking) { stopSpeaking(); setIsSpeaking(false); }
+                      setVoiceMode(!voiceMode);
+                    }}
+                    className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-all ${
+                      voiceMode
+                        ? "bg-primary/15 text-primary border border-primary/30"
+                        : "text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/80"
+                    }`}
+                    title={voiceMode ? "Desativar resposta por voz" : "Ativar resposta por voz"}
+                  >
+                    {voiceMode ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                    {voiceMode ? "Voz ON" : "Voz"}
+                  </button>
+                </div>
                 <Button variant="ghost" size="sm" onClick={newConversation} className="text-xs gap-1">
                   <RefreshCw className="w-3 h-3" /> Nova
                 </Button>
@@ -642,15 +687,26 @@ export default function NatLevaIntelligence() {
                   <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-5">
                     <Brain className="w-10 h-10 text-primary" />
                   </div>
-                  <h4 className="text-lg font-bold text-foreground mb-1">NatLeva Intelligence</h4>
+                  <h4 className="text-lg font-bold text-foreground mb-1">NatLeva Intelligence 2.0</h4>
                   <p className="text-sm text-muted-foreground max-w-lg mb-2">
-                    Seu motor cognitivo com acesso completo a todos os dados do sistema.
+                    Orquestrador multi-IA com roteamento inteligente de modelos.
+                  </p>
+
+                  {/* Orchestrator capabilities */}
+                  <div className="flex flex-wrap justify-center gap-1.5 mb-4 max-w-lg">
+                    <Badge variant="outline" className="text-[9px] gap-1"><Cpu className="w-2.5 h-2.5" /> Multi-Modelo</Badge>
+                    <Badge variant="outline" className="text-[9px] gap-1"><Sparkles className="w-2.5 h-2.5" /> ⚡ Flash</Badge>
+                    <Badge variant="outline" className="text-[9px] gap-1"><Brain className="w-2.5 h-2.5" /> 🧠 Pro</Badge>
+                    <Badge variant="outline" className="text-[9px] gap-1"><Image className="w-2.5 h-2.5" /> 🎨 Imagem</Badge>
+                    <Badge variant="outline" className="text-[9px] gap-1"><Mic className="w-2.5 h-2.5" /> STT</Badge>
+                    <Badge variant="outline" className="text-[9px] gap-1"><Volume2 className="w-2.5 h-2.5" /> TTS</Badge>
+                  </div>
+
+                  <p className="text-xs text-muted-foreground/60 max-w-lg mb-2">
+                    🧠 O orquestrador seleciona automaticamente o melhor motor de IA para cada solicitação
                   </p>
                   <p className="text-xs text-muted-foreground/60 max-w-lg mb-2">
-                    🎙️ Use o microfone para falar • 📎 Anexe imagens, PDFs e planilhas • 🔗 Cole links para análise
-                  </p>
-                  <p className="text-xs text-muted-foreground/60 max-w-lg mb-2">
-                    🎨 Gere imagens com IA • 📄 Exporte conversas em PDF • 📊 Exporte tabelas em planilhas
+                    🎙️ Microfone • 📎 Arquivos • 🔗 Links • 🎨 Imagens • 🗣️ Resposta por voz • 📄 PDF • 📊 Planilhas
                   </p>
                   <p className="text-xs text-muted-foreground/60 max-w-lg mb-6">
                     Vendas • Financeiro • RH • Clientes • Metas • Performance • Fornecedores • Check-in • Hospedagens
@@ -681,6 +737,16 @@ export default function NatLevaIntelligence() {
                   }`}>
                     {msg.role === "assistant" ? (
                       <>
+                        {/* Route indicator */}
+                        {msg.route && (
+                          <div className="flex items-center gap-1.5 mb-2 text-[9px] text-muted-foreground/70">
+                            <Cpu className="w-2.5 h-2.5" />
+                            <span>{msg.route.label}</span>
+                            <span className="text-muted-foreground/40">•</span>
+                            <span className="text-muted-foreground/50">{msg.route.reason}</span>
+                          </div>
+                        )}
+
                         <div className="prose prose-sm dark:prose-invert max-w-none
                           prose-headings:text-foreground prose-h1:text-lg prose-h1:font-bold prose-h1:mt-4 prose-h1:mb-2
                           prose-h2:text-base prose-h2:font-bold prose-h2:mt-5 prose-h2:mb-2 prose-h2:border-b prose-h2:border-border/30 prose-h2:pb-1
@@ -743,7 +809,7 @@ export default function NatLevaIntelligence() {
                           </div>
                         )}
 
-                        {/* Action buttons for assistant messages */}
+                        {/* Action buttons */}
                         {msg.content.length > 100 && !loading && (
                           <div className="flex flex-wrap gap-1.5 mt-3 pt-2 border-t border-border/20">
                             <button
@@ -769,6 +835,27 @@ export default function NatLevaIntelligence() {
                                 <Table className="w-3 h-3" /> Exportar Tabela
                               </button>
                             )}
+                            {/* TTS per-message */}
+                            <button
+                              onClick={() => {
+                                if (isSpeaking) {
+                                  stopSpeaking();
+                                  setIsSpeaking(false);
+                                } else {
+                                  setIsSpeaking(true);
+                                  speakText(msg.content, () => setIsSpeaking(false));
+                                }
+                              }}
+                              className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded-md transition-colors ${
+                                isSpeaking
+                                  ? "text-primary bg-primary/10 hover:bg-primary/20"
+                                  : "text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/80"
+                              }`}
+                              title={isSpeaking ? "Parar narração" : "Ouvir resposta"}
+                            >
+                              {isSpeaking ? <VolumeX className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+                              {isSpeaking ? "Parar" : "Ouvir"}
+                            </button>
                           </div>
                         )}
                       </>
@@ -791,7 +878,13 @@ export default function NatLevaIntelligence() {
                   </div>
                   <div className="bg-muted/50 border border-border/30 rounded-2xl rounded-bl-md px-4 py-3">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 className="w-4 h-4 animate-spin" /> {generatingImage ? "🎨 Gerando imagem..." : "Consultando dados e analisando..."}
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>
+                        {currentRoute
+                          ? `${currentRoute.label} processando...`
+                          : "🧠 Orquestrador selecionando motor e analisando..."
+                        }
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -817,7 +910,6 @@ export default function NatLevaIntelligence() {
             {/* Input area */}
             <div className="p-4 border-t border-border/40 shrink-0">
               <form onSubmit={(e) => { e.preventDefault(); sendMessage(input); }} className="flex items-end gap-2">
-                {/* File upload */}
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -838,16 +930,14 @@ export default function NatLevaIntelligence() {
                   {uploadingFiles ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
                 </Button>
 
-                {/* Text input */}
                 <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Pergunte, cole links, ou use o microfone..."
+                  placeholder={voiceMode ? "Fale ou digite... 🗣️" : "Pergunte, cole links, ou use o microfone..."}
                   disabled={loading}
                   className="flex-1"
                 />
 
-                {/* Mic button */}
                 <Button
                   type="button"
                   variant={isRecording ? "destructive" : "ghost"}
@@ -860,14 +950,13 @@ export default function NatLevaIntelligence() {
                   {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                 </Button>
 
-                {/* Send */}
                 <Button type="submit" disabled={loading || (!input.trim() && pendingAttachments.length === 0)} size="icon"
                   className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90 shrink-0 h-10 w-10">
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                 </Button>
               </form>
               <p className="text-[10px] text-muted-foreground/50 mt-1.5 text-center">
-                🎙️ Microfone • 📎 Arquivos • 🔗 Links • 🎨 "Gere uma imagem de..." • 📄 Exporte PDF/Planilha
+                🧠 Multi-IA • 🎙️ Microfone • 📎 Arquivos • 🔗 Links • 🎨 "Gere uma imagem de..." • 🗣️ Voz • 📄 PDF/Planilha
               </p>
             </div>
           </div>
@@ -1017,6 +1106,43 @@ export default function NatLevaIntelligence() {
               ))}
             </div>
 
+            {/* Orchestrator info card */}
+            <Card className="p-4 bg-gradient-to-r from-primary/5 to-accent/5 border-primary/20">
+              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+                <Cpu className="w-4 h-4 text-primary" /> Arquitetura do Orquestrador Multi-IA
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    <span className="font-medium text-foreground">⚡ Motor Rápido (Flash)</span>
+                  </div>
+                  <p className="text-muted-foreground pl-4">Consultas gerais, resumos, dúvidas rápidas</p>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                    <span className="font-medium text-foreground">🧠 Motor Estratégico (Pro)</span>
+                  </div>
+                  <p className="text-muted-foreground pl-4">Planos, análises complexas, cálculos avançados</p>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-purple-500" />
+                    <span className="font-medium text-foreground">🎨 Gerador de Imagens</span>
+                  </div>
+                  <p className="text-muted-foreground pl-4">Banners, artes, logos, posts, cards</p>
+                </div>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    <span className="font-medium text-foreground">👁️ Visão Computacional</span>
+                  </div>
+                  <p className="text-muted-foreground pl-4">OCR, análise de prints e documentos</p>
+                </div>
+              </div>
+            </Card>
+
             <Card className="p-4 bg-muted/30 border-primary/20">
               <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-2">
                 <Lightbulb className="w-4 h-4 text-warning" /> Como a IA usa essas configurações
@@ -1024,8 +1150,10 @@ export default function NatLevaIntelligence() {
               <ul className="text-xs text-muted-foreground space-y-1">
                 <li>• As configurações são injetadas no prompt de sistema da IA em tempo real</li>
                 <li>• Mudanças são aplicadas imediatamente na próxima conversa</li>
+                <li>• O orquestrador seleciona o modelo ideal automaticamente</li>
                 <li>• Use "Instruções Customizadas" para regras específicas do negócio</li>
-                <li>• A Base de Conhecimento complementa com contexto detalhado</li>
+                <li>• A Base de Conhecimento complementa com contexto detalhado (RAG simples)</li>
+                <li>• Ative "Voz ON" no chat para ouvir as respostas narradas</li>
               </ul>
             </Card>
           </div>
