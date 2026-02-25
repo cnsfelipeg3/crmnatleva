@@ -2089,6 +2089,42 @@ export type Database = {
           },
         ]
       }
+      user_locations: {
+        Row: {
+          city: string
+          country: string | null
+          created_at: string
+          id: string
+          lat: number
+          lon: number
+          state: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          city: string
+          country?: string | null
+          created_at?: string
+          id?: string
+          lat: number
+          lon: number
+          state?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          city?: string
+          country?: string | null
+          created_at?: string
+          id?: string
+          lat?: number
+          lon?: number
+          state?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string

@@ -23,6 +23,7 @@ import Viagens from "@/pages/Viagens";
 import ClientIntelligence from "@/pages/ClientIntelligence";
 import NatLevaIntelligence from "@/pages/NatLevaIntelligence";
 import NotFound from "@/pages/NotFound";
+import UserLocations from "@/pages/settings/UserLocations";
 
 // RH
 import RHIndex from "@/pages/rh/RHIndex";
@@ -122,6 +123,7 @@ function AppRoutes() {
         <Route path="/settings/products" element={<GenericSettingsList title="Produtos" defaultItems={["Aéreo", "Hotel", "Seguro Viagem", "Transfer", "Passeios"]} />} />
         <Route path="/settings/permissions" element={<GenericSettingsList title="Permissões" defaultItems={["admin", "gestor", "vendedor", "operacional", "financeiro", "leitura"]} />} />
         <Route path="/settings/calc-rules" element={<GenericSettingsList title="Regras de Cálculo" defaultItems={["Milheiro padrão: R$ 20,00", "Taxa fixa emissão: R$ 50,00", "Markup padrão: 15%"]} />} />
+        <Route path="/settings/user-locations" element={<UserLocations />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

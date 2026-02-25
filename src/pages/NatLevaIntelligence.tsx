@@ -223,6 +223,21 @@ export default function NatLevaIntelligence() {
         const state = geoData.address?.state || undefined;
         setUserLocation({ city, state, lat: latitude, lon: longitude });
         toast.success(`📍 Localização detectada: ${city}${state ? `, ${state}` : ""}`);
+
+        // Save to database
+        if (user) {
+          supabase.from("user_locations").upsert({
+            user_id: user.id,
+            city,
+            state: state || null,
+            country: geoData.address?.country || "Brasil",
+            lat: latitude,
+            lon: longitude,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "user_id" }).then(({ error }) => {
+            if (error) console.error("Error saving location:", error);
+          });
+        }
       } else {
         setUserLocation({ city: "Desconhecida", lat: latitude, lon: longitude });
       }
