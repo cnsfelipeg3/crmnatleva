@@ -518,6 +518,7 @@ function AISuggestionCard({
 function ChatWindow({
   conversation, messages, onSend, onBack,
   aiSuggestion, onAISuggest, onAISend, onAIEdit, onAIDismiss,
+  onSendAttachment,
 }: {
   conversation: Conversation | null;
   messages: Message[];
@@ -528,9 +529,16 @@ function ChatWindow({
   onAISend: () => void;
   onAIEdit: () => void;
   onAIDismiss: () => void;
+  onSendAttachment?: (file: File) => void;
 }) {
   const [text, setText] = useState("");
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [attachPreview, setAttachPreview] = useState<{ file: File; url: string } | null>(null);
+  const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const emojiRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -539,7 +547,32 @@ function ChatWindow({
     }
   }, [messages, aiSuggestion]);
 
-  if (!conversation) {
+  // Auto-resize textarea
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    const lineHeight = 20;
+    const maxLines = 8;
+    const maxHeight = lineHeight * maxLines;
+    ta.style.height = Math.min(ta.scrollHeight, maxHeight) + "px";
+    ta.style.overflowY = ta.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [text]);
+
+  // Close emoji on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (emojiRef.current && !emojiRef.current.contains(e.target as Node)) {
+        setShowEmoji(false);
+      }
+    };
+    if (showEmoji) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showEmoji]);
+
+  const noConversation = !conversation;
+
+  if (noConversation) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-muted/10 text-muted-foreground gap-4">
         <div className="w-20 h-20 rounded-2xl bg-primary/5 flex items-center justify-center">
@@ -556,9 +589,55 @@ function ChatWindow({
   const status = STATUS_MAP[conversation.status] || STATUS_MAP.novo;
 
   const handleSend = () => {
-    if (!text.trim()) return;
+    if (!text.trim() || sending) return;
+    setSending(true);
     onSend(text.trim());
     setText("");
+    setSending(false);
+    textareaRef.current?.focus();
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo: 20MB");
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setAttachPreview({ file, url });
+    e.target.value = "";
+  };
+
+  const handleSendAttachment = () => {
+    if (!attachPreview) return;
+    onSendAttachment?.(attachPreview.file);
+    // Also add as a message locally
+    onSend(`📎 ${attachPreview.file.name}`);
+    URL.revokeObjectURL(attachPreview.url);
+    setAttachPreview(null);
+  };
+
+  const handleEmojiSelect = (emoji: any) => {
+    const ta = textareaRef.current;
+    if (!ta) {
+      setText(prev => prev + emoji.native);
+      return;
+    }
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const newText = text.slice(0, start) + emoji.native + text.slice(end);
+    setText(newText);
+    // Restore cursor after emoji
+    requestAnimationFrame(() => {
+      const pos = start + emoji.native.length;
+      ta.selectionStart = ta.selectionEnd = pos;
+      ta.focus();
+    });
+  };
+
+  const handleComingSoon = (feature: string) => {
+    toast.info(`${feature} — integração em breve!`, { duration: 2000 });
   };
 
   return (
@@ -594,8 +673,8 @@ function ChatWindow({
         <div className="flex items-center gap-0.5">
           {!isMobile && (
             <>
-              <Button variant="ghost" size="icon" className="h-8 w-8"><Phone className="w-4 h-4" /></Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8"><Video className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleComingSoon("Chamada de voz")} title="Chamada de voz"><Phone className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleComingSoon("Videochamada")} title="Videochamada"><Video className="w-4 h-4" /></Button>
             </>
           )}
           <DropdownMenu>
@@ -623,13 +702,9 @@ function ChatWindow({
           backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.02'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H0V12h20V10H0V8h20V6H0V4h20V2H0V0h22v20h2V0h2v20h2V0h2v20h2V0h2v20h2V0h2v20.5z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
         }}
       >
-        {/* Date separator */}
         <div className="flex items-center justify-center mb-2">
-          <span className="px-3 py-1 rounded-full bg-muted/80 text-[10px] text-muted-foreground font-medium">
-            Hoje
-          </span>
+          <span className="px-3 py-1 rounded-full bg-muted/80 text-[10px] text-muted-foreground font-medium">Hoje</span>
         </div>
-
         {messages.map(msg => {
           const isClient = msg.sender_type === "cliente";
           return (
@@ -663,24 +738,91 @@ function ChatWindow({
           onEdit={() => {
             setText(aiSuggestion.suggestion);
             onAIEdit();
+            textareaRef.current?.focus();
           }}
           onRegenerate={onAISuggest}
           onDismiss={onAIDismiss}
         />
       )}
 
-      {/* Input */}
-      <div className="p-2.5 border-t border-border bg-card shrink-0">
+      {/* Attachment Preview */}
+      {attachPreview && (
+        <div className="mx-3 mb-2 p-3 rounded-xl border border-border bg-card flex items-center gap-3">
+          {attachPreview.file.type.startsWith("image/") ? (
+            <img src={attachPreview.url} alt="preview" className="w-16 h-16 rounded-lg object-cover" />
+          ) : (
+            <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center">
+              <FileText className="w-6 h-6 text-muted-foreground" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate text-foreground">{attachPreview.file.name}</p>
+            <p className="text-[11px] text-muted-foreground">{(attachPreview.file.size / 1024).toFixed(0)} KB</p>
+          </div>
+          <Button size="sm" className="h-8 gap-1.5" onClick={handleSendAttachment}>
+            <Send className="w-3 h-3" /> Enviar
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8" onClick={() => { URL.revokeObjectURL(attachPreview.url); setAttachPreview(null); }}>
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Input Area */}
+      <div className="p-2.5 border-t border-border bg-card shrink-0 sticky bottom-0">
+        <input
+          ref={fileInputRef}
+          type="file"
+          className="hidden"
+          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+          onChange={handleFileSelect}
+        />
+
+        {/* Emoji Picker */}
+        {showEmoji && (
+          <div ref={emojiRef} className="absolute bottom-16 left-2 z-50 shadow-xl rounded-xl overflow-hidden">
+            <EmojiPicker onSelect={handleEmojiSelect} />
+          </div>
+        )}
+
         <div className="flex items-end gap-1.5">
-          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground"><Smile className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground"><Paperclip className="w-5 h-5" /></Button>
-          <div className="flex-1">
-            <Textarea
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn("h-9 w-9 shrink-0 transition-colors", showEmoji ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground")}
+            onClick={() => setShowEmoji(!showEmoji)}
+            title="Emojis"
+          >
+            <Smile className="w-5 h-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => fileInputRef.current?.click()}
+            title="Anexar arquivo"
+          >
+            <Paperclip className="w-5 h-5" />
+          </Button>
+          <div className="flex-1 relative">
+            <textarea
+              ref={textareaRef}
               placeholder="Digite uma mensagem..."
               value={text}
               onChange={e => setText(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              className="min-h-[40px] max-h-[100px] resize-none text-sm border-0 bg-muted/50 focus-visible:ring-1"
+              onKeyDown={e => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              className={cn(
+                "w-full resize-none text-sm rounded-xl px-3 py-2.5 leading-5",
+                "bg-muted/50 border-0 focus:ring-1 focus:ring-primary/30 focus:outline-none",
+                "placeholder:text-muted-foreground",
+                "transition-all duration-150"
+              )}
+              style={{ minHeight: "40px", maxHeight: "160px", overflowY: "hidden" }}
               rows={1}
             />
           </div>
@@ -689,18 +831,62 @@ function ChatWindow({
             size="icon"
             className="h-9 w-9 shrink-0 text-primary hover:bg-primary/10"
             onClick={onAISuggest}
+            disabled={!conversation || messages.length === 0}
             title="Sugerir resposta com IA"
           >
             <Sparkles className="w-5 h-5" />
           </Button>
           {text.trim() ? (
-            <Button size="icon" className="h-9 w-9 shrink-0 rounded-full" onClick={handleSend}>
+            <Button
+              size="icon"
+              className="h-9 w-9 shrink-0 rounded-full shadow-sm"
+              onClick={handleSend}
+              disabled={sending}
+            >
               <Send className="w-4 h-4" />
             </Button>
           ) : (
-            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground"><Mic className="w-5 h-5" /></Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={() => handleComingSoon("Gravação de áudio")}
+              title="Gravar áudio"
+            >
+              <Mic className="w-5 h-5" />
+            </Button>
           )}
         </div>
+        <p className="text-[9px] text-muted-foreground/50 mt-1 ml-1">
+          Enter envia · Shift+Enter quebra linha
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── EMOJI PICKER (lightweight) ───
+function EmojiPicker({ onSelect }: { onSelect: (emoji: { native: string }) => void }) {
+  const emojis = [
+    "😊", "😍", "🥰", "😎", "🤩", "👍", "👏", "🙏", "❤️", "🔥",
+    "✈️", "🏖️", "🌍", "🗺️", "🏨", "🎉", "💰", "📞", "📧", "📎",
+    "✅", "⚠️", "🚀", "💎", "🌟", "🎯", "📋", "🔗", "👋", "😄",
+    "🤔", "😢", "🙌", "💪", "🎁", "📱", "💬", "🔔", "⏰", "📍",
+  ];
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-3 w-[280px]">
+      <p className="text-[10px] text-muted-foreground mb-2 font-medium">Emojis Rápidos</p>
+      <div className="grid grid-cols-10 gap-1">
+        {emojis.map(e => (
+          <button
+            key={e}
+            onClick={() => onSelect({ native: e })}
+            className="w-7 h-7 flex items-center justify-center rounded hover:bg-muted transition-colors text-base"
+          >
+            {e}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -965,6 +1151,7 @@ export default function LiveChat() {
           onAISend={handleAISend}
           onAIEdit={handleAIEdit}
           onAIDismiss={() => setAiSuggestion(null)}
+          onSendAttachment={(file) => toast.info(`Arquivo "${file.name}" será enviado quando integração estiver ativa.`)}
         />
       </div>
     );
@@ -993,6 +1180,7 @@ export default function LiveChat() {
         onAISend={handleAISend}
         onAIEdit={handleAIEdit}
         onAIDismiss={() => setAiSuggestion(null)}
+        onSendAttachment={(file) => toast.info(`Arquivo "${file.name}" será enviado quando integração estiver ativa.`)}
       />
       <ClientPanel conversation={selectedConv} />
     </div>
