@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";
 import { fetchAllRows } from "@/lib/fetchAll";
@@ -21,9 +21,10 @@ import {
 import {
   Users, DollarSign, TrendingUp, Target, Crown, AlertTriangle,
   Search, Download, ChevronRight, Star, Zap, Shield,
-  BarChart3, Layers, Activity, Clock, Plane, Brain, Sparkles,
+  BarChart3, Layers, Activity, Clock, Plane, Brain, Sparkles, Send,
   ArrowUp, ArrowDown, Award, HeartCrack, Timer,
   TrendingDown, UserX, CalendarX, Lightbulb, Gem, Eye, Loader2, RefreshCw, Wand2,
+  MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -57,9 +58,9 @@ export default function ClientIntelligence() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [drilldown, setDrilldown] = useState<{ label: string; clients: ClientAnalysis[] } | null>(null);
   const [selectedClient, setSelectedClient] = useState<ClientAnalysis | null>(null);
-  const [aiContent, setAiContent] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiGenerated, setAiGenerated] = useState(false);
+  const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
 
   useEffect(() => {
     fetchAllRows("sales", "*", { order: { column: "created_at", ascending: false } })
@@ -204,12 +205,9 @@ export default function ClientIntelligence() {
   const allClusters = useMemo(() => [...new Set(analysisData.map(c => c.cluster))].sort(), [analysisData]);
   const allSegmentos = useMemo(() => [...new Set(analysisData.map(c => c.segmento))].sort(), [analysisData]);
 
-  const generateAiInsights = useCallback(async () => {
-    if (analysisData.length === 0) return;
-    setAiLoading(true);
-    setAiContent("");
-    setAiGenerated(true);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
+  const buildMetricsContext = useCallback(() => {
     const active = analysisData.filter(c => c.totalTrips > 0);
     const segDist: Record<string, number> = {};
     analysisData.forEach(c => { segDist[c.segmento] = (segDist[c.segmento] || 0) + 1; });
@@ -218,13 +216,11 @@ export default function ClientIntelligence() {
       if (!clusterDist[c.cluster]) clusterDist[c.cluster] = { count: 0, rev: 0 };
       clusterDist[c.cluster].count++; clusterDist[c.cluster].rev += c.totalRevenue;
     });
-
     const inactive6m = analysisData.filter(c => c.daysInactive >= 180 && c.daysInactive < 9999 && c.totalTrips > 0);
     const inactiveBuckets = [
       { name: "6-9m", min: 180, max: 270 }, { name: "9-12m", min: 270, max: 365 },
       { name: "12-18m", min: 365, max: 540 }, { name: "18m+", min: 540, max: 99999 },
     ].map(b => ({ name: b.name, count: inactive6m.filter(c => c.daysInactive >= b.min && c.daysInactive < b.max).length }));
-
     const regionMargin: Record<string, { total: number; count: number; rev: number }> = {};
     active.forEach(c => {
       const r = c.topRegion;
@@ -232,12 +228,10 @@ export default function ClientIntelligence() {
       regionMargin[r].total += c.avgMargin; regionMargin[r].count++; regionMargin[r].rev += c.totalRevenue;
     });
     const topRegions = Object.entries(regionMargin).map(([r, d]) => ({ region: r, margin: d.total / d.count, rev: d.rev })).sort((a, b) => b.rev - a.rev).slice(0, 8);
-
     const topRisk = [...inactive6m].sort((a, b) => b.ltv - a.ltv).slice(0, 5).map(c => ({
       name: c.name, ltv: c.ltv, daysInactive: c.daysInactive, freq: c.frequency, ticket: c.avgTicket,
     }));
-
-    const metrics = {
+    return {
       totalClients: kpis.totalClients, totalRevenue: kpis.totalRevenue, totalProfit: kpis.totalProfit,
       avgTicket: kpis.avgTicket, avgMargin: kpis.avgMargin, avgFreq: kpis.avgFreq,
       avgScore: kpis.avgScore, totalLtv: kpis.totalLtv, rev12m: kpis.rev12m,
@@ -250,6 +244,18 @@ export default function ClientIntelligence() {
       topRisk,
       topRegions,
     };
+  }, [analysisData, kpis, rankings]);
+
+  const sendChatMessage = useCallback(async (input: string) => {
+    if (!input.trim() || chatLoading) return;
+    const userMsg = { role: "user" as const, content: input.trim() };
+    const newMessages = [...chatMessages, userMsg];
+    setChatMessages(newMessages);
+    setChatInput("");
+    setChatLoading(true);
+
+    let assistantContent = "";
+    const metrics = buildMetricsContext();
 
     try {
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/client-intelligence-ai`;
@@ -259,26 +265,24 @@ export default function ClientIntelligence() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ metrics }),
+        body: JSON.stringify({ messages: newMessages, metrics }),
       });
 
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: "Erro desconhecido" }));
-        toast.error(err.error || "Erro ao gerar análise");
-        setAiLoading(false);
+        toast.error(err.error || "Erro ao conectar com IA");
+        setChatLoading(false);
         return;
       }
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let textBuffer = "";
-      let accumulated = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         textBuffer += decoder.decode(value, { stream: true });
-
         let newlineIndex: number;
         while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
           let line = textBuffer.slice(0, newlineIndex);
@@ -292,18 +296,25 @@ export default function ClientIntelligence() {
             const parsed = JSON.parse(jsonStr);
             const content = parsed.choices?.[0]?.delta?.content;
             if (content) {
-              accumulated += content;
-              setAiContent(accumulated);
+              assistantContent += content;
+              setChatMessages(prev => {
+                const last = prev[prev.length - 1];
+                if (last?.role === "assistant") {
+                  return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantContent } : m);
+                }
+                return [...prev, { role: "assistant", content: assistantContent }];
+              });
             }
           } catch { /* partial */ }
         }
       }
     } catch (e) {
       console.error(e);
-      toast.error("Erro de conexão ao gerar análise IA");
+      toast.error("Erro de conexão com a IA");
     }
-    setAiLoading(false);
-  }, [analysisData, kpis, rankings]);
+    setChatLoading(false);
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  }, [chatMessages, chatLoading, buildMetricsContext]);
 
   if (loading) {
     return (
@@ -951,71 +962,120 @@ export default function ClientIntelligence() {
 
         {/* ===== IA ESTRATÉGICA ===== */}
         <TabsContent value="ai" className="space-y-5 mt-4">
-          <Card className="glass-card p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Wand2 className="w-5 h-5 text-primary" />
-                  Conclusões e Plano Estratégico por IA
-                </h3>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Análise completa da carteira com plano de ação detalhado, estratégias de fidelização, programa de comunidade e projeção de impacto.
-                </p>
+          <Card className="glass-card p-0 flex flex-col" style={{ height: "calc(100vh - 260px)", minHeight: 500 }}>
+            {/* Header */}
+            <div className="p-4 border-b border-border/40 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+                <Brain className="w-5 h-5 text-primary" />
               </div>
-              <Button
-                onClick={generateAiInsights}
-                disabled={aiLoading || analysisData.length === 0}
-                className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90"
-              >
-                {aiLoading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Analisando...</>
-                ) : aiGenerated ? (
-                  <><RefreshCw className="w-4 h-4 mr-2" /> Regenerar Análise</>
-                ) : (
-                  <><Wand2 className="w-4 h-4 mr-2" /> Gerar Análise Estratégica</>
-                )}
-              </Button>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-foreground">IA Estratégica NatLeva</h3>
+                <p className="text-xs text-muted-foreground">Consultor de gestão com acesso à sua carteira de {kpis.totalClients} clientes</p>
+              </div>
+              {chatMessages.length > 0 && (
+                <Button variant="ghost" size="sm" onClick={() => setChatMessages([])}>
+                  <RefreshCw className="w-3.5 h-3.5 mr-1" /> Nova conversa
+                </Button>
+              )}
             </div>
 
-            {!aiGenerated && !aiLoading && (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-4">
-                  <Brain className="w-10 h-10 text-primary" />
-                </div>
-                <h4 className="text-lg font-semibold text-foreground mb-2">Motor de Inteligência Artificial</h4>
-                <p className="text-sm text-muted-foreground max-w-md mb-6">
-                  A IA vai analisar seus {analysisData.length} clientes, {sales.length} vendas, métricas de churn, 
-                  segmentação e clusters para gerar um plano estratégico personalizado com ações práticas.
-                </p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs text-muted-foreground">
-                  {["Diagnóstico da carteira", "Mapa mental estratégico", "Plano por segmento", "Programa de fidelidade",
-                    "Estratégias anti-churn", "Comunidade VIP", "Plano 90 dias", "Projeção de impacto"].map(item => (
-                    <div key={item} className="flex items-center gap-1.5 p-2 rounded-lg bg-muted/30 border border-border/30">
-                      <Lightbulb className="w-3 h-3 text-warning shrink-0" />
-                      <span>{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {(aiContent || aiLoading) && (
-              <div className="prose prose-sm dark:prose-invert max-w-none mt-4 
-                prose-headings:text-foreground prose-h2:text-lg prose-h2:font-bold prose-h2:mt-8 prose-h2:mb-3 prose-h2:border-b prose-h2:border-border/30 prose-h2:pb-2
-                prose-h3:text-base prose-h3:font-semibold prose-h3:mt-5 prose-h3:mb-2
-                prose-p:text-muted-foreground prose-p:leading-relaxed
-                prose-li:text-muted-foreground prose-li:leading-relaxed
-                prose-strong:text-foreground
-                prose-ul:my-2 prose-ol:my-2">
-                <ReactMarkdown>{aiContent}</ReactMarkdown>
-                {aiLoading && (
-                  <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground animate-pulse">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Gerando análise estratégica...
+            {/* Messages area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {chatMessages.length === 0 && !chatLoading && (
+                <div className="flex flex-col items-center justify-center h-full text-center px-4">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center mb-4">
+                    <MessageCircle className="w-8 h-8 text-primary" />
                   </div>
-                )}
-              </div>
-            )}
+                  <h4 className="text-base font-semibold text-foreground mb-1">Converse com sua IA estratégica</h4>
+                  <p className="text-sm text-muted-foreground max-w-md mb-6">
+                    Pergunte qualquer coisa sobre sua carteira de clientes. A IA tem acesso a todos os dados de vendas, segmentação, churn e métricas.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-lg w-full">
+                    {[
+                      "Monte um plano estratégico completo de 90 dias para minha carteira",
+                      "Quais clientes estão em risco de churn e o que fazer?",
+                      "Crie um programa de fidelidade com níveis e presentes por LTV",
+                      "Quais estratégias para criar senso de comunidade entre meus clientes VIP?",
+                    ].map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        onClick={() => sendChatMessage(suggestion)}
+                        className="text-left text-xs p-3 rounded-lg border border-border/50 bg-muted/30 hover:bg-muted/60 transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        <Lightbulb className="w-3 h-3 inline mr-1.5 text-warning" />
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                  {msg.role === "assistant" && (
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0 mt-1">
+                      <Brain className="w-4 h-4 text-primary" />
+                    </div>
+                  )}
+                  <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                    msg.role === "user" 
+                      ? "bg-primary text-primary-foreground rounded-br-md" 
+                      : "bg-muted/50 border border-border/30 rounded-bl-md"
+                  }`}>
+                    {msg.role === "assistant" ? (
+                      <div className="prose prose-sm dark:prose-invert max-w-none
+                        prose-headings:text-foreground prose-h2:text-base prose-h2:font-bold prose-h2:mt-5 prose-h2:mb-2 prose-h2:border-b prose-h2:border-border/30 prose-h2:pb-1
+                        prose-h3:text-sm prose-h3:font-semibold prose-h3:mt-3 prose-h3:mb-1
+                        prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:text-sm
+                        prose-li:text-muted-foreground prose-li:leading-relaxed prose-li:text-sm
+                        prose-strong:text-foreground
+                        prose-ul:my-1 prose-ol:my-1">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      <p className="text-sm">{msg.content}</p>
+                    )}
+                  </div>
+                  {msg.role === "user" && (
+                    <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-1">
+                      <Users className="w-4 h-4 text-primary" />
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {chatLoading && chatMessages[chatMessages.length - 1]?.role !== "assistant" && (
+                <div className="flex gap-3">
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0">
+                    <Brain className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="bg-muted/50 border border-border/30 rounded-2xl rounded-bl-md px-4 py-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Analisando dados...
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Input area */}
+            <div className="p-4 border-t border-border/40">
+              <form onSubmit={(e) => { e.preventDefault(); sendChatMessage(chatInput); }} className="flex gap-2">
+                <Input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Pergunte sobre sua carteira, peça planos, estratégias..."
+                  disabled={chatLoading}
+                  className="flex-1"
+                />
+                <Button type="submit" disabled={chatLoading || !chatInput.trim()} size="icon"
+                  className="bg-gradient-to-r from-primary to-accent text-primary-foreground hover:opacity-90">
+                  {chatLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                </Button>
+              </form>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>

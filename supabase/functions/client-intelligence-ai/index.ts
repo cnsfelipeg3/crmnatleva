@@ -9,81 +9,23 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { metrics } = await req.json();
+    const { messages, metrics } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const systemPrompt = `Você é um consultor estratégico sênior especializado em agências de turismo premium. 
-Analise os dados da carteira de clientes e gere um plano estratégico completo e detalhado EM PORTUGUÊS DO BRASIL.
+    const systemPrompt = `Você é um consultor estratégico sênior especializado em agências de turismo premium, chamado "IA NatLeva".
+Você tem acesso aos dados reais da carteira de clientes da agência NatLeva e deve responder SEMPRE em português do Brasil.
 
-FORMATO DA RESPOSTA (use exatamente este formato com os marcadores):
+Você é um assistente conversacional — responda de forma direta, prática e personalizada.
+Use os dados fornecidos para embasar suas respostas com números reais.
+Seja proativo: sugira ações, estratégias, presentes, agrados, campanhas.
+Pense como um diretor de CRM de uma empresa de luxo.
 
-## 🎯 DIAGNÓSTICO GERAL
-Análise do estado atual da carteira em 3-4 parágrafos.
+Quando o usuário pedir planos, seja EXTREMAMENTE detalhado e prático.
+Use markdown para formatar suas respostas (títulos, listas, negrito, etc).
 
-## 📊 INDICADORES CRÍTICOS
-Para cada indicador abaixo, explique o que o número significa e o que fazer:
-- Receita e Lucro
-- Margem média
-- Churn e inatividade
-- Score médio da base
-- Concentração de receita
-
-## 🗺️ MAPA MENTAL ESTRATÉGICO
-Organize em árvore de decisão:
-### Pilar 1: Retenção e Anti-Churn
-- Ação 1.1: [detalhamento]
-- Ação 1.2: [detalhamento]
-### Pilar 2: Crescimento de Receita  
-- Ação 2.1: [detalhamento]
-- Ação 2.2: [detalhamento]
-### Pilar 3: Comunidade e Pertencimento
-- Ação 3.1: [detalhamento]
-- Ação 3.2: [detalhamento]
-### Pilar 4: Experiência Premium
-- Ação 4.1: [detalhamento]
-- Ação 4.2: [detalhamento]
-
-## 💎 PLANO POR SEGMENTO
-Para cada segmento (VIP Elite, VIP Premium, Estratégico, Recorrente, Potencial, Em Risco):
-### [Emoji] [Segmento] ([quantidade] clientes)
-- **Objetivo**: 
-- **Estratégia de relacionamento**: 
-- **Agrados e presentes sugeridos** (baseado no LTV):
-- **Frequência de contato ideal**:
-- **Meta de upsell**:
-
-## 🎁 PROGRAMA DE FIDELIDADE E COMUNIDADE
-Detalhe um programa completo com:
-- Níveis de fidelidade
-- Benefícios por nível
-- Sistema de pontos/recompensas
-- Eventos exclusivos
-- Surpresas e agrados por LTV
-- Estratégia de comunidade (grupo VIP, eventos, conteúdo)
-
-## 📈 PLANO DE AÇÃO - 90 DIAS
-### Semana 1-2: Quick Wins
-### Semana 3-4: Estruturação
-### Mês 2: Implementação
-### Mês 3: Otimização
-
-## 💰 PROJEÇÃO DE IMPACTO
-- Receita adicional estimada com reativação de inativos
-- Receita adicional com upsell de base ativa
-- Redução de churn projetada
-- ROI estimado das ações
-
-## ⚠️ RISCOS E ALERTAS
-Top 5 riscos imediatos que precisam de atenção.
-
-Seja EXTREMAMENTE detalhado, prático e específico. Use os números reais fornecidos. 
-Cada sugestão de presente/agrado deve ter estimativa de custo vs LTV do cliente.
-Pense como um diretor de CRM de uma empresa de luxo.`;
-
-    const userPrompt = `Analise estes dados da minha agência de turismo NatLeva:
-
-RESUMO DA CARTEIRA:
+DADOS DA CARTEIRA NATLEVA:
+${metrics ? `
 - Total de clientes ativos: ${metrics.totalClients}
 - Receita total acumulada: R$ ${metrics.totalRevenue?.toLocaleString("pt-BR")}
 - Lucro total: R$ ${metrics.totalProfit?.toLocaleString("pt-BR")}
@@ -95,26 +37,25 @@ RESUMO DA CARTEIRA:
 - Receita últimos 12 meses: R$ ${metrics.rev12m?.toLocaleString("pt-BR")}
 
 SEGMENTAÇÃO:
-${metrics.segments?.map((s: any) => `- ${s.name}: ${s.count} clientes (${s.pct}%)`).join("\n")}
+${metrics.segments?.map((s: any) => `- ${s.name}: ${s.count} clientes (${s.pct}%)`).join("\n") || "N/A"}
 
 CLUSTERS:
-${metrics.clusters?.map((c: any) => `- ${c.name}: ${c.count} clientes, receita R$ ${c.rev?.toLocaleString("pt-BR")}`).join("\n")}
+${metrics.clusters?.map((c: any) => `- ${c.name}: ${c.count} clientes, receita R$ ${c.rev?.toLocaleString("pt-BR")}`).join("\n") || "N/A"}
 
 CHURN:
 - Clientes inativos >6 meses: ${metrics.inactive6m}
 - Receita anual perdida (estimada): R$ ${metrics.lostRevenue?.toLocaleString("pt-BR")}
-- Distribuição de inativos: ${metrics.inactiveBuckets?.map((b: any) => `${b.name}: ${b.count}`).join(", ")}
+- Distribuição de inativos: ${metrics.inactiveBuckets?.map((b: any) => `${b.name}: ${b.count}`).join(", ") || "N/A"}
 
 TOP 10 CLIENTES POR RECEITA:
-${metrics.topClients?.map((c: any, i: number) => `${i + 1}. ${c.name} — R$ ${c.revenue?.toLocaleString("pt-BR")} | Margem: ${c.margin?.toFixed(1)}% | Score: ${c.score} | ${c.segment} | ${c.cluster} | Inativo: ${c.daysInactive} dias | LTV: R$ ${c.ltv?.toLocaleString("pt-BR")}`).join("\n")}
+${metrics.topClients?.map((c: any, i: number) => `${i + 1}. ${c.name} — R$ ${c.revenue?.toLocaleString("pt-BR")} | Margem: ${c.margin?.toFixed(1)}% | Score: ${c.score} | ${c.segment} | ${c.cluster} | Inativo: ${c.daysInactive} dias | LTV: R$ ${c.ltv?.toLocaleString("pt-BR")}`).join("\n") || "N/A"}
 
 TOP 5 EM RISCO (maior LTV perdido):
-${metrics.topRisk?.map((c: any, i: number) => `${i + 1}. ${c.name} — LTV: R$ ${c.ltv?.toLocaleString("pt-BR")} | Inativo: ${c.daysInactive} dias | Freq: ${c.freq?.toFixed(1)}/ano | Ticket: R$ ${c.ticket?.toLocaleString("pt-BR")}`).join("\n")}
+${metrics.topRisk?.map((c: any, i: number) => `${i + 1}. ${c.name} — LTV: R$ ${c.ltv?.toLocaleString("pt-BR")} | Inativo: ${c.daysInactive} dias | Freq: ${c.freq?.toFixed(1)}/ano | Ticket: R$ ${c.ticket?.toLocaleString("pt-BR")}`).join("\n") || "N/A"}
 
 REGIÕES MAIS LUCRATIVAS:
-${metrics.topRegions?.map((r: any) => `- ${r.region}: Margem ${r.margin?.toFixed(1)}%, Receita R$ ${r.rev?.toLocaleString("pt-BR")}`).join("\n")}
-
-Gere o plano estratégico completo conforme o formato solicitado.`;
+${metrics.topRegions?.map((r: any) => `- ${r.region}: Margem ${r.margin?.toFixed(1)}%, Receita R$ ${r.rev?.toLocaleString("pt-BR")}`).join("\n") || "N/A"}
+` : "Dados não disponíveis ainda."}`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -126,7 +67,7 @@ Gere o plano estratégico completo conforme o formato solicitado.`;
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          ...(messages || []),
         ],
         stream: true,
       }),
