@@ -19,7 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   Hotel, Clock, AlertTriangle, CheckCircle2, Copy,
   Eye, User, Search, RefreshCw, Loader2, Shield,
-  XCircle, Phone, Mail,
+  XCircle, Phone, Calendar, List, LayoutGrid,
 } from "lucide-react";
 
 interface LodgingTask {
@@ -44,22 +44,20 @@ interface LodgingTask {
   passengers?: any[];
 }
 
-const MILESTONE_CONFIG: Record<string, { label: string; color: string; urgency: string }> = {
-  D14: { label: "Confirmação 14d", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300", urgency: "LOW" },
-  D7: { label: "Confirmação 7d", color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300", urgency: "MEDIUM" },
-  H24: { label: "Confirmação 24h", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300", urgency: "HIGH" },
+const MILESTONE_CONFIG: Record<string, { label: string; short: string; color: string; dot: string }> = {
+  D14: { label: "Confirmação 14 dias", short: "14d", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300", dot: "bg-emerald-500" },
+  D7: { label: "Confirmação 7 dias", short: "7d", color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300", dot: "bg-amber-500" },
+  H24: { label: "Confirmação 24h", short: "24h", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300", dot: "bg-red-500" },
 };
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any }> = {
-  PENDENTE: { label: "Pendente", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300", icon: Clock },
-  EM_ANDAMENTO: { label: "Em andamento", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300", icon: Clock },
-  CONFIRMADO: { label: "Confirmado", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300", icon: CheckCircle2 },
-  PROBLEMA: { label: "Problema", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300", icon: XCircle },
-  BLOQUEADO: { label: "Bloqueado", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300", icon: Shield },
-  CANCELADO: { label: "Cancelado", color: "bg-gray-100 text-gray-500 dark:bg-gray-900/30 dark:text-gray-400", icon: XCircle },
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any; dot: string }> = {
+  PENDENTE: { label: "Pendente", color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300", icon: Clock, dot: "bg-blue-500" },
+  EM_ANDAMENTO: { label: "Em andamento", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300", icon: Clock, dot: "bg-indigo-500" },
+  CONFIRMADO: { label: "Confirmado", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300", icon: CheckCircle2, dot: "bg-emerald-500" },
+  PROBLEMA: { label: "Problema", color: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300", icon: XCircle, dot: "bg-red-500" },
+  BLOQUEADO: { label: "Bloqueado", color: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300", icon: Shield, dot: "bg-gray-400" },
+  CANCELADO: { label: "Cancelado", color: "bg-gray-100 text-gray-500 dark:bg-gray-900/30 dark:text-gray-400", icon: XCircle, dot: "bg-gray-300" },
 };
-
-// Using shared formatDateBR from @/lib/dateFormat
 
 function getTimeRemaining(checkin: string | null): string {
   if (!checkin) return "—";
@@ -71,22 +69,45 @@ function getTimeRemaining(checkin: string | null): string {
   return `${hours}h`;
 }
 
+function getDateLabel(dateStr: string | null): string {
+  if (!dateStr) return "Sem data";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (target.getTime() < today.getTime()) return "Atrasado";
+  if (target.getTime() === today.getTime()) return "Hoje";
+  if (target.getTime() === tomorrow.getTime()) return "Amanhã";
+  return formatDateBR(dateStr);
+}
+
+function getScheduledDateLabel(task: LodgingTask): string {
+  // Use scheduled_at for grouping (when the confirmation should happen)
+  const dateStr = task.scheduled_at_utc || task.hotel_checkin_datetime_utc;
+  return getDateLabel(dateStr);
+}
+
+function getDateKey(dateStr: string | null): string {
+  if (!dateStr) return "9999-sem-data";
+  const d = new Date(dateStr);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function Lodging() {
   const [tasks, setTasks] = useState<LodgingTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [search, setSearch] = useState("");
-  const [filterPeriod, setFilterPeriod] = useState("14d");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterMilestone, setFilterMilestone] = useState("all");
-  const [tab, setTab] = useState<"active" | "history">("active");
+  const [mainTab, setMainTab] = useState<"active" | "history">("active");
+  const [viewMode, setViewMode] = useState<"agenda" | "cards">("agenda");
 
-  // Confirm dialog
   const [confirmDialog, setConfirmDialog] = useState<LodgingTask | null>(null);
   const [confirmMethod, setConfirmMethod] = useState("");
   const [confirmNotes, setConfirmNotes] = useState("");
 
-  // Problem dialog
   const [problemDialog, setProblemDialog] = useState<LodgingTask | null>(null);
   const [issueType, setIssueType] = useState("");
   const [issueNotes, setIssueNotes] = useState("");
@@ -105,7 +126,6 @@ export default function Lodging() {
     if (!tasksData) { setLoading(false); return; }
 
     const saleIds = [...new Set(tasksData.map(t => t.sale_id))];
-
     const [salesRes, passengersRes] = await Promise.all([
       saleIds.length > 0 ? supabase.from("sales").select("*").in("id", saleIds) : { data: [] },
       saleIds.length > 0 ? supabase.from("sale_passengers").select("passenger_id, sale_id, passengers(*)").in("sale_id", saleIds) : { data: [] },
@@ -118,13 +138,11 @@ export default function Lodging() {
       if (sp.passengers) paxBySale.get(sp.sale_id)!.push(sp.passengers);
     });
 
-    const enriched = tasksData.map(t => ({
+    setTasks(tasksData.map(t => ({
       ...t,
       sale: salesMap.get(t.sale_id),
       passengers: paxBySale.get(t.sale_id) || [],
-    }));
-
-    setTasks(enriched);
+    })));
     setLoading(false);
   };
 
@@ -139,9 +157,7 @@ export default function Lodging() {
       await fetchTasks();
     } catch (err: any) {
       toast({ title: "Erro ao gerar tarefas", description: err.message, variant: "destructive" });
-    } finally {
-      setGenerating(false);
-    }
+    } finally { setGenerating(false); }
   };
 
   const handleConfirm = async () => {
@@ -190,26 +206,13 @@ export default function Lodging() {
 
   const filtered = useMemo(() => {
     let result = tasks;
-
-    if (tab === "active") {
+    if (mainTab === "active") {
       result = result.filter(t => !["CONFIRMADO", "CANCELADO"].includes(t.status));
     } else {
       result = result.filter(t => ["CONFIRMADO", "CANCELADO"].includes(t.status));
     }
-
-    if (filterPeriod !== "all" && tab === "active") {
-      const now = Date.now();
-      const days = filterPeriod === "today" ? 1 : filterPeriod === "7d" ? 7 : 14;
-      result = result.filter(t => {
-        if (!t.hotel_checkin_datetime_utc) return true;
-        const diff = new Date(t.hotel_checkin_datetime_utc).getTime() - now;
-        return diff <= days * 24 * 60 * 60 * 1000;
-      });
-    }
-
     if (filterStatus !== "all") result = result.filter(t => t.status === filterStatus);
     if (filterMilestone !== "all") result = result.filter(t => t.milestone === filterMilestone);
-
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(t => {
@@ -219,24 +222,127 @@ export default function Lodging() {
           t.hotel_reservation_code?.toLowerCase().includes(q) ||
           t.sale?.name?.toLowerCase().includes(q) ||
           t.sale?.display_id?.toLowerCase().includes(q) ||
-          t.sale?.destination_iata?.toLowerCase().includes(q) ||
           paxNames.includes(q)
         );
       });
     }
-
     return result;
-  }, [tasks, tab, filterPeriod, filterStatus, filterMilestone, search]);
+  }, [tasks, mainTab, filterStatus, filterMilestone, search]);
 
-  const grouped = useMemo(() => {
-    if (tab === "history") return { history: filtered };
-    const h24 = filtered.filter(t => t.milestone === "H24");
-    const d7 = filtered.filter(t => t.milestone === "D7");
-    const d14 = filtered.filter(t => t.milestone === "D14");
-    const bloqueado = filtered.filter(t => t.status === "BLOQUEADO");
-    const problema = filtered.filter(t => t.status === "PROBLEMA");
-    return { h24, d7, d14, bloqueado, problema };
-  }, [filtered, tab]);
+  // Group by scheduled date (when confirmation should happen)
+  const groupedByDate = useMemo(() => {
+    const groups = new Map<string, { label: string; tasks: LodgingTask[] }>();
+    filtered.forEach(t => {
+      const dateStr = t.scheduled_at_utc || t.hotel_checkin_datetime_utc;
+      const key = getDateKey(dateStr);
+      const label = getDateLabel(dateStr);
+      if (!groups.has(key)) groups.set(key, { label, tasks: [] });
+      groups.get(key)!.tasks.push(t);
+    });
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [filtered]);
+
+  // Stats
+  const activeTasks = tasks.filter(t => !["CONFIRMADO", "CANCELADO"].includes(t.status));
+  const todayTasks = activeTasks.filter(t => {
+    const dateStr = t.scheduled_at_utc || t.hotel_checkin_datetime_utc;
+    return dateStr && getDateLabel(dateStr) === "Hoje";
+  });
+  const tomorrowTasks = activeTasks.filter(t => {
+    const dateStr = t.scheduled_at_utc || t.hotel_checkin_datetime_utc;
+    return dateStr && getDateLabel(dateStr) === "Amanhã";
+  });
+  const problemTasks = activeTasks.filter(t => t.status === "PROBLEMA");
+  const overdueTasks = activeTasks.filter(t => {
+    const dateStr = t.scheduled_at_utc || t.hotel_checkin_datetime_utc;
+    return dateStr && getDateLabel(dateStr) === "Atrasado";
+  });
+
+  const renderAgendaRow = (task: LodgingTask) => {
+    const sale = task.sale;
+    const milestoneCfg = MILESTONE_CONFIG[task.milestone] || MILESTONE_CONFIG.D14;
+    const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.PENDENTE;
+    const StatusIcon = statusCfg.icon;
+    const paxNames = task.passengers?.map((p: any) => p.full_name).join(", ") || "—";
+
+    return (
+      <div
+        key={task.id}
+        className="flex items-center gap-3 px-4 py-3 border-b border-border/40 last:border-b-0 hover:bg-muted/30 transition-colors group"
+      >
+        {/* Milestone dot */}
+        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${milestoneCfg.dot}`} />
+
+        {/* Milestone badge */}
+        <Badge className={`${milestoneCfg.color} text-[9px] shrink-0 h-5`}>{milestoneCfg.short}</Badge>
+
+        {/* Hotel */}
+        <div className="flex items-center gap-2 w-48 shrink-0 min-w-0">
+          <Hotel className="w-4 h-4 text-muted-foreground shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-foreground truncate">{task.hotel_name || "Hotel não informado"}</p>
+            <p className="text-[10px] text-muted-foreground truncate">{sale?.destination_city || sale?.destination_iata || ""}</p>
+          </div>
+        </div>
+
+        {/* Check-in date */}
+        <div className="w-24 shrink-0 hidden md:block">
+          <p className="text-xs text-muted-foreground">
+            {task.hotel_checkin_datetime_utc ? formatDateBR(task.hotel_checkin_datetime_utc) : "—"}
+          </p>
+        </div>
+
+        {/* Reservation code */}
+        <div className="w-28 shrink-0 hidden lg:block">
+          {task.hotel_reservation_code ? (
+            <button onClick={() => copyToClipboard(task.hotel_reservation_code!)} className="flex items-center gap-1 text-xs font-mono text-foreground hover:text-primary transition-colors">
+              {task.hotel_reservation_code} <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100" />
+            </button>
+          ) : (
+            <span className="text-xs text-muted-foreground/50">—</span>
+          )}
+        </div>
+
+        {/* Passengers */}
+        <div className="flex-1 min-w-0 hidden md:block">
+          <p className="text-xs text-muted-foreground truncate" title={paxNames}>
+            <User className="w-3 h-3 inline mr-1" />{paxNames}
+          </p>
+        </div>
+
+        {/* Status */}
+        <Badge className={`${statusCfg.color} text-[9px] gap-0.5 shrink-0`}>
+          <StatusIcon className="w-3 h-3" />
+          {getTimeRemaining(task.hotel_checkin_datetime_utc)}
+        </Badge>
+
+        {/* Actions */}
+        <div className="flex gap-1 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
+          {!["CONFIRMADO", "CANCELADO"].includes(task.status) && (
+            <>
+              <Button size="sm" variant="default" className="text-[10px] h-6 px-2" onClick={() => {
+                setConfirmDialog(task);
+                setConfirmMethod("");
+                setConfirmNotes(task.notes || "");
+              }}>
+                <CheckCircle2 className="w-3 h-3" />
+              </Button>
+              <Button size="sm" variant="outline" className="text-[10px] h-6 px-2 text-red-600 border-red-200 hover:bg-red-50" onClick={() => {
+                setProblemDialog(task);
+                setIssueType("");
+                setIssueNotes("");
+              }}>
+                <XCircle className="w-3 h-3" />
+              </Button>
+            </>
+          )}
+          <Button size="sm" variant="ghost" className="text-[10px] h-6 px-2" onClick={() => navigate(`/sales/${task.sale_id}`)}>
+            <Eye className="w-3 h-3" />
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   const renderCard = (task: LodgingTask) => {
     const sale = task.sale;
@@ -245,63 +351,43 @@ export default function Lodging() {
     const StatusIcon = statusCfg.icon;
 
     return (
-      <Card key={task.id} className="p-4 glass-card hover:shadow-md transition-shadow">
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge className={`${milestoneCfg.color} text-[10px] gap-1`}>
-              {milestoneCfg.label}
-            </Badge>
+      <Card key={task.id} className="p-4 hover:shadow-md transition-shadow">
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Badge className={`${milestoneCfg.color} text-[10px]`}>{milestoneCfg.short}</Badge>
             <Badge className={`${statusCfg.color} text-[10px] gap-1`}>
-              <StatusIcon className="w-3 h-3" />
-              {statusCfg.label}
+              <StatusIcon className="w-3 h-3" /> {statusCfg.label}
             </Badge>
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-xs font-bold text-foreground">
-              {!["CONFIRMADO", "CANCELADO"].includes(task.status) ? getTimeRemaining(task.hotel_checkin_datetime_utc) : "✓"}
-            </p>
-            {!["CONFIRMADO", "CANCELADO"].includes(task.status) && (
-              <p className="text-[10px] text-muted-foreground">para check-in</p>
-            )}
-          </div>
+          <span className="text-xs font-bold text-foreground whitespace-nowrap">
+            {!["CONFIRMADO", "CANCELADO"].includes(task.status) ? getTimeRemaining(task.hotel_checkin_datetime_utc) : "✓"}
+          </span>
         </div>
 
-        {/* Hotel info */}
         <div className="flex items-center gap-2 mb-2">
-          <Hotel className="w-4 h-4 text-muted-foreground shrink-0" />
+          <Hotel className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-semibold text-foreground">{task.hotel_name || "Hotel não informado"}</span>
         </div>
 
         <div className="text-xs text-muted-foreground mb-2 space-y-0.5">
-          {task.hotel_checkin_datetime_utc && (
-            <p>📅 Check-in: {formatDateBR(task.hotel_checkin_datetime_utc)}</p>
-          )}
-          {sale?.destination_iata && <p>📍 Destino: {sale.destination_iata}</p>}
+          {task.hotel_checkin_datetime_utc && <p>📅 Check-in: {formatDateBR(task.hotel_checkin_datetime_utc)}</p>}
+          {sale?.destination_iata && <p>📍 {sale.destination_city || sale.destination_iata}</p>}
           {task.hotel_reservation_code && (
             <p className="flex items-center gap-1">
-              📋 Reserva: <span className="font-mono font-bold text-foreground">{task.hotel_reservation_code}</span>
-              <button onClick={() => copyToClipboard(task.hotel_reservation_code!)} className="hover:text-primary">
-                <Copy className="w-3 h-3" />
-              </button>
+              📋 <span className="font-mono font-bold text-foreground">{task.hotel_reservation_code}</span>
+              <button onClick={() => copyToClipboard(task.hotel_reservation_code!)} className="hover:text-primary"><Copy className="w-3 h-3" /></button>
             </p>
           )}
-          {sale?.hotel_room && <p>🛏️ Quarto: {sale.hotel_room}</p>}
-          {sale?.hotel_meal_plan && <p>🍽️ Alimentação: {sale.hotel_meal_plan}</p>}
+          {sale?.hotel_room && <p>🛏️ {sale.hotel_room}</p>}
         </div>
 
-        {/* Passengers */}
         {task.passengers && task.passengers.length > 0 && (
-          <div className="mb-3 space-y-1">
+          <div className="mb-3 space-y-0.5">
             {task.passengers.slice(0, 2).map((p: any, i: number) => (
-              <div key={i} className="flex items-center gap-2 text-xs">
+              <p key={i} className="text-xs flex items-center gap-1.5">
                 <User className="w-3 h-3 text-muted-foreground" />
                 <span className="text-foreground">{p.full_name}</span>
-                {p.phone && (
-                  <button onClick={() => copyToClipboard(p.phone)} className="text-muted-foreground hover:text-primary">
-                    <Phone className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
+              </p>
             ))}
             {task.passengers.length > 2 && (
               <p className="text-[10px] text-muted-foreground">+{task.passengers.length - 2} hóspede(s)</p>
@@ -309,30 +395,21 @@ export default function Lodging() {
           </div>
         )}
 
-        {/* Issue info */}
         {task.status === "PROBLEMA" && task.issue_type && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded p-2 mb-3 text-[10px] text-red-700 dark:text-red-300">
-            ⚠️ {task.issue_type}{task.issue_resolution && ` — ${task.issue_resolution}`}
+            ⚠️ {task.issue_type}
           </div>
         )}
 
-        {/* Contact method */}
-        {task.contact_method && (
-          <p className="text-[10px] text-muted-foreground mb-2">
-            📞 Contato: {task.contact_method} {task.contact_details && `(${task.contact_details})`}
-          </p>
-        )}
-
-        {/* Actions */}
-        <div className="flex flex-wrap gap-1.5 mt-2">
+        <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-border/40">
           {!["CONFIRMADO", "CANCELADO"].includes(task.status) && (
             <>
-              <Button size="sm" variant="default" className="text-[10px] h-7" onClick={() => {
+              <Button size="sm" className="text-[10px] h-7" onClick={() => {
                 setConfirmDialog(task);
                 setConfirmMethod("");
                 setConfirmNotes(task.notes || "");
               }}>
-                <CheckCircle2 className="w-3 h-3 mr-1" /> Confirmado
+                <CheckCircle2 className="w-3 h-3 mr-1" /> Confirmar
               </Button>
               <Button size="sm" variant="destructive" className="text-[10px] h-7" onClick={() => {
                 setProblemDialog(task);
@@ -343,11 +420,6 @@ export default function Lodging() {
               </Button>
             </>
           )}
-          {task.hotel_reservation_code && (
-            <Button size="sm" variant="outline" className="text-[10px] h-7" onClick={() => copyToClipboard(task.hotel_reservation_code!)}>
-              <Copy className="w-3 h-3 mr-1" /> Reserva
-            </Button>
-          )}
           <Button size="sm" variant="ghost" className="text-[10px] h-7" onClick={() => navigate(`/sales/${task.sale_id}`)}>
             <Eye className="w-3 h-3 mr-1" /> Venda
           </Button>
@@ -356,42 +428,22 @@ export default function Lodging() {
     );
   };
 
-  const renderSection = (title: string, icon: any, items: LodgingTask[], color: string) => {
-    if (items.length === 0) return null;
-    const Icon = icon;
-    return (
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Icon className={`w-4 h-4 ${color}`} />
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-          <Badge variant="secondary" className="text-[10px]">{items.length}</Badge>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {items.map(renderCard)}
-        </div>
-      </div>
-    );
+  const dateLabelStyle = (label: string) => {
+    if (label === "Atrasado") return "bg-red-500 text-white";
+    if (label === "Hoje") return "bg-primary text-primary-foreground";
+    if (label === "Amanhã") return "bg-amber-500 text-white";
+    return "bg-muted text-muted-foreground";
   };
 
-  // KPIs
-  const activeTasks = tasks.filter(t => !["CONFIRMADO", "CANCELADO"].includes(t.status));
-  const kpis = [
-    { label: "14 dias", value: activeTasks.filter(t => t.milestone === "D14").length, color: "text-emerald-600" },
-    { label: "7 dias", value: activeTasks.filter(t => t.milestone === "D7").length, color: "text-amber-600" },
-    { label: "24 horas", value: activeTasks.filter(t => t.milestone === "H24").length, color: "text-red-600" },
-    { label: "Problemas", value: activeTasks.filter(t => t.status === "PROBLEMA").length, color: "text-red-600" },
-    { label: "Bloqueados", value: activeTasks.filter(t => t.status === "BLOQUEADO").length, color: "text-gray-600" },
-    { label: "Confirmados", value: tasks.filter(t => t.status === "CONFIRMADO").length, color: "text-emerald-600" },
-  ];
-
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="p-4 md:p-6 space-y-5 animate-fade-in">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-serif text-foreground flex items-center gap-2">
-            <Hotel className="w-6 h-6" /> Confirmar Hospedagens
+          <h1 className="text-xl md:text-2xl font-serif text-foreground flex items-center gap-2">
+            <Hotel className="w-5 h-5 md:w-6 md:h-6" /> Confirmar Hospedagens
           </h1>
-          <p className="text-sm text-muted-foreground">Confirmações de reserva de hotel</p>
+          <p className="text-xs text-muted-foreground">Confirmações de reserva organizadas por data</p>
         </div>
         <Button size="sm" onClick={handleGenerate} disabled={generating}>
           {generating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
@@ -399,23 +451,52 @@ export default function Lodging() {
         </Button>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        {kpis.map(k => (
-          <Card key={k.label} className="p-3 glass-card text-center">
-            <p className={`text-2xl font-bold ${k.color}`}>{k.value}</p>
-            <p className="text-[10px] text-muted-foreground">{k.label}</p>
-          </Card>
-        ))}
+      {/* Quick stats */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <Card className={`p-4 border-2 ${overdueTasks.length > 0 ? "border-red-500/50 bg-red-50 dark:bg-red-950/20" : "border-transparent"}`}>
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="w-4 h-4 text-red-500" />
+            <span className="text-xs font-medium text-muted-foreground">Atrasados</span>
+          </div>
+          <p className="text-2xl font-bold text-red-600">{overdueTasks.length}</p>
+        </Card>
+        <Card className={`p-4 border-2 ${todayTasks.length > 0 ? "border-primary/50 bg-primary/5" : "border-transparent"}`}>
+          <div className="flex items-center gap-2 mb-1">
+            <Calendar className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-muted-foreground">Hoje</span>
+          </div>
+          <p className="text-2xl font-bold text-primary">{todayTasks.length}</p>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Clock className="w-4 h-4 text-amber-500" />
+            <span className="text-xs font-medium text-muted-foreground">Amanhã</span>
+          </div>
+          <p className="text-2xl font-bold text-amber-600">{tomorrowTasks.length}</p>
+        </Card>
+        <Card className={`p-4 ${problemTasks.length > 0 ? "border-2 border-red-300 dark:border-red-800" : ""}`}>
+          <div className="flex items-center gap-2 mb-1">
+            <XCircle className="w-4 h-4 text-red-500" />
+            <span className="text-xs font-medium text-muted-foreground">Problemas</span>
+          </div>
+          <p className="text-2xl font-bold text-red-600">{problemTasks.length}</p>
+        </Card>
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+            <span className="text-xs font-medium text-muted-foreground">Confirmados</span>
+          </div>
+          <p className="text-2xl font-bold text-emerald-600">{tasks.filter(t => t.status === "CONFIRMADO").length}</p>
+        </Card>
       </div>
 
-      {/* Tabs + Filters */}
+      {/* Toolbar */}
       <div className="flex flex-wrap gap-2 items-center">
         <div className="flex gap-1 bg-muted rounded-lg p-0.5">
-          <button onClick={() => setTab("active")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${tab === "active" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
-            Ativos
+          <button onClick={() => setMainTab("active")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mainTab === "active" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
+            Ativos ({activeTasks.length})
           </button>
-          <button onClick={() => setTab("history")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${tab === "history" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
+          <button onClick={() => setMainTab("history")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mainTab === "history" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
             Histórico
           </button>
         </div>
@@ -424,22 +505,13 @@ export default function Lodging() {
 
         <div className="relative">
           <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar hotel, hóspede, reserva..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-xs w-[220px]" />
+          <Input placeholder="Buscar hotel, hóspede, reserva..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-xs w-[200px]" />
         </div>
 
-        {tab === "active" && (
+        {mainTab === "active" && (
           <>
-            <Select value={filterPeriod} onValueChange={setFilterPeriod}>
-              <SelectTrigger className="w-[130px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Hoje</SelectItem>
-                <SelectItem value="7d">Próximos 7 dias</SelectItem>
-                <SelectItem value="14d">Próximos 14 dias</SelectItem>
-                <SelectItem value="all">Todos</SelectItem>
-              </SelectContent>
-            </Select>
             <Select value={filterMilestone} onValueChange={setFilterMilestone}>
-              <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[110px] h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas etapas</SelectItem>
                 <SelectItem value="H24">24 horas</SelectItem>
@@ -454,39 +526,59 @@ export default function Lodging() {
                 <SelectItem value="PENDENTE">Pendente</SelectItem>
                 <SelectItem value="EM_ANDAMENTO">Em andamento</SelectItem>
                 <SelectItem value="PROBLEMA">Problema</SelectItem>
-                <SelectItem value="BLOQUEADO">Bloqueado</SelectItem>
               </SelectContent>
             </Select>
           </>
         )}
+
+        <div className="flex gap-0.5 bg-muted rounded-md p-0.5">
+          <button onClick={() => setViewMode("agenda")} className={`p-1.5 rounded ${viewMode === "agenda" ? "bg-background shadow-sm" : ""}`}>
+            <List className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded ${viewMode === "cards" ? "bg-background shadow-sm" : ""}`}>
+            <LayoutGrid className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
       {loading ? (
-        <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+        <div className="text-center py-12"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></div>
       ) : filtered.length === 0 ? (
-        <Card className="p-12 text-center glass-card">
-          <Hotel className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+        <Card className="p-12 text-center">
+          <Hotel className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-sm text-muted-foreground mb-3">
-            {tab === "active" ? "Nenhuma confirmação pendente" : "Nenhuma confirmação no histórico"}
+            {mainTab === "active" ? "Nenhuma confirmação pendente" : "Nenhuma confirmação no histórico"}
           </p>
-          {tab === "active" && (
+          {mainTab === "active" && (
             <Button size="sm" variant="outline" onClick={handleGenerate} disabled={generating}>
               <RefreshCw className="w-3 h-3 mr-1" /> Gerar tarefas
             </Button>
           )}
         </Card>
-      ) : tab === "active" ? (
-        <div className="space-y-6">
-          {renderSection("🔴 Confirmação 24h — CRÍTICO", AlertTriangle, (grouped as any).h24 || [], "text-red-600")}
-          {renderSection("🟡 Confirmação 7 dias", AlertTriangle, (grouped as any).d7 || [], "text-amber-600")}
-          {renderSection("🟢 Confirmação 14 dias", Clock, (grouped as any).d14 || [], "text-emerald-600")}
-          {renderSection("⚠️ Problemas", XCircle, (grouped as any).problema || [], "text-red-600")}
-          {renderSection("⚫ Bloqueados — dados faltando", Shield, (grouped as any).bloqueado || [], "text-gray-600")}
-        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {filtered.map(renderCard)}
+        <div className="space-y-4">
+          {groupedByDate.map(([key, group]) => (
+            <div key={key}>
+              <div className="flex items-center gap-2 mb-2 sticky top-0 z-10 bg-background/95 backdrop-blur py-1">
+                <Badge className={`${dateLabelStyle(group.label)} text-xs font-bold px-3 py-1`}>
+                  {group.label}
+                </Badge>
+                <span className="text-xs text-muted-foreground">{group.tasks.length} confirmação(ões)</span>
+                <div className="flex-1 h-px bg-border/50" />
+              </div>
+
+              {viewMode === "agenda" ? (
+                <Card className="overflow-hidden divide-y divide-border/30">
+                  {group.tasks.map(renderAgendaRow)}
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {group.tasks.map(renderCard)}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
@@ -497,6 +589,15 @@ export default function Lodging() {
             <DialogTitle>Confirmar Hospedagem</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {confirmDialog && (
+              <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                <p className="font-semibold">{confirmDialog.hotel_name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {confirmDialog.hotel_reservation_code && `Reserva: ${confirmDialog.hotel_reservation_code} • `}
+                  {confirmDialog.passengers?.map((p: any) => p.full_name).join(", ")}
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label className="text-xs">Método de contato</Label>
               <Select value={confirmMethod} onValueChange={setConfirmMethod}>
@@ -530,6 +631,12 @@ export default function Lodging() {
             <DialogTitle>Registrar Problema</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {problemDialog && (
+              <div className="bg-muted/50 rounded-lg p-3 text-sm">
+                <p className="font-semibold">{problemDialog.hotel_name}</p>
+                <p className="text-xs text-muted-foreground">{problemDialog.hotel_reservation_code}</p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label className="text-xs">Tipo do problema</Label>
               <Select value={issueType} onValueChange={setIssueType}>
@@ -546,7 +653,7 @@ export default function Lodging() {
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Descrição e plano de resolução</Label>
-              <Textarea placeholder="Descreva o problema e o que será feito..." value={issueNotes} onChange={e => setIssueNotes(e.target.value)} rows={4} />
+              <Textarea placeholder="Descreva o problema..." value={issueNotes} onChange={e => setIssueNotes(e.target.value)} rows={4} />
             </div>
           </div>
           <DialogFooter>
