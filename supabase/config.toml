@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.natleva-image-gen]
 verify_jwt = false
+
+[functions.web-search]
+verify_jwt = false

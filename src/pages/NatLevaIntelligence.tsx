@@ -19,7 +19,7 @@ import {
   History, Sparkles, AlertTriangle, Target, DollarSign, Users,
   TrendingUp, Shield, Zap, ChevronRight, Mic, MicOff, Paperclip, X,
   Image, FileSpreadsheet, Link2, Download, ImagePlus, FileDown, Table,
-  Volume2, VolumeX, Radio, Cpu,
+  Volume2, VolumeX, Radio, Cpu, Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 import { exportChatAsPDF, exportChatAsXLSX, exportTableFromContent } from "@/lib/chatExport";
@@ -56,7 +56,7 @@ const SUGGESTIONS = [
   { icon: TrendingUp, text: "Analise meu fluxo de caixa e sugira otimizações" },
   { icon: Shield, text: "Quais clientes VIP estão em risco de churn e o que fazer?" },
   { icon: Sparkles, text: "Gere uma imagem de um banner promocional da NatLeva para Instagram" },
-  { icon: Zap, text: "Quais gargalos operacionais devo resolver primeiro?" },
+  { icon: Globe, text: "Pesquise tendências de turismo e notícias do setor aéreo hoje" },
 ];
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -700,6 +700,7 @@ export default function NatLevaIntelligence() {
                     <Badge variant="outline" className="text-[9px] gap-1"><Image className="w-2.5 h-2.5" /> 🎨 Imagem</Badge>
                     <Badge variant="outline" className="text-[9px] gap-1"><Mic className="w-2.5 h-2.5" /> STT</Badge>
                     <Badge variant="outline" className="text-[9px] gap-1"><Volume2 className="w-2.5 h-2.5" /> TTS</Badge>
+                    <Badge variant="outline" className="text-[9px] gap-1 text-emerald-600 border-emerald-200">🌐 Busca Web</Badge>
                   </div>
 
                   <p className="text-xs text-muted-foreground/60 max-w-lg mb-2">
@@ -707,6 +708,9 @@ export default function NatLevaIntelligence() {
                   </p>
                   <p className="text-xs text-muted-foreground/60 max-w-lg mb-2">
                     🎙️ Microfone • 📎 Arquivos • 🔗 Links • 🎨 Imagens • 🗣️ Resposta por voz • 📄 PDF • 📊 Planilhas
+                  </p>
+                  <p className="text-xs text-muted-foreground/60 max-w-lg mb-1">
+                    🌐 Busca em tempo real: DuckDuckGo • Wikipedia • Google News — <span className="text-emerald-600 font-medium">100% gratuito, sem API key</span>
                   </p>
                   <p className="text-xs text-muted-foreground/60 max-w-lg mb-6">
                     Vendas • Financeiro • RH • Clientes • Metas • Performance • Fornecedores • Check-in • Hospedagens
