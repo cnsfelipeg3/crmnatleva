@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.livechat-ai]
 verify_jwt = false
+
+[functions.import-chatguru]
+verify_jwt = false

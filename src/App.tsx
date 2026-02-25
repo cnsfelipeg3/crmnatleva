@@ -30,6 +30,7 @@ import WhatsAppIntegration from "@/pages/WhatsAppIntegration";
 import FlowBuilder from "@/pages/FlowBuilder";
 import AIIntegrations from "@/pages/AIIntegrations";
 import AIKnowledgeBase from "@/pages/AIKnowledgeBase";
+import ImportChatGuru from "@/pages/ImportChatGuru";
 
 // RH
 import RHIndex from "@/pages/rh/RHIndex";
@@ -97,6 +98,7 @@ function AppRoutes() {
          <Route path="/livechat/flows" element={<FlowBuilder />} />
          <Route path="/livechat/integrations" element={<AIIntegrations />} />
          <Route path="/livechat/knowledge-base" element={<AIKnowledgeBase />} />
+         <Route path="/livechat/import-chatguru" element={<ImportChatGuru />} />
 
         {/* Financeiro */}
         <Route path="/financeiro" element={<FinanceiroIndex />} />
