@@ -190,6 +190,108 @@ export type Database = {
           },
         ]
       }
+      ai_chat_history: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          messages: Json
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          messages?: Json
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          messages?: Json
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_config: {
+        Row: {
+          config_key: string
+          config_value: string
+          created_at: string
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          config_key: string
+          config_value?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_value?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      ai_knowledge_base: {
+        Row: {
+          category: string
+          content_text: string | null
+          created_at: string
+          description: string | null
+          file_name: string | null
+          file_type: string | null
+          file_url: string | null
+          id: string
+          is_active: boolean | null
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          category?: string
+          content_text?: string | null
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          category?: string
+          content_text?: string | null
+          created_at?: string
+          description?: string | null
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       airline_checkin_rules: {
         Row: {
           airline_iata: string

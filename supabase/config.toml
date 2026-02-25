@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.client-intelligence-ai]
 verify_jwt = false
+
+[functions.natleva-intelligence]
+verify_jwt = false

@@ -21,6 +21,7 @@ import ImportData from "@/pages/ImportData";
 import Pendencias from "@/pages/Pendencias";
 import Viagens from "@/pages/Viagens";
 import ClientIntelligence from "@/pages/ClientIntelligence";
+import NatLevaIntelligence from "@/pages/NatLevaIntelligence";
 import NotFound from "@/pages/NotFound";
 
 // RH
@@ -79,6 +80,7 @@ function AppRoutes() {
         <Route path="/clients/:id" element={<ClientDetail />} />
         <Route path="/passengers" element={<Passengers />} />
         <Route path="/inteligencia-clientes" element={<ClientIntelligence />} />
+        <Route path="/natleva-intelligence" element={<NatLevaIntelligence />} />
         <Route path="/birthdays" element={<Birthdays />} />
         <Route path="/import" element={<ImportData />} />
         <Route path="/pendencias" element={<Pendencias />} />
