@@ -4,7 +4,7 @@ import logoNatleva from "@/assets/logo-natleva.png";
 import {
   LayoutDashboard, Plus, List, Settings, LogOut, Plane, Users,
   ChevronLeft, ChevronRight, ClipboardCheck, Hotel, Sun, Moon, Cake, FileUp,
-  AlertTriangle, DollarSign, ChevronDown, Brain,
+  AlertTriangle, DollarSign, ChevronDown, Brain, Sparkles,
   ArrowUpRight, ArrowDownRight, Wallet, CreditCard, FileText, Building2,
   Percent, FolderTree, Users2, BarChart3, Cog,
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
@@ -21,6 +21,7 @@ const navItems = [
   { to: "/hospedagem", icon: Hotel, label: "Confirmar Hospedagens" },
   { to: "/passengers", icon: Users, label: "Passageiros" },
   { to: "/inteligencia-clientes", icon: Brain, label: "Inteligência Clientes" },
+  { to: "/natleva-intelligence", icon: Sparkles, label: "NatLeva Intelligence" },
   { to: "/birthdays", icon: Cake, label: "Aniversariantes" },
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
   { to: "/import", icon: FileUp, label: "Importar Dados" },
