@@ -16,6 +16,8 @@ import {
   MessageSquare, Zap, GitBranch, Tag, ArrowRightLeft, Sparkles, UserCheck,
   Settings2, X, LayoutTemplate, Plug, AlertCircle, CheckCircle2,
   Maximize2, AlignVerticalJustifyCenter, FlaskConical, Eye,
+  Bot, Send, Filter, Workflow, Cable, GripVertical,
+  Radio, Timer, Hash, Shield, Globe2, Cpu,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,13 +37,13 @@ const GREEN = "hsl(142 71% 45%)";
 const RED = "hsl(0 72% 51%)";
 
 const NODE_LIBRARY = [
-  { type: "trigger", label: "Gatilho", icon: Zap, color: "hsl(var(--chart-4))", description: "Inicia o fluxo quando um evento ocorre" },
-  { type: "message", label: "Mensagem", icon: MessageSquare, color: "hsl(var(--chart-1))", description: "Envia uma mensagem de texto" },
-  { type: "condition", label: "Condição", icon: GitBranch, color: "hsl(var(--chart-3))", description: "Ramifica o fluxo (IF / ELSE)" },
-  { type: "action_tag", label: "Aplicar Tag", icon: Tag, color: "hsl(var(--chart-2))", description: "Adiciona tags ao contato" },
-  { type: "action_funnel", label: "Mover Funil", icon: ArrowRightLeft, color: "hsl(var(--chart-5))", description: "Move o lead no funil" },
-  { type: "ai_agent", label: "Agente IA", icon: Sparkles, color: "hsl(280 80% 60%)", description: "IA com provedor configurável" },
-  { type: "handoff", label: "Transferir", icon: UserCheck, color: "hsl(var(--muted-foreground))", description: "Transfere para humano" },
+  { type: "trigger", label: "Gatilho", icon: Radio, color: "hsl(45 93% 58%)", emoji: "⚡", description: "Inicia o fluxo quando um evento ocorre" },
+  { type: "message", label: "Mensagem", icon: Send, color: "hsl(210 100% 56%)", emoji: "💬", description: "Envia uma mensagem de texto" },
+  { type: "condition", label: "Condição", icon: Filter, color: "hsl(32 95% 55%)", emoji: "🔀", description: "Ramifica o fluxo (IF / ELSE)" },
+  { type: "action_tag", label: "Aplicar Tag", icon: Hash, color: "hsl(280 65% 55%)", emoji: "🏷️", description: "Adiciona tags ao contato" },
+  { type: "action_funnel", label: "Mover Funil", icon: Workflow, color: "hsl(160 60% 45%)", emoji: "📊", description: "Move o lead no funil" },
+  { type: "ai_agent", label: "Agente IA", icon: Cpu, color: "hsl(280 80% 60%)", emoji: "🤖", description: "IA com provedor configurável" },
+  { type: "handoff", label: "Transferir", icon: Cable, color: "hsl(0 0% 55%)", emoji: "👤", description: "Transfere para humano" },
 ] as const;
 
 const PROVIDER_BADGES: Record<string, { label: string; icon: string; color: string }> = {
