@@ -496,6 +496,192 @@ export type Database = {
           },
         ]
       }
+      automation_edges: {
+        Row: {
+          created_at: string
+          flow_id: string
+          id: string
+          label: string | null
+          source_handle: string | null
+          source_node_id: string
+          target_handle: string | null
+          target_node_id: string
+        }
+        Insert: {
+          created_at?: string
+          flow_id: string
+          id?: string
+          label?: string | null
+          source_handle?: string | null
+          source_node_id: string
+          target_handle?: string | null
+          target_node_id: string
+        }
+        Update: {
+          created_at?: string
+          flow_id?: string
+          id?: string
+          label?: string | null
+          source_handle?: string | null
+          source_node_id?: string
+          target_handle?: string | null
+          target_node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_edges_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "automation_flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_edges_source_node_id_fkey"
+            columns: ["source_node_id"]
+            isOneToOne: false
+            referencedRelation: "automation_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_edges_target_node_id_fkey"
+            columns: ["target_node_id"]
+            isOneToOne: false
+            referencedRelation: "automation_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_executions: {
+        Row: {
+          completed_at: string | null
+          conversation_id: string | null
+          error_message: string | null
+          flow_id: string
+          id: string
+          started_at: string
+          status: string
+          trace: Json
+          variables: Json
+        }
+        Insert: {
+          completed_at?: string | null
+          conversation_id?: string | null
+          error_message?: string | null
+          flow_id: string
+          id?: string
+          started_at?: string
+          status?: string
+          trace?: Json
+          variables?: Json
+        }
+        Update: {
+          completed_at?: string | null
+          conversation_id?: string | null
+          error_message?: string | null
+          flow_id?: string
+          id?: string
+          started_at?: string
+          status?: string
+          trace?: Json
+          variables?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_executions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_executions_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "automation_flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_flows: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_template: boolean
+          name: string
+          status: string
+          template_category: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_template?: boolean
+          name: string
+          status?: string
+          template_category?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_template?: boolean
+          name?: string
+          status?: string
+          template_category?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      automation_nodes: {
+        Row: {
+          config: Json
+          created_at: string
+          flow_id: string
+          id: string
+          label: string
+          node_type: string
+          position_x: number
+          position_y: number
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          flow_id: string
+          id?: string
+          label?: string
+          node_type: string
+          position_x?: number
+          position_y?: number
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          flow_id?: string
+          id?: string
+          label?: string
+          node_type?: string
+          position_x?: number
+          position_y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_nodes_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "automation_flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chart_of_accounts: {
         Row: {
           code: string | null

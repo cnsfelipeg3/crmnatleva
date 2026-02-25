@@ -8,7 +8,7 @@ import {
   Plus, Tag, ArrowRight, MessageSquare, Clock, CheckCheck, Check,
   X, Star, AlertTriangle, Plane, DollarSign,
   ShoppingCart, ExternalLink, FileText, ChevronLeft, RefreshCw, Edit3,
-  Zap, TrendingUp, MapPin, Users, Crown, Target,
+  Zap, TrendingUp, MapPin, Users, Crown, Target, GitBranch,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -262,6 +262,9 @@ function ConversationList({
             LiveChat
           </h2>
           <div className="flex items-center gap-1">
+            <Button size="icon" variant="outline" className="h-8 w-8 rounded-lg" onClick={() => window.location.href = "/livechat/flows"} title="Automação / Agentes">
+              <GitBranch className="w-4 h-4" />
+            </Button>
             <Button size="icon" variant="outline" className="h-8 w-8 rounded-lg" onClick={() => window.location.href = "/livechat/integration"} title="Fazer Integração">
               <Zap className="w-4 h-4" />
             </Button>
