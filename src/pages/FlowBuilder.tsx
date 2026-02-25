@@ -81,8 +81,8 @@ const TEMPLATES = [
       { id: "n6", type: "message", label: "Msg padrão", position: { x: 420, y: 620 }, config: { text: "Olá {nome}! 🏙️ Temos pacotes incríveis para Dubai! Posso te ajudar?" } },
     ],
     edges: [
-      { source: "t1", target: "n1" }, { source: "n1", target: "n2" }, { source: "n2", target: "n3" },
-      { source: "n3", target: "n4" }, { source: "n4", target: "n5", sourceHandle: "yes", label: "Sim" },
+      { source: "t1", target: "n1", sourceHandle: "out" }, { source: "n1", target: "n2", sourceHandle: "out" }, { source: "n2", target: "n3", sourceHandle: "out" },
+      { source: "n3", target: "n4", sourceHandle: "out" }, { source: "n4", target: "n5", sourceHandle: "yes", label: "Sim" },
       { source: "n4", target: "n6", sourceHandle: "no", label: "Não" },
     ],
   },
@@ -99,8 +99,8 @@ const TEMPLATES = [
       { id: "n5", type: "handoff", label: "→ Vendedor", position: { x: 250, y: 600 }, config: { queue: "vendas", notify: true } },
     ],
     edges: [
-      { source: "t1", target: "n1" }, { source: "n1", target: "n2" }, { source: "n2", target: "n3" },
-      { source: "n3", target: "n4" }, { source: "n4", target: "n5" },
+      { source: "t1", target: "n1", sourceHandle: "out" }, { source: "n1", target: "n2", sourceHandle: "out" }, { source: "n2", target: "n3", sourceHandle: "out" },
+      { source: "n3", target: "n4", sourceHandle: "out" }, { source: "n4", target: "n5", sourceHandle: "out" },
     ],
   },
   {
@@ -116,10 +116,10 @@ const TEMPLATES = [
       { id: "n5", type: "action_funnel", label: "Docs OK", position: { x: 420, y: 400 }, config: { funnel_stage: "pos_venda" } },
     ],
     edges: [
-      { source: "t1", target: "n1" }, { source: "n1", target: "n2" },
+      { source: "t1", target: "n1", sourceHandle: "out" }, { source: "n1", target: "n2", sourceHandle: "out" },
       { source: "n2", target: "n3", sourceHandle: "no", label: "Não" },
       { source: "n2", target: "n5", sourceHandle: "yes", label: "Sim" },
-      { source: "n3", target: "n4" },
+      { source: "n3", target: "n4", sourceHandle: "out" },
     ],
   },
 ];
@@ -145,6 +145,7 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
         <Handle
           type="target"
           position={Position.Top}
+          id="target"
           className="!w-3 !h-3 !bg-primary !border-2 !border-background !-top-1.5 !rounded-full"
         />
       )}
@@ -193,6 +194,7 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
         <Handle
           type="source"
           position={Position.Bottom}
+          id="out"
           className="!w-3 !h-3 !bg-primary !border-2 !border-background !-bottom-1.5 !rounded-full"
         />
       )}
@@ -835,8 +837,8 @@ export default function FlowBuilder() {
         id: e.id,
         source: e.source_node_id,
         target: e.target_node_id,
-        sourceHandle: e.source_handle,
-        targetHandle: e.target_handle,
+        sourceHandle: e.source_handle || "out",
+        targetHandle: e.target_handle || "target",
         label: e.label,
         markerEnd: { type: MarkerType.ArrowClosed, color: isYes ? "hsl(142 71% 45%)" : isNo ? "hsl(0 72% 51%)" : undefined },
         style: isYes ? { stroke: "hsl(142 71% 45%)", strokeWidth: 2.5 } : isNo ? { stroke: "hsl(0 72% 51%)", strokeWidth: 2.5 } : { strokeWidth: 2 },
@@ -894,7 +896,8 @@ export default function FlowBuilder() {
         id: `e-${i}`,
         source: e.source,
         target: e.target,
-        sourceHandle: (e as any).sourceHandle,
+        sourceHandle: (e as any).sourceHandle || "out",
+        targetHandle: "target",
         label: (e as any).label,
         markerEnd: { type: MarkerType.ArrowClosed, color: isYes ? "hsl(142 71% 45%)" : isNo ? "hsl(0 72% 51%)" : undefined },
         style: isYes ? { stroke: "hsl(142 71% 45%)", strokeWidth: 2.5 } : isNo ? { stroke: "hsl(0 72% 51%)", strokeWidth: 2.5 } : { strokeWidth: 2 },
