@@ -220,6 +220,62 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_chat_suggestions: {
+        Row: {
+          action_taken: string | null
+          conversation_id: string | null
+          created_at: string
+          created_by: string | null
+          destination_detected: string | null
+          edited_text: string | null
+          funnel_stage_suggested: string | null
+          id: string
+          intent_detected: string | null
+          message_id: string | null
+          suggestion_text: string
+          tags_suggested: string[] | null
+          urgency_level: string | null
+        }
+        Insert: {
+          action_taken?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          destination_detected?: string | null
+          edited_text?: string | null
+          funnel_stage_suggested?: string | null
+          id?: string
+          intent_detected?: string | null
+          message_id?: string | null
+          suggestion_text: string
+          tags_suggested?: string[] | null
+          urgency_level?: string | null
+        }
+        Update: {
+          action_taken?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          destination_detected?: string | null
+          edited_text?: string | null
+          funnel_stage_suggested?: string | null
+          id?: string
+          intent_detected?: string | null
+          message_id?: string | null
+          suggestion_text?: string
+          tags_suggested?: string[] | null
+          urgency_level?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_suggestions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_config: {
         Row: {
           config_key: string
@@ -798,6 +854,7 @@ export type Database = {
           client_id: string | null
           created_at: string
           external_id: string | null
+          funnel_stage: string | null
           id: string
           last_message_at: string | null
           last_message_preview: string | null
@@ -812,6 +869,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           external_id?: string | null
+          funnel_stage?: string | null
           id?: string
           last_message_at?: string | null
           last_message_preview?: string | null
@@ -826,6 +884,7 @@ export type Database = {
           client_id?: string | null
           created_at?: string
           external_id?: string | null
+          funnel_stage?: string | null
           id?: string
           last_message_at?: string | null
           last_message_preview?: string | null
