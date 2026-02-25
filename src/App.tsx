@@ -11,6 +11,7 @@ import Sales from "@/pages/Sales";
 import SaleDetail from "@/pages/SaleDetail";
 import NewSale from "@/pages/NewSale";
 import Passengers from "@/pages/Passengers";
+import PassengerProfile from "@/pages/PassengerProfile";
 import Birthdays from "@/pages/Birthdays";
 import SettingsIndex from "@/pages/settings/SettingsIndex";
 import GenericSettingsList from "@/pages/settings/GenericSettingsList";
@@ -80,6 +81,7 @@ function AppRoutes() {
         <Route path="/hospedagem" element={<Lodging />} />
         <Route path="/clients/:id" element={<ClientDetail />} />
         <Route path="/passengers" element={<Passengers />} />
+        <Route path="/passengers/:id" element={<PassengerProfile />} />
         <Route path="/inteligencia-clientes" element={<ClientIntelligence />} />
         <Route path="/natleva-intelligence" element={<NatLevaIntelligence />} />
         <Route path="/birthdays" element={<Birthdays />} />

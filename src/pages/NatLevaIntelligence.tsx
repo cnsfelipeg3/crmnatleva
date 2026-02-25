@@ -120,6 +120,9 @@ export default function NatLevaIntelligence() {
   const [configSaving, setConfigSaving] = useState(false);
   const [showNewKB, setShowNewKB] = useState(false);
   const [newKB, setNewKB] = useState({ title: "", description: "", category: "geral", content_text: "" });
+  const kbFileInputRef = useRef<HTMLInputElement>(null);
+  const [kbFile, setKbFile] = useState<File | null>(null);
+  const [kbUploadingFile, setKbUploadingFile] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -600,18 +603,57 @@ export default function NatLevaIntelligence() {
   };
 
   // Knowledge Base CRUD
+  const handleKbFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) { toast.error("Arquivo muito grande (máx 20MB)"); return; }
+    setKbFile(file);
+    if (!newKB.title.trim()) setNewKB(p => ({ ...p, title: file.name.replace(/\.[^.]+$/, "") }));
+  };
+
   const addKBItem = async () => {
     if (!newKB.title.trim()) { toast.error("Título obrigatório"); return; }
     setKbLoading(true);
+
+    let fileUrl: string | null = null;
+    let fileName: string | null = null;
+    let fileType: string | null = null;
+    let extractedText = newKB.content_text || null;
+
+    // Upload file if present
+    if (kbFile) {
+      setKbUploadingFile(true);
+      const filePath = `kb-files/${user?.id}/${Date.now()}-${kbFile.name}`;
+      const { error: uploadErr } = await supabase.storage.from("ai-knowledge-base").upload(filePath, kbFile);
+      if (uploadErr) {
+        toast.error("Erro ao enviar arquivo: " + uploadErr.message);
+        setKbLoading(false);
+        setKbUploadingFile(false);
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("ai-knowledge-base").getPublicUrl(filePath);
+      fileUrl = urlData.publicUrl;
+      fileName = kbFile.name;
+      fileType = kbFile.type;
+
+      // Extract text from text-based files
+      if (kbFile.type === "text/plain" || kbFile.type === "text/csv") {
+        try { extractedText = await kbFile.text(); } catch { /* ignore */ }
+      }
+      setKbUploadingFile(false);
+    }
+
     const { error } = await supabase.from("ai_knowledge_base").insert({
       title: newKB.title, description: newKB.description, category: newKB.category,
-      content_text: newKB.content_text, uploaded_by: user?.id,
+      content_text: extractedText, uploaded_by: user?.id,
+      file_url: fileUrl, file_name: fileName, file_type: fileType,
     });
     if (error) toast.error("Erro ao salvar");
     else {
       toast.success("Conhecimento adicionado!");
       setShowNewKB(false);
       setNewKB({ title: "", description: "", category: "geral", content_text: "" });
+      setKbFile(null);
       const { data } = await supabase.from("ai_knowledge_base").select("*").order("created_at", { ascending: false });
       if (data) setKnowledgeBase(data as any);
     }
@@ -1162,9 +1204,22 @@ export default function NatLevaIntelligence() {
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <Badge variant="outline" className="text-[9px]">{item.category}</Badge>
+                  <div className="flex flex-wrap gap-1">
+                    <Badge variant="outline" className="text-[9px]">{item.category}</Badge>
+                    {item.file_name && (
+                      <Badge variant="secondary" className="text-[9px] gap-1">
+                        <Paperclip className="w-2.5 h-2.5" /> {item.file_name}
+                      </Badge>
+                    )}
+                  </div>
                   {item.description && <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>}
                   {item.content_text && <p className="text-[10px] text-muted-foreground/60 line-clamp-3 font-mono">{item.content_text}</p>}
+                  {item.file_url && (
+                    <a href={item.file_url} target="_blank" rel="noopener noreferrer"
+                      className="text-[10px] text-primary hover:underline flex items-center gap-1">
+                      <Download className="w-3 h-3" /> Baixar arquivo
+                    </a>
+                  )}
                   <p className="text-[9px] text-muted-foreground/40">{new Date(item.created_at).toLocaleDateString("pt-BR")}</p>
                 </Card>
               ))}
@@ -1210,11 +1265,59 @@ export default function NatLevaIntelligence() {
                     <label className="text-xs font-medium text-foreground mb-1 block">Conteúdo (texto completo)</label>
                     <Textarea value={newKB.content_text} onChange={(e) => setNewKB(p => ({ ...p, content_text: e.target.value }))}
                       placeholder="Cole aqui o conteúdo completo: processos, scripts, políticas, treinamentos..."
-                      rows={8} />
+                      rows={6} />
                   </div>
-                  <Button onClick={addKBItem} disabled={kbLoading} className="w-full gap-2">
-                    {kbLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Salvar na Base de Conhecimento
+
+                  {/* File upload section */}
+                  <div className="border-t pt-3 space-y-2">
+                    <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                      <Upload className="w-3.5 h-3.5" /> Anexar Arquivo (opcional)
+                    </label>
+                    <p className="text-[10px] text-muted-foreground">
+                      PDF, PPTX, XLSX, CSV, TXT — máx 20MB. O arquivo será armazenado e referenciado pela IA.
+                    </p>
+                    <input
+                      ref={kbFileInputRef}
+                      type="file"
+                      accept=".pdf,.pptx,.ppt,.xlsx,.xls,.csv,.txt,.doc,.docx"
+                      onChange={handleKbFileSelect}
+                      className="hidden"
+                    />
+                    {kbFile ? (
+                      <div className="flex items-center gap-2 bg-muted/50 border border-border/40 rounded-lg px-3 py-2">
+                        <FileText className="w-4 h-4 text-primary shrink-0" />
+                        <span className="text-sm truncate flex-1">{kbFile.name}</span>
+                        <span className="text-[10px] text-muted-foreground">{(kbFile.size / 1024).toFixed(0)}KB</span>
+                        <button onClick={() => setKbFile(null)} className="p-0.5 hover:text-destructive">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <Button type="button" variant="outline" size="sm" className="w-full gap-2"
+                        onClick={() => kbFileInputRef.current?.click()}>
+                        <Upload className="w-4 h-4" /> Selecionar arquivo
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Link input */}
+                  <div>
+                    <label className="text-xs font-medium text-foreground mb-1 flex items-center gap-1.5">
+                      <Link2 className="w-3.5 h-3.5" /> Link externo (opcional)
+                    </label>
+                    <Input
+                      placeholder="https://exemplo.com/documento"
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setNewKB(p => ({ ...p, description: p.description ? `${p.description}\n🔗 ${e.target.value}` : `🔗 ${e.target.value}` }));
+                        }
+                      }}
+                    />
+                  </div>
+
+                  <Button onClick={addKBItem} disabled={kbLoading || kbUploadingFile} className="w-full gap-2">
+                    {kbLoading || kbUploadingFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {kbUploadingFile ? "Enviando arquivo..." : "Salvar na Base de Conhecimento"}
                   </Button>
                 </div>
               </DialogContent>
