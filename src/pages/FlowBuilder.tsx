@@ -1,4 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { FlowCRMPipeline } from "@/components/flow/FlowCRMPipeline";
+import { FlowMetrics } from "@/components/flow/FlowMetrics";
+import { FlowSimulator } from "@/components/flow/FlowSimulator";
 import natlevaLogo from "@/assets/logo-natleva.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -94,7 +97,7 @@ const TEMPLATES = [
 
       // ── [B] RECEPÇÃO & ENCANTAMENTO ──
       { id: "b1", type: "action_funnel", label: "→ Recepção & Conexão", position: { x: 500, y: 850 }, config: { funnel_stage: "recepcao" } },
-      { id: "b2", type: "ai_agent", label: "🧠 IA Recepção Premium", position: { x: 500, y: 990 }, config: { persona: "sdr", objective: "qualificar", style: "premium", send_mode: "suggest", system_prompt: "Você é um concierge de viagens premium da NatLeva. Agradeça o contato com elegância, crie uma conexão genuína e pergunte 1-2 informações iniciais (destino e período). Seja acolhedor, objetivo e encantador. Nunca bombardeie de perguntas." } },
+      { id: "b2", type: "ai_agent", label: "🧠 IA Recepção Premium", position: { x: 500, y: 990 }, config: { persona: "sdr", objective: "qualificar", style: "premium", send_mode: "auto", system_prompt: "Você é um concierge de viagens premium da NatLeva. Agradeça o contato com elegância, crie uma conexão genuína e pergunte 1-2 informações iniciais (destino e período). Seja acolhedor, objetivo e encantador. Nunca bombardeie de perguntas." } },
       { id: "b3", type: "message", label: "💬 Qual destino?", position: { x: 500, y: 1130 }, config: { text: "(IA gerou + aprovação) Ex: 'Olá {nome}! ✨ Que bom ter você aqui. Me conta: qual destino está no seu radar?'" } },
       { id: "b4", type: "message", label: "📅 Período aproximado?", position: { x: 500, y: 1270 }, config: { text: "E tem algum período em mente? Pode ser uma janela flexível também 😉" } },
       { id: "b5", type: "message", label: "👥 Quantas pessoas?", position: { x: 500, y: 1410 }, config: { text: "Quantas pessoas vão na viagem? (adultos e crianças com idades, se houver)" } },
@@ -108,7 +111,7 @@ const TEMPLATES = [
 
       // ── [C] QUALIFICAÇÃO COMPLETA ──
       { id: "c1", type: "action_funnel", label: "→ Qualificação", position: { x: 500, y: 2050 }, config: { funnel_stage: "qualificacao" } },
-      { id: "c2", type: "ai_agent", label: "🧠 IA Qualificação NatLeva", position: { x: 500, y: 2190 }, config: { persona: "vendas", objective: "qualificar", style: "premium", send_mode: "suggest", system_prompt: "Colete dados de qualificação com elegância: cidade de origem, datas, qtd pessoas, preferência de hotel (3-5 estrelas), estilo (econômico/conforto/premium), experiências desejadas, faixa de orçamento, forma de pagamento e observações. Pergunte de forma natural, não como formulário.", context_fields: ["last_message", "chat_history", "client_name", "client_score", "funnel_stage", "tags"] } },
+      { id: "c2", type: "ai_agent", label: "🧠 IA Qualificação NatLeva", position: { x: 500, y: 2190 }, config: { persona: "vendas", objective: "qualificar", style: "premium", send_mode: "auto", system_prompt: "Colete dados de qualificação com elegância: cidade de origem, datas, qtd pessoas, preferência de hotel (3-5 estrelas), estilo (econômico/conforto/premium), experiências desejadas, faixa de orçamento, forma de pagamento e observações. Pergunte de forma natural, não como formulário.", context_fields: ["last_message", "chat_history", "client_name", "client_score", "funnel_stage", "tags"] } },
       { id: "c3", type: "condition", label: "Faltou info essencial?", position: { x: 500, y: 2350 }, config: { field: "tag", operator: "not_contains", value: "Qualificado" } },
       { id: "c4", type: "action_funnel", label: "→ Aguardando Info", position: { x: 200, y: 2500 }, config: { funnel_stage: "aguardando_info" } },
       { id: "c5", type: "action_tag", label: "🏷️ Falta Info", position: { x: 200, y: 2640 }, config: { tags: ["Falta Info"] } },
@@ -121,31 +124,35 @@ const TEMPLATES = [
       { id: "d4", type: "condition", label: "Viagem < 15 dias?", position: { x: 700, y: 2670 }, config: { field: "inactive_days", operator: "less_than", value: "15" } },
       { id: "d5", type: "action_tag", label: "🏷️ Urgente", position: { x: 500, y: 2820 }, config: { tags: ["Urgente", "Responder Hoje"] } },
 
-      // ── [E] ORÇAMENTO EM PREPARAÇÃO ──
+      // ── [E] ORÇAMENTO EM PREPARAÇÃO (PAUSA REAL) ──
       { id: "e1", type: "action_funnel", label: "→ Orçamento Preparação", position: { x: 700, y: 2960 }, config: { funnel_stage: "orcamento_preparacao" } },
-      { id: "e2", type: "message", label: "💎 Msg 'estou preparando'", position: { x: 700, y: 3100 }, config: { text: "Perfeito {nome}, já entendi o cenário! 🎯 Vou preparar as melhores opções com calma e te retorno com uma proposta bem redonda. Se surgir qualquer detalhe — datas, hotel, voo — me avise por aqui!" } },
-      { id: "e3", type: "message", label: "⏱️ Lembrete interno (2-4h)", position: { x: 700, y: 3240 }, config: { text: "(Tarefa interna: lembrete ao vendedor para finalizar proposta em até 4h)" } },
-      { id: "e4", type: "ai_agent", label: "🧠 IA Follow-up 24h", position: { x: 700, y: 3380 }, config: { persona: "vendas", objective: "responder", style: "premium", send_mode: "suggest", system_prompt: "Se passaram 24h sem envio de proposta. Gere um follow-up elegante mantendo o cliente engajado. Dê uma dica do destino ou um diferencial do roteiro em preparação." } },
+      { id: "e1b", type: "action_tag", label: "🏷️ Tag Orçamento", position: { x: 700, y: 3060 }, config: { tags: ["Orçamento", "Em Cotação"] } },
+      { id: "e2", type: "message", label: "💎 Msg 'estou preparando'", position: { x: 700, y: 3160 }, config: { text: "Perfeito {nome}, já entendi o cenário! 🎯 Vou preparar as melhores opções com calma e te retorno com uma proposta bem redonda. Se surgir qualquer detalhe — datas, hotel, voo — me avise por aqui!", require_approval: false } },
+      { id: "e3", type: "message", label: "⏱️ Tarefa interna vendedor", position: { x: 700, y: 3260 }, config: { text: "(Tarefa interna: criar orçamento para o cliente. Lembrete em 2-4h.)", require_approval: false } },
+      { id: "e_pause", type: "handoff", label: "⏸️ PAUSAR AUTOMAÇÃO", position: { x: 700, y: 3380 }, config: { queue: "vendas", notify: true, pause_automation: true, pause_reason: "Aguardando vendedor preparar orçamento. IA NÃO responde automaticamente nesta fase. Cliente será notificado se enviar mensagem." } },
+      { id: "e4", type: "ai_agent", label: "🧠 IA Follow-up 24h", position: { x: 700, y: 3520 }, config: { persona: "vendas", objective: "responder", style: "premium", send_mode: "suggest", system_prompt: "Se passaram 24h sem envio de proposta. Gere um follow-up elegante mantendo o cliente engajado. Dê uma dica do destino ou um diferencial do roteiro em preparação." } },
+      // ── TRIGGER DE RETOMADA ──
+      { id: "e_resume", type: "trigger", label: "🔄 Retomada: Proposta Enviada", position: { x: 900, y: 3520 }, config: { trigger_type: "funnel_changed", target_stage: "proposta_enviada", resume_from_pause: true } },
 
-      // ── [F] PROPOSTA ENVIADA ──
-      { id: "f1", type: "action_funnel", label: "→ Proposta Enviada", position: { x: 700, y: 3550 }, config: { funnel_stage: "proposta_enviada" } },
-      { id: "f2", type: "ai_agent", label: "🧠 IA Entrega de Proposta", position: { x: 700, y: 3690 }, config: { persona: "vendas", objective: "vender", style: "premium", send_mode: "suggest", system_prompt: "Gere mensagem de entrega da proposta: resumo do roteiro, por que faz sentido, opções A/B (bom/melhor), CTA leve como 'Quer que eu ajuste algo?'. Tom: consultivo, premium, sem pressão." } },
-      { id: "f3", type: "action_tag", label: "🏷️ Proposta", position: { x: 700, y: 3830 }, config: { tags: ["Proposta Enviada"] } },
-      { id: "f4", type: "condition", label: "Cliente respondeu?", position: { x: 700, y: 3970 }, config: { field: "last_response", operator: "exists", value: "" } },
+      // ── [F] PROPOSTA ENVIADA (RETOMADA AUTOMÁTICA) ──
+      { id: "f1", type: "action_funnel", label: "→ Proposta Enviada", position: { x: 700, y: 3700 }, config: { funnel_stage: "proposta_enviada" } },
+      { id: "f2", type: "ai_agent", label: "🧠 IA Entrega de Proposta", position: { x: 700, y: 3840 }, config: { persona: "vendas", objective: "vender", style: "premium", send_mode: "auto", system_prompt: "Gere mensagem de entrega da proposta: resumo do roteiro, por que faz sentido, opções A/B (bom/melhor), CTA leve como 'Quer que eu ajuste algo?'. Tom: consultivo, premium, sem pressão." } },
+      { id: "f3", type: "action_tag", label: "🏷️ Proposta", position: { x: 700, y: 3980 }, config: { tags: ["Proposta Enviada"] } },
+      { id: "f4", type: "condition", label: "Cliente respondeu?", position: { x: 700, y: 4120 }, config: { field: "last_response", operator: "exists", value: "" } },
 
-      // Follow-up proposta (sem resposta)
-      { id: "f5", type: "message", label: "⏱️ Follow-up 12h", position: { x: 1000, y: 4130 }, config: { text: "{nome}, viu a proposta? 😊 Estou aqui se quiser ajustar qualquer detalhe — hotel, voo, roteiro... é só me dizer!" } },
-      { id: "f6", type: "message", label: "⏱️ Follow-up 48h", position: { x: 1000, y: 4270 }, config: { text: "Só passando para saber se tem alguma dúvida sobre a proposta, {nome}. Se preferir, posso montar opções diferentes. 🙂" } },
+      // Follow-up proposta (sem resposta) — IA auto
+      { id: "f5", type: "message", label: "⏱️ Follow-up 12h", position: { x: 1000, y: 4280 }, config: { text: "{nome}, viu a proposta? 😊 Estou aqui se quiser ajustar qualquer detalhe — hotel, voo, roteiro... é só me dizer!", require_approval: false } },
+      { id: "f6", type: "message", label: "⏱️ Follow-up 48h", position: { x: 1000, y: 4420 }, config: { text: "Só passando para saber se tem alguma dúvida sobre a proposta, {nome}. Se preferir, posso montar opções diferentes. 🙂", require_approval: false } },
 
-      // ── [G] NEGOCIAÇÃO & DÚVIDAS ──
-      { id: "g1", type: "action_funnel", label: "→ Negociação", position: { x: 450, y: 4130 }, config: { funnel_stage: "negociacao" } },
-      { id: "g2", type: "condition", label: "Objeção = Preço?", position: { x: 450, y: 4280 }, config: { field: "keyword", operator: "contains", value: "caro,preço,desconto,barato" } },
-      { id: "g3", type: "ai_agent", label: "🧠 IA Objeção Preço", position: { x: 150, y: 4440 }, config: { persona: "vendas", objective: "vender", style: "premium", send_mode: "suggest", system_prompt: "O cliente levantou objeção de preço. Responda com valor: mostre o que está incluso, compare com mercado, sugira alternativas mais acessíveis sem desvalorizar. Ofereça opções de parcelamento. Tom: consultivo e empático." } },
-      { id: "g4", type: "condition", label: "Dúvida = Hotel/Voo?", position: { x: 650, y: 4440 }, config: { field: "keyword", operator: "contains", value: "hotel,voo,conexão,quarto" } },
-      { id: "g5", type: "ai_agent", label: "🧠 IA Ajuste Hotel/Voo", position: { x: 400, y: 4600 }, config: { persona: "concierge", objective: "responder", style: "premium", send_mode: "suggest", system_prompt: "O cliente tem dúvida ou quer ajustar hotel/voo. Responda com detalhes, sugira alternativas e pergunte preferências específicas." } },
-      { id: "g6", type: "condition", label: "Dúvida = Pagamento?", position: { x: 850, y: 4600 }, config: { field: "keyword", operator: "contains", value: "parcelamento,cartão,pix,pagamento" } },
-      { id: "g7", type: "ai_agent", label: "🧠 IA Pagamento", position: { x: 650, y: 4760 }, config: { persona: "vendas", objective: "responder", style: "premium", send_mode: "suggest", system_prompt: "Responda sobre formas de pagamento: PIX, cartão, parcelamento. Explique condições de forma clara e objetiva." } },
-      { id: "g8", type: "ai_agent", label: "🧠 IA Docs/Visto", position: { x: 1050, y: 4760 }, config: { persona: "documentos", objective: "responder", style: "premium", send_mode: "suggest", system_prompt: "Responda sobre documentação: passaporte, visto, prazos. Seja preciso e oriente os próximos passos." } },
+      // ── [G] NEGOCIAÇÃO & DÚVIDAS (IA AUTO) ──
+      { id: "g1", type: "action_funnel", label: "→ Negociação", position: { x: 450, y: 4280 }, config: { funnel_stage: "negociacao" } },
+      { id: "g2", type: "condition", label: "Objeção = Preço?", position: { x: 450, y: 4430 }, config: { field: "keyword", operator: "contains", value: "caro,preço,desconto,barato" } },
+      { id: "g3", type: "ai_agent", label: "🧠 IA Objeção Preço", position: { x: 150, y: 4590 }, config: { persona: "vendas", objective: "vender", style: "premium", send_mode: "auto", system_prompt: "O cliente levantou objeção de preço. Responda com valor: mostre o que está incluso, compare com mercado, sugira alternativas mais acessíveis sem desvalorizar. Ofereça opções de parcelamento. Tom: consultivo e empático." } },
+      { id: "g4", type: "condition", label: "Dúvida = Hotel/Voo?", position: { x: 650, y: 4590 }, config: { field: "keyword", operator: "contains", value: "hotel,voo,conexão,quarto" } },
+      { id: "g5", type: "ai_agent", label: "🧠 IA Ajuste Hotel/Voo", position: { x: 400, y: 4750 }, config: { persona: "concierge", objective: "responder", style: "premium", send_mode: "auto", system_prompt: "O cliente tem dúvida ou quer ajustar hotel/voo. Responda com detalhes, sugira alternativas e pergunte preferências específicas." } },
+      { id: "g6", type: "condition", label: "Dúvida = Pagamento?", position: { x: 850, y: 4750 }, config: { field: "keyword", operator: "contains", value: "parcelamento,cartão,pix,pagamento" } },
+      { id: "g7", type: "ai_agent", label: "🧠 IA Pagamento", position: { x: 650, y: 4910 }, config: { persona: "vendas", objective: "responder", style: "premium", send_mode: "auto", system_prompt: "Responda sobre formas de pagamento: PIX, cartão, parcelamento. Explique condições de forma clara e objetiva." } },
+      { id: "g8", type: "ai_agent", label: "🧠 IA Docs/Visto", position: { x: 1050, y: 4910 }, config: { persona: "documentos", objective: "responder", style: "premium", send_mode: "auto", system_prompt: "Responda sobre documentação: passaporte, visto, prazos. Seja preciso e oriente os próximos passos." } },
 
       // ── [H] FECHAMENTO ──
       { id: "h1", type: "action_funnel", label: "→ Fechado ✅", position: { x: 500, y: 4950 }, config: { funnel_stage: "fechado" } },
@@ -157,17 +164,17 @@ const TEMPLATES = [
       { id: "i1", type: "action_funnel", label: "→ Pós-venda/Operação", position: { x: 500, y: 5550 }, config: { funnel_stage: "pos_venda" } },
       { id: "i2", type: "message", label: "📩 Msg pré-embarque", position: { x: 300, y: 5700 }, config: { text: "Faltam poucos dias {nome}! 🛫✨ Seu check-in abre em breve. Já separei todas as informações. Qualquer dúvida de última hora, estamos aqui!" } },
       { id: "i3", type: "message", label: "🌍 Durante viagem", position: { x: 500, y: 5700 }, config: { text: "E aí {nome}, como está sendo a viagem? 🌟 Se precisar de qualquer suporte — restaurante, passeio, transfer — é só chamar!" } },
-      { id: "i4", type: "ai_agent", label: "🧠 IA NPS + Upsell", position: { x: 700, y: 5700 }, config: { persona: "pos_venda", objective: "pos_venda", style: "premium", send_mode: "suggest", system_prompt: "O cliente voltou de viagem. Pergunte como foi a experiência (NPS), agradeça a confiança e sonde próximos destinos. Tom: caloroso, genuíno." } },
+      { id: "i4", type: "ai_agent", label: "🧠 IA NPS + Upsell", position: { x: 700, y: 5700 }, config: { persona: "pos_venda", objective: "pos_venda", style: "premium", send_mode: "auto", system_prompt: "O cliente voltou de viagem. Pergunte como foi a experiência (NPS), agradeça a confiança e sonde próximos destinos. Tom: caloroso, genuíno." } },
 
       // ── [J] SEM RESPOSTA / REATIVAÇÃO ──
       { id: "j1", type: "condition", label: "Sem resposta 12h?", position: { x: 1100, y: 4950 }, config: { field: "inactive_days", operator: "greater_than", value: "0.5" } },
-      { id: "j2", type: "ai_agent", label: "🧠 IA Reativação 12h", position: { x: 1100, y: 5100 }, config: { persona: "reativacao", objective: "responder", style: "premium", send_mode: "suggest", system_prompt: "Reativação sutil após 12h sem resposta. Mensagem curta e leve, sem pressão." } },
+      { id: "j2", type: "ai_agent", label: "🧠 IA Reativação 12h", position: { x: 1100, y: 5100 }, config: { persona: "reativacao", objective: "responder", style: "premium", send_mode: "auto", system_prompt: "Reativação sutil após 12h sem resposta. Mensagem curta e leve, sem pressão." } },
       { id: "j3", type: "message", label: "⏱️ 24h: Valor + dica", position: { x: 1100, y: 5250 }, config: { text: "{nome}, achei uma dica incrível sobre {destino}! 💡 Quer que eu compartilhe enquanto finalizamos os detalhes?" } },
       { id: "j4", type: "message", label: "⏱️ 48h: Pausar?", position: { x: 1100, y: 5400 }, config: { text: "Oi {nome}! Tudo bem? Posso pausar o orçamento e retomar quando for melhor pra você? A porta está sempre aberta! 😊" } },
       { id: "j5", type: "condition", label: "Ainda sem retorno 7d?", position: { x: 1100, y: 5560 }, config: { field: "inactive_days", operator: "greater_than", value: "7" } },
       { id: "j6", type: "action_funnel", label: "→ Perdido", position: { x: 1300, y: 5710 }, config: { funnel_stage: "perdido" } },
       { id: "j7", type: "action_tag", label: "🏷️ Sem retorno", position: { x: 1300, y: 5850 }, config: { tags: ["Sem retorno", "Reativar futuro"] } },
-      { id: "j8", type: "ai_agent", label: "🧠 IA Reativação VIP 7d", position: { x: 900, y: 5710 }, config: { persona: "reativacao", objective: "vender", style: "premium", send_mode: "suggest", system_prompt: "Última tentativa de reativação elegante. Se for VIP, usar abordagem personalizada. Manter porta aberta sem desespero." } },
+      { id: "j8", type: "ai_agent", label: "🧠 IA Reativação VIP 7d", position: { x: 900, y: 5710 }, config: { persona: "reativacao", objective: "vender", style: "premium", send_mode: "auto", system_prompt: "Última tentativa de reativação elegante. Se for VIP, usar abordagem personalizada. Manter porta aberta sem desespero." } },
     ],
     edges: [
       // [A] Trigger → Novo Lead → Quiz?
@@ -212,11 +219,15 @@ const TEMPLATES = [
       { source: "d5", target: "e1", sourceHandle: "out" },
       { source: "d4", target: "e1", sourceHandle: "no", label: "Normal" },
 
-      // [E] Orçamento
-      { source: "e1", target: "e2", sourceHandle: "out" },
+      // [E] Orçamento (com pausa)
+      { source: "e1", target: "e1b", sourceHandle: "out" },
+      { source: "e1b", target: "e2", sourceHandle: "out" },
       { source: "e2", target: "e3", sourceHandle: "out" },
-      { source: "e3", target: "e4", sourceHandle: "out" },
+      { source: "e3", target: "e_pause", sourceHandle: "out" },
+      { source: "e_pause", target: "e4", sourceHandle: "out" },
       { source: "e4", target: "f1", sourceHandle: "out" },
+      // Retomada via trigger
+      { source: "e_resume", target: "f1", sourceHandle: "out" },
 
       // [F] Proposta
       { source: "f1", target: "f2", sourceHandle: "out" },
@@ -449,8 +460,18 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
         {/* AI status */}
         {data.nodeType === "ai_agent" && (
           <div className="mt-1.5 flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", data.config?.send_mode === "auto" ? "bg-green-400" : "bg-amber-400")} />
             <span className="text-[9px] text-muted-foreground">{data.config?.persona || "sdr"} · {data.config?.objective || "qualificar"}</span>
+            <Badge variant={data.config?.send_mode === "auto" ? "default" : "secondary"} className="text-[7px] h-3.5 px-1">
+              {data.config?.send_mode === "auto" ? "AUTO" : data.config?.send_mode === "suggest" ? "SUGESTÃO" : "APROVAÇÃO"}
+            </Badge>
+          </div>
+        )}
+        {/* Handoff pause indicator */}
+        {data.nodeType === "handoff" && data.config?.pause_automation && (
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            <span className="text-[9px] font-semibold text-amber-600">PAUSA AUTOMAÇÃO</span>
           </div>
         )}
       </div>
@@ -904,6 +925,15 @@ function ConfigPanel({ node, onUpdate, onClose, onDelete, onDuplicate }: {
                 <Switch className="scale-75" checked={config.notify || false} onCheckedChange={(v) => updateConfig("notify", v)} />
                 <Label className="text-[10px]">Notificar responsável</Label>
               </div>
+              <div className="flex items-center gap-2">
+                <Switch className="scale-75" checked={config.pause_automation || false} onCheckedChange={(v) => updateConfig("pause_automation", v)} />
+                <Label className="text-[10px]">⏸️ Pausar automação (IA não responde)</Label>
+              </div>
+              {config.pause_automation && (
+                <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <p className="text-[10px] text-amber-700">Quando ativado, a IA NÃO responde automaticamente. Mensagens do cliente geram notificação ao vendedor.</p>
+                </div>
+              )}
             </>
           )}
 
@@ -926,7 +956,7 @@ function ConfigPanel({ node, onUpdate, onClose, onDelete, onDuplicate }: {
 function FlowList({ flows, onSelect, onCreate, onUseTemplate, loading }: {
   flows: any[]; onSelect: (f: any) => void; onCreate: () => void; onUseTemplate: (t: typeof TEMPLATES[0]) => void; loading: boolean;
 }) {
-  const [tab, setTab] = useState<"flows" | "templates">("flows");
+  const [tab, setTab] = useState<"flows" | "templates" | "pipeline" | "metrics">("flows");
   const navigate = useNavigate();
 
   return (
@@ -939,10 +969,17 @@ function FlowList({ flows, onSelect, onCreate, onUseTemplate, loading }: {
           <Plug className="w-3 h-3 mr-1" /> Integrações IA
         </Button>
       </div>
-      <div className="flex border-b">
-        <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors", tab === "flows" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("flows")}>Meus Fluxos</button>
-        <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors", tab === "templates" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("templates")}>Templates</button>
+      <div className="flex border-b overflow-x-auto">
+        <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-3", tab === "flows" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("flows")}>Meus Fluxos</button>
+        <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-3", tab === "templates" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("templates")}>Templates</button>
+        <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-3", tab === "pipeline" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("pipeline")}>📊 Pipeline CRM</button>
+        <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-3", tab === "metrics" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("metrics")}>📈 Métricas</button>
       </div>
+
+      {tab === "pipeline" && <FlowCRMPipeline />}
+      {tab === "metrics" && <FlowMetrics />}
+
+      {(tab === "flows" || tab === "templates") && (
       <ScrollArea className="flex-1 p-3">
         {tab === "flows" ? (
           <div className="space-y-2">
@@ -980,6 +1017,7 @@ function FlowList({ flows, onSelect, onCreate, onUseTemplate, loading }: {
           </div>
         )}
       </ScrollArea>
+      )}
     </div>
   );
 }
@@ -1364,7 +1402,7 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
         </Select>
         <div className="flex-1" />
         <Button variant={testMode ? "default" : "outline"} size="sm" onClick={() => { setTestMode(!testMode); if (testMode) { setTestRunning(false); setTestStep(0); } }} className="text-xs h-8">
-          <FlaskConical className="w-3 h-3 mr-1" /> {testMode ? "Sair Teste" : "Testar"}
+          <FlaskConical className="w-3 h-3 mr-1" /> {testMode ? "Sair Simulação" : "🧪 Simular fluxo"}
         </Button>
         <Button size="sm" onClick={saveFlow} disabled={saving} className="text-xs h-8">
           <Save className="w-3 h-3 mr-1" /> {saving ? "Salvando..." : "Salvar"}
@@ -1411,20 +1449,26 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
             />
             <NodeLibrary />
             <CanvasToolbar onAutoLayout={autoLayout} onFitView={() => fitView({ padding: 0.2 })} nodeCount={nodes.length} edgeCount={edges.length} />
-            {testMode && (
-              <TestPanel
-                isRunning={testRunning}
-                currentStep={testStep}
-                steps={getTestNodeIds(nodes, edges).map((id) => {
-                  const n = nodes.find((nd) => nd.id === id);
-                  return (n?.data as any)?.label || id;
-                })}
-                onClose={() => { setTestMode(false); setTestRunning(false); setTestStep(0); }}
-                onStart={startTest}
-              />
-            )}
           </ReactFlow>
         </div>
+
+        {/* Simulator panel */}
+        {testMode && (
+          <FlowSimulator
+            nodes={nodes}
+            edges={edges}
+            onHighlightNode={(visited, activeId) => {
+              setNodes((nds) => nds.map((n) => ({
+                ...n,
+                data: {
+                  ...n.data,
+                  _testState: visited.includes(n.id) ? (n.id === activeId ? "active" : "passed") : undefined,
+                },
+              })));
+            }}
+            onClose={() => { setTestMode(false); setTestRunning(false); setTestStep(0); }}
+          />
+        )}
 
         {selectedNode && (
           <ConfigPanel
