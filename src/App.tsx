@@ -28,6 +28,7 @@ import UserLocations from "@/pages/settings/UserLocations";
 import LiveChat from "@/pages/LiveChat";
 import WhatsAppIntegration from "@/pages/WhatsAppIntegration";
 import FlowBuilder from "@/pages/FlowBuilder";
+import AIIntegrations from "@/pages/AIIntegrations";
 
 // RH
 import RHIndex from "@/pages/rh/RHIndex";
@@ -92,7 +93,8 @@ function AppRoutes() {
         <Route path="/pendencias" element={<Pendencias />} />
         <Route path="/livechat" element={<LiveChat />} />
         <Route path="/livechat/integration" element={<WhatsAppIntegration />} />
-        <Route path="/livechat/flows" element={<FlowBuilder />} />
+         <Route path="/livechat/flows" element={<FlowBuilder />} />
+         <Route path="/livechat/integrations" element={<AIIntegrations />} />
 
         {/* Financeiro */}
         <Route path="/financeiro" element={<FinanceiroIndex />} />

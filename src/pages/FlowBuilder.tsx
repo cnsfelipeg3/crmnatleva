@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { Database } from "@/integrations/supabase/types";
 import {
   ReactFlow, Background, Controls, MiniMap, Panel,
   addEdge, useNodesState, useEdgesState,
@@ -13,7 +14,7 @@ import "@xyflow/react/dist/style.css";
 import {
   ChevronLeft, Save, Play, Pause, Upload, Plus, Trash2, Copy,
   MessageSquare, Zap, GitBranch, Tag, ArrowRightLeft, Sparkles, UserCheck,
-  FileText, Settings2, X, LayoutTemplate, Search,
+  FileText, Settings2, X, LayoutTemplate, Search, Plug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,8 +35,32 @@ const NODE_LIBRARY = [
   { type: "condition", label: "Condição", icon: GitBranch, color: "hsl(var(--chart-3))", description: "IF / ELSE" },
   { type: "action_tag", label: "Aplicar Tag", icon: Tag, color: "hsl(var(--chart-2))", description: "Adiciona tag" },
   { type: "action_funnel", label: "Mover Funil", icon: ArrowRightLeft, color: "hsl(var(--chart-5))", description: "Altera etapa" },
-  { type: "ai_agent", label: "Agente IA", icon: Sparkles, color: "hsl(280 80% 60%)", description: "NatLeva Intelligence" },
+  { type: "ai_agent", label: "Agente IA", icon: Sparkles, color: "hsl(280 80% 60%)", description: "IA com provedor configurável" },
   { type: "handoff", label: "Transferir", icon: UserCheck, color: "hsl(var(--muted-foreground))", description: "Para humano" },
+] as const;
+
+const PROVIDER_BADGES: Record<string, { label: string; icon: string; color: string }> = {
+  natleva: { label: "NatLeva", icon: "🧠", color: "hsl(280 80% 60%)" },
+  openai: { label: "OpenAI", icon: "🤖", color: "hsl(160 60% 45%)" },
+  gemini: { label: "Gemini", icon: "💎", color: "hsl(210 80% 55%)" },
+  anthropic: { label: "Claude", icon: "🔮", color: "hsl(25 80% 55%)" },
+  groq: { label: "Groq", icon: "⚡", color: "hsl(45 80% 50%)" },
+  openrouter: { label: "OpenRouter", icon: "🌐", color: "hsl(190 70% 50%)" },
+  n8n: { label: "n8n", icon: "🔗", color: "hsl(340 70% 55%)" },
+};
+
+const AI_CONTEXT_FIELDS = [
+  { key: "last_message", label: "Última mensagem" },
+  { key: "chat_history", label: "Histórico recente" },
+  { key: "client_name", label: "Nome do cliente" },
+  { key: "client_score", label: "Score do cliente" },
+  { key: "client_cluster", label: "Cluster" },
+  { key: "client_vip", label: "Status VIP" },
+  { key: "client_city", label: "Cidade" },
+  { key: "funnel_stage", label: "Etapa do funil" },
+  { key: "tags", label: "Tags aplicadas" },
+  { key: "trips_summary", label: "Resumo de viagens" },
+  { key: "pendencies", label: "Pendências" },
 ] as const;
 
 type NodeConfig = Record<string, any>;
@@ -103,6 +128,8 @@ const TEMPLATES = [
 function FlowNode({ data, selected }: { data: any; selected: boolean }) {
   const def = NODE_LIBRARY.find((n) => n.type === data.nodeType) || NODE_LIBRARY[0];
   const Icon = def.icon;
+  const providerKey = data.nodeType === "ai_agent" ? (data.config?.provider || "natleva") : null;
+  const provBadge = providerKey ? PROVIDER_BADGES[providerKey] : null;
 
   return (
     <div
@@ -116,13 +143,20 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
           <Icon className="w-4 h-4 text-white" />
         </div>
         <span className="text-xs font-semibold truncate">{data.label || def.label}</span>
+        {provBadge && (
+          <span
+            className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white"
+            style={{ background: provBadge.color }}
+          >
+            {provBadge.icon} {provBadge.label}
+          </span>
+        )}
       </div>
       <div className="px-3 py-2">
         <p className="text-[10px] text-muted-foreground line-clamp-2">
           {data.description || def.description}
         </p>
       </div>
-      {/* Handles are rendered by ReactFlow based on node type */}
     </div>
   );
 }
@@ -136,6 +170,253 @@ const nodeTypes: NodeTypes = {
   ai_agent: FlowNode,
   handoff: FlowNode,
 };
+
+// ─── AI AGENT CONFIG COMPONENT ───
+function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateConfig: (key: string, value: any) => void }) {
+  const [integrations, setIntegrations] = useState<any[]>([]);
+  
+  useEffect(() => {
+    supabase.from("ai_integrations").select("id, name, provider, model, status")
+      .eq("status", "active").then(({ data }) => setIntegrations(data || []));
+  }, []);
+
+  const provider = config.provider || "natleva";
+  const contextFields = config.context_fields || AI_CONTEXT_FIELDS.map((f) => f.key);
+
+  return (
+    <>
+      {/* Provider Selector */}
+      <div>
+        <Label className="text-xs font-semibold">Provedor de IA</Label>
+        <Select value={provider} onValueChange={(v) => updateConfig("provider", v)}>
+          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {Object.entries(PROVIDER_BADGES).map(([k, v]) => (
+              <SelectItem key={k} value={k}>{v.icon} {v.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Integration Selection (for non-natleva providers) */}
+      {provider !== "natleva" && provider !== "n8n" && (
+        <div>
+          <Label className="text-xs">Credencial / Integração</Label>
+          <Select value={config.integration_id || ""} onValueChange={(v) => updateConfig("integration_id", v)}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+            <SelectContent>
+              {integrations.filter((i) => i.provider === provider).map((i) => (
+                <SelectItem key={i.id} value={i.id}>{i.name} ({i.model || "padrão"})</SelectItem>
+              ))}
+              {integrations.filter((i) => i.provider === provider).length === 0 && (
+                <div className="px-2 py-3 text-xs text-muted-foreground text-center">
+                  Nenhuma credencial para {PROVIDER_BADGES[provider]?.label}.<br />
+                  Configure em Integrações de IA.
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* n8n webhook config */}
+      {provider === "n8n" && (
+        <>
+          <div>
+            <Label className="text-xs">Credencial n8n</Label>
+            <Select value={config.integration_id || ""} onValueChange={(v) => updateConfig("integration_id", v)}>
+              <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+              <SelectContent>
+                {integrations.filter((i) => i.provider === "n8n").map((i) => (
+                  <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">Payload personalizado (JSON)</Label>
+            <Textarea
+              value={config.n8n_payload || '{\n  "texto_cliente": "{last_message}",\n  "cliente_id": "{client_id}",\n  "conversa_id": "{conversation_id}"\n}'}
+              onChange={(e) => updateConfig("n8n_payload", e.target.value)}
+              className="mt-1 min-h-[80px] font-mono text-[10px]"
+            />
+            <p className="text-[10px] text-muted-foreground mt-1">Variáveis: {"{last_message}"}, {"{client_id}"}, {"{conversation_id}"}, {"{tags}"}, {"{destino}"}</p>
+          </div>
+          <div>
+            <Label className="text-xs">Modo de retorno do n8n</Label>
+            <Select value={config.n8n_return_mode || "text"} onValueChange={(v) => updateConfig("n8n_return_mode", v)}>
+              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="text">Texto sugerido</SelectItem>
+                <SelectItem value="tags">Tags para aplicar</SelectItem>
+                <SelectItem value="funnel">Próxima etapa do funil</SelectItem>
+                <SelectItem value="action">Ação (criar venda/tarefa)</SelectItem>
+                <SelectItem value="full">Saída completa (JSON)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </>
+      )}
+
+      <Separator />
+
+      {/* Persona & Objective (all providers) */}
+      <div>
+        <Label className="text-xs">Persona</Label>
+        <Select value={config.persona || "sdr"} onValueChange={(v) => updateConfig("persona", v)}>
+          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="sdr">SDR (Qualificação)</SelectItem>
+            <SelectItem value="vendas">Vendas</SelectItem>
+            <SelectItem value="concierge">Concierge</SelectItem>
+            <SelectItem value="pos_venda">Pós-venda</SelectItem>
+            <SelectItem value="documentos">Documentação</SelectItem>
+            <SelectItem value="reativacao">Reativação</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label className="text-xs">Objetivo</Label>
+        <Select value={config.objective || "qualificar"} onValueChange={(v) => updateConfig("objective", v)}>
+          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="qualificar">Qualificar lead</SelectItem>
+            <SelectItem value="responder">Responder dúvida</SelectItem>
+            <SelectItem value="cobrar_docs">Cobrar documentos</SelectItem>
+            <SelectItem value="vender">Vender</SelectItem>
+            <SelectItem value="resolver">Resolver problema</SelectItem>
+            <SelectItem value="pedir_dados">Pedir dados</SelectItem>
+            <SelectItem value="pos_venda">Pós-venda</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* System Prompt */}
+      <div>
+        <Label className="text-xs">System Prompt / Persona (opcional)</Label>
+        <Textarea
+          value={config.system_prompt || ""}
+          onChange={(e) => updateConfig("system_prompt", e.target.value)}
+          className="mt-1 min-h-[80px]"
+          placeholder="Você é um consultor premium de viagens da NatLeva Turismo..."
+        />
+      </div>
+
+      {/* Model params (non-n8n) */}
+      {provider !== "n8n" && (
+        <>
+          <div>
+            <Label className="text-xs">Temperatura ({config.temperature || 0.7})</Label>
+            <input
+              type="range" min="0" max="1" step="0.1"
+              value={config.temperature || 0.7}
+              onChange={(e) => updateConfig("temperature", parseFloat(e.target.value))}
+              className="w-full mt-1 accent-primary"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Limite de tokens</Label>
+            <Input
+              type="number" value={config.max_tokens || 1024}
+              onChange={(e) => updateConfig("max_tokens", Number(e.target.value))}
+              className="mt-1"
+            />
+          </div>
+        </>
+      )}
+
+      {/* Send mode */}
+      <div>
+        <Label className="text-xs">Modo de envio</Label>
+        <Select value={config.send_mode || "suggest"} onValueChange={(v) => updateConfig("send_mode", v)}>
+          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="suggest">Apenas sugerir</SelectItem>
+            <SelectItem value="approve">Gerar e pedir aprovação humana</SelectItem>
+            <SelectItem value="auto">Enviar automático</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label className="text-xs">Estilo</Label>
+        <Select value={config.style || "premium"} onValueChange={(v) => updateConfig("style", v)}>
+          <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="premium">Premium NatLeva</SelectItem>
+            <SelectItem value="casual">Casual</SelectItem>
+            <SelectItem value="formal">Formal</SelectItem>
+            <SelectItem value="direto">Direto</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Separator />
+
+      {/* Context Variables */}
+      <div>
+        <Label className="text-xs font-semibold">Contexto enviado ao provedor</Label>
+        <p className="text-[10px] text-muted-foreground mb-2">Selecione quais dados enviar (privacidade/performance)</p>
+        <div className="space-y-1.5">
+          {AI_CONTEXT_FIELDS.map((f) => (
+            <div key={f.key} className="flex items-center gap-2">
+              <Switch
+                checked={contextFields.includes(f.key)}
+                onCheckedChange={(checked) => {
+                  const newFields = checked
+                    ? [...contextFields, f.key]
+                    : contextFields.filter((k: string) => k !== f.key);
+                  updateConfig("context_fields", newFields);
+                }}
+              />
+              <Label className="text-[11px]">{f.label}</Label>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Standardized Outputs Info */}
+      <div>
+        <Label className="text-xs font-semibold">Saídas padronizadas</Label>
+        <p className="text-[10px] text-muted-foreground mb-1">O bloco sempre produz:</p>
+        <div className="space-y-0.5">
+          {["response_text", "suggested_tags", "suggested_stage", "confidence", "next_question", "internal_note"].map((o) => (
+            <div key={o} className="flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+              <span className="text-[10px] font-mono text-muted-foreground">{o}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Knowledge base & web search toggles */}
+      <div className="flex items-center gap-2">
+        <Switch checked={config.use_knowledge_base || false} onCheckedChange={(v) => updateConfig("use_knowledge_base", v)} />
+        <Label className="text-xs">Consultar base de conhecimento</Label>
+      </div>
+      <div className="flex items-center gap-2">
+        <Switch checked={config.use_web_search || false} onCheckedChange={(v) => updateConfig("use_web_search", v)} />
+        <Label className="text-xs">Pesquisa web (se permitido)</Label>
+      </div>
+
+      {/* Log settings */}
+      <div className="flex items-center gap-2">
+        <Switch checked={config.metadata_only || false} onCheckedChange={(v) => updateConfig("metadata_only", v)} />
+        <Label className="text-xs">Salvar apenas metadados (privacidade)</Label>
+      </div>
+
+      {/* Test button */}
+      <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => toast.info("Teste de bloco disponível em breve!")}>
+        <Zap className="w-3 h-3 mr-1" /> Testar este bloco
+      </Button>
+    </>
+  );
+}
 
 // ─── CONFIG PANEL ───
 function ConfigPanel({
@@ -303,66 +584,9 @@ function ConfigPanel({
             </div>
           )}
 
-          {/* AI AGENT CONFIG */}
+          {/* AI AGENT CONFIG — EVOLVED */}
           {nodeType === "ai_agent" && (
-            <>
-              <div>
-                <Label className="text-xs">Persona</Label>
-                <Select value={config.persona || "sdr"} onValueChange={(v) => updateConfig("persona", v)}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sdr">SDR (Qualificação)</SelectItem>
-                    <SelectItem value="vendas">Vendas</SelectItem>
-                    <SelectItem value="concierge">Concierge</SelectItem>
-                    <SelectItem value="pos_venda">Pós-venda</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs">Objetivo</Label>
-                <Select value={config.objective || "qualificar"} onValueChange={(v) => updateConfig("objective", v)}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="qualificar">Qualificar lead</SelectItem>
-                    <SelectItem value="responder">Responder dúvida</SelectItem>
-                    <SelectItem value="cobrar_docs">Cobrar documentos</SelectItem>
-                    <SelectItem value="vender">Vender</SelectItem>
-                    <SelectItem value="resolver">Resolver problema</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs">Estilo</Label>
-                <Select value={config.style || "premium"} onValueChange={(v) => updateConfig("style", v)}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="premium">Premium NatLeva</SelectItem>
-                    <SelectItem value="casual">Casual</SelectItem>
-                    <SelectItem value="formal">Formal</SelectItem>
-                    <SelectItem value="direto">Direto</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs">Modo de envio</Label>
-                <Select value={config.send_mode || "suggest"} onValueChange={(v) => updateConfig("send_mode", v)}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="suggest">Apenas sugerir</SelectItem>
-                    <SelectItem value="approve">Enviar com aprovação</SelectItem>
-                    <SelectItem value="auto">Enviar automático</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={config.use_knowledge_base || false} onCheckedChange={(v) => updateConfig("use_knowledge_base", v)} />
-                <Label className="text-xs">Consultar base de conhecimento</Label>
-              </div>
-              <div className="flex items-center gap-2">
-                <Switch checked={config.use_web_search || false} onCheckedChange={(v) => updateConfig("use_web_search", v)} />
-                <Label className="text-xs">Pesquisa web (se permitido)</Label>
-              </div>
-            </>
+            <AIAgentConfig config={config} updateConfig={updateConfig} />
           )}
 
           {/* HANDOFF CONFIG */}
@@ -422,6 +646,10 @@ function FlowList({
           <ChevronLeft className="w-4 h-4" />
         </Button>
         <h1 className="font-bold text-lg">🧩 Automação / Agentes</h1>
+        <div className="flex-1" />
+        <Button variant="outline" size="sm" onClick={() => navigate("/livechat/integrations")} className="text-xs">
+          <Plug className="w-3 h-3 mr-1" /> Integrações IA
+        </Button>
       </div>
 
       <div className="flex border-b">
@@ -583,7 +811,10 @@ export default function FlowBuilder() {
     if (type === "message" && config?.text) return config.text.substring(0, 50) + "...";
     if (type === "condition" && config?.field) return `${config.field} ${config.operator} ${config.value}`;
     if (type === "action_tag" && config?.tags) return (config.tags as string[]).join(", ");
-    if (type === "ai_agent" && config?.persona) return `${config.persona} - ${config.objective}`;
+    if (type === "ai_agent") {
+      const prov = PROVIDER_BADGES[config?.provider || "natleva"];
+      return `${prov?.icon || "🧠"} ${config?.persona || "sdr"} - ${config?.objective || "qualificar"}`;
+    }
     return "";
   };
 

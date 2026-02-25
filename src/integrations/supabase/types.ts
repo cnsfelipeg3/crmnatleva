@@ -303,6 +303,137 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_execution_logs: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          error_message: string | null
+          estimated_cost: number | null
+          flow_id: string | null
+          id: string
+          input_summary: string | null
+          integration_id: string | null
+          metadata_only: boolean
+          model: string | null
+          node_id: string | null
+          output_summary: string | null
+          provider: string
+          response_time_ms: number | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          estimated_cost?: number | null
+          flow_id?: string | null
+          id?: string
+          input_summary?: string | null
+          integration_id?: string | null
+          metadata_only?: boolean
+          model?: string | null
+          node_id?: string | null
+          output_summary?: string | null
+          provider: string
+          response_time_ms?: number | null
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          estimated_cost?: number | null
+          flow_id?: string | null
+          id?: string
+          input_summary?: string | null
+          integration_id?: string | null
+          metadata_only?: boolean
+          model?: string | null
+          node_id?: string | null
+          output_summary?: string | null
+          provider?: string
+          response_time_ms?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_execution_logs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_execution_logs_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "automation_flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_execution_logs_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "ai_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_execution_logs_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "automation_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_integrations: {
+        Row: {
+          api_key_encrypted: string | null
+          base_url: string | null
+          created_at: string
+          created_by: string | null
+          environment: string
+          id: string
+          last_test_status: string | null
+          last_tested_at: string | null
+          model: string | null
+          name: string
+          notes: string | null
+          provider: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          api_key_encrypted?: string | null
+          base_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          environment?: string
+          id?: string
+          last_test_status?: string | null
+          last_tested_at?: string | null
+          model?: string | null
+          name: string
+          notes?: string | null
+          provider?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          api_key_encrypted?: string | null
+          base_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          environment?: string
+          id?: string
+          last_test_status?: string | null
+          last_tested_at?: string | null
+          model?: string | null
+          name?: string
+          notes?: string | null
+          provider?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_knowledge_base: {
         Row: {
           category: string
