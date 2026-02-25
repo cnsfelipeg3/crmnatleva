@@ -860,6 +860,7 @@ export type Database = {
           id: string
           media_url: string | null
           message_type: string
+          metadata: Json | null
           read_status: string
           sender_id: string | null
           sender_type: string
@@ -872,6 +873,7 @@ export type Database = {
           id?: string
           media_url?: string | null
           message_type?: string
+          metadata?: Json | null
           read_status?: string
           sender_id?: string | null
           sender_type?: string
@@ -884,6 +886,7 @@ export type Database = {
           id?: string
           media_url?: string | null
           message_type?: string
+          metadata?: Json | null
           read_status?: string
           sender_id?: string | null
           sender_type?: string
@@ -1170,12 +1173,14 @@ export type Database = {
           assigned_to: string | null
           client_id: string | null
           created_at: string
+          display_name: string | null
           external_id: string | null
           funnel_stage: string | null
           id: string
           last_message_at: string | null
           last_message_preview: string | null
           phone: string | null
+          source: string | null
           status: string
           tags: string[] | null
           unread_count: number | null
@@ -1185,12 +1190,14 @@ export type Database = {
           assigned_to?: string | null
           client_id?: string | null
           created_at?: string
+          display_name?: string | null
           external_id?: string | null
           funnel_stage?: string | null
           id?: string
           last_message_at?: string | null
           last_message_preview?: string | null
           phone?: string | null
+          source?: string | null
           status?: string
           tags?: string[] | null
           unread_count?: number | null
@@ -1200,12 +1207,14 @@ export type Database = {
           assigned_to?: string | null
           client_id?: string | null
           created_at?: string
+          display_name?: string | null
           external_id?: string | null
           funnel_stage?: string | null
           id?: string
           last_message_at?: string | null
           last_message_preview?: string | null
           phone?: string | null
+          source?: string | null
           status?: string
           tags?: string[] | null
           unread_count?: number | null

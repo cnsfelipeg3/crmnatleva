@@ -8,7 +8,7 @@ import {
   ArrowUpRight, ArrowDownRight, Wallet, CreditCard, FileText, Building2,
   Percent, FolderTree, Users2, BarChart3, Cog,
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
-  GitBranch, Plug, Zap, BookOpen,
+  GitBranch, Plug, Zap, BookOpen, FileDown,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -154,6 +154,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/livechat/integration", icon: Zap, label: "WhatsApp API" },
               { to: "/livechat/integrations", icon: Plug, label: "Integrações de IA" },
               { to: "/livechat/knowledge-base", icon: BookOpen, label: "Base de Conhecimento" },
+              { to: "/livechat/import-chatguru", icon: FileDown, label: "Importar Conversas" },
             ].map((item) => renderNavItem(item, true))}
           </div>
         )}
