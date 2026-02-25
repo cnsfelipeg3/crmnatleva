@@ -1,0 +1,113 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const { messages, clientContext } = await req.json();
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const contextBlock = clientContext ? `
+## CONTEXTO DO CLIENTE
+- Nome: ${clientContext.name || "Desconhecido"}
+- Score: ${clientContext.score ?? "N/A"}/100
+- Cluster: ${clientContext.cluster || "N/A"}
+- Nível: ${clientContext.level || "N/A"}
+- Total gasto: R$ ${clientContext.totalSpent?.toLocaleString("pt-BR") || "0"}
+- Viagens: ${clientContext.tripCount || 0}
+- Ticket médio: R$ ${clientContext.avgTicket?.toLocaleString("pt-BR") || "0"}
+- Margem média: ${clientContext.avgMargin || "0"}%
+- Última compra: ${clientContext.lastPurchase || "N/A"}
+- Destino favorito: ${clientContext.favoriteDestination || "N/A"}
+- Perfil: ${clientContext.profile || "N/A"}
+- Pendências: ${clientContext.pendencies || "Nenhuma"}
+` : "";
+
+    const systemPrompt = `Você é o assistente de vendas da NatLeva Turismo, uma agência premium de viagens.
+
+Seu papel é analisar mensagens de clientes e gerar respostas profissionais para os vendedores enviarem.
+
+## REGRAS
+1. NUNCA envie respostas diretamente ao cliente. Você gera SUGESTÕES para o vendedor.
+2. Adapte o tom conforme o perfil do cliente (VIP = premium e exclusivo, Econômico = objetivo e claro).
+3. Seja caloroso, profissional e consultivo.
+4. Use emojis com moderação (1-2 por mensagem).
+5. Sempre tente avançar o funil de vendas naturalmente.
+6. Se o cliente mencionar destino, período ou número de pessoas, destaque isso.
+
+## FORMATO DE RESPOSTA (JSON)
+Responda SEMPRE em JSON válido com esta estrutura:
+{
+  "suggestion": "texto da resposta sugerida para o vendedor enviar",
+  "intent": "classificação da intenção (consulta_destino, preco, pagamento, documento, reclamacao, pos_venda, saudacao, urgencia, outro)",
+  "destination": "destino identificado ou null",
+  "urgency": "normal | media | alta | critica",
+  "tags": ["array de tags sugeridas"],
+  "funnel_stage": "novo_lead | qualificacao | orcamento_enviado | negociacao | fechado | pos_venda",
+  "reasoning": "breve explicação da análise para o vendedor"
+}
+
+${contextBlock}`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages,
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns segundos." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao workspace." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const t = await response.text();
+      console.error("AI gateway error:", response.status, t);
+      return new Response(JSON.stringify({ error: "Erro na IA" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
+
+    // Try to parse JSON from the response
+    let parsed;
+    try {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { suggestion: content, intent: "outro", urgency: "normal", tags: [], funnel_stage: "novo_lead", reasoning: "" };
+    } catch {
+      parsed = { suggestion: content, intent: "outro", urgency: "normal", tags: [], funnel_stage: "novo_lead", reasoning: "" };
+    }
+
+    return new Response(JSON.stringify(parsed), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("livechat-ai error:", e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

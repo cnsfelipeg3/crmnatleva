@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.web-search]
 verify_jwt = false
+
+[functions.livechat-ai]
+verify_jwt = false
