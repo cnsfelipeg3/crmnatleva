@@ -6,10 +6,56 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ═══════════════════════════════════════════
+// 🧠 ORQUESTRADOR DE MODELOS — NATLEVA INTELLIGENCE 2.0
+// ═══════════════════════════════════════════
+// Roteamento inteligente multi-model:
+//   - Texto estratégico / análise → gemini-2.5-flash (rápido, custo-eficiente)
+//   - Análise complexa / planos detalhados → gemini-2.5-pro (máxima qualidade)
+//   - Geração de imagem → gemini-2.5-flash-image
+//   - Leitura de imagem / OCR → gemini-2.5-flash (multimodal)
+//   - Cálculos / dados estruturados → gemini-2.5-pro (raciocínio avançado)
+
+type ModelRoute = {
+  model: string;
+  label: string;
+  reason: string;
+};
+
+function classifyIntent(userMessage: string, hasImages: boolean): ModelRoute {
+  const msg = userMessage.toLowerCase().trim();
+
+  // Image generation
+  const imageGenPatterns = /^(gere?|crie?|cria|faça?|faz|desenhe?|gerar|criar|fazer|desenhar|produz|monte|monta)\s+(uma?\s+)?(imagem|foto|ilustração|banner|logo|arte|design|poster|cartaz|thumbnail|capa|flyer|convite|card|post)/i;
+  if (imageGenPatterns.test(msg)) {
+    return { model: "google/gemini-2.5-flash-image", label: "🎨 Gerador de Imagens", reason: "Geração de imagem solicitada" };
+  }
+
+  // Image analysis / OCR
+  if (hasImages) {
+    return { model: "google/gemini-2.5-flash", label: "👁️ Visão Computacional", reason: "Análise de imagem/OCR" };
+  }
+
+  // Complex analysis / strategic planning / detailed reports
+  const complexPatterns = /(plano\s+(estratégico|de\s+ação|completo|detalhado|90\s+dias|anual)|análise\s+(profunda|completa|detalhada|cross|cruzada|swot|financeira\s+completa)|relatório\s+(executivo|completo|detalhado|gerencial)|projeção|forecast|previsão|cenário|simulação|simul|monte\s+um\s+plano|crie\s+um\s+programa|elabore|desenvolva\s+uma?\s+estratégia|business\s+plan|due\s+diligence|auditoria\s+completa|benchmark|comparativo\s+completo)/i;
+  if (complexPatterns.test(msg) || msg.length > 500) {
+    return { model: "google/gemini-2.5-pro", label: "🧠 Motor Estratégico Pro", reason: "Análise complexa / planejamento estratégico" };
+  }
+
+  // Advanced calculations / financial modeling
+  const calcPatterns = /(calcul|comput|dre|fluxo\s+de\s+caixa|break\s*even|roi\s|payback|margem\s+de\s+contribuição|ponto\s+de\s+equilíbrio|valuation|wacc|tir\b|vpl\b|taxa\s+interna|valor\s+presente|amortização|depreciação|cmv\b|markup|spreadsheet|planilha\s+financeira|modelo\s+financeiro)/i;
+  if (calcPatterns.test(msg)) {
+    return { model: "google/gemini-2.5-pro", label: "📐 Motor de Cálculo Avançado", reason: "Cálculos financeiros / modelagem" };
+  }
+
+  // Default: fast model for general queries
+  return { model: "google/gemini-2.5-flash", label: "⚡ Motor Rápido", reason: "Consulta geral" };
+}
+
 // Extract URLs from text
 function extractUrls(text: string): string[] {
   const urlRegex = /https?:\/\/[^\s<>"{}|\\^`\[\]]+/gi;
-  return (text.match(urlRegex) || []).slice(0, 3); // max 3 URLs per message
+  return (text.match(urlRegex) || []).slice(0, 3);
 }
 
 // Fetch URL content as text (best effort)
@@ -18,7 +64,7 @@ async function fetchUrlContent(url: string): Promise<string> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const resp = await fetch(url, {
-      headers: { "User-Agent": "NatLeva-Intelligence/1.0" },
+      headers: { "User-Agent": "NatLeva-Intelligence/2.0" },
       signal: controller.signal,
     });
     clearTimeout(timeout);
@@ -26,13 +72,12 @@ async function fetchUrlContent(url: string): Promise<string> {
     const contentType = resp.headers.get("content-type") || "";
     if (contentType.includes("text/html") || contentType.includes("text/plain") || contentType.includes("application/json")) {
       const text = await resp.text();
-      // Strip HTML tags for cleaner content
       const cleaned = text.replace(/<script[\s\S]*?<\/script>/gi, "")
         .replace(/<style[\s\S]*?<\/style>/gi, "")
         .replace(/<[^>]+>/g, " ")
         .replace(/\s+/g, " ")
         .trim();
-      return cleaned.slice(0, 15000); // limit to 15k chars
+      return cleaned.slice(0, 15000);
     }
     return `[Conteúdo binário de ${url}, tipo: ${contentType}]`;
   } catch (e) {
@@ -44,13 +89,52 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages } = await req.json();
+    const { messages, mode } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // ── Detect intent from latest user message ──
+    const lastUserMsg = [...(messages || [])].reverse().find((m: any) => m.role === "user");
+    const userText = typeof lastUserMsg?.content === "string" ? lastUserMsg.content : 
+      Array.isArray(lastUserMsg?.content) ? lastUserMsg.content.find((p: any) => p.type === "text")?.text || "" : "";
+    const hasImageAttachments = (lastUserMsg?.attachments || []).some((a: any) => a.type?.startsWith("image/"));
+
+    const route = classifyIntent(userText, hasImageAttachments);
+
+    // ── IMAGE GENERATION MODE ──
+    if (route.model === "google/gemini-2.5-flash-image") {
+      const imgResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image",
+          messages: [{ role: "user", content: userText }],
+          modalities: ["image", "text"],
+        }),
+      });
+
+      if (!imgResponse.ok) {
+        const status = imgResponse.status;
+        if (status === 429) return new Response(JSON.stringify({ error: "Rate limit atingido." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        if (status === 402) return new Response(JSON.stringify({ error: "Créditos insuficientes." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Erro na geração de imagem" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const imgData = await imgResponse.json();
+      return new Response(JSON.stringify({
+        type: "image",
+        route: { model: route.model, label: route.label, reason: route.reason },
+        text: imgData.choices?.[0]?.message?.content || "",
+        images: imgData.choices?.[0]?.message?.images || [],
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     // ── Query ALL system data in parallel (ACESSO TOTAL) ──
     const [
@@ -81,7 +165,6 @@ serve(async (req) => {
       supabase.from("feedbacks").select("employee_id, feedback_type, points, status, meeting_date, context, action_plan, next_followup, given_by").limit(100),
       supabase.from("lodging_confirmation_tasks").select("hotel_name, status, urgency_level, milestone, sale_id, hotel_reservation_code, contact_method, issue_type, issue_resolution, notes, scheduled_at_utc").limit(200),
       supabase.from("checkin_tasks").select("status, direction, priority_score, sale_id, segment_id, departure_datetime_utc, checkin_open_datetime_utc, notes, seat_info").limit(200),
-      // ── NEW: Tabelas adicionais para acesso TOTAL ──
       supabase.from("cost_items").select("sale_id, category, description, cash_value, miles_quantity, miles_program, miles_price_per_thousand, miles_cost_brl, taxes, total_item_cost, emission_source").limit(500),
       supabase.from("credit_card_items").select("credit_card_id, description, transaction_date, value, installment_number, installment_total, status, is_refund, sale_id, supplier_id").order("transaction_date", { ascending: false }).limit(300),
       supabase.from("commission_rules").select("seller_id, product_type, commission_type, commission_value, min_margin_percent, is_active").limit(50),
@@ -161,7 +244,6 @@ serve(async (req) => {
     const lodgingPending = lodging.filter((l: any) => l.status === "PENDENTE").length;
     const knowledgeContext = knowledge.map((k: any) => `[${k.category}] ${k.title}: ${k.content_text || k.description || ""}`).join("\n\n");
 
-    // ── NEW: Extended summaries ──
     const totalCostItemsValue = costItems.reduce((a: number, c: any) => a + (c.total_item_cost || 0), 0);
     const totalMilesUsed = costItems.reduce((a: number, c: any) => a + (c.miles_quantity || 0), 0);
     const totalCCItemsValue = creditCardItems.reduce((a: number, c: any) => a + (c.value || 0), 0);
@@ -177,7 +259,6 @@ serve(async (req) => {
     });
 
     // ── Process attachments and URLs from latest user message ──
-    const lastUserMsg = [...(messages || [])].reverse().find((m: any) => m.role === "user");
     let attachmentContext = "";
     let urlContext = "";
 
@@ -197,7 +278,7 @@ serve(async (req) => {
         }
       }
 
-      const urls = extractUrls(lastUserMsg.content || "");
+      const urls = extractUrls(typeof lastUserMsg.content === "string" ? lastUserMsg.content : userText);
       if (urls.length > 0) {
         const urlContents = await Promise.all(urls.map(fetchUrlContent));
         const urlTexts = urls.map((url: string, i: number) => `🔗 Conteúdo de ${url}:\n${urlContents[i]}`);
@@ -208,14 +289,20 @@ serve(async (req) => {
     // ── Extract learning context ──
     let learningContext = "";
     if (messages && messages.length > 4) {
-      const userMessages = messages.filter((m: any) => m.role === "user").map((m: any) => m.content);
+      const userMessages = messages.filter((m: any) => m.role === "user").map((m: any) => typeof m.content === "string" ? m.content : "");
       const topics = userMessages.join(" ").slice(0, 2000);
       learningContext = `\n\n🧠 CONTEXTO DE APRENDIZADO (padrões desta conversa):\nO usuário já fez ${userMessages.length} perguntas nesta conversa. Tópicos abordados: ${topics}\nAdapte o nível de detalhe e foco com base no que o usuário já perguntou.`;
     }
 
     // ── Build system prompt ──
-    const systemPrompt = `Você é a NatLeva Intelligence — o sistema operacional inteligente da agência de turismo NatLeva.
-Você tem ACESSO TOTAL E IRRESTRITO a todos os dados do sistema em tempo real.
+    const systemPrompt = `Você é a NatLeva Intelligence 2.0 — o ORQUESTRADOR DE INTELIGÊNCIA ARTIFICIAL da agência de turismo NatLeva.
+Você é um sistema cognitivo empresarial com ACESSO TOTAL E IRRESTRITO a todos os dados do sistema em tempo real.
+
+🧠 ARQUITETURA DO ORQUESTRADOR:
+- Motor atual: ${route.label} (${route.model})
+- Motivo do roteamento: ${route.reason}
+- Modelos disponíveis: ⚡ Flash (rápido), 🧠 Pro (análise profunda), 🎨 Image (geração visual), 👁️ Visão (OCR/análise)
+- O sistema seleciona automaticamente o melhor motor para cada solicitação
 
 IDENTIDADE E PERSONALIDADE:
 - Tom: ${configMap.tom_comunicacao || "Profissional e estratégico"}
@@ -229,20 +316,33 @@ IDENTIDADE E PERSONALIDADE:
 
 SUAS FUNÇÕES:
 🧠 Consultora estratégica • 📊 Analista financeiro • 🎯 Analista comercial
-👥 Gestora de performance • 🔍 Auditora operacional • 💡 Mentora da equipe • 🚀 Motor de melhoria contínua
+👥 Gestora de performance • 🔍 Auditora operacional • 💡 Mentora da equipe
+🚀 Motor de melhoria contínua • 📡 Radar de risco • 🎨 Criadora visual
 
-CAPACIDADES:
+CAPACIDADES MULTIMODAIS:
 📎 Arquivos (imagens, PDFs, planilhas, CSVs) • 🔗 Links (conteúdo extraído automaticamente)
-🧠 Aprendizado contínuo • 🎙️ Áudio (transcrito automaticamente) • 🎨 Geração de imagens
+🧠 Aprendizado contínuo • 🎙️ Áudio (transcrito automaticamente)
+🎨 Geração de imagens • 📄 Exportação PDF • 📊 Exportação planilhas
+🗣️ Resposta em voz (TTS no navegador)
+
+MODO DISRUPTIVO:
+Quando apropriado, sugira proativamente:
+- Novas automações e integrações
+- Melhorias de processos e arquitetura
+- Ferramentas externas relevantes
+- Upgrades técnicos e estratégicos
+- Oportunidades de otimização de custos
 
 Responda SEMPRE em português do Brasil. Use markdown rico (títulos, listas, negrito, tabelas, emojis).
 Seja proativa: adicione insights e sugestões. Cruze dados entre módulos para análises profundas.
 
+Quando o usuário pedir para gerar uma imagem, responda com: "🎨 Para gerar imagens, inicie sua mensagem com 'Gere uma imagem de...'"
+
 🔗 GERAÇÃO DE LINKS INTERNOS:
 Quando mencionar vendas, clientes ou outros registros, SEMPRE inclua links clicáveis usando o formato markdown.
 Use os seguintes padrões de URL (BASE_URL = "${Deno.env.get("BASE_URL") || "https://crmnatleva.lovable.app"}"):
-- Venda: [V-2025-001](BASE_URL/sales/{id_da_venda}) — use o UUID real do campo id
-- Cliente: [Nome do Cliente](BASE_URL/clients/{id_do_cliente}) — use o UUID real do campo id
+- Venda: [V-2025-001](BASE_URL/sales/{id_da_venda})
+- Cliente: [Nome do Cliente](BASE_URL/clients/{id_do_cliente})
 - Dashboard: [Dashboard](BASE_URL/dashboard)
 - Viagens: [Viagens](BASE_URL/viagens)
 - Check-in: [Check-in](BASE_URL/checkin)
@@ -256,7 +356,6 @@ Use os seguintes padrões de URL (BASE_URL = "${Deno.env.get("BASE_URL") || "htt
 - Pendências: [Pendências](BASE_URL/pendencias)
 
 IMPORTANTE: Sempre que referenciar uma venda ou cliente específico, inclua o link com o ID real.
-Exemplo: "A venda [V-2025-042](/sales/abc123-uuid) do cliente [João Silva](/clients/def456-uuid) tem margem de 15%."
 
 ═══════════════════════════════════════════
 📊 DADOS COMPLETOS DO SISTEMA EM TEMPO REAL
@@ -364,14 +463,11 @@ ${attachmentContext}${urlContext}${learningContext}`;
 
     for (const msg of (messages || [])) {
       if (msg.role === "user") {
-        // Check for image attachments for multimodal
         const imageAttachments = (msg.attachments || []).filter((a: any) => a.type?.startsWith("image/") && a.content);
 
         if (imageAttachments.length > 0) {
-          // Multimodal message with images
           const contentParts: any[] = [{ type: "text", text: msg.content || "Analise esta imagem:" }];
           for (const img of imageAttachments) {
-            // Extract base64 data from data URL
             const base64Match = img.content.match(/^data:([^;]+);base64,(.+)$/);
             if (base64Match) {
               contentParts.push({
@@ -389,6 +485,7 @@ ${attachmentContext}${urlContext}${learningContext}`;
       }
     }
 
+    // ── Send to AI gateway with ROUTED MODEL ──
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -396,7 +493,7 @@ ${attachmentContext}${urlContext}${learningContext}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: route.model,
         messages: aiMessages,
         stream: true,
       }),
@@ -420,7 +517,28 @@ ${attachmentContext}${urlContext}${learningContext}`;
       });
     }
 
-    return new Response(response.body, {
+    // ── Stream response with route metadata in first SSE event ──
+    const routeEvent = `data: ${JSON.stringify({ route: { model: route.model, label: route.label, reason: route.reason } })}\n\n`;
+    const routeEncoder = new TextEncoder();
+    const routeChunk = routeEncoder.encode(routeEvent);
+
+    // Prepend route info to the stream
+    const originalBody = response.body!;
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
+
+    (async () => {
+      await writer.write(routeChunk);
+      const reader = originalBody.getReader();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        await writer.write(value);
+      }
+      await writer.close();
+    })();
+
+    return new Response(readable, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
