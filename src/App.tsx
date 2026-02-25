@@ -25,6 +25,7 @@ import ClientIntelligence from "@/pages/ClientIntelligence";
 import NatLevaIntelligence from "@/pages/NatLevaIntelligence";
 import NotFound from "@/pages/NotFound";
 import UserLocations from "@/pages/settings/UserLocations";
+import LiveChat from "@/pages/LiveChat";
 
 // RH
 import RHIndex from "@/pages/rh/RHIndex";
@@ -87,6 +88,7 @@ function AppRoutes() {
         <Route path="/birthdays" element={<Birthdays />} />
         <Route path="/import" element={<ImportData />} />
         <Route path="/pendencias" element={<Pendencias />} />
+        <Route path="/livechat" element={<LiveChat />} />
 
         {/* Financeiro */}
         <Route path="/financeiro" element={<FinanceiroIndex />} />
