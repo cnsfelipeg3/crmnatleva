@@ -22,34 +22,49 @@ type ModelRoute = {
   reason: string;
 };
 
-function classifyIntent(userMessage: string, hasImages: boolean): ModelRoute {
+function classifyIntent(userMessage: string, hasImages: boolean): ModelRoute & { needsWebSearch: boolean; searchQuery?: string } {
   const msg = userMessage.toLowerCase().trim();
 
   // Image generation
   const imageGenPatterns = /^(gere?|crie?|cria|faça?|faz|desenhe?|gerar|criar|fazer|desenhar|produz|monte|monta)\s+(uma?\s+)?(imagem|foto|ilustração|banner|logo|arte|design|poster|cartaz|thumbnail|capa|flyer|convite|card|post)/i;
   if (imageGenPatterns.test(msg)) {
-    return { model: "google/gemini-2.5-flash-image", label: "🎨 Gerador de Imagens", reason: "Geração de imagem solicitada" };
+    return { model: "google/gemini-2.5-flash-image", label: "🎨 Gerador de Imagens", reason: "Geração de imagem solicitada", needsWebSearch: false };
   }
 
   // Image analysis / OCR
   if (hasImages) {
-    return { model: "google/gemini-2.5-flash", label: "👁️ Visão Computacional", reason: "Análise de imagem/OCR" };
+    return { model: "google/gemini-2.5-flash", label: "👁️ Visão Computacional", reason: "Análise de imagem/OCR", needsWebSearch: false };
+  }
+
+  // ── Web search detection ──
+  const searchPatterns = /(pesquis|busc|procur|notícia|tendência|mercado|concorr|benchmark|o que há de novo|novidade|atualização|última hora|greve|crise|desastre|restriç|regulament|legislaç|cotação|dólar|euro|câmbio|preço atual|valor atual|tarifa atual|instagram|tiktok|linkedin|twitter|rede\s*social|@\w|monitorar?\s+perfil|analis[ae]\s+(mercado|setor|concorr)|o que é\b|quem é\b|como funciona\b|quando\b.*\b(aconteceu|foi|será)|turismo\s+(mundial|global|brasil)|ranking\s+(de|dos|das)|companhia\s+aérea.*not|hotel.*notícia|destino\s+(popular|tendência|mais)|api\s+(grátis|free|gratuita|aberta)|integraç|ferramenta|software|plataforma.*alternativa)/i;
+  const needsWebSearch = searchPatterns.test(msg);
+  
+  // Extract a clean search query from the user message
+  let searchQuery: string | undefined;
+  if (needsWebSearch) {
+    // Remove common command prefixes to get the core query
+    searchQuery = userMessage
+      .replace(/^(pesquise?|busque?|procure?|me\s+diga|me\s+fale|quero\s+saber)\s+(sobre\s+)?/i, "")
+      .replace(/^(o que|quem|como|quando|onde|qual|quais)\s+(é|são|foi|era|funciona|fica)\s+/i, "$1 $2 ")
+      .trim()
+      .slice(0, 200);
   }
 
   // Complex analysis / strategic planning / detailed reports
   const complexPatterns = /(plano\s+(estratégico|de\s+ação|completo|detalhado|90\s+dias|anual)|análise\s+(profunda|completa|detalhada|cross|cruzada|swot|financeira\s+completa)|relatório\s+(executivo|completo|detalhado|gerencial)|projeção|forecast|previsão|cenário|simulação|simul|monte\s+um\s+plano|crie\s+um\s+programa|elabore|desenvolva\s+uma?\s+estratégia|business\s+plan|due\s+diligence|auditoria\s+completa|benchmark|comparativo\s+completo)/i;
   if (complexPatterns.test(msg) || msg.length > 500) {
-    return { model: "google/gemini-2.5-pro", label: "🧠 Motor Estratégico Pro", reason: "Análise complexa / planejamento estratégico" };
+    return { model: "google/gemini-2.5-pro", label: "🧠 Motor Estratégico Pro", reason: "Análise complexa / planejamento estratégico", needsWebSearch, searchQuery };
   }
 
   // Advanced calculations / financial modeling
   const calcPatterns = /(calcul|comput|dre|fluxo\s+de\s+caixa|break\s*even|roi\s|payback|margem\s+de\s+contribuição|ponto\s+de\s+equilíbrio|valuation|wacc|tir\b|vpl\b|taxa\s+interna|valor\s+presente|amortização|depreciação|cmv\b|markup|spreadsheet|planilha\s+financeira|modelo\s+financeiro)/i;
   if (calcPatterns.test(msg)) {
-    return { model: "google/gemini-2.5-pro", label: "📐 Motor de Cálculo Avançado", reason: "Cálculos financeiros / modelagem" };
+    return { model: "google/gemini-2.5-pro", label: "📐 Motor de Cálculo Avançado", reason: "Cálculos financeiros / modelagem", needsWebSearch, searchQuery };
   }
 
   // Default: fast model for general queries
-  return { model: "google/gemini-2.5-flash", label: "⚡ Motor Rápido", reason: "Consulta geral" };
+  return { model: "google/gemini-2.5-flash", label: needsWebSearch ? "🔍 Busca + IA" : "⚡ Motor Rápido", reason: needsWebSearch ? "Consulta com busca na web" : "Consulta geral", needsWebSearch, searchQuery };
 }
 
 // Extract URLs from text
@@ -104,6 +119,29 @@ serve(async (req) => {
     const hasImageAttachments = (lastUserMsg?.attachments || []).some((a: any) => a.type?.startsWith("image/"));
 
     const route = classifyIntent(userText, hasImageAttachments);
+
+    // ── WEB SEARCH (if needed) ──
+    let webSearchContext = "";
+    if (route.needsWebSearch && route.searchQuery) {
+      try {
+        const searchResp = await fetch(`${supabaseUrl}/functions/v1/web-search`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ query: route.searchQuery, sources: ["web", "wikipedia", "news"] }),
+        });
+        if (searchResp.ok) {
+          const searchData = await searchResp.json();
+          if (searchData.summary) {
+            webSearchContext = `\n\n🌐 RESULTADOS DE BUSCA NA WEB (dados em tempo real):\n${searchData.summary}`;
+          }
+        }
+      } catch (e) {
+        console.error("Web search failed:", e);
+      }
+    }
 
     // ── IMAGE GENERATION MODE ──
     if (route.model === "google/gemini-2.5-flash-image") {
@@ -324,6 +362,17 @@ CAPACIDADES MULTIMODAIS:
 🧠 Aprendizado contínuo • 🎙️ Áudio (transcrito automaticamente)
 🎨 Geração de imagens • 📄 Exportação PDF • 📊 Exportação planilhas
 🗣️ Resposta em voz (TTS no navegador)
+🌐 Busca na web em tempo real (DuckDuckGo, Wikipedia, Google News — SEM API key)
+
+ACESSO A FONTES EXTERNAS:
+Quando a busca na web é ativada, você recebe dados em tempo real da internet.
+Use essas fontes para enriquecer suas análises com:
+- Notícias do setor de turismo (greves, crises, novas rotas, regulamentações)
+- Tendências de mercado e benchmarks
+- Cotações e dados econômicos
+- Informações sobre concorrentes e fornecedores
+- Análise de redes sociais e perfis públicos
+Sempre cite as fontes quando usar dados da web.
 
 MODO DISRUPTIVO:
 Quando apropriado, sugira proativamente:
@@ -456,7 +505,7 @@ ${clientNotes.slice(0, 10).map((n: any) => `- Cliente ${n.client_id?.slice(0, 8)
 
 ÚLTIMAS TRANSAÇÕES CARTÃO:
 ${creditCardItems.slice(0, 15).map((c: any) => `- ${c.transaction_date} | ${c.description || "?"} | R$ ${(c.value || 0).toLocaleString("pt-BR")} | ${c.status} ${c.is_refund ? "(ESTORNO)" : ""}`).join("\n") || "- Sem transações"}
-${attachmentContext}${urlContext}${learningContext}`;
+${attachmentContext}${urlContext}${learningContext}${webSearchContext}`;
 
     // ── Build messages for AI, handling multimodal (images) ──
     const aiMessages: any[] = [{ role: "system", content: systemPrompt }];
