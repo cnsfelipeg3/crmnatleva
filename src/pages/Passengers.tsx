@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Search, Plus, AlertTriangle, User, RefreshCw, Loader2, Plane } from "lucide-react";
+import { Search, Plus, AlertTriangle, User, RefreshCw, Loader2, Plane, ShoppingCart, CheckSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import AIExtractButton from "@/components/AIExtractButton";
@@ -79,6 +79,8 @@ export default function Passengers() {
   const [detailPax, setDetailPax] = useState<Passenger | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [bulkSelection, setBulkSelection] = useState<Set<string>>(new Set());
+  const [bulkMode, setBulkMode] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -218,6 +220,23 @@ export default function Passengers() {
     return matchSearch && matchState && matchDoc;
   });
 
+  const navigateToNewSaleWithPassengers = (paxIds: string[]) => {
+    const paxList = passengers.filter(p => paxIds.includes(p.id)).map(p => ({
+      id: p.id, full_name: p.full_name, cpf: p.cpf, birth_date: p.birth_date,
+      passport_number: p.passport_number, passport_expiry: p.passport_expiry,
+      phone: p.phone, incomplete: !p.cpf && !p.passport_number,
+    }));
+    navigate("/sales/new", { state: { preSelectedPassengers: paxList } });
+  };
+
+  const toggleBulk = (id: string) => {
+    setBulkSelection(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-5 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -225,7 +244,15 @@ export default function Passengers() {
           <h1 className="text-xl sm:text-2xl font-serif text-foreground">Passageiros</h1>
           <p className="text-sm text-muted-foreground">{passengers.length} passageiros cadastrados</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button variant={bulkMode ? "secondary" : "outline"} size="sm" onClick={() => { setBulkMode(!bulkMode); setBulkSelection(new Set()); }}>
+            <CheckSquare className="w-4 h-4 mr-1" /> {bulkMode ? "Cancelar seleção" : "Selecionar"}
+          </Button>
+          {bulkMode && bulkSelection.size > 0 && (
+            <Button size="sm" onClick={() => navigateToNewSaleWithPassengers([...bulkSelection])}>
+              <ShoppingCart className="w-4 h-4 mr-1" /> Criar venda ({bulkSelection.size})
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
             {syncing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
             Sincronizar das Vendas
@@ -360,10 +387,15 @@ export default function Passengers() {
           {filtered.map((p) => (
             <Card
               key={p.id}
-              className="p-4 glass-card cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => setDetailPax(p)}
+              className={`p-4 glass-card cursor-pointer hover:shadow-md transition-shadow ${bulkMode && bulkSelection.has(p.id) ? "ring-2 ring-primary" : ""}`}
+              onClick={() => bulkMode ? toggleBulk(p.id) : setDetailPax(p)}
             >
               <div className="flex items-start gap-3">
+                {bulkMode && (
+                  <div className="pt-1">
+                    <input type="checkbox" checked={bulkSelection.has(p.id)} onChange={() => toggleBulk(p.id)} className="rounded border-input" />
+                  </div>
+                )}
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <User className="w-5 h-5 text-primary" />
                 </div>
@@ -439,6 +471,20 @@ export default function Passengers() {
                   </div>
                 </div>
               )}
+
+              {/* Quick action: create sale */}
+              <div className="border-t pt-3">
+                <Button
+                  className="w-full"
+                  size="sm"
+                  onClick={() => {
+                    setDetailPax(null);
+                    navigateToNewSaleWithPassengers([detailPax.id]);
+                  }}
+                >
+                  <ShoppingCart className="w-4 h-4 mr-1" /> Criar venda para este passageiro
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>

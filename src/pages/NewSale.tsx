@@ -22,6 +22,8 @@ import FlightEnrichmentDialog from "@/components/FlightEnrichmentDialog";
 import HotelAutocomplete from "@/components/HotelAutocomplete";
 import { classifyItinerary, assignDirections } from "@/lib/itineraryClassifier";
 import { smartCapitalizeName } from "@/lib/nameUtils";
+import PassengerSelector, { type SelectedPassenger } from "@/components/PassengerSelector";
+import { useLocation } from "react-router-dom";
 
 const steps = [
   { id: 1, label: "Upload & IA" },
@@ -90,6 +92,11 @@ export default function NewSale() {
 
   const [saving, setSaving] = useState(false);
   const [enrichmentOpen, setEnrichmentOpen] = useState(false);
+  const location = useLocation();
+  const [selectedPassengers, setSelectedPassengers] = useState<SelectedPassenger[]>(() => {
+    const state = location.state as any;
+    return state?.preSelectedPassengers || [];
+  });
 
   const updateForm = (field: string, value: any) => setForm(f => ({ ...f, [field]: value }));
 
@@ -420,6 +427,14 @@ export default function NewSale() {
         }
       }
 
+      // Link manually selected passengers
+      for (const pax of selectedPassengers) {
+        const { data: existingLink } = await supabase.from("sale_passengers").select("id").eq("sale_id", saleId).eq("passenger_id", pax.id).maybeSingle();
+        if (!existingLink) {
+          await supabase.from("sale_passengers").insert({ sale_id: saleId, passenger_id: pax.id });
+        }
+      }
+
       toast({ title: "Venda salva com sucesso!" });
 
       // Auto-generate checkin and lodging tasks
@@ -622,7 +637,9 @@ export default function NewSale() {
                 <Input value={form.children_ages} onChange={(e) => updateForm("children_ages", e.target.value)} placeholder="3, 8" />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">Gerencie passageiros individuais na página <button onClick={() => navigate("/passengers")} className="text-primary underline">Passageiros</button>.</p>
+            <div className="border-t pt-4">
+              <PassengerSelector selected={selectedPassengers} onChange={setSelectedPassengers} />
+            </div>
           </div>
         )}
 
@@ -846,6 +863,7 @@ export default function NewSale() {
                 <span className="text-muted-foreground">Datas</span><span>{form.departure_date || "?"} — {form.return_date || "?"}</span>
                 <span className="text-muted-foreground">Companhia</span><span>{form.airline || "—"}</span>
                 <span className="text-muted-foreground">PAX</span><span>{form.adults + form.children}</span>
+                <span className="text-muted-foreground">Passageiros</span><span>{selectedPassengers.length} vinculado(s)</span>
                 <span className="text-muted-foreground">Hotel</span><span>{form.hotel_name || "—"}</span>
                 <span className="text-muted-foreground">Receita</span><span className="text-success font-semibold">R$ {receivedValue.toFixed(2)}</span>
                 <span className="text-muted-foreground">Custo</span><span>R$ {totalCost.toFixed(2)}</span>
