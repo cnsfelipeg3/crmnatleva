@@ -431,7 +431,7 @@ export default function Passengers() {
             <Card
               key={p.id}
               className={`p-4 glass-card cursor-pointer hover:shadow-md transition-shadow ${bulkMode && bulkSelection.has(p.id) ? "ring-2 ring-primary" : ""}`}
-              onClick={() => bulkMode ? toggleBulk(p.id) : (() => { setDetailPax(p); setEditingDetail(false); })()}
+              onClick={() => bulkMode ? toggleBulk(p.id) : navigate(`/passengers/${p.id}`)}
             >
               <div className="flex items-start gap-3">
                 {bulkMode && (
