@@ -1665,17 +1665,23 @@ export type Database = {
       sale_passengers: {
         Row: {
           id: string
+          observations: string | null
           passenger_id: string
+          role: string
           sale_id: string
         }
         Insert: {
           id?: string
+          observations?: string | null
           passenger_id: string
+          role?: string
           sale_id: string
         }
         Update: {
           id?: string
+          observations?: string | null
           passenger_id?: string
+          role?: string
           sale_id?: string
         }
         Relationships: [
@@ -1737,6 +1743,7 @@ export type Database = {
           origin_city: string | null
           origin_iata: string | null
           other_codes: string[] | null
+          payer_passenger_id: string | null
           payment_method: string | null
           products: string[] | null
           profit: number | null
@@ -1790,6 +1797,7 @@ export type Database = {
           origin_city?: string | null
           origin_iata?: string | null
           other_codes?: string[] | null
+          payer_passenger_id?: string | null
           payment_method?: string | null
           products?: string[] | null
           profit?: number | null
@@ -1843,6 +1851,7 @@ export type Database = {
           origin_city?: string | null
           origin_iata?: string | null
           other_codes?: string[] | null
+          payer_passenger_id?: string | null
           payment_method?: string | null
           products?: string[] | null
           profit?: number | null
@@ -1861,6 +1870,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_payer_passenger_id_fkey"
+            columns: ["payer_passenger_id"]
+            isOneToOne: false
+            referencedRelation: "passengers"
             referencedColumns: ["id"]
           },
         ]

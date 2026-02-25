@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { Search, Plus, AlertTriangle, User, RefreshCw, Loader2, Plane, ShoppingCart, CheckSquare } from "lucide-react";
+import { Search, Plus, AlertTriangle, User, RefreshCw, Loader2, Plane, ShoppingCart, CheckSquare, Pencil, Save, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import AIExtractButton from "@/components/AIExtractButton";
@@ -25,6 +25,7 @@ interface Passenger {
   passport_number: string | null;
   passport_expiry: string | null;
   phone: string | null;
+  rg: string | null;
   address_cep: string | null;
   address_street: string | null;
   address_number: string | null;
@@ -81,6 +82,9 @@ export default function Passengers() {
   const [syncing, setSyncing] = useState(false);
   const [bulkSelection, setBulkSelection] = useState<Set<string>>(new Set());
   const [bulkMode, setBulkMode] = useState(false);
+  const [editingDetail, setEditingDetail] = useState(false);
+  const [editForm, setEditForm] = useState<Partial<Passenger>>({});
+  const [savingEdit, setSavingEdit] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -97,9 +101,7 @@ export default function Passengers() {
     setPassengers(data as Passenger[]);
     setLoading(false);
 
-    // Fetch sale links for all passengers (paginated)
     const links = await fetchAllRows("sale_passengers", "passenger_id, sale_id, sales:sale_id(name, display_id)");
-    
     if (links) {
       const map: Record<string, SaleLink[]> = {};
       for (const link of links as any[]) {
@@ -122,16 +124,11 @@ export default function Passengers() {
     try {
       const { data, error } = await supabase.functions.invoke("backfill-passengers");
       if (error) throw error;
-      toast({
-        title: "Sincronização concluída!",
-        description: `${data.created} criados, ${data.linked} vinculados, ${data.skipped} atualizados`,
-      });
+      toast({ title: "Sincronização concluída!", description: `${data.created} criados, ${data.linked} vinculados, ${data.skipped} atualizados` });
       await fetchPassengers();
     } catch (err: any) {
       toast({ title: "Erro na sincronização", description: err.message, variant: "destructive" });
-    } finally {
-      setSyncing(false);
-    }
+    } finally { setSyncing(false); }
   };
 
   const handleCepLookup = async (cep: string) => {
@@ -142,6 +139,24 @@ export default function Passengers() {
       const data = await res.json();
       if (!data.erro) {
         setForm(f => ({
+          ...f,
+          address_street: data.logradouro || f.address_street,
+          address_neighborhood: data.bairro || f.address_neighborhood,
+          address_city: data.localidade || f.address_city,
+          address_state: data.uf || f.address_state,
+        }));
+      }
+    } catch { /* ignore */ }
+  };
+
+  const handleEditCepLookup = async (cep: string) => {
+    const clean = cep.replace(/\D/g, "");
+    if (clean.length !== 8) return;
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setEditForm(f => ({
           ...f,
           address_street: data.logradouro || f.address_street,
           address_neighborhood: data.bairro || f.address_neighborhood,
@@ -195,16 +210,57 @@ export default function Passengers() {
       address_state: form.address_state || null,
       created_by: user?.id,
     });
-
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
       return;
     }
-
     toast({ title: "Passageiro cadastrado!" });
     setForm({ full_name: "", cpf: "", birth_date: "", passport_number: "", passport_expiry: "", phone: "", address_cep: "", address_street: "", address_number: "", address_complement: "", address_neighborhood: "", address_city: "", address_state: "" });
     setDialogOpen(false);
     fetchPassengers();
+  };
+
+  const startEditDetail = () => {
+    if (!detailPax) return;
+    setEditForm({ ...detailPax });
+    setEditingDetail(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!detailPax) return;
+    setSavingEdit(true);
+    const capitalizedName = smartCapitalizeName(editForm.full_name || "");
+    if (!capitalizedName || capitalizedName.length < 2) {
+      toast({ title: "Nome inválido", variant: "destructive" });
+      setSavingEdit(false);
+      return;
+    }
+    const { error } = await supabase.from("passengers").update({
+      full_name: capitalizedName,
+      cpf: editForm.cpf || null,
+      birth_date: editForm.birth_date || null,
+      passport_number: editForm.passport_number || null,
+      passport_expiry: editForm.passport_expiry || null,
+      phone: editForm.phone || null,
+      rg: editForm.rg || null,
+      address_cep: editForm.address_cep || null,
+      address_street: editForm.address_street || null,
+      address_number: editForm.address_number || null,
+      address_complement: editForm.address_complement || null,
+      address_neighborhood: editForm.address_neighborhood || null,
+      address_city: editForm.address_city || null,
+      address_state: editForm.address_state || null,
+    }).eq("id", detailPax.id);
+    setSavingEdit(false);
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Passageiro atualizado!" });
+    const updated = { ...detailPax, ...editForm, full_name: capitalizedName } as Passenger;
+    setDetailPax(updated);
+    setPassengers(prev => prev.map(p => p.id === updated.id ? updated : p));
+    setEditingDetail(false);
   };
 
   const states = [...new Set(passengers.map(p => p.address_state).filter(Boolean))].sort() as string[];
@@ -269,12 +325,7 @@ export default function Passengers() {
               <form onSubmit={handleSubmit} className="space-y-4 pt-2">
                 <div className="space-y-2">
                   <Label>Nome Completo *</Label>
-                  <Input 
-                    value={form.full_name} 
-                    onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} 
-                    onBlur={(e) => setForm(f => ({ ...f, full_name: smartCapitalizeName(e.target.value) }))}
-                    required 
-                  />
+                  <Input value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} onBlur={(e) => setForm(f => ({ ...f, full_name: smartCapitalizeName(e.target.value) }))} required />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
@@ -305,15 +356,7 @@ export default function Passengers() {
                   <div className="grid grid-cols-3 gap-3">
                     <div className="space-y-2">
                       <Label>CEP</Label>
-                      <Input
-                        value={form.address_cep}
-                        onChange={(e) => {
-                          const v = formatCep(e.target.value);
-                          setForm(f => ({ ...f, address_cep: v }));
-                          if (v.replace(/\D/g, "").length === 8) handleCepLookup(v);
-                        }}
-                        placeholder="00000-000"
-                      />
+                      <Input value={form.address_cep} onChange={(e) => { const v = formatCep(e.target.value); setForm(f => ({ ...f, address_cep: v })); if (v.replace(/\D/g, "").length === 8) handleCepLookup(v); }} placeholder="00000-000" />
                     </div>
                     <div className="space-y-2 col-span-2">
                       <Label>Rua</Label>
@@ -388,7 +431,7 @@ export default function Passengers() {
             <Card
               key={p.id}
               className={`p-4 glass-card cursor-pointer hover:shadow-md transition-shadow ${bulkMode && bulkSelection.has(p.id) ? "ring-2 ring-primary" : ""}`}
-              onClick={() => bulkMode ? toggleBulk(p.id) : setDetailPax(p)}
+              onClick={() => bulkMode ? toggleBulk(p.id) : (() => { setDetailPax(p); setEditingDetail(false); })()}
             >
               <div className="flex items-start gap-3">
                 {bulkMode && (
@@ -403,9 +446,7 @@ export default function Passengers() {
                   <p className="font-medium text-foreground truncate">{p.full_name}</p>
                   {p.cpf && <p className="text-xs text-muted-foreground font-mono">{p.cpf}</p>}
                   {p.phone && <p className="text-xs text-muted-foreground">{p.phone}</p>}
-                  {p.address_city && (
-                    <p className="text-xs text-muted-foreground">{p.address_city}/{p.address_state}</p>
-                  )}
+                  {p.address_city && <p className="text-xs text-muted-foreground">{p.address_city}/{p.address_state}</p>}
                   <div className="flex gap-1 mt-2 flex-wrap">
                     {(saleLinks[p.id]?.length || 0) > 0 && (
                       <Badge variant="secondary" className="text-[10px]">
@@ -413,9 +454,7 @@ export default function Passengers() {
                       </Badge>
                     )}
                     {p.passport_number && (
-                      <Badge variant="outline" className="text-[10px]">
-                        Passaporte: {p.passport_number}
-                      </Badge>
+                      <Badge variant="outline" className="text-[10px]">Passaporte: {p.passport_number}</Badge>
                     )}
                     {isPassportExpiringSoon(p.passport_expiry) && (
                       <Badge variant="destructive" className="text-[10px] flex items-center gap-1">
@@ -430,19 +469,25 @@ export default function Passengers() {
         </div>
       )}
 
-      {/* Detail dialog */}
-      <Dialog open={!!detailPax} onOpenChange={(open) => !open && setDetailPax(null)}>
-        <DialogContent className="max-w-md">
+      {/* Detail/Edit dialog */}
+      <Dialog open={!!detailPax} onOpenChange={(open) => { if (!open) { setDetailPax(null); setEditingDetail(false); } }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="w-5 h-5 text-primary" />
-              {detailPax?.full_name}
+              {editingDetail ? "Editar Passageiro" : detailPax?.full_name}
             </DialogTitle>
           </DialogHeader>
-          {detailPax && (
+          {detailPax && !editingDetail && (
             <div className="space-y-4">
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={startEditDetail}>
+                  <Pencil className="w-4 h-4 mr-1" /> Editar Cadastro
+                </Button>
+              </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 {detailPax.cpf && <><span className="text-muted-foreground">CPF</span><span className="font-mono">{detailPax.cpf}</span></>}
+                {detailPax.rg && <><span className="text-muted-foreground">RG</span><span className="font-mono">{detailPax.rg}</span></>}
                 {detailPax.birth_date && <><span className="text-muted-foreground">Nascimento</span><span>{formatDateBR(detailPax.birth_date)}</span></>}
                 {detailPax.phone && <><span className="text-muted-foreground">Telefone</span><span>{detailPax.phone}</span></>}
                 {detailPax.passport_number && <><span className="text-muted-foreground">Passaporte</span><span className="font-mono">{detailPax.passport_number}</span></>}
@@ -451,7 +496,6 @@ export default function Passengers() {
                 {detailPax.address_street && <><span className="text-muted-foreground">Endereço</span><span>{detailPax.address_street}, {detailPax.address_number}</span></>}
               </div>
 
-              {/* Linked sales */}
               {(saleLinks[detailPax.id]?.length || 0) > 0 && (
                 <div className="border-t pt-3">
                   <h4 className="text-sm font-semibold mb-2 flex items-center gap-1">
@@ -472,17 +516,95 @@ export default function Passengers() {
                 </div>
               )}
 
-              {/* Quick action: create sale */}
               <div className="border-t pt-3">
-                <Button
-                  className="w-full"
-                  size="sm"
-                  onClick={() => {
-                    setDetailPax(null);
-                    navigateToNewSaleWithPassengers([detailPax.id]);
-                  }}
-                >
+                <Button className="w-full" size="sm" onClick={() => { setDetailPax(null); navigateToNewSaleWithPassengers([detailPax.id]); }}>
                   <ShoppingCart className="w-4 h-4 mr-1" /> Criar venda para este passageiro
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Edit mode */}
+          {detailPax && editingDetail && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Nome Completo *</Label>
+                <Input value={editForm.full_name || ""} onChange={(e) => setEditForm(f => ({ ...f, full_name: e.target.value }))} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>CPF</Label>
+                  <Input value={editForm.cpf || ""} onChange={(e) => setEditForm(f => ({ ...f, cpf: formatCpf(e.target.value) }))} placeholder="000.000.000-00" />
+                </div>
+                <div className="space-y-2">
+                  <Label>RG</Label>
+                  <Input value={editForm.rg || ""} onChange={(e) => setEditForm(f => ({ ...f, rg: e.target.value }))} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Data de Nascimento</Label>
+                  <Input type="date" value={editForm.birth_date || ""} onChange={(e) => setEditForm(f => ({ ...f, birth_date: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefone</Label>
+                  <Input value={editForm.phone || ""} onChange={(e) => setEditForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} placeholder="(11) 99999-9999" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Passaporte</Label>
+                  <Input value={editForm.passport_number || ""} onChange={(e) => setEditForm(f => ({ ...f, passport_number: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Validade Passaporte</Label>
+                  <Input type="date" value={editForm.passport_expiry || ""} onChange={(e) => setEditForm(f => ({ ...f, passport_expiry: e.target.value }))} />
+                </div>
+              </div>
+              <div className="border-t pt-3">
+                <h4 className="text-sm font-semibold mb-3">Endereço</h4>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-2">
+                    <Label>CEP</Label>
+                    <Input value={editForm.address_cep || ""} onChange={(e) => { const v = formatCep(e.target.value); setEditForm(f => ({ ...f, address_cep: v })); if (v.replace(/\D/g, "").length === 8) handleEditCepLookup(v); }} placeholder="00000-000" />
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label>Rua</Label>
+                    <Input value={editForm.address_street || ""} onChange={(e) => setEditForm(f => ({ ...f, address_street: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  <div className="space-y-2">
+                    <Label>Número</Label>
+                    <Input value={editForm.address_number || ""} onChange={(e) => setEditForm(f => ({ ...f, address_number: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2 col-span-2">
+                    <Label>Complemento</Label>
+                    <Input value={editForm.address_complement || ""} onChange={(e) => setEditForm(f => ({ ...f, address_complement: e.target.value }))} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3 mt-3">
+                  <div className="space-y-2">
+                    <Label>Bairro</Label>
+                    <Input value={editForm.address_neighborhood || ""} onChange={(e) => setEditForm(f => ({ ...f, address_neighborhood: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cidade</Label>
+                    <Input value={editForm.address_city || ""} onChange={(e) => setEditForm(f => ({ ...f, address_city: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>UF</Label>
+                    <Input value={editForm.address_state || ""} onChange={(e) => setEditForm(f => ({ ...f, address_state: e.target.value }))} maxLength={2} />
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => setEditingDetail(false)}>
+                  <X className="w-4 h-4 mr-1" /> Cancelar
+                </Button>
+                <Button className="flex-1" onClick={handleSaveEdit} disabled={savingEdit}>
+                  {savingEdit ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+                  Salvar Alterações
                 </Button>
               </div>
             </div>

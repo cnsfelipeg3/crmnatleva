@@ -23,6 +23,7 @@ import FlightEnrichmentDialog from "@/components/FlightEnrichmentDialog";
 import HotelAutocomplete from "@/components/HotelAutocomplete";
 import AirlineLogo, { AirlineLogosStack } from "@/components/AirlineLogo";
 import ClientAutocomplete from "@/components/ClientAutocomplete";
+import SalePassengersManager from "@/components/SalePassengersManager";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -38,6 +39,7 @@ export default function SaleDetail() {
   const [summary, setSummary] = useState("");
   const [generatingSummary, setGeneratingSummary] = useState(false);
   const [clientName, setClientName] = useState("");
+  const [payerPassengerId, setPayerPassengerId] = useState<string | null>(null);
 
   // Edit mode
   const [editing, setEditing] = useState(false);
@@ -51,7 +53,7 @@ export default function SaleDetail() {
       setSale(saleData);
       if (saleData) {
         setEditForm(saleData);
-        // Fetch client name
+        setPayerPassengerId(saleData.payer_passenger_id || null);
         if (saleData.client_id) {
           const { data: clientData } = await supabase.from("clients").select("display_name").eq("id", saleData.client_id).single();
           if (clientData) setClientName(clientData.display_name);
@@ -129,9 +131,7 @@ export default function SaleDetail() {
       setEditing(false);
       toast({ title: "Venda atualizada!" });
 
-      // Auto-sync checkin and lodging tasks
       try {
-        // If sale is cancelled, cancel all related tasks
         if (editForm.status === "Cancelado") {
           await Promise.all([
             supabase.from("checkin_tasks").update({ status: "CANCELADO" }).eq("sale_id", id).not("status", "in", '("CONCLUIDO","CANCELADO")'),
@@ -351,6 +351,16 @@ export default function SaleDetail() {
             </div>
             <div className="space-y-1"><Label className="text-xs">Observações</Label><Textarea value={editForm.observations || ""} onChange={e => updateEdit("observations", e.target.value)} rows={3} /></div>
           </Card>
+
+          {/* Passengers management in edit mode */}
+          <Card className="p-5 glass-card lg:col-span-2">
+            <SalePassengersManager
+              saleId={id!}
+              payerPassengerId={payerPassengerId}
+              onPayerChange={setPayerPassengerId}
+              editable={true}
+            />
+          </Card>
         </div>
       ) : (
         /* View mode */
@@ -416,9 +426,19 @@ export default function SaleDetail() {
 
           {/* PAX & Hotel */}
           <div className="space-y-4">
+            {/* Passengers linked - view mode */}
+            <Card className="p-5 glass-card">
+              <SalePassengersManager
+                saleId={id!}
+                payerPassengerId={payerPassengerId}
+                onPayerChange={setPayerPassengerId}
+                editable={true}
+              />
+            </Card>
+
             <Card className="p-5 glass-card">
               <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                <Users className="w-4 h-4 text-info" /> Passageiros
+                <Users className="w-4 h-4 text-info" /> Contagem PAX
               </h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Adultos</span><span>{sale.adults}</span></div>
