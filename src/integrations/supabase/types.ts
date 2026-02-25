@@ -478,6 +478,53 @@ export type Database = {
           },
         ]
       }
+      chat_messages: {
+        Row: {
+          content: string | null
+          conversation_id: string
+          created_at: string
+          external_message_id: string | null
+          id: string
+          media_url: string | null
+          message_type: string
+          read_status: string
+          sender_id: string | null
+          sender_type: string
+        }
+        Insert: {
+          content?: string | null
+          conversation_id: string
+          created_at?: string
+          external_message_id?: string | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          read_status?: string
+          sender_id?: string | null
+          sender_type?: string
+        }
+        Update: {
+          content?: string | null
+          conversation_id?: string
+          created_at?: string
+          external_message_id?: string | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          read_status?: string
+          sender_id?: string | null
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checkin_tasks: {
         Row: {
           assigned_to_user_id: string | null
@@ -709,6 +756,101 @@ export type Database = {
           seller_id?: string | null
         }
         Relationships: []
+      }
+      conversation_transfers: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          from_user_id: string | null
+          id: string
+          notes: string | null
+          to_user_id: string | null
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          from_user_id?: string | null
+          id?: string
+          notes?: string | null
+          to_user_id?: string | null
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          from_user_id?: string | null
+          id?: string
+          notes?: string | null
+          to_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_transfers_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversations: {
+        Row: {
+          assigned_to: string | null
+          client_id: string | null
+          created_at: string
+          external_id: string | null
+          id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          phone: string | null
+          status: string
+          tags: string[] | null
+          unread_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          client_id?: string | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          phone?: string | null
+          status?: string
+          tags?: string[] | null
+          unread_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          client_id?: string | null
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          phone?: string | null
+          status?: string
+          tags?: string[] | null
+          unread_count?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cost_items: {
         Row: {
@@ -2212,6 +2354,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      whatsapp_config: {
+        Row: {
+          access_token: string | null
+          connection_status: string | null
+          id: string
+          phone_number_id: string | null
+          updated_at: string
+          updated_by: string | null
+          verify_token: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          connection_status?: string | null
+          id?: string
+          phone_number_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          verify_token?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          connection_status?: string | null
+          id?: string
+          phone_number_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          verify_token?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
