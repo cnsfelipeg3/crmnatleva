@@ -1182,7 +1182,7 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
           {/* Watermark NatLeva */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 1 }}>
             <img src={natlevaLogo} alt="" className="w-48 h-auto select-none grayscale" draggable={false}
-              style={{ opacity: 0.06, filter: "grayscale(100%) brightness(1.2)" }} />
+              style={{ opacity: 0.10, filter: "grayscale(100%) brightness(1.2)" }} />
           </div>
           <ReactFlow
             nodes={nodesWithStatus}
