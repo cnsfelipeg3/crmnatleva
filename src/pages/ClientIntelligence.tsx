@@ -61,6 +61,17 @@ export default function ClientIntelligence() {
   const [chatMessages, setChatMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientSearchOpen, setClientSearchOpen] = useState(false);
+  const clientSearchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (clientSearchRef.current && !clientSearchRef.current.contains(e.target as Node)) setClientSearchOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   useEffect(() => {
     fetchAllRows("sales", "*", { order: { column: "created_at", ascending: false } })
@@ -68,6 +79,14 @@ export default function ClientIntelligence() {
   }, []);
 
   const analysisData = useMemo(() => analyzeClients(sales), [sales]);
+
+  const clientSearchResults = useMemo(() => {
+    if (clientSearch.length < 2) return [];
+    const q = clientSearch.toLowerCase();
+    return analysisData
+      .filter(c => c.name.toLowerCase().includes(q) || c.originCity?.toLowerCase().includes(q) || c.topDestination.toLowerCase().includes(q))
+      .slice(0, 10);
+  }, [clientSearch, analysisData]);
 
   // Global KPIs
   const kpis = useMemo(() => {
@@ -348,6 +367,60 @@ export default function ClientIntelligence() {
         }}>
           <Download className="w-4 h-4 mr-1" /> Exportar
         </Button>
+      </div>
+
+      {/* Client Search Bar */}
+      <div ref={clientSearchRef} className="relative max-w-lg">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={clientSearch}
+            onChange={(e) => {
+              setClientSearch(e.target.value);
+              setClientSearchOpen(true);
+            }}
+            onFocus={() => clientSearch.length >= 2 && setClientSearchOpen(true)}
+            placeholder="🔍 Buscar cliente por nome, cidade ou destino..."
+            className="pl-9 h-11 text-sm bg-muted/30 border-border/50 focus:bg-background"
+          />
+        </div>
+        {clientSearchOpen && clientSearch.length >= 2 && (
+          <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-xl shadow-xl max-h-[360px] overflow-y-auto">
+            {clientSearchResults.length === 0 && (
+              <div className="p-4 text-center text-sm text-muted-foreground">Nenhum cliente encontrado para "{clientSearch}"</div>
+            )}
+            {clientSearchResults.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => {
+                  setSelectedClient(c);
+                  setClientSearchOpen(false);
+                  setClientSearch("");
+                }}
+                className="flex items-center gap-3 w-full p-3 text-left hover:bg-muted/50 transition-colors border-b border-border/30 last:border-0"
+              >
+                <div className="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10 text-primary font-bold text-sm shrink-0">
+                  {c.scoreNatLeva}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-foreground truncate">{c.name}</span>
+                    <span className="text-[10px]">{c.segmentoEmoji}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
+                    <span>{c.segmento}</span>
+                    <span>·</span>
+                    <span>{fmt(c.totalRevenue)}</span>
+                    <span>·</span>
+                    <span>{c.totalTrips} viagens</span>
+                    {c.originCity && <><span>·</span><span>📍 {c.originCity}</span></>}
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
