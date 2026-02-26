@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.import-chatguru]
 verify_jwt = false
+
+[functions.analyze-atendimento]
+verify_jwt = false
