@@ -22,15 +22,14 @@ serve(async (req) => {
     // Calculate date range
     const daysMap: Record<string, number> = { "7d": 7, "30d": 30, "90d": 90 };
     const days = daysMap[period] || 30;
-    const since = new Date(Date.now() - days * 86400000).toISOString();
 
-    // Fetch recent conversations
+    // Fetch recent conversations (ordered by last_message_at, limited to 50)
     let convQuery = sb.from("conversations").select("id, display_name, phone, funnel_stage, tags, status, created_at, last_message_at").order("last_message_at", { ascending: false });
     
     if (conversationIds?.length) {
       convQuery = convQuery.in("id", conversationIds);
     } else {
-      convQuery = convQuery.gte("last_message_at", since).limit(50);
+      convQuery = convQuery.limit(50);
     }
 
     const { data: conversations, error: convError } = await convQuery;
