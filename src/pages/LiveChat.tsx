@@ -934,7 +934,11 @@ function ClientPanel({ conversation, onClose }: { conversation: Conversation | n
           <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Vendas Recentes</h4>
           <div className="space-y-1.5">
             {mockSales.map(s => (
-              <div key={s.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+              <div key={s.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                onClick={() => {
+                  const saleId = s.id.replace("V-", "").replace(/-/g, "");
+                  navigate(`/sales`);
+                }}>
                 <div>
                   <p className="text-[11px] font-semibold text-foreground">{s.id}</p>
                   <p className="text-[9px] text-muted-foreground">{s.dest} · {s.date}</p>
@@ -965,10 +969,13 @@ function ClientPanel({ conversation, onClose }: { conversation: Conversation | n
           <Button variant="outline" size="sm" className="w-full justify-start text-[11px] h-8" onClick={() => navigate("/sales/new")}>
             <ShoppingCart className="w-3.5 h-3.5 mr-2" />Criar venda
           </Button>
-          <Button variant="outline" size="sm" className="w-full justify-start text-[11px] h-8">
+          <Button variant="outline" size="sm" className="w-full justify-start text-[11px] h-8" onClick={() => {
+            if (conversation.client_id) navigate(`/clients/${conversation.client_id}`);
+            else if (conversation.phone) navigate(`/passengers`);
+          }}>
             <ExternalLink className="w-3.5 h-3.5 mr-2" />Perfil completo
           </Button>
-          <Button variant="outline" size="sm" className="w-full justify-start text-[11px] h-8">
+          <Button variant="outline" size="sm" className="w-full justify-start text-[11px] h-8" onClick={() => navigate("/pendencias")}>
             <FileText className="w-3.5 h-3.5 mr-2" />Criar tarefa
           </Button>
         </div>
