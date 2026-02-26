@@ -1859,6 +1859,75 @@ export type Database = {
           },
         ]
       }
+      import_jobs: {
+        Row: {
+          checkpoint_data: Json | null
+          contacts_created: number
+          conversations_created: number
+          conversations_updated: number
+          create_contacts: boolean
+          created_at: string
+          error_message: string | null
+          errors: number
+          file_names: string[] | null
+          finished_at: string | null
+          id: string
+          messages_created: number
+          messages_deduplicated: number
+          processed_rows: number
+          progress: number
+          started_at: string | null
+          status: string
+          storage_path: string | null
+          total_rows: number
+          updated_at: string
+        }
+        Insert: {
+          checkpoint_data?: Json | null
+          contacts_created?: number
+          conversations_created?: number
+          conversations_updated?: number
+          create_contacts?: boolean
+          created_at?: string
+          error_message?: string | null
+          errors?: number
+          file_names?: string[] | null
+          finished_at?: string | null
+          id?: string
+          messages_created?: number
+          messages_deduplicated?: number
+          processed_rows?: number
+          progress?: number
+          started_at?: string | null
+          status?: string
+          storage_path?: string | null
+          total_rows?: number
+          updated_at?: string
+        }
+        Update: {
+          checkpoint_data?: Json | null
+          contacts_created?: number
+          conversations_created?: number
+          conversations_updated?: number
+          create_contacts?: boolean
+          created_at?: string
+          error_message?: string | null
+          errors?: number
+          file_names?: string[] | null
+          finished_at?: string | null
+          id?: string
+          messages_created?: number
+          messages_deduplicated?: number
+          processed_rows?: number
+          progress?: number
+          started_at?: string | null
+          status?: string
+          storage_path?: string | null
+          total_rows?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lodging_confirmation_tasks: {
         Row: {
           assigned_to_user_id: string | null
