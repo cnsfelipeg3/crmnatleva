@@ -111,96 +111,50 @@ function formatMessageTime(dateStr: string) {
   return format(d, "dd/MM");
 }
 
-// ─── MOCK DATA ───
-const MOCK_CONVERSATIONS: Conversation[] = [
-  {
-    id: "1", client_id: null, assigned_to: null, status: "em_atendimento",
-    tags: ["VIP", "Dubai"], funnel_stage: "qualificacao",
-    last_message_at: new Date().toISOString(),
-    last_message_preview: "Quero saber sobre o pacote para Dubai em março!",
-    unread_count: 3, phone: "+55 11 99988-7766",
-    client_name: "Ana Carolina Silva", assigned_name: "Mariana",
-    score: 92, cluster: "Luxo Frequente", level: "VIP Elite",
-    totalSpent: 87500, tripCount: 6, avgTicket: 14583, avgMargin: 22,
-    lastPurchase: "12/01/2026", nextTrip: "15/03/2026",
-    favoriteDestination: "Dubai", pendencies: "Passaporte vence em 4 meses",
-  },
-  {
-    id: "2", client_id: null, assigned_to: null, status: "em_atendimento",
-    tags: ["Europa", "Família"], funnel_stage: "orcamento_enviado",
-    last_message_at: new Date(Date.now() - 1800000).toISOString(),
-    last_message_preview: "Perfeito! Vou enviar os documentos agora.",
-    unread_count: 0, phone: "+55 21 98877-6655",
-    client_name: "João Pedro Santos", assigned_name: "Carlos",
-    score: 78, cluster: "Família Premium", level: "VIP Premium",
-    totalSpent: 42300, tripCount: 4, avgTicket: 10575, avgMargin: 18,
-    lastPurchase: "05/11/2025", favoriteDestination: "Paris",
-  },
-  {
-    id: "3", client_id: null, assigned_to: null, status: "aguardando_cliente",
-    tags: ["Família"], funnel_stage: "negociacao",
-    last_message_at: new Date(Date.now() - 7200000).toISOString(),
-    last_message_preview: "Estou aguardando a confirmação do hotel.",
-    unread_count: 0, phone: "+55 31 97766-5544",
-    client_name: "Maria Fernanda Costa", assigned_name: "Mariana",
-    score: 65, cluster: "Recorrente", level: "Estratégico",
-    totalSpent: 28900, tripCount: 3, avgTicket: 9633, avgMargin: 15,
-  },
-  {
-    id: "4", client_id: null, assigned_to: null, status: "novo",
-    tags: ["Urgente"], funnel_stage: "novo_lead",
-    last_message_at: new Date(Date.now() - 300000).toISOString(),
-    last_message_preview: "Preciso remarcar meu voo urgente!",
-    unread_count: 5, phone: "+55 11 96655-4433",
-    client_name: "Rafael Oliveira", assigned_name: undefined,
-    score: 45, cluster: "Potencial", level: "Potencial",
-    totalSpent: 8500, tripCount: 1, avgTicket: 8500, avgMargin: 12,
-    pendencies: "Voo amanhã - remarcar",
-  },
-  {
-    id: "5", client_id: null, assigned_to: null, status: "resolvido",
-    tags: ["Pós-venda"], funnel_stage: "pos_venda",
-    last_message_at: new Date(Date.now() - 86400000).toISOString(),
-    last_message_preview: "Obrigado pelo atendimento! 😊",
-    unread_count: 0, phone: "+55 21 95544-3322",
-    client_name: "Beatriz Almeida", assigned_name: "Carlos",
-    score: 70, cluster: "Recorrente", level: "Recorrente",
-    totalSpent: 35600, tripCount: 3, avgTicket: 11866, avgMargin: 16,
-  },
-  {
-    id: "6", client_id: null, assigned_to: null, status: "novo",
-    tags: ["Novo Lead", "Alto Ticket"], funnel_stage: "novo_lead",
-    last_message_at: new Date(Date.now() - 120000).toISOString(),
-    last_message_preview: "Boa tarde! Indicação da Ana Carolina. Quero Maldivas.",
-    unread_count: 2, phone: "+55 11 93322-1100",
-    client_name: "Luciana Martins", assigned_name: undefined,
-    score: 0, cluster: "Novo", level: "Novo Lead",
-    totalSpent: 0, tripCount: 0,
-  },
-];
+// ─── DATA FETCHING ───
+async function fetchConversations(): Promise<Conversation[]> {
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("*")
+    .order("last_message_at", { ascending: false })
+    .limit(200);
 
-function generateMockMessages(convId: string): Message[] {
-  const now = Date.now();
-  if (convId === "1") return [
-    { id: "m1", conversation_id: "1", sender_type: "cliente", message_type: "text", content: "Olá! Boa tarde! 😊", read_status: "read", created_at: new Date(now - 3600000).toISOString() },
-    { id: "m2", conversation_id: "1", sender_type: "atendente", message_type: "text", content: "Olá Ana! Boa tarde! Seja bem-vinda à NatLeva Turismo ✈️\n\nComo posso ajudá-la hoje?", read_status: "read", created_at: new Date(now - 3500000).toISOString() },
-    { id: "m3", conversation_id: "1", sender_type: "cliente", message_type: "text", content: "Quero saber sobre o pacote para Dubai em março! Vi no Instagram de vocês e achei incrível 😍", read_status: "read", created_at: new Date(now - 3400000).toISOString() },
-    { id: "m4", conversation_id: "1", sender_type: "atendente", message_type: "text", content: "Que ótimo gosto, Ana! Dubai em março é uma época maravilhosa — clima perfeito, sem o calor extremo do verão.\n\nTemos pacotes exclusivos com hospedagem no Atlantis The Royal ou no JW Marriott Marquis.\n\nQuantas pessoas iriam na viagem?", read_status: "read", created_at: new Date(now - 3300000).toISOString() },
-    { id: "m5", conversation_id: "1", sender_type: "cliente", message_type: "text", content: "Somos eu e meu marido! Queremos algo bem especial, estilo lua de mel. Temos 10 dias disponíveis.", read_status: "read", created_at: new Date(now - 600000).toISOString() },
-    { id: "m6", conversation_id: "1", sender_type: "cliente", message_type: "text", content: "Vocês fazem pacote com Abu Dhabi também?", read_status: "delivered", created_at: new Date(now - 60000).toISOString() },
-  ];
-  if (convId === "4") return [
-    { id: "m10", conversation_id: "4", sender_type: "cliente", message_type: "text", content: "Preciso remarcar meu voo urgente! O voo é amanhã e tive um imprevisto.", read_status: "delivered", created_at: new Date(now - 300000).toISOString() },
-    { id: "m11", conversation_id: "4", sender_type: "cliente", message_type: "text", content: "Alguém pode me ajudar por favor?? É urgente!", read_status: "delivered", created_at: new Date(now - 240000).toISOString() },
-  ];
-  if (convId === "6") return [
-    { id: "m20", conversation_id: "6", sender_type: "cliente", message_type: "text", content: "Boa tarde! A Ana Carolina me indicou vocês. Quero ir para as Maldivas em abril, casal, algo bem premium.", read_status: "delivered", created_at: new Date(now - 120000).toISOString() },
-    { id: "m21", conversation_id: "6", sender_type: "cliente", message_type: "text", content: "Orçamento não é problema, quero a melhor experiência possível!", read_status: "delivered", created_at: new Date(now - 60000).toISOString() },
-  ];
-  return [
-    { id: `m-${convId}-1`, conversation_id: convId, sender_type: "cliente", message_type: "text", content: "Olá!", read_status: "read", created_at: new Date(now - 7200000).toISOString() },
-    { id: `m-${convId}-2`, conversation_id: convId, sender_type: "atendente", message_type: "text", content: "Olá! Como posso ajudar?", read_status: "read", created_at: new Date(now - 7100000).toISOString() },
-  ];
+  if (error || !data) return [];
+
+  return data.map((c: any) => ({
+    id: c.id,
+    client_id: c.client_id,
+    assigned_to: c.assigned_to,
+    status: c.status || "novo",
+    tags: c.tags || [],
+    funnel_stage: c.funnel_stage || "novo_lead",
+    last_message_at: c.last_message_at || c.created_at,
+    last_message_preview: c.last_message_preview,
+    unread_count: c.unread_count || 0,
+    phone: c.phone,
+    client_name: c.display_name || c.phone || "Sem nome",
+  }));
+}
+
+async function fetchMessages(conversationId: string): Promise<Message[]> {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select("*")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: true })
+    .limit(200);
+
+  if (error || !data) return [];
+
+  return data.map((m: any) => ({
+    id: m.id,
+    conversation_id: m.conversation_id,
+    sender_type: m.sender_type || "cliente",
+    message_type: m.message_type || "text",
+    content: m.content,
+    read_status: m.read_status || "sent",
+    created_at: m.created_at,
+  }));
 }
 
 // ─── CONVERSATION LIST ───
@@ -1025,7 +979,8 @@ function ClientPanel({ conversation, onClose }: { conversation: Conversation | n
 
 // ─── MAIN PAGE ───
 export default function LiveChat() {
-  const [conversations] = useState<Conversation[]>(MOCK_CONVERSATIONS);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loadingConvs, setLoadingConvs] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [filter, setFilter] = useState("todas");
@@ -1036,9 +991,21 @@ export default function LiveChat() {
 
   const selectedConv = conversations.find(c => c.id === selectedId) || null;
 
+  // Load conversations from database
+  useEffect(() => {
+    setLoadingConvs(true);
+    fetchConversations().then(convs => {
+      setConversations(convs);
+      setLoadingConvs(false);
+    });
+  }, []);
+
+  // Load messages when conversation selected
   useEffect(() => {
     if (selectedId) {
-      setMessages(generateMockMessages(selectedId));
+      fetchMessages(selectedId).then(msgs => {
+        setMessages(msgs);
+      });
       setAiSuggestion(null);
     }
   }, [selectedId]);
