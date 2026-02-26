@@ -31,6 +31,7 @@ import FlowBuilder from "@/pages/FlowBuilder";
 import AIIntegrations from "@/pages/AIIntegrations";
 import AIKnowledgeBase from "@/pages/AIKnowledgeBase";
 import ImportChatGuru from "@/pages/ImportChatGuru";
+import AnaliseAtendimento from "@/pages/AnaliseAtendimento";
 
 // RH
 import RHIndex from "@/pages/rh/RHIndex";
@@ -99,6 +100,7 @@ function AppRoutes() {
          <Route path="/livechat/integrations" element={<AIIntegrations />} />
          <Route path="/livechat/knowledge-base" element={<AIKnowledgeBase />} />
          <Route path="/livechat/import-chatguru" element={<ImportChatGuru />} />
+         <Route path="/livechat/analise" element={<AnaliseAtendimento />} />
 
         {/* Financeiro */}
         <Route path="/financeiro" element={<FinanceiroIndex />} />

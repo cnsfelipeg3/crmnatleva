@@ -155,6 +155,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/livechat/integrations", icon: Plug, label: "Integrações de IA" },
               { to: "/livechat/knowledge-base", icon: BookOpen, label: "Base de Conhecimento" },
               { to: "/livechat/import-chatguru", icon: FileDown, label: "Importar Conversas" },
+              { to: "/livechat/analise", icon: Brain, label: "Análise de Atendimento" },
             ].map((item) => renderNavItem(item, true))}
           </div>
         )}
