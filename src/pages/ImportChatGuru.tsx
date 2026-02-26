@@ -268,22 +268,30 @@ export default function ImportChatGuru() {
     setError(null);
 
     try {
-      // Upload all messages as JSON to storage
-      const storagePath = `import_${Date.now()}.json`;
-      const jsonBlob = new Blob([JSON.stringify(allMessages)], { type: "application/json" });
+      // Upload messages in small chunk files (2000 msgs each) to avoid memory limits
+      const CHUNK_SIZE = 2000;
+      const totalChunks = Math.ceil(allMessages.length / CHUNK_SIZE);
+      const importId = `import_${Date.now()}`;
 
-      const { error: uploadErr } = await supabase.storage
-        .from("chatguru-imports")
-        .upload(storagePath, jsonBlob, { contentType: "application/json", upsert: true });
+      for (let i = 0; i < totalChunks; i++) {
+        const chunk = allMessages.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        const chunkPath = `${importId}/chunk_${String(i).padStart(5, "0")}.json`;
+        const jsonBlob = new Blob([JSON.stringify(chunk)], { type: "application/json" });
 
-      if (uploadErr) throw uploadErr;
+        const { error: uploadErr } = await supabase.storage
+          .from("chatguru-imports")
+          .upload(chunkPath, jsonBlob, { contentType: "application/json", upsert: true });
 
-      // Create job
+        if (uploadErr) throw uploadErr;
+      }
+
+      // Create job with folder path and chunk count
       const { data, error: jobErr } = await supabase.functions.invoke("import-chatguru", {
         body: {
           action: "create_job",
-          storage_path: storagePath,
+          storage_path: importId,
           total_rows: allMessages.length,
+          total_chunks: totalChunks,
           create_contacts: createContacts,
           file_names: files.map(f => f.name),
         },

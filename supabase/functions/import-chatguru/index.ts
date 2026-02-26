@@ -24,24 +24,6 @@ function hashMessage(chatId: string, created: string, texto: string, type: strin
   return `cg_${Math.abs(hash).toString(36)}_${created.replace(/\D/g, "").substring(0, 14)}`;
 }
 
-interface ImportJob {
-  id: string;
-  status: string;
-  total_rows: number;
-  processed_rows: number;
-  progress: number;
-  conversations_created: number;
-  conversations_updated: number;
-  messages_created: number;
-  messages_deduplicated: number;
-  contacts_created: number;
-  errors: number;
-  error_message: string | null;
-  create_contacts: boolean;
-  storage_path: string;
-  checkpoint_data: any;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -66,7 +48,6 @@ Deno.serve(async (req) => {
 
     // ─── RESET ───
     if (action === "reset") {
-      // Delete all chatguru-imported messages and conversations
       const { data: convs } = await supabase
         .from("conversations")
         .select("id")
@@ -77,7 +58,6 @@ Deno.serve(async (req) => {
       let convsDeleted = 0;
 
       if (convIds.length > 0) {
-        // Delete messages in batches
         for (let i = 0; i < convIds.length; i += 50) {
           const batch = convIds.slice(i, i + 50);
           const { count } = await supabase
@@ -86,7 +66,6 @@ Deno.serve(async (req) => {
             .in("conversation_id", batch);
           msgsDeleted += count || 0;
         }
-        // Delete conversations
         const { count } = await supabase
           .from("conversations")
           .delete({ count: "exact" })
@@ -94,7 +73,6 @@ Deno.serve(async (req) => {
         convsDeleted = count || 0;
       }
 
-      // Reset import jobs
       await supabase.from("import_jobs").delete().neq("id", "00000000-0000-0000-0000-000000000000");
 
       return new Response(JSON.stringify({ 
@@ -108,7 +86,7 @@ Deno.serve(async (req) => {
 
     // ─── CREATE JOB ───
     if (action === "create_job") {
-      const { storage_path, total_rows, create_contacts, file_names } = body;
+      const { storage_path, total_rows, total_chunks, create_contacts, file_names } = body;
       const { data: job, error: jobErr } = await supabase
         .from("import_jobs")
         .insert({
@@ -117,6 +95,7 @@ Deno.serve(async (req) => {
           create_contacts: create_contacts || false,
           storage_path,
           file_names: file_names || [],
+          checkpoint_data: { current_chunk: 0, total_chunks: total_chunks || 1 },
         })
         .select("id")
         .single();
@@ -131,7 +110,6 @@ Deno.serve(async (req) => {
     if (action === "process") {
       const { job_id } = body;
       
-      // Get job
       const { data: job, error: jobErr } = await supabase
         .from("import_jobs")
         .select("*")
@@ -163,30 +141,45 @@ Deno.serve(async (req) => {
         updated_at: new Date().toISOString(),
       }).eq("id", job_id);
 
-      // Download data from storage
+      const checkpoint = job.checkpoint_data || {};
+      const currentChunk = checkpoint.current_chunk || 0;
+      const totalChunks = checkpoint.total_chunks || 1;
+
+      // Check if all chunks done
+      if (currentChunk >= totalChunks) {
+        await supabase.from("import_jobs").update({
+          status: "completed",
+          progress: 100,
+          finished_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }).eq("id", job_id);
+
+        return new Response(JSON.stringify({ status: "completed", done: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Download ONLY the current chunk file (small ~2000 msgs)
+      const chunkPath = `${job.storage_path}/chunk_${String(currentChunk).padStart(5, "0")}.json`;
       const { data: fileData, error: dlErr } = await supabase.storage
         .from("chatguru-imports")
-        .download(job.storage_path);
+        .download(chunkPath);
 
       if (dlErr || !fileData) {
         await supabase.from("import_jobs").update({ 
           status: "failed", 
-          error_message: "Failed to download data: " + (dlErr?.message || "unknown"),
+          error_message: "Failed to download chunk: " + (dlErr?.message || "unknown"),
           updated_at: new Date().toISOString(),
         }).eq("id", job_id);
-        throw dlErr || new Error("Download failed");
+        return new Response(JSON.stringify({ error: "Download failed: " + (dlErr?.message || "unknown") }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500,
+        });
       }
 
       const text = await fileData.text();
-      const allMessages = JSON.parse(text);
-      
-      const checkpoint = job.checkpoint_data || {};
-      const startIdx = checkpoint.last_processed_idx || 0;
-      const CHUNK_SIZE = 2000; // Process 2000 messages per invocation
-      const endIdx = Math.min(startIdx + CHUNK_SIZE, allMessages.length);
-      const chunk = allMessages.slice(startIdx, endIdx);
+      const chunkMessages = JSON.parse(text);
 
-      // Check if paused before processing
+      // Check if paused
       const { data: freshJob } = await supabase.from("import_jobs").select("status").eq("id", job_id).single();
       if (freshJob?.status === "paused" || freshJob?.status === "cancelled") {
         return new Response(JSON.stringify({ status: freshJob.status, done: freshJob.status === "cancelled" }), {
@@ -194,9 +187,9 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Group chunk messages by chat_id
+      // Group by chat_id
       const chatGroups = new Map<string, any[]>();
-      for (const msg of chunk) {
+      for (const msg of chunkMessages) {
         if (!msg.chat_id) continue;
         if (!chatGroups.has(msg.chat_id)) chatGroups.set(msg.chat_id, []);
         chatGroups.get(msg.chat_id)!.push(msg);
@@ -277,7 +270,7 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Get existing hashes
+          // Get existing hashes for this conversation
           const { data: existingMsgs } = await supabase
             .from("chat_messages")
             .select("external_message_id")
@@ -286,7 +279,7 @@ Deno.serve(async (req) => {
 
           const existingHashes = new Set((existingMsgs || []).map((m: any) => m.external_message_id));
 
-          // Build messages
+          // Build messages to insert
           const toInsert: any[] = [];
           for (const msg of chatMessages) {
             if (msg.deleted === 1) { msgsDeduped++; continue; }
@@ -317,10 +310,9 @@ Deno.serve(async (req) => {
             });
           }
 
-          // Batch insert
-          const SUB_BATCH = 500;
-          for (let i = 0; i < toInsert.length; i += SUB_BATCH) {
-            const batch = toInsert.slice(i, i + SUB_BATCH);
+          // Batch insert in sub-batches of 200
+          for (let i = 0; i < toInsert.length; i += 200) {
+            const batch = toInsert.slice(i, i + 200);
             const { error: insertErr } = await supabase.from("chat_messages").insert(batch);
             if (insertErr) { console.error("Insert error:", insertErr.message); errs++; }
             else { msgsCreated += batch.length; }
@@ -331,10 +323,14 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Update job with cumulative stats
-      const newProcessedRows = endIdx;
-      const newProgress = Math.min(Math.round((newProcessedRows / allMessages.length) * 100), 100);
-      const isDone = endIdx >= allMessages.length;
+      // Update job - advance to next chunk
+      const nextChunk = currentChunk + 1;
+      const newProcessedRows = Math.min(
+        (job.processed_rows || 0) + chunkMessages.length,
+        job.total_rows
+      );
+      const newProgress = Math.min(Math.round((nextChunk / totalChunks) * 100), 100);
+      const isDone = nextChunk >= totalChunks;
 
       await supabase.from("import_jobs").update({
         status: isDone ? "completed" : "running",
@@ -346,7 +342,7 @@ Deno.serve(async (req) => {
         messages_deduplicated: (job.messages_deduplicated || 0) + msgsDeduped,
         contacts_created: (job.contacts_created || 0) + contactsCreated,
         errors: (job.errors || 0) + errs,
-        checkpoint_data: { last_processed_idx: endIdx },
+        checkpoint_data: { current_chunk: nextChunk, total_chunks: totalChunks },
         finished_at: isDone ? new Date().toISOString() : null,
         updated_at: new Date().toISOString(),
       }).eq("id", job_id);
@@ -355,9 +351,9 @@ Deno.serve(async (req) => {
         status: isDone ? "completed" : "running",
         done: isDone,
         processed: newProcessedRows,
-        total: allMessages.length,
+        total: job.total_rows,
         progress: newProgress,
-        chunk_stats: { convsCreated, convsUpdated, msgsCreated, msgsDeduped, contactsCreated, errors: errs },
+        chunk: `${nextChunk}/${totalChunks}`,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
