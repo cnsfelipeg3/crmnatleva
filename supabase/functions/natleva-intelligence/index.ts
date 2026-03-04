@@ -36,18 +36,32 @@ function classifyIntent(userMessage: string, hasImages: boolean, forceWebSearch 
     return { model: "google/gemini-2.5-flash", label: "👁️ Visão Computacional", reason: "Análise de imagem/OCR", needsWebSearch: false };
   }
 
-  // ── Web search detection (AGRESSIVO — detecta qualquer necessidade de dados externos) ──
-  const searchPatterns = /(pesquis|busc|procur|notícia|tendência|mercado|concorr|benchmark|o que há de novo|novidade|atualização|última hora|greve|crise|desastre|restriç|regulament|legislaç|cotação|dólar|euro|câmbio|preço atual|valor atual|tarifa atual|instagram|tiktok|linkedin|twitter|rede\s*social|@\w|monitorar?\s+perfil|analis[ae]\s+(mercado|setor|concorr)|o que é\b|quem é\b|como funciona\b|quando\b.*\b(aconteceu|foi|será)|turismo\s+(mundial|global|brasil)|ranking\s+(de|dos|das)|companhia\s+aérea|hotel.*notícia|destino\s+(popular|tendência|mais)|api\s+(grátis|free|gratuita|aberta)|integraç|ferramenta|software|plataforma.*alternativa|hoje\b|agora\b|atual|recente|últim[oa]s?\b|novo[as]?\b|2025|2026|previs[ãa]o|cen[áa]rio|governo|lei\b|decreto|promoç|oferta|black\s*friday|alta\s+temporada|baixa\s+temporada|passa\s*porte|visto\b|visa\b|exig[êe]ncia|requisito|vacina|saúde|seguro\s+viagem|clima\b|tempo\b|temperatura|melhor\s+época|quando\s+ir|aeroporto|companhia|latam|gol\b|azul\b|american|delta|united|emirates|copa\s+airlines|avianca|air\s+france|british|lufthansa|tap\b|iberia|qatar|turkish|ryanair|easyjet|jetblue|spirit|frontier|volaris|aero[a-z]*|booking|expedia|decolar|hurb|123milhas|maxmilhas|smiles|livelo|tudoazul|multiplus|pontos|milhas|transfer[êe]ncia|bônus)/i;
+  // ── Web search detection (ULTRA AGRESSIVO — detecta qualquer necessidade de dados externos) ──
+  const searchPatterns = /(pesquis|busc|procur|notícia|tendência|mercado|concorr|benchmark|o que há de novo|novidade|atualização|última hora|greve|crise|desastre|restriç|regulament|legislaç|cotação|dólar|euro|câmbio|preço atual|valor atual|tarifa atual|instagram|tiktok|linkedin|twitter|rede\s*social|@\w|monitorar?\s+perfil|analis[ae]\s+(mercado|setor|concorr)|o que é\b|quem é\b|como funciona\b|quando\b.*\b(aconteceu|foi|será)|turismo\s+(mundial|global|brasil)|ranking\s+(de|dos|das)|companhia\s+aérea|hotel.*notícia|destino\s+(popular|tendência|mais)|api\s+(grátis|free|gratuita|aberta)|integraç|ferramenta|software|plataforma.*alternativa|hoje\b|agora\b|atual|recente|últim[oa]s?\b|novo[as]?\b|2025|2026|previs[ãa]o|cen[áa]rio|governo|lei\b|decreto|promoç|oferta|black\s*friday|alta\s+temporada|baixa\s+temporada|passa\s*porte|visto\b|visa\b|exig[êe]ncia|requisito|vacina|saúde|seguro\s+viagem|clima\b|tempo\b|temperatura|melhor\s+época|quando\s+ir|aeroporto|companhia|latam|gol\b|azul\b|american|delta|united|emirates|copa\s+airlines|avianca|air\s+france|british|lufthansa|tap\b|iberia|qatar|turkish|ryanair|easyjet|jetblue|spirit|frontier|volaris|aero[a-z]*|booking|expedia|decolar|hurb|123milhas|maxmilhas|smiles|livelo|tudoazul|multiplus|pontos|milhas|transfer[êe]ncia|bônus|evento[s]?\b|festival|show[s]?\b|congresso|feira\b|exposiç|conferência|agenda\b|programaç|inauguraç|lançamento|estréia|essa\s+semana|este\s+m[eê]s|próxim[oa]|semana\s+que\s+vem|fim\s+de\s+semana|feriado|f[ée]rias|temporada|happening|what'?s\s+on|things\s+to\s+do|nyc|new\s+york|paris|london|tokyo|dubai|miami|orlando|las\s+vegas|los\s+angeles|madrid|barcelona|lisboa|porto|roma|mil[aã]o|amsterdam|berlim|cancun|punta\s+cana|santiago|buenos\s+aires|montevid[eé]u|bariloche|cartagena|bogot[áa])/i;
   const needsWebSearch = forceWebSearch || searchPatterns.test(msg);
   
-  // Extract a clean search query from the user message
+  // Extract a clean search query, enriching temporal references with actual dates
   let searchQuery: string | undefined;
   if (needsWebSearch) {
-    searchQuery = userMessage
+    const now = new Date();
+    const isoToday = now.toISOString().split("T")[0];
+    const monthYear = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    
+    let q = userMessage
       .replace(/^(pesquise?|busque?|procure?|me\s+diga|me\s+fale|quero\s+saber)\s+(sobre\s+)?/i, "")
       .replace(/^(o que|quem|como|quando|onde|qual|quais)\s+(é|são|foi|era|funciona|fica)\s+/i, "$1 $2 ")
-      .trim()
-      .slice(0, 200);
+      .trim();
+    
+    // Enrich temporal references so DuckDuckGo gets better results
+    if (/essa\s+semana|esta\s+semana|this\s+week/i.test(q)) {
+      q += ` ${monthYear} ${isoToday}`;
+    } else if (/esse\s+m[eê]s|este\s+m[eê]s/i.test(q)) {
+      q += ` ${monthYear}`;
+    } else if (/hoje|today/i.test(q)) {
+      q += ` ${isoToday}`;
+    }
+    
+    searchQuery = q.slice(0, 250);
   }
 
   // Complex analysis / strategic planning / detailed reports
@@ -327,8 +341,15 @@ serve(async (req) => {
       : "";
 
     // ── Build system prompt ──
+    const now = new Date();
+    const todayStr = now.toLocaleDateString("pt-BR", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    const isoDate = now.toISOString().split("T")[0];
+    
     const systemPrompt = `Você é a NatLeva Intelligence 2.0 — o ORQUESTRADOR DE INTELIGÊNCIA ARTIFICIAL da agência de turismo NatLeva.
 Você é um sistema cognitivo empresarial com ACESSO TOTAL E IRRESTRITO a todos os dados do sistema em tempo real.${locationContext}
+
+📅 DATA E HORA ATUAL: ${todayStr} (${isoDate})
+Quando o usuário disser "hoje", "essa semana", "este mês", "amanhã" etc., use esta data como referência. NUNCA peça a data ao usuário quando ele usar expressões temporais relativas.
 
 🧠 ARQUITETURA DO ORQUESTRADOR:
 - Motor atual: ${route.label} (${route.model})
