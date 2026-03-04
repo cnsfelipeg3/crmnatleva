@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -24,6 +24,7 @@ import { classifyItinerary, assignDirections } from "@/lib/itineraryClassifier";
 import { smartCapitalizeName } from "@/lib/nameUtils";
 import PassengerSelector, { type SelectedPassenger } from "@/components/PassengerSelector";
 import { useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 
 const steps = [
   { id: 1, label: "Upload & IA" },
@@ -82,8 +83,10 @@ export default function NewSale() {
     // Cost items
     air_cash: "", air_miles_qty: "", air_miles_price: "", air_taxes: "",
     air_taxes_included: false, air_emission_source: "", air_miles_program: "",
+    air_supplier_id: "", 
     hotel_cash: "", hotel_miles_qty: "", hotel_miles_price: "", hotel_taxes: "",
     hotel_taxes_included: false, hotel_emission_source: "", hotel_miles_program: "",
+    hotel_supplier_id: "",
   });
 
   const [segments, setSegments] = useState<FlightSegment[]>([
@@ -97,6 +100,43 @@ export default function NewSale() {
     const state = location.state as any;
     return state?.preSelectedPassengers || [];
   });
+
+  // Suppliers & miles programs
+  const { data: suppliers = [] } = useQuery({
+    queryKey: ["suppliers"],
+    queryFn: async () => {
+      const { data } = await supabase.from("suppliers").select("*").order("name");
+      return data || [];
+    },
+  });
+
+  const { data: allMilesPrograms = [] } = useQuery({
+    queryKey: ["all_supplier_miles_programs"],
+    queryFn: async () => {
+      const { data } = await supabase.from("supplier_miles_programs").select("*").eq("is_active", true).order("program_name").order("min_miles");
+      return data || [];
+    },
+  });
+
+  const getSupplierPrograms = (supplierId: string) => {
+    const programs = allMilesPrograms.filter((p: any) => p.supplier_id === supplierId);
+    return [...new Set(programs.map((p: any) => p.program_name))];
+  };
+
+  const autoFillMilesPrice = (supplierId: string, programName: string, milesQty: string, prefix: "air" | "hotel") => {
+    const qty = parseInt(milesQty) || 0;
+    const tiers = allMilesPrograms
+      .filter((p: any) => p.supplier_id === supplierId && p.program_name === programName && p.is_active)
+      .sort((a: any, b: any) => a.min_miles - b.min_miles);
+    if (tiers.length === 0) return;
+    const tier = tiers.find((t: any) => {
+      if (t.max_miles) return qty >= t.min_miles && qty <= t.max_miles;
+      return qty >= t.min_miles;
+    }) || tiers[tiers.length - 1];
+    if (tier) {
+      setForm(f => ({ ...f, [`${prefix}_miles_price`]: String(tier.price_per_thousand) }));
+    }
+  };
 
   const updateForm = (field: string, value: any) => setForm(f => ({ ...f, [field]: value }));
 
@@ -800,12 +840,50 @@ export default function NewSale() {
             <div className="border-t pt-4">
               <h3 className="text-sm font-semibold mb-3">✈️ Custos — Aéreo</h3>
               <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Fornecedor</Label>
+                  <Select value={form.air_supplier_id} onValueChange={(v) => {
+                    updateForm("air_supplier_id", v);
+                    updateForm("air_miles_program", "");
+                    updateForm("air_miles_price", "");
+                  }}>
+                    <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione o fornecedor" /></SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((s: any) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Programa de Milhas</Label>
+                  <Select value={form.air_miles_program} onValueChange={(v) => {
+                    updateForm("air_miles_program", v);
+                    if (form.air_supplier_id && form.air_miles_qty) {
+                      autoFillMilesPrice(form.air_supplier_id, v, form.air_miles_qty, "air");
+                    }
+                  }} disabled={!form.air_supplier_id}>
+                    <SelectTrigger className="h-9 text-xs"><SelectValue placeholder={form.air_supplier_id ? "Selecione o programa" : "Selecione fornecedor primeiro"} /></SelectTrigger>
+                    <SelectContent>
+                      {form.air_supplier_id && getSupplierPrograms(form.air_supplier_id).map(name => (
+                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-1"><Label className="text-xs">Valor pago R$</Label><Input type="number" step="0.01" value={form.air_cash} onChange={(e) => updateForm("air_cash", e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs">Milhas</Label><Input type="number" value={form.air_miles_qty} onChange={(e) => updateForm("air_miles_qty", e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs">Preço Milheiro R$</Label><Input type="number" step="0.01" value={form.air_miles_price} onChange={(e) => updateForm("air_miles_price", e.target.value)} /></div>
+                <div className="space-y-1"><Label className="text-xs">Qtd Milhas</Label><Input type="number" value={form.air_miles_qty} onChange={(e) => {
+                  updateForm("air_miles_qty", e.target.value);
+                  if (form.air_supplier_id && form.air_miles_program) {
+                    autoFillMilesPrice(form.air_supplier_id, form.air_miles_program, e.target.value, "air");
+                  }
+                }} /></div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Preço Milheiro R$ {form.air_supplier_id && form.air_miles_program ? "(auto)" : ""}</Label>
+                  <Input type="number" step="0.01" value={form.air_miles_price} onChange={(e) => updateForm("air_miles_price", e.target.value)} />
+                </div>
                 <div className="space-y-1"><Label className="text-xs">Taxas R$</Label><Input type="number" step="0.01" value={form.air_taxes} onChange={(e) => updateForm("air_taxes", e.target.value)} /></div>
                 <div className="space-y-1"><Label className="text-xs">Emissão por</Label><Input value={form.air_emission_source} onChange={(e) => updateForm("air_emission_source", e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs">Programa</Label><Input value={form.air_miles_program} onChange={(e) => updateForm("air_miles_program", e.target.value)} /></div>
               </div>
               <div className="flex items-center gap-2 mt-2">
                 <Checkbox checked={form.air_taxes_included} onCheckedChange={(v) => updateForm("air_taxes_included", !!v)} id="air-tax" />
@@ -820,12 +898,50 @@ export default function NewSale() {
             <div className="border-t pt-4">
               <h3 className="text-sm font-semibold mb-3">🏨 Custos — Hotel</h3>
               <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Fornecedor</Label>
+                  <Select value={form.hotel_supplier_id} onValueChange={(v) => {
+                    updateForm("hotel_supplier_id", v);
+                    updateForm("hotel_miles_program", "");
+                    updateForm("hotel_miles_price", "");
+                  }}>
+                    <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione o fornecedor" /></SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map((s: any) => (
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Programa de Milhas</Label>
+                  <Select value={form.hotel_miles_program} onValueChange={(v) => {
+                    updateForm("hotel_miles_program", v);
+                    if (form.hotel_supplier_id && form.hotel_miles_qty) {
+                      autoFillMilesPrice(form.hotel_supplier_id, v, form.hotel_miles_qty, "hotel");
+                    }
+                  }} disabled={!form.hotel_supplier_id}>
+                    <SelectTrigger className="h-9 text-xs"><SelectValue placeholder={form.hotel_supplier_id ? "Selecione o programa" : "Selecione fornecedor primeiro"} /></SelectTrigger>
+                    <SelectContent>
+                      {form.hotel_supplier_id && getSupplierPrograms(form.hotel_supplier_id).map(name => (
+                        <SelectItem key={name} value={name}>{name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="space-y-1"><Label className="text-xs">Valor pago R$</Label><Input type="number" step="0.01" value={form.hotel_cash} onChange={(e) => updateForm("hotel_cash", e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs">Milhas</Label><Input type="number" value={form.hotel_miles_qty} onChange={(e) => updateForm("hotel_miles_qty", e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs">Preço Milheiro R$</Label><Input type="number" step="0.01" value={form.hotel_miles_price} onChange={(e) => updateForm("hotel_miles_price", e.target.value)} /></div>
+                <div className="space-y-1"><Label className="text-xs">Qtd Milhas</Label><Input type="number" value={form.hotel_miles_qty} onChange={(e) => {
+                  updateForm("hotel_miles_qty", e.target.value);
+                  if (form.hotel_supplier_id && form.hotel_miles_program) {
+                    autoFillMilesPrice(form.hotel_supplier_id, form.hotel_miles_program, e.target.value, "hotel");
+                  }
+                }} /></div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Preço Milheiro R$ {form.hotel_supplier_id && form.hotel_miles_program ? "(auto)" : ""}</Label>
+                  <Input type="number" step="0.01" value={form.hotel_miles_price} onChange={(e) => updateForm("hotel_miles_price", e.target.value)} />
+                </div>
                 <div className="space-y-1"><Label className="text-xs">Taxas R$</Label><Input type="number" step="0.01" value={form.hotel_taxes} onChange={(e) => updateForm("hotel_taxes", e.target.value)} /></div>
                 <div className="space-y-1"><Label className="text-xs">Emissão por</Label><Input value={form.hotel_emission_source} onChange={(e) => updateForm("hotel_emission_source", e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs">Programa</Label><Input value={form.hotel_miles_program} onChange={(e) => updateForm("hotel_miles_program", e.target.value)} /></div>
               </div>
               <div className="flex items-center gap-2 mt-2">
                 <Checkbox checked={form.hotel_taxes_included} onCheckedChange={(v) => updateForm("hotel_taxes_included", !!v)} id="hotel-tax" />
