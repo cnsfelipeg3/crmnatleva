@@ -10,15 +10,21 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Search, Building2, Trash2, Pencil } from "lucide-react";
+import { Plus, Search, Building2, Trash2, Pencil, ChevronDown, ChevronRight } from "lucide-react";
 
 interface MilesProgram {
   id: string;
   supplier_id: string;
   program_name: string;
   price_per_thousand: number;
+  min_miles: number;
+  max_miles: number | null;
   is_active: boolean;
   notes: string | null;
+}
+
+function formatMiles(n: number) {
+  return n.toLocaleString("pt-BR");
 }
 
 export default function Fornecedores() {
@@ -28,7 +34,8 @@ export default function Fornecedores() {
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [form, setForm] = useState({ name: "", cnpj: "", contact_name: "", phone: "", email: "", category: "", payment_conditions: "", bank_pix_key: "" });
-  const [mpForm, setMpForm] = useState({ program_name: "", price_per_thousand: "" });
+  const [mpForm, setMpForm] = useState({ program_name: "", price_per_thousand: "", min_miles: "", max_miles: "" });
+  const [expandedPrograms, setExpandedPrograms] = useState<Record<string, boolean>>({});
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ["suppliers"],
@@ -46,10 +53,18 @@ export default function Fornecedores() {
         .from("supplier_miles_programs")
         .select("*")
         .eq("supplier_id", selectedSupplier.id)
-        .order("program_name");
+        .order("program_name")
+        .order("min_miles");
       return (data || []) as MilesProgram[];
     },
   });
+
+  // Group miles programs by program_name
+  const groupedPrograms = milesPrograms.reduce<Record<string, MilesProgram[]>>((acc, mp) => {
+    if (!acc[mp.program_name]) acc[mp.program_name] = [];
+    acc[mp.program_name].push(mp);
+    return acc;
+  }, {});
 
   const filtered = suppliers.filter((s: any) =>
     !search || (s.name || "").toLowerCase().includes(search.toLowerCase()) || (s.cnpj || "").includes(search)
@@ -85,30 +100,41 @@ export default function Fornecedores() {
     if (!mpForm.program_name.trim()) { toast.error("Nome do programa obrigatório"); return; }
     const price = parseFloat(mpForm.price_per_thousand);
     if (isNaN(price) || price <= 0) { toast.error("Valor do milheiro inválido"); return; }
+    const minMiles = parseInt(mpForm.min_miles) || 0;
+    const maxMiles = mpForm.max_miles ? parseInt(mpForm.max_miles) : null;
+    if (maxMiles !== null && maxMiles <= minMiles) { toast.error("Máximo deve ser maior que mínimo"); return; }
+
     const { error } = await supabase.from("supplier_miles_programs").insert({
       supplier_id: selectedSupplier.id,
       program_name: mpForm.program_name.trim(),
       price_per_thousand: price,
+      min_miles: minMiles,
+      max_miles: maxMiles,
     });
     if (error) {
-      if (error.code === "23505") toast.error("Programa já cadastrado para este fornecedor");
+      if (error.code === "23505") toast.error("Faixa já cadastrada para este programa");
       else toast.error("Erro ao salvar");
       return;
     }
-    toast.success("Programa adicionado!");
-    setMpForm({ program_name: "", price_per_thousand: "" });
+    toast.success("Faixa adicionada!");
+    setMpForm({ program_name: "", price_per_thousand: "", min_miles: "", max_miles: "" });
+    setExpandedPrograms(prev => ({ ...prev, [mpForm.program_name.trim()]: true }));
     refetchMiles();
   };
 
   const deleteMilesProgram = async (id: string) => {
     await supabase.from("supplier_miles_programs").delete().eq("id", id);
-    toast.success("Programa removido");
+    toast.success("Faixa removida");
     refetchMiles();
   };
 
   const toggleMilesProgram = async (mp: MilesProgram) => {
     await supabase.from("supplier_miles_programs").update({ is_active: !mp.is_active }).eq("id", mp.id);
     refetchMiles();
+  };
+
+  const toggleExpand = (name: string) => {
+    setExpandedPrograms(prev => ({ ...prev, [name]: !prev[name] }));
   };
 
   return (
@@ -226,42 +252,114 @@ export default function Fornecedores() {
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold">Programas de Milhas</h3>
 
-                {milesPrograms.length > 0 ? (
+                {Object.keys(groupedPrograms).length > 0 ? (
                   <div className="space-y-2">
-                    {milesPrograms.map((mp) => (
-                      <div key={mp.id} className="flex items-center justify-between p-3 rounded-lg border bg-muted/30">
-                        <div className="flex items-center gap-2">
-                          <Badge variant={mp.is_active ? "default" : "secondary"} className="cursor-pointer text-[10px]" onClick={() => toggleMilesProgram(mp)}>
-                            {mp.is_active ? "Ativo" : "Inativo"}
-                          </Badge>
-                          <div>
-                            <span className="text-sm font-medium">{mp.program_name}</span>
-                            <p className="text-xs text-muted-foreground">
-                              R$ {Number(mp.price_per_thousand).toFixed(2)} / milheiro
-                            </p>
-                          </div>
+                    {Object.entries(groupedPrograms).map(([programName, tiers]) => {
+                      const isExpanded = expandedPrograms[programName] ?? true;
+                      const allActive = tiers.every(t => t.is_active);
+                      return (
+                        <div key={programName} className="rounded-lg border bg-muted/20 overflow-hidden">
+                          <button
+                            onClick={() => toggleExpand(programName)}
+                            className="flex items-center justify-between w-full p-3 hover:bg-muted/40 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+                              <span className="text-sm font-semibold">{programName}</span>
+                              <Badge variant={allActive ? "default" : "secondary"} className="text-[10px]">
+                                {tiers.length} {tiers.length === 1 ? "faixa" : "faixas"}
+                              </Badge>
+                            </div>
+                          </button>
+                          {isExpanded && (
+                            <div className="border-t">
+                              {tiers.map((mp) => (
+                                <div key={mp.id} className="flex items-center justify-between px-3 py-2 border-b last:border-0 bg-background/50">
+                                  <div className="flex items-center gap-2">
+                                    <Badge
+                                      variant={mp.is_active ? "default" : "secondary"}
+                                      className="cursor-pointer text-[10px] min-w-[48px] justify-center"
+                                      onClick={() => toggleMilesProgram(mp)}
+                                    >
+                                      {mp.is_active ? "Ativo" : "Inativo"}
+                                    </Badge>
+                                    <div>
+                                      <p className="text-xs font-medium">
+                                        R$ {Number(mp.price_per_thousand).toFixed(2)} / milheiro
+                                      </p>
+                                      <p className="text-[10px] text-muted-foreground">
+                                        {formatMiles(mp.min_miles)} {mp.max_miles ? `até ${formatMiles(mp.max_miles)}` : "+"} milhas
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteMilesProgram(mp.id)}>
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteMilesProgram(mp.id)}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">Nenhum programa cadastrado</p>
                 )}
 
-                <div className="flex gap-2 items-end">
-                  <div className="flex-1 space-y-1">
-                    <Label className="text-xs">Programa</Label>
-                    <Input placeholder="Ex: Smiles, Latam Pass..." value={mpForm.program_name} onChange={(e) => setMpForm({ ...mpForm, program_name: e.target.value })} className="h-9 text-xs" />
+                {/* Add new tier */}
+                <div className="space-y-2 p-3 rounded-lg border border-dashed">
+                  <p className="text-xs font-medium text-muted-foreground">Adicionar faixa de preço</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">Programa</Label>
+                      <Input
+                        placeholder="Ex: Smiles, Latam Pass..."
+                        value={mpForm.program_name}
+                        onChange={(e) => setMpForm({ ...mpForm, program_name: e.target.value })}
+                        className="h-8 text-xs"
+                        list="program-suggestions"
+                      />
+                      <datalist id="program-suggestions">
+                        {Object.keys(groupedPrograms).map(name => (
+                          <option key={name} value={name} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">R$ / Milheiro</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={mpForm.price_per_thousand}
+                        onChange={(e) => setMpForm({ ...mpForm, price_per_thousand: e.target.value })}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">De (milhas)</Label>
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        value={mpForm.min_miles}
+                        onChange={(e) => setMpForm({ ...mpForm, min_miles: e.target.value })}
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px]">Até (milhas)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Sem limite"
+                        value={mpForm.max_miles}
+                        onChange={(e) => setMpForm({ ...mpForm, max_miles: e.target.value })}
+                        className="h-8 text-xs"
+                      />
+                    </div>
                   </div>
-                  <div className="w-32 space-y-1">
-                    <Label className="text-xs">R$ / Milheiro</Label>
-                    <Input type="number" step="0.01" placeholder="0.00" value={mpForm.price_per_thousand} onChange={(e) => setMpForm({ ...mpForm, price_per_thousand: e.target.value })} className="h-9 text-xs" />
-                  </div>
-                  <Button size="sm" className="h-9" onClick={addMilesProgram}>
-                    <Plus className="w-4 h-4" />
+                  <Button size="sm" className="w-full h-8 text-xs" onClick={addMilesProgram}>
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Adicionar Faixa
                   </Button>
                 </div>
               </div>

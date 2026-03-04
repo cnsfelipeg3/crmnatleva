@@ -2523,6 +2523,8 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          max_miles: number | null
+          min_miles: number
           notes: string | null
           price_per_thousand: number
           program_name: string
@@ -2533,6 +2535,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          max_miles?: number | null
+          min_miles?: number
           notes?: string | null
           price_per_thousand?: number
           program_name: string
@@ -2543,6 +2547,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          max_miles?: number | null
+          min_miles?: number
           notes?: string | null
           price_per_thousand?: number
           program_name?: string
