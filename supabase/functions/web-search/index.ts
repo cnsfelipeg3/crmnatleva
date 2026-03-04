@@ -5,45 +5,34 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ═══════════════════════════════════════════
-// 🔍 WEB SEARCH — FONTES GRATUITAS SEM API KEY
-// ═══════════════════════════════════════════
-// Usa DuckDuckGo HTML + Wikipedia API + NewsAPI (RSS)
-// Tudo gratuito, sem necessidade de chave de API
-
 interface SearchResult {
   title: string;
   snippet: string;
   url: string;
   source: string;
+  fullContent?: string;
 }
 
-// ── DuckDuckGo HTML Search (free, no key) ──
+// ── DuckDuckGo HTML Search ──
 async function searchDuckDuckGo(query: string): Promise<SearchResult[]> {
   try {
     const encoded = encodeURIComponent(query);
     const resp = await fetch(`https://html.duckduckgo.com/html/?q=${encoded}`, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; NatLeva-Intelligence/2.0)",
-      },
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; NatLeva-Intelligence/2.0)" },
     });
     if (!resp.ok) return [];
     const html = await resp.text();
 
     const results: SearchResult[] = [];
-    // Parse result blocks from DuckDuckGo HTML
     const resultBlocks = html.split('class="result__body"');
     for (let i = 1; i < Math.min(resultBlocks.length, 8); i++) {
       const block = resultBlocks[i];
-      // Extract title
       const titleMatch = block.match(/class="result__a"[^>]*>([^<]+)</);
       const title = titleMatch ? decodeHTMLEntities(titleMatch[1].trim()) : "";
-      // Extract snippet
       const snippetMatch = block.match(/class="result__snippet"[^>]*>([\s\S]*?)<\/a>/);
-      const snippet = snippetMatch 
+      const snippet = snippetMatch
         ? decodeHTMLEntities(snippetMatch[1].replace(/<[^>]+>/g, "").trim())
         : "";
-      // Extract URL
       const urlMatch = block.match(/class="result__url"[^>]*href="([^"]+)"/);
       let url = "";
       if (urlMatch) {
@@ -54,7 +43,6 @@ async function searchDuckDuckGo(query: string): Promise<SearchResult[]> {
         }
         if (!url.startsWith("http")) url = "https:" + url;
       }
-
       if (title && (snippet || url)) {
         results.push({ title, snippet, url, source: "DuckDuckGo" });
       }
@@ -66,7 +54,7 @@ async function searchDuckDuckGo(query: string): Promise<SearchResult[]> {
   }
 }
 
-// ── Wikipedia Search (free, no key) ──
+// ── Wikipedia Search ──
 async function searchWikipedia(query: string, lang = "pt"): Promise<SearchResult[]> {
   try {
     const encoded = encodeURIComponent(query);
@@ -88,7 +76,7 @@ async function searchWikipedia(query: string, lang = "pt"): Promise<SearchResult
   }
 }
 
-// ── Wikidata for structured facts ──
+// ── Wikidata ──
 async function searchWikidata(query: string): Promise<SearchResult[]> {
   try {
     const encoded = encodeURIComponent(query);
@@ -109,7 +97,7 @@ async function searchWikidata(query: string): Promise<SearchResult[]> {
   }
 }
 
-// ── News search via Google News RSS (free) ──
+// ── News via Google News RSS ──
 async function searchNews(query: string): Promise<SearchResult[]> {
   try {
     const encoded = encodeURIComponent(query);
@@ -150,6 +138,47 @@ async function searchNews(query: string): Promise<SearchResult[]> {
   }
 }
 
+// ── Deep scrape: fetch actual page content from top URLs ──
+async function scrapePageContent(url: string): Promise<string> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    const resp = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+      },
+      signal: controller.signal,
+      redirect: "follow",
+    });
+    clearTimeout(timeout);
+    if (!resp.ok) return "";
+    const contentType = resp.headers.get("content-type") || "";
+    if (!contentType.includes("text/html") && !contentType.includes("text/plain")) return "";
+    
+    const html = await resp.text();
+    
+    // Remove scripts, styles, nav, header, footer
+    const cleaned = html
+      .replace(/<script[\s\S]*?<\/script>/gi, "")
+      .replace(/<style[\s\S]*?<\/style>/gi, "")
+      .replace(/<nav[\s\S]*?<\/nav>/gi, "")
+      .replace(/<header[\s\S]*?<\/header>/gi, "")
+      .replace(/<footer[\s\S]*?<\/footer>/gi, "")
+      .replace(/<aside[\s\S]*?<\/aside>/gi, "")
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    
+    return cleaned.slice(0, 8000);
+  } catch {
+    return "";
+  }
+}
+
 function decodeHTMLEntities(text: string): string {
   return text
     .replace(/&amp;/g, "&")
@@ -166,7 +195,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { query, sources } = await req.json();
+    const { query, sources, deepScrape } = await req.json();
     if (!query || query.length < 3) {
       return new Response(JSON.stringify({ results: [], summary: "" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -174,6 +203,7 @@ serve(async (req) => {
     }
 
     const enabledSources = sources || ["web", "wikipedia", "news"];
+    const shouldDeepScrape = deepScrape !== false; // default true
     
     // Run all searches in parallel
     const searchPromises: Promise<SearchResult[]>[] = [];
@@ -185,10 +215,28 @@ serve(async (req) => {
     const allResults = await Promise.all(searchPromises);
     const results = allResults.flat().slice(0, 15);
 
+    // Deep scrape: fetch actual content from top 3 web results for richer data
+    if (shouldDeepScrape && results.length > 0) {
+      const webResults = results.filter(r => r.source === "DuckDuckGo" && r.url && !r.url.includes("duckduckgo.com"));
+      const topUrls = webResults.slice(0, 3);
+      
+      const scrapePromises = topUrls.map(async (r) => {
+        const content = await scrapePageContent(r.url);
+        if (content && content.length > 100) {
+          r.fullContent = content;
+        }
+      });
+      await Promise.all(scrapePromises);
+    }
+
     // Build a text summary for AI consumption
-    const summary = results.map((r, i) => 
-      `[${i + 1}] ${r.title} (${r.source})\n${r.snippet}\nFonte: ${r.url}`
-    ).join("\n\n");
+    const summary = results.map((r, i) => {
+      let entry = `[${i + 1}] ${r.title} (${r.source})\n${r.snippet}\nFonte: ${r.url}`;
+      if (r.fullContent) {
+        entry += `\n\n📄 CONTEÚDO COMPLETO DA PÁGINA:\n${r.fullContent}`;
+      }
+      return entry;
+    }).join("\n\n");
 
     return new Response(JSON.stringify({ results, summary }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
