@@ -975,8 +975,27 @@ export default function NatLevaIntelligence() {
                                 );
                               },
                             }}
-                          >{msg.content}</ReactMarkdown>
+                          >{msg.content.replace(/\[SIMULATE_ACTION:[^\]]*\]/g, "").trim()}</ReactMarkdown>
                         </div>
+
+                        {/* Simulate action buttons */}
+                        {msg.role === "assistant" && msg.content.includes("[SIMULATE_ACTION:") && (() => {
+                          const match = msg.content.match(/\[SIMULATE_ACTION:gateway=([^,]*),amount=([^,]*),mode=([^\]]*)\]/);
+                          if (!match) return null;
+                          const [, gw, amt, md] = match;
+                          return (
+                            <div className="flex items-center gap-2 mt-3 pt-2 border-t border-border/20">
+                              <span className="text-[10px] text-muted-foreground">Exportar simulação:</span>
+                              <button
+                                onClick={() => navigateTo(`/financeiro/simulador?gateway=${encodeURIComponent(gw)}&amount=${amt}&mode=${md}`)}
+                                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/80 px-2.5 py-1.5 rounded-md transition-colors"
+                              >
+                                <FileDown className="w-3 h-3" />
+                                Abrir no Simulador
+                              </button>
+                            </div>
+                          );
+                        })()}
 
                         {/* Generated images */}
                         {msg.images && msg.images.length > 0 && (

@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function SimuladorTaxas() {
+  const [searchParams] = useSearchParams();
   const [selectedGateway, setSelectedGateway] = useState<string>("__none__");
   const [amount, setAmount] = useState("");
   const [mode, setMode] = useState<"receive" | "charge">("charge");
@@ -46,6 +48,19 @@ export default function SimuladorTaxas() {
       return acc;
     }, {} as Record<string, any[]>);
   }, [allRules]);
+
+  // Pre-fill from URL params (from NatLeva Intelligence)
+  useEffect(() => {
+    const gwParam = searchParams.get("gateway");
+    const amtParam = searchParams.get("amount");
+    const modeParam = searchParams.get("mode");
+    if (gwParam) {
+      const match = Object.keys(gateways).find(g => g.toLowerCase() === gwParam.toLowerCase());
+      if (match) setSelectedGateway(match);
+    }
+    if (amtParam) setAmount(amtParam);
+    if (modeParam === "charge" || modeParam === "receive") setMode(modeParam);
+  }, [searchParams, gateways]);
 
   const rules: FeeRule[] = useMemo(() => {
     if (selectedGateway === "__none__") return [];
