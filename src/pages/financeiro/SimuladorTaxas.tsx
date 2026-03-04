@@ -8,7 +8,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { Calculator, ArrowDownToLine, ArrowUpFromLine, FileDown } from "lucide-react";
+import { Calculator, ArrowDownToLine, ArrowUpFromLine, FileDown, ImageDown } from "lucide-react";
 import jsPDF from "jspdf";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
 
@@ -233,6 +233,173 @@ export default function SimuladorTaxas() {
     doc.save(`simulacao-parcelamento-${Date.now()}.pdf`);
   };
 
+  const generateImage = () => {
+    if (rows.length === 0) return;
+
+    const rowH = 11;
+    const headerH = 12;
+    const pad = 4;
+    const headerArea = 90;
+    const cardH = pad + headerH + rows.length * rowH + pad;
+    const footerArea = 30;
+    const canvasW = 210;
+    const canvasH = Math.max(297, headerArea + cardH + footerArea);
+    const scale = 4; // high-res
+
+    const c = document.createElement("canvas");
+    c.width = canvasW * scale;
+    c.height = canvasH * scale;
+    const ctx = c.getContext("2d")!;
+    ctx.scale(scale, scale);
+
+    const s = (mm: number) => mm; // 1:1 since we scale canvas
+    const centerX = canvasW / 2;
+
+    const brandGreen = "#1e3c1c";
+    const softGreenBg = "#f3f8f3";
+    const cardBorderColor = "#d2e1d2";
+    const mutedTextColor = "#a0a0a0";
+    const bodyTextColor = "#464646";
+    const bgCream = "#f8f4e4";
+
+    // Background
+    ctx.fillStyle = bgCream;
+    ctx.fillRect(0, 0, canvasW, canvasH);
+
+    // Logo
+    const img = new Image();
+    img.onload = () => {
+      const logoW = 48;
+      const logoH = 18;
+      ctx.drawImage(img, centerX - logoW / 2, 24, logoW, logoH);
+      drawContent();
+    };
+    img.onerror = () => drawContent();
+    img.src = logoNatleva;
+
+    function roundedRect(x: number, y: number, w: number, h: number, r: number) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function drawContent() {
+      // Decorative line
+      const lineW = 50;
+      const lineY = 58;
+      ctx.strokeStyle = brandGreen;
+      ctx.lineWidth = 0.35;
+      ctx.beginPath();
+      ctx.moveTo(centerX - lineW / 2, lineY);
+      ctx.lineTo(centerX + lineW / 2, lineY);
+      ctx.stroke();
+
+      // Title
+      ctx.fillStyle = brandGreen;
+      ctx.font = "bold 7mm sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("Simulação de Parcelamento", centerX, 70);
+
+      // Date
+      ctx.fillStyle = mutedTextColor;
+      ctx.font = "3.5mm sans-serif";
+      ctx.fillText(
+        `Simulação realizada em ${new Date().toLocaleDateString("pt-BR")}`,
+        centerX, 78
+      );
+
+      // Card
+      const cardW = canvasW * 0.68;
+      const cardX = centerX - cardW / 2;
+      const tableTopY = 90;
+
+      // Shadow
+      ctx.fillStyle = "#e1e4de";
+      roundedRect(cardX + 0.8, tableTopY + 0.8, cardW, cardH, 4);
+      ctx.fill();
+
+      // Card body
+      ctx.fillStyle = "#ffffff";
+      roundedRect(cardX, tableTopY, cardW, cardH, 4);
+      ctx.fill();
+
+      // Card border
+      ctx.strokeStyle = cardBorderColor;
+      ctx.lineWidth = 0.3;
+      roundedRect(cardX, tableTopY, cardW, cardH, 4);
+      ctx.stroke();
+
+      // Header
+      const hY = tableTopY + pad;
+      ctx.fillStyle = softGreenBg;
+      roundedRect(cardX + 1.5, hY, cardW - 3, headerH, 2.5);
+      ctx.fill();
+
+      const col1X = cardX + cardW * 0.3;
+      const col2X = cardX + cardW * 0.7;
+
+      ctx.fillStyle = brandGreen;
+      ctx.font = "bold 3mm sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("PARCELAS", col1X, hY + 8);
+      ctx.fillText("VALOR DA PARCELA", col2X, hY + 8);
+
+      // Rows
+      rows.forEach((row, i) => {
+        const y = hY + headerH + i * rowH;
+
+        if (i % 2 === 1) {
+          ctx.fillStyle = "#fafdfa";
+          ctx.fillRect(cardX + 1.5, y, cardW - 3, rowH);
+        }
+
+        if (i > 0) {
+          ctx.strokeStyle = "#ebf0eb";
+          ctx.lineWidth = 0.12;
+          ctx.beginPath();
+          ctx.moveTo(cardX + 10, y);
+          ctx.lineTo(cardX + cardW - 10, y);
+          ctx.stroke();
+        }
+
+        const textY = y + rowH * 0.65;
+
+        ctx.fillStyle = bodyTextColor;
+        ctx.font = "4mm sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${row.installments}x`, col1X, textY);
+
+        ctx.fillStyle = brandGreen;
+        ctx.font = "bold 4.5mm sans-serif";
+        ctx.fillText(fmt(row.installmentValue), col2X, textY);
+      });
+
+      // Disclaimer
+      const disclaimerY = tableTopY + cardH + 14;
+      ctx.fillStyle = mutedTextColor;
+      ctx.font = "italic 2.8mm sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(
+        "Simulação estimada. Valores podem variar conforme operadora de pagamento.",
+        centerX, disclaimerY
+      );
+
+      // Download
+      const link = document.createElement("a");
+      link.download = `simulacao-parcelamento-${Date.now()}.png`;
+      link.href = c.toDataURL("image/png");
+      link.click();
+    }
+  };
+
   return (
     <div className="space-y-6 p-4 md:p-6 max-w-[900px] mx-auto">
       <div>
@@ -310,10 +477,16 @@ export default function SimuladorTaxas() {
         <Card className="glass-card overflow-hidden">
           <div className="flex items-center justify-between p-4 border-b">
             <h3 className="font-semibold text-sm">Tabela de Parcelamento — {selectedGateway}</h3>
-            <Button size="sm" variant="outline" className="text-xs gap-1.5" onClick={generatePDF}>
-              <FileDown className="w-3.5 h-3.5" />
-              Exportar PDF
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" className="text-xs gap-1.5" onClick={generateImage}>
+                <ImageDown className="w-3.5 h-3.5" />
+                Imagem
+              </Button>
+              <Button size="sm" variant="outline" className="text-xs gap-1.5" onClick={generatePDF}>
+                <FileDown className="w-3.5 h-3.5" />
+                PDF
+              </Button>
+            </div>
           </div>
           <Table>
             <TableHeader>
