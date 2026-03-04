@@ -141,6 +141,9 @@ export default function NatLevaIntelligence() {
   // Orchestrator state
   const [currentRoute, setCurrentRoute] = useState<RouteInfo | null>(null);
 
+  // Web search toggle
+  const [forceWebSearch, setForceWebSearch] = useState(false);
+
   // Geolocation state
   const [userLocation, setUserLocation] = useState<{ city: string; state?: string; lat: number; lon: number } | null>(null);
   const [geoConsent, setGeoConsent] = useState<"pending" | "granted" | "denied" | "dismissed">(
@@ -439,6 +442,7 @@ export default function NatLevaIntelligence() {
             role: m.role, content: m.content, attachments: m.attachments,
           })),
           userLocation: userLocation ? { city: userLocation.city, state: userLocation.state } : undefined,
+          forceWebSearch,
         }),
       });
 
@@ -1150,6 +1154,18 @@ export default function NatLevaIntelligence() {
 
                 <Button
                   type="button"
+                  variant={forceWebSearch ? "default" : "ghost"}
+                  size="icon"
+                  onClick={() => setForceWebSearch(v => !v)}
+                  disabled={loading}
+                  className={`shrink-0 h-10 w-10 ${forceWebSearch ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                  title={forceWebSearch ? "Busca web ATIVA — clique para desativar" : "Ativar busca na internet em tempo real"}
+                >
+                  <Globe className="w-4 h-4" />
+                </Button>
+
+                <Button
+                  type="button"
                   variant={isRecording ? "destructive" : "ghost"}
                   size="icon"
                   onClick={isRecording ? stopRecording : startRecording}
@@ -1166,7 +1182,7 @@ export default function NatLevaIntelligence() {
                 </Button>
               </form>
               <p className="text-[10px] text-muted-foreground/50 mt-1.5 text-center">
-                🧠 Multi-IA • 🎙️ Microfone • 📎 Arquivos • 🔗 Links • 🎨 "Gere uma imagem de..." • 🗣️ Voz • 📄 PDF/Planilha
+                🧠 Multi-IA • 🌐 Web em tempo real • 🎙️ Microfone • 📎 Arquivos • 🔗 Links • 🎨 "Gere uma imagem de..." • 🗣️ Voz • 📄 PDF/Planilha
               </p>
             </div>
           </div>
