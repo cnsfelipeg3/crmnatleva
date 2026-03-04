@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Search, Building2, Trash2, Pencil, ChevronDown, ChevronRight, Check, X } from "lucide-react";
+import { Plus, Search, Building2, Trash2, Pencil, ChevronDown, ChevronRight, Check, X, Gavel } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 interface MilesProgram {
   id: string;
@@ -20,6 +21,7 @@ interface MilesProgram {
   min_miles: number;
   max_miles: number | null;
   is_active: boolean;
+  is_liminar: boolean;
   notes: string | null;
 }
 
@@ -34,10 +36,10 @@ export default function Fornecedores() {
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
   const [form, setForm] = useState({ name: "", cnpj: "", contact_name: "", phone: "", email: "", category: "", payment_conditions: "", bank_pix_key: "" });
-  const [mpForm, setMpForm] = useState({ program_name: "", price_per_thousand: "", min_miles: "", max_miles: "" });
+  const [mpForm, setMpForm] = useState({ program_name: "", price_per_thousand: "", min_miles: "", max_miles: "", is_liminar: false });
   const [expandedPrograms, setExpandedPrograms] = useState<Record<string, boolean>>({});
   const [editingTier, setEditingTier] = useState<string | null>(null);
-  const [editTierForm, setEditTierForm] = useState({ price_per_thousand: "", min_miles: "", max_miles: "" });
+  const [editTierForm, setEditTierForm] = useState({ price_per_thousand: "", min_miles: "", max_miles: "", is_liminar: false });
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ["suppliers"],
@@ -112,6 +114,7 @@ export default function Fornecedores() {
       price_per_thousand: price,
       min_miles: minMiles,
       max_miles: maxMiles,
+      is_liminar: mpForm.is_liminar,
     });
     if (error) {
       if (error.code === "23505") toast.error("Faixa já cadastrada para este programa");
@@ -119,7 +122,7 @@ export default function Fornecedores() {
       return;
     }
     toast.success("Faixa adicionada!");
-    setMpForm({ program_name: "", price_per_thousand: "", min_miles: "", max_miles: "" });
+    setMpForm({ program_name: "", price_per_thousand: "", min_miles: "", max_miles: "", is_liminar: false });
     setExpandedPrograms(prev => ({ ...prev, [mpForm.program_name.trim()]: true }));
     refetchMiles();
   };
@@ -141,6 +144,7 @@ export default function Fornecedores() {
       price_per_thousand: String(mp.price_per_thousand),
       min_miles: String(mp.min_miles),
       max_miles: mp.max_miles ? String(mp.max_miles) : "",
+      is_liminar: mp.is_liminar,
     });
   };
 
@@ -154,6 +158,7 @@ export default function Fornecedores() {
       price_per_thousand: price,
       min_miles: minMiles,
       max_miles: maxMiles,
+      is_liminar: editTierForm.is_liminar,
     }).eq("id", mp.id);
     if (error) { toast.error("Erro ao atualizar"); return; }
     toast.success("Faixa atualizada!");
@@ -305,18 +310,25 @@ export default function Fornecedores() {
                                 <div key={mp.id} className="flex items-center justify-between px-3 py-2 border-b last:border-0 bg-background/50">
                                   {editingTier === mp.id ? (
                                     <>
-                                      <div className="flex-1 grid grid-cols-3 gap-1.5 mr-2">
-                                        <div>
-                                          <Label className="text-[9px] text-muted-foreground">R$/Milheiro</Label>
-                                          <Input type="number" step="0.01" value={editTierForm.price_per_thousand} onChange={e => setEditTierForm({ ...editTierForm, price_per_thousand: e.target.value })} className="h-7 text-xs" />
+                                      <div className="flex-1 space-y-1.5 mr-2">
+                                        <div className="grid grid-cols-3 gap-1.5">
+                                          <div>
+                                            <Label className="text-[9px] text-muted-foreground">R$/Milheiro</Label>
+                                            <Input type="number" step="0.01" value={editTierForm.price_per_thousand} onChange={e => setEditTierForm({ ...editTierForm, price_per_thousand: e.target.value })} className="h-7 text-xs" />
+                                          </div>
+                                          <div>
+                                            <Label className="text-[9px] text-muted-foreground">De (milhas)</Label>
+                                            <Input type="number" value={editTierForm.min_miles} onChange={e => setEditTierForm({ ...editTierForm, min_miles: e.target.value })} className="h-7 text-xs" />
+                                          </div>
+                                          <div>
+                                            <Label className="text-[9px] text-muted-foreground">Até (milhas)</Label>
+                                            <Input type="number" placeholder="∞" value={editTierForm.max_miles} onChange={e => setEditTierForm({ ...editTierForm, max_miles: e.target.value })} className="h-7 text-xs" />
+                                          </div>
                                         </div>
-                                        <div>
-                                          <Label className="text-[9px] text-muted-foreground">De (milhas)</Label>
-                                          <Input type="number" value={editTierForm.min_miles} onChange={e => setEditTierForm({ ...editTierForm, min_miles: e.target.value })} className="h-7 text-xs" />
-                                        </div>
-                                        <div>
-                                          <Label className="text-[9px] text-muted-foreground">Até (milhas)</Label>
-                                          <Input type="number" placeholder="∞" value={editTierForm.max_miles} onChange={e => setEditTierForm({ ...editTierForm, max_miles: e.target.value })} className="h-7 text-xs" />
+                                        <div className="flex items-center gap-2">
+                                          <Label className="text-[9px] text-muted-foreground">Liminar:</Label>
+                                          <Switch checked={editTierForm.is_liminar} onCheckedChange={v => setEditTierForm({ ...editTierForm, is_liminar: v })} className="scale-75" />
+                                          <span className="text-[10px] text-muted-foreground">{editTierForm.is_liminar ? "Sim" : "Não"}</span>
                                         </div>
                                       </div>
                                       <div className="flex gap-1">
@@ -335,9 +347,16 @@ export default function Fornecedores() {
                                           {mp.is_active ? "Ativo" : "Inativo"}
                                         </Badge>
                                         <div>
-                                          <p className="text-xs font-medium">
-                                            R$ {Number(mp.price_per_thousand).toFixed(2)} / milheiro
-                                          </p>
+                                          <div className="flex items-center gap-1.5">
+                                            <p className="text-xs font-medium">
+                                              R$ {Number(mp.price_per_thousand).toFixed(2)} / milheiro
+                                            </p>
+                                            {mp.is_liminar && (
+                                              <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-amber-500 text-amber-600">
+                                                <Gavel className="w-2.5 h-2.5 mr-0.5" /> Liminar
+                                              </Badge>
+                                            )}
+                                          </div>
                                           <p className="text-[10px] text-muted-foreground">
                                             {formatMiles(mp.min_miles)} {mp.max_miles ? `até ${formatMiles(mp.max_miles)}` : "+"} milhas
                                           </p>
@@ -410,6 +429,11 @@ export default function Fornecedores() {
                         onChange={(e) => setMpForm({ ...mpForm, max_miles: e.target.value })}
                         className="h-8 text-xs"
                       />
+                    </div>
+                    <div className="flex items-center gap-2 col-span-2">
+                      <Label className="text-[10px]">Liminar:</Label>
+                      <Switch checked={mpForm.is_liminar} onCheckedChange={v => setMpForm({ ...mpForm, is_liminar: v })} className="scale-75" />
+                      <span className="text-[10px] text-muted-foreground">{mpForm.is_liminar ? "Sim" : "Não"}</span>
                     </div>
                   </div>
                   <Button size="sm" className="w-full h-8 text-xs" onClick={addMilesProgram}>
