@@ -22,7 +22,7 @@ type ModelRoute = {
   reason: string;
 };
 
-function classifyIntent(userMessage: string, hasImages: boolean): ModelRoute & { needsWebSearch: boolean; searchQuery?: string } {
+function classifyIntent(userMessage: string, hasImages: boolean, forceWebSearch = false): ModelRoute & { needsWebSearch: boolean; searchQuery?: string } {
   const msg = userMessage.toLowerCase().trim();
 
   // Image generation
@@ -36,14 +36,13 @@ function classifyIntent(userMessage: string, hasImages: boolean): ModelRoute & {
     return { model: "google/gemini-2.5-flash", label: "👁️ Visão Computacional", reason: "Análise de imagem/OCR", needsWebSearch: false };
   }
 
-  // ── Web search detection ──
-  const searchPatterns = /(pesquis|busc|procur|notícia|tendência|mercado|concorr|benchmark|o que há de novo|novidade|atualização|última hora|greve|crise|desastre|restriç|regulament|legislaç|cotação|dólar|euro|câmbio|preço atual|valor atual|tarifa atual|instagram|tiktok|linkedin|twitter|rede\s*social|@\w|monitorar?\s+perfil|analis[ae]\s+(mercado|setor|concorr)|o que é\b|quem é\b|como funciona\b|quando\b.*\b(aconteceu|foi|será)|turismo\s+(mundial|global|brasil)|ranking\s+(de|dos|das)|companhia\s+aérea.*not|hotel.*notícia|destino\s+(popular|tendência|mais)|api\s+(grátis|free|gratuita|aberta)|integraç|ferramenta|software|plataforma.*alternativa)/i;
-  const needsWebSearch = searchPatterns.test(msg);
+  // ── Web search detection (AGRESSIVO — detecta qualquer necessidade de dados externos) ──
+  const searchPatterns = /(pesquis|busc|procur|notícia|tendência|mercado|concorr|benchmark|o que há de novo|novidade|atualização|última hora|greve|crise|desastre|restriç|regulament|legislaç|cotação|dólar|euro|câmbio|preço atual|valor atual|tarifa atual|instagram|tiktok|linkedin|twitter|rede\s*social|@\w|monitorar?\s+perfil|analis[ae]\s+(mercado|setor|concorr)|o que é\b|quem é\b|como funciona\b|quando\b.*\b(aconteceu|foi|será)|turismo\s+(mundial|global|brasil)|ranking\s+(de|dos|das)|companhia\s+aérea|hotel.*notícia|destino\s+(popular|tendência|mais)|api\s+(grátis|free|gratuita|aberta)|integraç|ferramenta|software|plataforma.*alternativa|hoje\b|agora\b|atual|recente|últim[oa]s?\b|novo[as]?\b|2025|2026|previs[ãa]o|cen[áa]rio|governo|lei\b|decreto|promoç|oferta|black\s*friday|alta\s+temporada|baixa\s+temporada|passa\s*porte|visto\b|visa\b|exig[êe]ncia|requisito|vacina|saúde|seguro\s+viagem|clima\b|tempo\b|temperatura|melhor\s+época|quando\s+ir|aeroporto|companhia|latam|gol\b|azul\b|american|delta|united|emirates|copa\s+airlines|avianca|air\s+france|british|lufthansa|tap\b|iberia|qatar|turkish|ryanair|easyjet|jetblue|spirit|frontier|volaris|aero[a-z]*|booking|expedia|decolar|hurb|123milhas|maxmilhas|smiles|livelo|tudoazul|multiplus|pontos|milhas|transfer[êe]ncia|bônus)/i;
+  const needsWebSearch = forceWebSearch || searchPatterns.test(msg);
   
   // Extract a clean search query from the user message
   let searchQuery: string | undefined;
   if (needsWebSearch) {
-    // Remove common command prefixes to get the core query
     searchQuery = userMessage
       .replace(/^(pesquise?|busque?|procure?|me\s+diga|me\s+fale|quero\s+saber)\s+(sobre\s+)?/i, "")
       .replace(/^(o que|quem|como|quando|onde|qual|quais)\s+(é|são|foi|era|funciona|fica)\s+/i, "$1 $2 ")
@@ -104,7 +103,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, mode, userLocation } = await req.json();
+    const { messages, mode, userLocation, forceWebSearch } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -118,30 +117,16 @@ serve(async (req) => {
       Array.isArray(lastUserMsg?.content) ? lastUserMsg.content.find((p: any) => p.type === "text")?.text || "" : "";
     const hasImageAttachments = (lastUserMsg?.attachments || []).some((a: any) => a.type?.startsWith("image/"));
 
-    const route = classifyIntent(userText, hasImageAttachments);
+    const route = classifyIntent(userText, hasImageAttachments, forceWebSearch === true);
 
-    // ── WEB SEARCH (if needed) ──
-    let webSearchContext = "";
-    if (route.needsWebSearch && route.searchQuery) {
-      try {
-        const searchResp = await fetch(`${supabaseUrl}/functions/v1/web-search`, {
+    // ── WEB SEARCH (runs in parallel with DB queries below) ──
+    const webSearchPromise = (route.needsWebSearch && route.searchQuery)
+      ? fetch(`${supabaseUrl}/functions/v1/web-search`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${supabaseKey}`,
-          },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${supabaseKey}` },
           body: JSON.stringify({ query: route.searchQuery, sources: ["web", "wikipedia", "news"] }),
-        });
-        if (searchResp.ok) {
-          const searchData = await searchResp.json();
-          if (searchData.summary) {
-            webSearchContext = `\n\n🌐 RESULTADOS DE BUSCA NA WEB (dados em tempo real):\n${searchData.summary}`;
-          }
-        }
-      } catch (e) {
-        console.error("Web search failed:", e);
-      }
-    }
+        }).then(r => r.ok ? r.json() : null).catch(() => null)
+      : Promise.resolve(null);
 
     // ── IMAGE GENERATION MODE ──
     if (route.model === "google/gemini-2.5-flash-image") {
@@ -252,6 +237,10 @@ serve(async (req) => {
     const salePassengers = salePassengersRes.data || [];
     const paymentFeeRules = paymentFeeRulesRes.data || [];
     const profiles = profilesRes.data || [];
+
+    // ── Resolve web search (was running in parallel with DB queries) ──
+    const webSearchData = await webSearchPromise;
+    const webSearchContext = webSearchData?.summary ? `\n\n🌐 RESULTADOS DE BUSCA NA WEB (dados em tempo real):\n${webSearchData.summary}` : "";
 
     // ── Build config map ──
     const configMap: Record<string, string> = {};
