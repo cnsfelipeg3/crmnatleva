@@ -2128,6 +2128,8 @@ export type Database = {
           fee_fixed: number | null
           fee_percent: number
           holder: string | null
+          holder_id: string | null
+          holder_type: string | null
           id: string
           installments: number | null
           is_active: boolean | null
@@ -2140,6 +2142,8 @@ export type Database = {
           fee_fixed?: number | null
           fee_percent?: number
           holder?: string | null
+          holder_id?: string | null
+          holder_type?: string | null
           id?: string
           installments?: number | null
           is_active?: boolean | null
@@ -2152,6 +2156,8 @@ export type Database = {
           fee_fixed?: number | null
           fee_percent?: number
           holder?: string | null
+          holder_id?: string | null
+          holder_type?: string | null
           id?: string
           installments?: number | null
           is_active?: boolean | null
