@@ -236,48 +236,41 @@ export default function SimuladorTaxas() {
   const generateImage = () => {
     if (rows.length === 0) return;
 
-    const rowH = 11;
-    const headerH = 12;
-    const pad = 4;
-    const headerArea = 90;
-    const cardH = pad + headerH + rows.length * rowH + pad;
-    const footerArea = 30;
-    const canvasW = 210;
-    const canvasH = Math.max(297, headerArea + cardH + footerArea);
-    const scale = 4; // high-res
+    // 1080x1350 Instagram-friendly ratio
+    const W = 1080;
+    const margin = 80;
+    const contentW = W - margin * 2;
+
+    // Calculate dynamic heights (in px)
+    const logoAreaH = 180;
+    const lineGap = 30;
+    const titleH = 60;
+    const subtitleH = 40;
+    const gapBeforeCard = 40;
+    const cardPadY = 24;
+    const headerRowH = 50;
+    const dataRowH = 56;
+    const cardContentH = headerRowH + rows.length * dataRowH;
+    const cardTotalH = cardPadY + cardContentH + cardPadY;
+    const footerH = 80;
+    const totalNeeded = logoAreaH + lineGap + titleH + subtitleH + gapBeforeCard + cardTotalH + footerH;
+    const H = Math.max(1350, totalNeeded + 60);
 
     const c = document.createElement("canvas");
-    c.width = canvasW * scale;
-    c.height = canvasH * scale;
+    c.width = W;
+    c.height = H;
     const ctx = c.getContext("2d")!;
-    ctx.scale(scale, scale);
-
-    const s = (mm: number) => mm; // 1:1 since we scale canvas
-    const centerX = canvasW / 2;
+    const cx = W / 2;
 
     const brandGreen = "#1e3c1c";
-    const softGreenBg = "#f3f8f3";
-    const cardBorderColor = "#d2e1d2";
-    const mutedTextColor = "#a0a0a0";
-    const bodyTextColor = "#464646";
     const bgCream = "#f8f4e4";
 
     // Background
     ctx.fillStyle = bgCream;
-    ctx.fillRect(0, 0, canvasW, canvasH);
+    ctx.fillRect(0, 0, W, H);
 
-    // Logo
-    const img = new Image();
-    img.onload = () => {
-      const logoW = 48;
-      const logoH = 18;
-      ctx.drawImage(img, centerX - logoW / 2, 24, logoW, logoH);
-      drawContent();
-    };
-    img.onerror = () => drawContent();
-    img.src = logoNatleva;
-
-    function roundedRect(x: number, y: number, w: number, h: number, r: number) {
+    // Rounded rect helper
+    function rrect(x: number, y: number, w: number, h: number, r: number) {
       ctx.beginPath();
       ctx.moveTo(x + r, y);
       ctx.lineTo(x + w - r, y);
@@ -291,105 +284,129 @@ export default function SimuladorTaxas() {
       ctx.closePath();
     }
 
-    function drawContent() {
+    const img = new Image();
+    img.onload = () => {
+      // Logo — proportional
+      const logoDispW = 240;
+      const logoDispH = 90;
+      ctx.drawImage(img, cx - logoDispW / 2, 60, logoDispW, logoDispH);
+      draw();
+    };
+    img.onerror = () => draw();
+    img.src = logoNatleva;
+
+    function draw() {
+      let y = logoAreaH;
+
       // Decorative line
-      const lineW = 50;
-      const lineY = 58;
+      const lineW = 260;
       ctx.strokeStyle = brandGreen;
-      ctx.lineWidth = 0.35;
+      ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(centerX - lineW / 2, lineY);
-      ctx.lineTo(centerX + lineW / 2, lineY);
+      ctx.moveTo(cx - lineW / 2, y);
+      ctx.lineTo(cx + lineW / 2, y);
       ctx.stroke();
+      y += lineGap;
 
       // Title
       ctx.fillStyle = brandGreen;
-      ctx.font = "bold 7mm sans-serif";
+      ctx.font = "bold 38px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText("Simulação de Parcelamento", centerX, 70);
+      ctx.textBaseline = "top";
+      ctx.fillText("Simulação de Parcelamento", cx, y);
+      y += titleH;
 
-      // Date
-      ctx.fillStyle = mutedTextColor;
-      ctx.font = "3.5mm sans-serif";
+      // Date subtitle
+      ctx.fillStyle = "#a0a0a0";
+      ctx.font = "24px sans-serif";
       ctx.fillText(
         `Simulação realizada em ${new Date().toLocaleDateString("pt-BR")}`,
-        centerX, 78
+        cx, y
       );
+      y += subtitleH + gapBeforeCard;
 
-      // Card
-      const cardW = canvasW * 0.68;
-      const cardX = centerX - cardW / 2;
-      const tableTopY = 90;
+      // Card dimensions
+      const cardW = contentW;
+      const cardX = margin;
+      const cardY = y;
 
-      // Shadow
-      ctx.fillStyle = "#e1e4de";
-      roundedRect(cardX + 0.8, tableTopY + 0.8, cardW, cardH, 4);
+      // Card shadow
+      ctx.fillStyle = "rgba(0,0,0,0.06)";
+      rrect(cardX + 4, cardY + 4, cardW, cardTotalH, 20);
       ctx.fill();
 
       // Card body
       ctx.fillStyle = "#ffffff";
-      roundedRect(cardX, tableTopY, cardW, cardH, 4);
+      rrect(cardX, cardY, cardW, cardTotalH, 20);
       ctx.fill();
 
       // Card border
-      ctx.strokeStyle = cardBorderColor;
-      ctx.lineWidth = 0.3;
-      roundedRect(cardX, tableTopY, cardW, cardH, 4);
+      ctx.strokeStyle = "#d2e1d2";
+      ctx.lineWidth = 1.5;
+      rrect(cardX, cardY, cardW, cardTotalH, 20);
       ctx.stroke();
 
-      // Header
-      const hY = tableTopY + pad;
-      ctx.fillStyle = softGreenBg;
-      roundedRect(cardX + 1.5, hY, cardW - 3, headerH, 2.5);
+      // Table header bg
+      const hY = cardY + cardPadY;
+      ctx.fillStyle = "#eef4ee";
+      rrect(cardX + 12, hY, cardW - 24, headerRowH, 12);
       ctx.fill();
 
-      const col1X = cardX + cardW * 0.3;
-      const col2X = cardX + cardW * 0.7;
+      const col1 = cardX + cardW * 0.3;
+      const col2 = cardX + cardW * 0.7;
 
+      // Header text
       ctx.fillStyle = brandGreen;
-      ctx.font = "bold 3mm sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText("PARCELAS", col1X, hY + 8);
-      ctx.fillText("VALOR DA PARCELA", col2X, hY + 8);
+      ctx.font = "bold 20px sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.fillText("PARCELAS", col1, hY + headerRowH / 2);
+      ctx.fillText("VALOR DA PARCELA", col2, hY + headerRowH / 2);
 
-      // Rows
+      // Data rows
+      const dataStartY = hY + headerRowH;
       rows.forEach((row, i) => {
-        const y = hY + headerH + i * rowH;
+        const rY = dataStartY + i * dataRowH;
 
+        // Zebra
         if (i % 2 === 1) {
-          ctx.fillStyle = "#fafdfa";
-          ctx.fillRect(cardX + 1.5, y, cardW - 3, rowH);
+          ctx.fillStyle = "#f7faf7";
+          ctx.fillRect(cardX + 12, rY, cardW - 24, dataRowH);
         }
 
+        // Separator
         if (i > 0) {
-          ctx.strokeStyle = "#ebf0eb";
-          ctx.lineWidth = 0.12;
+          ctx.strokeStyle = "#e8ede8";
+          ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.moveTo(cardX + 10, y);
-          ctx.lineTo(cardX + cardW - 10, y);
+          ctx.moveTo(cardX + 40, rY);
+          ctx.lineTo(cardX + cardW - 40, rY);
           ctx.stroke();
         }
 
-        const textY = y + rowH * 0.65;
+        const textY = rY + dataRowH / 2;
 
-        ctx.fillStyle = bodyTextColor;
-        ctx.font = "4mm sans-serif";
+        // Installments
+        ctx.fillStyle = "#464646";
+        ctx.font = "28px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(`${row.installments}x`, col1X, textY);
+        ctx.textBaseline = "middle";
+        ctx.fillText(`${row.installments}x`, col1, textY);
 
+        // Value — bold green
         ctx.fillStyle = brandGreen;
-        ctx.font = "bold 4.5mm sans-serif";
-        ctx.fillText(fmt(row.installmentValue), col2X, textY);
+        ctx.font = "bold 30px sans-serif";
+        ctx.fillText(fmt(row.installmentValue), col2, textY);
       });
 
       // Disclaimer
-      const disclaimerY = tableTopY + cardH + 14;
-      ctx.fillStyle = mutedTextColor;
-      ctx.font = "italic 2.8mm sans-serif";
+      const disclaimerY = cardY + cardTotalH + 40;
+      ctx.fillStyle = "#a0a0a0";
+      ctx.font = "italic 18px sans-serif";
       ctx.textAlign = "center";
+      ctx.textBaseline = "top";
       ctx.fillText(
         "Simulação estimada. Valores podem variar conforme operadora de pagamento.",
-        centerX, disclaimerY
+        cx, disclaimerY
       );
 
       // Download
