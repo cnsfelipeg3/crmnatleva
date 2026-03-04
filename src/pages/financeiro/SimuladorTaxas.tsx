@@ -108,7 +108,7 @@ export default function SimuladorTaxas() {
     const cardBorder: [number, number, number] = [210, 225, 210];
     const mutedText: [number, number, number] = [160, 160, 160];
     const bodyText: [number, number, number] = [70, 70, 70];
-    const bgCream: [number, number, number] = [247, 244, 234];
+    const bgCream: [number, number, number] = [248, 244, 228];
 
     // Page background — NatLeva cream tone
     doc.setFillColor(...bgCream);
