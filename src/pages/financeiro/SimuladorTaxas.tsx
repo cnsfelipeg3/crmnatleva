@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Calculator, ArrowDownToLine, ArrowUpFromLine, FileDown } from "lucide-react";
 import jsPDF from "jspdf";
-import logoNatleva from "@/assets/logo-natleva-premium.jpg";
+import logoNatleva from "@/assets/logo-natleva-clean.png";
 
 interface FeeRule {
   installments: number;
@@ -115,14 +115,15 @@ export default function SimuladorTaxas() {
     doc.rect(0, 0, pageW, pageH, "F");
 
     // Logo — compact, elegant
-    const logoSize = 30;
+    const logoW = 48;
+    const logoH = 18;
     try {
-      doc.addImage(logoNatleva, "JPEG", centerX - logoSize / 2, 22, logoSize, logoSize, undefined, "FAST");
+      doc.addImage(logoNatleva, "PNG", centerX - logoW / 2, 24, logoW, logoH, undefined, "FAST");
     } catch {
       doc.setFontSize(22);
       doc.setTextColor(...brandGreen);
       doc.setFont("helvetica", "bold");
-      doc.text("natleva", centerX, 40, { align: "center" });
+      doc.text("natleva", centerX, 36, { align: "center" });
     }
 
     // Decorative line
