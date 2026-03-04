@@ -17,6 +17,7 @@ export default function GatewayPagamentos() {
   const [showFeeForm, setShowFeeForm] = useState<string | null>(null);
   const [expandedGateway, setExpandedGateway] = useState<string | null>(null);
   const [gatewayName, setGatewayName] = useState("");
+  const [gatewayHolder, setGatewayHolder] = useState("");
   const [feeForm, setFeeForm] = useState({ installments: "1", fee_percent: "", fee_fixed: "" });
   const [editingFee, setEditingFee] = useState<string | null>(null);
   const [editFeeForm, setEditFeeForm] = useState({ installments: "1", fee_percent: "", fee_fixed: "" });
@@ -48,12 +49,14 @@ export default function GatewayPagamentos() {
       fee_percent: 0,
       fee_fixed: 0,
       acquirer: name,
+      holder: gatewayHolder.trim() || null,
     });
     if (error) { toast.error("Erro ao criar gateway"); return; }
     toast.success("Gateway cadastrado!");
     qc.invalidateQueries({ queryKey: ["gateway-fee-rules"] });
     setShowGatewayForm(false);
     setGatewayName("");
+    setGatewayHolder("");
     setExpandedGateway(name);
   };
 
@@ -61,12 +64,14 @@ export default function GatewayPagamentos() {
     const inst = Number(feeForm.installments) || 1;
     const existing = (gateways[gateway] || []).find((r: any) => r.installments === inst);
     if (existing) { toast.error(`Parcela ${inst}x já cadastrada para este gateway`); return; }
+    const holder = (gateways[gateway] || [])[0]?.holder || null;
     const { error } = await supabase.from("payment_fee_rules").insert({
       payment_method: "cartao_credito",
       installments: inst,
       fee_percent: Number(feeForm.fee_percent) || 0,
       fee_fixed: Number(feeForm.fee_fixed) || 0,
       acquirer: gateway,
+      holder,
     });
     if (error) { toast.error("Erro ao adicionar taxa"); return; }
     toast.success(`Taxa ${inst}x adicionada!`);
@@ -141,6 +146,9 @@ export default function GatewayPagamentos() {
               <CreditCard className="w-5 h-5 text-primary" />
               <div>
                 <span className="font-semibold text-sm">{gateway}</span>
+                {gatewayRules[0]?.holder && (
+                  <span className="text-xs text-muted-foreground ml-2">• Titular: {gatewayRules[0].holder}</span>
+                )}
                 <Badge variant="secondary" className="ml-2 text-[10px]">
                   {gatewayRules.length} {gatewayRules.length === 1 ? "faixa" : "faixas"}
                 </Badge>
@@ -241,6 +249,10 @@ export default function GatewayPagamentos() {
             <div>
               <Label className="text-xs">Nome do Gateway *</Label>
               <Input value={gatewayName} onChange={(e) => setGatewayName(e.target.value)} placeholder="Ex: Stone, Cielo, PagSeguro" />
+            </div>
+            <div>
+              <Label className="text-xs">Titular da Conta</Label>
+              <Input value={gatewayHolder} onChange={(e) => setGatewayHolder(e.target.value)} placeholder="Ex: João da Silva" />
             </div>
             <Button onClick={handleAddGateway} className="w-full">Cadastrar Gateway</Button>
           </div>

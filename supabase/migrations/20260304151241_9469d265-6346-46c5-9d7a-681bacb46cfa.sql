@@ -1,0 +1,1 @@
+ALTER TABLE public.payment_fee_rules ADD COLUMN holder text;
