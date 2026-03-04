@@ -60,6 +60,7 @@ import GatewayPagamentos from "@/pages/financeiro/GatewayPagamentos";
 import PlanoContas from "@/pages/financeiro/PlanoContas";
 import Comissoes from "@/pages/financeiro/Comissoes";
 import DREReport from "@/pages/financeiro/DREReport";
+import SimuladorTaxas from "@/pages/financeiro/SimuladorTaxas";
 
 const queryClient = new QueryClient();
 
@@ -115,6 +116,7 @@ function AppRoutes() {
         <Route path="/financeiro/plano-contas" element={<PlanoContas />} />
         <Route path="/financeiro/comissoes" element={<Comissoes />} />
         <Route path="/financeiro/dre" element={<DREReport />} />
+        <Route path="/financeiro/simulador" element={<SimuladorTaxas />} />
 
         {/* RH */}
         <Route path="/rh" element={<RHIndex />} />
