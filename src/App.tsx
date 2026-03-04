@@ -56,6 +56,7 @@ import FluxoCaixa from "@/pages/financeiro/FluxoCaixa";
 import CartaoCredito from "@/pages/financeiro/CartaoCredito";
 import Fornecedores from "@/pages/financeiro/Fornecedores";
 import TaxasTarifas from "@/pages/financeiro/TaxasTarifas";
+import GatewayPagamentos from "@/pages/financeiro/GatewayPagamentos";
 import PlanoContas from "@/pages/financeiro/PlanoContas";
 import Comissoes from "@/pages/financeiro/Comissoes";
 import DREReport from "@/pages/financeiro/DREReport";
@@ -109,7 +110,8 @@ function AppRoutes() {
         <Route path="/financeiro/fluxo" element={<FluxoCaixa />} />
         <Route path="/financeiro/cartoes" element={<CartaoCredito />} />
         <Route path="/financeiro/fornecedores" element={<Fornecedores />} />
-        <Route path="/financeiro/taxas" element={<TaxasTarifas />} />
+            <Route path="/financeiro/taxas" element={<TaxasTarifas />} />
+            <Route path="/financeiro/gateways" element={<GatewayPagamentos />} />
         <Route path="/financeiro/plano-contas" element={<PlanoContas />} />
         <Route path="/financeiro/comissoes" element={<Comissoes />} />
         <Route path="/financeiro/dre" element={<DREReport />} />

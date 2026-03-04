@@ -36,6 +36,7 @@ const financeItems = [
   { to: "/financeiro/cartoes", icon: CreditCard, label: "Cartões" },
   { to: "/financeiro/fornecedores", icon: Building2, label: "Fornecedores" },
   { to: "/financeiro/taxas", icon: Percent, label: "Taxas & Tarifas" },
+  { to: "/financeiro/gateways", icon: CreditCard, label: "Gateway Pagamentos" },
   { to: "/financeiro/plano-contas", icon: FolderTree, label: "Plano de Contas" },
   { to: "/financeiro/comissoes", icon: Users2, label: "Comissões" },
   { to: "/financeiro/dre", icon: FileText, label: "DRE / Relatórios" },
