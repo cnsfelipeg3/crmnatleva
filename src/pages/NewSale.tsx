@@ -79,13 +79,13 @@ export default function NewSale() {
     hotel_name: "", hotel_room: "", hotel_meal_plan: "", hotel_reservation_code: "",
     hotel_checkin_date: "", hotel_checkout_date: "",
     hotel_city: "", hotel_country: "", hotel_address: "", hotel_lat: 0, hotel_lng: 0, hotel_place_id: "",
-    received_value: "", 
+    received_value: "", paid_value: "", payment_gateway: "", payment_installments: "1",
     // Cost items
-    air_cash: "", air_miles_qty: "", air_miles_price: "", air_taxes: "",
-    air_taxes_included: false, air_emission_source: "", air_miles_program: "",
+    air_miles_qty: "", air_miles_price: "", air_taxes: "",
+    air_emission_source: "", air_miles_program: "",
     air_supplier_id: "", 
-    hotel_cash: "", hotel_miles_qty: "", hotel_miles_price: "", hotel_taxes: "",
-    hotel_taxes_included: false, hotel_emission_source: "", hotel_miles_program: "",
+    hotel_miles_qty: "", hotel_miles_price: "", hotel_taxes: "",
+    hotel_emission_source: "", hotel_miles_program: "",
     hotel_supplier_id: "",
   });
 
@@ -114,6 +114,14 @@ export default function NewSale() {
     queryKey: ["all_supplier_miles_programs"],
     queryFn: async () => {
       const { data } = await supabase.from("supplier_miles_programs").select("*").eq("is_active", true).order("program_name").order("min_miles");
+      return data || [];
+    },
+  });
+
+  const { data: paymentFeeRules = [] } = useQuery({
+    queryKey: ["payment-fee-rules-select"],
+    queryFn: async () => {
+      const { data } = await supabase.from("payment_fee_rules").select("*").eq("is_active", true).order("payment_method");
       return data || [];
     },
   });
@@ -201,13 +209,11 @@ export default function NewSale() {
           children: f.children?.value ? Number(f.children.value) : prev.children,
           children_ages: f.children_ages?.value ? (Array.isArray(f.children_ages.value) ? f.children_ages.value.join(", ") : String(f.children_ages.value)) : prev.children_ages,
           received_value: get("received_value") || prev.received_value,
-          air_cash: get("air_cash") || get("cash_value") || prev.air_cash,
           air_miles_qty: get("air_miles_qty") || get("miles_quantity") || prev.air_miles_qty,
           air_miles_price: get("air_miles_price") || prev.air_miles_price,
           air_taxes: get("air_taxes") || get("taxes") || prev.air_taxes,
           air_emission_source: get("emission_source") || prev.air_emission_source,
           air_miles_program: get("miles_program") || prev.air_miles_program,
-          hotel_cash: get("hotel_cash") || prev.hotel_cash,
           hotel_miles_qty: get("hotel_miles_qty") || prev.hotel_miles_qty,
           hotel_miles_price: get("hotel_miles_price") || prev.hotel_miles_price,
           hotel_taxes: get("hotel_taxes") || prev.hotel_taxes,
@@ -264,19 +270,17 @@ export default function NewSale() {
     const qty = parseFloat(form.air_miles_qty) || 0;
     const price = parseFloat(form.air_miles_price) || 0;
     const taxes = parseFloat(form.air_taxes) || 0;
-    return (qty / 1000) * price + (form.air_taxes_included ? 0 : taxes);
+    return (qty / 1000) * price + taxes;
   })();
-  const airCash = parseFloat(form.air_cash) || 0;
-  const airTotal = airCash + airMilesCost;
+  const airTotal = airMilesCost;
 
   const hotelMilesCost = (() => {
     const qty = parseFloat(form.hotel_miles_qty) || 0;
     const price = parseFloat(form.hotel_miles_price) || 0;
     const taxes = parseFloat(form.hotel_taxes) || 0;
-    return (qty / 1000) * price + (form.hotel_taxes_included ? 0 : taxes);
+    return (qty / 1000) * price + taxes;
   })();
-  const hotelCash = parseFloat(form.hotel_cash) || 0;
-  const hotelTotal = hotelCash + hotelMilesCost;
+  const hotelTotal = hotelMilesCost;
 
   const totalCost = airTotal + hotelTotal;
   const receivedValue = parseFloat(form.received_value) || 0;
@@ -347,10 +351,10 @@ export default function NewSale() {
         costItems.push({
           sale_id: saleId, category: "aereo" as const,
           description: "Aéreo",
-          cash_value: airCash, miles_quantity: parseInt(form.air_miles_qty) || 0,
+          cash_value: 0, miles_quantity: parseInt(form.air_miles_qty) || 0,
           miles_price_per_thousand: parseFloat(form.air_miles_price) || 0,
           taxes: parseFloat(form.air_taxes) || 0,
-          taxes_included_in_cash: form.air_taxes_included,
+          taxes_included_in_cash: false,
           emission_source: form.air_emission_source || null,
           miles_program: form.air_miles_program || null,
           miles_cost_brl: airMilesCost, total_item_cost: airTotal,
@@ -360,10 +364,10 @@ export default function NewSale() {
         costItems.push({
           sale_id: saleId, category: "hotel" as const,
           description: "Hotel",
-          cash_value: hotelCash, miles_quantity: parseInt(form.hotel_miles_qty) || 0,
+          cash_value: 0, miles_quantity: parseInt(form.hotel_miles_qty) || 0,
           miles_price_per_thousand: parseFloat(form.hotel_miles_price) || 0,
           taxes: parseFloat(form.hotel_taxes) || 0,
-          taxes_included_in_cash: form.hotel_taxes_included,
+          taxes_included_in_cash: false,
           emission_source: form.hotel_emission_source || null,
           miles_program: form.hotel_miles_program || null,
           miles_cost_brl: hotelMilesCost, total_item_cost: hotelTotal,
@@ -831,9 +835,70 @@ export default function NewSale() {
         {step === 7 && (
           <div className="space-y-5 max-w-2xl">
             <h2 className="text-lg font-serif text-foreground">Financeiro</h2>
-            <div className="space-y-2">
-              <Label>Valor Recebido (R$)</Label>
-              <Input data-testid="input-received-value" type="number" step="0.01" value={form.received_value} onChange={(e) => updateForm("received_value", e.target.value)} />
+            
+            {/* Received & Paid values */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Valor Recebido (R$)</Label>
+                <Input data-testid="input-received-value" type="number" step="0.01" value={form.received_value} onChange={(e) => updateForm("received_value", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor Pago pelo Cliente (R$)</Label>
+                <Input type="number" step="0.01" value={form.paid_value} onChange={(e) => updateForm("paid_value", e.target.value)} />
+              </div>
+            </div>
+
+            {/* Payment method */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label className="text-xs">Forma de Pagamento</Label>
+                <Select value={form.payment_method} onValueChange={(v) => {
+                  updateForm("payment_method", v);
+                  if (v !== "cartao_credito") {
+                    updateForm("payment_gateway", "");
+                    updateForm("payment_installments", "1");
+                  }
+                }}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pix">PIX</SelectItem>
+                    <SelectItem value="transferencia">Transferência</SelectItem>
+                    <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                    <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
+                    <SelectItem value="boleto">Boleto</SelectItem>
+                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {(form.payment_method === "cartao_credito" || form.payment_method === "cartao_debito") && (
+                <>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Gateway de Pagamento</Label>
+                    <Select value={form.payment_gateway} onValueChange={(v) => updateForm("payment_gateway", v)}>
+                      <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione o gateway" /></SelectTrigger>
+                      <SelectContent>
+                        {paymentFeeRules
+                          .map((r: any) => r.acquirer)
+                          .filter((v: string, i: number, a: string[]) => v && a.indexOf(v) === i)
+                          .map((acquirer: string) => (
+                            <SelectItem key={acquirer} value={acquirer}>{acquirer}</SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs">Parcelas</Label>
+                    <Select value={form.payment_installments} onValueChange={(v) => updateForm("payment_installments", v)}>
+                      <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+                          <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Air costs */}
@@ -871,7 +936,6 @@ export default function NewSale() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1"><Label className="text-xs">Valor pago R$</Label><Input type="number" step="0.01" value={form.air_cash} onChange={(e) => updateForm("air_cash", e.target.value)} /></div>
                 <div className="space-y-1"><Label className="text-xs">Qtd Milhas</Label><Input type="number" value={form.air_miles_qty} onChange={(e) => {
                   updateForm("air_miles_qty", e.target.value);
                   if (form.air_supplier_id && form.air_miles_program) {
@@ -884,10 +948,6 @@ export default function NewSale() {
                 </div>
                 <div className="space-y-1"><Label className="text-xs">Taxas R$</Label><Input type="number" step="0.01" value={form.air_taxes} onChange={(e) => updateForm("air_taxes", e.target.value)} /></div>
                 <div className="space-y-1"><Label className="text-xs">Emissão por</Label><Input value={form.air_emission_source} onChange={(e) => updateForm("air_emission_source", e.target.value)} /></div>
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <Checkbox checked={form.air_taxes_included} onCheckedChange={(v) => updateForm("air_taxes_included", !!v)} id="air-tax" />
-                <label htmlFor="air-tax" className="text-xs text-muted-foreground">Taxas já incluídas no valor pago em R$</label>
               </div>
               {airMilesCost > 0 && (
                 <p className="text-xs text-muted-foreground mt-2">Custo milhas: R$ {airMilesCost.toFixed(2)} | Total aéreo: R$ {airTotal.toFixed(2)}</p>
@@ -929,7 +989,6 @@ export default function NewSale() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1"><Label className="text-xs">Valor pago R$</Label><Input type="number" step="0.01" value={form.hotel_cash} onChange={(e) => updateForm("hotel_cash", e.target.value)} /></div>
                 <div className="space-y-1"><Label className="text-xs">Qtd Milhas</Label><Input type="number" value={form.hotel_miles_qty} onChange={(e) => {
                   updateForm("hotel_miles_qty", e.target.value);
                   if (form.hotel_supplier_id && form.hotel_miles_program) {
@@ -942,10 +1001,6 @@ export default function NewSale() {
                 </div>
                 <div className="space-y-1"><Label className="text-xs">Taxas R$</Label><Input type="number" step="0.01" value={form.hotel_taxes} onChange={(e) => updateForm("hotel_taxes", e.target.value)} /></div>
                 <div className="space-y-1"><Label className="text-xs">Emissão por</Label><Input value={form.hotel_emission_source} onChange={(e) => updateForm("hotel_emission_source", e.target.value)} /></div>
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <Checkbox checked={form.hotel_taxes_included} onCheckedChange={(v) => updateForm("hotel_taxes_included", !!v)} id="hotel-tax" />
-                <label htmlFor="hotel-tax" className="text-xs text-muted-foreground">Taxas já incluídas no valor pago em R$</label>
               </div>
               {hotelMilesCost > 0 && (
                 <p className="text-xs text-muted-foreground mt-2">Custo milhas: R$ {hotelMilesCost.toFixed(2)} | Total hotel: R$ {hotelTotal.toFixed(2)}</p>
