@@ -1203,6 +1203,13 @@ export default function NatLevaIntelligence() {
                     <p className="text-sm font-medium truncate">{conv.title}</p>
                     <p className="text-[10px] text-muted-foreground">{new Date(conv.updated_at).toLocaleDateString("pt-BR")}</p>
                   </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteConversation(conv.conversation_id); }}
+                    className="p-1.5 text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-destructive/10"
+                    title="Apagar conversa"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                   <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                 </div>
               </Card>
