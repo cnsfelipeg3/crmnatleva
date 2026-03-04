@@ -104,133 +104,126 @@ export default function SimuladorTaxas() {
     const centerX = pageW / 2;
 
     const brandGreen: [number, number, number] = [30, 60, 28];
-    const softGreen: [number, number, number] = [240, 247, 240];
-    const cardBorder: [number, number, number] = [200, 220, 200];
-    const mutedText: [number, number, number] = [150, 150, 150];
-    const bodyText: [number, number, number] = [60, 60, 60];
-    const bgCream: [number, number, number] = [252, 250, 243];
+    const softGreenBg: [number, number, number] = [243, 248, 243];
+    const cardBorder: [number, number, number] = [210, 225, 210];
+    const mutedText: [number, number, number] = [160, 160, 160];
+    const bodyText: [number, number, number] = [70, 70, 70];
+    const bgCream: [number, number, number] = [247, 244, 234];
 
-    // Full page cream background
+    // Page background — NatLeva cream tone
     doc.setFillColor(...bgCream);
     doc.rect(0, 0, pageW, pageH, "F");
 
-    // Logo
-    const logoW = 50;
-    const logoH = 50;
+    // Logo — compact, elegant
+    const logoSize = 30;
     try {
-      doc.addImage(logoNatleva, "JPEG", centerX - logoW / 2, 20, logoW, logoH, undefined, "FAST");
+      doc.addImage(logoNatleva, "JPEG", centerX - logoSize / 2, 22, logoSize, logoSize, undefined, "FAST");
     } catch {
-      doc.setFontSize(28);
+      doc.setFontSize(22);
       doc.setTextColor(...brandGreen);
       doc.setFont("helvetica", "bold");
-      doc.text("natleva", centerX, 46, { align: "center" });
+      doc.text("natleva", centerX, 40, { align: "center" });
     }
 
-    // Elegant divider
-    const lineY = 78;
-    const lineW = 60;
+    // Decorative line
+    const lineW = 50;
+    const lineY = 58;
     doc.setDrawColor(...brandGreen);
-    doc.setLineWidth(0.4);
+    doc.setLineWidth(0.35);
     doc.line(centerX - lineW / 2, lineY, centerX + lineW / 2, lineY);
 
     // Title
-    doc.setFontSize(20);
+    doc.setFontSize(18);
     doc.setTextColor(...brandGreen);
     doc.setFont("helvetica", "bold");
-    doc.text("Simulação de Parcelamento", centerX, 92, { align: "center" });
+    doc.text("Simulação de Parcelamento", centerX, 70, { align: "center" });
 
-    // Date subtitle
+    // Date
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...mutedText);
     doc.text(
       `Simulação realizada em ${new Date().toLocaleDateString("pt-BR")}`,
-      centerX, 100, { align: "center" }
+      centerX, 78, { align: "center" }
     );
 
-    // Card dimensions
-    const cardW = 150;
+    // Card
+    const cardW = pageW * 0.68;
     const cardX = centerX - cardW / 2;
-    const rowH = 13;
-    const headerH = 14;
-    const tableTopY = 114;
-    const padTop = 6;
-    const padBottom = 6;
-    const cardH = padTop + headerH + rows.length * rowH + padBottom;
+    const rowH = 11;
+    const headerH = 12;
+    const tableTopY = 90;
+    const pad = 4;
+    const cardH = pad + headerH + rows.length * rowH + pad;
 
-    // Card shadow
-    doc.setFillColor(230, 235, 230);
-    doc.roundedRect(cardX + 1, tableTopY + 1.5, cardW, cardH, 5, 5, "F");
+    // Shadow
+    doc.setFillColor(225, 228, 222);
+    doc.roundedRect(cardX + 0.8, tableTopY + 0.8, cardW, cardH, 4, 4, "F");
 
     // Card body
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(cardX, tableTopY, cardW, cardH, 5, 5, "F");
+    doc.roundedRect(cardX, tableTopY, cardW, cardH, 4, 4, "F");
 
     // Card border
     doc.setDrawColor(...cardBorder);
-    doc.setLineWidth(0.35);
-    doc.roundedRect(cardX, tableTopY, cardW, cardH, 5, 5, "S");
+    doc.setLineWidth(0.3);
+    doc.roundedRect(cardX, tableTopY, cardW, cardH, 4, 4, "S");
 
-    // Table header
-    const headerY = tableTopY + padTop;
-    doc.setFillColor(...softGreen);
-    doc.roundedRect(cardX + 2, headerY, cardW - 4, headerH, 3, 3, "F");
+    // Header row
+    const hY = tableTopY + pad;
+    doc.setFillColor(...softGreenBg);
+    doc.roundedRect(cardX + 1.5, hY, cardW - 3, headerH, 2.5, 2.5, "F");
 
     const col1X = cardX + cardW * 0.3;
     const col2X = cardX + cardW * 0.7;
 
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...brandGreen);
-    doc.text("PARCELAS", col1X, headerY + 9.5, { align: "center" });
-    doc.text("VALOR DA PARCELA", col2X, headerY + 9.5, { align: "center" });
+    doc.text("PARCELAS", col1X, hY + 8, { align: "center" });
+    doc.text("VALOR DA PARCELA", col2X, hY + 8, { align: "center" });
 
-    // Table rows
+    // Rows
     rows.forEach((row, i) => {
-      const y = headerY + headerH + i * rowH;
+      const y = hY + headerH + i * rowH;
 
+      // Zebra
       if (i % 2 === 1) {
-        doc.setFillColor(248, 252, 248);
-        doc.rect(cardX + 2, y, cardW - 4, rowH, "F");
+        doc.setFillColor(250, 253, 250);
+        doc.rect(cardX + 1.5, y, cardW - 3, rowH, "F");
       }
 
+      // Separator
       if (i > 0) {
-        doc.setDrawColor(230, 238, 230);
-        doc.setLineWidth(0.15);
-        doc.line(cardX + 12, y, cardX + cardW - 12, y);
+        doc.setDrawColor(235, 240, 235);
+        doc.setLineWidth(0.12);
+        doc.line(cardX + 10, y, cardX + cardW - 10, y);
       }
 
-      const textY = y + rowH * 0.62;
+      const textY = y + rowH * 0.65;
 
-      doc.setFontSize(11);
+      // Installments — regular
+      doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...bodyText);
       doc.text(`${row.installments}x`, col1X, textY, { align: "center" });
 
-      doc.setFontSize(12.5);
+      // Value — bold green
+      doc.setFontSize(11.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...brandGreen);
       doc.text(fmt(row.installmentValue), col2X, textY, { align: "center" });
     });
 
-    // Bottom accent line
-    const accentY = tableTopY + cardH + 16;
-    doc.setDrawColor(...brandGreen);
-    doc.setLineWidth(0.3);
-    doc.line(centerX - lineW / 2, accentY, centerX + lineW / 2, accentY);
-
     // Disclaimer
-    doc.setFontSize(7.5);
+    const disclaimerY = tableTopY + cardH + 14;
+    doc.setFontSize(7);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(...mutedText);
     doc.text(
       "Simulação estimada. Valores podem variar conforme operadora de pagamento.",
-      centerX, accentY + 8, { align: "center" }
+      centerX, disclaimerY, { align: "center" }
     );
-
-    // Footer bar
-    doc.setFillColor(...brandGreen);
-    doc.rect(0, pageH - 3, pageW, 3, "F");
 
     doc.save(`simulacao-parcelamento-${Date.now()}.pdf`);
   };
