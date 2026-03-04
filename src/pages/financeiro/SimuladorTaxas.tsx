@@ -100,120 +100,127 @@ export default function SimuladorTaxas() {
 
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const centerX = pageW / 2;
     const brandGreen: [number, number, number] = [30, 70, 32];
-    const darkText: [number, number, number] = [30, 30, 30];
-    const mutedText: [number, number, number] = [120, 120, 120];
-    const lineColor: [number, number, number] = [200, 210, 200];
-    const headerBg: [number, number, number] = [235, 245, 235];
+    const softGreen: [number, number, number] = [245, 250, 245];
+    const mutedText: [number, number, number] = [140, 140, 140];
+    const bodyText: [number, number, number] = [50, 50, 50];
 
-    // ── Top accent bar
+    // ── Subtle top accent line
     doc.setFillColor(...brandGreen);
-    doc.rect(0, 0, pageW, 4, "F");
+    doc.rect(0, 0, pageW, 2.5, "F");
 
     // ── Logo
-    const logoW = 50;
-    const logoH = 18;
-    const logoX = (pageW - logoW) / 2;
+    const logoW = 44;
+    const logoH = 16;
     try {
-      doc.addImage(logoNatleva, "PNG", logoX, 12, logoW, logoH);
+      doc.addImage(logoNatleva, "PNG", centerX - logoW / 2, 16, logoW, logoH);
     } catch {
-      doc.setFontSize(22);
+      doc.setFontSize(20);
       doc.setTextColor(...brandGreen);
       doc.setFont("helvetica", "bold");
-      doc.text("natleva", pageW / 2, 24, { align: "center" });
+      doc.text("natleva", centerX, 26, { align: "center" });
     }
 
-    // ── Divider line under logo
-    const divY = 36;
-    doc.setDrawColor(...brandGreen);
-    doc.setLineWidth(0.5);
-    doc.line(30, divY, pageW - 30, divY);
-
     // ── Title
-    doc.setFontSize(16);
+    doc.setFontSize(18);
     doc.setTextColor(...brandGreen);
     doc.setFont("helvetica", "bold");
-    doc.text("Simulação de Parcelamento", pageW / 2, divY + 12, { align: "center" });
+    doc.text("Simulação de Parcelamento", centerX, 46, { align: "center" });
 
-    // ── Info block
-    const infoY = divY + 22;
-    doc.setFontSize(10);
+    // ── Subtitle (date only)
+    doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...mutedText);
+    doc.text(
+      `Simulação realizada em ${new Date().toLocaleDateString("pt-BR")}`,
+      centerX,
+      54,
+      { align: "center" }
+    );
 
-    const modeLabel = mode === "charge" ? "Valor Cobrado" : "Valor Líquido Desejado";
-    const infoLines = [
-      `Gateway: ${selectedGateway}`,
-      `Modo: ${mode === "charge" ? "Quanto vou receber" : "Quanto devo cobrar"}`,
-      `${modeLabel}: ${fmt(value)}`,
-      `Data: ${new Date().toLocaleDateString("pt-BR")}`,
-    ];
-    infoLines.forEach((line, i) => {
-      doc.text(line, 25, infoY + i * 6);
-    });
+    // ── Card dimensions
+    const cardW = 140;
+    const cardX = centerX - cardW / 2;
+    const rowH = 12;
+    const headerH = 13;
+    const tableTopY = 68;
+    const cardH = headerH + rows.length * rowH + 4;
 
-    // ── Table
-    const tableY = infoY + infoLines.length * 6 + 8;
-    const marginX = 25;
-    const tableW = pageW - marginX * 2;
-    const colWidths = [tableW * 0.35, tableW * 0.65];
-    const rowH = 10;
+    // ── Card shadow (layered rects)
+    doc.setFillColor(220, 225, 220);
+    doc.roundedRect(cardX + 1.5, tableTopY + 1.5, cardW, cardH, 4, 4, "F");
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(cardX, tableTopY, cardW, cardH, 4, 4, "F");
 
-    // Header
-    doc.setFillColor(...headerBg);
-    doc.roundedRect(marginX, tableY, tableW, rowH, 2, 2, "F");
-    doc.setFontSize(10);
+    // ── Card border
+    doc.setDrawColor(220, 230, 220);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(cardX, tableTopY, cardW, cardH, 4, 4, "S");
+
+    // ── Table header
+    doc.setFillColor(...softGreen);
+    doc.roundedRect(cardX + 1, tableTopY + 1, cardW - 2, headerH, 3, 3, "F");
+
+    const col1X = cardX + cardW * 0.3;
+    const col2X = cardX + cardW * 0.7;
+
+    doc.setFontSize(8.5);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...brandGreen);
-    doc.text("Parcelas", marginX + 6, tableY + 7);
-    doc.text("Valor da Parcela", marginX + colWidths[0] + 6, tableY + 7);
+    doc.text("PARCELAS", col1X, tableTopY + 9, { align: "center" });
+    doc.text("VALOR DA PARCELA", col2X, tableTopY + 9, { align: "center" });
 
-    // Rows
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...darkText);
-
+    // ── Table rows
     rows.forEach((row, i) => {
-      const y = tableY + rowH + i * rowH;
+      const y = tableTopY + headerH + i * rowH;
 
-      // Alternate row bg
-      if (i % 2 === 0) {
-        doc.setFillColor(248, 250, 248);
-        doc.rect(marginX, y, tableW, rowH, "F");
+      // Zebra stripe
+      if (i % 2 === 1) {
+        doc.setFillColor(250, 253, 250);
+        doc.rect(cardX + 1, y, cardW - 2, rowH, "F");
       }
 
-      // Row border bottom
-      doc.setDrawColor(...lineColor);
-      doc.setLineWidth(0.2);
-      doc.line(marginX, y + rowH, marginX + tableW, y + rowH);
+      // Separator
+      if (i > 0) {
+        doc.setDrawColor(235, 240, 235);
+        doc.setLineWidth(0.15);
+        doc.line(cardX + 8, y, cardX + cardW - 8, y);
+      }
 
+      const textY = y + rowH * 0.65;
+
+      // Parcelas (medium)
       doc.setFontSize(10);
-      doc.text(`${row.installments}x`, marginX + 6, y + 7);
-      doc.text(fmt(row.installmentValue), marginX + colWidths[0] + 6, y + 7);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...bodyText);
+      doc.text(`${row.installments}x`, col1X, textY, { align: "center" });
+
+      // Valor (bold, slightly larger)
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...brandGreen);
+      doc.text(fmt(row.installmentValue), col2X, textY, { align: "center" });
     });
 
-    // Table outer border
-    const tableEndY = tableY + rowH + rows.length * rowH;
-    doc.setDrawColor(...brandGreen);
-    doc.setLineWidth(0.4);
-    doc.roundedRect(marginX, tableY, tableW, tableEndY - tableY, 2, 2, "S");
-
-    // ── Footer
-    const footerY = Math.min(tableEndY + 16, 270);
-    doc.setDrawColor(...lineColor);
-    doc.setLineWidth(0.3);
-    doc.line(30, footerY, pageW - 30, footerY);
-
-    doc.setFontSize(8);
-    doc.setTextColor(...mutedText);
+    // ── Disclaimer
+    const disclaimerY = tableTopY + cardH + 12;
+    doc.setFontSize(7.5);
     doc.setFont("helvetica", "italic");
-    doc.text("Documento gerado automaticamente pelo sistema NatLeva", pageW / 2, footerY + 6, { align: "center" });
-    doc.text("As taxas podem variar conforme o gateway e a operadora.", pageW / 2, footerY + 11, { align: "center" });
+    doc.setTextColor(...mutedText);
+    doc.text(
+      "Simulação estimada. Valores podem variar conforme operadora de pagamento.",
+      centerX,
+      disclaimerY,
+      { align: "center" }
+    );
 
-    // ── Bottom accent bar
+    // ── Bottom accent line
     doc.setFillColor(...brandGreen);
-    doc.rect(0, doc.internal.pageSize.getHeight() - 4, pageW, 4, "F");
+    doc.rect(0, pageH - 2.5, pageW, 2.5, "F");
 
-    doc.save(`simulacao-${selectedGateway.toLowerCase().replace(/\s+/g, "-")}-${Date.now()}.pdf`);
+    doc.save(`simulacao-parcelamento-${Date.now()}.pdf`);
   };
 
   return (
