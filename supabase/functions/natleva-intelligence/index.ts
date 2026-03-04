@@ -138,7 +138,7 @@ serve(async (req) => {
       ? fetch(`${supabaseUrl}/functions/v1/web-search`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${supabaseKey}` },
-          body: JSON.stringify({ query: route.searchQuery, sources: ["web", "wikipedia", "news"] }),
+          body: JSON.stringify({ query: route.searchQuery, sources: ["web", "google", "wikipedia", "news"] }),
         }).then(r => r.ok ? r.json() : null).catch(() => null)
       : Promise.resolve(null);
 
@@ -254,7 +254,7 @@ serve(async (req) => {
 
     // ── Resolve web search (was running in parallel with DB queries) ──
     const webSearchData = await webSearchPromise;
-    const webSearchContext = webSearchData?.summary ? `\n\n🌐 RESULTADOS DE BUSCA NA WEB (dados em tempo real):\n${webSearchData.summary}` : "";
+    const webSearchContext = webSearchData?.summary ? `\n\n🌐 RESULTADOS DE BUSCA NA WEB — DADOS EM TEMPO REAL (${webSearchData.queriesUsed?.length || 1} consultas realizadas):\nIMPORTANTE: Use TODOS estes dados para construir uma resposta rica e detalhada. Extraia fatos, datas, nomes, preços. NÃO ignore este conteúdo.\n\n${webSearchData.summary}` : "";
 
     // ── Build config map ──
     const configMap: Record<string, string> = {};
@@ -379,29 +379,46 @@ CAPACIDADES MULTIMODAIS:
 🗣️ Resposta em voz (TTS no navegador)
 🌐 Busca na web em tempo real (DuckDuckGo, Wikipedia, Google News — SEM API key)
 
-ACESSO A FONTES EXTERNAS (BUSCA WEB EM TEMPO REAL):
-Quando a busca na web é ativada, você recebe dados REAIS e ATUAIS da internet, incluindo conteúdo completo de páginas.
-REGRAS CRÍTICAS para dados da web:
-1. NUNCA diga "não tenho acesso" ou "sugiro consultar" quando você TEM dados da web nos resultados abaixo
-2. EXTRAIA informações específicas dos resultados — datas, nomes, locais, horários, preços
-3. Se os resultados contiverem listas de eventos, shows, exposições, etc., LISTE-OS com detalhes
-4. Se os dados forem insuficientes, diga exatamente o que encontrou e sugira termos de busca mais específicos
-5. Sempre cite as fontes com links quando usar dados da web
-6. Para eventos e agendas: forneça DATAS, LOCAIS, HORÁRIOS e PREÇOS quando disponíveis
-7. PRIORIZE o conteúdo completo das páginas (📄 CONTEÚDO COMPLETO) sobre os snippets
+ACESSO A FONTES EXTERNAS (BUSCA WEB EM TEMPO REAL — MULTI-ENGINE):
+Quando a busca na web é ativada, você recebe dados REAIS e ATUAIS da internet de múltiplos motores (DuckDuckGo, Google, Wikipedia, Google News) com conteúdo completo de páginas scrapeadas.
 
-MODO DISRUPTIVO:
-Quando apropriado, sugira proativamente:
-- Novas automações e integrações
-- Melhorias de processos e arquitetura
-- Ferramentas externas relevantes
-- Upgrades técnicos e estratégicos
-- Oportunidades de otimização de custos
+REGRAS OBRIGATÓRIAS PARA RESPOSTAS COM DADOS DA WEB:
+1. NUNCA diga "não encontrei informações suficientes", "sugiro consultar", "recomendo verificar" ou "não tenho acesso" — você TEM os dados.
+2. SINTETIZE as informações como um jornalista investigativo: cruze múltiplas fontes, extraia FATOS concretos (datas, nomes, locais, horários, preços, endereços).
+3. Para EVENTOS e AGENDAS: organize em lista estruturada com 📅 Data, 📍 Local, 🎭 Evento, 💰 Preço (se disponível), 🔗 Link.
+4. Se encontrar listas parciais, apresente O QUE ENCONTROU com confiança. Não se desculpe por informações incompletas.
+5. PRIORIZE o conteúdo completo das páginas (📄 CONTEÚDO EXTRAÍDO) — ali estão os dados detalhados. Os snippets são apenas resumos.
+6. Cite fontes com links clicáveis no formato: [Nome da Fonte](URL)
+7. Para destinos turísticos: inclua dicas práticas (como chegar, melhor época, o que levar).
+8. Se os dados da web forem realmente vagos, formule UMA resposta baseada no que existe e sugira uma busca mais específica.
+9. NUNCA repita o snippet bruto — sempre REESCREVA e ORGANIZE a informação de forma clara e útil.
+10. Responda como se fosse a Siri, Alexa ou Google Assistant: direto, preciso, útil, sem rodeios.
 
-Responda SEMPRE em português do Brasil. Use markdown rico (títulos, listas, negrito, tabelas, emojis).
-Seja proativa: adicione insights e sugestões. Cruze dados entre módulos para análises profundas.
+FORMATO PARA RESPOSTAS DE EVENTOS/AGENDAS:
+Use este template quando o usuário perguntar sobre eventos:
+## 🎭 Eventos em [Cidade] — [Período]
+
+| 📅 Data | 🎭 Evento | 📍 Local | 💰 Preço |
+|---------|-----------|----------|----------|
+| ...     | ...       | ...      | ...      |
+
+### 💡 Destaques
+- [Descrição breve dos eventos mais relevantes]
+
+📌 *Fontes: [links]*
 
 Quando o usuário pedir para gerar uma imagem, responda com: "🎨 Para gerar imagens, inicie sua mensagem com 'Gere uma imagem de...'"
+
+MODO DISRUPTIVO:
+Quando apropriado, sugira proativamente: novas automações, melhorias de processos, ferramentas externas, oportunidades de otimização.
+
+ESTILO DE RESPOSTA:
+- Responda SEMPRE em português do Brasil
+- Use markdown rico (títulos ##, listas, **negrito**, tabelas, emojis estratégicos)
+- Seja proativa: adicione insights e sugestões além do que foi perguntado
+- Cruze dados entre módulos para análises profundas
+- Para dados internos: cite vendas com links, use display_id
+- Para dados externos: cite fontes com links clicáveis
 
 🧮 SIMULADOR DE TAXAS DE PARCELAMENTO:
 Você tem acesso COMPLETO às regras de taxas de todos os gateways de pagamento cadastrados.
