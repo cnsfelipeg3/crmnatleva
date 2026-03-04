@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Calculator, ArrowDownToLine, ArrowUpFromLine, FileDown } from "lucide-react";
 import jsPDF from "jspdf";
-import logoNatleva from "@/assets/logo-natleva.png";
+import logoNatleva from "@/assets/logo-natleva-premium.jpg";
 
 interface FeeRule {
   installments: number;
@@ -102,123 +102,135 @@ export default function SimuladorTaxas() {
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const centerX = pageW / 2;
-    const brandGreen: [number, number, number] = [30, 70, 32];
-    const softGreen: [number, number, number] = [245, 250, 245];
-    const mutedText: [number, number, number] = [140, 140, 140];
-    const bodyText: [number, number, number] = [50, 50, 50];
 
-    // ── Subtle top accent line
-    doc.setFillColor(...brandGreen);
-    doc.rect(0, 0, pageW, 2.5, "F");
+    const brandGreen: [number, number, number] = [30, 60, 28];
+    const softGreen: [number, number, number] = [240, 247, 240];
+    const cardBorder: [number, number, number] = [200, 220, 200];
+    const mutedText: [number, number, number] = [150, 150, 150];
+    const bodyText: [number, number, number] = [60, 60, 60];
+    const bgCream: [number, number, number] = [252, 250, 243];
 
-    // ── Logo
-    const logoW = 44;
-    const logoH = 16;
+    // Full page cream background
+    doc.setFillColor(...bgCream);
+    doc.rect(0, 0, pageW, pageH, "F");
+
+    // Logo
+    const logoW = 50;
+    const logoH = 50;
     try {
-      doc.addImage(logoNatleva, "PNG", centerX - logoW / 2, 16, logoW, logoH);
+      doc.addImage(logoNatleva, "JPEG", centerX - logoW / 2, 20, logoW, logoH, undefined, "FAST");
     } catch {
-      doc.setFontSize(20);
+      doc.setFontSize(28);
       doc.setTextColor(...brandGreen);
       doc.setFont("helvetica", "bold");
-      doc.text("natleva", centerX, 26, { align: "center" });
+      doc.text("natleva", centerX, 46, { align: "center" });
     }
 
-    // ── Title
-    doc.setFontSize(18);
+    // Elegant divider
+    const lineY = 78;
+    const lineW = 60;
+    doc.setDrawColor(...brandGreen);
+    doc.setLineWidth(0.4);
+    doc.line(centerX - lineW / 2, lineY, centerX + lineW / 2, lineY);
+
+    // Title
+    doc.setFontSize(20);
     doc.setTextColor(...brandGreen);
     doc.setFont("helvetica", "bold");
-    doc.text("Simulação de Parcelamento", centerX, 46, { align: "center" });
+    doc.text("Simulação de Parcelamento", centerX, 92, { align: "center" });
 
-    // ── Subtitle (date only)
+    // Date subtitle
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...mutedText);
     doc.text(
       `Simulação realizada em ${new Date().toLocaleDateString("pt-BR")}`,
-      centerX,
-      54,
-      { align: "center" }
+      centerX, 100, { align: "center" }
     );
 
-    // ── Card dimensions
-    const cardW = 140;
+    // Card dimensions
+    const cardW = 150;
     const cardX = centerX - cardW / 2;
-    const rowH = 12;
-    const headerH = 13;
-    const tableTopY = 68;
-    const cardH = headerH + rows.length * rowH + 4;
+    const rowH = 13;
+    const headerH = 14;
+    const tableTopY = 114;
+    const padTop = 6;
+    const padBottom = 6;
+    const cardH = padTop + headerH + rows.length * rowH + padBottom;
 
-    // ── Card shadow (layered rects)
-    doc.setFillColor(220, 225, 220);
-    doc.roundedRect(cardX + 1.5, tableTopY + 1.5, cardW, cardH, 4, 4, "F");
+    // Card shadow
+    doc.setFillColor(230, 235, 230);
+    doc.roundedRect(cardX + 1, tableTopY + 1.5, cardW, cardH, 5, 5, "F");
+
+    // Card body
     doc.setFillColor(255, 255, 255);
-    doc.roundedRect(cardX, tableTopY, cardW, cardH, 4, 4, "F");
+    doc.roundedRect(cardX, tableTopY, cardW, cardH, 5, 5, "F");
 
-    // ── Card border
-    doc.setDrawColor(220, 230, 220);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(cardX, tableTopY, cardW, cardH, 4, 4, "S");
+    // Card border
+    doc.setDrawColor(...cardBorder);
+    doc.setLineWidth(0.35);
+    doc.roundedRect(cardX, tableTopY, cardW, cardH, 5, 5, "S");
 
-    // ── Table header
+    // Table header
+    const headerY = tableTopY + padTop;
     doc.setFillColor(...softGreen);
-    doc.roundedRect(cardX + 1, tableTopY + 1, cardW - 2, headerH, 3, 3, "F");
+    doc.roundedRect(cardX + 2, headerY, cardW - 4, headerH, 3, 3, "F");
 
     const col1X = cardX + cardW * 0.3;
     const col2X = cardX + cardW * 0.7;
 
-    doc.setFontSize(8.5);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...brandGreen);
-    doc.text("PARCELAS", col1X, tableTopY + 9, { align: "center" });
-    doc.text("VALOR DA PARCELA", col2X, tableTopY + 9, { align: "center" });
+    doc.text("PARCELAS", col1X, headerY + 9.5, { align: "center" });
+    doc.text("VALOR DA PARCELA", col2X, headerY + 9.5, { align: "center" });
 
-    // ── Table rows
+    // Table rows
     rows.forEach((row, i) => {
-      const y = tableTopY + headerH + i * rowH;
+      const y = headerY + headerH + i * rowH;
 
-      // Zebra stripe
       if (i % 2 === 1) {
-        doc.setFillColor(250, 253, 250);
-        doc.rect(cardX + 1, y, cardW - 2, rowH, "F");
+        doc.setFillColor(248, 252, 248);
+        doc.rect(cardX + 2, y, cardW - 4, rowH, "F");
       }
 
-      // Separator
       if (i > 0) {
-        doc.setDrawColor(235, 240, 235);
+        doc.setDrawColor(230, 238, 230);
         doc.setLineWidth(0.15);
-        doc.line(cardX + 8, y, cardX + cardW - 8, y);
+        doc.line(cardX + 12, y, cardX + cardW - 12, y);
       }
 
-      const textY = y + rowH * 0.65;
+      const textY = y + rowH * 0.62;
 
-      // Parcelas (medium)
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.setFont("helvetica", "normal");
       doc.setTextColor(...bodyText);
       doc.text(`${row.installments}x`, col1X, textY, { align: "center" });
 
-      // Valor (bold, slightly larger)
-      doc.setFontSize(11);
+      doc.setFontSize(12.5);
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...brandGreen);
       doc.text(fmt(row.installmentValue), col2X, textY, { align: "center" });
     });
 
-    // ── Disclaimer
-    const disclaimerY = tableTopY + cardH + 12;
+    // Bottom accent line
+    const accentY = tableTopY + cardH + 16;
+    doc.setDrawColor(...brandGreen);
+    doc.setLineWidth(0.3);
+    doc.line(centerX - lineW / 2, accentY, centerX + lineW / 2, accentY);
+
+    // Disclaimer
     doc.setFontSize(7.5);
     doc.setFont("helvetica", "italic");
     doc.setTextColor(...mutedText);
     doc.text(
       "Simulação estimada. Valores podem variar conforme operadora de pagamento.",
-      centerX,
-      disclaimerY,
-      { align: "center" }
+      centerX, accentY + 8, { align: "center" }
     );
 
-    // ── Bottom accent line
+    // Footer bar
     doc.setFillColor(...brandGreen);
-    doc.rect(0, pageH - 2.5, pageW, 2.5, "F");
+    doc.rect(0, pageH - 3, pageW, 3, "F");
 
     doc.save(`simulacao-parcelamento-${Date.now()}.pdf`);
   };
