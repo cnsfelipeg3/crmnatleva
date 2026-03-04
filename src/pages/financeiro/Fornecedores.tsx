@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Search, Building2, Trash2, Pencil, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Search, Building2, Trash2, Pencil, ChevronDown, ChevronRight, Check, X } from "lucide-react";
 
 interface MilesProgram {
   id: string;
@@ -36,6 +36,8 @@ export default function Fornecedores() {
   const [form, setForm] = useState({ name: "", cnpj: "", contact_name: "", phone: "", email: "", category: "", payment_conditions: "", bank_pix_key: "" });
   const [mpForm, setMpForm] = useState({ program_name: "", price_per_thousand: "", min_miles: "", max_miles: "" });
   const [expandedPrograms, setExpandedPrograms] = useState<Record<string, boolean>>({});
+  const [editingTier, setEditingTier] = useState<string | null>(null);
+  const [editTierForm, setEditTierForm] = useState({ price_per_thousand: "", min_miles: "", max_miles: "" });
 
   const { data: suppliers = [] } = useQuery({
     queryKey: ["suppliers"],
@@ -130,6 +132,32 @@ export default function Fornecedores() {
 
   const toggleMilesProgram = async (mp: MilesProgram) => {
     await supabase.from("supplier_miles_programs").update({ is_active: !mp.is_active }).eq("id", mp.id);
+    refetchMiles();
+  };
+
+  const startEditTier = (mp: MilesProgram) => {
+    setEditingTier(mp.id);
+    setEditTierForm({
+      price_per_thousand: String(mp.price_per_thousand),
+      min_miles: String(mp.min_miles),
+      max_miles: mp.max_miles ? String(mp.max_miles) : "",
+    });
+  };
+
+  const saveEditTier = async (mp: MilesProgram) => {
+    const price = parseFloat(editTierForm.price_per_thousand);
+    if (isNaN(price) || price <= 0) { toast.error("Valor inválido"); return; }
+    const minMiles = parseInt(editTierForm.min_miles) || 0;
+    const maxMiles = editTierForm.max_miles ? parseInt(editTierForm.max_miles) : null;
+    if (maxMiles !== null && maxMiles <= minMiles) { toast.error("Máximo deve ser maior que mínimo"); return; }
+    const { error } = await supabase.from("supplier_miles_programs").update({
+      price_per_thousand: price,
+      min_miles: minMiles,
+      max_miles: maxMiles,
+    }).eq("id", mp.id);
+    if (error) { toast.error("Erro ao atualizar"); return; }
+    toast.success("Faixa atualizada!");
+    setEditingTier(null);
     refetchMiles();
   };
 
@@ -275,26 +303,52 @@ export default function Fornecedores() {
                             <div className="border-t">
                               {tiers.map((mp) => (
                                 <div key={mp.id} className="flex items-center justify-between px-3 py-2 border-b last:border-0 bg-background/50">
-                                  <div className="flex items-center gap-2">
-                                    <Badge
-                                      variant={mp.is_active ? "default" : "secondary"}
-                                      className="cursor-pointer text-[10px] min-w-[48px] justify-center"
-                                      onClick={() => toggleMilesProgram(mp)}
-                                    >
-                                      {mp.is_active ? "Ativo" : "Inativo"}
-                                    </Badge>
-                                    <div>
-                                      <p className="text-xs font-medium">
-                                        R$ {Number(mp.price_per_thousand).toFixed(2)} / milheiro
-                                      </p>
-                                      <p className="text-[10px] text-muted-foreground">
-                                        {formatMiles(mp.min_miles)} {mp.max_miles ? `até ${formatMiles(mp.max_miles)}` : "+"} milhas
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteMilesProgram(mp.id)}>
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </Button>
+                                  {editingTier === mp.id ? (
+                                    <>
+                                      <div className="flex-1 grid grid-cols-3 gap-1.5 mr-2">
+                                        <div>
+                                          <Label className="text-[9px] text-muted-foreground">R$/Milheiro</Label>
+                                          <Input type="number" step="0.01" value={editTierForm.price_per_thousand} onChange={e => setEditTierForm({ ...editTierForm, price_per_thousand: e.target.value })} className="h-7 text-xs" />
+                                        </div>
+                                        <div>
+                                          <Label className="text-[9px] text-muted-foreground">De (milhas)</Label>
+                                          <Input type="number" value={editTierForm.min_miles} onChange={e => setEditTierForm({ ...editTierForm, min_miles: e.target.value })} className="h-7 text-xs" />
+                                        </div>
+                                        <div>
+                                          <Label className="text-[9px] text-muted-foreground">Até (milhas)</Label>
+                                          <Input type="number" placeholder="∞" value={editTierForm.max_miles} onChange={e => setEditTierForm({ ...editTierForm, max_miles: e.target.value })} className="h-7 text-xs" />
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-1">
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={() => saveEditTier(mp)}><Check className="w-3.5 h-3.5" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingTier(null)}><X className="w-3.5 h-3.5" /></Button>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center gap-2">
+                                        <Badge
+                                          variant={mp.is_active ? "default" : "secondary"}
+                                          className="cursor-pointer text-[10px] min-w-[48px] justify-center"
+                                          onClick={() => toggleMilesProgram(mp)}
+                                        >
+                                          {mp.is_active ? "Ativo" : "Inativo"}
+                                        </Badge>
+                                        <div>
+                                          <p className="text-xs font-medium">
+                                            R$ {Number(mp.price_per_thousand).toFixed(2)} / milheiro
+                                          </p>
+                                          <p className="text-[10px] text-muted-foreground">
+                                            {formatMiles(mp.min_miles)} {mp.max_miles ? `até ${formatMiles(mp.max_miles)}` : "+"} milhas
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <div className="flex gap-0.5">
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEditTier(mp)}><Pencil className="w-3 h-3" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteMilesProgram(mp.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
                               ))}
                             </div>
