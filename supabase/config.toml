@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.analyze-atendimento]
 verify_jwt = false
+
+[functions.generate-page-summary]
+verify_jwt = false
