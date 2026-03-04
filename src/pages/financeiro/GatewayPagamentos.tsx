@@ -59,7 +59,9 @@ export default function GatewayPagamentos() {
   }, [suppliers, clients]);
 
   const getHolderName = (type: string | null, id: string | null) => {
-    if (!type || !id) return null;
+    if (!type) return null;
+    if (type === "company") return "Natleva";
+    if (!id) return null;
     if (type === "supplier") {
       const s = suppliers.find((s: any) => s.id === id);
       return s ? s.name : null;
@@ -90,7 +92,7 @@ export default function GatewayPagamentos() {
       fee_fixed: 0,
       acquirer: name,
       holder_type: holderType === "__none__" ? null : holderType,
-      holder_id: holderId === "__none__" ? null : holderId,
+      holder_id: holderType === "company" ? null : (holderId === "__none__" ? null : holderId),
     });
     if (error) { toast.error("Erro ao criar gateway"); return; }
     toast.success("Gateway cadastrado!");
@@ -210,7 +212,7 @@ export default function GatewayPagamentos() {
       {Object.entries(gateways).map(([gateway, gatewayRules]) => {
         const first = gatewayRules[0];
         const holderName = getHolderName(first?.holder_type, first?.holder_id);
-        const holderLabel = first?.holder_type === "supplier" ? "Fornecedor" : first?.holder_type === "client" ? "Cliente" : null;
+        const holderLabel = first?.holder_type === "company" ? "Empresa" : first?.holder_type === "supplier" ? "Fornecedor" : first?.holder_type === "client" ? "Cliente" : null;
 
         return (
           <Card key={gateway} className="glass-card overflow-hidden">
@@ -350,12 +352,13 @@ export default function GatewayPagamentos() {
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">Nenhum</SelectItem>
+                  <SelectItem value="company">Empresa (Natleva)</SelectItem>
                   <SelectItem value="supplier">Fornecedor</SelectItem>
                   <SelectItem value="client">Cliente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            {holderType !== "__none__" && (
+            {holderType !== "__none__" && holderType !== "company" && (
               <div>
                 <Label className="text-xs">Titular da Conta *</Label>
                 <Select value={holderId} onValueChange={setHolderId}>
@@ -385,12 +388,13 @@ export default function GatewayPagamentos() {
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">Nenhum</SelectItem>
+                  <SelectItem value="company">Empresa (Natleva)</SelectItem>
                   <SelectItem value="supplier">Fornecedor</SelectItem>
                   <SelectItem value="client">Cliente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            {editHolderType !== "__none__" && (
+            {editHolderType !== "__none__" && editHolderType !== "company" && (
               <div>
                 <Label className="text-xs">Titular da Conta *</Label>
                 <Select value={editHolderId} onValueChange={setEditHolderId}>
