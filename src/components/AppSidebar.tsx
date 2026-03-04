@@ -6,7 +6,7 @@ import {
   ChevronLeft, ChevronRight, ClipboardCheck, Hotel, Sun, Moon, Cake, FileUp,
   AlertTriangle, DollarSign, ChevronDown, Brain, Sparkles,
   ArrowUpRight, ArrowDownRight, Wallet, CreditCard, FileText, Building2,
-  Percent, FolderTree, Users2, BarChart3, Cog,
+  Percent, FolderTree, Users2, BarChart3, Cog, Calculator,
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
   GitBranch, Plug, Zap, BookOpen, FileDown,
 } from "lucide-react";
@@ -37,6 +37,7 @@ const financeItems = [
   { to: "/financeiro/fornecedores", icon: Building2, label: "Fornecedores" },
   { to: "/financeiro/taxas", icon: Percent, label: "Taxas & Tarifas" },
   { to: "/financeiro/gateways", icon: CreditCard, label: "Gateway Pagamentos" },
+  { to: "/financeiro/simulador", icon: Calculator, label: "Simulador de Taxas" },
   { to: "/financeiro/plano-contas", icon: FolderTree, label: "Plano de Contas" },
   { to: "/financeiro/comissoes", icon: Users2, label: "Comissões" },
   { to: "/financeiro/dre", icon: FileText, label: "DRE / Relatórios" },

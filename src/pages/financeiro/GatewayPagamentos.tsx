@@ -11,7 +11,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Trash2, Pencil, CreditCard, ChevronDown, ChevronRight, Building2, Users } from "lucide-react";
-import GatewayFeeSimulator from "@/components/financeiro/GatewayFeeSimulator";
 
 export default function GatewayPagamentos() {
   const qc = useQueryClient();
@@ -337,8 +336,6 @@ export default function GatewayPagamentos() {
           </Card>
         );
       })}
-
-      <GatewayFeeSimulator gateways={gateways} />
 
       {/* New Gateway Dialog */}
       <Dialog open={showGatewayForm} onOpenChange={setShowGatewayForm}>
