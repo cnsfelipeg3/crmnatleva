@@ -98,9 +98,17 @@ export default function SimuladorTaxas() {
   const generatePDF = () => {
     if (rows.length === 0) return;
 
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
+    const pageW = 210; // A4 width in mm
+    const rowH = 11;
+    const headerH = 12;
+    const pad = 4;
+    const headerArea = 90; // logo + line + title + date
+    const cardH = pad + headerH + rows.length * rowH + pad;
+    const footerArea = 30; // disclaimer + spacing
+    const totalNeeded = headerArea + cardH + footerArea;
+    const pageH = Math.max(297, totalNeeded); // at least A4, or taller
+
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: [pageW, pageH] });
     const centerX = pageW / 2;
 
     const brandGreen: [number, number, number] = [30, 60, 28];
@@ -110,11 +118,11 @@ export default function SimuladorTaxas() {
     const bodyText: [number, number, number] = [70, 70, 70];
     const bgCream: [number, number, number] = [248, 244, 228];
 
-    // Page background — NatLeva cream tone
+    // Page background
     doc.setFillColor(...bgCream);
     doc.rect(0, 0, pageW, pageH, "F");
 
-    // Logo — compact, elegant
+    // Logo
     const logoW = 48;
     const logoH = 18;
     try {
@@ -151,11 +159,7 @@ export default function SimuladorTaxas() {
     // Card
     const cardW = pageW * 0.68;
     const cardX = centerX - cardW / 2;
-    const rowH = 11;
-    const headerH = 12;
     const tableTopY = 90;
-    const pad = 4;
-    const cardH = pad + headerH + rows.length * rowH + pad;
 
     // Shadow
     doc.setFillColor(225, 228, 222);
