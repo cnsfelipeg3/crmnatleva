@@ -12,7 +12,7 @@ import { useNavigate } from "react-router-dom";
 import RoutesMap from "@/components/RoutesMap";
 import {
   Plane, Globe, AlertTriangle, Users, DollarSign, MapPin,
-  Clock, Shield, Eye, ExternalLink, Radio, Zap, Info,
+  Clock, Shield, Eye, ExternalLink, Radio, Zap, Info, ChevronRight,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -184,20 +184,23 @@ export default function Viagens() {
 
   // Alerts
   const alerts = useMemo(() => {
-    const items: { icon: typeof AlertTriangle; text: string; severity: "red" | "yellow" | "blue" }[] = [];
+    const items: { icon: typeof AlertTriangle; text: string; severity: "red" | "yellow" | "blue"; filterFn: (t: typeof tripsWithStatus[0]) => boolean }[] = [];
     const embarqueAmanha = tripsWithStatus.filter(t => t.tripStatus === "embarque_amanha");
-    if (embarqueAmanha.length > 0) items.push({ icon: AlertTriangle, text: `${embarqueAmanha.length} cliente(s) embarca(m) amanhã`, severity: "yellow" });
+    if (embarqueAmanha.length > 0) items.push({ icon: AlertTriangle, text: `${embarqueAmanha.length} cliente(s) embarca(m) amanhã`, severity: "yellow", filterFn: t => t.tripStatus === "embarque_amanha" });
     const retornoHoje = tripsWithStatus.filter(t => t.tripStatus === "retorno_hoje");
-    if (retornoHoje.length > 0) items.push({ icon: MapPin, text: `${retornoHoje.length} cliente(s) retorna(m) hoje`, severity: "blue" });
+    if (retornoHoje.length > 0) items.push({ icon: MapPin, text: `${retornoHoje.length} cliente(s) retorna(m) hoje`, severity: "blue", filterFn: t => t.tripStatus === "retorno_hoje" });
     const highValue = tripsWithStatus.filter(t => t.tripStatus === "em_viagem" && t.received_value >= 50000);
-    if (highValue.length > 0) items.push({ icon: DollarSign, text: `${highValue.length} viagem(s) acima de R$ 50k ativa(s)`, severity: "red" });
+    if (highValue.length > 0) items.push({ icon: DollarSign, text: `${highValue.length} viagem(s) acima de R$ 50k ativa(s)`, severity: "red", filterFn: t => t.tripStatus === "em_viagem" && t.received_value >= 50000 });
     const intl = tripsWithStatus.filter(t => t.tripStatus === "em_viagem" && t.is_international);
-    if (intl.length > 0) items.push({ icon: Globe, text: `${intl.length} viagem(s) internacional(is) em andamento`, severity: "blue" });
-    if (correctionLog.autoFinalized > 0) items.push({ icon: Shield, text: `${correctionLog.autoFinalized} viagem(s) encerrada(s) automaticamente (>30 dias sem retorno)`, severity: "yellow" });
-    if (correctionLog.noDate > 0) items.push({ icon: Info, text: `${correctionLog.noDate} venda(s) sem data de embarque`, severity: "yellow" });
-    if (correctionLog.dateErrors > 0) items.push({ icon: AlertTriangle, text: `${correctionLog.dateErrors} venda(s) com erro de data (retorno < ida)`, severity: "red" });
+    if (intl.length > 0) items.push({ icon: Globe, text: `${intl.length} viagem(s) internacional(is) em andamento`, severity: "blue", filterFn: t => t.tripStatus === "em_viagem" && !!t.is_international });
+    if (correctionLog.autoFinalized > 0) items.push({ icon: Shield, text: `${correctionLog.autoFinalized} viagem(s) encerrada(s) automaticamente (>30 dias sem retorno)`, severity: "yellow", filterFn: t => t.tripStatus === "finalizada" && !t.return_date && (t.daysSinceDep ?? 0) > 30 });
+    if (correctionLog.noDate > 0) items.push({ icon: Info, text: `${correctionLog.noDate} venda(s) sem data de embarque`, severity: "yellow", filterFn: t => t.tripStatus === "sem_data" });
+    if (correctionLog.dateErrors > 0) items.push({ icon: AlertTriangle, text: `${correctionLog.dateErrors} venda(s) com erro de data (retorno < ida)`, severity: "red", filterFn: t => t.tripStatus === "erro_data" });
     return items;
   }, [tripsWithStatus, correctionLog]);
+
+  // Alert drill-down state
+  const [alertDrilldown, setAlertDrilldown] = useState<{ title: string; trips: typeof tripsWithStatus } | null>(null);
 
   const daysUntil = (dateStr: string | null) => {
     if (!dateStr) return null;
@@ -275,16 +278,18 @@ export default function Viagens() {
           <div className="space-y-2">
             {alerts.length === 0 && <p className="text-xs text-muted-foreground">Nenhum alerta ✅</p>}
             {alerts.map((a, i) => (
-              <div key={i} className={`flex items-start gap-2 p-2 rounded-lg border ${
-                a.severity === "red" ? "bg-red-500/5 border-red-500/20" :
-                a.severity === "yellow" ? "bg-yellow-500/5 border-yellow-500/20" :
-                "bg-blue-500/5 border-blue-500/20"
-              }`}>
+              <button key={i} onClick={() => setAlertDrilldown({ title: a.text, trips: tripsWithStatus.filter(a.filterFn) })}
+                className={`flex items-start gap-2 p-2 rounded-lg border w-full text-left cursor-pointer transition-all hover:scale-[1.01] hover:shadow-sm ${
+                  a.severity === "red" ? "bg-red-500/5 border-red-500/20 hover:bg-red-500/10" :
+                  a.severity === "yellow" ? "bg-yellow-500/5 border-yellow-500/20 hover:bg-yellow-500/10" :
+                  "bg-blue-500/5 border-blue-500/20 hover:bg-blue-500/10"
+                }`}>
                 <a.icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${
                   a.severity === "red" ? "text-red-400" : a.severity === "yellow" ? "text-yellow-400" : "text-blue-400"
                 }`} />
                 <span className="text-[11px] text-foreground">{a.text}</span>
-              </div>
+                <ChevronRight className="w-3 h-3 mt-0.5 ml-auto shrink-0 text-muted-foreground" />
+              </button>
             ))}
           </div>
         </Card>
@@ -406,6 +411,46 @@ export default function Viagens() {
               </Button>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Alert Drill-down Dialog */}
+      <Dialog open={!!alertDrilldown} onOpenChange={() => setAlertDrilldown(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-sm">
+              <Zap className="w-4 h-4 text-yellow-400" />
+              {alertDrilldown?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[60vh]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs">ID</TableHead>
+                  <TableHead className="text-xs">Cliente</TableHead>
+                  <TableHead className="text-xs">Destino</TableHead>
+                  <TableHead className="text-xs">Embarque</TableHead>
+                  <TableHead className="text-xs">Retorno</TableHead>
+                  <TableHead className="text-xs text-right">Valor</TableHead>
+                  <TableHead className="text-xs w-8" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {alertDrilldown?.trips.map(trip => (
+                  <TableRow key={trip.id} className="cursor-pointer hover:bg-muted/30" onClick={() => { setAlertDrilldown(null); navigate(`/sales/${trip.id}`); }}>
+                    <TableCell className="text-xs font-mono text-primary">{trip.display_id}</TableCell>
+                    <TableCell className="text-xs font-medium">{trip.name}</TableCell>
+                    <TableCell className="text-xs">{iataToCityName(trip.destination_iata)}</TableCell>
+                    <TableCell className="text-xs font-mono">{formatDateBR(trip.departure_date)}</TableCell>
+                    <TableCell className="text-xs font-mono">{formatDateBR(trip.return_date)}</TableCell>
+                    <TableCell className="text-xs text-right font-medium">{fmt(trip.received_value || 0)}</TableCell>
+                    <TableCell><ExternalLink className="w-3 h-3 text-muted-foreground" /></TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
