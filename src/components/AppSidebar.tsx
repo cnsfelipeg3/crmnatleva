@@ -55,6 +55,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [financeOpen, setFinanceOpen] = useState(false);
   const [rhOpen, setRhOpen] = useState(false);
   const [livechatOpen, setLivechatOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const isCollapsed = mobile ? false : collapsed;
 
   useEffect(() => {
@@ -71,6 +72,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     if (window.location.pathname.startsWith("/financeiro")) setFinanceOpen(true);
     if (window.location.pathname.startsWith("/rh")) setRhOpen(true);
     if (window.location.pathname.startsWith("/livechat")) setLivechatOpen(true);
+    if (window.location.pathname.startsWith("/admin")) setAdminOpen(true);
   }, []);
 
   const renderNavItem = (item: typeof navItems[0], indent = false) => (
@@ -226,7 +228,39 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           </div>
         )}
 
-        {renderNavItem({ to: "/settings", icon: Settings, label: "Configurações" })}
+        {/* Admin section - only for admins */}
+        {role === "admin" && (
+          <>
+            <button
+              onClick={() => setAdminOpen(!adminOpen)}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
+                adminOpen
+                  ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+              )}
+            >
+              <Shield className={cn("w-5 h-5 shrink-0", adminOpen && "text-sidebar-primary")} />
+              {!isCollapsed && (
+                <>
+                  <span className="flex-1 text-left">Admin</span>
+                  <ChevronDown className={cn("w-4 h-4 transition-transform", adminOpen && "rotate-180")} />
+                </>
+              )}
+            </button>
+
+            {adminOpen && !isCollapsed && (
+              <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
+                {[
+                  { to: "/admin/users", icon: Users, label: "Usuários & Permissões" },
+                  { to: "/settings", icon: Settings, label: "Configurações" },
+                ].map((item) => renderNavItem(item, true))}
+              </div>
+            )}
+          </>
+        )}
+
+        {role !== "admin" && renderNavItem({ to: "/settings", icon: Settings, label: "Configurações" })}
       </nav>
 
       <div className="relative border-t border-sidebar-border p-3 space-y-1.5">

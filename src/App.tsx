@@ -62,6 +62,9 @@ import Comissoes from "@/pages/financeiro/Comissoes";
 import DREReport from "@/pages/financeiro/DREReport";
 import SimuladorTaxas from "@/pages/financeiro/SimuladorTaxas";
 
+// Admin
+import AdminUsers from "@/pages/admin/AdminUsers";
+
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -132,6 +135,9 @@ function AppRoutes() {
         <Route path="/rh/clima" element={<ClimaTime />} />
         <Route path="/rh/relatorios" element={<RelatoriosRH />} />
         <Route path="/rh/config" element={<ConfiguracoesRH />} />
+
+        {/* Admin */}
+        <Route path="/admin/users" element={<AdminUsers />} />
 
         <Route path="/settings" element={<SettingsIndex />} />
         <Route path="/settings/sellers" element={<GenericSettingsList title="Vendedores" defaultItems={["Admin NatLeva"]} />} />
