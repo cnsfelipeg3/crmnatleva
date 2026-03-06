@@ -146,7 +146,23 @@ serve(async (req) => {
       const offers = (data.data || []).slice(0, 3);
       const dictionaries = data.dictionaries || {};
 
-      const enrichedOffers = offers.map((offer: any) => {
+      // Filter offers by flight number if provided
+      let filteredOffers = offers;
+      if (flightNumOnly) {
+        filteredOffers = offers.filter((offer: any) => {
+          return (offer.itineraries || []).some((itin: any) =>
+            (itin.segments || []).some((seg: any) =>
+              seg.number === flightNumOnly || `${seg.carrierCode}${seg.number}` === flightNumber?.toUpperCase()
+            )
+          );
+        });
+        // If no exact match found, fall back to all offers but limited to 3
+        if (filteredOffers.length === 0) {
+          filteredOffers = offers.slice(0, 3);
+        }
+      }
+
+      const enrichedOffers = filteredOffers.slice(0, 3).map((offer: any) => {
         const itineraries = (offer.itineraries || []).map((itin: any, itinIdx: number) => {
           const direction = itinIdx === 0 ? "ida" : "volta";
           const segments = (itin.segments || []).map((seg: any, segIdx: number) => {
@@ -155,7 +171,6 @@ serve(async (req) => {
               ? (parseInt(durationMatch[1] || "0") * 60 + parseInt(durationMatch[2] || "0"))
               : 0;
 
-            // Calculate connection time from previous segment
             let connectionTimeMinutes = 0;
             if (segIdx > 0) {
               const prevArrival = new Date(itin.segments[segIdx - 1].arrival.at);
