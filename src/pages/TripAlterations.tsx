@@ -348,10 +348,14 @@ export default function TripAlterations() {
         });
       }
 
-      // Cancel tasks on total cancellation
+      // Cancel tasks on total cancellation and update sale status
       if (form.alteration_type === "cancelamento_total") {
-        await supabase.from("checkin_tasks").update({ status: "CANCELADO" }).eq("sale_id", form.sale_id).neq("status", "CONCLUIDO");
-        await supabase.from("lodging_confirmation_tasks").update({ status: "CANCELADO" }).eq("sale_id", form.sale_id).neq("status", "CONFIRMADO");
+        await Promise.all([
+          supabase.from("checkin_tasks").update({ status: "CANCELADO" }).eq("sale_id", form.sale_id).neq("status", "CONCLUIDO"),
+          supabase.from("lodging_confirmation_tasks").update({ status: "CANCELADO" }).eq("sale_id", form.sale_id).neq("status", "CONFIRMADO"),
+          supabase.from("sales").update({ status: "Cancelado" }).eq("id", form.sale_id),
+          supabase.from("accounts_receivable").update({ status: "cancelado" }).eq("sale_id", form.sale_id).neq("status", "recebido"),
+        ]);
       }
 
       toast({ title: "Alteração registrada com sucesso!" });
