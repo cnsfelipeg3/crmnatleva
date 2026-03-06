@@ -97,6 +97,7 @@ const EMPTY_FORM = {
   supplier_refund_origin: "", supplier_refund_method: "", supplier_refund_value: 0,
   supplier_refund_date: "", supplier_settlement_ref: "",
   affected_passengers: [] as string[],
+  new_flight_date: "",
   refund_notes: "", notes: "",
 };
 
