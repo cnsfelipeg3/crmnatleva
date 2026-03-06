@@ -144,7 +144,34 @@ export default function TripAlterations() {
     queryFn: async () => {
       const { data } = await supabase
         .from("cost_items")
-        .select("id, category, description, total_item_cost, cash_value, miles_cost_brl, miles_quantity, miles_program, product_type, supplier_id, suppliers(name)")
+        .select("id, category, description, total_item_cost, cash_value, miles_cost_brl, miles_quantity, miles_program, product_type, supplier_id, reservation_code, emission_source, taxes, suppliers(name)")
+        .eq("sale_id", form.sale_id);
+      return data || [];
+    },
+  });
+
+  // Flight segments for selected sale
+  const { data: saleFlightSegments = [] } = useQuery({
+    queryKey: ["flight-segments-for-alt", form.sale_id],
+    enabled: !!form.sale_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("flight_segments")
+        .select("*")
+        .eq("sale_id", form.sale_id)
+        .order("segment_order");
+      return data || [];
+    },
+  });
+
+  // Sale payments
+  const { data: salePayments = [] } = useQuery({
+    queryKey: ["sale-payments-for-alt", form.sale_id],
+    enabled: !!form.sale_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("sale_payments")
+        .select("*")
         .eq("sale_id", form.sale_id);
       return data || [];
     },
@@ -184,12 +211,21 @@ export default function TripAlterations() {
   useEffect(() => {
     if (selectedCostItem) {
       const cost = selectedCostItem.total_item_cost || 0;
-      // Estimate revenue proportionally from the sale's received value
       const totalCost = saleCostItems.reduce((s: number, c: any) => s + (c.total_item_cost || 0), 0);
       const saleRevenue = selectedSale?.received_value || 0;
       const proportion = totalCost > 0 ? (cost / totalCost) : 0;
       const productRevenue = saleRevenue * proportion;
       const profit = productRevenue - cost;
+      const supplierName = (selectedCostItem as any).suppliers?.name || "";
+      const emissionSource = selectedCostItem.emission_source || "";
+
+      // Auto-detect supplier refund origin
+      let autoOrigin = "";
+      if (emissionSource === "milhas" || selectedCostItem.miles_quantity > 0) {
+        autoOrigin = "credito_milhas";
+      } else if (supplierName) {
+        autoOrigin = "fornecedor_emissor";
+      }
 
       setForm(f => ({
         ...f,
@@ -199,6 +235,7 @@ export default function TripAlterations() {
         product_type: selectedCostItem.category === "aereo" ? "aereo" : selectedCostItem.category === "hotel" ? "hotel" : selectedCostItem.product_type || "outro",
         miles_program: selectedCostItem.miles_program || "",
         miles_used: selectedCostItem.miles_quantity || 0,
+        supplier_refund_origin: autoOrigin || f.supplier_refund_origin,
       }));
     }
   }, [form.cost_item_id, selectedCostItem, selectedSale, saleCostItems]);
@@ -503,13 +540,25 @@ export default function TripAlterations() {
                 </div>
               )}
               {form.sale_id && selectedSale && (
-                <Card className="p-3 bg-primary/5 border-primary/20 flex items-center justify-between">
-                  <div className="text-xs">
-                    <span className="font-mono font-bold text-primary">{selectedSale.display_id}</span>
-                    <span className="ml-2 font-semibold text-foreground">{selectedSale.name}</span>
-                    {selectedSale.clients?.display_name && <span className="ml-2 text-muted-foreground">({selectedSale.clients.display_name})</span>}
+                <Card className="p-3 bg-primary/5 border-primary/20">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs">
+                      <span className="font-mono font-bold text-primary">{selectedSale.display_id}</span>
+                      <span className="ml-2 font-semibold text-foreground">{selectedSale.name}</span>
+                      {selectedSale.clients?.display_name && <span className="ml-2 text-muted-foreground">({selectedSale.clients.display_name})</span>}
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-[10px] h-7" onClick={() => { setForm(f => ({ ...f, sale_id: "", cost_item_id: "", affected_passengers: [] })); setSaleSearch(""); }}>Trocar</Button>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-[10px] h-7" onClick={() => { setForm(f => ({ ...f, sale_id: "", cost_item_id: "", affected_passengers: [] })); setSaleSearch(""); }}>Trocar</Button>
+                  <div className="flex flex-wrap gap-4 mt-2 text-[10px] text-muted-foreground">
+                    {selectedSale.received_value > 0 && <span>Receita: <strong className="text-foreground">{fmt(selectedSale.received_value)}</strong></span>}
+                    {selectedSale.total_cost > 0 && <span>Custo: <strong className="text-foreground">{fmt(selectedSale.total_cost)}</strong></span>}
+                    {selectedSale.received_value > 0 && selectedSale.total_cost > 0 && (
+                      <span>Lucro: <strong className={`${(selectedSale.received_value - selectedSale.total_cost) >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                        {fmt(selectedSale.received_value - selectedSale.total_cost)}
+                      </strong></span>
+                    )}
+                    {selectedSale.origin_iata && selectedSale.destination_iata && <span>{selectedSale.origin_iata} → {selectedSale.destination_iata}</span>}
+                  </div>
                 </Card>
               )}
             </div>
@@ -524,6 +573,8 @@ export default function TripAlterations() {
                       {saleCostItems.map((ci: any) => {
                         const isSelected = form.cost_item_id === ci.id;
                         const PIcon = PRODUCT_TYPES.find(p => p.value === ci.category)?.icon || FileText;
+                        const supplierName = ci.suppliers?.name;
+                        const segments = ci.category === "aereo" ? saleFlightSegments : [];
                         return (
                           <button key={ci.id} onClick={() => setForm(f => ({ ...f, cost_item_id: ci.id }))}
                             className={`text-left border rounded-lg p-3 transition-all ${isSelected ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/50"}`}>
@@ -532,7 +583,41 @@ export default function TripAlterations() {
                               <span className="text-xs font-semibold text-foreground">{ci.category} — {ci.description || "Sem descrição"}</span>
                               <span className="ml-auto text-xs font-bold text-foreground">{fmt(ci.total_item_cost || 0)}</span>
                             </div>
-                            {(ci as any).suppliers?.name && <p className="text-[10px] text-muted-foreground mt-1">Fornecedor: {(ci as any).suppliers.name}</p>}
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
+                              {supplierName && (
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  <Building2 className="w-3 h-3" /> Fornecedor: <strong className="text-foreground">{supplierName}</strong>
+                                </span>
+                              )}
+                              {ci.emission_source && (
+                                <span className="text-[10px] text-muted-foreground">Emissão: <strong className="text-foreground">{ci.emission_source}</strong></span>
+                              )}
+                              {ci.reservation_code && (
+                                <span className="text-[10px] text-muted-foreground">Localizador: <strong className="font-mono text-foreground">{ci.reservation_code}</strong></span>
+                              )}
+                              {ci.miles_quantity > 0 && (
+                                <span className="text-[10px] text-muted-foreground">Milhas: <strong className="text-foreground">{ci.miles_quantity?.toLocaleString()} ({ci.miles_program || "—"})</strong></span>
+                              )}
+                              {ci.cash_value > 0 && (
+                                <span className="text-[10px] text-muted-foreground">Cash: <strong className="text-foreground">{fmt(ci.cash_value)}</strong></span>
+                              )}
+                              {ci.taxes > 0 && (
+                                <span className="text-[10px] text-muted-foreground">Taxas: <strong className="text-foreground">{fmt(ci.taxes)}</strong></span>
+                              )}
+                            </div>
+                            {segments.length > 0 && isSelected && (
+                              <div className="mt-2 pt-2 border-t space-y-1">
+                                {segments.map((seg: any) => (
+                                  <div key={seg.id} className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                    <Plane className="w-3 h-3" />
+                                    <span className="font-mono font-bold text-foreground">{seg.flight_number || "—"}</span>
+                                    <span>{seg.origin_iata} → {seg.destination_iata}</span>
+                                    {seg.departure_date && <span>{new Date(seg.departure_date + "T00:00:00").toLocaleDateString("pt-BR")}</span>}
+                                    {seg.airline && <span>({seg.airline})</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </button>
                         );
                       })}
