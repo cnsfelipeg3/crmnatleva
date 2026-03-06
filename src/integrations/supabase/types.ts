@@ -1499,70 +1499,127 @@ export type Database = {
       }
       employees: {
         Row: {
+          address_cep: string | null
+          address_city: string | null
+          address_complement: string | null
+          address_neighborhood: string | null
+          address_number: string | null
+          address_state: string | null
+          address_street: string | null
           avatar_url: string | null
           base_salary: number | null
+          birth_date: string | null
           commission_enabled: boolean | null
+          commission_percent: number | null
           contract_type: string
+          cpf: string | null
           created_at: string
           department: string
           email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
           full_name: string
           hire_date: string
           id: string
           lunch_duration_minutes: number | null
           manager_id: string | null
           observations: string | null
+          permissions: Json | null
           phone: string | null
           position: string
+          remuneration_type: string | null
+          rg: string | null
           status: string
+          system_user_id: string | null
+          termination_date: string | null
           updated_at: string
           user_id: string | null
+          weekly_hours: number | null
+          work_days: string[] | null
           work_regime: string | null
           work_schedule_end: string | null
           work_schedule_start: string | null
         }
         Insert: {
+          address_cep?: string | null
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
           avatar_url?: string | null
           base_salary?: number | null
+          birth_date?: string | null
           commission_enabled?: boolean | null
+          commission_percent?: number | null
           contract_type?: string
+          cpf?: string | null
           created_at?: string
           department?: string
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           full_name: string
           hire_date?: string
           id?: string
           lunch_duration_minutes?: number | null
           manager_id?: string | null
           observations?: string | null
+          permissions?: Json | null
           phone?: string | null
           position?: string
+          remuneration_type?: string | null
+          rg?: string | null
           status?: string
+          system_user_id?: string | null
+          termination_date?: string | null
           updated_at?: string
           user_id?: string | null
+          weekly_hours?: number | null
+          work_days?: string[] | null
           work_regime?: string | null
           work_schedule_end?: string | null
           work_schedule_start?: string | null
         }
         Update: {
+          address_cep?: string | null
+          address_city?: string | null
+          address_complement?: string | null
+          address_neighborhood?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
           avatar_url?: string | null
           base_salary?: number | null
+          birth_date?: string | null
           commission_enabled?: boolean | null
+          commission_percent?: number | null
           contract_type?: string
+          cpf?: string | null
           created_at?: string
           department?: string
           email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
           full_name?: string
           hire_date?: string
           id?: string
           lunch_duration_minutes?: number | null
           manager_id?: string | null
           observations?: string | null
+          permissions?: Json | null
           phone?: string | null
           position?: string
+          remuneration_type?: string | null
+          rg?: string | null
           status?: string
+          system_user_id?: string | null
+          termination_date?: string | null
           updated_at?: string
           user_id?: string | null
+          weekly_hours?: number | null
+          work_days?: string[] | null
           work_regime?: string | null
           work_schedule_end?: string | null
           work_schedule_start?: string | null
