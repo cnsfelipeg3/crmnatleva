@@ -16,7 +16,7 @@ import {
 import {
   Check, Upload, Sparkles, Loader2, Plus, Trash2, Plane, Hotel, CreditCard,
   ShoppingBag, Paperclip, Eye, ChevronDown, Camera, Car, Shield, Ticket,
-  UtensilsCrossed, MapPin, CalendarDays, Users, FileText, DollarSign,
+  UtensilsCrossed, MapPin, CalendarDays, Users, FileText, DollarSign, Train,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
