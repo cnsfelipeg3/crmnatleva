@@ -334,7 +334,7 @@ export default function NewSale() {
         name: smartCapitalizeName(form.name),
         seller_id: user?.id,
         close_date: form.close_date || null,
-        payment_method: form.payment_method || null,
+        payment_method: salePayments.length > 0 ? salePayments.map(p => p.payment_method).join(", ") : form.payment_method || null,
         products, observations: form.observations || null,
         link_chat: form.link_chat || null,
         origin_iata: form.origin_iata || null, origin_city: null,
