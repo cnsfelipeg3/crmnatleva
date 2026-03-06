@@ -643,7 +643,6 @@ function FlightGroupCard({
               <AirlineAutocomplete
                 value={first?.airline || defaultAirline}
                 onChange={(iata) => {
-                  // Set airline for all segments in this group
                   group.segments.forEach((_, i) => onSegmentUpdate(i, "airline", iata));
                 }}
               />
@@ -654,7 +653,7 @@ function FlightGroupCard({
               <AirportAutocomplete
                 value={first?.origin_iata || defaultOrigin}
                 onChange={iata => onSegmentUpdate(0, "origin_iata", iata)}
-                placeholder="GRU"
+                placeholder="Ex: GRU ou Guarulhos"
               />
             </div>
 
@@ -663,7 +662,7 @@ function FlightGroupCard({
               <AirportAutocomplete
                 value={last?.destination_iata || defaultDestination}
                 onChange={iata => onSegmentUpdate(group.segments.length - 1, "destination_iata", iata)}
-                placeholder="FCO"
+                placeholder="Ex: DXB ou Dubai"
               />
             </div>
 
@@ -675,6 +674,20 @@ function FlightGroupCard({
                 onChange={e => onSegmentUpdate(0, "departure_date", e.target.value)}
                 className="text-sm"
               />
+            </div>
+          </div>
+
+          {/* ─── Nº do Voo (acima da consulta Amadeus) ─── */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Nº do Voo</Label>
+              <Input
+                value={first?.flight_number || ""}
+                onChange={e => onSegmentUpdate(0, "flight_number", e.target.value.toUpperCase())}
+                placeholder="EK262"
+                className="font-mono text-sm"
+              />
+              <p className="text-[10px] text-muted-foreground">Opcional — ajuda o Amadeus a localizar o voo exato</p>
             </div>
           </div>
 
