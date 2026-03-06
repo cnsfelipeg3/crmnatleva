@@ -41,6 +41,7 @@ const financeItems = [
   { to: "/financeiro/simulador", icon: Calculator, label: "Simulador de Taxas" },
   { to: "/financeiro/plano-contas", icon: FolderTree, label: "Plano de Contas" },
   { to: "/financeiro/comissoes", icon: Users2, label: "Comissões" },
+  { to: "/financeiro/fechamento", icon: ClipboardCheck, label: "Fechamento Fornecedores" },
   { to: "/financeiro/dre", icon: FileText, label: "DRE / Relatórios" },
 ];
 

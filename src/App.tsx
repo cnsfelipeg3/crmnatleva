@@ -64,6 +64,7 @@ import PlanoContas from "@/pages/financeiro/PlanoContas";
 import Comissoes from "@/pages/financeiro/Comissoes";
 import DREReport from "@/pages/financeiro/DREReport";
 import SimuladorTaxas from "@/pages/financeiro/SimuladorTaxas";
+import FechamentoFornecedores from "@/pages/financeiro/FechamentoFornecedores";
 
 // Admin
 import AdminUsers from "@/pages/admin/AdminUsers";
@@ -125,6 +126,7 @@ function AppRoutes() {
         <Route path="/financeiro/comissoes" element={<Comissoes />} />
         <Route path="/financeiro/dre" element={<DREReport />} />
         <Route path="/financeiro/simulador" element={<SimuladorTaxas />} />
+        <Route path="/financeiro/fechamento" element={<FechamentoFornecedores />} />
 
         {/* RH */}
         <Route path="/rh" element={<RHIndex />} />
