@@ -118,17 +118,22 @@ serve(async (req) => {
 
     if (action === "flight_schedule") {
       // Flight Offers Search - but we only extract schedule info, NO prices
-      const { origin, destination, departureDate, returnDate, airline } = params;
+      const { origin, destination, departureDate, returnDate, airline, flightNumber } = params;
       if (!origin || !destination || !departureDate) {
         throw new Error("origin, destination, departureDate are required");
       }
+
+      // Extract numeric part from flight number (e.g. "EK262" -> "262")
+      const flightNumOnly = flightNumber
+        ? flightNumber.replace(/^[A-Z]{2,3}/i, "").trim()
+        : "";
 
       const searchParams: Record<string, string> = {
         originLocationCode: origin.toUpperCase(),
         destinationLocationCode: destination.toUpperCase(),
         departureDate,
         adults: "1",
-        max: "3",
+        max: flightNumOnly ? "10" : "3",
         currencyCode: "BRL",
         nonStop: "false",
       };
@@ -141,7 +146,23 @@ serve(async (req) => {
       const offers = (data.data || []).slice(0, 3);
       const dictionaries = data.dictionaries || {};
 
-      const enrichedOffers = offers.map((offer: any) => {
+      // Filter offers by flight number if provided
+      let filteredOffers = offers;
+      if (flightNumOnly) {
+        filteredOffers = offers.filter((offer: any) => {
+          return (offer.itineraries || []).some((itin: any) =>
+            (itin.segments || []).some((seg: any) =>
+              seg.number === flightNumOnly || `${seg.carrierCode}${seg.number}` === flightNumber?.toUpperCase()
+            )
+          );
+        });
+        // If no exact match found, fall back to all offers but limited to 3
+        if (filteredOffers.length === 0) {
+          filteredOffers = offers.slice(0, 3);
+        }
+      }
+
+      const enrichedOffers = filteredOffers.slice(0, 3).map((offer: any) => {
         const itineraries = (offer.itineraries || []).map((itin: any, itinIdx: number) => {
           const direction = itinIdx === 0 ? "ida" : "volta";
           const segments = (itin.segments || []).map((seg: any, segIdx: number) => {
@@ -150,7 +171,6 @@ serve(async (req) => {
               ? (parseInt(durationMatch[1] || "0") * 60 + parseInt(durationMatch[2] || "0"))
               : 0;
 
-            // Calculate connection time from previous segment
             let connectionTimeMinutes = 0;
             if (segIdx > 0) {
               const prevArrival = new Date(itin.segments[segIdx - 1].arrival.at);
