@@ -485,6 +485,47 @@ export default function NewSale() {
         if (!existingLink) await supabase.from("sale_passengers").insert({ sale_id: saleId, passenger_id: pax.id });
       }
 
+      // Save sale payments
+      if (salePayments.length > 0) {
+        await supabase.from("sale_payments").insert(
+          salePayments.map(p => ({
+            sale_id: saleId,
+            payment_method: p.payment_method,
+            gateway: p.gateway || null,
+            installments: p.installments,
+            gross_value: p.gross_value,
+            fee_percent: p.fee_percent,
+            fee_fixed: p.fee_fixed,
+            fee_total: p.fee_total,
+            net_value: p.net_value,
+            receiving_account_id: p.receiving_account_id || null,
+            payment_date: p.payment_date || null,
+            notes: p.notes || null,
+          }))
+        );
+
+        // Auto-create accounts_receivable entries
+        for (const p of salePayments) {
+          if (p.gross_value > 0) {
+            await supabase.from("accounts_receivable").insert({
+              sale_id: saleId,
+              description: `Pagamento ${p.payment_method}${p.gateway ? ` (${p.gateway})` : ""}`,
+              gross_value: p.gross_value,
+              fee_percent: p.fee_percent,
+              fee_value: p.fee_total,
+              net_value: p.net_value,
+              payment_method: p.payment_method,
+              status: "recebido",
+              received_date: p.payment_date || new Date().toISOString().slice(0, 10),
+              seller_id: user?.id || null,
+              created_by: user?.id || null,
+              installment_number: 1,
+              installment_total: p.installments,
+            });
+          }
+        }
+      }
+
       toast({ title: "Venda salva com sucesso!" });
       try { await Promise.all([supabase.functions.invoke("checkin-generate"), supabase.functions.invoke("lodging-generate")]); } catch {}
       navigate("/sales");
