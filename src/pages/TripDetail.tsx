@@ -414,7 +414,7 @@ export default function TripDetail() {
                     const prevDate = i > 0 ? timeline[i - 1].date : null;
                     const showDateHeader = item.date && item.date !== prevDate;
 
-                    const isPast = (item.date && item.date < today) || item.status === "concluido";
+                    const isPast = isItemPast(item);
                     const isCurrent = i === currentIdx;
                     const isFuture = !isPast && !isCurrent;
 
