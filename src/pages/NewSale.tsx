@@ -117,6 +117,8 @@ export default function NewSale() {
   ]);
   const [otherProducts, setOtherProducts] = useState<OtherProduct[]>([]);
   const [salePayments, setSalePayments] = useState<SalePayment[]>([]);
+  const [airTariff, setAirTariff] = useState<TariffCondition>({ ...EMPTY_TARIFF });
+  const [hotelTariff, setHotelTariff] = useState<TariffCondition>({ ...EMPTY_TARIFF });
   const [saving, setSaving] = useState(false);
   const [enrichmentOpen, setEnrichmentOpen] = useState(false);
   const [selectedPassengers, setSelectedPassengers] = useState<SelectedPassenger[]>(() => {
