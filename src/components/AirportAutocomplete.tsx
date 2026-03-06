@@ -102,12 +102,12 @@ export default function AirportAutocomplete({ value, onChange, placeholder = "GR
     <div ref={containerRef} className="relative">
       <Input
         data-testid={testId}
-        value={query}
+        value={displayValue}
         onChange={(e) => handleInputChange(e.target.value)}
-        onFocus={() => results.length > 0 && setOpen(true)}
+        onFocus={handleFocus}
         placeholder={placeholder}
-        maxLength={30}
-        className={cn("font-mono", className)}
+        maxLength={40}
+        className={cn("text-sm", selectedLabel && !isFocused ? "" : "font-mono", className)}
       />
       {open && (
         <div className="absolute z-50 top-full mt-1 w-full min-w-[280px] bg-popover border border-border rounded-md shadow-lg max-h-[240px] overflow-y-auto">
