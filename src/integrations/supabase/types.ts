@@ -2998,6 +2998,184 @@ export type Database = {
           },
         ]
       }
+      trip_alteration_attachments: {
+        Row: {
+          alteration_id: string
+          created_at: string
+          file_name: string
+          file_type: string | null
+          file_url: string
+          id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          alteration_id: string
+          created_at?: string
+          file_name: string
+          file_type?: string | null
+          file_url: string
+          id?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          alteration_id?: string
+          created_at?: string
+          file_name?: string
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_alteration_attachments_alteration_id_fkey"
+            columns: ["alteration_id"]
+            isOneToOne: false
+            referencedRelation: "trip_alterations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trip_alteration_history: {
+        Row: {
+          action: string
+          alteration_id: string
+          created_at: string
+          details: string | null
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          alteration_id: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          alteration_id?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_alteration_history_alteration_id_fkey"
+            columns: ["alteration_id"]
+            isOneToOne: false
+            referencedRelation: "trip_alterations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trip_alterations: {
+        Row: {
+          alteration_type: string
+          client_refund_value: number | null
+          created_at: string
+          created_by: string | null
+          credit_value: number | null
+          description: string | null
+          id: string
+          miles_penalty: number | null
+          miles_program: string | null
+          miles_returned: number | null
+          miles_used: number | null
+          notes: string | null
+          original_value: number | null
+          penalty_value: number | null
+          product_type: string
+          reason: string | null
+          refund_date: string | null
+          refund_method: string | null
+          refund_notes: string | null
+          refund_value: number | null
+          request_date: string
+          resolved_at: string | null
+          resolved_by: string | null
+          sale_id: string
+          segment_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          alteration_type?: string
+          client_refund_value?: number | null
+          created_at?: string
+          created_by?: string | null
+          credit_value?: number | null
+          description?: string | null
+          id?: string
+          miles_penalty?: number | null
+          miles_program?: string | null
+          miles_returned?: number | null
+          miles_used?: number | null
+          notes?: string | null
+          original_value?: number | null
+          penalty_value?: number | null
+          product_type?: string
+          reason?: string | null
+          refund_date?: string | null
+          refund_method?: string | null
+          refund_notes?: string | null
+          refund_value?: number | null
+          request_date?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sale_id: string
+          segment_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          alteration_type?: string
+          client_refund_value?: number | null
+          created_at?: string
+          created_by?: string | null
+          credit_value?: number | null
+          description?: string | null
+          id?: string
+          miles_penalty?: number | null
+          miles_program?: string | null
+          miles_returned?: number | null
+          miles_used?: number | null
+          notes?: string | null
+          original_value?: number | null
+          penalty_value?: number | null
+          product_type?: string
+          reason?: string | null
+          refund_date?: string | null
+          refund_method?: string | null
+          refund_notes?: string | null
+          refund_value?: number | null
+          request_date?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          sale_id?: string
+          segment_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_alterations_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_alterations_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "flight_segments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_locations: {
         Row: {
           city: string
