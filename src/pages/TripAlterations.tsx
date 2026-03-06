@@ -610,6 +610,12 @@ export default function TripAlterations() {
                     <Input className="h-9" value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} placeholder="Ex: Motivos pessoais" />
                   </div>
                 </div>
+                {(form.alteration_type === "remarcacao_voo" || form.alteration_type === "alteracao_datas") && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold">Nova data do voo</Label>
+                    <Input type="date" className="h-9" value={form.new_flight_date} onChange={e => setForm(f => ({ ...f, new_flight_date: e.target.value }))} />
+                  </div>
+                )}
                 <div className="space-y-1.5">
                   <Label className="text-xs font-semibold">Descrição detalhada</Label>
                   <Textarea rows={2} value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
