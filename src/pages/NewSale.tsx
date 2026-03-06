@@ -784,6 +784,13 @@ export default function NewSale() {
                 )}
               </div>
             </Card>
+            {/* Air Tariff Conditions */}
+            <TariffConditionsCard
+              value={airTariff}
+              onChange={setAirTariff}
+              productLabel="Aéreo"
+              compact
+            />
             <StepNavigation />
           </div>
         </TabsContent>
