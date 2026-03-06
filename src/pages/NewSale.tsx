@@ -268,7 +268,7 @@ export default function NewSale() {
     setOtherProducts(prev => [...prev, {
       id: crypto.randomUUID(), type: "transfer", description: "", supplier: "",
       date: "", emission_type: "pagante", miles_program: "", miles_qty: "",
-      miles_tax: "", cash_value: "",
+      miles_tax: "", cash_value: "", reservation_code: "",
     }]);
   };
   const updateProduct = (id: string, field: string, value: any) => {

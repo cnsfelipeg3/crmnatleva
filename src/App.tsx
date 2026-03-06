@@ -91,6 +91,7 @@ function AppRoutes() {
         <Route path="/sales/new" element={<NewSale />} />
         <Route path="/sales/:id" element={<SaleDetail />} />
         <Route path="/viagens" element={<Viagens />} />
+        <Route path="/viagens/:id" element={<TripDetail />} />
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/hospedagem" element={<Lodging />} />
         <Route path="/clients/:id" element={<ClientDetail />} />

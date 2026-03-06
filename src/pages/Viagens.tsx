@@ -330,7 +330,7 @@ export default function Viagens() {
                 const cfg = STATUS_CONFIG[trip.tripStatus];
                 const days = daysUntil(trip.tripStatus === "em_viagem" ? trip.return_date : trip.departure_date);
                 return (
-                  <TableRow key={trip.id} className="cursor-pointer hover:bg-muted/30" onClick={() => setSelectedSale(trip)}>
+                  <TableRow key={trip.id} className="cursor-pointer hover:bg-muted/30" onClick={() => navigate(`/viagens/${trip.id}`)}>
                     <TableCell>
                       <Tooltip>
                         <TooltipTrigger asChild>
