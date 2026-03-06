@@ -56,25 +56,32 @@ function SegmentRow({ seg }: { seg: FlightSegment }) {
         )}
       </div>
 
-      {/* Line */}
+      {/* Line with flight number above, logo below */}
       <div className="flex-1 relative min-w-[80px]">
-        <div className="border-t-2 border-primary/40 border-dashed" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-1.5">
-          {seg.airline ? (
-            <AirlineLogo iata={seg.airline} size={20} />
-          ) : (
-            <Plane className="w-4 h-4 text-primary" />
-          )}
-        </div>
-        <div className="flex justify-center mt-1.5">
+        {/* Flight number + duration ABOVE the line */}
+        <div className="flex justify-center mb-2">
           <div className="text-center space-y-0.5">
-            <p className="text-[10px] text-muted-foreground font-medium leading-tight">
-              {seg.airline} {seg.flight_number}
+            <p className="text-xs font-semibold font-mono text-foreground leading-tight">
+              {seg.flight_number || seg.airline}
             </p>
             {seg.duration_minutes > 0 && (
               <p className="text-[10px] text-muted-foreground leading-tight">
                 {formatDuration(seg.duration_minutes)}
               </p>
+            )}
+          </div>
+        </div>
+
+        {/* Dashed line */}
+        <div className="border-t-2 border-primary/40 border-dashed" />
+
+        {/* Logo + details BELOW the line */}
+        <div className="flex justify-center mt-2">
+          <div className="flex flex-col items-center gap-1">
+            {seg.airline ? (
+              <AirlineLogo iata={seg.airline} size={28} />
+            ) : (
+              <Plane className="w-5 h-5 text-primary" />
             )}
             {seg.flight_class && (
               <p className="text-[10px] text-muted-foreground leading-tight">{seg.flight_class}</p>
