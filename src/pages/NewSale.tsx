@@ -882,6 +882,7 @@ export default function NewSale() {
                       <div className="space-y-2"><Label>Fornecedor</Label><Input value={product.supplier} onChange={(e) => updateProduct(product.id, "supplier", e.target.value)} /></div>
                       <div className="space-y-2"><Label>Descrição</Label><Input value={product.description} onChange={(e) => updateProduct(product.id, "description", e.target.value)} placeholder="Detalhes do produto" /></div>
                       <div className="space-y-2"><Label>Data</Label><Input type="date" value={product.date} onChange={(e) => updateProduct(product.id, "date", e.target.value)} /></div>
+                      <div className="space-y-2"><Label>Código de Reserva</Label><Input value={product.reservation_code} onChange={(e) => updateProduct(product.id, "reservation_code", e.target.value.toUpperCase())} placeholder="Localizador / confirmação" className="font-mono" /></div>
                     </div>
 
                     <div className="space-y-2">
