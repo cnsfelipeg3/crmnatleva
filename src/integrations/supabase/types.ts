@@ -2988,6 +2988,96 @@ export type Database = {
         }
         Relationships: []
       }
+      tariff_conditions: {
+        Row: {
+          alteration_allowed: boolean | null
+          alteration_deadline: string | null
+          cancellation_allowed: boolean | null
+          cancellation_deadline: string | null
+          cost_item_id: string | null
+          created_at: string
+          credit_miles_allowed: boolean | null
+          credit_voucher_allowed: boolean | null
+          fare_difference_applies: boolean | null
+          fare_name: string | null
+          id: string
+          is_refundable: string | null
+          observations: string | null
+          penalty_fixed_value: number | null
+          penalty_percent: number | null
+          penalty_plus_fare_difference: boolean | null
+          penalty_type: string | null
+          product_label: string | null
+          product_type: string
+          refund_type: string | null
+          sale_id: string
+          updated_at: string
+        }
+        Insert: {
+          alteration_allowed?: boolean | null
+          alteration_deadline?: string | null
+          cancellation_allowed?: boolean | null
+          cancellation_deadline?: string | null
+          cost_item_id?: string | null
+          created_at?: string
+          credit_miles_allowed?: boolean | null
+          credit_voucher_allowed?: boolean | null
+          fare_difference_applies?: boolean | null
+          fare_name?: string | null
+          id?: string
+          is_refundable?: string | null
+          observations?: string | null
+          penalty_fixed_value?: number | null
+          penalty_percent?: number | null
+          penalty_plus_fare_difference?: boolean | null
+          penalty_type?: string | null
+          product_label?: string | null
+          product_type?: string
+          refund_type?: string | null
+          sale_id: string
+          updated_at?: string
+        }
+        Update: {
+          alteration_allowed?: boolean | null
+          alteration_deadline?: string | null
+          cancellation_allowed?: boolean | null
+          cancellation_deadline?: string | null
+          cost_item_id?: string | null
+          created_at?: string
+          credit_miles_allowed?: boolean | null
+          credit_voucher_allowed?: boolean | null
+          fare_difference_applies?: boolean | null
+          fare_name?: string | null
+          id?: string
+          is_refundable?: string | null
+          observations?: string | null
+          penalty_fixed_value?: number | null
+          penalty_percent?: number | null
+          penalty_plus_fare_difference?: boolean | null
+          penalty_type?: string | null
+          product_label?: string | null
+          product_type?: string
+          refund_type?: string | null
+          sale_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tariff_conditions_cost_item_id_fkey"
+            columns: ["cost_item_id"]
+            isOneToOne: false
+            referencedRelation: "cost_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tariff_conditions_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_checkins: {
         Row: {
           checkin_date: string
