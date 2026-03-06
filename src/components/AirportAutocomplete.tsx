@@ -21,21 +21,29 @@ interface Props {
 }
 
 export default function AirportAutocomplete({ value, onChange, placeholder = "GRU", className, "data-testid": testId }: Props) {
+  const [selectedLabel, setSelectedLabel] = useState("");
   const [query, setQuery] = useState(value || "");
   const [results, setResults] = useState<AirportResult[]>([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Show label when not focused, raw query when focused
+  const displayValue = isFocused ? query : (selectedLabel || value || "");
+
   useEffect(() => {
-    setQuery(value || "");
-  }, [value]);
+    if (!isFocused) {
+      setQuery(value || "");
+    }
+  }, [value, isFocused]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpen(false);
+        setIsFocused(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -66,16 +74,28 @@ export default function AirportAutocomplete({ value, onChange, placeholder = "GR
   const handleInputChange = (val: string) => {
     const upper = val.toUpperCase();
     setQuery(upper);
+    setSelectedLabel("");
     search(upper);
     if (upper.length === 3 && /^[A-Z]{3}$/.test(upper)) {
       onChange(upper);
     }
   };
 
+  const handleFocus = () => {
+    setIsFocused(true);
+    setQuery(value || "");
+    if (value && value.length >= 2) {
+      search(value);
+    }
+  };
+
   const handleSelect = (r: AirportResult) => {
+    const label = `${r.iata} — ${r.city || r.name}`;
+    setSelectedLabel(label);
     setQuery(r.iata);
     onChange(r.iata, r.name);
     setOpen(false);
+    setIsFocused(false);
   };
 
   return (
