@@ -96,8 +96,10 @@ export default function TripDetail() {
     if (!sale) return [];
     const items: TimelineItem[] = [];
 
-    // Flight segments
+    // Flight segments — with full time details
     segments.forEach(seg => {
+      const depTime = seg.departure_time ? formatTimeBR(seg.departure_time) : "";
+      const arrTime = seg.arrival_time ? formatTimeBR(seg.arrival_time) : "";
       items.push({
         date: seg.departure_date || sale.departure_date || "",
         time: seg.departure_time || undefined,
@@ -108,8 +110,10 @@ export default function TripDetail() {
           "Companhia": seg.airline || sale.airline || "—",
           "Voo": seg.flight_number || "—",
           "Classe": seg.flight_class || "—",
-          "Partida": seg.departure_time || "—",
-          "Chegada": seg.arrival_time || "—",
+          "Partida": depTime || "—",
+          "Chegada": arrTime || "—",
+          "Duração": seg.duration_minutes ? `${Math.floor(seg.duration_minutes / 60)}h${seg.duration_minutes % 60 > 0 ? `${seg.duration_minutes % 60}min` : ""}` : "—",
+          "Terminal": seg.terminal || "—",
         },
         status: getFlightStatus(seg),
         reservationCode: sale.locators?.[0] || undefined,
@@ -132,7 +136,6 @@ export default function TripDetail() {
         reservationCode: sale.locators?.[0] || undefined,
         icon: Plane,
       });
-      // Return flight
       if (sale.return_date) {
         items.push({
           date: sale.return_date,
@@ -147,30 +150,52 @@ export default function TripDetail() {
       }
     }
 
-    // Hotel
+    // Hotel — split into Check-in and Check-out entries
     if (sale.hotel_name) {
       items.push({
         date: sale.hotel_checkin_date || sale.departure_date || "",
+        time: "14:00",
         type: "hotel",
-        title: sale.hotel_name,
+        title: `🏨 Check-in: ${sale.hotel_name}`,
         subtitle: `${sale.hotel_city || ""} • ${sale.hotel_room || ""} ${sale.hotel_meal_plan || ""}`.trim(),
         details: {
-          "Check-in": formatDateBR(sale.hotel_checkin_date) || "—",
-          "Check-out": formatDateBR(sale.hotel_checkout_date) || "—",
+          "Horário": "14:00 (padrão)",
           "Quarto": sale.hotel_room || "—",
           "Refeição": sale.hotel_meal_plan || "—",
           "Reserva": sale.hotel_reservation_code || "—",
+          "Endereço": sale.hotel_address || "—",
         },
         status: getLodgingStatus(),
         reservationCode: sale.hotel_reservation_code || undefined,
         icon: Hotel,
       });
+      if (sale.hotel_checkout_date) {
+        items.push({
+          date: sale.hotel_checkout_date,
+          time: "12:00",
+          type: "hotel",
+          title: `🏨 Check-out: ${sale.hotel_name}`,
+          subtitle: `${sale.hotel_city || ""}`,
+          details: {
+            "Horário": "12:00 (padrão)",
+            "Reserva": sale.hotel_reservation_code || "—",
+          },
+          status: getLodgingStatus(),
+          reservationCode: sale.hotel_reservation_code || undefined,
+          icon: Hotel,
+        });
+      }
     }
 
-    // Other products from cost_items
+    // Other products from cost_items — include date/time info
     costItems.filter(ci => ci.category === "outros").forEach(ci => {
       const pType = ci.product_type || "outros";
       const config = TYPE_CONFIG[pType] || TYPE_CONFIG.outros;
+      // Try to extract a meaningful time hint based on product type
+      const timeHint = pType === "transfer" ? "Conforme reserva"
+        : pType === "passeio" ? "Conforme reserva"
+        : pType === "aluguel_carro" ? "Conforme contrato"
+        : "";
       items.push({
         date: ci.created_at?.slice(0, 10) || "",
         type: pType as any,
@@ -179,6 +204,7 @@ export default function TripDetail() {
         details: {
           "Valor": ci.total_item_cost ? fmt(ci.total_item_cost) : "—",
           "Reserva": ci.reservation_code || "—",
+          ...(timeHint ? { "Horário": timeHint } : {}),
         },
         status: "pendente",
         reservationCode: ci.reservation_code || undefined,
