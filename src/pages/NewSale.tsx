@@ -17,6 +17,7 @@ import {
   Check, Upload, Sparkles, Loader2, Plus, Trash2, Plane, Hotel, CreditCard,
   ShoppingBag, Paperclip, Eye, ChevronDown, Camera, Car, Shield, Ticket,
   UtensilsCrossed, MapPin, CalendarDays, Users, FileText, DollarSign, Train,
+  ArrowLeft, ArrowRight, AlertCircle, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,6 +67,7 @@ const PRODUCT_TYPES = [
 ];
 
 const TAB_IDS = ["info", "passageiros", "aereo", "hospedagem", "produtos", "pagamentos", "anexos", "revisao"] as const;
+type TabId = typeof TAB_IDS[number];
 
 /* ─── Component ────────────────────────────────────────── */
 
@@ -305,6 +307,44 @@ export default function NewSale() {
 
   const totalMiles = (parseFloat(form.air_miles_qty) || 0) + (parseFloat(form.hotel_miles_qty) || 0)
     + otherProducts.filter(p => p.emission_type === "milhas").reduce((s, p) => s + (parseFloat(p.miles_qty) || 0), 0);
+
+  // ─── Passenger validation ──────────────────────────
+  const totalPassengersRequired = form.adults + form.children;
+  const passengersValid = selectedPassengers.length === totalPassengersRequired;
+
+  // ─── Tab navigation ────────────────────────────────
+  const currentTabIndex = TAB_IDS.indexOf(activeTab as TabId);
+  const canAdvanceFromPassengers = passengersValid;
+
+  const goNext = () => {
+    if (activeTab === "passageiros" && !canAdvanceFromPassengers) {
+      toast({
+        title: "Passageiros pendentes",
+        description: `Esta venda possui ${totalPassengersRequired} passageiro(s), mas apenas ${selectedPassengers.length} foram vinculados.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    const next = currentTabIndex + 1;
+    if (next < TAB_IDS.length) setActiveTab(TAB_IDS[next]);
+  };
+  const goPrev = () => {
+    const prev = currentTabIndex - 1;
+    if (prev >= 0) setActiveTab(TAB_IDS[prev]);
+  };
+
+  const StepNavigation = ({ hideNext }: { hideNext?: boolean }) => (
+    <div className="flex items-center justify-between mt-6 pt-4 border-t">
+      <Button variant="outline" onClick={goPrev} disabled={currentTabIndex === 0}>
+        <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
+      </Button>
+      {!hideNext && (
+        <Button onClick={goNext} disabled={currentTabIndex === TAB_IDS.length - 1}>
+          Avançar <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
+      )}
+    </div>
+  );
 
   // ─── Save ───────────────────────────────────────────
   const handleSave = async () => {
@@ -619,6 +659,7 @@ export default function NewSale() {
                 <Textarea value={form.observations} onChange={(e) => updateForm("observations", e.target.value)} rows={3} placeholder="Detalhes adicionais, preferências do cliente..." />
               </div>
             </div>
+            <StepNavigation />
           </Card>
         </TabsContent>
 
@@ -626,7 +667,9 @@ export default function NewSale() {
         <TabsContent value="passageiros">
           <Card className="p-6">
             <SectionTitle icon={Users} title="Passageiros" subtitle="Adicione os viajantes desta venda" />
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            
+            {/* Bloco 1 — Quantidade */}
+            <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="space-y-2">
                 <Label>Adultos (18+)</Label>
                 <Input type="number" min={1} value={form.adults} onChange={(e) => updateForm("adults", parseInt(e.target.value) || 1)} />
@@ -640,9 +683,33 @@ export default function NewSale() {
                 <Input value={form.children_ages} onChange={(e) => updateForm("children_ages", e.target.value)} placeholder="3, 8" />
               </div>
             </div>
+
+            {/* Bloco 3 — Validação visual */}
+            <div className={cn(
+              "rounded-lg px-4 py-3 mb-5 flex items-center gap-3 text-sm font-medium border",
+              passengersValid
+                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
+                : "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400"
+            )}>
+              {passengersValid ? (
+                <CheckCircle2 className="w-5 h-5 shrink-0" />
+              ) : (
+                <AlertCircle className="w-5 h-5 shrink-0" />
+              )}
+              <span>
+                Passageiros selecionados: <strong>{selectedPassengers.length}</strong> de <strong>{totalPassengersRequired}</strong>
+                {passengersValid
+                  ? " — ✅ Todos os passageiros obrigatórios foram vinculados"
+                  : ` — Selecione ${totalPassengersRequired - selectedPassengers.length} passageiro(s) para continuar`}
+              </span>
+            </div>
+
+            {/* Bloco 2 — Seleção */}
             <div className="border-t pt-5">
               <PassengerSelector selected={selectedPassengers} onChange={setSelectedPassengers} />
             </div>
+
+            <StepNavigation />
           </Card>
         </TabsContent>
 
@@ -781,6 +848,7 @@ export default function NewSale() {
                 )}
               </div>
             </Card>
+            <StepNavigation />
           </div>
         </TabsContent>
 
@@ -873,6 +941,7 @@ export default function NewSale() {
                 )}
               </div>
             </Card>
+            <StepNavigation />
           </div>
         </TabsContent>
 
@@ -939,6 +1008,7 @@ export default function NewSale() {
             {otherProducts.length > 0 && (
               <Button variant="outline" onClick={addProduct} className="w-full mt-4"><Plus className="w-4 h-4 mr-2" /> Adicionar Outro Produto</Button>
             )}
+            <StepNavigation />
           </Card>
         </TabsContent>
 
@@ -1001,6 +1071,7 @@ export default function NewSale() {
                 </div>
               </Card>
             </div>
+            <StepNavigation />
           </Card>
         </TabsContent>
 
@@ -1078,6 +1149,7 @@ export default function NewSale() {
                 <p className="text-xs text-muted-foreground">✅ Campos preenchidos automaticamente nas abas correspondentes. Revise antes de salvar.</p>
               </Card>
             )}
+            <StepNavigation />
           </Card>
         </TabsContent>
 
@@ -1182,9 +1254,14 @@ export default function NewSale() {
                 </div>
               </Card>
 
-              <Button data-testid="btn-save-sale" className="w-full" size="lg" onClick={handleSave} disabled={saving}>
-                {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...</> : <><Check className="w-4 h-4 mr-2" /> Confirmar e Salvar Venda</>}
-              </Button>
+              <div className="flex items-center gap-3 mt-6 pt-4 border-t">
+                <Button variant="outline" onClick={goPrev}>
+                  <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
+                </Button>
+                <Button data-testid="btn-save-sale" className="flex-1" size="lg" onClick={handleSave} disabled={saving}>
+                  {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...</> : <><Check className="w-4 h-4 mr-2" /> Confirmar e Salvar Venda</>}
+                </Button>
+              </div>
             </div>
           </Card>
         </TabsContent>
