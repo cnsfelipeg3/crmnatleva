@@ -561,6 +561,8 @@ export default function TripAlterations() {
                       {saleCostItems.map((ci: any) => {
                         const isSelected = form.cost_item_id === ci.id;
                         const PIcon = PRODUCT_TYPES.find(p => p.value === ci.category)?.icon || FileText;
+                        const supplierName = ci.suppliers?.name;
+                        const segments = ci.category === "aereo" ? saleFlightSegments : [];
                         return (
                           <button key={ci.id} onClick={() => setForm(f => ({ ...f, cost_item_id: ci.id }))}
                             className={`text-left border rounded-lg p-3 transition-all ${isSelected ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-muted/50"}`}>
@@ -569,7 +571,41 @@ export default function TripAlterations() {
                               <span className="text-xs font-semibold text-foreground">{ci.category} — {ci.description || "Sem descrição"}</span>
                               <span className="ml-auto text-xs font-bold text-foreground">{fmt(ci.total_item_cost || 0)}</span>
                             </div>
-                            {(ci as any).suppliers?.name && <p className="text-[10px] text-muted-foreground mt-1">Fornecedor: {(ci as any).suppliers.name}</p>}
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
+                              {supplierName && (
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                  <Building2 className="w-3 h-3" /> Fornecedor: <strong className="text-foreground">{supplierName}</strong>
+                                </span>
+                              )}
+                              {ci.emission_source && (
+                                <span className="text-[10px] text-muted-foreground">Emissão: <strong className="text-foreground">{ci.emission_source}</strong></span>
+                              )}
+                              {ci.reservation_code && (
+                                <span className="text-[10px] text-muted-foreground">Localizador: <strong className="font-mono text-foreground">{ci.reservation_code}</strong></span>
+                              )}
+                              {ci.miles_quantity > 0 && (
+                                <span className="text-[10px] text-muted-foreground">Milhas: <strong className="text-foreground">{ci.miles_quantity?.toLocaleString()} ({ci.miles_program || "—"})</strong></span>
+                              )}
+                              {ci.cash_value > 0 && (
+                                <span className="text-[10px] text-muted-foreground">Cash: <strong className="text-foreground">{fmt(ci.cash_value)}</strong></span>
+                              )}
+                              {ci.taxes > 0 && (
+                                <span className="text-[10px] text-muted-foreground">Taxas: <strong className="text-foreground">{fmt(ci.taxes)}</strong></span>
+                              )}
+                            </div>
+                            {segments.length > 0 && isSelected && (
+                              <div className="mt-2 pt-2 border-t space-y-1">
+                                {segments.map((seg: any) => (
+                                  <div key={seg.id} className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                    <Plane className="w-3 h-3" />
+                                    <span className="font-mono font-bold text-foreground">{seg.flight_number || "—"}</span>
+                                    <span>{seg.origin_iata} → {seg.destination_iata}</span>
+                                    {seg.departure_date && <span>{new Date(seg.departure_date + "T00:00:00").toLocaleDateString("pt-BR")}</span>}
+                                    {seg.airline && <span>({seg.airline})</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </button>
                         );
                       })}
