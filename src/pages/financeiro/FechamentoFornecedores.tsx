@@ -57,6 +57,8 @@ export default function FechamentoFornecedores() {
   const [search, setSearch] = useState("");
   const [filterSupplier, setFilterSupplier] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
   const [detailId, setDetailId] = useState<string | null>(null);
   const [payDialog, setPayDialog] = useState<string | null>(null);
   const [invoiceDialog, setInvoiceDialog] = useState<string | null>(null);
