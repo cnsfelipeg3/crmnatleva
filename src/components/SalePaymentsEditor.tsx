@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, CreditCard, Banknote, Wallet, ArrowRight, AlertCircle } from "lucide-react";
+import { Plus, Trash2, CreditCard, Banknote, Wallet, AlertCircle, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 export interface SalePayment {
@@ -22,6 +21,8 @@ export interface SalePayment {
   net_value: number;
   receiving_account_id: string;
   payment_date: string;
+  due_date: string;
+  status: "pago" | "a_receber" | "vencido";
   notes: string;
 }
 
@@ -31,6 +32,7 @@ const PAYMENT_METHODS = [
   { value: "transferencia", label: "Transferência Bancária", icon: Banknote },
   { value: "ted", label: "TED", icon: Banknote },
   { value: "deposito", label: "Depósito", icon: Banknote },
+  { value: "boleto", label: "Boleto", icon: Banknote },
   { value: "dinheiro", label: "Dinheiro", icon: Banknote },
   { value: "cripto", label: "Criptomoeda", icon: Wallet },
   { value: "outro", label: "Outro", icon: Wallet },
@@ -39,6 +41,12 @@ const PAYMENT_METHODS = [
 const CARD_METHODS = ["cartao_credito", "cartao_debito"];
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const STATUS_CONFIG = {
+  pago: { label: "Pago", color: "bg-emerald-500/10 text-emerald-700 border-emerald-200", icon: CheckCircle2 },
+  a_receber: { label: "A receber", color: "bg-amber-500/10 text-amber-700 border-amber-200", icon: Clock },
+  vencido: { label: "Vencido", color: "bg-destructive/10 text-destructive border-destructive/20", icon: AlertTriangle },
+};
 
 interface Props {
   payments: SalePayment[];
@@ -68,6 +76,14 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
     return [...unique] as string[];
   }, [feeRules]);
 
+  const today = new Date().toISOString().slice(0, 10);
+
+  const resolveStatus = (p: { status: string; due_date?: string; payment_date?: string }): "pago" | "a_receber" | "vencido" => {
+    if (p.status === "pago") return "pago";
+    if (p.due_date && p.due_date < today) return "vencido";
+    return "a_receber";
+  };
+
   const addPayment = () => {
     onChange([...payments, {
       id: crypto.randomUUID(),
@@ -80,7 +96,9 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
       fee_total: 0,
       net_value: 0,
       receiving_account_id: "",
-      payment_date: new Date().toISOString().slice(0, 10),
+      payment_date: today,
+      due_date: "",
+      status: "pago",
       notes: "",
     }]);
   };
@@ -127,6 +145,13 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
         updated.installments = 1;
       }
 
+      // Auto-set status based on due_date
+      if (field === "status") {
+        // manual override
+      } else if (field === "due_date" && value) {
+        updated.status = value <= today ? "pago" : "a_receber";
+      }
+
       return updated;
     }));
   };
@@ -134,6 +159,9 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
   const totalGross = payments.reduce((s, p) => s + p.gross_value, 0);
   const totalFees = payments.reduce((s, p) => s + p.fee_total, 0);
   const totalNet = payments.reduce((s, p) => s + p.net_value, 0);
+  const totalPaid = payments.filter(p => resolveStatus(p) === "pago").reduce((s, p) => s + p.gross_value, 0);
+  const totalPending = payments.filter(p => resolveStatus(p) !== "pago").reduce((s, p) => s + p.gross_value, 0);
+  const totalOverdue = payments.filter(p => resolveStatus(p) === "vencido").reduce((s, p) => s + p.gross_value, 0);
   const remaining = totalSaleValue - totalGross;
 
   const getMaxInstallments = (gateway: string) => {
@@ -156,6 +184,9 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
         const isCard = CARD_METHODS.includes(payment.payment_method);
         const methodConfig = PAYMENT_METHODS.find(m => m.value === payment.payment_method);
         const Icon = methodConfig?.icon || Wallet;
+        const currentStatus = resolveStatus(payment);
+        const statusCfg = STATUS_CONFIG[currentStatus];
+        const StatusIcon = statusCfg.icon;
 
         return (
           <Card key={payment.id} className="p-4 space-y-4 border-border/60">
@@ -166,14 +197,18 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
                   <Icon className="w-4 h-4 text-primary" />
                 </div>
                 <span className="text-sm font-semibold">Pagamento {idx + 1}</span>
+                <Badge variant="outline" className={`text-[10px] gap-1 ${statusCfg.color}`}>
+                  <StatusIcon className="w-3 h-3" />
+                  {statusCfg.label}
+                </Badge>
               </div>
               <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removePayment(payment.id)}>
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
             </div>
 
-            {/* Method + Value */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Method + Value + Status */}
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Forma de pagamento</Label>
                 <Select value={payment.payment_method} onValueChange={v => updatePayment(payment.id, "payment_method", v)}>
@@ -186,12 +221,22 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Valor pago pelo cliente (R$)</Label>
+                <Label className="text-xs">Valor (R$)</Label>
                 <Input
                   type="number" step="0.01" className="h-9"
                   value={payment.gross_value || ""}
                   onChange={e => updatePayment(payment.id, "gross_value", parseFloat(e.target.value) || 0)}
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Status</Label>
+                <Select value={payment.status} onValueChange={v => updatePayment(payment.id, "status", v)}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pago">Pago</SelectItem>
+                    <SelectItem value="a_receber">A receber</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -269,11 +314,15 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
               </div>
             )}
 
-            {/* Date + Notes */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* Date fields */}
+            <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Data do pagamento</Label>
                 <Input type="date" className="h-9" value={payment.payment_date} onChange={e => updatePayment(payment.id, "payment_date", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Data de vencimento</Label>
+                <Input type="date" className="h-9" value={payment.due_date || ""} onChange={e => updatePayment(payment.id, "due_date", e.target.value)} />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Observações</Label>
@@ -290,20 +339,43 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
 
       {/* Summary */}
       {payments.length > 0 && (
-        <Card className="p-4 bg-primary/5 border-primary/20 space-y-2">
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Resumo dos Pagamentos</h4>
+        <Card className="p-4 bg-primary/5 border-primary/20 space-y-3">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Resumo Financeiro</h4>
           <div className="grid grid-cols-2 gap-1 text-sm">
-            <span className="text-muted-foreground">Total pago (bruto)</span>
+            <span className="text-muted-foreground">Total da venda</span>
+            <span className="font-bold text-right">{fmt(totalSaleValue)}</span>
+
+            <span className="text-muted-foreground">Total registrado (bruto)</span>
             <span className="font-bold text-right">{fmt(totalGross)}</span>
+
             {totalFees > 0 && (
               <>
                 <span className="text-muted-foreground">Total taxas</span>
                 <span className="font-medium text-right text-destructive">- {fmt(totalFees)}</span>
               </>
             )}
+
             <span className="text-muted-foreground">Total líquido</span>
             <span className="font-bold text-right text-primary">{fmt(totalNet)}</span>
           </div>
+
+          <div className="border-t border-border pt-2 grid grid-cols-3 gap-2 text-center">
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase">Recebido</p>
+              <p className="text-sm font-bold text-emerald-600">{fmt(totalPaid)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase">A receber</p>
+              <p className="text-sm font-bold text-amber-600">{fmt(totalPending)}</p>
+            </div>
+            {totalOverdue > 0 && (
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase">Vencido</p>
+                <p className="text-sm font-bold text-destructive">{fmt(totalOverdue)}</p>
+              </div>
+            )}
+          </div>
+
           {totalSaleValue > 0 && remaining !== 0 && (
             <div className="flex items-center gap-2 pt-2 border-t">
               <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
