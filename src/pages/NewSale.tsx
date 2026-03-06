@@ -717,86 +717,18 @@ export default function NewSale() {
         {/* ═══════════════ 3. AÉREO ═══════════════ */}
         <TabsContent value="aereo">
           <div className="space-y-4">
-            <Card className="p-6">
-              <SectionTitle icon={Plane} title="Aéreo" subtitle="Dados do voo e segmentos" />
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="space-y-2"><Label>Origem</Label><AirportAutocomplete value={form.origin_iata} onChange={(iata) => updateForm("origin_iata", iata)} placeholder="GRU" /></div>
-                <div className="space-y-2"><Label>Destino</Label><AirportAutocomplete value={form.destination_iata} onChange={(iata) => updateForm("destination_iata", iata)} placeholder="FCO" /></div>
-                <div className="space-y-2"><Label>Data Ida</Label><Input type="date" value={form.departure_date} onChange={(e) => updateForm("departure_date", e.target.value)} /></div>
-                <div className="space-y-2"><Label>Data Volta</Label><Input type="date" value={form.return_date} onChange={(e) => updateForm("return_date", e.target.value)} /></div>
-                <div className="space-y-2"><Label>Companhia Aérea</Label><AirlineAutocomplete value={form.airline} onChange={(iata) => updateForm("airline", iata)} /></div>
-                <div className="space-y-2"><Label>Classe</Label>
-                  <Select value={form.flight_class} onValueChange={(v) => updateForm("flight_class", v)}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Econômica">Econômica</SelectItem>
-                      <SelectItem value="Premium Economy">Premium Economy</SelectItem>
-                      <SelectItem value="Executiva">Executiva</SelectItem>
-                      <SelectItem value="Primeira">Primeira</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2"><Label>Localizador</Label><Input value={form.locator} onChange={(e) => updateForm("locator", e.target.value.toUpperCase())} className="font-mono" /></div>
-                <div className="space-y-2"><Label>Conexões</Label><Input value={form.connections} onChange={(e) => updateForm("connections", e.target.value.toUpperCase())} placeholder="LIS, MAD" /></div>
-              </div>
-
-              {/* Segments */}
-              <Collapsible defaultOpen>
-                <CollapsibleTrigger className="flex items-center justify-between w-full py-3 border-t">
-                  <span className="text-sm font-semibold flex items-center gap-2"><Plane className="w-4 h-4" /> Segmentos de Voo</span>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-4 pt-3">
-                  {form.origin_iata && form.destination_iata && form.departure_date && (
-                    <Button variant="outline" onClick={() => setEnrichmentOpen(true)} className="w-full" size="sm">
-                      <Plane className="w-4 h-4 mr-2" /> Enriquecer com Amadeus
-                    </Button>
-                  )}
-                  <FlightEnrichmentDialog open={enrichmentOpen} onOpenChange={setEnrichmentOpen}
-                    origin={form.origin_iata} destination={form.destination_iata}
-                    departureDate={form.departure_date} returnDate={form.return_date}
-                    airline={form.airline} currentSegments={segments}
-                    onApply={(newSegs) => setSegments(newSegs)} />
-
-                  {segments.filter(s => s.origin_iata && s.destination_iata).length > 0 && (
-                    <Card className="p-4 bg-muted/30"><FlightTimeline segments={segments} showAll /></Card>
-                  )}
-
-                  {(["ida", "volta"] as const).map((dir) => (
-                    <div key={dir} className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold capitalize flex items-center gap-2">
-                          <Plane className={cn("w-4 h-4", dir === "volta" && "rotate-180")} /> {dir}
-                        </h3>
-                        <Button variant="outline" size="sm" onClick={() => addSegment(dir)}>
-                          <Plus className="w-3 h-3 mr-1" /> Segmento
-                        </Button>
-                      </div>
-                      {segments.map((seg, i) => seg.direction !== dir ? null : (
-                        <Card key={i} className="p-4 space-y-3 bg-muted/20">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-semibold text-muted-foreground">Segmento {seg.segment_order}</span>
-                            {segments.filter(s => s.direction === dir).length > 1 && (
-                              <Button variant="ghost" size="sm" onClick={() => removeSegment(i)}><Trash2 className="w-3 h-3 text-destructive" /></Button>
-                            )}
-                          </div>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                            <div className="space-y-1"><Label className="text-xs">Origem</Label><Input value={seg.origin_iata} onChange={(e) => updateSegment(i, "origin_iata", e.target.value.toUpperCase())} maxLength={3} className="font-mono" /></div>
-                            <div className="space-y-1"><Label className="text-xs">Destino</Label><Input value={seg.destination_iata} onChange={(e) => updateSegment(i, "destination_iata", e.target.value.toUpperCase())} maxLength={3} className="font-mono" /></div>
-                            <div className="space-y-1"><Label className="text-xs">Companhia</Label><Input value={seg.airline} onChange={(e) => updateSegment(i, "airline", e.target.value)} /></div>
-                            <div className="space-y-1"><Label className="text-xs">Nº Voo</Label><Input value={seg.flight_number} onChange={(e) => updateSegment(i, "flight_number", e.target.value)} /></div>
-                            <div className="space-y-1"><Label className="text-xs">Data</Label><Input type="date" value={seg.departure_date} onChange={(e) => updateSegment(i, "departure_date", e.target.value)} /></div>
-                            <div className="space-y-1"><Label className="text-xs">Partida</Label><Input type="time" value={seg.departure_time} onChange={(e) => updateSegment(i, "departure_time", e.target.value)} /></div>
-                            <div className="space-y-1"><Label className="text-xs">Chegada</Label><Input type="time" value={seg.arrival_time} onChange={(e) => updateSegment(i, "arrival_time", e.target.value)} /></div>
-                            <div className="space-y-1"><Label className="text-xs">Classe</Label><Input value={seg.flight_class} onChange={(e) => updateSegment(i, "flight_class", e.target.value)} /></div>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  ))}
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
+            <FlightRegistrationSection
+              segments={segments}
+              onSegmentsChange={setSegments}
+              formOrigin={form.origin_iata}
+              formDestination={form.destination_iata}
+              formDepartureDate={form.departure_date}
+              formReturnDate={form.return_date}
+              formAirline={form.airline}
+              formLocator={form.locator}
+              formFlightClass={form.flight_class}
+              onFormChange={updateForm}
+            />
 
             {/* Air Cost */}
             <Card className="p-6">
