@@ -540,13 +540,25 @@ export default function TripAlterations() {
                 </div>
               )}
               {form.sale_id && selectedSale && (
-                <Card className="p-3 bg-primary/5 border-primary/20 flex items-center justify-between">
-                  <div className="text-xs">
-                    <span className="font-mono font-bold text-primary">{selectedSale.display_id}</span>
-                    <span className="ml-2 font-semibold text-foreground">{selectedSale.name}</span>
-                    {selectedSale.clients?.display_name && <span className="ml-2 text-muted-foreground">({selectedSale.clients.display_name})</span>}
+                <Card className="p-3 bg-primary/5 border-primary/20">
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs">
+                      <span className="font-mono font-bold text-primary">{selectedSale.display_id}</span>
+                      <span className="ml-2 font-semibold text-foreground">{selectedSale.name}</span>
+                      {selectedSale.clients?.display_name && <span className="ml-2 text-muted-foreground">({selectedSale.clients.display_name})</span>}
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-[10px] h-7" onClick={() => { setForm(f => ({ ...f, sale_id: "", cost_item_id: "", affected_passengers: [] })); setSaleSearch(""); }}>Trocar</Button>
                   </div>
-                  <Button variant="ghost" size="sm" className="text-[10px] h-7" onClick={() => { setForm(f => ({ ...f, sale_id: "", cost_item_id: "", affected_passengers: [] })); setSaleSearch(""); }}>Trocar</Button>
+                  <div className="flex flex-wrap gap-4 mt-2 text-[10px] text-muted-foreground">
+                    {selectedSale.received_value > 0 && <span>Receita: <strong className="text-foreground">{fmt(selectedSale.received_value)}</strong></span>}
+                    {selectedSale.total_cost > 0 && <span>Custo: <strong className="text-foreground">{fmt(selectedSale.total_cost)}</strong></span>}
+                    {selectedSale.received_value > 0 && selectedSale.total_cost > 0 && (
+                      <span>Lucro: <strong className={`${(selectedSale.received_value - selectedSale.total_cost) >= 0 ? "text-emerald-600" : "text-destructive"}`}>
+                        {fmt(selectedSale.received_value - selectedSale.total_cost)}
+                      </strong></span>
+                    )}
+                    {selectedSale.origin_iata && selectedSale.destination_iata && <span>{selectedSale.origin_iata} → {selectedSale.destination_iata}</span>}
+                  </div>
                 </Card>
               )}
             </div>
