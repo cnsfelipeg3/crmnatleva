@@ -2774,6 +2774,163 @@ export type Database = {
           },
         ]
       }
+      supplier_settlement_items: {
+        Row: {
+          card_installments: number | null
+          card_invoice_date: string | null
+          client_name: string | null
+          cost_item_id: string | null
+          created_at: string
+          credit_card_id: string | null
+          emission_date: string
+          emission_source: string | null
+          emission_value: number
+          id: string
+          miles_price_per_thousand: number | null
+          miles_program: string | null
+          miles_quantity: number | null
+          notes: string | null
+          product_description: string | null
+          sale_id: string | null
+          settlement_id: string
+        }
+        Insert: {
+          card_installments?: number | null
+          card_invoice_date?: string | null
+          client_name?: string | null
+          cost_item_id?: string | null
+          created_at?: string
+          credit_card_id?: string | null
+          emission_date?: string
+          emission_source?: string | null
+          emission_value?: number
+          id?: string
+          miles_price_per_thousand?: number | null
+          miles_program?: string | null
+          miles_quantity?: number | null
+          notes?: string | null
+          product_description?: string | null
+          sale_id?: string | null
+          settlement_id: string
+        }
+        Update: {
+          card_installments?: number | null
+          card_invoice_date?: string | null
+          client_name?: string | null
+          cost_item_id?: string | null
+          created_at?: string
+          credit_card_id?: string | null
+          emission_date?: string
+          emission_source?: string | null
+          emission_value?: number
+          id?: string
+          miles_price_per_thousand?: number | null
+          miles_program?: string | null
+          miles_quantity?: number | null
+          notes?: string | null
+          product_description?: string | null
+          sale_id?: string | null
+          settlement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_settlement_items_cost_item_id_fkey"
+            columns: ["cost_item_id"]
+            isOneToOne: false
+            referencedRelation: "cost_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_settlement_items_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_settlement_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_settlement_items_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_settlements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          difference_value: number | null
+          emission_count: number
+          id: string
+          notes: string | null
+          payment_account: string | null
+          payment_date: string | null
+          payment_due_date: string
+          payment_method: string | null
+          period_end: string
+          period_start: string
+          status: string
+          supplier_id: string | null
+          supplier_invoice_value: number | null
+          total_value: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          difference_value?: number | null
+          emission_count?: number
+          id?: string
+          notes?: string | null
+          payment_account?: string | null
+          payment_date?: string | null
+          payment_due_date: string
+          payment_method?: string | null
+          period_end: string
+          period_start: string
+          status?: string
+          supplier_id?: string | null
+          supplier_invoice_value?: number | null
+          total_value?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          difference_value?: number | null
+          emission_count?: number
+          id?: string
+          notes?: string | null
+          payment_account?: string | null
+          payment_date?: string | null
+          payment_due_date?: string
+          payment_method?: string | null
+          period_end?: string
+          period_start?: string
+          status?: string
+          supplier_id?: string | null
+          supplier_invoice_value?: number | null
+          total_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_settlements_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           bank_account: string | null
