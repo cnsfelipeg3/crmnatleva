@@ -321,93 +321,158 @@ export default function TripDetail() {
       )}
 
       {/* Chronological Journey Timeline */}
-      <Card className="p-5">
-        <h3 className="text-sm font-semibold flex items-center gap-2 mb-4">
-          <Clock className="w-4 h-4 text-primary" /> Jornada Completa
-          <Badge variant="outline" className="text-[10px] ml-auto">{timeline.length} itens</Badge>
-        </h3>
+      <Card className="p-5 overflow-hidden">
+        {(() => {
+          const today = new Date().toISOString().slice(0, 10);
+          const pastCount = timeline.filter(item => {
+            if (!item.date) return false;
+            return item.date < today || item.status === "concluido";
+          }).length;
+          const progressPercent = timeline.length > 0 ? Math.round((pastCount / timeline.length) * 100) : 0;
+          const currentIdx = timeline.findIndex(item => item.date && item.date >= today && item.status !== "concluido");
 
-        <div className="relative">
-          {/* Vertical line */}
-          <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
+          return (
+            <>
+              <div className="flex items-center gap-3 mb-5">
+                <Clock className="w-4 h-4 text-primary" />
+                <h3 className="text-sm font-semibold">Jornada Completa</h3>
+                <Badge variant="outline" className="text-[10px]">{timeline.length} itens</Badge>
+                <div className="ml-auto flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">{pastCount} de {timeline.length} concluídos</span>
+                  <span className="text-sm font-bold text-primary">{progressPercent}%</span>
+                </div>
+              </div>
 
-          <div className="space-y-4">
-            {timeline.map((item, i) => {
-              const config = TYPE_CONFIG[item.type] || TYPE_CONFIG.outros;
-              const Icon = config.icon;
-              const statusClass = STATUS_BADGE[item.status] || STATUS_BADGE.pendente;
-              const prevDate = i > 0 ? timeline[i - 1].date : null;
-              const showDateHeader = item.date && item.date !== prevDate;
+              {/* Progress bar */}
+              <div className="relative h-2 rounded-full bg-muted mb-6 overflow-hidden">
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-700 ease-out"
+                  style={{
+                    width: `${progressPercent}%`,
+                    background: `linear-gradient(90deg, hsl(var(--primary) / 0.6), hsl(var(--primary)))`,
+                    boxShadow: `0 0 12px hsl(var(--primary) / 0.4)`,
+                  }}
+                />
+                {progressPercent > 0 && progressPercent < 100 && (
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 border-primary bg-card z-10 animate-pulse"
+                    style={{ left: `calc(${progressPercent}% - 7px)` }}
+                  />
+                )}
+              </div>
 
-              return (
-                <div key={i}>
-                  {showDateHeader && (
-                    <div className="flex items-center gap-3 mb-2 ml-12">
-                      <Calendar className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        {formatDateBR(item.date)}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex gap-3 relative">
-                    {/* Dot */}
-                    <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center z-10 bg-card border ${
-                      item.status === "concluido" ? "border-green-500/40" :
-                      item.status === "confirmado" ? "border-green-500/30" :
-                      "border-border"
-                    }`}>
-                      <Icon className={`w-4 h-4 ${config.color}`} />
-                    </div>
+              {/* Dot legend */}
+              <div className="flex items-center gap-4 mb-4 text-[10px] text-muted-foreground">
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-muted-foreground/40" /> Concluído</span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-primary animate-pulse" /> Atual</span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-primary/70" /> Por vir</span>
+              </div>
 
-                    {/* Content */}
-                    <div className="flex-1 bg-muted/20 rounded-xl p-4 border border-border/50 hover:border-border transition-colors">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                          {item.subtitle && <p className="text-xs text-muted-foreground">{item.subtitle}</p>}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {item.reservationCode && (
-                            <button
-                              onClick={() => copyToClipboard(item.reservationCode!)}
-                              className="flex items-center gap-1 bg-muted/50 rounded px-2 py-0.5 text-[10px] font-mono hover:bg-muted transition-colors"
-                            >
-                              {item.reservationCode}
-                              <Copy className="w-2.5 h-2.5" />
-                            </button>
-                          )}
-                          <Badge variant="outline" className={`text-[9px] ${statusClass}`}>
-                            {item.status === "concluido" ? "Concluído" :
-                             item.status === "confirmado" ? "Confirmado" :
-                             item.status === "cancelado" ? "Cancelado" : "Pendente"}
-                          </Badge>
+              <div className="relative">
+                {/* Vertical line */}
+                <div className="absolute left-5 top-0 bottom-0 w-px bg-border" />
+
+                <div className="space-y-4">
+                  {timeline.map((item, i) => {
+                    const config = TYPE_CONFIG[item.type] || TYPE_CONFIG.outros;
+                    const Icon = config.icon;
+                    const prevDate = i > 0 ? timeline[i - 1].date : null;
+                    const showDateHeader = item.date && item.date !== prevDate;
+
+                    const isPast = (item.date && item.date < today) || item.status === "concluido";
+                    const isCurrent = i === currentIdx;
+                    const isFuture = !isPast && !isCurrent;
+
+                    return (
+                      <div key={i} className={isPast ? "opacity-50" : ""}>
+                        {showDateHeader && (
+                          <div className="flex items-center gap-3 mb-2 ml-12">
+                            <Calendar className="w-3 h-3 text-muted-foreground" />
+                            <span className={`text-xs font-semibold uppercase tracking-wider ${isPast ? "text-muted-foreground/60" : isCurrent ? "text-primary" : "text-muted-foreground"}`}>
+                              {formatDateBR(item.date)}
+                              {isCurrent && <span className="ml-2 text-primary normal-case tracking-normal">← Hoje</span>}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex gap-3 relative">
+                          {/* Dot */}
+                          <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center z-10 transition-all duration-300 ${
+                            isPast
+                              ? "bg-muted border border-border"
+                              : isCurrent
+                                ? "bg-primary/20 border-2 border-primary shadow-[0_0_12px_hsl(var(--primary)/0.35)] animate-pulse"
+                                : "bg-card border border-primary/40"
+                          }`}>
+                            <Icon className={`w-4 h-4 ${
+                              isPast ? "text-muted-foreground/60" : isCurrent ? "text-primary" : config.color
+                            }`} />
+                          </div>
+
+                          {/* Content */}
+                          <div className={`flex-1 rounded-xl p-4 border transition-all duration-300 ${
+                            isPast
+                              ? "bg-muted/10 border-border/30"
+                              : isCurrent
+                                ? "bg-primary/5 border-primary/30 shadow-[0_0_20px_hsl(var(--primary)/0.1)]"
+                                : "bg-muted/20 border-border/50 hover:border-primary/30"
+                          }`}>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div>
+                                <p className={`text-sm font-semibold ${isPast ? "text-muted-foreground line-through decoration-muted-foreground/30" : "text-foreground"}`}>{item.title}</p>
+                                {item.subtitle && <p className="text-xs text-muted-foreground">{item.subtitle}</p>}
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {item.reservationCode && (
+                                  <button
+                                    onClick={() => copyToClipboard(item.reservationCode!)}
+                                    className="flex items-center gap-1 bg-muted/50 rounded px-2 py-0.5 text-[10px] font-mono hover:bg-muted transition-colors"
+                                  >
+                                    {item.reservationCode}
+                                    <Copy className="w-2.5 h-2.5" />
+                                  </button>
+                                )}
+                                <Badge variant="outline" className={`text-[9px] ${
+                                  isPast
+                                    ? "bg-muted text-muted-foreground border-border"
+                                    : isCurrent
+                                      ? "bg-primary/20 text-primary border-primary/40"
+                                      : STATUS_BADGE[item.status] || STATUS_BADGE.pendente
+                                }`}>
+                                  {isPast ? "✓ Concluído" :
+                                   isCurrent ? "▶ Em andamento" :
+                                   item.status === "confirmado" ? "Confirmado" :
+                                   item.status === "cancelado" ? "Cancelado" : "Pendente"}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            {Object.keys(item.details).length > 0 && !isPast && (
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 text-xs">
+                                {Object.entries(item.details).map(([k, v]) => v && v !== "—" && (
+                                  <div key={k}>
+                                    <span className="text-muted-foreground">{k}: </span>
+                                    <span className="font-medium">{v}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
+                    );
+                  })}
 
-                      {Object.keys(item.details).length > 0 && (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 text-xs">
-                          {Object.entries(item.details).map(([k, v]) => v && v !== "—" && (
-                            <div key={k}>
-                              <span className="text-muted-foreground">{k}: </span>
-                              <span className="font-medium">{v}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                  {timeline.length === 0 && (
+                    <div className="text-center py-10 text-muted-foreground">
+                      <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Nenhum item registrado na jornada</p>
                     </div>
-                  </div>
+                  )}
                 </div>
-              );
-            })}
-
-            {timeline.length === 0 && (
-              <div className="text-center py-10 text-muted-foreground">
-                <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Nenhum item registrado na jornada</p>
               </div>
-            )}
-          </div>
-        </div>
+            </>
+          );
+        })()}
       </Card>
 
       {/* Operational Status */}
