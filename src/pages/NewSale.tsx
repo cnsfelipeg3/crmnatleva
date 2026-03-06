@@ -667,7 +667,9 @@ export default function NewSale() {
         <TabsContent value="passageiros">
           <Card className="p-6">
             <SectionTitle icon={Users} title="Passageiros" subtitle="Adicione os viajantes desta venda" />
-            <div className="grid grid-cols-3 gap-4 mb-6">
+            
+            {/* Bloco 1 — Quantidade */}
+            <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="space-y-2">
                 <Label>Adultos (18+)</Label>
                 <Input type="number" min={1} value={form.adults} onChange={(e) => updateForm("adults", parseInt(e.target.value) || 1)} />
@@ -681,9 +683,33 @@ export default function NewSale() {
                 <Input value={form.children_ages} onChange={(e) => updateForm("children_ages", e.target.value)} placeholder="3, 8" />
               </div>
             </div>
+
+            {/* Bloco 3 — Validação visual */}
+            <div className={cn(
+              "rounded-lg px-4 py-3 mb-5 flex items-center gap-3 text-sm font-medium border",
+              passengersValid
+                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
+                : "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400"
+            )}>
+              {passengersValid ? (
+                <CheckCircle2 className="w-5 h-5 shrink-0" />
+              ) : (
+                <AlertCircle className="w-5 h-5 shrink-0" />
+              )}
+              <span>
+                Passageiros selecionados: <strong>{selectedPassengers.length}</strong> de <strong>{totalPassengersRequired}</strong>
+                {passengersValid
+                  ? " — ✅ Todos os passageiros obrigatórios foram vinculados"
+                  : ` — Selecione ${totalPassengersRequired - selectedPassengers.length} passageiro(s) para continuar`}
+              </span>
+            </div>
+
+            {/* Bloco 2 — Seleção */}
             <div className="border-t pt-5">
               <PassengerSelector selected={selectedPassengers} onChange={setSelectedPassengers} />
             </div>
+
+            <StepNavigation />
           </Card>
         </TabsContent>
 
