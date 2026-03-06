@@ -916,54 +916,24 @@ export default function NewSale() {
         {/* ═══════════════ 6. PAGAMENTOS E CUSTOS ═══════════════ */}
         <TabsContent value="pagamentos">
           <Card className="p-6">
-            <SectionTitle icon={DollarSign} title="Pagamentos e Custos" subtitle="Resumo financeiro consolidado" />
+            <SectionTitle icon={DollarSign} title="Pagamentos da Venda" subtitle="Registre um ou mais pagamentos (PIX, cartão, transferência...)" />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div className="space-y-2">
-                <Label>Valor Recebido do Cliente R$</Label>
-                <Input data-testid="input-received-value" type="number" step="0.01" value={form.received_value} onChange={(e) => updateForm("received_value", e.target.value)} className="text-lg font-semibold" />
-              </div>
-              <div className="space-y-2">
-                <Label>Forma de Pagamento</Label>
-                <Select value={form.payment_method} onValueChange={(v) => updateForm("payment_method", v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pix">PIX</SelectItem>
-                    <SelectItem value="transferencia">Transferência</SelectItem>
-                    <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
-                    <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
-                    <SelectItem value="boleto">Boleto</SelectItem>
-                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <SalePaymentsEditor
+              payments={salePayments}
+              onChange={setSalePayments}
+              totalSaleValue={receivedValue > 0 && salePayments.length === 0 ? receivedValue : undefined}
+            />
 
-            {(form.payment_method === "cartao_credito" || form.payment_method === "cartao_debito") && (
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="space-y-2">
-                  <Label>Gateway de Pagamento</Label>
-                  <Select value={form.payment_gateway} onValueChange={(v) => updateForm("payment_gateway", v)}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>
-                      {paymentFeeRules.map((r: any) => r.acquirer).filter((v: string, i: number, a: string[]) => v && a.indexOf(v) === i).map((acquirer: string) => (
-                        <SelectItem key={acquirer} value={acquirer}>{acquirer}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Parcelas</Label>
-                  <Select value={form.payment_installments} onValueChange={(v) => updateForm("payment_installments", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{Array.from({ length: 12 }, (_, i) => i + 1).map(n => <SelectItem key={n} value={String(n)}>{n}x</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
+            {/* Fallback: valor manual se nenhum pagamento registrado */}
+            {salePayments.length === 0 && (
+              <div className="mt-6 space-y-2 border-t pt-4">
+                <Label className="text-xs text-muted-foreground">Ou informe o valor recebido manualmente:</Label>
+                <Input data-testid="input-received-value" type="number" step="0.01" value={form.received_value} onChange={(e) => updateForm("received_value", e.target.value)} placeholder="Valor total recebido" />
               </div>
             )}
 
             {/* Cost summary */}
-            <div className="border-t pt-5">
+            <div className="border-t pt-5 mt-6">
               <h3 className="text-sm font-semibold mb-3">📊 Resumo de Custos</h3>
               <div className="space-y-2">
                 {airCost > 0 && (
