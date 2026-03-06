@@ -425,7 +425,7 @@ export default function TripDetail() {
                             <Calendar className="w-3 h-3 text-muted-foreground" />
                             <span className={`text-xs font-semibold uppercase tracking-wider ${isPast ? "text-muted-foreground/60" : isCurrent ? "text-primary" : "text-muted-foreground"}`}>
                               {formatDateBR(item.date)}
-                              {isCurrent && <span className="ml-2 text-primary normal-case tracking-normal">← Hoje</span>}
+                              {item.date === today && <span className="ml-2 text-primary normal-case tracking-normal">← Hoje</span>}
                             </span>
                           </div>
                         )}
