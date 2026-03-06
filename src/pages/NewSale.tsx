@@ -30,6 +30,7 @@ import HotelAutocomplete from "@/components/HotelAutocomplete";
 import { classifyItinerary, assignDirections } from "@/lib/itineraryClassifier";
 import { smartCapitalizeName } from "@/lib/nameUtils";
 import PassengerSelector, { type SelectedPassenger } from "@/components/PassengerSelector";
+import SalePaymentsEditor, { type SalePayment } from "@/components/SalePaymentsEditor";
 import { useQuery } from "@tanstack/react-query";
 
 /* ─── Types ────────────────────────────────────────────── */
@@ -111,6 +112,7 @@ export default function NewSale() {
     { ...defaultSegment, direction: "ida", segment_order: 1 },
   ]);
   const [otherProducts, setOtherProducts] = useState<OtherProduct[]>([]);
+  const [salePayments, setSalePayments] = useState<SalePayment[]>([]);
   const [saving, setSaving] = useState(false);
   const [enrichmentOpen, setEnrichmentOpen] = useState(false);
   const [selectedPassengers, setSelectedPassengers] = useState<SelectedPassenger[]>(() => {
@@ -130,13 +132,6 @@ export default function NewSale() {
     queryKey: ["all_supplier_miles_programs"],
     queryFn: async () => {
       const { data } = await supabase.from("supplier_miles_programs").select("*").eq("is_active", true).order("program_name").order("min_miles");
-      return data || [];
-    },
-  });
-  const { data: paymentFeeRules = [] } = useQuery({
-    queryKey: ["payment-fee-rules-select"],
-    queryFn: async () => {
-      const { data } = await supabase.from("payment_fee_rules").select("*").eq("is_active", true).order("payment_method");
       return data || [];
     },
   });
@@ -303,7 +298,8 @@ export default function NewSale() {
   }, 0);
 
   const totalCost = airCost + hotelCost + productsCost;
-  const receivedValue = parseFloat(form.received_value) || 0;
+  const paymentsGross = salePayments.reduce((s, p) => s + p.gross_value, 0);
+  const receivedValue = paymentsGross > 0 ? paymentsGross : parseFloat(form.received_value) || 0;
   const profit = receivedValue - totalCost;
   const margin = receivedValue > 0 ? (profit / receivedValue) * 100 : 0;
 
@@ -331,7 +327,7 @@ export default function NewSale() {
         name: smartCapitalizeName(form.name),
         seller_id: user?.id,
         close_date: form.close_date || null,
-        payment_method: form.payment_method || null,
+        payment_method: salePayments.length > 0 ? salePayments.map(p => p.payment_method).join(", ") : form.payment_method || null,
         products, observations: form.observations || null,
         link_chat: form.link_chat || null,
         origin_iata: form.origin_iata || null, origin_city: null,
@@ -482,6 +478,47 @@ export default function NewSale() {
         if (!existingLink) await supabase.from("sale_passengers").insert({ sale_id: saleId, passenger_id: pax.id });
       }
 
+      // Save sale payments
+      if (salePayments.length > 0) {
+        await supabase.from("sale_payments").insert(
+          salePayments.map(p => ({
+            sale_id: saleId,
+            payment_method: p.payment_method,
+            gateway: p.gateway || null,
+            installments: p.installments,
+            gross_value: p.gross_value,
+            fee_percent: p.fee_percent,
+            fee_fixed: p.fee_fixed,
+            fee_total: p.fee_total,
+            net_value: p.net_value,
+            receiving_account_id: p.receiving_account_id || null,
+            payment_date: p.payment_date || null,
+            notes: p.notes || null,
+          }))
+        );
+
+        // Auto-create accounts_receivable entries
+        for (const p of salePayments) {
+          if (p.gross_value > 0) {
+            await supabase.from("accounts_receivable").insert({
+              sale_id: saleId,
+              description: `Pagamento ${p.payment_method}${p.gateway ? ` (${p.gateway})` : ""}`,
+              gross_value: p.gross_value,
+              fee_percent: p.fee_percent,
+              fee_value: p.fee_total,
+              net_value: p.net_value,
+              payment_method: p.payment_method,
+              status: "recebido",
+              received_date: p.payment_date || new Date().toISOString().slice(0, 10),
+              seller_id: user?.id || null,
+              created_by: user?.id || null,
+              installment_number: 1,
+              installment_total: p.installments,
+            });
+          }
+        }
+      }
+
       toast({ title: "Venda salva com sucesso!" });
       try { await Promise.all([supabase.functions.invoke("checkin-generate"), supabase.functions.invoke("lodging-generate")]); } catch {}
       navigate("/sales");
@@ -565,18 +602,6 @@ export default function NewSale() {
               <div className="space-y-2">
                 <Label>Vendedor Responsável</Label>
                 <Input value={user?.email || ""} disabled className="bg-muted/50" />
-              </div>
-              <div className="space-y-2">
-                <Label>Forma de Pagamento Principal</Label>
-                <Select value={form.payment_method} onValueChange={(v) => updateForm("payment_method", v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PIX">PIX</SelectItem>
-                    <SelectItem value="Cartão de crédito">Cartão de crédito</SelectItem>
-                    <SelectItem value="Transferência">Transferência</SelectItem>
-                    <SelectItem value="Boleto">Boleto</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <div className="sm:col-span-2 space-y-2">
                 <Label>Link do Chat (WhatsApp / atendimento)</Label>
@@ -913,54 +938,24 @@ export default function NewSale() {
         {/* ═══════════════ 6. PAGAMENTOS E CUSTOS ═══════════════ */}
         <TabsContent value="pagamentos">
           <Card className="p-6">
-            <SectionTitle icon={DollarSign} title="Pagamentos e Custos" subtitle="Resumo financeiro consolidado" />
+            <SectionTitle icon={DollarSign} title="Pagamentos da Venda" subtitle="Registre um ou mais pagamentos (PIX, cartão, transferência...)" />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-              <div className="space-y-2">
-                <Label>Valor Recebido do Cliente R$</Label>
-                <Input data-testid="input-received-value" type="number" step="0.01" value={form.received_value} onChange={(e) => updateForm("received_value", e.target.value)} className="text-lg font-semibold" />
-              </div>
-              <div className="space-y-2">
-                <Label>Forma de Pagamento</Label>
-                <Select value={form.payment_method} onValueChange={(v) => updateForm("payment_method", v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pix">PIX</SelectItem>
-                    <SelectItem value="transferencia">Transferência</SelectItem>
-                    <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
-                    <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
-                    <SelectItem value="boleto">Boleto</SelectItem>
-                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <SalePaymentsEditor
+              payments={salePayments}
+              onChange={setSalePayments}
+              totalSaleValue={receivedValue > 0 && salePayments.length === 0 ? receivedValue : undefined}
+            />
 
-            {(form.payment_method === "cartao_credito" || form.payment_method === "cartao_debito") && (
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="space-y-2">
-                  <Label>Gateway de Pagamento</Label>
-                  <Select value={form.payment_gateway} onValueChange={(v) => updateForm("payment_gateway", v)}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>
-                      {paymentFeeRules.map((r: any) => r.acquirer).filter((v: string, i: number, a: string[]) => v && a.indexOf(v) === i).map((acquirer: string) => (
-                        <SelectItem key={acquirer} value={acquirer}>{acquirer}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Parcelas</Label>
-                  <Select value={form.payment_installments} onValueChange={(v) => updateForm("payment_installments", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{Array.from({ length: 12 }, (_, i) => i + 1).map(n => <SelectItem key={n} value={String(n)}>{n}x</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
+            {/* Fallback: valor manual se nenhum pagamento registrado */}
+            {salePayments.length === 0 && (
+              <div className="mt-6 space-y-2 border-t pt-4">
+                <Label className="text-xs text-muted-foreground">Ou informe o valor recebido manualmente:</Label>
+                <Input data-testid="input-received-value" type="number" step="0.01" value={form.received_value} onChange={(e) => updateForm("received_value", e.target.value)} placeholder="Valor total recebido" />
               </div>
             )}
 
             {/* Cost summary */}
-            <div className="border-t pt-5">
+            <div className="border-t pt-5 mt-6">
               <h3 className="text-sm font-semibold mb-3">📊 Resumo de Custos</h3>
               <div className="space-y-2">
                 {airCost > 0 && (
@@ -1092,8 +1087,21 @@ export default function NewSale() {
                   <span className="text-muted-foreground">Nome</span><span className="font-medium">{form.name || "—"}</span>
                   <span className="text-muted-foreground">Vendedor</span><span className="font-medium">{user?.email || "—"}</span>
                   <span className="text-muted-foreground">Data</span><span>{form.close_date || "—"}</span>
-                  <span className="text-muted-foreground">Pagamento</span><span>{form.payment_method || "—"}</span>
+                  <span className="text-muted-foreground">Pagamentos</span>
+                  <span>{salePayments.length > 0 ? `${salePayments.length} pagamento(s)` : form.payment_method || "—"}</span>
                 </div>
+                {salePayments.length > 0 && (
+                  <div className="space-y-1 mt-2 pt-2 border-t">
+                    {salePayments.map((p, i) => (
+                      <div key={p.id} className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          {i + 1}. {p.payment_method}{p.gateway ? ` (${p.gateway})` : ""}{p.installments > 1 ? ` ${p.installments}x` : ""}
+                        </span>
+                        <span className="font-medium">R$ {p.gross_value.toFixed(2)}{p.fee_total > 0 ? ` (líq: R$ ${p.net_value.toFixed(2)})` : ""}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Passengers */}
