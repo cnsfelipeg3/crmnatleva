@@ -33,6 +33,7 @@ import AIKnowledgeBase from "@/pages/AIKnowledgeBase";
 import ImportChatGuru from "@/pages/ImportChatGuru";
 import AnaliseAtendimento from "@/pages/AnaliseAtendimento";
 import ApresentacaoGeral from "@/pages/ApresentacaoGeral";
+import TripDetail from "@/pages/TripDetail";
 
 // RH
 import RHIndex from "@/pages/rh/RHIndex";
