@@ -126,6 +126,7 @@ function AppRoutes() {
         <Route path="/financeiro/comissoes" element={<Comissoes />} />
         <Route path="/financeiro/dre" element={<DREReport />} />
         <Route path="/financeiro/simulador" element={<SimuladorTaxas />} />
+        <Route path="/financeiro/fechamento" element={<FechamentoFornecedores />} />
 
         {/* RH */}
         <Route path="/rh" element={<RHIndex />} />
