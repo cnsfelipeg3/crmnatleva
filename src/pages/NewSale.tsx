@@ -16,7 +16,7 @@ import {
 import {
   Check, Upload, Sparkles, Loader2, Plus, Trash2, Plane, Hotel, CreditCard,
   ShoppingBag, Paperclip, Eye, ChevronDown, Camera, Car, Shield, Ticket,
-  UtensilsCrossed, MapPin, CalendarDays, Users, FileText, DollarSign,
+  UtensilsCrossed, MapPin, CalendarDays, Users, FileText, DollarSign, Train,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,6 +44,7 @@ interface OtherProduct {
   id: string; type: string; description: string; supplier: string;
   date: string; emission_type: "milhas" | "pagante";
   miles_program: string; miles_qty: string; miles_tax: string; cash_value: string;
+  reservation_code: string;
 }
 
 const defaultSegment: FlightSegment = {
@@ -55,6 +56,7 @@ const defaultSegment: FlightSegment = {
 
 const PRODUCT_TYPES = [
   { value: "transfer", label: "Transfer", icon: Car },
+  { value: "trem", label: "Trem / Ferroviário", icon: Train },
   { value: "seguro", label: "Seguro Viagem", icon: Shield },
   { value: "passeio", label: "Passeio / Experiência", icon: Ticket },
   { value: "ingresso", label: "Ingresso", icon: Ticket },
@@ -266,7 +268,7 @@ export default function NewSale() {
     setOtherProducts(prev => [...prev, {
       id: crypto.randomUUID(), type: "transfer", description: "", supplier: "",
       date: "", emission_type: "pagante", miles_program: "", miles_qty: "",
-      miles_tax: "", cash_value: "",
+      miles_tax: "", cash_value: "", reservation_code: "",
     }]);
   };
   const updateProduct = (id: string, field: string, value: any) => {
@@ -389,14 +391,16 @@ export default function NewSale() {
       }
       for (const p of otherProducts) {
         const cost = p.emission_type === "pagante" ? parseFloat(p.cash_value) || 0 : parseFloat(p.miles_tax) || 0;
-        if (cost > 0) {
+        if (cost > 0 || p.description || p.reservation_code) {
           costItems.push({
             sale_id: saleId, category: "outros",
+            product_type: p.type,
             description: `${PRODUCT_TYPES.find(t => t.value === p.type)?.label || p.type} - ${p.description}`,
             cash_value: p.emission_type === "pagante" ? parseFloat(p.cash_value) || 0 : 0,
             miles_quantity: parseInt(p.miles_qty) || 0,
             taxes: parseFloat(p.miles_tax) || 0,
             total_item_cost: cost,
+            reservation_code: p.reservation_code || null,
           });
         }
       }
@@ -878,6 +882,7 @@ export default function NewSale() {
                       <div className="space-y-2"><Label>Fornecedor</Label><Input value={product.supplier} onChange={(e) => updateProduct(product.id, "supplier", e.target.value)} /></div>
                       <div className="space-y-2"><Label>Descrição</Label><Input value={product.description} onChange={(e) => updateProduct(product.id, "description", e.target.value)} placeholder="Detalhes do produto" /></div>
                       <div className="space-y-2"><Label>Data</Label><Input type="date" value={product.date} onChange={(e) => updateProduct(product.id, "date", e.target.value)} /></div>
+                      <div className="space-y-2"><Label>Código de Reserva</Label><Input value={product.reservation_code} onChange={(e) => updateProduct(product.id, "reservation_code", e.target.value.toUpperCase())} placeholder="Localizador / confirmação" className="font-mono" /></div>
                     </div>
 
                     <div className="space-y-2">
