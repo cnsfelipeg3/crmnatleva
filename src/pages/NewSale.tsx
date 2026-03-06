@@ -941,6 +941,7 @@ export default function NewSale() {
                 )}
               </div>
             </Card>
+            <StepNavigation />
           </div>
         </TabsContent>
 
