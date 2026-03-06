@@ -8,8 +8,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Collapsible, CollapsibleContent, CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Plane, Plus, Trash2, ChevronDown, ChevronUp, Loader2, Search,
   ArrowRight, Clock, MapPin, RotateCcw, Zap, Route, AlertCircle, CheckCircle2,
@@ -76,15 +76,32 @@ function getSegmentCount(connType: FlightGroup["connectionType"]): number {
   }
 }
 
+function formatDuration(mins: number): string {
+  if (!mins) return "";
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${h}h${m > 0 ? `${m}m` : ""}`;
+}
+
 /* ─── Amadeus Lookup ─────────────────────────── */
 
-async function lookupAmadeus(origin: string, destination: string, date: string, airline?: string) {
-  const { data, error } = await supabase.functions.invoke("amadeus-search", {
-    body: { action: "flight_schedule", origin, destination, departureDate: date, airline: airline || undefined },
-  });
+interface AmadeusItinerary {
+  direction: string;
+  segments: any[];
+  totalDurationMinutes: number;
+}
+
+interface AmadeusOffer {
+  itineraries: AmadeusItinerary[];
+}
+
+async function lookupAmadeus(origin: string, destination: string, date: string, airline?: string, nonStop?: boolean) {
+  const body: any = { action: "flight_schedule", origin, destination, departureDate: date };
+  if (airline) body.airline = airline;
+  const { data, error } = await supabase.functions.invoke("amadeus-search", { body });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
-  return data?.data || [];
+  return (data?.data || []) as AmadeusOffer[];
 }
 
 /* ─── Component ──────────────────────────────── */
@@ -102,10 +119,8 @@ export default function FlightRegistrationSection({
   });
 
   const [groups, setGroups] = useState<FlightGroup[]>(() => {
-    // Initialize from existing segments
     const idaSegs = segments.filter(s => s.direction === "ida");
     const voltaSegs = segments.filter(s => s.direction === "volta");
-
     const result: FlightGroup[] = [];
 
     const outbound = createGroup("main_outbound", "Voo de Ida");
@@ -119,14 +134,16 @@ export default function FlightRegistrationSection({
       if (voltaSegs.length > 1) ret.connectionType = voltaSegs.length === 2 ? "1_conexao" : voltaSegs.length === 3 ? "2_conexoes" : "3_mais";
       result.push(ret);
     }
-
     return result;
   });
 
   const [loadingGroup, setLoadingGroup] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(groups.map(g => g.id)));
 
-  // Sync groups → flat segments for parent
+  // Amadeus offer selection dialog
+  const [offerDialogOpen, setOfferDialogOpen] = useState(false);
+  const [pendingOffers, setPendingOffers] = useState<{ groupId: string; offers: AmadeusOffer[]; direction: string } | null>(null);
+
   const syncSegments = useCallback((newGroups: FlightGroup[]) => {
     const flat: FlightSegment[] = [];
     for (const g of newGroups) {
@@ -147,13 +164,11 @@ export default function FlightRegistrationSection({
     });
   }, [syncSegments]);
 
-  // ─── Itinerary type change ─────────────────
   const handleItineraryChange = (type: ItineraryStructure) => {
     setItineraryType(type);
     updateGroups(prev => {
       let next = [...prev];
       const hasReturn = next.some(g => g.type === "main_return");
-
       if (type === "so_ida" && hasReturn) {
         next = next.filter(g => g.type !== "main_return");
       } else if ((type === "ida_volta" || type === "open_jaw") && !hasReturn) {
@@ -167,7 +182,6 @@ export default function FlightRegistrationSection({
     });
   };
 
-  // ─── Connection type change ────────────────
   const handleConnectionChange = (groupId: string, connType: FlightGroup["connectionType"]) => {
     updateGroups(prev => prev.map(g => {
       if (g.id !== groupId) return g;
@@ -190,16 +204,13 @@ export default function FlightRegistrationSection({
     }));
   };
 
-  // ─── Segment update ────────────────────────
   const updateGroupSegment = (groupId: string, segIdx: number, field: string, value: any) => {
     updateGroups(prev => prev.map(g => {
       if (g.id !== groupId) return g;
       const segs = g.segments.map((s, i) => {
         if (i !== segIdx) return s;
-        const updated = { ...s, [field]: value };
-        return updated;
+        return { ...s, [field]: value };
       });
-      // Auto-chain: if destination changed and next segment exists, update its origin
       if (field === "destination_iata" && segIdx < segs.length - 1) {
         segs[segIdx + 1] = { ...segs[segIdx + 1], origin_iata: value };
       }
@@ -207,70 +218,128 @@ export default function FlightRegistrationSection({
     }));
   };
 
-  // ─── Add internal flight ───────────────────
   const addInternalFlight = () => {
     const internal = createGroup("internal", `Voo Interno ${groups.filter(g => g.type === "internal").length + 1}`);
     updateGroups(prev => [...prev, internal]);
     setExpandedGroups(p => new Set([...p, internal.id]));
   };
 
-  // ─── Remove group ─────────────────────────
   const removeGroup = (groupId: string) => {
     updateGroups(prev => prev.filter(g => g.id !== groupId));
   };
 
-  // ─── Amadeus auto-lookup for group ─────────
+  // ─── Amadeus lookup – now shows offer selection dialog ───
   const handleAmadeusLookup = async (groupId: string) => {
     const group = groups.find(g => g.id === groupId);
     if (!group) return;
+
     const first = group.segments[0];
     const last = group.segments[group.segments.length - 1];
-    if (!first.origin_iata || !last.destination_iata || !first.departure_date) {
-      toast({ title: "Preencha origem, destino e data para consultar", variant: "destructive" });
+
+    // Get effective values (fallback to form-level values)
+    const origin = first.origin_iata || (group.type === "main_return" ? formDestination : formOrigin);
+    const destination = last.destination_iata || (group.type === "main_return" ? formOrigin : formDestination);
+    const date = first.departure_date || (group.type === "main_return" ? formReturnDate : formDepartureDate);
+    const airline = first.airline || formAirline;
+
+    if (!origin || !destination || !date) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha companhia, origem, destino e data para consultar no Amadeus.",
+        variant: "destructive",
+      });
       return;
     }
+
+    if (!airline) {
+      toast({
+        title: "Companhia aérea necessária",
+        description: "Selecione a companhia aérea para filtrar os resultados do Amadeus.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoadingGroup(groupId);
     try {
-      const offers = await lookupAmadeus(first.origin_iata, last.destination_iata, first.departure_date, first.airline);
+      const offers = await lookupAmadeus(origin, destination, date, airline);
       if (!offers.length) {
-        toast({ title: "Nenhum voo encontrado", variant: "destructive" });
+        toast({
+          title: "Nenhum voo encontrado",
+          description: `Não foram encontrados voos ${airline} de ${origin} para ${destination} em ${date}. Preencha manualmente.`,
+        });
         return;
       }
-      // Use first offer's first itinerary
-      const itin = offers[0]?.itineraries?.[0];
-      if (!itin?.segments?.length) {
-        toast({ title: "Sem dados de segmentos", variant: "destructive" });
-        return;
+
+      const dir = group.type === "main_return" ? "volta" : "ida";
+
+      // If only 1 offer, apply directly
+      if (offers.length === 1) {
+        applyOffer(groupId, offers[0], dir);
+      } else {
+        // Show selection dialog
+        setPendingOffers({ groupId, offers, direction: dir });
+        setOfferDialogOpen(true);
       }
-      const dir = group.type === "main_return" ? "volta" as const : "ida" as const;
-      const newSegs: FlightSegment[] = itin.segments.map((s: any, i: number) => ({
-        ...defaultSegment,
-        direction: dir,
-        segment_order: i + 1,
-        airline: s.airline || "",
-        flight_number: `${s.airline || ""}${s.flight_number || ""}`,
-        origin_iata: s.origin_iata || "",
-        destination_iata: s.destination_iata || "",
-        departure_date: s.departure_date || "",
-        departure_time: s.departure_time || "",
-        arrival_time: s.arrival_time || "",
-        duration_minutes: s.duration_minutes || 0,
-        terminal: s.terminal || "",
-        operated_by: s.operated_by || "",
-        connection_time_minutes: s.connection_time_minutes || 0,
-      }));
-
-      const connType = newSegs.length === 1 ? "direto" : newSegs.length === 2 ? "1_conexao" : newSegs.length === 3 ? "2_conexoes" : "3_mais";
-
-      updateGroups(prev => prev.map(g =>
-        g.id === groupId ? { ...g, segments: newSegs, connectionType: connType as FlightGroup["connectionType"] } : g
-      ));
-      toast({ title: "Dados do Amadeus aplicados!", description: `${newSegs.length} segmento(s) encontrados.` });
     } catch (err: any) {
-      toast({ title: "Erro Amadeus", description: err.message, variant: "destructive" });
+      const msg = err.message || "Erro desconhecido";
+      if (msg.includes("auth failed") || msg.includes("invalid_client")) {
+        toast({
+          title: "Erro de autenticação Amadeus",
+          description: "As credenciais do Amadeus estão inválidas. Verifique as configurações.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Não foi possível consultar o Amadeus",
+          description: msg.length > 120 ? "Erro na comunicação com o Amadeus. Tente novamente ou preencha manualmente." : msg,
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoadingGroup(null);
     }
+  };
+
+  const applyOffer = (groupId: string, offer: AmadeusOffer, direction: string) => {
+    const itin = offer.itineraries?.[0];
+    if (!itin?.segments?.length) return;
+
+    const dir = direction as "ida" | "volta";
+    const newSegs: FlightSegment[] = itin.segments.map((s: any, i: number) => ({
+      ...defaultSegment,
+      direction: dir,
+      segment_order: i + 1,
+      airline: s.airline || "",
+      flight_number: `${s.airline || ""}${s.flight_number || ""}`,
+      origin_iata: s.origin_iata || "",
+      destination_iata: s.destination_iata || "",
+      departure_date: s.departure_date || "",
+      departure_time: s.departure_time || "",
+      arrival_time: s.arrival_time || "",
+      duration_minutes: s.duration_minutes || 0,
+      terminal: s.terminal || "",
+      operated_by: s.operated_by || "",
+      connection_time_minutes: s.connection_time_minutes || 0,
+    }));
+
+    const connType = newSegs.length === 1 ? "direto" : newSegs.length === 2 ? "1_conexao" : newSegs.length === 3 ? "2_conexoes" : "3_mais";
+
+    updateGroups(prev => prev.map(g =>
+      g.id === groupId ? { ...g, segments: newSegs, connectionType: connType as FlightGroup["connectionType"] } : g
+    ));
+
+    toast({
+      title: "✈️ Dados do Amadeus aplicados!",
+      description: `${newSegs.length} segmento(s) preenchidos automaticamente. Revise antes de salvar.`,
+    });
+  };
+
+  const handleSelectOffer = (offerIdx: number) => {
+    if (!pendingOffers) return;
+    applyOffer(pendingOffers.groupId, pendingOffers.offers[offerIdx], pendingOffers.direction);
+    setOfferDialogOpen(false);
+    setPendingOffers(null);
   };
 
   const toggleGroup = (id: string) => {
@@ -281,7 +350,6 @@ export default function FlightRegistrationSection({
     });
   };
 
-  // ─── All valid segments for timeline ───────
   const allValidSegments = groups.flatMap(g => g.segments.filter(s => s.origin_iata && s.destination_iata));
 
   return (
@@ -380,6 +448,8 @@ export default function FlightRegistrationSection({
           onStopoverIataChange={(iata) => updateGroups(p => p.map(g => g.id === group.id ? { ...g, stopoverIata: iata } : g))}
           defaultAirline={formAirline}
           defaultDate={group.type === "main_return" ? formReturnDate : formDepartureDate}
+          defaultOrigin={group.type === "main_return" ? formDestination : formOrigin}
+          defaultDestination={group.type === "main_return" ? formOrigin : formDestination}
         />
       ))}
 
@@ -387,6 +457,85 @@ export default function FlightRegistrationSection({
       <Button variant="outline" onClick={addInternalFlight} className="w-full border-dashed h-12">
         <Plus className="w-4 h-4 mr-2" /> Adicionar Voo Interno / Adicional
       </Button>
+
+      {/* ═══ OFFER SELECTION DIALOG ═══ */}
+      <Dialog open={offerDialogOpen} onOpenChange={setOfferDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plane className="w-5 h-5 text-primary" />
+              Selecione o Voo
+            </DialogTitle>
+            <DialogDescription>
+              Foram encontrados {pendingOffers?.offers.length || 0} itinerários. Selecione o correto para preencher automaticamente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 mt-2">
+            {pendingOffers?.offers.map((offer, oi) => {
+              const itin = offer.itineraries?.[0];
+              if (!itin) return null;
+              const segs = itin.segments || [];
+              const first = segs[0];
+              const last = segs[segs.length - 1];
+
+              return (
+                <button
+                  key={oi}
+                  type="button"
+                  onClick={() => handleSelectOffer(oi)}
+                  className="w-full text-left border rounded-lg p-4 hover:bg-accent/50 hover:border-primary/40 transition-all group"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="font-mono text-xs">
+                        Opção {oi + 1}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {segs.length === 1 ? "Voo Direto" : `${segs.length} segmento(s)`}
+                      </span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDuration(itin.totalDurationMinutes)}
+                    </span>
+                  </div>
+
+                  {/* Segments preview */}
+                  <div className="space-y-1.5">
+                    {segs.map((seg: any, si: number) => (
+                      <div key={si} className="flex items-center gap-2 text-sm">
+                        <span className="font-mono font-bold text-primary w-16">
+                          {seg.airline}{seg.flight_number}
+                        </span>
+                        <span className="font-mono text-foreground">
+                          {seg.origin_iata}
+                        </span>
+                        <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                        <span className="font-mono text-foreground">
+                          {seg.destination_iata}
+                        </span>
+                        <span className="text-muted-foreground text-xs ml-auto flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {seg.departure_time} → {seg.arrival_time}
+                        </span>
+                        {seg.duration_minutes > 0 && (
+                          <span className="text-muted-foreground text-xs">
+                            ({formatDuration(seg.duration_minutes)})
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-xs text-primary mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    Clique para selecionar este itinerário →
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -409,26 +558,37 @@ interface FlightGroupCardProps {
   onStopoverIataChange: (iata: string) => void;
   defaultAirline: string;
   defaultDate: string;
+  defaultOrigin: string;
+  defaultDestination: string;
 }
 
 function FlightGroupCard({
   group, expanded, onToggle, onConnectionChange, onSegmentUpdate,
   onRemove, onAmadeusLookup, loading, onStopoverChange, onStopoverIataChange,
-  defaultAirline, defaultDate,
+  defaultAirline, defaultDate, defaultOrigin, defaultDestination,
 }: FlightGroupCardProps) {
   const isMain = group.type !== "internal";
   const dirIcon = group.type === "main_return" ? "rotate-180" : "";
   const colorClass = group.type === "main_outbound" ? "border-primary/30" :
-    group.type === "main_return" ? "border-info/30" : "border-accent/30";
+    group.type === "main_return" ? "border-blue-400/30" : "border-accent/30";
   const bgClass = group.type === "main_outbound" ? "bg-primary/5" :
-    group.type === "main_return" ? "bg-info/5" : "bg-accent/5";
+    group.type === "main_return" ? "bg-blue-400/5" : "bg-accent/5";
 
   const first = group.segments[0];
   const last = group.segments[group.segments.length - 1];
-  const routeSummary = first?.origin_iata && last?.destination_iata
-    ? `${first.origin_iata} → ${last.destination_iata}` : "";
+
+  const effectiveOrigin = first?.origin_iata || defaultOrigin;
+  const effectiveDestination = last?.destination_iata || defaultDestination;
+  const effectiveDate = first?.departure_date || defaultDate;
+  const effectiveAirline = first?.airline || defaultAirline;
+
+  const routeSummary = effectiveOrigin && effectiveDestination
+    ? `${effectiveOrigin} → ${effectiveDestination}` : "";
 
   const allFilled = group.segments.every(s => s.origin_iata && s.destination_iata && s.flight_number);
+
+  // Check if Amadeus lookup can be triggered
+  const canLookup = !!(effectiveAirline && effectiveOrigin && effectiveDestination && effectiveDate);
 
   return (
     <Card className={cn("overflow-hidden border", colorClass)}>
@@ -463,9 +623,9 @@ function FlightGroupCard({
 
       {expanded && (
         <div className="px-5 py-4 space-y-4">
-          {/* Connection type & stopover */}
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="space-y-1 flex-1 min-w-[160px]">
+          {/* ─── STEP 1: Type + Airline + Origin + Destination + Date ─── */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="space-y-1">
               <Label className="text-xs font-medium">Tipo de Voo</Label>
               <Select value={group.connectionType} onValueChange={(v) => onConnectionChange(v as FlightGroup["connectionType"])}>
                 <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
@@ -478,37 +638,95 @@ function FlightGroupCard({
               </Select>
             </div>
 
-            <div className="space-y-1 min-w-[120px]">
-              <Label className="text-xs font-medium">Stopover?</Label>
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Companhia *</Label>
+              <AirlineAutocomplete
+                value={first?.airline || defaultAirline}
+                onChange={(iata) => {
+                  // Set airline for all segments in this group
+                  group.segments.forEach((_, i) => onSegmentUpdate(i, "airline", iata));
+                }}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Origem *</Label>
+              <AirportAutocomplete
+                value={first?.origin_iata || defaultOrigin}
+                onChange={iata => onSegmentUpdate(0, "origin_iata", iata)}
+                placeholder="GRU"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Destino *</Label>
+              <AirportAutocomplete
+                value={last?.destination_iata || defaultDestination}
+                onChange={iata => onSegmentUpdate(group.segments.length - 1, "destination_iata", iata)}
+                placeholder="FCO"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Data *</Label>
+              <Input
+                type="date"
+                value={first?.departure_date || defaultDate}
+                onChange={e => onSegmentUpdate(0, "departure_date", e.target.value)}
+                className="text-sm"
+              />
+            </div>
+          </div>
+
+          {/* ─── STEP 2: Amadeus Lookup Button ─── */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onAmadeusLookup}
+              disabled={loading || !canLookup}
+              className={cn(
+                "h-9 transition-all",
+                canLookup && !loading && "border-primary/50 text-primary hover:bg-primary/10"
+              )}
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Search className="w-4 h-4 mr-2" />
+              )}
+              {loading ? "Consultando Amadeus..." : "Consultar Amadeus"}
+            </Button>
+
+            {!canLookup && (
+              <span className="text-xs text-muted-foreground">
+                Preencha companhia, origem, destino e data para consultar.
+              </span>
+            )}
+
+            {canLookup && !loading && (
+              <span className="text-xs text-muted-foreground">
+                Pronto para buscar voos {effectiveAirline} {effectiveOrigin} → {effectiveDestination}
+              </span>
+            )}
+
+            {/* Stopover */}
+            <div className="ml-auto flex items-center gap-2">
+              <Label className="text-xs">Stopover?</Label>
               <Select value={group.hasStopover ? "sim" : "nao"} onValueChange={v => onStopoverChange(v === "sim")}>
-                <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="text-sm w-[80px] h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="nao">Não</SelectItem>
                   <SelectItem value="sim">Sim</SelectItem>
                 </SelectContent>
               </Select>
+              {group.hasStopover && (
+                <AirportAutocomplete value={group.stopoverIata} onChange={onStopoverIataChange} placeholder="LIS" className="w-[100px]" />
+              )}
             </div>
-
-            {group.hasStopover && (
-              <div className="space-y-1 min-w-[100px]">
-                <Label className="text-xs font-medium">Stopover em</Label>
-                <AirportAutocomplete value={group.stopoverIata} onChange={onStopoverIataChange} placeholder="LIS" />
-              </div>
-            )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onAmadeusLookup}
-              disabled={loading}
-              className="h-9"
-            >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Zap className="w-4 h-4 mr-1" />}
-              Amadeus
-            </Button>
           </div>
 
-          {/* Segments */}
+          {/* ─── STEP 3: Segment Details (auto-filled or manual) ─── */}
           <div className="space-y-3">
             {group.segments.map((seg, si) => (
               <SegmentCard
@@ -545,13 +763,17 @@ interface SegmentCardProps {
 
 function SegmentCard({ seg, segIndex, totalSegments, onUpdate, defaultAirline, defaultDate, isConnection }: SegmentCardProps) {
   const label = totalSegments === 1
-    ? "Voo Direto"
+    ? "Detalhes do Voo"
     : `Segmento ${segIndex + 1} de ${totalSegments}`;
 
-  const missingFlightNum = !seg.flight_number;
+  const hasFlight = !!seg.flight_number;
+  const hasRoute = !!(seg.origin_iata && seg.destination_iata);
 
   return (
-    <div className="rounded-lg border bg-card p-4 space-y-3">
+    <div className={cn(
+      "rounded-lg border p-4 space-y-3 transition-colors",
+      hasFlight && hasRoute ? "bg-card border-emerald-200/50" : "bg-card"
+    )}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</span>
@@ -559,31 +781,38 @@ function SegmentCard({ seg, segIndex, totalSegments, onUpdate, defaultAirline, d
             <Badge variant="outline" className="text-[10px] px-1.5">Conexão</Badge>
           )}
         </div>
-        {missingFlightNum && (
-          <Badge variant="destructive" className="text-[10px]">Nº voo obrigatório</Badge>
+        {hasFlight && hasRoute ? (
+          <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-300">
+            <CheckCircle2 className="w-3 h-3 mr-1" /> Preenchido
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-[10px] text-amber-600 border-amber-300">
+            Pendente
+          </Badge>
         )}
       </div>
 
-      {/* Row 1: Airline, Flight Number, Date */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs">Companhia Aérea *</Label>
-          <AirlineAutocomplete
-            value={seg.airline || defaultAirline}
-            onChange={(iata) => onUpdate("airline", iata)}
-          />
-        </div>
+      {/* Row 1: Flight Number + Route + Date */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="space-y-1">
           <Label className="text-xs">Nº do Voo *</Label>
           <Input
             value={seg.flight_number}
             onChange={e => onUpdate("flight_number", e.target.value.toUpperCase())}
             placeholder="LA8084"
-            className={cn("font-mono text-sm", missingFlightNum && "border-destructive/50")}
+            className={cn("font-mono text-sm", !hasFlight && "border-amber-300/50")}
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Data do Voo *</Label>
+          <Label className="text-xs">Origem</Label>
+          <AirportAutocomplete value={seg.origin_iata} onChange={iata => onUpdate("origin_iata", iata)} placeholder="GRU" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Destino</Label>
+          <AirportAutocomplete value={seg.destination_iata} onChange={iata => onUpdate("destination_iata", iata)} placeholder="FCO" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Data</Label>
           <Input
             type="date"
             value={seg.departure_date || defaultDate}
@@ -593,19 +822,7 @@ function SegmentCard({ seg, segIndex, totalSegments, onUpdate, defaultAirline, d
         </div>
       </div>
 
-      {/* Row 2: Origin, Destination */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs">Origem *</Label>
-          <AirportAutocomplete value={seg.origin_iata} onChange={iata => onUpdate("origin_iata", iata)} placeholder="GRU" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Destino *</Label>
-          <AirportAutocomplete value={seg.destination_iata} onChange={iata => onUpdate("destination_iata", iata)} placeholder="FCO" />
-        </div>
-      </div>
-
-      {/* Row 3: Times, Duration, Class */}
+      {/* Row 2: Times, Duration, Class */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="space-y-1">
           <Label className="text-xs">Horário Saída</Label>
@@ -633,7 +850,7 @@ function SegmentCard({ seg, segIndex, totalSegments, onUpdate, defaultAirline, d
         </div>
       </div>
 
-      {/* Row 4: Terminal, Operated By */}
+      {/* Row 3: Terminal, Operated By, Connection Time */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="space-y-1">
           <Label className="text-xs">Terminal</Label>
@@ -642,6 +859,13 @@ function SegmentCard({ seg, segIndex, totalSegments, onUpdate, defaultAirline, d
         <div className="space-y-1">
           <Label className="text-xs">Operado por</Label>
           <Input value={seg.operated_by} onChange={e => onUpdate("operated_by", e.target.value)} className="text-sm" placeholder="Codeshare" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Companhia</Label>
+          <AirlineAutocomplete
+            value={seg.airline || defaultAirline}
+            onChange={(iata) => onUpdate("airline", iata)}
+          />
         </div>
         {segIndex > 0 && (
           <div className="space-y-1">
