@@ -126,6 +126,19 @@ export default function TripAlterations() {
     },
   });
 
+  // Miles programs from supplier config
+  const { data: milesPrograms = [] } = useQuery({
+    queryKey: ["all-miles-programs"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("supplier_miles_programs")
+        .select("program_name")
+        .eq("is_active", true);
+      const unique = [...new Set((data || []).map((d: any) => d.program_name))].sort();
+      return unique as string[];
+    },
+  });
+
   const { data: allSales = [] } = useQuery({
     queryKey: ["sales-for-alt-search"],
     queryFn: async () => {
