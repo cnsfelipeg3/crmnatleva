@@ -211,12 +211,21 @@ export default function TripAlterations() {
   useEffect(() => {
     if (selectedCostItem) {
       const cost = selectedCostItem.total_item_cost || 0;
-      // Estimate revenue proportionally from the sale's received value
       const totalCost = saleCostItems.reduce((s: number, c: any) => s + (c.total_item_cost || 0), 0);
       const saleRevenue = selectedSale?.received_value || 0;
       const proportion = totalCost > 0 ? (cost / totalCost) : 0;
       const productRevenue = saleRevenue * proportion;
       const profit = productRevenue - cost;
+      const supplierName = (selectedCostItem as any).suppliers?.name || "";
+      const emissionSource = selectedCostItem.emission_source || "";
+
+      // Auto-detect supplier refund origin
+      let autoOrigin = "";
+      if (emissionSource === "milhas" || selectedCostItem.miles_quantity > 0) {
+        autoOrigin = "credito_milhas";
+      } else if (supplierName) {
+        autoOrigin = "fornecedor_emissor";
+      }
 
       setForm(f => ({
         ...f,
@@ -226,6 +235,7 @@ export default function TripAlterations() {
         product_type: selectedCostItem.category === "aereo" ? "aereo" : selectedCostItem.category === "hotel" ? "hotel" : selectedCostItem.product_type || "outro",
         miles_program: selectedCostItem.miles_program || "",
         miles_used: selectedCostItem.miles_quantity || 0,
+        supplier_refund_origin: autoOrigin || f.supplier_refund_origin,
       }));
     }
   }, [form.cost_item_id, selectedCostItem, selectedSale, saleCostItems]);
