@@ -11,9 +11,6 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Collapsible, CollapsibleContent, CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
   Check, Upload, Sparkles, Loader2, Plus, Trash2, Plane, Hotel, CreditCard,
   ShoppingBag, Paperclip, Eye, ChevronDown, Camera, Car, Shield, Ticket,
   UtensilsCrossed, MapPin, CalendarDays, Users, FileText, DollarSign, Train,
@@ -24,11 +21,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
-import AirportAutocomplete from "@/components/AirportAutocomplete";
-import AirlineAutocomplete from "@/components/AirlineAutocomplete";
-import FlightEnrichmentDialog from "@/components/FlightEnrichmentDialog";
-import HotelAutocomplete from "@/components/HotelAutocomplete";
 import FlightRegistrationSection from "@/components/FlightRegistrationSection";
+import AirCostBlocksEditor, { type AirCostBlock, createEmptyAirCostBlock, calcBlockCost } from "@/components/AirCostBlocksEditor";
+import HotelEntriesEditor, { type HotelEntry, createEmptyHotelEntry, calcHotelCost } from "@/components/HotelEntriesEditor";
 import { classifyItinerary, assignDirections } from "@/lib/itineraryClassifier";
 import { smartCapitalizeName } from "@/lib/nameUtils";
 import PassengerSelector, { type SelectedPassenger } from "@/components/PassengerSelector";
@@ -71,6 +66,8 @@ const PRODUCT_TYPES = [
 const TAB_IDS = ["info", "passageiros", "aereo", "hospedagem", "produtos", "pagamentos", "anexos", "revisao"] as const;
 type TabId = typeof TAB_IDS[number];
 
+const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
 /* ─── Component ────────────────────────────────────────── */
 
 export default function NewSale() {
@@ -87,27 +84,13 @@ export default function NewSale() {
   const [extracting, setExtracting] = useState(false);
   const [extraction, setExtraction] = useState<ExtractionResult | null>(null);
 
-  // Form
+  // Form (basic sale info)
   const [form, setForm] = useState({
     name: "", close_date: "", payment_method: "", observations: "",
     link_chat: "", adults: 1, children: 0, children_ages: "",
     origin_iata: "", destination_iata: "", departure_date: "", return_date: "",
     airline: "", flight_class: "", locator: "", connections: "", miles_program: "",
     emission_source: "",
-    // Air costs
-    air_emission_type: "milhas" as "milhas" | "pagante",
-    air_miles_qty: "", air_miles_price: "", air_taxes: "",
-    air_emission_source: "", air_miles_program: "", air_supplier_id: "",
-    air_cash_value: "",
-    // Hotel
-    hotel_name: "", hotel_room: "", hotel_meal_plan: "", hotel_reservation_code: "",
-    hotel_checkin_date: "", hotel_checkout_date: "", hotel_qty_rooms: "1",
-    hotel_city: "", hotel_country: "", hotel_address: "", hotel_lat: 0, hotel_lng: 0, hotel_place_id: "",
-    // Hotel costs
-    hotel_emission_type: "milhas" as "milhas" | "pagante",
-    hotel_miles_qty: "", hotel_miles_price: "", hotel_taxes: "",
-    hotel_emission_source: "", hotel_miles_program: "", hotel_supplier_id: "",
-    hotel_cash_value: "",
     // Payment
     received_value: "", paid_value: "", payment_gateway: "", payment_installments: "1",
   });
@@ -115,12 +98,18 @@ export default function NewSale() {
   const [segments, setSegments] = useState<FlightSegment[]>([
     { ...defaultSegment, direction: "ida", segment_order: 1 },
   ]);
+  
+  // NEW: Air cost blocks (replaces single air cost)
+  const [airCostBlocks, setAirCostBlocks] = useState<AirCostBlock[]>([]);
+  
+  // NEW: Multiple hotels (replaces single hotel)
+  const [hotelEntries, setHotelEntries] = useState<HotelEntry[]>([]);
+  
   const [otherProducts, setOtherProducts] = useState<OtherProduct[]>([]);
   const [salePayments, setSalePayments] = useState<SalePayment[]>([]);
   const [airTariff, setAirTariff] = useState<TariffCondition>({ ...EMPTY_TARIFF });
   const [hotelTariff, setHotelTariff] = useState<TariffCondition>({ ...EMPTY_TARIFF });
   const [saving, setSaving] = useState(false);
-  const [enrichmentOpen, setEnrichmentOpen] = useState(false);
   const [selectedPassengers, setSelectedPassengers] = useState<SelectedPassenger[]>(() => {
     const state = location.state as any;
     return state?.preSelectedPassengers || [];
@@ -147,14 +136,14 @@ export default function NewSale() {
     return [...new Set(programs.map((p: any) => p.program_name))];
   };
 
-  const autoFillMilesPrice = (supplierId: string, programName: string, milesQty: string, prefix: "air" | "hotel") => {
+  const autoFillMilesPriceCallback = (supplierId: string, programName: string, milesQty: string, callback: (price: string) => void) => {
     const qty = parseInt(milesQty) || 0;
     const tiers = allMilesPrograms
       .filter((p: any) => p.supplier_id === supplierId && p.program_name === programName && p.is_active)
       .sort((a: any, b: any) => a.min_miles - b.min_miles);
     if (tiers.length === 0) return;
     const tier = tiers.find((t: any) => t.max_miles ? qty >= t.min_miles && qty <= t.max_miles : qty >= t.min_miles) || tiers[tiers.length - 1];
-    if (tier) setForm(f => ({ ...f, [`${prefix}_miles_price`]: String(tier.price_per_thousand) }));
+    if (tier) callback(String(tier.price_per_thousand));
   };
 
   const updateForm = (field: string, value: any) => setForm(f => ({ ...f, [field]: value }));
@@ -206,10 +195,6 @@ export default function NewSale() {
           locator: get("locators") || prev.locator,
           flight_class: get("flight_class") || prev.flight_class,
           miles_program: get("miles_program") || prev.miles_program,
-          hotel_name: get("hotel_name") || prev.hotel_name,
-          hotel_reservation_code: get("hotel_code") || prev.hotel_reservation_code,
-          hotel_room: get("hotel_room") || prev.hotel_room,
-          hotel_meal_plan: get("hotel_meal_plan") || prev.hotel_meal_plan,
           connections: get("connections") || prev.connections,
           payment_method: get("payment_method") || prev.payment_method,
           observations: get("observations") || prev.observations,
@@ -218,15 +203,18 @@ export default function NewSale() {
           children: f.children?.value ? Number(f.children.value) : prev.children,
           children_ages: f.children_ages?.value ? (Array.isArray(f.children_ages.value) ? f.children_ages.value.join(", ") : String(f.children_ages.value)) : prev.children_ages,
           received_value: get("received_value") || prev.received_value,
-          air_miles_qty: get("air_miles_qty") || get("miles_quantity") || prev.air_miles_qty,
-          air_miles_price: get("air_miles_price") || prev.air_miles_price,
-          air_taxes: get("air_taxes") || get("taxes") || prev.air_taxes,
-          air_emission_source: get("emission_source") || prev.air_emission_source,
-          air_miles_program: get("miles_program") || prev.air_miles_program,
-          hotel_miles_qty: get("hotel_miles_qty") || prev.hotel_miles_qty,
-          hotel_miles_price: get("hotel_miles_price") || prev.hotel_miles_price,
-          hotel_taxes: get("hotel_taxes") || prev.hotel_taxes,
         }));
+
+        // Extract hotel info into first hotel entry
+        const hotelName = get("hotel_name");
+        if (hotelName && hotelEntries.length === 0) {
+          const entry = createEmptyHotelEntry();
+          entry.hotel_name = hotelName;
+          entry.hotel_reservation_code = get("hotel_code") || "";
+          entry.hotel_room = get("hotel_room") || "";
+          entry.hotel_meal_plan = get("hotel_meal_plan") || "";
+          setHotelEntries([entry]);
+        }
 
         if (f.flight_segments && Array.isArray(f.flight_segments)) {
           const rawSegments = f.flight_segments.map((s: any, i: number) => ({
@@ -280,27 +268,14 @@ export default function NewSale() {
   };
 
   // ─── Cost calculations ─────────────────────────────
-  const airCost = (() => {
-    if (form.air_emission_type === "pagante") return parseFloat(form.air_cash_value) || 0;
-    const qty = parseFloat(form.air_miles_qty) || 0;
-    const price = parseFloat(form.air_miles_price) || 0;
-    const taxes = parseFloat(form.air_taxes) || 0;
-    return (qty / 1000) * price + taxes;
-  })();
-
-  const hotelCost = (() => {
-    if (form.hotel_emission_type === "pagante") return parseFloat(form.hotel_cash_value) || 0;
-    const qty = parseFloat(form.hotel_miles_qty) || 0;
-    const price = parseFloat(form.hotel_miles_price) || 0;
-    const taxes = parseFloat(form.hotel_taxes) || 0;
-    return (qty / 1000) * price + taxes;
-  })();
+  const airCost = airCostBlocks.reduce((sum, b) => sum + calcBlockCost(b), 0);
+  const hotelCost = hotelEntries.reduce((sum, h) => sum + calcHotelCost(h), 0);
 
   const productsCost = otherProducts.reduce((sum, p) => {
     if (p.emission_type === "pagante") return sum + (parseFloat(p.cash_value) || 0);
     const qty = parseFloat(p.miles_qty) || 0;
     const tax = parseFloat(p.miles_tax) || 0;
-    return sum + tax; // simplified — miles cost calculation would need price/thousand
+    return sum + tax;
   }, 0);
 
   const totalCost = airCost + hotelCost + productsCost;
@@ -309,7 +284,8 @@ export default function NewSale() {
   const profit = receivedValue - totalCost;
   const margin = receivedValue > 0 ? (profit / receivedValue) * 100 : 0;
 
-  const totalMiles = (parseFloat(form.air_miles_qty) || 0) + (parseFloat(form.hotel_miles_qty) || 0)
+  const totalMiles = airCostBlocks.filter(b => b.emission_type === "milhas").reduce((s, b) => s + (parseFloat(b.miles_qty) || 0), 0)
+    + hotelEntries.filter(h => h.emission_type === "milhas").reduce((s, h) => s + (parseFloat(h.miles_qty) || 0), 0)
     + otherProducts.filter(p => p.emission_type === "milhas").reduce((s, p) => s + (parseFloat(p.miles_qty) || 0), 0);
 
   // ─── Passenger validation ──────────────────────────
@@ -361,11 +337,14 @@ export default function NewSale() {
     try {
       const products: string[] = [];
       if (airCost > 0 || form.airline) products.push("Aéreo");
-      if (hotelCost > 0 || form.hotel_name) products.push("Hotel");
+      if (hotelCost > 0 || hotelEntries.some(h => h.hotel_name)) products.push("Hotel");
       otherProducts.forEach(p => {
         const label = PRODUCT_TYPES.find(t => t.value === p.type)?.label || p.type;
         if (!products.includes(label)) products.push(label);
       });
+
+      // Use first hotel for legacy fields
+      const firstHotel = hotelEntries[0];
 
       const { data: saleData, error: saleError } = await supabase.from("sales").insert({
         name: smartCapitalizeName(form.name),
@@ -382,15 +361,18 @@ export default function NewSale() {
         connections: form.connections ? form.connections.split(",").map(c => c.trim()) : [],
         miles_program: form.miles_program || null,
         emission_source: form.emission_source || null,
-        hotel_name: form.hotel_name || null, hotel_room: form.hotel_room || null,
-        hotel_meal_plan: form.hotel_meal_plan || null,
-        hotel_reservation_code: form.hotel_reservation_code || null,
-        hotel_checkin_date: form.hotel_checkin_date || null,
-        hotel_checkout_date: form.hotel_checkout_date || null,
-        hotel_city: form.hotel_city || null, hotel_country: form.hotel_country || null,
-        hotel_address: form.hotel_address || null,
-        hotel_lat: form.hotel_lat || null, hotel_lng: form.hotel_lng || null,
-        hotel_place_id: form.hotel_place_id || null,
+        hotel_name: firstHotel?.hotel_name || null,
+        hotel_room: firstHotel?.hotel_room || null,
+        hotel_meal_plan: firstHotel?.hotel_meal_plan || null,
+        hotel_reservation_code: firstHotel?.hotel_reservation_code || null,
+        hotel_checkin_date: firstHotel?.hotel_checkin_date || null,
+        hotel_checkout_date: firstHotel?.hotel_checkout_date || null,
+        hotel_city: firstHotel?.hotel_city || null,
+        hotel_country: firstHotel?.hotel_country || null,
+        hotel_address: firstHotel?.hotel_address || null,
+        hotel_lat: firstHotel?.hotel_lat || null,
+        hotel_lng: firstHotel?.hotel_lng || null,
+        hotel_place_id: firstHotel?.hotel_place_id || null,
         adults: form.adults, children: form.children,
         children_ages: form.children_ages ? form.children_ages.split(",").map(a => parseInt(a.trim())).filter(Boolean) : [],
         received_value: receivedValue, total_cost: totalCost,
@@ -401,36 +383,61 @@ export default function NewSale() {
       if (saleError) throw saleError;
       const saleId = (saleData as any).id;
 
-      // Cost items
+      // Cost items — one per air cost block + one per hotel + others
       const costItems: any[] = [];
-      if (airCost > 0) {
-        costItems.push({
-          sale_id: saleId, category: "aereo", description: "Aéreo",
-          cash_value: form.air_emission_type === "pagante" ? parseFloat(form.air_cash_value) || 0 : 0,
-          miles_quantity: parseInt(form.air_miles_qty) || 0,
-          miles_price_per_thousand: parseFloat(form.air_miles_price) || 0,
-          taxes: parseFloat(form.air_taxes) || 0, taxes_included_in_cash: false,
-          emission_source: form.air_emission_source || null,
-          miles_program: form.air_miles_program || null,
-          miles_cost_brl: form.air_emission_type === "milhas" ? airCost : 0,
-          total_item_cost: airCost,
-          supplier_id: form.air_supplier_id || null,
-        });
+      
+      for (const block of airCostBlocks) {
+        const cost = calcBlockCost(block);
+        if (cost > 0 || block.reservation_code) {
+          const segmentLabels = block.segment_indices
+            .map(i => {
+              const seg = segments.filter(s => s.origin_iata && s.destination_iata)[i];
+              return seg ? `${seg.origin_iata}→${seg.destination_iata}` : "";
+            })
+            .filter(Boolean)
+            .join(", ");
+          
+          costItems.push({
+            sale_id: saleId,
+            category: "aereo",
+            description: `Aéreo: ${block.label}${segmentLabels ? ` (${segmentLabels})` : ""}`,
+            cash_value: block.emission_type === "pagante" ? parseFloat(block.cash_value) || 0 : 0,
+            miles_quantity: parseInt(block.miles_qty) || 0,
+            miles_price_per_thousand: parseFloat(block.miles_price) || 0,
+            taxes: parseFloat(block.taxes) || 0,
+            taxes_included_in_cash: false,
+            emission_source: block.emission_source || null,
+            miles_program: block.miles_program || null,
+            miles_cost_brl: block.emission_type === "milhas" ? cost : 0,
+            total_item_cost: cost,
+            supplier_id: block.supplier_id || null,
+            reservation_code: block.reservation_code || null,
+          });
+        }
       }
-      if (hotelCost > 0) {
-        costItems.push({
-          sale_id: saleId, category: "hotel", description: "Hotel",
-          cash_value: form.hotel_emission_type === "pagante" ? parseFloat(form.hotel_cash_value) || 0 : 0,
-          miles_quantity: parseInt(form.hotel_miles_qty) || 0,
-          miles_price_per_thousand: parseFloat(form.hotel_miles_price) || 0,
-          taxes: parseFloat(form.hotel_taxes) || 0, taxes_included_in_cash: false,
-          emission_source: form.hotel_emission_source || null,
-          miles_program: form.hotel_miles_program || null,
-          miles_cost_brl: form.hotel_emission_type === "milhas" ? hotelCost : 0,
-          total_item_cost: hotelCost,
-          supplier_id: form.hotel_supplier_id || null,
-        });
+
+      for (const hotel of hotelEntries) {
+        const cost = calcHotelCost(hotel);
+        if (cost > 0 || hotel.hotel_name) {
+          costItems.push({
+            sale_id: saleId,
+            category: "hotel",
+            description: `Hotel: ${hotel.hotel_name || "Sem nome"}${hotel.hotel_city ? ` (${hotel.hotel_city})` : ""}`,
+            cash_value: hotel.emission_type === "pagante" ? parseFloat(hotel.cash_value) || 0 : 0,
+            miles_quantity: parseInt(hotel.miles_qty) || 0,
+            miles_price_per_thousand: parseFloat(hotel.miles_price) || 0,
+            taxes: parseFloat(hotel.taxes) || 0,
+            taxes_included_in_cash: false,
+            emission_source: hotel.emission_source || null,
+            miles_program: hotel.miles_program || null,
+            miles_cost_brl: hotel.emission_type === "milhas" ? cost : 0,
+            total_item_cost: cost,
+            supplier_id: hotel.supplier_id || null,
+            reservation_code: hotel.hotel_reservation_code || null,
+          });
+        }
       }
+
       for (const p of otherProducts) {
         const cost = p.emission_type === "pagante" ? parseFloat(p.cash_value) || 0 : parseFloat(p.miles_tax) || 0;
         if (cost > 0 || p.description || p.reservation_code) {
@@ -556,7 +563,6 @@ export default function NewSale() {
           }))
         );
 
-        // Auto-create accounts_receivable entries
         for (const p of salePayments) {
           if (p.gross_value > 0) {
             const isPaid = p.status === "pago";
@@ -606,17 +612,6 @@ export default function NewSale() {
         <h2 className="text-lg font-semibold text-foreground">{title}</h2>
         {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
       </div>
-    </div>
-  );
-
-  const EmissionTypeSelector = ({ value, onChange }: { value: "milhas" | "pagante"; onChange: (v: "milhas" | "pagante") => void }) => (
-    <div className="flex gap-2">
-      <Button type="button" variant={value === "milhas" ? "default" : "outline"} size="sm" onClick={() => onChange("milhas")} className="flex-1">
-        🎯 Milhas
-      </Button>
-      <Button type="button" variant={value === "pagante" ? "default" : "outline"} size="sm" onClick={() => onChange("pagante")} className="flex-1">
-        💰 Pagante
-      </Button>
     </div>
   );
 
@@ -682,7 +677,6 @@ export default function NewSale() {
           <Card className="p-6">
             <SectionTitle icon={Users} title="Passageiros" subtitle="Adicione os viajantes desta venda" />
             
-            {/* Bloco 1 — Quantidade */}
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="space-y-2">
                 <Label>Adultos (18+)</Label>
@@ -698,7 +692,6 @@ export default function NewSale() {
               </div>
             </div>
 
-            {/* Bloco 3 — Validação visual */}
             <div className={cn(
               "rounded-lg px-4 py-3 mb-5 flex items-center gap-3 text-sm font-medium border",
               passengersValid
@@ -718,7 +711,6 @@ export default function NewSale() {
               </span>
             </div>
 
-            {/* Bloco 2 — Seleção */}
             <div className="border-t pt-5">
               <PassengerSelector selected={selectedPassengers} onChange={setSelectedPassengers} />
             </div>
@@ -730,6 +722,7 @@ export default function NewSale() {
         {/* ═══════════════ 3. AÉREO ═══════════════ */}
         <TabsContent value="aereo">
           <div className="space-y-4">
+            {/* Flight structure */}
             <FlightRegistrationSection
               segments={segments}
               onSegmentsChange={setSegments}
@@ -743,57 +736,17 @@ export default function NewSale() {
               onFormChange={updateForm}
             />
 
-            {/* Air Cost */}
-            <Card className="p-6">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">💰 Custo do Aéreo</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Fornecedor</Label>
-                    <Select value={form.air_supplier_id} onValueChange={(v) => { updateForm("air_supplier_id", v); updateForm("air_miles_program", ""); updateForm("air_miles_price", ""); }}>
-                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>{suppliers.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tipo de Emissão</Label>
-                    <EmissionTypeSelector value={form.air_emission_type} onChange={(v) => updateForm("air_emission_type", v)} />
-                  </div>
-                </div>
+            {/* Air Cost Blocks */}
+            <AirCostBlocksEditor
+              blocks={airCostBlocks}
+              onChange={setAirCostBlocks}
+              segments={segments}
+              suppliers={suppliers}
+              allMilesPrograms={allMilesPrograms}
+              getSupplierPrograms={getSupplierPrograms}
+              autoFillMilesPrice={autoFillMilesPriceCallback}
+            />
 
-                {form.air_emission_type === "milhas" ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Programa de Milhas</Label>
-                      <Select value={form.air_miles_program} onValueChange={(v) => {
-                        updateForm("air_miles_program", v);
-                        if (form.air_supplier_id && form.air_miles_qty) autoFillMilesPrice(form.air_supplier_id, v, form.air_miles_qty, "air");
-                      }} disabled={!form.air_supplier_id}>
-                        <SelectTrigger><SelectValue placeholder={form.air_supplier_id ? "Selecione" : "Selecione fornecedor"} /></SelectTrigger>
-                        <SelectContent>{form.air_supplier_id && getSupplierPrograms(form.air_supplier_id).map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2"><Label>Qtd Milhas</Label><Input type="number" value={form.air_miles_qty} onChange={(e) => {
-                      updateForm("air_miles_qty", e.target.value);
-                      if (form.air_supplier_id && form.air_miles_program) autoFillMilesPrice(form.air_supplier_id, form.air_miles_program, e.target.value, "air");
-                    }} /></div>
-                    <div className="space-y-2"><Label>Preço Milheiro R$</Label><Input type="number" step="0.01" value={form.air_miles_price} onChange={(e) => updateForm("air_miles_price", e.target.value)} /></div>
-                    <div className="space-y-2"><Label>Taxa em Dinheiro R$</Label><Input type="number" step="0.01" value={form.air_taxes} onChange={(e) => updateForm("air_taxes", e.target.value)} /></div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2"><Label>Valor Pago em Dinheiro R$</Label><Input type="number" step="0.01" value={form.air_cash_value} onChange={(e) => updateForm("air_cash_value", e.target.value)} /></div>
-                    <div className="space-y-2"><Label>Emissão por</Label><Input value={form.air_emission_source} onChange={(e) => updateForm("air_emission_source", e.target.value)} placeholder="Site, app..." /></div>
-                  </div>
-                )}
-
-                {airCost > 0 && (
-                  <div className="bg-muted/50 rounded-lg p-3 text-sm font-medium">
-                    Total Aéreo: <span className="text-primary">R$ {airCost.toFixed(2)}</span>
-                  </div>
-                )}
-              </div>
-            </Card>
             {/* Air Tariff Conditions */}
             <TariffConditionsCard
               value={airTariff}
@@ -809,91 +762,17 @@ export default function NewSale() {
         <TabsContent value="hospedagem">
           <div className="space-y-4">
             <Card className="p-6">
-              <SectionTitle icon={Hotel} title="Hospedagem" subtitle="Detalhes do hotel e reserva" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2 space-y-2">
-                  <Label>Hotel</Label>
-                  <HotelAutocomplete value={form.hotel_name} onChange={(name) => updateForm("hotel_name", name)}
-                    onSelect={(hotel) => {
-                      updateForm("hotel_name", hotel.name); updateForm("hotel_city", hotel.city);
-                      updateForm("hotel_country", hotel.country); updateForm("hotel_address", hotel.address);
-                      updateForm("hotel_lat", hotel.lat); updateForm("hotel_lng", hotel.lng);
-                      updateForm("hotel_place_id", hotel.place_id);
-                    }} />
-                  {form.hotel_city && <p className="text-xs text-muted-foreground">📍 {[form.hotel_city, form.hotel_country].filter(Boolean).join(", ")}</p>}
-                </div>
-                <div className="space-y-2"><Label>Destino</Label><Input value={form.hotel_city} onChange={(e) => updateForm("hotel_city", e.target.value)} /></div>
-                <div className="space-y-2"><Label>Check-in</Label><Input type="date" value={form.hotel_checkin_date} onChange={(e) => updateForm("hotel_checkin_date", e.target.value)} /></div>
-                <div className="space-y-2"><Label>Check-out</Label><Input type="date" value={form.hotel_checkout_date} onChange={(e) => updateForm("hotel_checkout_date", e.target.value)} /></div>
-                <div className="space-y-2"><Label>Qtd Quartos</Label><Input type="number" min={1} value={form.hotel_qty_rooms} onChange={(e) => updateForm("hotel_qty_rooms", e.target.value)} /></div>
-                <div className="space-y-2"><Label>Tipo de Quarto</Label><Input value={form.hotel_room} onChange={(e) => updateForm("hotel_room", e.target.value)} placeholder="Duplo, Suite..." /></div>
-                <div className="space-y-2"><Label>Alimentação</Label>
-                  <Select value={form.hotel_meal_plan} onValueChange={(v) => updateForm("hotel_meal_plan", v)}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Sem alimentação">Sem alimentação</SelectItem>
-                      <SelectItem value="Café da manhã">Café da manhã</SelectItem>
-                      <SelectItem value="Meia pensão">Meia pensão</SelectItem>
-                      <SelectItem value="Pensão completa">Pensão completa</SelectItem>
-                      <SelectItem value="All inclusive">All inclusive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2"><Label>Código Reserva</Label><Input value={form.hotel_reservation_code} onChange={(e) => updateForm("hotel_reservation_code", e.target.value)} className="font-mono" /></div>
-              </div>
+              <SectionTitle icon={Hotel} title="Hospedagem" subtitle="Cadastre uma ou mais hospedagens com seus custos individuais" />
             </Card>
 
-            {/* Hotel Cost */}
-            <Card className="p-6">
-              <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">💰 Custo da Hospedagem</h3>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Fornecedor</Label>
-                    <Select value={form.hotel_supplier_id} onValueChange={(v) => { updateForm("hotel_supplier_id", v); updateForm("hotel_miles_program", ""); updateForm("hotel_miles_price", ""); }}>
-                      <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>{suppliers.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Tipo de Pagamento</Label>
-                    <EmissionTypeSelector value={form.hotel_emission_type} onChange={(v) => updateForm("hotel_emission_type", v)} />
-                  </div>
-                </div>
+            <HotelEntriesEditor
+              hotels={hotelEntries}
+              onChange={setHotelEntries}
+              suppliers={suppliers}
+              getSupplierPrograms={getSupplierPrograms}
+              autoFillMilesPrice={autoFillMilesPriceCallback}
+            />
 
-                {form.hotel_emission_type === "milhas" ? (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Programa de Pontos</Label>
-                      <Select value={form.hotel_miles_program} onValueChange={(v) => {
-                        updateForm("hotel_miles_program", v);
-                        if (form.hotel_supplier_id && form.hotel_miles_qty) autoFillMilesPrice(form.hotel_supplier_id, v, form.hotel_miles_qty, "hotel");
-                      }} disabled={!form.hotel_supplier_id}>
-                        <SelectTrigger><SelectValue placeholder={form.hotel_supplier_id ? "Selecione" : "Selecione fornecedor"} /></SelectTrigger>
-                        <SelectContent>{form.hotel_supplier_id && getSupplierPrograms(form.hotel_supplier_id).map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2"><Label>Qtd Pontos</Label><Input type="number" value={form.hotel_miles_qty} onChange={(e) => {
-                      updateForm("hotel_miles_qty", e.target.value);
-                      if (form.hotel_supplier_id && form.hotel_miles_program) autoFillMilesPrice(form.hotel_supplier_id, form.hotel_miles_program, e.target.value, "hotel");
-                    }} /></div>
-                    <div className="space-y-2"><Label>Preço Milheiro R$</Label><Input type="number" step="0.01" value={form.hotel_miles_price} onChange={(e) => updateForm("hotel_miles_price", e.target.value)} /></div>
-                    <div className="space-y-2"><Label>Taxas R$</Label><Input type="number" step="0.01" value={form.hotel_taxes} onChange={(e) => updateForm("hotel_taxes", e.target.value)} /></div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2"><Label>Valor em Dinheiro R$</Label><Input type="number" step="0.01" value={form.hotel_cash_value} onChange={(e) => updateForm("hotel_cash_value", e.target.value)} /></div>
-                    <div className="space-y-2"><Label>Emissão por</Label><Input value={form.hotel_emission_source} onChange={(e) => updateForm("hotel_emission_source", e.target.value)} /></div>
-                  </div>
-                )}
-
-                {hotelCost > 0 && (
-                  <div className="bg-muted/50 rounded-lg p-3 text-sm font-medium">
-                    Total Hospedagem: <span className="text-primary">R$ {hotelCost.toFixed(2)}</span>
-                  </div>
-                )}
-              </div>
-            </Card>
             {/* Hotel Tariff Conditions */}
             <TariffConditionsCard
               value={hotelTariff}
@@ -948,7 +827,14 @@ export default function NewSale() {
 
                     <div className="space-y-2">
                       <Label>Tipo de Emissão</Label>
-                      <EmissionTypeSelector value={product.emission_type} onChange={(v) => updateProduct(product.id, "emission_type", v)} />
+                      <div className="flex gap-2">
+                        <Button type="button" variant={product.emission_type === "milhas" ? "default" : "outline"} size="sm" onClick={() => updateProduct(product.id, "emission_type", "milhas")} className="flex-1">
+                          🎯 Milhas
+                        </Button>
+                        <Button type="button" variant={product.emission_type === "pagante" ? "default" : "outline"} size="sm" onClick={() => updateProduct(product.id, "emission_type", "pagante")} className="flex-1">
+                          💰 Pagante
+                        </Button>
+                      </div>
                     </div>
 
                     {product.emission_type === "milhas" ? (
@@ -972,7 +858,7 @@ export default function NewSale() {
           </Card>
         </TabsContent>
 
-        {/* ═══════════════ 6. PAGAMENTOS E CUSTOS ═══════════════ */}
+        {/* ═══════════════ 6. PAGAMENTOS ═══════════════ */}
         <TabsContent value="pagamentos">
           <Card className="p-6">
             <SectionTitle icon={DollarSign} title="Pagamentos da Venda" subtitle="Registre um ou mais pagamentos (PIX, cartão, transferência...)" />
@@ -983,7 +869,6 @@ export default function NewSale() {
               totalSaleValue={receivedValue > 0 && salePayments.length === 0 ? receivedValue : undefined}
             />
 
-            {/* Fallback: valor manual se nenhum pagamento registrado */}
             {salePayments.length === 0 && (
               <div className="mt-6 space-y-2 border-t pt-4">
                 <Label className="text-xs text-muted-foreground">Ou informe o valor recebido manualmente:</Label>
@@ -997,20 +882,20 @@ export default function NewSale() {
               <div className="space-y-2">
                 {airCost > 0 && (
                   <div className="flex justify-between items-center py-2 px-3 bg-muted/30 rounded-lg">
-                    <span className="text-sm flex items-center gap-2"><Plane className="w-4 h-4" /> Aéreo</span>
-                    <span className="text-sm font-semibold">R$ {airCost.toFixed(2)}</span>
+                    <span className="text-sm flex items-center gap-2"><Plane className="w-4 h-4" /> Aéreo ({airCostBlocks.length} bloco{airCostBlocks.length !== 1 ? "s" : ""})</span>
+                    <span className="text-sm font-semibold">{fmt(airCost)}</span>
                   </div>
                 )}
                 {hotelCost > 0 && (
                   <div className="flex justify-between items-center py-2 px-3 bg-muted/30 rounded-lg">
-                    <span className="text-sm flex items-center gap-2"><Hotel className="w-4 h-4" /> Hospedagem</span>
-                    <span className="text-sm font-semibold">R$ {hotelCost.toFixed(2)}</span>
+                    <span className="text-sm flex items-center gap-2"><Hotel className="w-4 h-4" /> Hospedagem ({hotelEntries.length} hotel{hotelEntries.length !== 1 ? "éis" : ""})</span>
+                    <span className="text-sm font-semibold">{fmt(hotelCost)}</span>
                   </div>
                 )}
                 {productsCost > 0 && (
                   <div className="flex justify-between items-center py-2 px-3 bg-muted/30 rounded-lg">
                     <span className="text-sm flex items-center gap-2"><ShoppingBag className="w-4 h-4" /> Outros Produtos</span>
-                    <span className="text-sm font-semibold">R$ {productsCost.toFixed(2)}</span>
+                    <span className="text-sm font-semibold">{fmt(productsCost)}</span>
                   </div>
                 )}
               </div>
@@ -1018,14 +903,14 @@ export default function NewSale() {
               <Card className="p-4 mt-4 bg-primary/5 border-primary/20">
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <span className="text-muted-foreground">Custo Total</span>
-                  <span className="font-bold text-right">R$ {totalCost.toFixed(2)}</span>
+                  <span className="font-bold text-right">{fmt(totalCost)}</span>
                   <span className="text-muted-foreground">Total Milhas Utilizadas</span>
                   <span className="font-bold text-right">{totalMiles.toLocaleString()}</span>
                   <span className="text-muted-foreground">Valor Recebido</span>
-                  <span className="font-bold text-right text-success">R$ {receivedValue.toFixed(2)}</span>
+                  <span className="font-bold text-right text-success">{fmt(receivedValue)}</span>
                   <div className="col-span-2 border-t my-1" />
                   <span className="text-muted-foreground font-semibold">Lucro</span>
-                  <span className={cn("font-bold text-right text-lg", profit >= 0 ? "text-primary" : "text-destructive")}>R$ {profit.toFixed(2)}</span>
+                  <span className={cn("font-bold text-right text-lg", profit >= 0 ? "text-primary" : "text-destructive")}>{fmt(profit)}</span>
                   <span className="text-muted-foreground">Margem</span>
                   <span className="font-bold text-right text-accent">{margin.toFixed(1)}%</span>
                 </div>
@@ -1041,7 +926,6 @@ export default function NewSale() {
             <SectionTitle icon={Sparkles} title="Anexos e Extração com IA" subtitle="Envie comprovantes e deixe a IA preencher automaticamente" />
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Upload area */}
               <div className="space-y-4">
                 <div
                   className={cn("border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer", dragOver ? "border-primary bg-primary/5" : "border-border")}
@@ -1074,7 +958,6 @@ export default function NewSale() {
                 )}
               </div>
 
-              {/* Text input */}
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Texto complementar</Label>
@@ -1136,7 +1019,7 @@ export default function NewSale() {
                         <span className="text-muted-foreground">
                           {i + 1}. {p.payment_method}{p.gateway ? ` (${p.gateway})` : ""}{p.installments > 1 ? ` ${p.installments}x` : ""}
                         </span>
-                        <span className="font-medium">R$ {p.gross_value.toFixed(2)}{p.fee_total > 0 ? ` (líq: R$ ${p.net_value.toFixed(2)})` : ""}</span>
+                        <span className="font-medium">{fmt(p.gross_value)}{p.fee_total > 0 ? ` (líq: ${fmt(p.net_value)})` : ""}</span>
                       </div>
                     ))}
                   </div>
@@ -1156,27 +1039,54 @@ export default function NewSale() {
               </div>
 
               {/* Air */}
-              {(form.origin_iata || form.airline) && (
+              {(form.origin_iata || form.airline || airCostBlocks.length > 0) && (
                 <div className="bg-muted/30 rounded-xl p-4">
                   <h3 className="text-sm font-semibold flex items-center gap-2 mb-3"><Plane className="w-4 h-4 text-primary" /> Aéreo</h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="grid grid-cols-2 gap-2 text-sm mb-3">
                     <span className="text-muted-foreground">Rota</span><span className="font-mono">{form.origin_iata || "?"} → {form.destination_iata || "?"}</span>
                     <span className="text-muted-foreground">Datas</span><span>{form.departure_date || "?"} — {form.return_date || "?"}</span>
                     <span className="text-muted-foreground">Companhia</span><span>{form.airline || "—"}</span>
                     <span className="text-muted-foreground">Segmentos</span><span>{segments.filter(s => s.origin_iata).length} trecho(s)</span>
-                    <span className="text-muted-foreground">Custo</span><span className="font-semibold">R$ {airCost.toFixed(2)}</span>
                   </div>
+                  {airCostBlocks.length > 0 && (
+                    <div className="border-t pt-2 space-y-1">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Blocos de custo</p>
+                      {airCostBlocks.map(b => (
+                        <div key={b.id} className="flex justify-between text-xs">
+                          <span className="text-muted-foreground">{b.label} ({b.emission_type})</span>
+                          <span className="font-medium">{fmt(calcBlockCost(b))}</span>
+                        </div>
+                      ))}
+                      <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                        <span>Total Aéreo</span>
+                        <span className="text-primary">{fmt(airCost)}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Hotel */}
-              {form.hotel_name && (
+              {/* Hotels */}
+              {hotelEntries.length > 0 && (
                 <div className="bg-muted/30 rounded-xl p-4">
-                  <h3 className="text-sm font-semibold flex items-center gap-2 mb-3"><Hotel className="w-4 h-4 text-primary" /> Hospedagem</h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <span className="text-muted-foreground">Hotel</span><span>{form.hotel_name}</span>
-                    <span className="text-muted-foreground">Datas</span><span>{form.hotel_checkin_date || "?"} — {form.hotel_checkout_date || "?"}</span>
-                    <span className="text-muted-foreground">Custo</span><span className="font-semibold">R$ {hotelCost.toFixed(2)}</span>
+                  <h3 className="text-sm font-semibold flex items-center gap-2 mb-3"><Hotel className="w-4 h-4 text-primary" /> Hospedagem ({hotelEntries.length})</h3>
+                  <div className="space-y-2">
+                    {hotelEntries.map(h => (
+                      <div key={h.id} className="flex justify-between text-sm">
+                        <div>
+                          <span className="font-medium">{h.hotel_name || "Hotel sem nome"}</span>
+                          {h.hotel_city && <span className="text-muted-foreground text-xs ml-2">({h.hotel_city})</span>}
+                          {h.hotel_checkin_date && <span className="text-muted-foreground text-xs ml-2">{h.hotel_checkin_date} → {h.hotel_checkout_date || "?"}</span>}
+                        </div>
+                        <span className="font-semibold">{fmt(calcHotelCost(h))}</span>
+                      </div>
+                    ))}
+                    {hotelCost > 0 && (
+                      <div className="flex justify-between text-sm font-semibold pt-1 border-t">
+                        <span>Total Hospedagem</span>
+                        <span className="text-primary">{fmt(hotelCost)}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1189,7 +1099,7 @@ export default function NewSale() {
                     {otherProducts.map(p => (
                       <div key={p.id} className="flex justify-between">
                         <span>{PRODUCT_TYPES.find(t => t.value === p.type)?.label} — {p.description || "Sem descrição"}</span>
-                        <span className="font-semibold">R$ {(p.emission_type === "pagante" ? parseFloat(p.cash_value) || 0 : parseFloat(p.miles_tax) || 0).toFixed(2)}</span>
+                        <span className="font-semibold">{fmt(p.emission_type === "pagante" ? parseFloat(p.cash_value) || 0 : parseFloat(p.miles_tax) || 0)}</span>
                       </div>
                     ))}
                   </div>
@@ -1201,14 +1111,14 @@ export default function NewSale() {
                 <h3 className="text-sm font-semibold flex items-center gap-2 mb-4"><DollarSign className="w-4 h-4 text-primary" /> Resumo Financeiro</h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <span className="text-muted-foreground">Custo Total</span>
-                  <span className="font-bold text-right">R$ {totalCost.toFixed(2)}</span>
+                  <span className="font-bold text-right">{fmt(totalCost)}</span>
                   <span className="text-muted-foreground">Total de Milhas</span>
                   <span className="font-bold text-right">{totalMiles.toLocaleString()}</span>
                   <span className="text-muted-foreground">Valor Recebido</span>
-                  <span className="font-bold text-right text-success">R$ {receivedValue.toFixed(2)}</span>
+                  <span className="font-bold text-right text-success">{fmt(receivedValue)}</span>
                   <div className="col-span-2 border-t my-1" />
                   <span className="font-semibold">Lucro</span>
-                  <span className={cn("font-bold text-right text-xl", profit >= 0 ? "text-primary" : "text-destructive")}>R$ {profit.toFixed(2)}</span>
+                  <span className={cn("font-bold text-right text-xl", profit >= 0 ? "text-primary" : "text-destructive")}>{fmt(profit)}</span>
                   <span className="text-muted-foreground">Margem</span>
                   <span className="font-bold text-right text-accent text-lg">{margin.toFixed(1)}%</span>
                 </div>
