@@ -132,11 +132,50 @@ export default function SaleDetail() {
       toast({ title: "Venda atualizada!" });
 
       try {
+        // Audit log
+        const changedFields: string[] = [];
+        for (const key of Object.keys(editForm)) {
+          if (sale[key] !== editForm[key] && key !== 'profit' && key !== 'margin') {
+            changedFields.push(key);
+          }
+        }
+        if (changedFields.length > 0) {
+          await supabase.from("audit_log").insert({
+            sale_id: id,
+            action: "sale_updated",
+            details: `Campos alterados: ${changedFields.join(", ")}`,
+            old_value: Object.fromEntries(changedFields.map(k => [k, sale[k]])),
+            new_value: Object.fromEntries(changedFields.map(k => [k, editForm[k]])),
+            user_id: null, // will be set by RLS context
+          });
+        }
+
+        // Sync financial: update accounts_receivable if received_value changed
+        if (sale.received_value !== receivedValue) {
+          // Update virtual receivables for this sale
+          const { data: existingAR } = await supabase.from("accounts_receivable").select("id").eq("sale_id", id);
+          if (!existingAR || existingAR.length === 0) {
+            // Create one if none exists
+            if (receivedValue > 0) {
+              await supabase.from("accounts_receivable").insert({
+                sale_id: id,
+                description: editForm.name || "Venda",
+                gross_value: receivedValue,
+                net_value: receivedValue,
+                status: "pendente",
+                payment_method: editForm.payment_method || null,
+              });
+            }
+          }
+        }
+
         if (editForm.status === "Cancelado") {
           await Promise.all([
             supabase.from("checkin_tasks").update({ status: "CANCELADO" }).eq("sale_id", id).not("status", "in", '("CONCLUIDO","CANCELADO")'),
             supabase.from("lodging_confirmation_tasks").update({ status: "CANCELADO" }).eq("sale_id", id).not("status", "in", '("CONFIRMADO","CANCELADO")'),
           ]);
+          // Mark receivables as cancelled
+          await supabase.from("accounts_receivable").update({ status: "cancelado" }).eq("sale_id", id).neq("status", "recebido");
         } else {
           await Promise.all([
             supabase.functions.invoke("checkin-generate"),

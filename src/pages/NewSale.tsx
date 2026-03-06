@@ -384,6 +384,7 @@ export default function NewSale() {
           miles_program: form.hotel_miles_program || null,
           miles_cost_brl: form.hotel_emission_type === "milhas" ? hotelCost : 0,
           total_item_cost: hotelCost,
+          supplier_id: form.hotel_supplier_id || null,
         });
       }
       for (const p of otherProducts) {
