@@ -118,17 +118,22 @@ serve(async (req) => {
 
     if (action === "flight_schedule") {
       // Flight Offers Search - but we only extract schedule info, NO prices
-      const { origin, destination, departureDate, returnDate, airline } = params;
+      const { origin, destination, departureDate, returnDate, airline, flightNumber } = params;
       if (!origin || !destination || !departureDate) {
         throw new Error("origin, destination, departureDate are required");
       }
+
+      // Extract numeric part from flight number (e.g. "EK262" -> "262")
+      const flightNumOnly = flightNumber
+        ? flightNumber.replace(/^[A-Z]{2,3}/i, "").trim()
+        : "";
 
       const searchParams: Record<string, string> = {
         originLocationCode: origin.toUpperCase(),
         destinationLocationCode: destination.toUpperCase(),
         departureDate,
         adults: "1",
-        max: "3",
+        max: flightNumOnly ? "10" : "3",
         currencyCode: "BRL",
         nonStop: "false",
       };
