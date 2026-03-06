@@ -64,6 +64,7 @@ import PlanoContas from "@/pages/financeiro/PlanoContas";
 import Comissoes from "@/pages/financeiro/Comissoes";
 import DREReport from "@/pages/financeiro/DREReport";
 import SimuladorTaxas from "@/pages/financeiro/SimuladorTaxas";
+import FechamentoFornecedores from "@/pages/financeiro/FechamentoFornecedores";
 
 // Admin
 import AdminUsers from "@/pages/admin/AdminUsers";
