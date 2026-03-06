@@ -1,21 +1,17 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Search, Download, User } from "lucide-react";
+import { Plus, Search, Download } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import EmployeeFormTabs from "@/components/rh/EmployeeFormTabs";
 
-const POSITIONS = ["SDR", "Vendas", "Consultor", "Operação", "Financeiro", "Admin"];
-const DEPARTMENTS = ["Comercial", "Operacional", "Financeiro", "Administrativo", "Marketing"];
-const CONTRACT_TYPES = ["CLT", "PJ", "Freelancer", "Estágio"];
+const DEPARTMENTS = ["Comercial", "Operacional", "Financeiro", "Administrativo", "Marketing", "Atendimento"];
 const STATUSES = ["ativo", "inativo", "afastado"];
 
 export default function Colaboradores() {
@@ -26,7 +22,6 @@ export default function Colaboradores() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<any>({});
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   const load = async () => {
     setLoading(true);
@@ -46,6 +41,12 @@ export default function Colaboradores() {
 
   const handleSave = async () => {
     if (!form.full_name) { toast.error("Nome é obrigatório"); return; }
+    
+    // Auto-set termination date when status changes to inativo
+    const termination_date = form.status === "inativo" && !form.termination_date
+      ? new Date().toISOString().slice(0, 10)
+      : form.termination_date || null;
+
     const payload = {
       full_name: form.full_name,
       position: form.position || "Vendas",
@@ -58,12 +59,37 @@ export default function Colaboradores() {
       work_regime: form.work_regime || "presencial",
       status: form.status || "ativo",
       observations: form.observations || null,
+      cpf: form.cpf || null,
+      rg: form.rg || null,
+      birth_date: form.birth_date || null,
+      address_street: form.address_street || null,
+      address_number: form.address_number || null,
+      address_complement: form.address_complement || null,
+      address_neighborhood: form.address_neighborhood || null,
+      address_city: form.address_city || null,
+      address_state: form.address_state || null,
+      address_cep: form.address_cep || null,
+      emergency_contact_name: form.emergency_contact_name || null,
+      emergency_contact_phone: form.emergency_contact_phone || null,
+      manager_id: form.manager_id || null,
+      remuneration_type: form.remuneration_type || "fixo",
+      commission_enabled: form.commission_enabled || false,
+      commission_percent: Number(form.commission_percent) || 0,
+      weekly_hours: Number(form.weekly_hours) || 44,
+      work_schedule_start: form.work_schedule_start || "09:00",
+      work_schedule_end: form.work_schedule_end || "18:00",
+      lunch_duration_minutes: Number(form.lunch_duration_minutes) || 60,
+      work_days: form.work_days || ["seg", "ter", "qua", "qui", "sex"],
+      permissions: form.permissions || {},
+      termination_date,
     };
+
     if (form.id) {
       await supabase.from("employees").update(payload).eq("id", form.id);
       toast.success("Colaborador atualizado");
     } else {
-      await supabase.from("employees").insert(payload);
+      const { data } = await supabase.from("employees").insert(payload).select().single();
+      if (data) setForm({ ...form, id: data.id });
       toast.success("Colaborador criado");
     }
     setShowForm(false);
@@ -93,7 +119,6 @@ export default function Colaboradores() {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -115,7 +140,6 @@ export default function Colaboradores() {
         </Select>
       </div>
 
-      {/* Table */}
       <Card className="border-border/50">
         <CardContent className="p-0">
           <Table>
@@ -148,58 +172,10 @@ export default function Colaboradores() {
         </CardContent>
       </Card>
 
-      {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
           <DialogHeader><DialogTitle>{form.id ? "Editar" : "Novo"} Colaborador</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Nome completo *</Label><Input value={form.full_name || ""} onChange={e => setForm({ ...form, full_name: e.target.value })} /></div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Cargo</Label>
-                <Select value={form.position || "Vendas"} onValueChange={v => setForm({ ...form, position: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{POSITIONS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div><Label>Área</Label>
-                <Select value={form.department || "Comercial"} onValueChange={v => setForm({ ...form, department: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Contrato</Label>
-                <Select value={form.contract_type || "CLT"} onValueChange={v => setForm({ ...form, contract_type: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{CONTRACT_TYPES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div><Label>Admissão</Label><Input type="date" value={form.hire_date || ""} onChange={e => setForm({ ...form, hire_date: e.target.value })} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div><Label>Salário Base</Label><Input type="number" value={form.base_salary || ""} onChange={e => setForm({ ...form, base_salary: e.target.value })} /></div>
-              <div><Label>Status</Label>
-                <Select value={form.status || "ativo"} onValueChange={v => setForm({ ...form, status: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{STATUSES.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div><Label>Email</Label><Input value={form.email || ""} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
-            <div><Label>Telefone</Label><Input value={form.phone || ""} onChange={e => setForm({ ...form, phone: e.target.value })} /></div>
-            <div><Label>Regime</Label>
-              <Select value={form.work_regime || "presencial"} onValueChange={v => setForm({ ...form, work_regime: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="presencial">Presencial</SelectItem>
-                  <SelectItem value="hibrido">Híbrido</SelectItem>
-                  <SelectItem value="remoto">Remoto</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button onClick={handleSave} className="w-full">{form.id ? "Salvar" : "Criar"}</Button>
-          </div>
+          <EmployeeFormTabs form={form} setForm={setForm} onSave={handleSave} employees={employees} />
         </DialogContent>
       </Dialog>
     </div>
