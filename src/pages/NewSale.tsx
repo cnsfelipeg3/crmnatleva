@@ -56,6 +56,7 @@ const defaultSegment: FlightSegment = {
 
 const PRODUCT_TYPES = [
   { value: "transfer", label: "Transfer", icon: Car },
+  { value: "trem", label: "Trem / Ferroviário", icon: Car },
   { value: "seguro", label: "Seguro Viagem", icon: Shield },
   { value: "passeio", label: "Passeio / Experiência", icon: Ticket },
   { value: "ingresso", label: "Ingresso", icon: Ticket },
