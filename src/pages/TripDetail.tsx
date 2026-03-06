@@ -443,9 +443,18 @@ export default function TripDetail() {
                                 : "bg-muted/20 border-border/50 hover:border-primary/30"
                           }`}>
                             <div className="flex items-start justify-between gap-2 mb-2">
-                              <div>
-                                <p className={`text-sm font-semibold ${isPast ? "text-muted-foreground line-through decoration-muted-foreground/30" : "text-foreground"}`}>{item.title}</p>
-                                {item.subtitle && <p className="text-xs text-muted-foreground">{item.subtitle}</p>}
+                              <div className="flex items-center gap-2">
+                                {item.time && (
+                                  <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${
+                                    isPast ? "bg-muted text-muted-foreground/60" : "bg-primary/15 text-primary"
+                                  }`}>
+                                    {formatTimeBR(item.time)}
+                                  </span>
+                                )}
+                                <div>
+                                  <p className={`text-sm font-semibold ${isPast ? "text-muted-foreground line-through decoration-muted-foreground/30" : "text-foreground"}`}>{item.title}</p>
+                                  {item.subtitle && <p className="text-xs text-muted-foreground">{item.subtitle}</p>}
+                                </div>
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
                                 {item.reservationCode && (
