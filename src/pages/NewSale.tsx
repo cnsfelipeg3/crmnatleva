@@ -1094,8 +1094,21 @@ export default function NewSale() {
                   <span className="text-muted-foreground">Nome</span><span className="font-medium">{form.name || "—"}</span>
                   <span className="text-muted-foreground">Vendedor</span><span className="font-medium">{user?.email || "—"}</span>
                   <span className="text-muted-foreground">Data</span><span>{form.close_date || "—"}</span>
-                  <span className="text-muted-foreground">Pagamento</span><span>{form.payment_method || "—"}</span>
+                  <span className="text-muted-foreground">Pagamentos</span>
+                  <span>{salePayments.length > 0 ? `${salePayments.length} pagamento(s)` : form.payment_method || "—"}</span>
                 </div>
+                {salePayments.length > 0 && (
+                  <div className="space-y-1 mt-2 pt-2 border-t">
+                    {salePayments.map((p, i) => (
+                      <div key={p.id} className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          {i + 1}. {p.payment_method}{p.gateway ? ` (${p.gateway})` : ""}{p.installments > 1 ? ` ${p.installments}x` : ""}
+                        </span>
+                        <span className="font-medium">R$ {p.gross_value.toFixed(2)}{p.fee_total > 0 ? ` (líq: R$ ${p.net_value.toFixed(2)})` : ""}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Passengers */}
