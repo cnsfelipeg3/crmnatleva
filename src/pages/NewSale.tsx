@@ -135,13 +135,6 @@ export default function NewSale() {
       return data || [];
     },
   });
-  const { data: paymentFeeRules = [] } = useQuery({
-    queryKey: ["payment-fee-rules-select"],
-    queryFn: async () => {
-      const { data } = await supabase.from("payment_fee_rules").select("*").eq("is_active", true).order("payment_method");
-      return data || [];
-    },
-  });
 
   const getSupplierPrograms = (supplierId: string) => {
     const programs = allMilesPrograms.filter((p: any) => p.supplier_id === supplierId);
