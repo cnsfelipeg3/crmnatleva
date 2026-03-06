@@ -261,9 +261,13 @@ export default function FlightRegistrationSection({
       return;
     }
 
+    const flightNumber = first.flight_number || "";
+    // Extract just the numeric part if flight_number includes airline code
+    const flightNumOnly = flightNumber.replace(/^[A-Z]{2}/i, "").trim();
+
     setLoadingGroup(groupId);
     try {
-      const offers = await lookupAmadeus(origin, destination, date, airline);
+      const offers = await lookupAmadeus(origin, destination, date, airline, flightNumber || undefined);
       if (!offers.length) {
         toast({
           title: "Nenhum voo encontrado",
