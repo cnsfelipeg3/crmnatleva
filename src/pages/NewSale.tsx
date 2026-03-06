@@ -1071,6 +1071,7 @@ export default function NewSale() {
                 </div>
               </Card>
             </div>
+            <StepNavigation />
           </Card>
         </TabsContent>
 
