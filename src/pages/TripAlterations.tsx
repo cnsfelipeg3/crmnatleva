@@ -144,7 +144,34 @@ export default function TripAlterations() {
     queryFn: async () => {
       const { data } = await supabase
         .from("cost_items")
-        .select("id, category, description, total_item_cost, cash_value, miles_cost_brl, miles_quantity, miles_program, product_type, supplier_id, suppliers(name)")
+        .select("id, category, description, total_item_cost, cash_value, miles_cost_brl, miles_quantity, miles_program, product_type, supplier_id, reservation_code, emission_source, taxes, suppliers(name)")
+        .eq("sale_id", form.sale_id);
+      return data || [];
+    },
+  });
+
+  // Flight segments for selected sale
+  const { data: saleFlightSegments = [] } = useQuery({
+    queryKey: ["flight-segments-for-alt", form.sale_id],
+    enabled: !!form.sale_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("flight_segments")
+        .select("*")
+        .eq("sale_id", form.sale_id)
+        .order("segment_order");
+      return data || [];
+    },
+  });
+
+  // Sale payments
+  const { data: salePayments = [] } = useQuery({
+    queryKey: ["sale-payments-for-alt", form.sale_id],
+    enabled: !!form.sale_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("sale_payments")
+        .select("*")
         .eq("sale_id", form.sale_id);
       return data || [];
     },
