@@ -370,6 +370,7 @@ export default function NewSale() {
           miles_program: form.air_miles_program || null,
           miles_cost_brl: form.air_emission_type === "milhas" ? airCost : 0,
           total_item_cost: airCost,
+          supplier_id: form.air_supplier_id || null,
         });
       }
       if (hotelCost > 0) {
@@ -383,6 +384,7 @@ export default function NewSale() {
           miles_program: form.hotel_miles_program || null,
           miles_cost_brl: form.hotel_emission_type === "milhas" ? hotelCost : 0,
           total_item_cost: hotelCost,
+          supplier_id: form.hotel_supplier_id || null,
         });
       }
       for (const p of otherProducts) {

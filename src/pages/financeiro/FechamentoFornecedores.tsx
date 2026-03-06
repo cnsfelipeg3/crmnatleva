@@ -96,16 +96,27 @@ export default function FechamentoFornecedores() {
     },
   });
 
-  const { data: costItemsUnlinked = [] } = useQuery({
-    queryKey: ["unlinked-emissions"],
+  const { data: allSettlementItemCostIds = [] } = useQuery({
+    queryKey: ["settlement-item-cost-ids"],
     queryFn: async () => {
-      // Get cost_items with a supplier that aren't yet in a settlement
+      const { data } = await (supabase.from as any)("supplier_settlement_items")
+        .select("cost_item_id")
+        .not("cost_item_id", "is", null);
+      return (data || []).map((d: any) => d.cost_item_id);
+    },
+  });
+
+  const { data: costItemsUnlinked = [] } = useQuery({
+    queryKey: ["unlinked-emissions", allSettlementItemCostIds],
+    queryFn: async () => {
       const { data } = await supabase
         .from("cost_items")
         .select("id, sale_id, category, description, total_item_cost, miles_program, miles_quantity, miles_price_per_thousand, emission_source, supplier_id, created_at, suppliers(name), sales(name, display_id, clients(display_name))")
         .not("supplier_id", "is", null)
         .order("created_at", { ascending: false });
-      return data || [];
+      // Filter out items already in a settlement
+      const settled = new Set(allSettlementItemCostIds);
+      return (data || []).filter((ci: any) => !settled.has(ci.id));
     },
   });
 
