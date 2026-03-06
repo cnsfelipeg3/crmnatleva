@@ -3073,8 +3073,11 @@ export type Database = {
       }
       trip_alterations: {
         Row: {
+          affected_passengers: string[] | null
+          agency_profit: number | null
           alteration_type: string
           client_refund_value: number | null
+          cost_item_id: string | null
           created_at: string
           created_by: string | null
           credit_value: number | null
@@ -3087,11 +3090,18 @@ export type Database = {
           notes: string | null
           original_value: number | null
           penalty_value: number | null
+          pix_bank: string | null
+          pix_key: string | null
+          pix_key_type: string | null
+          pix_receiver_name: string | null
+          product_cost: number | null
           product_type: string
+          profit_impact: number | null
           reason: string | null
           refund_date: string | null
           refund_method: string | null
           refund_notes: string | null
+          refund_status: string | null
           refund_value: number | null
           request_date: string
           resolved_at: string | null
@@ -3099,11 +3109,20 @@ export type Database = {
           sale_id: string
           segment_id: string | null
           status: string
+          supplier_refund_date: string | null
+          supplier_refund_method: string | null
+          supplier_refund_origin: string | null
+          supplier_refund_status: string | null
+          supplier_refund_value: number | null
+          supplier_settlement_ref: string | null
           updated_at: string
         }
         Insert: {
+          affected_passengers?: string[] | null
+          agency_profit?: number | null
           alteration_type?: string
           client_refund_value?: number | null
+          cost_item_id?: string | null
           created_at?: string
           created_by?: string | null
           credit_value?: number | null
@@ -3116,11 +3135,18 @@ export type Database = {
           notes?: string | null
           original_value?: number | null
           penalty_value?: number | null
+          pix_bank?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
+          pix_receiver_name?: string | null
+          product_cost?: number | null
           product_type?: string
+          profit_impact?: number | null
           reason?: string | null
           refund_date?: string | null
           refund_method?: string | null
           refund_notes?: string | null
+          refund_status?: string | null
           refund_value?: number | null
           request_date?: string
           resolved_at?: string | null
@@ -3128,11 +3154,20 @@ export type Database = {
           sale_id: string
           segment_id?: string | null
           status?: string
+          supplier_refund_date?: string | null
+          supplier_refund_method?: string | null
+          supplier_refund_origin?: string | null
+          supplier_refund_status?: string | null
+          supplier_refund_value?: number | null
+          supplier_settlement_ref?: string | null
           updated_at?: string
         }
         Update: {
+          affected_passengers?: string[] | null
+          agency_profit?: number | null
           alteration_type?: string
           client_refund_value?: number | null
+          cost_item_id?: string | null
           created_at?: string
           created_by?: string | null
           credit_value?: number | null
@@ -3145,11 +3180,18 @@ export type Database = {
           notes?: string | null
           original_value?: number | null
           penalty_value?: number | null
+          pix_bank?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
+          pix_receiver_name?: string | null
+          product_cost?: number | null
           product_type?: string
+          profit_impact?: number | null
           reason?: string | null
           refund_date?: string | null
           refund_method?: string | null
           refund_notes?: string | null
+          refund_status?: string | null
           refund_value?: number | null
           request_date?: string
           resolved_at?: string | null
@@ -3157,9 +3199,22 @@ export type Database = {
           sale_id?: string
           segment_id?: string | null
           status?: string
+          supplier_refund_date?: string | null
+          supplier_refund_method?: string | null
+          supplier_refund_origin?: string | null
+          supplier_refund_status?: string | null
+          supplier_refund_value?: number | null
+          supplier_settlement_ref?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "trip_alterations_cost_item_id_fkey"
+            columns: ["cost_item_id"]
+            isOneToOne: false
+            referencedRelation: "cost_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "trip_alterations_sale_id_fkey"
             columns: ["sale_id"]
