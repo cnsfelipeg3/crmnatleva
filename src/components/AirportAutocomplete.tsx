@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { Plane, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { searchAirportsLocal, type AirportEntry } from "@/lib/airportsData";
 
 interface AirportResult {
   iata: string;
@@ -30,7 +31,6 @@ export default function AirportAutocomplete({ value, onChange, placeholder = "GR
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Show label when not focused, raw query when focused
   const displayValue = isFocused ? query : (selectedLabel || value || "");
 
   useEffect(() => {
@@ -50,25 +50,51 @@ export default function AirportAutocomplete({ value, onChange, placeholder = "GR
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const mergeResults = (local: AirportEntry[], remote: AirportResult[]): AirportResult[] => {
+    const seen = new Set(local.map(r => r.iata));
+    const merged: AirportResult[] = local.map(r => ({ ...r }));
+    for (const r of remote) {
+      if (!seen.has(r.iata)) {
+        seen.add(r.iata);
+        merged.push(r);
+      }
+    }
+    return merged.slice(0, 15);
+  };
+
   const search = (keyword: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (keyword.length < 2) { setResults([]); setOpen(false); return; }
-    debounceRef.current = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase.functions.invoke("amadeus-search", {
-          body: { action: "airport_search", keyword },
-        });
-        if (!error && data?.data) {
-          setResults(data.data);
-          setOpen(data.data.length > 0);
+    if (keyword.length < 1) { setResults([]); setOpen(false); return; }
+
+    // Instant local search
+    const localResults = searchAirportsLocal(keyword, 12);
+    if (localResults.length > 0) {
+      setResults(localResults.map(r => ({ ...r })));
+      setOpen(true);
+    }
+
+    // Supplement with Amadeus for 2+ chars
+    if (keyword.length >= 2) {
+      debounceRef.current = setTimeout(async () => {
+        setLoading(true);
+        try {
+          const { data, error } = await supabase.functions.invoke("amadeus-search", {
+            body: { action: "airport_search", keyword },
+          });
+          if (!error && data?.data) {
+            setResults(prev => mergeResults(
+              localResults,
+              data.data as AirportResult[]
+            ));
+            setOpen(true);
+          }
+        } catch (e) {
+          console.error("Airport search error:", e);
+        } finally {
+          setLoading(false);
         }
-      } catch (e) {
-        console.error("Airport search error:", e);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
+      }, 300);
+    }
   };
 
   const handleInputChange = (val: string) => {
@@ -84,7 +110,7 @@ export default function AirportAutocomplete({ value, onChange, placeholder = "GR
   const handleFocus = () => {
     setIsFocused(true);
     setQuery(value || "");
-    if (value && value.length >= 2) {
+    if (value && value.length >= 1) {
       search(value);
     }
   };
@@ -130,7 +156,7 @@ export default function AirportAutocomplete({ value, onChange, placeholder = "GR
             </button>
           ))}
           {loading && (
-            <div className="px-3 py-2 text-xs text-muted-foreground text-center">Buscando...</div>
+            <div className="px-3 py-2 text-xs text-muted-foreground text-center">Buscando mais...</div>
           )}
         </div>
       )}
