@@ -480,6 +480,7 @@ export default function NewSale() {
 
       // Save sale payments
       if (salePayments.length > 0) {
+        const todayStr = new Date().toISOString().slice(0, 10);
         await supabase.from("sale_payments").insert(
           salePayments.map(p => ({
             sale_id: saleId,
@@ -493,6 +494,8 @@ export default function NewSale() {
             net_value: p.net_value,
             receiving_account_id: p.receiving_account_id || null,
             payment_date: p.payment_date || null,
+            due_date: p.due_date || null,
+            status: p.status || "pago",
             notes: p.notes || null,
           }))
         );
@@ -500,6 +503,7 @@ export default function NewSale() {
         // Auto-create accounts_receivable entries
         for (const p of salePayments) {
           if (p.gross_value > 0) {
+            const isPaid = p.status === "pago";
             await supabase.from("accounts_receivable").insert({
               sale_id: saleId,
               description: `Pagamento ${p.payment_method}${p.gateway ? ` (${p.gateway})` : ""}`,
@@ -508,8 +512,9 @@ export default function NewSale() {
               fee_value: p.fee_total,
               net_value: p.net_value,
               payment_method: p.payment_method,
-              status: "recebido",
-              received_date: p.payment_date || new Date().toISOString().slice(0, 10),
+              status: isPaid ? "recebido" : "pendente",
+              received_date: isPaid ? (p.payment_date || todayStr) : null,
+              due_date: p.due_date || p.payment_date || todayStr,
               seller_id: user?.id || null,
               created_by: user?.id || null,
               installment_number: 1,
