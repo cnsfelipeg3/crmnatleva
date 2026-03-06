@@ -349,13 +349,22 @@ export default function TripDetail() {
       {/* Chronological Journey Timeline */}
       <Card className="p-5 overflow-hidden">
         {(() => {
-          const today = new Date().toISOString().slice(0, 10);
-          const pastCount = timeline.filter(item => {
+          // Use local date/time (Brazil UTC-3) instead of UTC
+          const now = new Date();
+          const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+          const nowTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+          const isItemPast = (item: TimelineItem) => {
+            if (item.status === "concluido") return true;
             if (!item.date) return false;
-            return item.date < today || item.status === "concluido";
-          }).length;
+            if (item.date < today) return true;
+            if (item.date === today && item.time && item.time <= nowTime) return true;
+            return false;
+          };
+
+          const pastCount = timeline.filter(isItemPast).length;
           const progressPercent = timeline.length > 0 ? Math.round((pastCount / timeline.length) * 100) : 0;
-          const currentIdx = timeline.findIndex(item => item.date && item.date >= today && item.status !== "concluido");
+          const currentIdx = timeline.findIndex(item => item.date && !isItemPast(item));
 
           return (
             <>
