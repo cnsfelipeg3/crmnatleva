@@ -810,7 +810,16 @@ export default function TripAlterations() {
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Milhas</h4>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5"><Label className="text-xs">Programa</Label><Input className="h-9" value={form.miles_program} onChange={e => setForm(f => ({ ...f, miles_program: e.target.value }))} placeholder="Ex: Smiles" /></div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Programa</Label>
+                        <Select value={form.miles_program || "__none__"} onValueChange={v => setForm(f => ({ ...f, miles_program: v === "__none__" ? "" : v }))}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Selecionar programa" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Selecionar...</SelectItem>
+                            {milesPrograms.map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="space-y-1.5"><Label className="text-xs">Milhas utilizadas</Label><Input type="number" className="h-9" value={form.miles_used || ""} onChange={e => setForm(f => ({ ...f, miles_used: parseInt(e.target.value) || 0 }))} /></div>
                       <div className="space-y-1.5"><Label className="text-xs">Multa em milhas</Label><Input type="number" className="h-9" value={form.miles_penalty || ""} onChange={e => setForm(f => ({ ...f, miles_penalty: parseInt(e.target.value) || 0 }))} /></div>
                       <div className="space-y-1.5"><Label className="text-xs">Milhas devolvidas</Label><Input type="number" className="h-9" value={form.miles_returned || ""} onChange={e => setForm(f => ({ ...f, miles_returned: parseInt(e.target.value) || 0 }))} /></div>
