@@ -142,9 +142,11 @@ export default function FechamentoFornecedores() {
         const supplierName = s.suppliers?.name?.toLowerCase() || "";
         if (!supplierName.includes(q)) return false;
       }
+      if (filterDateFrom && s.period_start < filterDateFrom) return false;
+      if (filterDateTo && s.period_end > filterDateTo) return false;
       return true;
     });
-  }, [settlements, filterSupplier, filterStatus, search]);
+  }, [settlements, filterSupplier, filterStatus, search, filterDateFrom, filterDateTo]);
 
   // Generate settlement
   async function handleGenerate() {
