@@ -1008,6 +1008,7 @@ export default function NewSale() {
             {otherProducts.length > 0 && (
               <Button variant="outline" onClick={addProduct} className="w-full mt-4"><Plus className="w-4 h-4 mr-2" /> Adicionar Outro Produto</Button>
             )}
+            <StepNavigation />
           </Card>
         </TabsContent>
 
