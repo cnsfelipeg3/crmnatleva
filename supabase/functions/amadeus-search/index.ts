@@ -35,7 +35,7 @@ async function getAmadeusToken(): Promise<string> {
 async function amadeusGet(path: string, params: Record<string, string>) {
   const token = await getAmadeusToken();
   const qs = new URLSearchParams(params).toString();
-  const url = `https://api.amadeus.com${path}?${qs}`;
+  const url = `https://test.api.amadeus.com${path}?${qs}`;
   console.log("Amadeus GET:", url);
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
