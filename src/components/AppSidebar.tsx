@@ -261,6 +261,11 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         )}
 
         {role !== "admin" && renderNavItem({ to: "/settings", icon: Settings, label: "Configurações" })}
+
+        {/* Apresentação Geral */}
+        <div className="mt-2 pt-2 border-t border-sidebar-border/30">
+          {renderNavItem({ to: "/apresentacao", icon: Presentation, label: "Apresentação Geral" })}
+        </div>
       </nav>
 
       <div className="relative border-t border-sidebar-border p-3 space-y-1.5">

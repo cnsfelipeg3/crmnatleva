@@ -140,6 +140,9 @@ function AppRoutes() {
         {/* Admin */}
         <Route path="/admin/users" element={<AdminUsers />} />
 
+        {/* Apresentação */}
+        <Route path="/apresentacao" element={<ApresentacaoGeral />} />
+
         <Route path="/settings" element={<SettingsIndex />} />
         <Route path="/settings/sellers" element={<GenericSettingsList title="Vendedores" defaultItems={["Admin NatLeva"]} />} />
         <Route path="/settings/airlines" element={<GenericSettingsList title="Companhias Aéreas" defaultItems={["LATAM", "GOL", "Azul", "TAP", "Emirates", "Qatar Airways", "Turkish Airlines"]} />} />
