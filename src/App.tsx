@@ -34,6 +34,7 @@ import ImportChatGuru from "@/pages/ImportChatGuru";
 import AnaliseAtendimento from "@/pages/AnaliseAtendimento";
 import ApresentacaoGeral from "@/pages/ApresentacaoGeral";
 import TripDetail from "@/pages/TripDetail";
+import TripAlterations from "@/pages/TripAlterations";
 
 // RH
 import RHIndex from "@/pages/rh/RHIndex";
