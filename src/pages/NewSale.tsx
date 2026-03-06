@@ -370,6 +370,7 @@ export default function NewSale() {
           miles_program: form.air_miles_program || null,
           miles_cost_brl: form.air_emission_type === "milhas" ? airCost : 0,
           total_item_cost: airCost,
+          supplier_id: form.air_supplier_id || null,
         });
       }
       if (hotelCost > 0) {
