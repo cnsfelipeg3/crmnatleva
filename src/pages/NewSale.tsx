@@ -66,6 +66,7 @@ const PRODUCT_TYPES = [
 ];
 
 const TAB_IDS = ["info", "passageiros", "aereo", "hospedagem", "produtos", "pagamentos", "anexos", "revisao"] as const;
+type TabId = typeof TAB_IDS[number];
 
 /* ─── Component ────────────────────────────────────────── */
 
