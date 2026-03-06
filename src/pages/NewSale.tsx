@@ -308,6 +308,44 @@ export default function NewSale() {
   const totalMiles = (parseFloat(form.air_miles_qty) || 0) + (parseFloat(form.hotel_miles_qty) || 0)
     + otherProducts.filter(p => p.emission_type === "milhas").reduce((s, p) => s + (parseFloat(p.miles_qty) || 0), 0);
 
+  // ─── Passenger validation ──────────────────────────
+  const totalPassengersRequired = form.adults + form.children;
+  const passengersValid = selectedPassengers.length === totalPassengersRequired;
+
+  // ─── Tab navigation ────────────────────────────────
+  const currentTabIndex = TAB_IDS.indexOf(activeTab as TabId);
+  const canAdvanceFromPassengers = passengersValid;
+
+  const goNext = () => {
+    if (activeTab === "passageiros" && !canAdvanceFromPassengers) {
+      toast({
+        title: "Passageiros pendentes",
+        description: `Esta venda possui ${totalPassengersRequired} passageiro(s), mas apenas ${selectedPassengers.length} foram vinculados.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    const next = currentTabIndex + 1;
+    if (next < TAB_IDS.length) setActiveTab(TAB_IDS[next]);
+  };
+  const goPrev = () => {
+    const prev = currentTabIndex - 1;
+    if (prev >= 0) setActiveTab(TAB_IDS[prev]);
+  };
+
+  const StepNavigation = ({ hideNext }: { hideNext?: boolean }) => (
+    <div className="flex items-center justify-between mt-6 pt-4 border-t">
+      <Button variant="outline" onClick={goPrev} disabled={currentTabIndex === 0}>
+        <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
+      </Button>
+      {!hideNext && (
+        <Button onClick={goNext} disabled={currentTabIndex === TAB_IDS.length - 1}>
+          Avançar <ArrowRight className="w-4 h-4 ml-2" />
+        </Button>
+      )}
+    </div>
+  );
+
   // ─── Save ───────────────────────────────────────────
   const handleSave = async () => {
     if (!form.name.trim()) {
