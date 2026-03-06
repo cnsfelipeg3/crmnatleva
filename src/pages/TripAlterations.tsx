@@ -126,6 +126,19 @@ export default function TripAlterations() {
     },
   });
 
+  // Miles programs from supplier config
+  const { data: milesPrograms = [] } = useQuery({
+    queryKey: ["all-miles-programs"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("supplier_miles_programs")
+        .select("program_name")
+        .eq("is_active", true);
+      const unique = [...new Set((data || []).map((d: any) => d.program_name))].sort();
+      return unique as string[];
+    },
+  });
+
   const { data: allSales = [] } = useQuery({
     queryKey: ["sales-for-alt-search"],
     queryFn: async () => {
@@ -543,28 +556,52 @@ export default function TripAlterations() {
                   {filteredSales.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">Nenhuma venda encontrada</p>}
                 </div>
               )}
-              {form.sale_id && selectedSale && (
-                <Card className="p-3 bg-primary/5 border-primary/20">
-                  <div className="flex items-center justify-between">
-                    <div className="text-xs">
-                      <span className="font-mono font-bold text-primary">{selectedSale.display_id}</span>
-                      <span className="ml-2 font-semibold text-foreground">{selectedSale.name}</span>
-                      {selectedSale.clients?.display_name && <span className="ml-2 text-muted-foreground">({selectedSale.clients.display_name})</span>}
-                    </div>
-                    <Button variant="ghost" size="sm" className="text-[10px] h-7" onClick={() => { setForm(f => ({ ...f, sale_id: "", cost_item_id: "", affected_passengers: [] })); setSaleSearch(""); }}>Trocar</Button>
-                  </div>
-                  <div className="flex flex-wrap gap-4 mt-2 text-[10px] text-muted-foreground">
-                    {selectedSale.received_value > 0 && <span>Receita: <strong className="text-foreground">{fmt(selectedSale.received_value)}</strong></span>}
-                    {selectedSale.total_cost > 0 && <span>Custo: <strong className="text-foreground">{fmt(selectedSale.total_cost)}</strong></span>}
-                    {selectedSale.received_value > 0 && selectedSale.total_cost > 0 && (
-                      <span>Lucro: <strong className={`${(selectedSale.received_value - selectedSale.total_cost) >= 0 ? "text-emerald-600" : "text-destructive"}`}>
-                        {fmt(selectedSale.received_value - selectedSale.total_cost)}
-                      </strong></span>
-                    )}
-                    {selectedSale.origin_iata && selectedSale.destination_iata && <span>{selectedSale.origin_iata} → {selectedSale.destination_iata}</span>}
-                  </div>
-                </Card>
-              )}
+              {form.sale_id && selectedSale && (() => {
+                const revenue = selectedSale.received_value || 0;
+                const cost = selectedSale.total_cost || 0;
+                const profit = revenue - cost;
+                const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+                return (
+                  <>
+                    <Card className="p-3 bg-primary/5 border-primary/20">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs">
+                          <span className="font-mono font-bold text-primary">{selectedSale.display_id}</span>
+                          <span className="ml-2 font-semibold text-foreground">{selectedSale.name}</span>
+                          {selectedSale.clients?.display_name && <span className="ml-2 text-muted-foreground">({selectedSale.clients.display_name})</span>}
+                        </div>
+                        <Button variant="ghost" size="sm" className="text-[10px] h-7" onClick={() => { setForm(f => ({ ...f, sale_id: "", cost_item_id: "", affected_passengers: [] })); setSaleSearch(""); }}>Trocar</Button>
+                      </div>
+                      {selectedSale.origin_iata && selectedSale.destination_iata && (
+                        <p className="text-[10px] text-muted-foreground mt-1">{selectedSale.origin_iata} → {selectedSale.destination_iata}</p>
+                      )}
+                    </Card>
+                    <Card className={`p-4 border-2 ${profit >= 0 ? "border-emerald-500/40 bg-emerald-500/5" : "border-destructive/40 bg-destructive/5"}`}>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1">
+                        <DollarSign className="w-3.5 h-3.5" /> Resumo Financeiro da Venda
+                      </h4>
+                      <div className="grid grid-cols-4 gap-3 text-center">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase">Receita</p>
+                          <p className="text-lg font-bold text-foreground">{fmt(revenue)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase">Custo Total</p>
+                          <p className="text-lg font-bold text-foreground">{fmt(cost)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase">Lucro</p>
+                          <p className={`text-xl font-extrabold ${profit >= 0 ? "text-emerald-600" : "text-destructive"}`}>{fmt(profit)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase">Margem</p>
+                          <p className={`text-lg font-bold ${margin >= 0 ? "text-emerald-600" : "text-destructive"}`}>{margin.toFixed(1)}%</p>
+                        </div>
+                      </div>
+                    </Card>
+                  </>
+                );
+              })()}
             </div>
 
             {form.sale_id && (
@@ -773,7 +810,16 @@ export default function TripAlterations() {
                   <div className="space-y-2">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Milhas</h4>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5"><Label className="text-xs">Programa</Label><Input className="h-9" value={form.miles_program} onChange={e => setForm(f => ({ ...f, miles_program: e.target.value }))} placeholder="Ex: Smiles" /></div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Programa</Label>
+                        <Select value={form.miles_program || "__none__"} onValueChange={v => setForm(f => ({ ...f, miles_program: v === "__none__" ? "" : v }))}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Selecionar programa" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Selecionar...</SelectItem>
+                            {milesPrograms.map((p: string) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="space-y-1.5"><Label className="text-xs">Milhas utilizadas</Label><Input type="number" className="h-9" value={form.miles_used || ""} onChange={e => setForm(f => ({ ...f, miles_used: parseInt(e.target.value) || 0 }))} /></div>
                       <div className="space-y-1.5"><Label className="text-xs">Multa em milhas</Label><Input type="number" className="h-9" value={form.miles_penalty || ""} onChange={e => setForm(f => ({ ...f, miles_penalty: parseInt(e.target.value) || 0 }))} /></div>
                       <div className="space-y-1.5"><Label className="text-xs">Milhas devolvidas</Label><Input type="number" className="h-9" value={form.miles_returned || ""} onChange={e => setForm(f => ({ ...f, miles_returned: parseInt(e.target.value) || 0 }))} /></div>
