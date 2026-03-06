@@ -95,9 +95,10 @@ interface AmadeusOffer {
   itineraries: AmadeusItinerary[];
 }
 
-async function lookupAmadeus(origin: string, destination: string, date: string, airline?: string, nonStop?: boolean) {
+async function lookupAmadeus(origin: string, destination: string, date: string, airline?: string, flightNumber?: string) {
   const body: any = { action: "flight_schedule", origin, destination, departureDate: date };
   if (airline) body.airline = airline;
+  if (flightNumber) body.flightNumber = flightNumber;
   const { data, error } = await supabase.functions.invoke("amadeus-search", { body });
   if (error) throw error;
   if (data?.error) throw new Error(data.error);
