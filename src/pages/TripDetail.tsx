@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDateBR } from "@/lib/dateFormat";
+import { formatDateBR, formatTimeBR } from "@/lib/dateFormat";
 import { iataToLabel, iataToCityName } from "@/lib/iataUtils";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import AirlineLogo, { AirlineLogosStack } from "@/components/AirlineLogo";
