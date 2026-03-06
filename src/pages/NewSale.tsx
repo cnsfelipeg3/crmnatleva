@@ -659,6 +659,7 @@ export default function NewSale() {
                 <Textarea value={form.observations} onChange={(e) => updateForm("observations", e.target.value)} rows={3} placeholder="Detalhes adicionais, preferências do cliente..." />
               </div>
             </div>
+            <StepNavigation />
           </Card>
         </TabsContent>
 
