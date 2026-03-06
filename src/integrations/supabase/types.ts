@@ -2391,6 +2391,48 @@ export type Database = {
         }
         Relationships: []
       }
+      receiving_accounts: {
+        Row: {
+          account_number: string | null
+          account_type: string
+          agency: string | null
+          bank_name: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          pix_key: string | null
+          pix_key_type: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          account_type?: string
+          agency?: string | null
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          account_type?: string
+          agency?: string | null
+          bank_name?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
+        }
+        Relationships: []
+      }
       sale_passengers: {
         Row: {
           id: string
@@ -2423,6 +2465,72 @@ export type Database = {
           },
           {
             foreignKeyName: "sale_passengers_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sale_payments: {
+        Row: {
+          created_at: string
+          fee_fixed: number | null
+          fee_percent: number | null
+          fee_total: number | null
+          gateway: string | null
+          gross_value: number
+          id: string
+          installments: number | null
+          net_value: number
+          notes: string | null
+          payment_date: string | null
+          payment_method: string
+          receiving_account_id: string | null
+          sale_id: string
+        }
+        Insert: {
+          created_at?: string
+          fee_fixed?: number | null
+          fee_percent?: number | null
+          fee_total?: number | null
+          gateway?: string | null
+          gross_value?: number
+          id?: string
+          installments?: number | null
+          net_value?: number
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string
+          receiving_account_id?: string | null
+          sale_id: string
+        }
+        Update: {
+          created_at?: string
+          fee_fixed?: number | null
+          fee_percent?: number | null
+          fee_total?: number | null
+          gateway?: string | null
+          gross_value?: number
+          id?: string
+          installments?: number | null
+          net_value?: number
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string
+          receiving_account_id?: string | null
+          sale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_payments_receiving_account_id_fkey"
+            columns: ["receiving_account_id"]
+            isOneToOne: false
+            referencedRelation: "receiving_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_payments_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
