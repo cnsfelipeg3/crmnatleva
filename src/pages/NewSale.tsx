@@ -28,6 +28,7 @@ import AirportAutocomplete from "@/components/AirportAutocomplete";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import FlightEnrichmentDialog from "@/components/FlightEnrichmentDialog";
 import HotelAutocomplete from "@/components/HotelAutocomplete";
+import FlightRegistrationSection from "@/components/FlightRegistrationSection";
 import { classifyItinerary, assignDirections } from "@/lib/itineraryClassifier";
 import { smartCapitalizeName } from "@/lib/nameUtils";
 import PassengerSelector, { type SelectedPassenger } from "@/components/PassengerSelector";
