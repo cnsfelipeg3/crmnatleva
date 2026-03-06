@@ -548,6 +548,7 @@ export type Database = {
       attachments: {
         Row: {
           category: string
+          cost_item_id: string | null
           created_at: string
           file_name: string
           file_type: string | null
@@ -558,6 +559,7 @@ export type Database = {
         }
         Insert: {
           category?: string
+          cost_item_id?: string | null
           created_at?: string
           file_name: string
           file_type?: string | null
@@ -568,6 +570,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          cost_item_id?: string | null
           created_at?: string
           file_name?: string
           file_type?: string | null
@@ -577,6 +580,13 @@ export type Database = {
           uploaded_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "attachments_cost_item_id_fkey"
+            columns: ["cost_item_id"]
+            isOneToOne: false
+            referencedRelation: "cost_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "attachments_sale_id_fkey"
             columns: ["sale_id"]
@@ -1249,7 +1259,10 @@ export type Database = {
           miles_price_per_thousand: number | null
           miles_program: string | null
           miles_quantity: number | null
+          product_type: string | null
+          reservation_code: string | null
           sale_id: string
+          supplier_id: string | null
           taxes: number | null
           taxes_included_in_cash: boolean | null
           total_item_cost: number | null
@@ -1265,7 +1278,10 @@ export type Database = {
           miles_price_per_thousand?: number | null
           miles_program?: string | null
           miles_quantity?: number | null
+          product_type?: string | null
+          reservation_code?: string | null
           sale_id: string
+          supplier_id?: string | null
           taxes?: number | null
           taxes_included_in_cash?: boolean | null
           total_item_cost?: number | null
@@ -1281,7 +1297,10 @@ export type Database = {
           miles_price_per_thousand?: number | null
           miles_program?: string | null
           miles_quantity?: number | null
+          product_type?: string | null
+          reservation_code?: string | null
           sale_id?: string
+          supplier_id?: string | null
           taxes?: number | null
           taxes_included_in_cash?: boolean | null
           total_item_cost?: number | null
@@ -1292,6 +1311,13 @@ export type Database = {
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_items_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
