@@ -32,6 +32,7 @@ import AIIntegrations from "@/pages/AIIntegrations";
 import AIKnowledgeBase from "@/pages/AIKnowledgeBase";
 import ImportChatGuru from "@/pages/ImportChatGuru";
 import AnaliseAtendimento from "@/pages/AnaliseAtendimento";
+import ApresentacaoGeral from "@/pages/ApresentacaoGeral";
 
 // RH
 import RHIndex from "@/pages/rh/RHIndex";
@@ -138,6 +139,9 @@ function AppRoutes() {
 
         {/* Admin */}
         <Route path="/admin/users" element={<AdminUsers />} />
+
+        {/* Apresentação */}
+        <Route path="/apresentacao" element={<ApresentacaoGeral />} />
 
         <Route path="/settings" element={<SettingsIndex />} />
         <Route path="/settings/sellers" element={<GenericSettingsList title="Vendedores" defaultItems={["Admin NatLeva"]} />} />

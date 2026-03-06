@@ -8,7 +8,7 @@ import {
   ArrowUpRight, ArrowDownRight, Wallet, CreditCard, FileText, Building2,
   Percent, FolderTree, Users2, BarChart3, Cog, Calculator,
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
-  GitBranch, Plug, Zap, BookOpen, FileDown,
+  GitBranch, Plug, Zap, BookOpen, FileDown, Presentation,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -261,6 +261,11 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         )}
 
         {role !== "admin" && renderNavItem({ to: "/settings", icon: Settings, label: "Configurações" })}
+
+        {/* Apresentação Geral */}
+        <div className="mt-2 pt-2 border-t border-sidebar-border/30">
+          {renderNavItem({ to: "/apresentacao", icon: Presentation, label: "Apresentação Geral" })}
+        </div>
       </nav>
 
       <div className="relative border-t border-sidebar-border p-3 space-y-1.5">
