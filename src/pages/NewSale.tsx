@@ -1149,6 +1149,7 @@ export default function NewSale() {
                 <p className="text-xs text-muted-foreground">✅ Campos preenchidos automaticamente nas abas correspondentes. Revise antes de salvar.</p>
               </Card>
             )}
+            <StepNavigation />
           </Card>
         </TabsContent>
 
