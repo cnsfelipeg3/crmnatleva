@@ -15,7 +15,7 @@ async function getAmadeusToken(): Promise<string> {
   const secret = Deno.env.get("AMADEUS_API_SECRET");
   if (!key || !secret) throw new Error("Amadeus credentials not configured");
 
-  const res = await fetch("https://api.amadeus.com/v1/security/oauth2/token", {
+  const res = await fetch("https://test.api.amadeus.com/v1/security/oauth2/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: `grant_type=client_credentials&client_id=${key}&client_secret=${secret}`,
