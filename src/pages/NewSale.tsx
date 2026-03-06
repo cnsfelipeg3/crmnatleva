@@ -112,6 +112,7 @@ export default function NewSale() {
     { ...defaultSegment, direction: "ida", segment_order: 1 },
   ]);
   const [otherProducts, setOtherProducts] = useState<OtherProduct[]>([]);
+  const [salePayments, setSalePayments] = useState<SalePayment[]>([]);
   const [saving, setSaving] = useState(false);
   const [enrichmentOpen, setEnrichmentOpen] = useState(false);
   const [selectedPassengers, setSelectedPassengers] = useState<SelectedPassenger[]>(() => {
