@@ -32,6 +32,7 @@ import AIIntegrations from "@/pages/AIIntegrations";
 import AIKnowledgeBase from "@/pages/AIKnowledgeBase";
 import ImportChatGuru from "@/pages/ImportChatGuru";
 import AnaliseAtendimento from "@/pages/AnaliseAtendimento";
+import ApresentacaoGeral from "@/pages/ApresentacaoGeral";
 
 // RH
 import RHIndex from "@/pages/rh/RHIndex";
