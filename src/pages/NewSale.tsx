@@ -391,14 +391,16 @@ export default function NewSale() {
       }
       for (const p of otherProducts) {
         const cost = p.emission_type === "pagante" ? parseFloat(p.cash_value) || 0 : parseFloat(p.miles_tax) || 0;
-        if (cost > 0) {
+        if (cost > 0 || p.description || p.reservation_code) {
           costItems.push({
             sale_id: saleId, category: "outros",
+            product_type: p.type,
             description: `${PRODUCT_TYPES.find(t => t.value === p.type)?.label || p.type} - ${p.description}`,
             cash_value: p.emission_type === "pagante" ? parseFloat(p.cash_value) || 0 : 0,
             miles_quantity: parseInt(p.miles_qty) || 0,
             taxes: parseFloat(p.miles_tax) || 0,
             total_item_cost: cost,
+            reservation_code: p.reservation_code || null,
           });
         }
       }
