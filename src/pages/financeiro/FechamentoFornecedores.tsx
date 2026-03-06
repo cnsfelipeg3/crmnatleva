@@ -466,7 +466,20 @@ export default function FechamentoFornecedores() {
                 {Object.entries(STATUS_MAP).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}
               </SelectContent>
             </Select>
+           </div>
+          <div className="w-[160px]">
+            <Label className="text-xs">Data emissão de</Label>
+            <Input type="date" className="h-9" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} />
           </div>
+          <div className="w-[160px]">
+            <Label className="text-xs">Data emissão até</Label>
+            <Input type="date" className="h-9" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} />
+          </div>
+          {(filterDateFrom || filterDateTo) && (
+            <Button variant="ghost" size="sm" className="h-9 mt-auto" onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); }}>
+              Limpar datas
+            </Button>
+          )}
         </div>
       </Card>
 
