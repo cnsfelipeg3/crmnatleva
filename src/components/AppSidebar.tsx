@@ -20,6 +20,7 @@ const navItems = [
   { to: "/viagens", icon: Plane, label: "Viagens" },
   { to: "/checkin", icon: ClipboardCheck, label: "Fazer Check-in" },
   { to: "/hospedagem", icon: Hotel, label: "Confirmar Hospedagens" },
+  { to: "/alteracoes", icon: RotateCcw, label: "Alterações de Viagem" },
   { to: "/passengers", icon: Users, label: "Passageiros" },
   { to: "/inteligencia-clientes", icon: Brain, label: "Inteligência Clientes" },
   { to: "/natleva-intelligence", icon: Sparkles, label: "NatLeva Intelligence" },

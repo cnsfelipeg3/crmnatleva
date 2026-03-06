@@ -95,6 +95,7 @@ function AppRoutes() {
         <Route path="/viagens/:id" element={<TripDetail />} />
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/hospedagem" element={<Lodging />} />
+        <Route path="/alteracoes" element={<TripAlterations />} />
         <Route path="/clients/:id" element={<ClientDetail />} />
         <Route path="/passengers" element={<Passengers />} />
         <Route path="/passengers/:id" element={<PassengerProfile />} />
