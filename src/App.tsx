@@ -34,6 +34,7 @@ import ImportChatGuru from "@/pages/ImportChatGuru";
 import AnaliseAtendimento from "@/pages/AnaliseAtendimento";
 import ApresentacaoGeral from "@/pages/ApresentacaoGeral";
 import TripDetail from "@/pages/TripDetail";
+import TripAlterations from "@/pages/TripAlterations";
 
 // RH
 import RHIndex from "@/pages/rh/RHIndex";
@@ -94,6 +95,7 @@ function AppRoutes() {
         <Route path="/viagens/:id" element={<TripDetail />} />
         <Route path="/checkin" element={<Checkin />} />
         <Route path="/hospedagem" element={<Lodging />} />
+        <Route path="/alteracoes" element={<TripAlterations />} />
         <Route path="/clients/:id" element={<ClientDetail />} />
         <Route path="/passengers" element={<Passengers />} />
         <Route path="/passengers/:id" element={<PassengerProfile />} />
