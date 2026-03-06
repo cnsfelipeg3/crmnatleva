@@ -8,7 +8,7 @@ import {
   ArrowUpRight, ArrowDownRight, Wallet, CreditCard, FileText, Building2,
   Percent, FolderTree, Users2, BarChart3, Cog, Calculator,
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
-  GitBranch, Plug, Zap, BookOpen, FileDown, Presentation,
+  GitBranch, Plug, Zap, BookOpen, FileDown, Presentation, RotateCcw,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
