@@ -33,6 +33,7 @@ import { classifyItinerary, assignDirections } from "@/lib/itineraryClassifier";
 import { smartCapitalizeName } from "@/lib/nameUtils";
 import PassengerSelector, { type SelectedPassenger } from "@/components/PassengerSelector";
 import SalePaymentsEditor, { type SalePayment } from "@/components/SalePaymentsEditor";
+import TariffConditionsCard, { type TariffCondition, EMPTY_TARIFF } from "@/components/TariffConditionsCard";
 import { useQuery } from "@tanstack/react-query";
 
 /* ─── Types ────────────────────────────────────────────── */
