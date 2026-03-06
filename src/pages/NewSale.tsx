@@ -884,6 +884,13 @@ export default function NewSale() {
                 )}
               </div>
             </Card>
+            {/* Hotel Tariff Conditions */}
+            <TariffConditionsCard
+              value={hotelTariff}
+              onChange={setHotelTariff}
+              productLabel="Hospedagem"
+              compact
+            />
             <StepNavigation />
           </div>
         </TabsContent>
