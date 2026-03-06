@@ -610,18 +610,6 @@ export default function NewSale() {
                 <Label>Vendedor Responsável</Label>
                 <Input value={user?.email || ""} disabled className="bg-muted/50" />
               </div>
-              <div className="space-y-2">
-                <Label>Forma de Pagamento Principal</Label>
-                <Select value={form.payment_method} onValueChange={(v) => updateForm("payment_method", v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="PIX">PIX</SelectItem>
-                    <SelectItem value="Cartão de crédito">Cartão de crédito</SelectItem>
-                    <SelectItem value="Transferência">Transferência</SelectItem>
-                    <SelectItem value="Boleto">Boleto</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
               <div className="sm:col-span-2 space-y-2">
                 <Label>Link do Chat (WhatsApp / atendimento)</Label>
                 <Input value={form.link_chat} onChange={(e) => updateForm("link_chat", e.target.value)} placeholder="https://wa.me/..." />
