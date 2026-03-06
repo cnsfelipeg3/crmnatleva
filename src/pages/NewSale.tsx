@@ -33,6 +33,7 @@ import { classifyItinerary, assignDirections } from "@/lib/itineraryClassifier";
 import { smartCapitalizeName } from "@/lib/nameUtils";
 import PassengerSelector, { type SelectedPassenger } from "@/components/PassengerSelector";
 import SalePaymentsEditor, { type SalePayment } from "@/components/SalePaymentsEditor";
+import TariffConditionsCard, { type TariffCondition, EMPTY_TARIFF } from "@/components/TariffConditionsCard";
 import { useQuery } from "@tanstack/react-query";
 
 /* ─── Types ────────────────────────────────────────────── */
@@ -116,6 +117,8 @@ export default function NewSale() {
   ]);
   const [otherProducts, setOtherProducts] = useState<OtherProduct[]>([]);
   const [salePayments, setSalePayments] = useState<SalePayment[]>([]);
+  const [airTariff, setAirTariff] = useState<TariffCondition>({ ...EMPTY_TARIFF });
+  const [hotelTariff, setHotelTariff] = useState<TariffCondition>({ ...EMPTY_TARIFF });
   const [saving, setSaving] = useState(false);
   const [enrichmentOpen, setEnrichmentOpen] = useState(false);
   const [selectedPassengers, setSelectedPassengers] = useState<SelectedPassenger[]>(() => {
@@ -444,6 +447,16 @@ export default function NewSale() {
         }
       }
       if (costItems.length > 0) await supabase.from("cost_items").insert(costItems);
+
+      // Tariff conditions
+      const tariffConditions: any[] = [];
+      if (airTariff.fare_name) {
+        tariffConditions.push({ sale_id: saleId, product_type: "aereo", product_label: "Aéreo", ...airTariff });
+      }
+      if (hotelTariff.fare_name) {
+        tariffConditions.push({ sale_id: saleId, product_type: "hotel", product_label: "Hospedagem", ...hotelTariff });
+      }
+      if (tariffConditions.length > 0) await supabase.from("tariff_conditions").insert(tariffConditions);
 
       // Flight segments
       const validSegments = segments.filter(s => s.origin_iata && s.destination_iata);
@@ -781,6 +794,13 @@ export default function NewSale() {
                 )}
               </div>
             </Card>
+            {/* Air Tariff Conditions */}
+            <TariffConditionsCard
+              value={airTariff}
+              onChange={setAirTariff}
+              productLabel="Aéreo"
+              compact
+            />
             <StepNavigation />
           </div>
         </TabsContent>
@@ -874,6 +894,13 @@ export default function NewSale() {
                 )}
               </div>
             </Card>
+            {/* Hotel Tariff Conditions */}
+            <TariffConditionsCard
+              value={hotelTariff}
+              onChange={setHotelTariff}
+              productLabel="Hospedagem"
+              compact
+            />
             <StepNavigation />
           </div>
         </TabsContent>
