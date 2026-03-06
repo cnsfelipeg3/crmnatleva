@@ -2475,6 +2475,7 @@ export type Database = {
       sale_payments: {
         Row: {
           created_at: string
+          due_date: string | null
           fee_fixed: number | null
           fee_percent: number | null
           fee_total: number | null
@@ -2488,9 +2489,11 @@ export type Database = {
           payment_method: string
           receiving_account_id: string | null
           sale_id: string
+          status: string
         }
         Insert: {
           created_at?: string
+          due_date?: string | null
           fee_fixed?: number | null
           fee_percent?: number | null
           fee_total?: number | null
@@ -2504,9 +2507,11 @@ export type Database = {
           payment_method?: string
           receiving_account_id?: string | null
           sale_id: string
+          status?: string
         }
         Update: {
           created_at?: string
+          due_date?: string | null
           fee_fixed?: number | null
           fee_percent?: number | null
           fee_total?: number | null
@@ -2520,6 +2525,7 @@ export type Database = {
           payment_method?: string
           receiving_account_id?: string | null
           sale_id?: string
+          status?: string
         }
         Relationships: [
           {
