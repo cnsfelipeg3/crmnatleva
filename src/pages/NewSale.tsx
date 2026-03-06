@@ -448,6 +448,16 @@ export default function NewSale() {
       }
       if (costItems.length > 0) await supabase.from("cost_items").insert(costItems);
 
+      // Tariff conditions
+      const tariffConditions: any[] = [];
+      if (airTariff.fare_name) {
+        tariffConditions.push({ sale_id: saleId, product_type: "aereo", product_label: "Aéreo", ...airTariff });
+      }
+      if (hotelTariff.fare_name) {
+        tariffConditions.push({ sale_id: saleId, product_type: "hotel", product_label: "Hospedagem", ...hotelTariff });
+      }
+      if (tariffConditions.length > 0) await supabase.from("tariff_conditions").insert(tariffConditions);
+
       // Flight segments
       const validSegments = segments.filter(s => s.origin_iata && s.destination_iata);
       if (validSegments.length > 0) {
