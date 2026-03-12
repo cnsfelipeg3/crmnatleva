@@ -19,12 +19,8 @@ interface SaleRow {
   hotelCount?: number;
   paxCount?: number;
 }
-  created_at: string;
-  clientName?: string;
-  segmentCount?: number;
-  hotelCount?: number;
-  paxCount?: number;
-}
+
+
 
 const fmtDate = (d: string | null) => {
   if (!d) return "—";
