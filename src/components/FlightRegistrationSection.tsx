@@ -32,6 +32,7 @@ export interface FlightGroup {
   connectionType: "direto" | "1_conexao" | "2_conexoes" | "3_mais";
   hasStopover: boolean;
   stopoverIata: string;
+  locator: string;
   segments: FlightSegment[];
 }
 
