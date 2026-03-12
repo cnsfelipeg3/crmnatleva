@@ -594,8 +594,8 @@ function FlightGroupCard({
 
   const effectiveFlightNumber = first?.flight_number || "";
 
-  // Can lookup with (airline + flight number) OR (airline + origin + destination + date)
-  const canLookup = !!(effectiveAirline && effectiveFlightNumber) || !!(effectiveAirline && effectiveOrigin && effectiveDestination && effectiveDate);
+  // Can lookup with (airline + flight number + date) OR (airline + origin + destination + date)
+  const canLookup = !!(effectiveAirline && effectiveFlightNumber && effectiveDate) || !!(effectiveAirline && effectiveOrigin && effectiveDestination && effectiveDate);
 
   return (
     <Card className={cn("overflow-hidden border", colorClass)}>
