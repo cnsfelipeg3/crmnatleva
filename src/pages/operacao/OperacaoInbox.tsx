@@ -97,8 +97,8 @@ export default function OperacaoInbox() {
     setSelectedConv(conv);
     setLoadingMsgs(true);
     const { data } = await supabase
-      .from("chat_messages")
-      .select("id, content, sender_type, created_at, message_type")
+      .from("messages")
+      .select("id, text, sender_type, created_at, message_type, media_url")
       .eq("conversation_id", conv.id)
       .order("created_at", { ascending: true })
       .limit(200);
