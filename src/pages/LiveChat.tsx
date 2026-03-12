@@ -2174,7 +2174,7 @@ export default function LiveChat() {
                                 <div>
                                   {msg.media_url ? (
                                     <>
-                                      <video controls className="rounded-lg max-w-[250px] max-h-[300px] mb-1">
+                                      <video controls className="rounded-lg w-full max-w-[220px] sm:max-w-[280px] lg:max-w-[340px] max-h-[320px] mb-1">
                                         <source src={msg.media_url} />
                                       </video>
                                       <div className="flex items-center gap-2 mt-1">
