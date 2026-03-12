@@ -53,7 +53,7 @@ function loadGooglePlaces(): Promise<void> {
   if (!apiKey) return Promise.reject(new Error("Google Maps API key missing"));
 
   placesServicePromise = new Promise((resolve, reject) => {
-    if (window.google?.maps?.places) {
+    if ((window as any).google?.maps?.places) {
       resolve();
       return;
     }
