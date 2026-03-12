@@ -77,6 +77,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     if (window.location.pathname.startsWith("/rh")) setRhOpen(true);
     if (window.location.pathname.startsWith("/livechat")) setLivechatOpen(true);
     if (window.location.pathname.startsWith("/operacao")) setOperacaoOpen(true);
+    if (window.location.pathname.startsWith("/implementacao") || window.location.pathname.startsWith("/import") || window.location.pathname.startsWith("/livechat/import")) setImplOpen(true);
     if (window.location.pathname.startsWith("/admin")) setAdminOpen(true);
   }, []);
 
