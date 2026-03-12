@@ -65,6 +65,10 @@ export default function OperacaoIntegracoes() {
 
   const handleOpen = (int: Integration) => {
     if (!int.configurable) return;
+    if (int.id === "whatsapp-qrcode") {
+      navigate("/livechat/whatsapp-qr");
+      return;
+    }
     setSelected(int);
     setCredentials({});
     setShowSecrets({});
