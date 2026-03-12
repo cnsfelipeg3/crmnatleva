@@ -164,7 +164,16 @@ export default function AirCostBlocksEditor({
       const indices = b.segment_indices.includes(segIdx)
         ? b.segment_indices.filter(i => i !== segIdx)
         : [...b.segment_indices, segIdx];
-      return { ...b, segment_indices: indices };
+      return { ...b, segment_indices: indices, label: generateLabelFromSegments(indices) };
+    }));
+  };
+
+  const toggleAllSegments = (blockId: string) => {
+    onChange(blocks.map(b => {
+      if (b.id !== blockId) return b;
+      const allSelected = validSegments.every((_, i) => b.segment_indices.includes(i));
+      const indices = allSelected ? [] : validSegments.map((_, i) => i);
+      return { ...b, segment_indices: indices, label: generateLabelFromSegments(indices) };
     }));
   };
 
