@@ -65,7 +65,10 @@ export function createViewer({ container, minimal = true }: ViewerOptions): Cesi
   cameraController.inertiaZoom = 0.82;
 
   if (minimal) {
-    viewer.cesiumWidget.creditContainer.style.opacity = "0.75";
+    const creditContainer = viewer.cesiumWidget.creditContainer as HTMLElement | null;
+    if (creditContainer) {
+      creditContainer.style.opacity = "0.75";
+    }
   }
 
   return viewer;
