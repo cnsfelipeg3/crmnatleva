@@ -175,6 +175,29 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
     return max;
   };
 
+  const handleReceiptUpload = async (paymentId: string, file: File) => {
+    setUploadingPaymentId(paymentId);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `receipts/${paymentId}/${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("sale-attachments").upload(path, file);
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = supabase.storage.from("sale-attachments").getPublicUrl(path);
+      updatePayment(paymentId, "receipt_url", urlData.publicUrl);
+      updatePayment(paymentId, "receipt_name", file.name);
+      toast.success("Comprovante anexado");
+    } catch (err: any) {
+      toast.error("Erro ao enviar comprovante: " + (err.message || ""));
+    } finally {
+      setUploadingPaymentId(null);
+    }
+  };
+
+  const removeReceipt = (paymentId: string) => {
+    updatePayment(paymentId, "receipt_url", "");
+    updatePayment(paymentId, "receipt_name", "");
+  };
+
   return (
     <div className="space-y-4">
       {payments.length === 0 && (
