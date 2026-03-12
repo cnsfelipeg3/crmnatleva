@@ -130,6 +130,9 @@ export default function JourneyHero({
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-[0.95] tracking-tighter">
             {title}
           </h1>
+          {subtitle && (
+            <p className="text-base sm:text-lg text-white/50 font-light tracking-wide mt-2">{subtitle}</p>
+          )}
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-4 text-sm text-white/60 font-light tracking-wide">
             {originIata && destinationIata && (
