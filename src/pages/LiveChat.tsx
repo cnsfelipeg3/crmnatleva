@@ -1101,7 +1101,7 @@ export default function LiveChat() {
     // Deduplicate by normalized phone - keep most recent (first after sort)
     const seen = new Set<string>();
     return filtered.filter(c => {
-      const norm = c.phone.replace(/\D/g, "");
+      const norm = (c.phone || "").replace(/\D/g, "");
       if (!norm) return true;
       if (seen.has(norm)) return false;
       seen.add(norm);
