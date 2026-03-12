@@ -1847,6 +1847,8 @@ export default function LiveChat() {
                   {filteredConversations.map(conv => {
                     const stageInfo = getStageInfo(conv.stage);
                     const isSelected = conv.id === selectedId;
+                    const displayName = getSafeContactName(conv.contact_name, conv.phone);
+                    const contactInitials = getContactInitials(conv.contact_name, conv.phone);
                     const _previewRaw = (conv.last_message_preview || "").replace(/\n/g, " ").trim();
                     const _previewTruncated = _previewRaw.length > 35 ? _previewRaw.slice(0, 35) + "…" : _previewRaw;
                     return (
