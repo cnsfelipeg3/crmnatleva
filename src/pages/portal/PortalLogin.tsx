@@ -35,8 +35,8 @@ export default function PortalLogin() {
       return;
     }
 
-    const { data: portal } = await supabase
-      .from("portal_access" as any)
+    const { data: portal } = await (supabase as any)
+      .from("portal_access")
       .select("*")
       .eq("user_id", user.id)
       .eq("is_active", true)
@@ -67,23 +67,19 @@ export default function PortalLogin() {
 
   return (
     <div className="min-h-screen relative flex items-center justify-center overflow-hidden">
-      {/* Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-[hsl(158,45%,6%)] via-[hsl(160,30%,12%)] to-[hsl(200,40%,10%)]" />
 
-      {/* Ambient lights */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-accent/15 rounded-full blur-[150px] animate-pulse" />
         <div className="absolute bottom-1/3 right-1/4 w-[400px] h-[400px] bg-info/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: "2s" }} />
         <div className="absolute top-1/2 right-1/3 w-[300px] h-[300px] bg-warning/8 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: "4s" }} />
       </div>
 
-      {/* Grid */}
       <div className="absolute inset-0 opacity-[0.03]" style={{
         backgroundImage: "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
         backgroundSize: "60px 60px",
       }} />
 
-      {/* Card */}
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -91,10 +87,9 @@ export default function PortalLogin() {
         className="relative z-10 w-full max-w-md mx-4"
       >
         <div className="bg-white/[0.06] backdrop-blur-2xl border border-white/[0.08] rounded-3xl p-8 md:p-10 shadow-2xl">
-          {/* Logo */}
           <div className="flex flex-col items-center mb-8">
             <img src={logoNatleva} alt="NatLeva" className="h-12 mb-5 brightness-0 invert opacity-90" />
-            <h1 className="text-2xl font-bold text-white tracking-tight font-sans">Minhas Viagens</h1>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Minhas Viagens</h1>
             <p className="text-white/40 text-sm mt-1.5">
               {forgotMode ? "Recupere seu acesso" : "Acesse seu portal exclusivo"}
             </p>
@@ -153,7 +148,7 @@ export default function PortalLogin() {
           </form>
 
           <div className="mt-6 text-center">
-            <button onClick={() => { setForgotMode(!forgotMode); }} className="text-white/35 hover:text-white/60 text-sm transition-colors">
+            <button onClick={() => setForgotMode(!forgotMode)} className="text-white/35 hover:text-white/60 text-sm transition-colors">
               {forgotMode ? "← Voltar ao login" : "Esqueci minha senha"}
             </button>
           </div>

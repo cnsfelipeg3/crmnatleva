@@ -32,13 +32,12 @@ export default function PublishToPortalDialog({ open, onOpenChange, saleId, clie
       setCustomTitle(saleName || "");
       setPublished(false);
 
-      // Check if already published
-      supabase
-        .from("portal_published_sales" as any)
+      (supabase as any)
+        .from("portal_published_sales")
         .select("id")
         .eq("sale_id", saleId)
         .single()
-        .then(({ data }) => {
+        .then(({ data }: any) => {
           setAlreadyPublished(!!data);
         });
     }
@@ -111,49 +110,26 @@ export default function PublishToPortalDialog({ open, onOpenChange, saleId, clie
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>E-mail do cliente *</Label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="cliente@email.com"
-                required
-              />
+              <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="cliente@email.com" required />
               <p className="text-xs text-muted-foreground">Será usado para criar o acesso do cliente ao portal.</p>
             </div>
-
             <div className="space-y-2">
               <Label>Título da viagem</Label>
-              <Input
-                value={customTitle}
-                onChange={(e) => setCustomTitle(e.target.value)}
-                placeholder="Ex: Viagem Paris 2025"
-              />
+              <Input value={customTitle} onChange={(e) => setCustomTitle(e.target.value)} placeholder="Ex: Viagem Paris 2025" />
             </div>
-
             <div className="space-y-2">
               <Label>URL da imagem de capa</Label>
-              <Input
-                value={coverUrl}
-                onChange={(e) => setCoverUrl(e.target.value)}
-                placeholder="https://..."
-              />
+              <Input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} placeholder="https://..." />
             </div>
-
             <div className="space-y-2">
               <Label>Notas para o cliente</Label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Mensagem visível para o cliente no portal..."
-                rows={3}
-              />
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Mensagem visível para o cliente no portal..." rows={3} />
             </div>
-
             <Button onClick={handlePublish} disabled={loading} className="w-full">
               {loading ? (
                 <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Publicando...</span>
               ) : (
-                <span className="flex items-center gap-2"><Globe className="h-4 w-4" /> {alreadyPublished ? "Atualizar Publicação" : "Publicar no Portal"}</span>
+                <span className="flex items-center gap-2"><Globe className="h-4 w-4" /> {alreadyPublished ? "Atualizar" : "Publicar no Portal"}</span>
               )}
             </Button>
           </div>

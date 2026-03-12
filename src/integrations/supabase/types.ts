@@ -2812,6 +2812,101 @@ export type Database = {
           },
         ]
       }
+      portal_access: {
+        Row: {
+          client_id: string
+          created_at: string
+          first_login_at: string | null
+          id: string
+          is_active: boolean
+          must_change_password: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          first_login_at?: string | null
+          id?: string
+          is_active?: boolean
+          must_change_password?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          first_login_at?: string | null
+          id?: string
+          is_active?: boolean
+          must_change_password?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_access_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_published_sales: {
+        Row: {
+          client_id: string
+          cover_image_url: string | null
+          created_at: string
+          custom_title: string | null
+          id: string
+          is_active: boolean
+          notes_for_client: string | null
+          published_at: string
+          published_by: string | null
+          sale_id: string
+        }
+        Insert: {
+          client_id: string
+          cover_image_url?: string | null
+          created_at?: string
+          custom_title?: string | null
+          id?: string
+          is_active?: boolean
+          notes_for_client?: string | null
+          published_at?: string
+          published_by?: string | null
+          sale_id: string
+        }
+        Update: {
+          client_id?: string
+          cover_image_url?: string | null
+          created_at?: string
+          custom_title?: string | null
+          id?: string
+          is_active?: boolean
+          notes_for_client?: string | null
+          published_at?: string
+          published_by?: string | null
+          sale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_published_sales_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_published_sales_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: true
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -4351,6 +4446,7 @@ export type Database = {
       deduplicate_passengers: { Args: never; Returns: Json }
       deduplicate_sales: { Args: never; Returns: Json }
       extract_person_name: { Args: { raw_name: string }; Returns: string }
+      get_portal_client_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

@@ -28,16 +28,21 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchPortalAccess = async (userId: string) => {
-    const { data } = await supabase
+    const { data } = await (supabase as any)
       .from("portal_access")
       .select("*")
       .eq("user_id", userId)
       .eq("is_active", true)
       .single();
     if (data) {
-      setPortalAccess(data as unknown as PortalAccess);
+      setPortalAccess({
+        id: data.id,
+        client_id: data.client_id,
+        must_change_password: data.must_change_password,
+        first_login_at: data.first_login_at,
+      });
       if (!data.first_login_at) {
-        await supabase
+        await (supabase as any)
           .from("portal_access")
           .update({ first_login_at: new Date().toISOString() })
           .eq("id", data.id);
@@ -77,7 +82,7 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
   const updatePassword = async (newPassword: string) => {
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (!error && portalAccess) {
-      await supabase
+      await (supabase as any)
         .from("portal_access")
         .update({ must_change_password: false })
         .eq("id", portalAccess.id);
