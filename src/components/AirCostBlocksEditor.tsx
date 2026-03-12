@@ -352,7 +352,22 @@ export default function AirCostBlocksEditor({
                     {/* Segment selection */}
                     {validSegments.length > 0 && (
                       <div className="space-y-2">
-                        <Label className="text-xs font-semibold">Trechos incluídos neste bloco</Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-semibold">Trechos incluídos neste detalhamento</Label>
+                          {validSegments.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-[10px] px-2"
+                              onClick={() => toggleAllSegments(block.id)}
+                            >
+                              {validSegments.every((_, i) => block.segment_indices.includes(i))
+                                ? "Desmarcar todos"
+                                : "Selecionar todos"}
+                            </Button>
+                          )}
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {validSegments.map((seg, si) => {
                             const isSelected = block.segment_indices.includes(si);
