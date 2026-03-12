@@ -218,14 +218,6 @@ export default function SaleDetail() {
     toast({ title: "Resumo copiado!" });
   };
 
-  if (loading) return <div className="p-6 text-center text-muted-foreground animate-fade-in">Carregando...</div>;
-  if (!sale) return (
-    <div className="p-6 animate-fade-in">
-      <Button variant="ghost" onClick={() => navigate("/sales")}><ArrowLeft className="w-4 h-4 mr-1" /> Voltar</Button>
-      <p className="mt-8 text-center text-muted-foreground">Venda não encontrada.</p>
-    </div>
-  );
-
   const statusColor: Record<string, string> = {
     "Rascunho": "bg-muted text-muted-foreground",
     "Pendente": "bg-amber-500/15 text-amber-700 border-amber-300",
@@ -251,6 +243,14 @@ export default function SaleDetail() {
     segments.forEach(s => { if (s.airline) set.add(s.airline); });
     return [...set];
   }, [sale, segments]);
+
+  if (loading) return <div className="p-6 text-center text-muted-foreground animate-fade-in">Carregando...</div>;
+  if (!sale) return (
+    <div className="p-6 animate-fade-in">
+      <Button variant="ghost" onClick={() => navigate("/sales")}><ArrowLeft className="w-4 h-4 mr-1" /> Voltar</Button>
+      <p className="mt-8 text-center text-muted-foreground">Venda não encontrada.</p>
+    </div>
+  );
 
   return (
     <div className="p-6 space-y-5 animate-fade-in">
