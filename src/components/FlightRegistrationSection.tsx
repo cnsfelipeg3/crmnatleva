@@ -449,6 +449,7 @@ export default function FlightRegistrationSection({
           loading={loadingGroup === group.id}
           onStopoverChange={(has) => updateGroups(p => p.map(g => g.id === group.id ? { ...g, hasStopover: has } : g))}
           onStopoverIataChange={(iata) => updateGroups(p => p.map(g => g.id === group.id ? { ...g, stopoverIata: iata } : g))}
+          onLocatorChange={(loc) => updateGroups(p => p.map(g => g.id === group.id ? { ...g, locator: loc } : g))}
           defaultAirline={formAirline}
           defaultDate={group.type === "main_return" ? formReturnDate : formDepartureDate}
           defaultOrigin={group.type === "main_return" ? formDestination : formOrigin}
