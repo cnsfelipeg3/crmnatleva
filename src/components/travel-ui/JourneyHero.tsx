@@ -9,17 +9,17 @@ const fmtShort = (d: string | null) => {
 };
 
 const destImages: Record<string, string> = {
-  MCO: "https://images.unsplash.com/photo-1575089976121-8ed7b2a54265?w=1600&h=900&fit=crop&q=80",
-  MIA: "https://images.unsplash.com/photo-1533106497176-45ae19e68ba2?w=1600&h=900&fit=crop&q=80",
-  LIS: "https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=1600&h=900&fit=crop&q=80",
-  CDG: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=1600&h=900&fit=crop&q=80",
-  FCO: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=1600&h=900&fit=crop&q=80",
-  CUN: "https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=1600&h=900&fit=crop&q=80",
-  EZE: "https://images.unsplash.com/photo-1589909202802-8f4aadce1849?w=1600&h=900&fit=crop&q=80",
-  MLE: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=1600&h=900&fit=crop&q=80",
-  FTE: "https://images.unsplash.com/photo-1531761535209-180857e67b1e?w=1600&h=900&fit=crop&q=80",
-  DXB: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1600&h=900&fit=crop&q=80",
-  default: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1600&h=900&fit=crop&q=80",
+  MCO: "https://images.unsplash.com/photo-1575089976121-8ed7b2a54265?w=2560&h=1440&fit=crop&q=95&auto=format",
+  MIA: "https://images.unsplash.com/photo-1533106497176-45ae19e68ba2?w=2560&h=1440&fit=crop&q=95&auto=format",
+  LIS: "https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=2560&h=1440&fit=crop&q=95&auto=format",
+  CDG: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=2560&h=1440&fit=crop&q=95&auto=format",
+  FCO: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=2560&h=1440&fit=crop&q=95&auto=format",
+  CUN: "https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=2560&h=1440&fit=crop&q=95&auto=format",
+  EZE: "https://images.unsplash.com/photo-1589909202802-8f4aadce1849?w=2560&h=1440&fit=crop&q=95&auto=format",
+  MLE: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=2560&h=1440&fit=crop&q=95&auto=format",
+  FTE: "https://images.unsplash.com/photo-1531761535209-180857e67b1e?w=2560&h=1440&fit=crop&q=95&auto=format",
+  DXB: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=2560&h=1440&fit=crop&q=95&auto=format",
+  default: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=2560&h=1440&fit=crop&q=95&auto=format",
 };
 
 export function getDestinationImage(iata: string | null, cover?: string | null) {
