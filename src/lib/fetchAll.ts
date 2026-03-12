@@ -3,9 +3,20 @@ import { supabase } from "@/integrations/supabase/client";
 interface FetchAllOptions {
   order?: { column: string; ascending?: boolean };
   maxRows?: number;
+  cacheMs?: number;
+  bypassCache?: boolean;
 }
 
 const inFlightRequests = new Map<string, Promise<any[]>>();
+const resultCache = new Map<string, { rows: any[]; expiresAt: number }>();
+const DEFAULT_CACHE_MS = 15000;
+const MAX_CACHE_ENTRIES = 40;
+
+function pruneCache() {
+  if (resultCache.size <= MAX_CACHE_ENTRIES) return;
+  const oldestKey = resultCache.keys().next().value;
+  if (oldestKey) resultCache.delete(oldestKey);
+}
 
 /**
  * Fetch all rows from a table, paginating past the 1000-row default limit.
@@ -18,7 +29,16 @@ export async function fetchAllRows(
   batchSize: number = 1000,
 ): Promise<any[]> {
   const safeBatchSize = Math.max(100, Math.min(batchSize, 1000));
-  const requestKey = JSON.stringify({ table, select, options, batchSize: safeBatchSize });
+  const requestKey = JSON.stringify({ table, select, options: { ...options, bypassCache: undefined }, batchSize: safeBatchSize });
+  const cacheMs = Math.max(0, options?.cacheMs ?? DEFAULT_CACHE_MS);
+
+  if (!options?.bypassCache && cacheMs > 0) {
+    const cached = resultCache.get(requestKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.rows.slice();
+    }
+    if (cached) resultCache.delete(requestKey);
+  }
 
   const existingRequest = inFlightRequests.get(requestKey);
   if (existingRequest) return existingRequest;
@@ -63,7 +83,17 @@ export async function fetchAllRows(
   inFlightRequests.set(requestKey, requestPromise);
 
   try {
-    return await requestPromise;
+    const rows = await requestPromise;
+
+    if (!options?.bypassCache && cacheMs > 0) {
+      resultCache.set(requestKey, {
+        rows: rows.slice(),
+        expiresAt: Date.now() + cacheMs,
+      });
+      pruneCache();
+    }
+
+    return rows;
   } finally {
     inFlightRequests.delete(requestKey);
   }
