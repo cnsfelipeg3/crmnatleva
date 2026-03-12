@@ -227,6 +227,7 @@ export default function HotelEntriesEditor({
                             <Plus className="w-4 h-4" />
                           </Button>
                         </div>
+                      </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Tipo de Pagamento</Label>
                         <div className="flex gap-2">
