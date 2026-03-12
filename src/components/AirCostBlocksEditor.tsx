@@ -58,6 +58,7 @@ export function createEmptyAirCostBlock(label?: string): AirCostBlock {
     payment_currency: "BRL",
     payment_card_label: "",
     payment_installments: "1",
+    payment_card_holder: "",
   };
 }
 
