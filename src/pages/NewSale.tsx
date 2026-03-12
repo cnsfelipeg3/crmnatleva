@@ -60,6 +60,7 @@ const PRODUCT_TYPES = [
   { value: "passeio", label: "Passeio / Experiência", icon: Ticket },
   { value: "ingresso", label: "Ingresso", icon: Ticket },
   { value: "aluguel_carro", label: "Aluguel de Carro", icon: Car },
+  { value: "roteiro", label: "Roteiro Personalizado", icon: MapPin },
   { value: "outros", label: "Outros", icon: ShoppingBag },
 ];
 
