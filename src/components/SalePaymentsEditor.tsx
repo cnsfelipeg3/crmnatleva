@@ -396,6 +396,7 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
                 </label>
               )}
             </div>
+          </Card>
         );
       })}
 
