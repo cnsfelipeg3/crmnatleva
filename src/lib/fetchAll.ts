@@ -7,6 +7,21 @@ interface FetchAllOptions {
 
 const inFlightRequests = new Map<string, Promise<any[]>>();
 
+async function withQueryTimeout<T>(promise: Promise<T>, label: string, timeoutMs = 15000): Promise<T> {
+  let timeoutId: number | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      reject(new Error(`Timeout ao buscar ${label}.`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  }
+}
+
 /**
  * Fetch all rows from a table, paginating past the 1000-row default limit
  * and loading pages in parallel (limited concurrency) for better performance.
