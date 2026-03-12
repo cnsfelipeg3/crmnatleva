@@ -202,8 +202,9 @@ function mapZapiStatus(zapiStatus: string | null | undefined, fromMe: boolean): 
 }
 
 // Helper: format Brazilian phone number for display
-function formatPhoneDisplay(number: string): string {
-  const clean = number.replace(/\D/g, "");
+function formatPhoneDisplay(number?: string | null): string {
+  const raw = typeof number === "string" ? number : "";
+  const clean = raw.replace(/\D/g, "");
   if (clean.startsWith("55") && clean.length >= 12) {
     const ddd = clean.slice(2, 4);
     const rest = clean.slice(4);
@@ -211,7 +212,28 @@ function formatPhoneDisplay(number: string): string {
     if (rest.length === 8) return `+55 (${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
   }
   if (clean.length >= 10) return `+${clean}`;
-  return number;
+  return raw || "Sem telefone";
+}
+
+function getSafeContactName(contactName?: string | null, phone?: string | null): string {
+  const trimmedName = (contactName || "").trim();
+  if (trimmedName) return trimmedName;
+  const trimmedPhone = (phone || "").trim();
+  if (trimmedPhone) return formatPhoneDisplay(trimmedPhone);
+  return "Contato sem nome";
+}
+
+function getContactInitials(contactName?: string | null, phone?: string | null): string {
+  const safeName = getSafeContactName(contactName, phone);
+  const initials = safeName
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  return initials || "CN";
 }
 
 // Z-API helper
