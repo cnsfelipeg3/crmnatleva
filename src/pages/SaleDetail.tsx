@@ -59,8 +59,11 @@ export default function SaleDetail() {
         setEditForm(saleData);
         setPayerPassengerId(saleData.payer_passenger_id || null);
         if (saleData.client_id) {
-          const { data: clientData } = await supabase.from("clients").select("display_name").eq("id", saleData.client_id).single();
-          if (clientData) setClientName(clientData.display_name);
+          const { data: clientData } = await supabase.from("clients").select("display_name, email").eq("id", saleData.client_id).single();
+          if (clientData) {
+            setClientName(clientData.display_name);
+            setClientEmail(clientData.email || null);
+          }
         }
       }
 
