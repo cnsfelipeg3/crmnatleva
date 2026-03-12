@@ -122,7 +122,7 @@ export default function PortalDashboard() {
 
   return (
     <PortalLayout>
-      <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-6 sm:-mt-8">
+      <div>
 
         {/* ═══════════ GLOBE + HERO SECTION ═══════════ */}
         <div className="relative overflow-hidden bg-gradient-to-b from-[hsl(160,30%,3%)] via-[hsl(160,25%,6%)] to-background">
