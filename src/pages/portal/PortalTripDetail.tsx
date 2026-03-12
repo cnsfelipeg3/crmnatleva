@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Compass, MessageCircle, Map as MapIcon, ListOrdered, CalendarDays, Sparkles,
+  CreditCard, Plane, FileText, ChevronRight,
 } from "lucide-react";
 import {
   JourneyHero, getDestinationImage, getTripStatus, getTripDays,
@@ -24,11 +25,11 @@ const fmt = (v: number) => v?.toLocaleString("pt-BR", { style: "currency", curre
 function NextAction({ sale, segments, financial, attachments }: {
   sale: any; segments: any[]; financial: any; attachments: any[];
 }) {
-  const actions: { emoji: string; label: string; type: "urgent" | "warning" | "info" }[] = [];
+  const actions: { icon: React.ReactNode; label: string; detail?: string; type: "urgent" | "warning" | "info" }[] = [];
   const receivables = financial?.receivables || [];
   const pending = receivables.filter((r: any) => r.status !== "recebido");
   if (pending.length > 0) {
-    actions.push({ emoji: "💳", label: `Parcela pendente — ${fmt(pending[0].gross_value)}`, type: "warning" });
+    actions.push({ icon: <CreditCard className="h-4 w-4" />, label: "Parcela pendente", detail: fmt(pending[0].gross_value), type: "warning" });
   }
   if (segments.length > 0) {
     const now = new Date();
@@ -36,23 +37,32 @@ function NextAction({ sale, segments, financial, attachments }: {
     const dep = first?.departure_date ? new Date(first.departure_date + "T00:00:00") : null;
     const hours = dep ? (dep.getTime() - now.getTime()) / 3600000 : Infinity;
     if (hours <= 48 && hours > 0) {
-      actions.push({ emoji: "✈️", label: `Check-in disponível — ${first.airline || ""} ${first.flight_number || ""}`, type: "urgent" });
+      actions.push({ icon: <Plane className="h-4 w-4" />, label: "Check-in disponível", detail: `${first.airline || ""} ${first.flight_number || ""}`.trim(), type: "urgent" });
     }
   }
   if (attachments.length === 0 && segments.length > 0) {
-    actions.push({ emoji: "📄", label: "Documentos sendo preparados pela equipe", type: "info" });
+    actions.push({ icon: <FileText className="h-4 w-4" />, label: "Documentos em preparação", detail: "Nossa equipe está trabalhando nisso", type: "info" });
   }
   if (actions.length === 0) return null;
-  const colors = { urgent: "border-destructive/20 bg-destructive/5", warning: "border-warning/20 bg-warning/5", info: "border-accent/20 bg-accent/5" };
+
+  const accentMap = {
+    urgent: "text-destructive",
+    warning: "text-amber-500",
+    info: "text-muted-foreground",
+  };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-8">
-      <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-3">Próximo passo</p>
-      <div className="space-y-2">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-10">
+      <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.4em] font-medium mb-4">Próximo passo</p>
+      <div className="space-y-3">
         {actions.map((a, i) => (
-          <div key={i} className={`flex items-center gap-3 p-4 rounded-xl border ${colors[a.type]} transition-all`}>
-            <span className="text-xl">{a.emoji}</span>
-            <p className="text-sm font-medium text-foreground">{a.label}</p>
+          <div key={i} className="flex items-center gap-4 group">
+            <span className={`${accentMap[a.type]} opacity-70`}>{a.icon}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground leading-tight">{a.label}</p>
+              {a.detail && <p className="text-xs text-muted-foreground/70 mt-0.5">{a.detail}</p>}
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-muted-foreground/50 transition-colors" />
           </div>
         ))}
       </div>
@@ -161,15 +171,13 @@ export default function PortalTripDetail() {
           <NextAction sale={sale} segments={segments || []} financial={financial} attachments={attachments || []} />
 
           {published?.notes_for_client && (
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-8">
-              <div className="flex items-start gap-4 p-5 rounded-2xl bg-accent/5 border border-accent/15">
-                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="h-5 w-5 text-accent" />
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-10">
+              <div className="relative pl-5 border-l-2 border-accent/30">
+                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-accent/20 flex items-center justify-center">
+                  <Sparkles className="h-2.5 w-2.5 text-accent" />
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-foreground mb-1">Mensagem da NatLeva</p>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{published.notes_for_client}</p>
-                </div>
+                <p className="text-[10px] text-accent/70 uppercase tracking-[0.3em] font-medium mb-2">Mensagem da NatLeva</p>
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{published.notes_for_client}</p>
               </div>
             </motion.div>
           )}
