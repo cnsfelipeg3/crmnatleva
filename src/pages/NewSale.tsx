@@ -99,6 +99,7 @@ export default function NewSale() {
   const [segments, setSegments] = useState<FlightSegment[]>([
     { ...defaultSegment, direction: "ida", segment_order: 1 },
   ]);
+  const [groupLocators, setGroupLocators] = useState<string[]>([]);
   
   // NEW: Air cost blocks (replaces single air cost)
   const [airCostBlocks, setAirCostBlocks] = useState<AirCostBlock[]>([]);
