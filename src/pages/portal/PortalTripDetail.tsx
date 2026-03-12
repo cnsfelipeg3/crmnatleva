@@ -153,6 +153,7 @@ export default function PortalTripDetail() {
   const status = getTripStatus(sale || {});
   const tripDays = getTripDays(sale || {});
   const title = published?.custom_title || sale?.name || "Sua Jornada";
+  const subtitle = data?.subtitle || published?.subtitle || undefined;
   const imageUrl = getDestinationImage(sale?.destination_iata, published?.cover_image_url);
 
   return (
