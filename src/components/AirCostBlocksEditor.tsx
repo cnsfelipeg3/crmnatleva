@@ -36,6 +36,7 @@ export interface AirCostBlock {
   payment_currency: string;
   payment_card_label: string;
   payment_installments: string;
+  payment_card_holder: string;
 }
 
 export function createEmptyAirCostBlock(label?: string): AirCostBlock {
