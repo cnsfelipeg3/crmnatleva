@@ -164,9 +164,10 @@ export default function FlightRegistrationSection({
     setGroups(prev => {
       const next = fn(prev);
       syncSegments(next);
+      onGroupLocatorsChange?.(next.map(g => g.locator).filter(Boolean));
       return next;
     });
-  }, [syncSegments]);
+  }, [syncSegments, onGroupLocatorsChange]);
 
   const handleItineraryChange = (type: ItineraryStructure) => {
     setItineraryType(type);
