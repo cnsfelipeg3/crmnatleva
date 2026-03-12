@@ -83,7 +83,7 @@ export async function fetchAllRows(
             });
           }
 
-          const { data, error } = await query;
+          const { data, error } = await withQueryTimeout<any>(query as Promise<any>, `${table} (página ${pageIndex + 1})`);
           if (error) throw error;
 
           pagesData[pageIndex] = data ?? [];
