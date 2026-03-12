@@ -27,6 +27,7 @@ import NotFound from "@/pages/NotFound";
 import UserLocations from "@/pages/settings/UserLocations";
 import LiveChat from "@/pages/LiveChat";
 import WhatsAppIntegration from "@/pages/WhatsAppIntegration";
+import WhatsAppQRConnect from "@/pages/WhatsAppQRConnect";
 import FlowBuilder from "@/pages/FlowBuilder";
 import AIIntegrations from "@/pages/AIIntegrations";
 import AIKnowledgeBase from "@/pages/AIKnowledgeBase";
