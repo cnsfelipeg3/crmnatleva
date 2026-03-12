@@ -28,45 +28,86 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchPortalAccess = async (userId: string) => {
-    const { data } = await (supabase as any)
-      .from("portal_access")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("is_active", true)
-      .single();
-    if (data) {
+    try {
+      const { data, error } = await (supabase as any)
+        .from("portal_access")
+        .select("id, client_id, must_change_password, first_login_at")
+        .eq("user_id", userId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Portal access fetch error:", error);
+        setPortalAccess(null);
+        return;
+      }
+
+      if (!data) {
+        setPortalAccess(null);
+        return;
+      }
+
       setPortalAccess({
         id: data.id,
         client_id: data.client_id,
         must_change_password: data.must_change_password,
         first_login_at: data.first_login_at,
       });
+
       if (!data.first_login_at) {
-        await (supabase as any)
+        void (supabase as any)
           .from("portal_access")
           .update({ first_login_at: new Date().toISOString() })
           .eq("id", data.id);
       }
+    } catch (error) {
+      console.error("Portal access bootstrap error:", error);
+      setPortalAccess(null);
     }
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u) {
-        await fetchPortalAccess(u.id);
+    let isMounted = true;
+    const AUTH_BOOT_TIMEOUT_MS = 6000;
+
+    const applySession = (session: { user: User | null } | null) => {
+      if (!isMounted) return;
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      setIsLoading(false);
+
+      if (currentUser) {
+        void fetchPortalAccess(currentUser.id);
       } else {
         setPortalAccess(null);
       }
-      setIsLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      applySession(session ?? null);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) setIsLoading(false);
-    });
+    const bootTimeout = window.setTimeout(() => {
+      if (isMounted) setIsLoading(false);
+    }, AUTH_BOOT_TIMEOUT_MS);
 
-    return () => subscription.unsubscribe();
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        applySession(session ?? null);
+      })
+      .catch((error) => {
+        console.error("Portal auth session bootstrap error:", error);
+        if (isMounted) setIsLoading(false);
+      })
+      .finally(() => {
+        window.clearTimeout(bootTimeout);
+      });
+
+    return () => {
+      isMounted = false;
+      window.clearTimeout(bootTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
