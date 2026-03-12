@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, CreditCard, Banknote, Wallet, AlertCircle, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, CreditCard, Banknote, Wallet, AlertCircle, Clock, CheckCircle2, AlertTriangle, Paperclip, FileText, X, Upload, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export interface SalePayment {
   id: string;
