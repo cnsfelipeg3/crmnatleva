@@ -38,54 +38,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const [profileRes, roleRes] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, full_name, email, avatar_url")
-        .eq("id", userId)
-        .maybeSingle(),
-      supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .maybeSingle(),
-    ]);
+    try {
+      const [profileRes, roleRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, full_name, email, avatar_url")
+          .eq("id", userId)
+          .maybeSingle(),
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userId)
+          .maybeSingle(),
+      ]);
 
-    if (profileRes.error) console.error("Profile fetch error:", profileRes.error);
-    if (roleRes.error) console.error("Role fetch error:", roleRes.error);
+      if (profileRes.error) console.error("Profile fetch error:", profileRes.error);
+      if (roleRes.error) console.error("Role fetch error:", roleRes.error);
 
-    setProfile((profileRes.data as Profile | null) ?? null);
-    setRole((roleRes.data?.role as UserRole) ?? DEFAULT_ROLE);
+      setProfile((profileRes.data as Profile | null) ?? null);
+      setRole((roleRes.data?.role as UserRole) ?? DEFAULT_ROLE);
+    } catch (error) {
+      console.error("Auth context load error:", error);
+      setProfile(null);
+      setRole(DEFAULT_ROLE);
+    }
   }, []);
 
   useEffect(() => {
     let isMounted = true;
+    const AUTH_BOOT_TIMEOUT_MS = 6000;
 
-    const hydrateSession = async (session: Session | null) => {
+    const applySession = (session: Session | null) => {
       if (!isMounted) return;
 
       const currentUser = session?.user ?? null;
       setUser(currentUser);
+      setIsLoading(false);
 
-      try {
-        await loadUserContext(currentUser?.id ?? null);
-      } finally {
-        if (isMounted) setIsLoading(false);
+      if (currentUser) {
+        void loadUserContext(currentUser.id);
+      } else {
+        setProfile(null);
+        setRole(DEFAULT_ROLE);
       }
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      void hydrateSession(session);
+      applySession(session);
     });
 
-    void (async () => {
-      setIsLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      await hydrateSession(session ?? null);
-    })();
+    const bootTimeout = window.setTimeout(() => {
+      if (isMounted) setIsLoading(false);
+    }, AUTH_BOOT_TIMEOUT_MS);
+
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        applySession(session ?? null);
+      })
+      .catch((error) => {
+        console.error("Auth session bootstrap error:", error);
+        if (isMounted) setIsLoading(false);
+      })
+      .finally(() => {
+        window.clearTimeout(bootTimeout);
+      });
 
     return () => {
       isMounted = false;
+      window.clearTimeout(bootTimeout);
       subscription.unsubscribe();
     };
   }, [loadUserContext]);
