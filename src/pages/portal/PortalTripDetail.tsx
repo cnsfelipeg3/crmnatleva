@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Compass, MessageCircle, Map as MapIcon, ListOrdered, CalendarDays, Sparkles,
+  CreditCard, Plane, FileText, ChevronRight,
 } from "lucide-react";
 import {
   JourneyHero, getDestinationImage, getTripStatus, getTripDays,
