@@ -6,7 +6,8 @@ import { useEffect, useRef, useState, useCallback, memo } from "react";
 import { AnimatePresence } from "framer-motion";
 import type * as CesiumType from "cesium";
 import type { GlobeFlightRoute, GlobeWaypoint } from "@/lib/cesium";
-import { GlobeFallback, GlobeHud, GlobeLoading, RouteInfoPanel } from "./TravelGlobeOverlays";
+import { GlobeFallback, GlobeHud, GlobeLoading, RouteInfoPanel, SearchResultPanel } from "./TravelGlobeOverlays";
+import MapSearchBar, { type SearchResult } from "./MapSearchBar";
 import type { GlobeStatus, SelectedRouteInfo, TravelGlobeProps } from "./travelGlobe.types";
 
 /* ═══ Helpers ═══ */
