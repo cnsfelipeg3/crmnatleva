@@ -108,6 +108,14 @@ async function lookupAmadeus(origin: string, destination: string, date: string, 
   return (data?.data || []) as AmadeusOffer[];
 }
 
+async function lookupAmadeusByNumber(airline: string, flightNumber: string, date: string) {
+  const body: any = { action: "flight_by_number", airline, flightNumber, departureDate: date };
+  const { data, error } = await supabase.functions.invoke("amadeus-search", { body });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return (data?.data || []) as AmadeusOffer[];
+}
+
 /* ─── Component ──────────────────────────────── */
 
 export default function FlightRegistrationSection({
@@ -247,10 +255,18 @@ export default function FlightRegistrationSection({
     const date = first.departure_date || (group.type === "main_return" ? formReturnDate : formDepartureDate);
     const airline = first.airline || formAirline;
 
-    if (!origin || !destination || !date) {
+    const flightNumber = first.flight_number || "";
+    const flightNumOnly = flightNumber.replace(/^[A-Z]{2}/i, "").trim();
+
+    // Strategy: if we have airline + flight number + date, use flight_by_number
+    // If we have origin + destination + date + airline, use flight_schedule
+    const hasFullRoute = !!(origin && destination && date);
+    const hasByNumber = !!(airline && flightNumber && date);
+
+    if (!hasByNumber && !hasFullRoute) {
       toast({
-        title: "Campos obrigatórios",
-        description: "Preencha companhia, origem, destino e data para consultar no Amadeus.",
+        title: "Campos insuficientes",
+        description: "Preencha companhia + nº do voo + data, ou companhia + origem + destino + data.",
         variant: "destructive",
       });
       return;
@@ -259,34 +275,39 @@ export default function FlightRegistrationSection({
     if (!airline) {
       toast({
         title: "Companhia aérea necessária",
-        description: "Selecione a companhia aérea para filtrar os resultados do Amadeus.",
+        description: "Selecione a companhia aérea para consultar o Amadeus.",
         variant: "destructive",
       });
       return;
     }
 
-    const flightNumber = first.flight_number || "";
-    // Extract just the numeric part if flight_number includes airline code
-    const flightNumOnly = flightNumber.replace(/^[A-Z]{2}/i, "").trim();
-
     setLoadingGroup(groupId);
     try {
-      const offers = await lookupAmadeus(origin, destination, date, airline, flightNumber || undefined);
+      let offers: AmadeusOffer[];
+
+      if (hasByNumber && !hasFullRoute) {
+        // Lookup by flight number (no origin/destination needed)
+        offers = await lookupAmadeusByNumber(airline, flightNumber, date);
+      } else {
+        // Full route lookup
+        offers = await lookupAmadeus(origin, destination, date, airline, flightNumber || undefined);
+      }
+
       if (!offers.length) {
         toast({
           title: "Nenhum voo encontrado",
-          description: `Não foram encontrados voos ${airline} de ${origin} para ${destination} em ${date}. Preencha manualmente.`,
+          description: hasByNumber
+            ? `Não foram encontrados dados para o voo ${airline}${flightNumOnly} em ${date}. Preencha manualmente.`
+            : `Não foram encontrados voos ${airline} de ${origin} para ${destination} em ${date}. Preencha manualmente.`,
         });
         return;
       }
 
       const dir = group.type === "main_return" ? "volta" : "ida";
 
-      // If only 1 offer, apply directly
       if (offers.length === 1) {
         applyOffer(groupId, offers[0], dir);
       } else {
-        // Show selection dialog
         setPendingOffers({ groupId, offers, direction: dir });
         setOfferDialogOpen(true);
       }
@@ -573,8 +594,8 @@ function FlightGroupCard({
 
   const effectiveFlightNumber = first?.flight_number || "";
 
-  // Can lookup with (airline + flight number) OR (airline + origin + destination + date)
-  const canLookup = !!(effectiveAirline && effectiveFlightNumber) || !!(effectiveAirline && effectiveOrigin && effectiveDestination && effectiveDate);
+  // Can lookup with (airline + flight number + date) OR (airline + origin + destination + date)
+  const canLookup = !!(effectiveAirline && effectiveFlightNumber && effectiveDate) || !!(effectiveAirline && effectiveOrigin && effectiveDestination && effectiveDate);
 
   return (
     <Card className={cn("overflow-hidden border", colorClass)}>

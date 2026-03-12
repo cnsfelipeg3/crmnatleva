@@ -116,6 +116,137 @@ serve(async (req) => {
       });
     }
 
+    if (action === "flight_by_number") {
+      // Lookup by airline + flight number + date using Flight Status API
+      const { airline, flightNumber, departureDate } = params;
+      if (!airline || !flightNumber || !departureDate) {
+        throw new Error("airline, flightNumber and departureDate are required");
+      }
+      const flightNumOnly = flightNumber.replace(/^[A-Z]{2,3}/i, "").trim();
+      const carrierCode = airline.toUpperCase();
+
+      try {
+        const data = await amadeusGet("/v2/schedule/flights", {
+          carrierCode,
+          flightNumber: flightNumOnly,
+          scheduledDepartureDate: departureDate,
+        });
+
+        const flights = data.data || [];
+        if (flights.length === 0) {
+          return new Response(JSON.stringify({ data: [] }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Map schedule data to our format
+        const enrichedOffers = flights.slice(0, 3).map((flight: any) => {
+          const legs = flight.flightPoints || [];
+          const departure = legs[0];
+          const arrival = legs[legs.length - 1];
+
+          const depTime = departure?.departure?.timings?.[0]?.value || "";
+          const arrTime = arrival?.arrival?.timings?.[0]?.value || "";
+          const depTerminal = departure?.departure?.terminal?.code || "";
+          const arrTerminal = arrival?.arrival?.terminal?.code || "";
+
+          // Parse times for duration
+          let durationMinutes = 0;
+          if (depTime && arrTime) {
+            const depDate = new Date(`${departureDate}T${depTime}`);
+            const arrDate = new Date(`${departureDate}T${arrTime}`);
+            durationMinutes = Math.round((arrDate.getTime() - depDate.getTime()) / 60000);
+            if (durationMinutes < 0) durationMinutes += 24 * 60; // next day arrival
+          }
+
+          const segments = [{
+            direction: "ida",
+            segment_order: 1,
+            airline: carrierCode,
+            airline_name: carrierCode,
+            flight_number: flightNumOnly,
+            origin_iata: departure?.iataCode || "",
+            destination_iata: arrival?.iataCode || "",
+            departure_date: departureDate,
+            departure_time: depTime ? depTime.slice(0, 5) : "",
+            arrival_time: arrTime ? arrTime.slice(0, 5) : "",
+            duration_minutes: durationMinutes,
+            terminal: depTerminal,
+            arrival_terminal: arrTerminal,
+            operated_by: "",
+            connection_time_minutes: 0,
+            cabin_type: "",
+            flight_class: "",
+          }];
+
+          // Handle multi-leg (stops) flights
+          if (legs.length > 2) {
+            segments.length = 0;
+            for (let i = 0; i < legs.length - 1; i++) {
+              const dep = legs[i];
+              const arr = legs[i + 1];
+              const dTime = dep?.departure?.timings?.[0]?.value || "";
+              const aTime = arr?.arrival?.timings?.[0]?.value || "";
+              let dur = 0;
+              if (dTime && aTime) {
+                const d1 = new Date(`${departureDate}T${dTime}`);
+                const d2 = new Date(`${departureDate}T${aTime}`);
+                dur = Math.round((d2.getTime() - d1.getTime()) / 60000);
+                if (dur < 0) dur += 24 * 60;
+              }
+              let connTime = 0;
+              if (i > 0 && segments.length > 0) {
+                const prevArr = segments[segments.length - 1].arrival_time;
+                if (prevArr && dTime) {
+                  const p = new Date(`${departureDate}T${prevArr}:00`);
+                  const c = new Date(`${departureDate}T${dTime}`);
+                  connTime = Math.round((c.getTime() - p.getTime()) / 60000);
+                  if (connTime < 0) connTime += 24 * 60;
+                }
+              }
+              segments.push({
+                direction: "ida",
+                segment_order: i + 1,
+                airline: carrierCode,
+                airline_name: carrierCode,
+                flight_number: flightNumOnly,
+                origin_iata: dep?.iataCode || "",
+                destination_iata: arr?.iataCode || "",
+                departure_date: departureDate,
+                departure_time: dTime ? dTime.slice(0, 5) : "",
+                arrival_time: aTime ? aTime.slice(0, 5) : "",
+                duration_minutes: dur,
+                terminal: dep?.departure?.terminal?.code || "",
+                arrival_terminal: arr?.arrival?.terminal?.code || "",
+                operated_by: "",
+                connection_time_minutes: connTime,
+                cabin_type: "",
+                flight_class: "",
+              });
+            }
+          }
+
+          return {
+            itineraries: [{
+              direction: "ida",
+              segments,
+              totalDurationMinutes: durationMinutes,
+            }],
+          };
+        });
+
+        return new Response(JSON.stringify({ data: enrichedOffers }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (err: unknown) {
+        // If schedule API fails, return empty so frontend can fall back
+        console.error("Flight schedule lookup failed:", err);
+        return new Response(JSON.stringify({ data: [], fallback: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     if (action === "flight_schedule") {
       // Flight Offers Search - but we only extract schedule info, NO prices
       const { origin, destination, departureDate, returnDate, airline, flightNumber } = params;
