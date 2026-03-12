@@ -68,12 +68,18 @@ Deno.serve(async (req) => {
 
     // ---- LIST TRIPS ----
     if (action === "trips") {
-      const { data: published } = await admin
+      let query = admin
         .from("portal_published_sales")
         .select("*")
-        .eq("client_id", clientId)
         .eq("is_active", true)
         .order("published_at", { ascending: false });
+
+      // Non-admin: filter by client_id
+      if (!isAdmin && clientId) {
+        query = query.eq("client_id", clientId);
+      }
+
+      const { data: published } = await query;
 
       if (!published?.length) {
         return new Response(JSON.stringify({ trips: [], portalAccess: access }), {
