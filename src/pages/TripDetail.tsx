@@ -93,6 +93,14 @@ export default function TripDetail() {
     });
   }, [id]);
 
+  // Helper: treat "Não", "não", "N/A", "—", empty as null
+  const clean = (v: string | null | undefined): string | undefined => {
+    if (!v) return undefined;
+    const t = v.trim();
+    if (!t || /^(não|nao|n\/a|—|-|\.+)$/i.test(t)) return undefined;
+    return t;
+  };
+
   // Build timeline items
   const timeline = useMemo(() => {
     if (!sale) return [];
