@@ -99,6 +99,7 @@ export default function PortalTripDetail() {
       const mockData = getMockTripDetail(id || "");
       if (mockData) {
         setData({
+          subtitle: mockData.subtitle,
           published: { custom_title: mockData.custom_title, cover_image_url: mockData.cover_image_url, notes_for_client: mockData.notes_for_client },
           sale: mockData.sale,
           segments: mockData.segments,
