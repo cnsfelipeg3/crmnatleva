@@ -71,7 +71,7 @@ export default function OperacaoInbox() {
     setLoading(true);
     const { data } = await supabase
       .from("conversations")
-      .select("id, contact_name, display_name, phone, status, funnel_stage, last_message_at, last_message_preview, unread_count, tags, source")
+      .select("id, contact_name, display_name, phone, status, funnel_stage, stage, last_message_at, last_message_preview, unread_count, tags, source")
       .order("last_message_at", { ascending: false })
       .limit(500);
     setConversations(data || []);
