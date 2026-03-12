@@ -243,8 +243,8 @@ export default function AirCostBlocksEditor({
           <Package className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1">
-          <h2 className="text-lg font-semibold text-foreground">Composição Financeira do Aéreo</h2>
-          <p className="text-sm text-muted-foreground">Agrupe trechos por emissão e registre os custos</p>
+          <h2 className="text-lg font-semibold text-foreground">Detalhar Custos</h2>
+          <p className="text-sm text-muted-foreground">Selecione os trechos e registre os custos por emissão</p>
         </div>
       </div>
 
