@@ -404,29 +404,6 @@ export default function FlightRegistrationSection({
           )}
         </div>
 
-        {/* Global fields */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-          <div className="space-y-1">
-            <Label className="text-xs">Classe Geral</Label>
-            <Select value={formFlightClass} onValueChange={v => onFormChange("flight_class", v)}>
-              <SelectTrigger className="text-sm"><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Econômica">Econômica</SelectItem>
-                <SelectItem value="Premium Economy">Premium Economy</SelectItem>
-                <SelectItem value="Executiva">Executiva</SelectItem>
-                <SelectItem value="Primeira">Primeira</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Cia Aérea Principal</Label>
-            <AirlineAutocomplete value={formAirline} onChange={iata => onFormChange("airline", iata)} />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Data Ida</Label>
-            <Input type="date" value={formDepartureDate} onChange={e => onFormChange("departure_date", e.target.value)} className="text-sm" />
-          </div>
-        </div>
 
         {/* Timeline preview */}
         {allValidSegments.length > 0 && (
