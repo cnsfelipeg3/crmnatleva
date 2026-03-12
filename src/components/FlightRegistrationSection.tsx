@@ -560,6 +560,7 @@ interface FlightGroupCardProps {
   loading: boolean;
   onStopoverChange: (has: boolean) => void;
   onStopoverIataChange: (iata: string) => void;
+  onLocatorChange: (locator: string) => void;
   defaultAirline: string;
   defaultDate: string;
   defaultOrigin: string;
@@ -569,7 +570,7 @@ interface FlightGroupCardProps {
 function FlightGroupCard({
   group, expanded, onToggle, onConnectionChange, onSegmentUpdate,
   onRemove, onAmadeusLookup, loading, onStopoverChange, onStopoverIataChange,
-  defaultAirline, defaultDate, defaultOrigin, defaultDestination,
+  onLocatorChange, defaultAirline, defaultDate, defaultOrigin, defaultDestination,
 }: FlightGroupCardProps) {
   const isMain = group.type !== "internal";
   const dirIcon = group.type === "main_return" ? "rotate-180" : "";
