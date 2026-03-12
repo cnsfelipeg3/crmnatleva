@@ -8,10 +8,22 @@ import {
   Plane, X, Navigation, Ruler, Compass, Play, ChevronDown,
 } from "lucide-react";
 import type { GlobeStatus, SelectedRouteInfo } from "./travelGlobe.types";
-import { computeDistanceKm } from "@/lib/cesium";
 
 /* ═══ Utility ═══ */
 const fmtKm = (km: number) => km.toLocaleString("pt-BR");
+
+const computeDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
+};
 
 const TYPE_LABELS: Record<string, string> = {
   origin: "Origem",
