@@ -7,6 +7,7 @@ interface PortalAccess {
   client_id: string;
   must_change_password: boolean;
   first_login_at: string | null;
+  is_admin?: boolean;
 }
 
 interface PortalAuthContextType {
