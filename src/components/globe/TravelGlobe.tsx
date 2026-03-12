@@ -310,11 +310,24 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
             onToggleFullscreen={toggleFullscreen}
             currentLocation={currentLocationLabel}
           />
+          <MapSearchBar
+            onSelect={handleSearchSelect}
+            onClear={handleSearchClear}
+            isMobile={isMobile}
+          />
           {selectedRoute && (
             <RouteInfoPanel
               info={{ ...selectedRoute, currentLocationId }}
               onClose={() => setSelectedRoute(null)}
               onAnimate={handleAnimate}
+              isMobile={isMobile}
+            />
+          )}
+          {searchResult && !selectedRoute && (
+            <SearchResultPanel
+              result={searchResult}
+              onClose={handleSearchClear}
+              onRecenter={handleSearchRecenter}
               isMobile={isMobile}
             />
           )}
