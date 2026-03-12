@@ -1,11 +1,10 @@
 import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Plane, Hotel, Shield, Ticket, CreditCard, MapPin, FileText, FolderOpen,
-  Download, Eye, Search, X, Star, ExternalLink, Share2,
+  Download, Eye, Search, X, Star, ExternalLink,
 } from "lucide-react";
 
 interface Attachment {
@@ -50,11 +49,6 @@ function getFileIcon(fileName: string) {
   return "📎";
 }
 
-function isImageFile(fileName: string) {
-  const ext = fileName?.split(".").pop()?.toLowerCase();
-  return ["jpg", "jpeg", "png", "webp", "gif"].includes(ext || "");
-}
-
 function isPriorityDoc(att: Attachment, sale: any) {
   const priorityCats = ["aereo", "seguro"];
   if (priorityCats.includes(att.category)) return true;
@@ -75,8 +69,6 @@ const FILTER_OPTIONS = [
 export default function PortalDocumentsCenter({ attachments, sale, segments, hotels, services }: PortalDocumentsCenterProps) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [previewName, setPreviewName] = useState("");
 
   const filtered = useMemo(() => {
     let list = [...attachments];
@@ -93,7 +85,6 @@ export default function PortalDocumentsCenter({ attachments, sale, segments, hot
         getCategory(a.category).label.toLowerCase().includes(q)
       );
     }
-    // Sort: priority docs first, then by date
     list.sort((a, b) => {
       const pa = isPriorityDoc(a, sale) ? 0 : 1;
       const pb = isPriorityDoc(b, sale) ? 0 : 1;
@@ -103,7 +94,6 @@ export default function PortalDocumentsCenter({ attachments, sale, segments, hot
     return list;
   }, [attachments, filter, search, sale]);
 
-  // Group by category
   const grouped = useMemo(() => {
     const map: Record<string, Attachment[]> = {};
     filtered.forEach(att => {
@@ -121,14 +111,9 @@ export default function PortalDocumentsCenter({ attachments, sale, segments, hot
     return FILTER_OPTIONS.filter(f => f.key === "all" || cats.has(f.key));
   }, [attachments]);
 
-  const openPreview = (att: Attachment) => {
-    if (isImageFile(att.file_name) || att.file_type?.includes("pdf") || att.file_name?.endsWith(".pdf")) {
-      setPreviewUrl(att.file_url);
-      setPreviewName(att.file_name);
-    } else {
-      window.open(att.file_url, "_blank");
-    }
-  };
+  function openDocument(att: Attachment) {
+    window.open(att.file_url, "_blank", "noopener,noreferrer");
+  }
 
   if (!attachments.length) {
     return (
@@ -212,14 +197,12 @@ export default function PortalDocumentsCenter({ attachments, sale, segments, hot
                           ? "bg-accent/5 border-accent/20 hover:border-accent/40"
                           : "bg-muted/20 border-border/50 hover:border-border"
                       }`}
-                      onClick={() => openPreview(att)}
+                      onClick={() => openDocument(att)}
                     >
-                      {/* File icon */}
                       <div className="w-11 h-11 rounded-lg bg-background flex items-center justify-center flex-shrink-0 text-lg border border-border/30">
                         {getFileIcon(att.file_name)}
                       </div>
 
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           {priority && <Star className="h-3 w-3 text-accent flex-shrink-0" />}
@@ -230,14 +213,13 @@ export default function PortalDocumentsCenter({ attachments, sale, segments, hot
                         </p>
                       </div>
 
-                      {/* Actions */}
                       <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
-                          onClick={e => { e.stopPropagation(); openPreview(att); }}
+                          onClick={e => { e.stopPropagation(); openDocument(att); }}
                           className="p-2 rounded-lg hover:bg-muted transition-colors"
                           title="Visualizar"
                         >
-                          <Eye className="h-4 w-4 text-muted-foreground" />
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
                         </button>
                         <a
                           href={att.file_url}
@@ -264,49 +246,6 @@ export default function PortalDocumentsCenter({ attachments, sale, segments, hot
           <p className="text-sm text-muted-foreground">Nenhum documento encontrado.</p>
         </div>
       )}
-
-      {/* Preview Modal */}
-      <AnimatePresence>
-        {previewUrl && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
-            onClick={() => setPreviewUrl(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              className="bg-background rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between p-4 border-b border-border/50">
-                <p className="text-sm font-semibold text-foreground truncate">{previewName}</p>
-                <div className="flex items-center gap-2">
-                  <a href={previewUrl} download>
-                    <Button variant="ghost" size="sm"><Download className="h-4 w-4 mr-1" /> Baixar</Button>
-                  </a>
-                  <a href={previewUrl} target="_blank" rel="noopener noreferrer">
-                    <Button variant="ghost" size="sm"><ExternalLink className="h-4 w-4 mr-1" /> Abrir</Button>
-                  </a>
-                  <button onClick={() => setPreviewUrl(null)} className="p-2 rounded-lg hover:bg-muted">
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="flex-1 overflow-auto p-4 flex items-center justify-center min-h-[300px]">
-                {isImageFile(previewName) ? (
-                  <img src={previewUrl} alt={previewName} className="max-w-full max-h-[70vh] rounded-lg object-contain" />
-                ) : (
-                  <iframe src={previewUrl} className="w-full h-[70vh] rounded-lg border border-border/30" />
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
