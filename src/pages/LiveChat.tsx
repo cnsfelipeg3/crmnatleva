@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Menu } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useSidebar } from "@/components/ui/sidebar";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -240,7 +240,7 @@ const SUBMENU_ITEMS = [
 // ════════════════════════════════════════
 export default function LiveChat() {
   const isMobile = useIsMobile();
-  const { toggleSidebar } = useSidebar();
+  
   const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState("inbox");
   
@@ -1724,7 +1724,7 @@ export default function LiveChat() {
       {isMobile && !(selectedId && activeSection === "inbox") && (
         <div className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0 px-4 py-2">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={toggleSidebar}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => window.history.back()}>
               <Menu className="h-5 w-5" />
             </Button>
             <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
