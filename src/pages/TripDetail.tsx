@@ -9,6 +9,8 @@ import { formatDateBR, formatTimeBR } from "@/lib/dateFormat";
 import { iataToLabel, iataToCityName } from "@/lib/iataUtils";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import AirlineLogo, { AirlineLogosStack } from "@/components/AirlineLogo";
+import { Suspense, lazy } from "react";
+const TripRouteMap = lazy(() => import("@/components/TripRouteMap"));
 import {
   ArrowLeft, Plane, Hotel, Users, DollarSign, MapPin, Calendar,
   ExternalLink, Clock, ShoppingBag, Shield, Car, Ticket, Train,
@@ -337,6 +339,46 @@ export default function TripDetail() {
           </div>
         </Card>
       )}
+
+      {/* Interactive Route Map + Itinerary Sidebar */}
+      <Card className="p-5 overflow-hidden">
+        <h3 className="text-sm font-semibold flex items-center gap-2 mb-3"><MapPin className="w-4 h-4 text-primary" /> Mapa da Rota</h3>
+        <Suspense fallback={<div className="h-[450px] flex items-center justify-center text-muted-foreground text-sm">Carregando mapa...</div>}>
+          <TripRouteMap
+            segments={segments.map(s => ({
+              origin_iata: s.origin_iata,
+              destination_iata: s.destination_iata,
+              departure_date: s.departure_date,
+              departure_time: s.departure_time,
+              arrival_time: s.arrival_time,
+              airline: s.airline || sale?.airline,
+              flight_number: s.flight_number,
+              flight_class: s.flight_class || sale?.flight_class,
+              duration_minutes: s.duration_minutes,
+              terminal: s.terminal,
+              direction: s.direction,
+            }))}
+            services={costItems.filter(ci => ci.category === "outros").map(ci => ({
+              type: ci.product_type || "outros",
+              title: ci.description || ci.category,
+              subtitle: ci.emission_source || "",
+              value: ci.total_item_cost,
+              reservationCode: ci.reservation_code,
+            }))}
+            hotelInfo={sale?.hotel_name ? {
+              name: sale.hotel_name,
+              city: sale.hotel_city,
+              checkinDate: sale.hotel_checkin_date || sale.departure_date,
+              checkoutDate: sale.hotel_checkout_date,
+              room: sale.hotel_room,
+              mealPlan: sale.hotel_meal_plan,
+              reservationCode: sale.hotel_reservation_code,
+              address: sale.hotel_address,
+            } : undefined}
+            height="480px"
+          />
+        </Suspense>
+      </Card>
 
       {/* Flight Timeline visual */}
       {segments.length > 0 && (
