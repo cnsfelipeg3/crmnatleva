@@ -27,6 +27,7 @@ const integrations: Integration[] = [
 ];
 
 export default function OperacaoIntegracoes() {
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<Integration | null>(null);
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
