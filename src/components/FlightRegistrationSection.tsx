@@ -32,6 +32,7 @@ export interface FlightGroup {
   connectionType: "direto" | "1_conexao" | "2_conexoes" | "3_mais";
   hasStopover: boolean;
   stopoverIata: string;
+  locator: string;
   segments: FlightSegment[];
 }
 
@@ -46,6 +47,7 @@ interface Props {
   formLocator: string;
   formFlightClass: string;
   onFormChange: (field: string, value: any) => void;
+  onGroupLocatorsChange?: (locators: string[]) => void;
 }
 
 const defaultSegment: FlightSegment = {
@@ -63,6 +65,7 @@ function createGroup(type: FlightGroup["type"], label: string): FlightGroup {
     connectionType: "direto",
     hasStopover: false,
     stopoverIata: "",
+    locator: "",
     segments: [{ ...defaultSegment, direction: type === "main_return" ? "volta" : "ida", segment_order: 1 }],
   };
 }
@@ -110,7 +113,7 @@ async function lookupAmadeus(origin: string, destination: string, date: string, 
 export default function FlightRegistrationSection({
   segments, onSegmentsChange,
   formOrigin, formDestination, formDepartureDate, formReturnDate, formAirline,
-  formLocator, formFlightClass, onFormChange,
+  formLocator, formFlightClass, onFormChange, onGroupLocatorsChange,
 }: Props) {
   const { toast } = useToast();
 
@@ -161,9 +164,10 @@ export default function FlightRegistrationSection({
     setGroups(prev => {
       const next = fn(prev);
       syncSegments(next);
+      onGroupLocatorsChange?.(next.map(g => g.locator).filter(Boolean));
       return next;
     });
-  }, [syncSegments]);
+  }, [syncSegments, onGroupLocatorsChange]);
 
   const handleItineraryChange = (type: ItineraryStructure) => {
     setItineraryType(type);
@@ -401,11 +405,7 @@ export default function FlightRegistrationSection({
         </div>
 
         {/* Global fields */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-          <div className="space-y-1">
-            <Label className="text-xs">Localizador</Label>
-            <Input value={formLocator} onChange={e => onFormChange("locator", e.target.value.toUpperCase())} className="font-mono text-sm" placeholder="ABC123" />
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
           <div className="space-y-1">
             <Label className="text-xs">Classe Geral</Label>
             <Select value={formFlightClass} onValueChange={v => onFormChange("flight_class", v)}>
@@ -451,6 +451,7 @@ export default function FlightRegistrationSection({
           loading={loadingGroup === group.id}
           onStopoverChange={(has) => updateGroups(p => p.map(g => g.id === group.id ? { ...g, hasStopover: has } : g))}
           onStopoverIataChange={(iata) => updateGroups(p => p.map(g => g.id === group.id ? { ...g, stopoverIata: iata } : g))}
+          onLocatorChange={(loc) => updateGroups(p => p.map(g => g.id === group.id ? { ...g, locator: loc } : g))}
           defaultAirline={formAirline}
           defaultDate={group.type === "main_return" ? formReturnDate : formDepartureDate}
           defaultOrigin={group.type === "main_return" ? formDestination : formOrigin}
@@ -561,6 +562,7 @@ interface FlightGroupCardProps {
   loading: boolean;
   onStopoverChange: (has: boolean) => void;
   onStopoverIataChange: (iata: string) => void;
+  onLocatorChange: (locator: string) => void;
   defaultAirline: string;
   defaultDate: string;
   defaultOrigin: string;
@@ -570,7 +572,7 @@ interface FlightGroupCardProps {
 function FlightGroupCard({
   group, expanded, onToggle, onConnectionChange, onSegmentUpdate,
   onRemove, onAmadeusLookup, loading, onStopoverChange, onStopoverIataChange,
-  defaultAirline, defaultDate, defaultOrigin, defaultDestination,
+  onLocatorChange, defaultAirline, defaultDate, defaultOrigin, defaultDestination,
 }: FlightGroupCardProps) {
   const isMain = group.type !== "internal";
   const dirIcon = group.type === "main_return" ? "rotate-180" : "";
@@ -682,9 +684,9 @@ function FlightGroupCard({
             </div>
           </div>
 
-          {/* ─── Nº do Voo (only for direct flights — multi-segment has it per segment) ─── */}
-          {group.connectionType === "direto" && (
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {/* ─── Nº do Voo + Localizador ─── */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            {group.connectionType === "direto" && (
               <div className="space-y-1">
                 <Label className="text-xs font-medium">Nº do Voo</Label>
                 <Input
@@ -695,8 +697,17 @@ function FlightGroupCard({
                 />
                 <p className="text-[10px] text-muted-foreground">Opcional — ajuda o Amadeus a localizar o voo exato</p>
               </div>
+            )}
+            <div className="space-y-1">
+              <Label className="text-xs font-medium">Localizador</Label>
+              <Input
+                value={group.locator || ""}
+                onChange={e => onLocatorChange(e.target.value.toUpperCase())}
+                placeholder="ABC123"
+                className="font-mono text-sm"
+              />
             </div>
-          )}
+          </div>
 
           {/* ─── STEP 2: Amadeus Lookup Button ─── */}
           <div className="flex flex-wrap items-center gap-3">
