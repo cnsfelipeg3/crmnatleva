@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import ItineraryDocument from "@/components/itinerary/ItineraryDocument";
+import ItineraryListPage from "@/components/itinerary/ItineraryListPage";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -112,7 +113,7 @@ export default function Itinerary() {
     }
   };
 
-  if (!saleId) return <div className="p-8 text-center text-muted-foreground">Nenhuma venda selecionada.</div>;
+  if (!saleId) return <ItineraryListPage />;
 
   return (
     <div className="min-h-screen bg-muted/30">
