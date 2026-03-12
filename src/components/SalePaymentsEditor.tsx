@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, CreditCard, Banknote, Wallet, AlertCircle, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, CreditCard, Banknote, Wallet, AlertCircle, Clock, CheckCircle2, AlertTriangle, Paperclip, FileText, X, Upload, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export interface SalePayment {
   id: string;
@@ -24,6 +25,8 @@ export interface SalePayment {
   due_date: string;
   status: "pago" | "a_receber" | "vencido";
   notes: string;
+  receipt_url?: string;
+  receipt_name?: string;
 }
 
 const PAYMENT_METHODS = [
@@ -55,6 +58,8 @@ interface Props {
 }
 
 export default function SalePaymentsEditor({ payments, onChange, totalSaleValue = 0 }: Props) {
+  const [uploadingPaymentId, setUploadingPaymentId] = useState<string | null>(null);
+
   const { data: feeRules = [] } = useQuery({
     queryKey: ["payment-fee-rules-all"],
     queryFn: async () => {
@@ -168,6 +173,29 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
     const rules = feeRules.filter((r: any) => r.acquirer === gateway);
     const max = Math.max(1, ...rules.map((r: any) => r.installments || 1));
     return max;
+  };
+
+  const handleReceiptUpload = async (paymentId: string, file: File) => {
+    setUploadingPaymentId(paymentId);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `receipts/${paymentId}/${Date.now()}.${ext}`;
+      const { error: uploadErr } = await supabase.storage.from("sale-attachments").upload(path, file);
+      if (uploadErr) throw uploadErr;
+      const { data: urlData } = supabase.storage.from("sale-attachments").getPublicUrl(path);
+      updatePayment(paymentId, "receipt_url", urlData.publicUrl);
+      updatePayment(paymentId, "receipt_name", file.name);
+      toast.success("Comprovante anexado");
+    } catch (err: any) {
+      toast.error("Erro ao enviar comprovante: " + (err.message || ""));
+    } finally {
+      setUploadingPaymentId(null);
+    }
+  };
+
+  const removeReceipt = (paymentId: string) => {
+    updatePayment(paymentId, "receipt_url", "");
+    updatePayment(paymentId, "receipt_name", "");
   };
 
   return (
@@ -328,6 +356,45 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
                 <Label className="text-xs">Observações</Label>
                 <Input className="h-9" value={payment.notes} onChange={e => updatePayment(payment.id, "notes", e.target.value)} placeholder="Opcional" />
               </div>
+            </div>
+
+            {/* Receipt attachment */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Comprovante</Label>
+              {payment.receipt_url ? (
+                <div className="flex items-center gap-2 bg-muted/40 rounded-lg px-3 py-2">
+                  <FileText className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-xs truncate flex-1">{payment.receipt_name || "Comprovante"}</span>
+                  <a href={payment.receipt_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <button onClick={() => removeReceipt(payment.id)} className="text-destructive hover:text-destructive/80">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 border border-dashed border-border rounded-lg px-3 py-2 cursor-pointer hover:border-primary/50 transition-colors">
+                  {uploadingPaymentId === payment.id ? (
+                    <span className="text-xs text-muted-foreground">Enviando...</span>
+                  ) : (
+                    <>
+                      <Paperclip className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Anexar comprovante</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="hidden"
+                    disabled={uploadingPaymentId === payment.id}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleReceiptUpload(payment.id, file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
             </div>
           </Card>
         );
