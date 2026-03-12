@@ -18,6 +18,7 @@ interface Conversation {
   phone: string | null;
   status: string;
   funnel_stage: string | null;
+  stage: string | null;
   last_message_at: string | null;
   last_message_preview: string | null;
   unread_count: number | null;
