@@ -80,11 +80,16 @@ export default function PortalDashboard() {
 
   useEffect(() => {
     const fetchTrips = async () => {
-      const { data, error } = await supabase.functions.invoke("portal-api", {
-        body: { action: "trips" },
-      });
-      if (data?.trips) setTrips(data.trips);
-      setLoading(false);
+      try {
+        const { data, error } = await supabase.functions.invoke("portal-api", {
+          body: { action: "trips" },
+        });
+        if (data?.trips) setTrips(data.trips);
+      } catch (err) {
+        console.error("Failed to fetch portal trips:", err);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchTrips();
   }, []);
