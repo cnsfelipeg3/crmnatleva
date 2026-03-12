@@ -27,10 +27,11 @@ interface Conversation {
 
 interface Message {
   id: string;
-  content: string | null;
+  text: string | null;
   sender_type: string;
   created_at: string;
   message_type: string;
+  media_url: string | null;
 }
 
 const stageLabels: Record<string, string> = {
