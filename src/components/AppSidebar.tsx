@@ -27,7 +27,6 @@ const navItems = [
   { to: "/natleva-intelligence", icon: Sparkles, label: "NatLeva Intelligence" },
   { to: "/birthdays", icon: Cake, label: "Aniversariantes" },
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
-  { to: "/import", icon: FileUp, label: "Importar Dados" },
 ];
 
 const financeItems = [
