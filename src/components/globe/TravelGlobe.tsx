@@ -236,6 +236,46 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
     cesiumLibRef.current.animateAirplane(viewerRef.current, selectedRoute.route, 5);
   }, [selectedRoute]);
 
+  const handleSearchSelect = useCallback((result: SearchResult) => {
+    if (!viewerRef.current || !cesiumRef.current || !cesiumLibRef.current) return;
+    setSearchResult(result);
+    setSelectedRoute(null);
+
+    cesiumLibRef.current.addSearchMarker(viewerRef.current, result.lat, result.lng, result.name);
+
+    viewerRef.current.camera.flyTo({
+      destination: cesiumRef.current.Cartesian3.fromDegrees(result.lng, result.lat, 15_000),
+      orientation: {
+        heading: cesiumRef.current.Math.toRadians(0),
+        pitch: cesiumRef.current.Math.toRadians(-45),
+        roll: 0,
+      },
+      duration: 2.5,
+      easingFunction: cesiumRef.current.EasingFunction.QUINTIC_IN_OUT,
+    });
+  }, []);
+
+  const handleSearchClear = useCallback(() => {
+    if (viewerRef.current && cesiumLibRef.current) {
+      cesiumLibRef.current.removeSearchMarker(viewerRef.current);
+    }
+    setSearchResult(null);
+  }, []);
+
+  const handleSearchRecenter = useCallback(() => {
+    if (!searchResult || !viewerRef.current || !cesiumRef.current) return;
+    viewerRef.current.camera.flyTo({
+      destination: cesiumRef.current.Cartesian3.fromDegrees(searchResult.lng, searchResult.lat, 15_000),
+      orientation: {
+        heading: cesiumRef.current.Math.toRadians(0),
+        pitch: cesiumRef.current.Math.toRadians(-45),
+        roll: 0,
+      },
+      duration: 2,
+      easingFunction: cesiumRef.current.EasingFunction.QUINTIC_IN_OUT,
+    });
+  }, [searchResult]);
+
   const showFallback = status !== "loading" && status !== "ready";
 
   // Current location label for HUD
