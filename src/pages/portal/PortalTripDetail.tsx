@@ -7,12 +7,12 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft, Plane, Hotel, Users, DollarSign, FileText, Calendar, MapPin,
   Clock, Shield, Briefcase, MessageCircle, CheckCircle2,
-  AlertTriangle, Info, ChevronDown, ChevronUp, Map as MapIcon, Timer,
-  Sparkles, Navigation, Eye, CreditCard, Star, ListOrdered, CalendarDays,
+  AlertTriangle, ChevronDown, Map as MapIcon, Timer,
+  Sparkles, Navigation, CreditCard, Star, ListOrdered, CalendarDays,
+  ArrowRight, Eye, Luggage,
 } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
 import { iataToLabel } from "@/lib/iataUtils";
@@ -23,6 +23,7 @@ import PortalTimeline from "@/components/portal/PortalTimeline";
 import PortalCalendar from "@/components/portal/PortalCalendar";
 import { getMockTripDetail } from "@/lib/portalMockTrips";
 
+/* ── Helpers ── */
 const fmt = (v: number) => v?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00";
 const fmtDate = (d: string | null) => {
   if (!d) return "—";
@@ -33,8 +34,25 @@ const fmtDateShort = (d: string | null) => {
   return new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 };
 
-/* ─── Countdown ─── */
-function Countdown({ departureDate }: { departureDate: string }) {
+/* ── Destination images ── */
+const destImages: Record<string, string> = {
+  MCO: "https://images.unsplash.com/photo-1575089976121-8ed7b2a54265?w=1400&h=700&fit=crop",
+  MIA: "https://images.unsplash.com/photo-1533106497176-45ae19e68ba2?w=1400&h=700&fit=crop",
+  LIS: "https://images.unsplash.com/photo-1585208798174-6cedd86e019a?w=1400&h=700&fit=crop",
+  CDG: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=1400&h=700&fit=crop",
+  FCO: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=1400&h=700&fit=crop",
+  CUN: "https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=1400&h=700&fit=crop",
+  EZE: "https://images.unsplash.com/photo-1589909202802-8f4aadce1849?w=1400&h=700&fit=crop",
+  default: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1400&h=700&fit=crop",
+};
+function getImg(iata: string | null, cover: string | null) {
+  if (cover) return cover;
+  if (iata && destImages[iata]) return destImages[iata];
+  return destImages.default;
+}
+
+/* ── Cinematic Countdown ── */
+function CinematicCountdown({ departureDate }: { departureDate: string }) {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60000);
@@ -43,49 +61,134 @@ function Countdown({ departureDate }: { departureDate: string }) {
   const dep = new Date(departureDate + "T00:00:00");
   const diff = dep.getTime() - now.getTime();
   if (diff <= 0) return null;
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
   return (
-    <div className="flex items-center gap-2">
-      <div className="bg-white/10 backdrop-blur-sm text-white font-bold text-lg px-3 py-1.5 rounded-lg min-w-[48px] text-center">{days}</div>
-      <span className="text-white/60 text-xs">dias</span>
-      <div className="bg-white/10 backdrop-blur-sm text-white font-bold text-lg px-3 py-1.5 rounded-lg min-w-[48px] text-center">{hours}</div>
-      <span className="text-white/60 text-xs">horas</span>
+    <div>
+      <p className="text-white/40 text-[10px] uppercase tracking-[0.25em] mb-2 font-medium">Embarque em</p>
+      <div className="flex items-center gap-1.5">
+        {[
+          { val: days, label: "dias" },
+          { val: hours, label: "hrs" },
+          { val: mins, label: "min" },
+        ].map((item, i) => (
+          <div key={i} className="flex items-center gap-1">
+            <div className="bg-white/10 backdrop-blur-md text-white font-bold text-xl sm:text-2xl px-2.5 sm:px-3 py-1.5 rounded-lg min-w-[44px] text-center tabular-nums border border-white/10">
+              {item.val}
+            </div>
+            <span className="text-white/30 text-[9px] uppercase mr-1">{item.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-/* ─── Trip Status ─── */
+/* ── Trip Progress Bar ── */
+function TripProgressBar({ sale }: { sale: any }) {
+  const dep = sale?.departure_date ? new Date(sale.departure_date + "T00:00:00") : null;
+  const ret = sale?.return_date ? new Date(sale.return_date + "T23:59:59") : null;
+  const now = new Date();
+
+  if (!dep || !ret) return null;
+
+  const total = ret.getTime() - dep.getTime();
+  const elapsed = now.getTime() - dep.getTime();
+  const pct = total > 0 ? Math.max(0, Math.min(100, (elapsed / total) * 100)) : 0;
+  const isActive = dep <= now && ret >= now;
+  const isPast = ret < now;
+  const tripDays = Math.ceil(total / 86400000);
+  const currentDay = isActive ? Math.min(Math.ceil(elapsed / 86400000), tripDays) : isPast ? tripDays : 0;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+      className="relative"
+    >
+      <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+        <span className="flex items-center gap-1.5">
+          <Plane className="h-3 w-3 text-accent" />
+          {fmtDateShort(sale.departure_date)}
+        </span>
+        {isActive && (
+          <span className="text-accent font-semibold text-xs">
+            Dia {currentDay} de {tripDays}
+          </span>
+        )}
+        {isPast && <span className="text-muted-foreground font-medium text-xs">Concluída</span>}
+        <span className="flex items-center gap-1.5">
+          {fmtDateShort(sale.return_date)}
+          <MapPin className="h-3 w-3 text-accent" />
+        </span>
+      </div>
+      <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${isPast ? 100 : pct}%` }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+          className="h-full rounded-full relative"
+          style={{
+            background: isPast
+              ? "hsl(var(--muted-foreground))"
+              : "linear-gradient(90deg, hsl(var(--accent)), hsl(160, 80%, 60%))",
+          }}
+        >
+          {isActive && (
+            <span className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-accent border-2 border-background shadow-lg shadow-accent/40" />
+          )}
+        </motion.div>
+      </div>
+      {/* Milestones */}
+      <div className="flex justify-between mt-1.5">
+        <span className="text-[10px] text-muted-foreground">Partida</span>
+        <span className="text-[10px] text-muted-foreground">Retorno</span>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ── Status Badge ── */
 function TripStatus({ sale }: { sale: any }) {
   const dep = sale?.departure_date ? new Date(sale.departure_date + "T00:00:00") : null;
   const ret = sale?.return_date ? new Date(sale.return_date + "T23:59:59") : null;
   const now = new Date();
   if (dep && ret && dep <= now && ret >= now)
-    return <Badge className="bg-accent/20 text-accent border-accent/30 backdrop-blur-sm text-xs font-semibold">✈️ Em viagem</Badge>;
+    return (
+      <Badge className="bg-accent text-accent-foreground border-none shadow-lg shadow-accent/30 text-xs px-3 py-1.5">
+        <span className="relative flex h-2 w-2 mr-1.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-foreground opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-foreground" />
+        </span>
+        Em viagem
+      </Badge>
+    );
   if (dep && dep > now)
-    return <Badge className="bg-white/15 text-white border-white/20 backdrop-blur-sm text-xs font-semibold">🟢 Confirmada</Badge>;
+    return <Badge className="bg-info/90 text-info-foreground border-none shadow-lg shadow-info/20 text-xs px-3 py-1.5">🟢 Confirmada</Badge>;
   if (ret && ret < now)
-    return <Badge className="bg-white/10 text-white/60 border-white/10 backdrop-blur-sm text-xs font-semibold">Concluída</Badge>;
-  return <Badge className="bg-white/15 text-white border-white/20 backdrop-blur-sm text-xs font-semibold">Agendada</Badge>;
+    return <Badge className="bg-muted/80 text-muted-foreground border-none text-xs px-3 py-1.5">Concluída</Badge>;
+  return <Badge className="bg-muted/80 text-muted-foreground border-none text-xs px-3 py-1.5">Agendada</Badge>;
 }
 
-/* ─── Section ─── */
+/* ── Section ── */
 function Section({ title, icon: Icon, children, defaultOpen = true, count }: {
   title: string; icon: any; children: React.ReactNode; defaultOpen?: boolean; count?: number;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <Card className="overflow-hidden border-border/50 hover:border-border transition-colors">
+    <Card className="overflow-hidden border-border/50 hover:border-accent/10 transition-colors">
       <button
         onClick={() => setOpen(!open)}
         className="w-full flex items-center justify-between p-5 sm:p-6 hover:bg-muted/20 transition-colors group"
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/15 transition-colors">
+          <div className="w-11 h-11 rounded-2xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/15 group-hover:scale-105 transition-all">
             <Icon className="h-5 w-5 text-accent" />
           </div>
           <div className="text-left">
-            <h3 className="text-base sm:text-lg font-semibold text-foreground">{title}</h3>
+            <h3 className="text-base sm:text-lg font-bold text-foreground">{title}</h3>
             {count !== undefined && <p className="text-xs text-muted-foreground">{count} {count === 1 ? "item" : "itens"}</p>}
           </div>
         </div>
@@ -99,7 +202,7 @@ function Section({ title, icon: Icon, children, defaultOpen = true, count }: {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
             className="overflow-hidden"
           >
             <div className="px-5 sm:px-6 pb-5 sm:pb-6 pt-0">{children}</div>
@@ -110,13 +213,12 @@ function Section({ title, icon: Icon, children, defaultOpen = true, count }: {
   );
 }
 
-/* ─── Next Action Block ─── */
+/* ── Next Action Block ── */
 function NextActionBlock({ sale, segments, financial, attachments }: {
   sale: any; segments: any[]; financial: any; attachments: any[];
 }) {
-  const actions: { icon: any; label: string; priority: string; color: string }[] = [];
+  const actions: { icon: any; label: string; priority: string; color: string; bgColor: string }[] = [];
 
-  // Check pending payment
   const receivables = financial?.receivables || [];
   const pending = receivables.filter((r: any) => r.status !== "recebido");
   if (pending.length > 0) {
@@ -125,60 +227,106 @@ function NextActionBlock({ sale, segments, financial, attachments }: {
       icon: CreditCard,
       label: `Quitar parcela ${next.installment_number || ""} — ${fmt(next.gross_value)}`,
       priority: "alta",
-      color: "text-amber-500",
+      color: "text-warning",
+      bgColor: "bg-warning/10",
     });
   }
 
-  // Check check-in
   if (segments.length > 0) {
     const now = new Date();
     const firstFlight = segments[0];
     const dep = firstFlight?.departure_date ? new Date(firstFlight.departure_date + "T00:00:00") : null;
-    const hours = dep ? (dep.getTime() - now.getTime()) / (1000 * 60 * 60) : Infinity;
+    const hours = dep ? (dep.getTime() - now.getTime()) / 3600000 : Infinity;
     if (hours <= 48 && hours > 0) {
       actions.push({
         icon: Plane,
         label: `Check-in online — ${firstFlight.airline || ""} ${firstFlight.flight_number || ""}`,
         priority: "urgente",
         color: "text-destructive",
+        bgColor: "bg-destructive/10",
       });
     }
   }
 
-  // Check documents
   if (attachments.length === 0 && segments.length > 0) {
     actions.push({
       icon: FileText,
       label: "Aguardando envio de documentos pela NatLeva",
       priority: "info",
-      color: "text-blue-500",
+      color: "text-info",
+      bgColor: "bg-info/10",
     });
   }
 
   if (actions.length === 0) return null;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
-      <Card className="p-4 sm:p-5 border-accent/20 bg-accent/5">
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="h-4 w-4 text-accent" />
-          <p className="text-sm font-semibold text-foreground">Próximas ações</p>
-        </div>
-        <div className="space-y-2">
-          {actions.map((a, i) => (
-            <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-background/60 border border-border/30">
-              <a.icon className={`h-4 w-4 ${a.color} flex-shrink-0`} />
-              <p className="text-sm text-foreground flex-1">{a.label}</p>
-              <Badge variant="outline" className="text-[10px]">{a.priority}</Badge>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+      <Card className="overflow-hidden border-accent/20">
+        <div className="p-5 sm:p-6 bg-gradient-to-r from-accent/5 via-transparent to-transparent">
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-9 h-9 rounded-xl bg-accent/15 flex items-center justify-center">
+              <Sparkles className="h-4.5 w-4.5 text-accent" />
             </div>
-          ))}
+            <div>
+              <p className="text-sm font-bold text-foreground">Próximo passo da sua viagem</p>
+              <p className="text-xs text-muted-foreground">Ações que precisam da sua atenção</p>
+            </div>
+          </div>
+          <div className="space-y-2.5">
+            {actions.map((a, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.25 + i * 0.08 }}
+                className="flex items-center gap-3 p-3.5 rounded-xl bg-background/70 border border-border/40 hover:border-accent/20 hover:shadow-sm transition-all cursor-default"
+              >
+                <div className={`w-9 h-9 rounded-xl ${a.bgColor} flex items-center justify-center flex-shrink-0`}>
+                  <a.icon className={`h-4.5 w-4.5 ${a.color}`} />
+                </div>
+                <p className="text-sm text-foreground flex-1 font-medium">{a.label}</p>
+                <Badge variant="outline" className={`text-[10px] ${a.color} border-current/20`}>{a.priority}</Badge>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </Card>
     </motion.div>
   );
 }
 
-/* ─── Main Page ─── */
+/* ── Overview Stat Card ── */
+function StatCard({ icon: Icon, label, value, isText, delay }: {
+  icon: any; label: string; value: string | number; isText?: boolean; delay: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, type: "spring", stiffness: 200 }}
+    >
+      <Card className="p-4 sm:p-5 hover:shadow-lg hover:shadow-accent/5 hover:border-accent/20 transition-all group cursor-default overflow-hidden relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-accent/3 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+        <div className="relative flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/15 group-hover:scale-110 transition-all">
+            <Icon className="h-6 w-6 text-accent" />
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-medium">{label}</p>
+            {isText ? (
+              <p className="text-sm font-bold text-foreground mt-0.5 truncate max-w-[140px]">{value}</p>
+            ) : (
+              <p className="text-2xl font-bold text-foreground mt-0.5 tabular-nums">{value}</p>
+            )}
+          </div>
+        </div>
+      </Card>
+    </motion.div>
+  );
+}
+
+/* ═══════════════════════ MAIN PAGE ═══════════════════════ */
 export default function PortalTripDetail() {
   const { saleId } = useParams();
   const id = saleId;
@@ -217,8 +365,11 @@ export default function PortalTripDetail() {
   if (loading) {
     return (
       <PortalLayout>
-        <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-[3px] border-accent/20 border-t-accent rounded-full animate-spin" />
+        <div className="flex items-center justify-center py-32">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-10 h-10 border-[3px] border-accent/20 border-t-accent rounded-full animate-spin" />
+            <p className="text-muted-foreground text-sm">Carregando viagem...</p>
+          </div>
         </div>
       </PortalLayout>
     );
@@ -227,10 +378,10 @@ export default function PortalTripDetail() {
   if (!data || data.error) {
     return (
       <PortalLayout>
-        <div className="text-center py-20">
-          <AlertTriangle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-          <p className="text-muted-foreground">Viagem não encontrada.</p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate("/portal")}>Voltar</Button>
+        <div className="text-center py-32">
+          <AlertTriangle className="h-16 w-16 text-muted-foreground/20 mx-auto mb-4" />
+          <p className="text-muted-foreground text-lg font-medium">Viagem não encontrada.</p>
+          <Button variant="outline" className="mt-6" onClick={() => navigate("/portal")}>Voltar ao início</Button>
         </div>
       </PortalLayout>
     );
@@ -243,138 +394,134 @@ export default function PortalTripDetail() {
   const totalPending = totalReceivable - totalPaid;
   const paymentPct = totalReceivable > 0 ? Math.round((totalPaid / totalReceivable) * 100) : 0;
 
-  // Trip time status
   const dep = sale?.departure_date ? new Date(sale.departure_date + "T00:00:00") : null;
   const ret = sale?.return_date ? new Date(sale.return_date + "T23:59:59") : null;
   const now = new Date();
   const isUpcoming = dep && dep > now;
   const isActive = dep && ret && dep <= now && ret >= now;
-
-  // Calculate trip days
-  const tripDays = dep && ret ? Math.ceil((ret.getTime() - dep.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+  const tripDays = dep && ret ? Math.ceil((ret.getTime() - dep.getTime()) / 86400000) : 0;
 
   return (
     <PortalLayout>
-      <div className="space-y-6">
-        {/* Back button */}
-        <button onClick={() => navigate("/portal")} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="h-4 w-4" /> Voltar ao início
-        </button>
+      <div className="space-y-6 sm:space-y-8">
+        {/* Back */}
+        <motion.button
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          onClick={() => navigate("/portal")}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+        >
+          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" /> Voltar ao início
+        </motion.button>
 
         {/* ═══ CINEMATIC HERO ═══ */}
-        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}>
-          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl h-[260px] sm:h-[340px] group">
+        <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7, ease: "easeOut" }}>
+          <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl h-[340px] sm:h-[420px] lg:h-[480px] group">
             <img
-              src={published?.cover_image_url || "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1200&h=600&fit=crop"}
+              src={getImg(sale?.destination_iata, published?.cover_image_url)}
               alt=""
-              className="w-full h-full object-cover transition-transform duration-[8s] group-hover:scale-110"
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-[1500ms] group-hover:scale-105"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
+            {/* Cinematic overlays */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/5" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
 
-            {/* Status badge */}
-            <div className="absolute top-5 left-5 sm:top-6 sm:left-6">
+            {/* Top - Status */}
+            <div className="absolute top-5 left-5 sm:top-8 sm:left-8">
               <TripStatus sale={sale} />
             </div>
 
-            {/* Content */}
-            <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8">
-              <h1 className="text-2xl sm:text-4xl font-bold text-white leading-tight drop-shadow-lg">
-                {published?.custom_title || sale?.name || "Detalhes da Viagem"}
-              </h1>
+            {/* Bottom - Content */}
+            <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-8 lg:p-10">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+              >
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-white leading-[1.1] tracking-tight max-w-3xl drop-shadow-lg">
+                  {published?.custom_title || sale?.name || "Detalhes da Viagem"}
+                </h1>
 
-              {/* Route & date badges */}
-              <div className="flex flex-wrap gap-2 mt-3">
-                {sale?.origin_iata && sale?.destination_iata && (
-                  <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm text-white/90 text-xs px-3 py-1.5 rounded-full">
-                    <Navigation className="h-3 w-3" />
-                    {iataToLabel(sale.origin_iata)} → {iataToLabel(sale.destination_iata)}
-                  </div>
-                )}
-                {sale?.departure_date && (
-                  <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm text-white/90 text-xs px-3 py-1.5 rounded-full">
-                    <Calendar className="h-3 w-3" />
-                    {fmtDateShort(sale.departure_date)} — {fmtDateShort(sale.return_date)}
-                  </div>
-                )}
-                {tripDays > 0 && (
-                  <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm text-white/90 text-xs px-3 py-1.5 rounded-full">
-                    <Clock className="h-3 w-3" />
-                    {tripDays} {tripDays === 1 ? "dia" : "dias"}
-                  </div>
-                )}
-              </div>
-
-              {/* Countdown */}
-              {isUpcoming && sale?.departure_date && (
-                <div className="mt-4">
-                  <p className="text-white/50 text-xs uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                    <Timer className="h-3 w-3" /> Embarque em
-                  </p>
-                  <Countdown departureDate={sale.departure_date} />
+                {/* Route & date chips */}
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {sale?.origin_iata && sale?.destination_iata && (
+                    <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md text-white/80 text-xs px-3.5 py-2 rounded-full border border-white/10">
+                      <Navigation className="h-3.5 w-3.5" />
+                      <span className="font-mono tracking-wider text-white">{sale.origin_iata}</span>
+                      <ArrowRight className="h-3 w-3 text-white/40" />
+                      <span className="font-mono tracking-wider text-white">{sale.destination_iata}</span>
+                    </div>
+                  )}
+                  {sale?.departure_date && (
+                    <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md text-white/80 text-xs px-3.5 py-2 rounded-full border border-white/10">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {fmtDateShort(sale.departure_date)} — {fmtDateShort(sale.return_date)}
+                    </div>
+                  )}
+                  {tripDays > 0 && (
+                    <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md text-white/80 text-xs px-3.5 py-2 rounded-full border border-white/10">
+                      <Clock className="h-3.5 w-3.5" />
+                      {tripDays} {tripDays === 1 ? "dia" : "dias"}
+                    </div>
+                  )}
                 </div>
-              )}
 
-              {isActive && (
-                <div className="mt-4 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                  <p className="text-accent text-sm font-semibold">Viagem em andamento</p>
-                </div>
-              )}
+                {/* Countdown or active indicator */}
+                {isUpcoming && sale?.departure_date && (
+                  <div className="mt-5">
+                    <CinematicCountdown departureDate={sale.departure_date} />
+                  </div>
+                )}
+                {isActive && (
+                  <div className="mt-5 flex items-center gap-2.5">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-accent" />
+                    </span>
+                    <p className="text-accent text-sm font-bold tracking-wide">Viagem em andamento</p>
+                  </div>
+                )}
+              </motion.div>
             </div>
           </div>
         </motion.div>
 
-        {/* ═══ OVERVIEW CARDS ═══ */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {[
-              { icon: Users, label: "Passageiros", value: passengers?.length || 0, suffix: "" },
-              { icon: Plane, label: "Voos", value: segments?.length || 0, suffix: "" },
-              { icon: Hotel, label: "Hotéis", value: allHotels.length, suffix: "" },
-              { icon: Star, label: "Consultor", value: sellerName || "NatLeva", suffix: "", isText: true },
-            ].map((card, i) => (
-              <Card key={i} className="p-4 hover:shadow-md hover:border-accent/20 transition-all group cursor-default">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/15 group-hover:scale-110 transition-all">
-                    <card.icon className="h-5 w-5 text-accent" />
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">{card.label}</p>
-                    {(card as any).isText ? (
-                      <p className="text-sm font-semibold text-foreground mt-0.5 truncate">{card.value}</p>
-                    ) : (
-                      <p className="text-xl font-bold text-foreground mt-0.5">{card.value}{card.suffix}</p>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </motion.div>
+        {/* ═══ PROGRESS BAR ═══ */}
+        <TripProgressBar sale={sale} />
+
+        {/* ═══ OVERVIEW STATS ═══ */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+          <StatCard icon={Users} label="Passageiros" value={passengers?.length || 0} delay={0.1} />
+          <StatCard icon={Plane} label="Voos" value={segments?.length || 0} delay={0.14} />
+          <StatCard icon={Hotel} label="Hotéis" value={allHotels.length} delay={0.18} />
+          <StatCard icon={Star} label="Consultor" value={sellerName || "NatLeva"} isText delay={0.22} />
+        </div>
 
         {/* ═══ NEXT ACTIONS ═══ */}
         <NextActionBlock sale={sale} segments={segments || []} financial={financial} attachments={attachments || []} />
 
-        {/* ═══ NOTES FROM NATLEVA ═══ */}
+        {/* ═══ NOTES ═══ */}
         {published?.notes_for_client && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-            <Card className="p-5 bg-accent/5 border-accent/20">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
-                  <MessageCircle className="h-5 w-5 text-accent" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground mb-1">Mensagem da NatLeva</p>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{published.notes_for_client}</p>
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+            <Card className="overflow-hidden border-accent/20">
+              <div className="p-5 sm:p-6 bg-gradient-to-r from-accent/5 via-transparent to-transparent">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center flex-shrink-0">
+                    <MessageCircle className="h-5 w-5 text-accent" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-foreground mb-1.5">Mensagem da NatLeva</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{published.notes_for_client}</p>
+                  </div>
                 </div>
               </div>
             </Card>
           </motion.div>
         )}
 
-        {/* ═══ MAIN TABS: Mapa / Timeline / Calendário ═══ */}
+        {/* ═══ MAP / TIMELINE / CALENDAR ═══ */}
         {segments?.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
             <Card className="overflow-hidden">
               <Tabs defaultValue="map" className="w-full">
                 <div className="px-5 sm:px-6 pt-5 sm:pt-6">
@@ -390,15 +537,12 @@ export default function PortalTripDetail() {
                     </TabsTrigger>
                   </TabsList>
                 </div>
-
                 <TabsContent value="map" className="px-5 sm:px-6 pb-5 sm:pb-6 pt-4">
                   <PortalJourneyMap segments={segments} hotels={hotels} lodging={lodging} services={services} sale={sale} />
                 </TabsContent>
-
                 <TabsContent value="timeline" className="px-5 sm:px-6 pb-5 sm:pb-6 pt-4">
                   <PortalTimeline segments={segments} hotels={hotels} lodging={lodging} services={services} sale={sale} />
                 </TabsContent>
-
                 <TabsContent value="calendar" className="px-5 sm:px-6 pb-5 sm:pb-6 pt-4">
                   <PortalCalendar segments={segments} hotels={hotels} lodging={lodging} services={services} sale={sale} />
                 </TabsContent>
@@ -408,7 +552,7 @@ export default function PortalTripDetail() {
         )}
 
         {/* ═══ CHECKLIST ═══ */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Section title="Preparação da Viagem" icon={CheckCircle2}>
             <PortalChecklist
               sale={sale}
@@ -425,42 +569,50 @@ export default function PortalTripDetail() {
 
         {/* ═══ FLIGHTS ═══ */}
         {segments?.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.32 }}>
             <Section title="Voos" icon={Plane} count={segments.length}>
               <div className="space-y-3">
                 {segments.map((seg: any, i: number) => (
-                  <div key={seg.id || i} className="flex flex-col sm:flex-row gap-4 p-4 rounded-xl bg-muted/20 border border-border/30 hover:border-border/60 hover:shadow-sm transition-all">
-                    <div className="flex items-center gap-3 sm:w-36 flex-shrink-0">
-                      <AirlineLogo iata={seg.airline} size={36} />
+                  <motion.div
+                    key={seg.id || i}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.35 + i * 0.06 }}
+                    className="group/flight flex flex-col sm:flex-row gap-4 p-4 sm:p-5 rounded-2xl bg-muted/20 border border-border/30 hover:border-accent/20 hover:shadow-md hover:shadow-accent/5 transition-all"
+                  >
+                    <div className="flex items-center gap-3 sm:w-40 flex-shrink-0">
+                      <AirlineLogo iata={seg.airline} size={40} />
                       <div>
-                        <p className="text-sm font-semibold text-foreground">{seg.airline}</p>
-                        <p className="text-xs text-muted-foreground">{seg.flight_number || "—"}</p>
+                        <p className="text-sm font-bold text-foreground">{seg.airline}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{seg.flight_number || "—"}</p>
                       </div>
                     </div>
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
                       <div>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Origem</p>
-                        <p className="text-sm font-semibold">{iataToLabel(seg.origin_iata)}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-medium">Origem</p>
+                        <p className="text-sm font-bold text-foreground">{iataToLabel(seg.origin_iata)}</p>
                         {seg.departure_date && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                             <Calendar className="h-3 w-3" />{fmtDateShort(seg.departure_date)}
-                            {seg.departure_time && <><Clock className="h-3 w-3 ml-1" />{seg.departure_time}</>}
+                            {seg.departure_time && <span className="ml-1 font-mono">{seg.departure_time}</span>}
                           </p>
                         )}
                       </div>
                       <div className="hidden sm:flex items-center justify-center">
                         <div className="flex items-center gap-2 text-muted-foreground">
-                          <div className="w-8 h-px bg-border" />
-                          <Plane className="h-4 w-4 text-accent" />
-                          <div className="w-8 h-px bg-border" />
+                          <div className="w-10 h-px bg-border group-hover/flight:bg-accent/30 transition-colors" />
+                          <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center group-hover/flight:bg-accent/20 transition-colors">
+                            <Plane className="h-4 w-4 text-accent" />
+                          </div>
+                          <div className="w-10 h-px bg-border group-hover/flight:bg-accent/30 transition-colors" />
                         </div>
                       </div>
                       <div className="sm:text-right">
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Destino</p>
-                        <p className="text-sm font-semibold">{iataToLabel(seg.destination_iata)}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-medium">Destino</p>
+                        <p className="text-sm font-bold text-foreground">{iataToLabel(seg.destination_iata)}</p>
                         {seg.arrival_time && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5 sm:justify-end">
-                            <Clock className="h-3 w-3" />{seg.arrival_time}
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1 sm:justify-end">
+                            <Clock className="h-3 w-3" /><span className="font-mono">{seg.arrival_time}</span>
                           </p>
                         )}
                       </div>
@@ -474,7 +626,7 @@ export default function PortalTripDetail() {
                         </Badge>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </Section>
@@ -483,43 +635,57 @@ export default function PortalTripDetail() {
 
         {/* ═══ HOTELS ═══ */}
         {allHotels.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34 }}>
             <Section title="Hospedagem" icon={Hotel} count={allHotels.length}>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {allHotels.map((h: any, i: number) => (
-                  <div key={h.id || i} className="p-4 rounded-xl bg-muted/20 border border-border/30 hover:border-border/60 hover:shadow-sm transition-all">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <Hotel className="h-5 w-5 text-amber-500" />
-                        </div>
+                  <motion.div
+                    key={h.id || i}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.36 + i * 0.06 }}
+                    className="flex flex-col sm:flex-row gap-4 p-4 sm:p-5 rounded-2xl bg-muted/20 border border-border/30 hover:border-accent/20 hover:shadow-md hover:shadow-accent/5 transition-all overflow-hidden"
+                  >
+                    {/* Hotel image */}
+                    <div className="sm:w-40 h-28 sm:h-auto rounded-xl overflow-hidden flex-shrink-0 bg-muted">
+                      <img
+                        src={`https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&h=300&fit=crop`}
+                        alt={h.hotel_name || "Hotel"}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    {/* Hotel info */}
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-2">
                         <div>
-                          <p className="text-base font-semibold text-foreground">
+                          <p className="text-base font-bold text-foreground">
                             {h.hotel_name || h.description || "Hotel"}
                           </p>
                           {(h.hotel_reservation_code || h.reservation_code) && (
-                            <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1 font-mono">
                               <FileText className="h-3 w-3" />Reserva: {h.hotel_reservation_code || h.reservation_code}
                             </p>
                           )}
                         </div>
+                        {h.status && (
+                          <Badge variant={h.status === "CONFIRMADO" ? "default" : "secondary"} className="text-[10px] flex-shrink-0">
+                            {h.status}
+                          </Badge>
+                        )}
                       </div>
-                      {h.status && (
-                        <Badge variant={h.status === "CONFIRMADO" ? "default" : "secondary"} className="flex-shrink-0 text-[10px]">
-                          {h.status}
-                        </Badge>
+                      <div className="flex flex-wrap gap-3 mt-3">
+                        {h.hotel_checkin_datetime_utc && (
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/40 px-2.5 py-1.5 rounded-lg">
+                            <Calendar className="h-3 w-3 text-accent" />
+                            Check-in: {new Date(h.hotel_checkin_datetime_utc).toLocaleDateString("pt-BR")}
+                          </div>
+                        )}
+                      </div>
+                      {h.notes && (
+                        <p className="text-xs text-muted-foreground mt-3 italic bg-muted/30 rounded-lg p-3 border border-border/20">{h.notes}</p>
                       )}
                     </div>
-                    {h.hotel_checkin_datetime_utc && (
-                      <p className="text-sm text-muted-foreground mt-3 flex items-center gap-1.5 ml-[52px]">
-                        <Calendar className="h-3.5 w-3.5" />
-                        Check-in: {new Date(h.hotel_checkin_datetime_utc).toLocaleDateString("pt-BR")}
-                      </p>
-                    )}
-                    {h.notes && (
-                      <p className="text-xs text-muted-foreground mt-2 ml-[52px] italic bg-muted/30 rounded-lg p-2.5">{h.notes}</p>
-                    )}
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             </Section>
@@ -528,24 +694,24 @@ export default function PortalTripDetail() {
 
         {/* ═══ SERVICES ═══ */}
         {services?.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}>
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}>
             <Section title="Serviços e Experiências" icon={Briefcase} count={services.length} defaultOpen={false}>
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {services.map((s: any, i: number) => {
                   const cat = (s.product_type || s.category || "").toLowerCase();
                   const isTransfer = cat.includes("transfer");
                   const isSecurity = cat.includes("seguro");
                   const Icon = isTransfer ? Navigation : isSecurity ? Shield : Star;
-                  const iconColor = isTransfer ? "text-emerald-500 bg-emerald-500/10" : isSecurity ? "text-blue-500 bg-blue-500/10" : "text-purple-500 bg-purple-500/10";
+                  const iconColor = isTransfer ? "text-accent bg-accent/10" : isSecurity ? "text-info bg-info/10" : "text-warning bg-warning/10";
 
                   return (
-                    <div key={s.id || i} className="flex items-center gap-3 p-3 rounded-xl bg-muted/20 border border-border/30 hover:border-border/60 transition-all">
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${iconColor}`}>
-                        <Icon className="h-4 w-4" />
+                    <div key={s.id || i} className="flex items-center gap-3 p-3.5 rounded-xl bg-muted/20 border border-border/30 hover:border-accent/20 transition-all">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${iconColor}`}>
+                        <Icon className="h-4.5 w-4.5" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{s.description || s.category}</p>
-                        {s.reservation_code && <p className="text-xs text-muted-foreground">Código: {s.reservation_code}</p>}
+                        <p className="text-sm font-semibold text-foreground truncate">{s.description || s.category}</p>
+                        {s.reservation_code && <p className="text-xs text-muted-foreground font-mono mt-0.5">Código: {s.reservation_code}</p>}
                       </div>
                       <Badge variant="secondary" className="text-[10px] flex-shrink-0">{s.product_type || s.category}</Badge>
                     </div>
@@ -557,7 +723,7 @@ export default function PortalTripDetail() {
         )}
 
         {/* ═══ DOCUMENTS ═══ */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}>
           <Section title="Central de Documentos" icon={FileText}>
             <PortalDocumentsCenter
               attachments={attachments || []}
@@ -571,69 +737,62 @@ export default function PortalTripDetail() {
 
         {/* ═══ FINANCIAL ═══ */}
         {financial?.receivables?.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.33 }}>
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
             <Section title="Financeiro" icon={DollarSign}>
-              {/* Financial Summary Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-                <Card className="p-4 bg-accent/5 border-accent/20">
-                  <div className="flex items-center gap-2 mb-1">
-                    <DollarSign className="h-4 w-4 text-accent" />
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Valor Total</p>
-                  </div>
-                  <p className="text-xl font-bold text-foreground">{fmt(totalReceivable)}</p>
-                </Card>
-                <Card className="p-4 bg-emerald-500/5 border-emerald-500/20">
-                  <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Pago</p>
-                  </div>
-                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{fmt(totalPaid)}</p>
-                </Card>
-                <Card className="p-4 bg-amber-500/5 border-amber-500/20">
-                  <div className="flex items-center gap-2 mb-1">
-                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">Pendente</p>
-                  </div>
-                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{fmt(totalPending)}</p>
-                </Card>
+              {/* Summary cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                {[
+                  { icon: DollarSign, label: "Valor Total", value: fmt(totalReceivable), color: "text-accent", bg: "bg-accent/5 border-accent/15" },
+                  { icon: CheckCircle2, label: "Pago", value: fmt(totalPaid), color: "text-success", bg: "bg-success/5 border-success/15" },
+                  { icon: AlertTriangle, label: "Pendente", value: fmt(totalPending), color: "text-warning", bg: "bg-warning/5 border-warning/15" },
+                ].map((c, i) => (
+                  <Card key={i} className={`p-4 sm:p-5 ${c.bg}`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <c.icon className={`h-4 w-4 ${c.color}`} />
+                      <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-medium">{c.label}</p>
+                    </div>
+                    <p className={`text-xl sm:text-2xl font-bold ${c.color}`}>{c.value}</p>
+                  </Card>
+                ))}
               </div>
 
               {/* Animated Progress */}
               {totalReceivable > 0 && (
-                <div className="mb-5">
+                <div className="mb-6">
                   <div className="flex justify-between text-xs text-muted-foreground mb-2">
                     <span>Progresso do pagamento</span>
-                    <span className="font-semibold text-foreground">{paymentPct}%</span>
+                    <span className="font-bold text-foreground">{paymentPct}%</span>
                   </div>
                   <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min(100, paymentPct)}%` }}
-                      transition={{ duration: 1.2, ease: "easeOut" }}
-                      className="h-full bg-gradient-to-r from-accent to-emerald-400 rounded-full relative"
-                    >
-                      {paymentPct >= 15 && (
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-white">
-                          {paymentPct}%
-                        </span>
-                      )}
-                    </motion.div>
+                      transition={{ duration: 1.5, ease: "easeOut" }}
+                      className="h-full rounded-full"
+                      style={{ background: "linear-gradient(90deg, hsl(var(--accent)), hsl(160, 80%, 60%))" }}
+                    />
                   </div>
                 </div>
               )}
 
-              {/* Parcels */}
-              <div className="space-y-2">
+              {/* Installments */}
+              <div className="space-y-2.5">
                 {financial.receivables.map((r: any, i: number) => {
                   const isPaid = r.status === "recebido";
                   return (
-                    <div key={r.id || i} className={`flex items-center justify-between p-3.5 rounded-xl border transition-all ${
-                      isPaid ? "bg-emerald-500/5 border-emerald-500/10" : "bg-amber-500/5 border-amber-500/10"
-                    }`}>
+                    <motion.div
+                      key={r.id || i}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.45 + i * 0.05 }}
+                      className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                        isPaid ? "bg-success/5 border-success/15" : "bg-warning/5 border-warning/15 hover:border-warning/30"
+                      }`}
+                    >
                       <div className="flex items-center gap-3">
-                        <div className={`w-3 h-3 rounded-full ${isPaid ? "bg-emerald-500" : "bg-amber-500 animate-pulse"}`} />
+                        <div className={`w-3 h-3 rounded-full flex-shrink-0 ${isPaid ? "bg-success" : "bg-warning animate-pulse"}`} />
                         <div>
-                          <p className="text-sm font-medium text-foreground">
+                          <p className="text-sm font-semibold text-foreground">
                             {r.description || `Parcela ${r.installment_number || i + 1}`}
                             {r.installment_total > 1 && ` de ${r.installment_total}`}
                           </p>
@@ -641,13 +800,13 @@ export default function PortalTripDetail() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-semibold text-foreground">{fmt(r.gross_value)}</p>
+                        <p className="text-sm font-bold text-foreground">{fmt(r.gross_value)}</p>
                         <div className="flex items-center gap-1.5 justify-end mt-0.5">
-                          {isPaid && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
+                          {isPaid && <CheckCircle2 className="h-3 w-3 text-success" />}
                           <p className="text-xs text-muted-foreground">{r.payment_method || (isPaid ? "Pago" : "Pendente")}</p>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -657,16 +816,16 @@ export default function PortalTripDetail() {
 
         {/* ═══ PASSENGERS ═══ */}
         {passengers?.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}>
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42 }}>
             <Section title="Passageiros" icon={Users} count={passengers.length}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {passengers.map((pax: any, i: number) => (
-                  <div key={pax.id || i} className="flex items-center gap-4 p-4 rounded-xl bg-muted/20 border border-border/30">
-                    <div className="w-11 h-11 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0 text-accent font-bold text-sm">
+                  <div key={pax.id || i} className="flex items-center gap-4 p-4 rounded-2xl bg-muted/20 border border-border/30 hover:border-accent/20 transition-all">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center flex-shrink-0 text-accent font-bold text-base">
                       {(pax.full_name || "?")[0]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">{pax.full_name}</p>
+                      <p className="text-sm font-bold text-foreground truncate">{pax.full_name}</p>
                       <div className="flex flex-wrap gap-1.5 mt-1">
                         {pax.role && <Badge variant="secondary" className="text-[10px]">{pax.role}</Badge>}
                         {pax.birth_date && (
@@ -682,23 +841,25 @@ export default function PortalTripDetail() {
         )}
 
         {/* ═══ SUPPORT CTA ═══ */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-          <Card className="p-6 sm:p-8 bg-gradient-to-r from-primary to-[hsl(160,30%,15%)] text-primary-foreground rounded-2xl overflow-hidden relative">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-accent/5 rounded-full blur-3xl -mr-20 -mt-20" />
-            <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
+          <Card className="overflow-hidden rounded-2xl sm:rounded-3xl relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary to-[hsl(160,30%,15%)]" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl -mr-20 -mt-20" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent/5 rounded-full blur-3xl -ml-20 -mb-20" />
+            <div className="relative p-6 sm:p-8 lg:p-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
               <div>
-                <h3 className="text-lg font-bold">Precisa de ajuda?</h3>
-                <p className="text-sm text-primary-foreground/70 mt-1">
-                  {sellerName ? `Fale com ${sellerName} ou com nossa equipe` : "Nossa equipe está pronta para ajudar"}
+                <h3 className="text-xl font-bold text-primary-foreground">Precisa de ajuda?</h3>
+                <p className="text-sm text-primary-foreground/60 mt-1.5 max-w-md">
+                  {sellerName ? `Fale com ${sellerName} ou com nossa equipe de concierge` : "Nossa equipe de concierge está pronta para ajudar"}
                 </p>
               </div>
               <Button
                 size="lg"
-                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl"
+                className="bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl shadow-lg"
                 onClick={() => window.open("https://wa.me/5511999999999", "_blank")}
               >
                 <MessageCircle className="h-4 w-4 mr-2" />
-                WhatsApp
+                Falar via WhatsApp
               </Button>
             </div>
           </Card>
