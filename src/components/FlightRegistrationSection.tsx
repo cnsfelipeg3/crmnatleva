@@ -108,6 +108,14 @@ async function lookupAmadeus(origin: string, destination: string, date: string, 
   return (data?.data || []) as AmadeusOffer[];
 }
 
+async function lookupAmadeusByNumber(airline: string, flightNumber: string, date: string) {
+  const body: any = { action: "flight_by_number", airline, flightNumber, departureDate: date };
+  const { data, error } = await supabase.functions.invoke("amadeus-search", { body });
+  if (error) throw error;
+  if (data?.error) throw new Error(data.error);
+  return (data?.data || []) as AmadeusOffer[];
+}
+
 /* ─── Component ──────────────────────────────── */
 
 export default function FlightRegistrationSection({
