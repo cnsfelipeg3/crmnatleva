@@ -171,15 +171,13 @@ export default function PortalTripDetail() {
           <NextAction sale={sale} segments={segments || []} financial={financial} attachments={attachments || []} />
 
           {published?.notes_for_client && (
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-8">
-              <div className="flex items-start gap-4 p-5 rounded-2xl bg-accent/5 border border-accent/15">
-                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="h-5 w-5 text-accent" />
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-10">
+              <div className="relative pl-5 border-l-2 border-accent/30">
+                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-accent/20 flex items-center justify-center">
+                  <Sparkles className="h-2.5 w-2.5 text-accent" />
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-foreground mb-1">Mensagem da NatLeva</p>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{published.notes_for_client}</p>
-                </div>
+                <p className="text-[10px] text-accent/70 uppercase tracking-[0.3em] font-medium mb-2">Mensagem da NatLeva</p>
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{published.notes_for_client}</p>
               </div>
             </motion.div>
           )}
