@@ -35,6 +35,7 @@ import AnaliseAtendimento from "@/pages/AnaliseAtendimento";
 import ApresentacaoGeral from "@/pages/ApresentacaoGeral";
 import TripDetail from "@/pages/TripDetail";
 import TripAlterations from "@/pages/TripAlterations";
+import Itinerary from "@/pages/Itinerary";
 
 // RH
 import RHIndex from "@/pages/rh/RHIndex";
