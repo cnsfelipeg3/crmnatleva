@@ -145,7 +145,7 @@ export default function JourneyHero({
             {departureDate && (
               <span className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5 text-white/40" />
-                {fmtShort(departureDate)} — {fmtShort(returnDate)}
+                {fmtShort(departureDate)} · {fmtShort(returnDate)}
               </span>
             )}
             {(tripDays ?? 0) > 0 && (
