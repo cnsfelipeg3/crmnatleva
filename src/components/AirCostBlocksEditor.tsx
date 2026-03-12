@@ -94,8 +94,43 @@ export default function AirCostBlocksEditor({
 
   const validSegments = segments.filter(s => s.origin_iata && s.destination_iata);
 
+  // Generate a descriptive label from segment indices
+  const generateLabelFromSegments = (indices: number[]): string => {
+    if (indices.length === 0) return "Novo Detalhamento";
+    const segs = indices.map(i => validSegments[i]).filter(Boolean);
+    if (segs.length === 0) return "Novo Detalhamento";
+    
+    // If all segments selected, show full route
+    if (indices.length === validSegments.length && validSegments.length > 1) {
+      const first = segs[0];
+      const last = segs[segs.length - 1];
+      return `${first.origin_iata} → ${last.destination_iata} (Todos os trechos)`;
+    }
+    
+    // Check if it's ida+volta combined
+    const hasIda = segs.some(s => s.direction === "ida");
+    const hasVolta = segs.some(s => s.direction === "volta");
+    if (hasIda && hasVolta) {
+      const idaFirst = segs.find(s => s.direction === "ida");
+      const voltaLast = segs.filter(s => s.direction === "volta").pop();
+      return `${idaFirst?.origin_iata} → ${voltaLast?.destination_iata} (Ida + Volta)`;
+    }
+    
+    // Single or multiple segments of same direction
+    if (segs.length === 1) {
+      const s = segs[0];
+      const dir = s.direction === "ida" ? "Ida" : s.direction === "volta" ? "Volta" : "Interno";
+      return `${s.origin_iata} → ${s.destination_iata} (${dir})`;
+    }
+    
+    const first = segs[0];
+    const last = segs[segs.length - 1];
+    const dir = first.direction === "ida" ? "Ida" : first.direction === "volta" ? "Volta" : "Interno";
+    return `${first.origin_iata} → ${last.destination_iata} (${dir})`;
+  };
+
   const addBlock = () => {
-    const newBlock = createEmptyAirCostBlock(`Bloco ${blocks.length + 1}`);
+    const newBlock = createEmptyAirCostBlock("Novo Detalhamento");
     onChange([...blocks, newBlock]);
     setExpandedBlocks(prev => new Set([...prev, newBlock.id]));
   };
@@ -129,7 +164,16 @@ export default function AirCostBlocksEditor({
       const indices = b.segment_indices.includes(segIdx)
         ? b.segment_indices.filter(i => i !== segIdx)
         : [...b.segment_indices, segIdx];
-      return { ...b, segment_indices: indices };
+      return { ...b, segment_indices: indices, label: generateLabelFromSegments(indices) };
+    }));
+  };
+
+  const toggleAllSegments = (blockId: string) => {
+    onChange(blocks.map(b => {
+      if (b.id !== blockId) return b;
+      const allSelected = validSegments.every((_, i) => b.segment_indices.includes(i));
+      const indices = allSelected ? [] : validSegments.map((_, i) => i);
+      return { ...b, segment_indices: indices, label: generateLabelFromSegments(indices) };
     }));
   };
 
@@ -199,8 +243,8 @@ export default function AirCostBlocksEditor({
           <Package className="w-5 h-5 text-primary" />
         </div>
         <div className="flex-1">
-          <h2 className="text-lg font-semibold text-foreground">Composição Financeira do Aéreo</h2>
-          <p className="text-sm text-muted-foreground">Agrupe trechos por emissão e registre os custos</p>
+          <h2 className="text-lg font-semibold text-foreground">Detalhar Custos</h2>
+          <p className="text-sm text-muted-foreground">Selecione os trechos e registre os custos por emissão</p>
         </div>
       </div>
 
@@ -232,8 +276,8 @@ export default function AirCostBlocksEditor({
       {blocks.length === 0 && (
         <div className="text-center py-8 bg-muted/30 rounded-xl mb-4">
           <Package className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-          <p className="text-sm text-muted-foreground mb-2">Nenhum bloco de custo criado</p>
-          <p className="text-xs text-muted-foreground mb-4">Agrupe seus trechos por emissão para registrar os custos corretamente</p>
+          <p className="text-sm text-muted-foreground mb-2">Nenhum custo detalhado</p>
+          <p className="text-xs text-muted-foreground mb-4">Selecione trechos individuais ou todos juntos para registrar os custos</p>
           <div className="flex justify-center gap-2">
             {validSegments.length > 0 && (
               <Button variant="outline" onClick={suggestAutoGroup} size="sm">
@@ -241,7 +285,7 @@ export default function AirCostBlocksEditor({
               </Button>
             )}
             <Button onClick={addBlock} size="sm">
-              <Plus className="w-4 h-4 mr-2" /> Criar bloco manual
+              <Plus className="w-4 h-4 mr-2" /> Detalhar custos
             </Button>
           </div>
         </div>
@@ -308,7 +352,22 @@ export default function AirCostBlocksEditor({
                     {/* Segment selection */}
                     {validSegments.length > 0 && (
                       <div className="space-y-2">
-                        <Label className="text-xs font-semibold">Trechos incluídos neste bloco</Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-semibold">Trechos incluídos neste detalhamento</Label>
+                          {validSegments.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 text-[10px] px-2"
+                              onClick={() => toggleAllSegments(block.id)}
+                            >
+                              {validSegments.every((_, i) => block.segment_indices.includes(i))
+                                ? "Desmarcar todos"
+                                : "Selecionar todos"}
+                            </Button>
+                          )}
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {validSegments.map((seg, si) => {
                             const isSelected = block.segment_indices.includes(si);
@@ -578,7 +637,7 @@ export default function AirCostBlocksEditor({
       {/* Add block */}
       {blocks.length > 0 && (
         <Button variant="outline" onClick={addBlock} className="w-full mt-3">
-          <Plus className="w-4 h-4 mr-2" /> Adicionar Bloco de Custo
+          <Plus className="w-4 h-4 mr-2" /> Detalhar outro custo
         </Button>
       )}
 
