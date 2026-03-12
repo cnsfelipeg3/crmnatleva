@@ -47,6 +47,7 @@ interface Props {
   formLocator: string;
   formFlightClass: string;
   onFormChange: (field: string, value: any) => void;
+  onGroupLocatorsChange?: (locators: string[]) => void;
 }
 
 const defaultSegment: FlightSegment = {
