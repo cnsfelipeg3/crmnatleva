@@ -136,7 +136,7 @@ function ScreenLoader() {
           </svg>
         </div>
         {/* Trail */}
-        <div className="absolute bottom-4 left-0 w-12 h-[3px] rounded-full bg-gradient-to-r from-primary/0 via-primary/20 to-primary/40 animate-[trail_1.8s_ease-in-out_infinite]" />
+        <div className="absolute bottom-4 left-0 w-12 h-[3px] rounded-full bg-gradient-to-r from-primary/0 via-primary/20 to-primary/40 animate-trail" />
       </div>
       <p className="text-sm text-muted-foreground mt-4 animate-pulse">Preparando decolagem...</p>
     </div>
