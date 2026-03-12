@@ -155,7 +155,7 @@ export default function FinancialSection({ filtered, sellerNames }: Props) {
                 <BarChart data={destProfit} layout="vertical" onClick={(e) => handleBarClick(e, "Destino")}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
                   <XAxis type="number" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: 'hsl(var(--muted-foreground))' }} width={110} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} width={130} />
                   <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
                   <Bar dataKey="lucro" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} name="Lucro" cursor="pointer" />
                 </BarChart>
