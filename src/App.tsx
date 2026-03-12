@@ -1,4 +1,5 @@
 import { lazy, Suspense } from "react";
+import airplaneImg from "@/assets/airplane-loader.png";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -118,22 +119,7 @@ function ScreenLoader() {
         </div>
         {/* Airplane */}
         <div className="absolute bottom-3 animate-takeoff">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            className="w-8 h-8 text-primary -rotate-45"
-          >
-            <path
-              d="M21.71 10.29L14 2.59a1 1 0 00-1.41 0l-.71.71L7.59 7.59 2.29 12.88a1 1 0 000 1.41l.71.71L5.59 17.59l2 2 .71.71a1 1 0 001.41 0L14 15.88 21.71 11.71a1 1 0 000-1.42z"
-              fill="currentColor"
-              opacity="0.9"
-            />
-            <path
-              d="M2 22l3-8 5 5-8 3z"
-              fill="currentColor"
-              opacity="0.6"
-            />
-          </svg>
+          <img src={airplaneImg} alt="Avião" className="w-10 h-10 object-contain" />
         </div>
         {/* Trail */}
         <div className="absolute bottom-4 left-0 w-12 h-[3px] rounded-full bg-gradient-to-r from-primary/0 via-primary/20 to-primary/40 animate-trail" />
