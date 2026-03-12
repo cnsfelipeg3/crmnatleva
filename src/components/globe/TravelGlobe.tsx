@@ -6,14 +6,8 @@ import { useEffect, useRef, useState, useCallback, memo } from "react";
 import { AnimatePresence } from "framer-motion";
 import type * as CesiumType from "cesium";
 import type { GlobeFlightRoute, GlobeWaypoint } from "@/lib/cesium";
-import { GlobeFallback, GlobeHud, GlobeLoading } from "./TravelGlobeOverlays";
-import type { GlobeStatus, TravelGlobeProps } from "./travelGlobe.types";
-
-const DEFAULT_ORLANDO_TARGET = {
-  lat: 28.5383,
-  lng: -81.3792,
-  height: 165_000,
-};
+import { GlobeFallback, GlobeHud, GlobeLoading, RouteInfoPanel } from "./TravelGlobeOverlays";
+import type { GlobeStatus, SelectedRouteInfo, TravelGlobeProps } from "./travelGlobe.types";
 
 function resolveStatusFromConfig(configStatus: {
   cesiumReady: boolean;
@@ -45,11 +39,7 @@ function resolveRoutes(
       const from = waypoints.find((wp) => wp.id === route.fromId);
       const to = waypoints.find((wp) => wp.id === route.toId);
       if (!from || !to) return null;
-      return {
-        from,
-        to,
-        status: route.status,
-      } satisfies GlobeFlightRoute;
+      return { from, to, status: route.status } satisfies GlobeFlightRoute;
     })
     .filter((route): route is GlobeFlightRoute => route !== null);
 }
@@ -64,6 +54,7 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
   const [missingKeys, setMissingKeys] = useState<string[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedRoute, setSelectedRoute] = useState<SelectedRouteInfo | null>(null);
 
   useEffect(() => {
     let destroyed = false;
@@ -71,6 +62,7 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
     const init = async () => {
       try {
         const cesiumLib = await import("@/lib/cesium");
+        const Cesium = await import("cesium");
         const configStatus = cesiumLib.checkCesiumConfig();
 
         if (!configStatus.allReady) {
@@ -112,22 +104,68 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
         const resolvedRoutes = resolveRoutes(routes, resolvedWaypoints, cesiumLib.TEST_ROUTES);
         resolvedRoutes.forEach((route) => cesiumLib.addFlightArc(viewer, route));
 
-        const target = initialTarget || DEFAULT_ORLANDO_TARGET;
-        cesiumLib.flyTo(
-          viewer,
-          target.lat,
-          target.lng,
-          target.height || DEFAULT_ORLANDO_TARGET.height,
-          4
-        );
+        // ── Camera: center globe perfectly with equal margins ──
+        if (initialTarget) {
+          cesiumLib.flyTo(
+            viewer,
+            initialTarget.lat,
+            initialTarget.lng,
+            initialTarget.height || 8_000_000,
+            4
+          );
+        } else {
+          const centered = cesiumLib.computeCenteredView(resolvedWaypoints);
+          viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(centered.lng, centered.lat, centered.height),
+            orientation: {
+              heading: Cesium.Math.toRadians(0),
+              pitch: Cesium.Math.toRadians(-90),
+              roll: 0,
+            },
+            duration: 3.5,
+          });
+        }
+
+        // ── Click handler for routes & waypoints ──
+        const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+        handler.setInputAction((click: { position: CesiumType.Cartesian2 }) => {
+          const picked = viewer.scene.pick(click.position);
+          if (!Cesium.defined(picked) || !picked?.id) {
+            setSelectedRoute(null);
+            return;
+          }
+
+          const entity = picked.id as CesiumType.Entity;
+          const meta = cesiumLib.getEntityMetadata(entity);
+
+          if (meta?.kind === "route") {
+            setSelectedRoute({
+              route: meta.route,
+              screenX: click.position.x,
+              screenY: click.position.y,
+            });
+          } else if (meta?.kind === "waypoint") {
+            // Find any route that includes this waypoint
+            const matchingRoute = resolvedRoutes.find(
+              (r) => r.from.id === meta.waypoint.id || r.to.id === meta.waypoint.id
+            );
+            if (matchingRoute) {
+              setSelectedRoute({
+                route: matchingRoute,
+                screenX: click.position.x,
+                screenY: click.position.y,
+              });
+            }
+          } else {
+            setSelectedRoute(null);
+          }
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
         setStatus("ready");
       } catch (err) {
         console.error("[TravelGlobe] Initialization error:", err);
         setErrorMessage(
-          err instanceof Error
-            ? err.message
-            : "Falha inesperada na inicialização do globo 3D."
+          err instanceof Error ? err.message : "Falha inesperada na inicialização do globo 3D."
         );
         if (!destroyed) setStatus("error");
       }
@@ -146,11 +184,7 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
 
   useEffect(() => {
     if (!viewerRef.current || status !== "ready") return;
-
-    const raf = requestAnimationFrame(() => {
-      viewerRef.current?.resize();
-    });
-
+    const raf = requestAnimationFrame(() => viewerRef.current?.resize());
     return () => cancelAnimationFrame(raf);
   }, [isFullscreen, status]);
 
@@ -176,19 +210,23 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
       <AnimatePresence>{status === "loading" && <GlobeLoading />}</AnimatePresence>
 
       {showFallback && (
-        <GlobeFallback
-          status={status}
-          missingKeys={missingKeys}
-          errorMessage={errorMessage}
-        />
+        <GlobeFallback status={status} missingKeys={missingKeys} errorMessage={errorMessage} />
       )}
 
       {status === "ready" && (
-        <GlobeHud
-          waypointCount={waypoints?.length || 3}
-          isFullscreen={isFullscreen}
-          onToggleFullscreen={toggleFullscreen}
-        />
+        <>
+          <GlobeHud
+            waypointCount={waypoints?.length || 3}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={toggleFullscreen}
+          />
+          {selectedRoute && (
+            <RouteInfoPanel
+              info={selectedRoute}
+              onClose={() => setSelectedRoute(null)}
+            />
+          )}
+        </>
       )}
     </div>
   );
