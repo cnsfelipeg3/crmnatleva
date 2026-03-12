@@ -44,11 +44,16 @@ export default function GlobalSearch() {
       Promise.all([
         fetchAllRows("sales", "id, display_id, name, destination_iata, origin_iata, received_value, locators, status"),
         fetchAllRows("clients", "id, display_name, email, phone"),
-      ]).then(([s, c]) => {
-        setSales(s as SaleResult[]);
-        setClients(c as ClientResult[]);
-        setLoaded(true);
-      });
+      ])
+        .then(([s, c]) => {
+          setSales(s as SaleResult[]);
+          setClients(c as ClientResult[]);
+          setLoaded(true);
+        })
+        .catch((err) => {
+          console.error("GlobalSearch fetch error:", err);
+          setLoaded(true);
+        });
     }
   }, [open, loaded]);
 
