@@ -69,6 +69,12 @@ import FechamentoFornecedores from "@/pages/financeiro/FechamentoFornecedores";
 // Admin
 import AdminUsers from "@/pages/admin/AdminUsers";
 
+// Portal do Cliente
+import { PortalAuthProvider } from "@/contexts/PortalAuthContext";
+import PortalLogin from "@/pages/portal/PortalLogin";
+import PortalDashboard from "@/pages/portal/PortalDashboard";
+import PortalTripDetail from "@/pages/portal/PortalTripDetail";
+
 // Operação Diária
 import OperacaoInbox from "@/pages/operacao/OperacaoInbox";
 import OperacaoFlowBuilder from "@/pages/operacao/OperacaoFlowBuilder";
