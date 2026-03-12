@@ -105,7 +105,42 @@ const OperacaoLogs = lazy(() => import("@/pages/operacao/OperacaoLogs"));
 const queryClient = new QueryClient();
 
 function ScreenLoader() {
-  return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Carregando...</div>;
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+      <div className="relative w-48 h-24">
+        {/* Runway */}
+        <div className="absolute bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent" />
+        {/* Runway dashes */}
+        <div className="absolute bottom-[7px] left-4 right-4 flex justify-between">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="w-3 h-[2px] bg-muted-foreground/20" />
+          ))}
+        </div>
+        {/* Airplane */}
+        <div className="absolute bottom-3 animate-[takeoff_1.8s_ease-in-out_infinite]">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            className="w-8 h-8 text-primary -rotate-45"
+          >
+            <path
+              d="M21.71 10.29L14 2.59a1 1 0 00-1.41 0l-.71.71L7.59 7.59 2.29 12.88a1 1 0 000 1.41l.71.71L5.59 17.59l2 2 .71.71a1 1 0 001.41 0L14 15.88 21.71 11.71a1 1 0 000-1.42z"
+              fill="currentColor"
+              opacity="0.9"
+            />
+            <path
+              d="M2 22l3-8 5 5-8 3z"
+              fill="currentColor"
+              opacity="0.6"
+            />
+          </svg>
+        </div>
+        {/* Trail */}
+        <div className="absolute bottom-4 left-0 w-12 h-[3px] rounded-full bg-gradient-to-r from-primary/0 via-primary/20 to-primary/40 animate-[trail_1.8s_ease-in-out_infinite]" />
+      </div>
+      <p className="text-sm text-muted-foreground mt-4 animate-pulse">Preparando decolagem...</p>
+    </div>
+  );
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
