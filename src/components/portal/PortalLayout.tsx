@@ -3,7 +3,7 @@ import { useNavigate, Link, useLocation, Navigate } from "react-router-dom";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, Menu, X, User, Home, Map, MessageCircle, Bell } from "lucide-react";
+import { LogOut, Menu, X, User, Home, Map, MessageCircle, Bell, Sun, Moon } from "lucide-react";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
 import PortalNotificationPanel from "@/components/portal/PortalNotificationPanel";
 import PortalAssistant from "@/components/portal/PortalAssistant";
@@ -15,6 +15,24 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("portal-theme");
+      if (saved) return saved === "dark";
+      return window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (darkMode) {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+    localStorage.setItem("portal-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
 
   // Fetch unread count
   useEffect(() => {
@@ -99,6 +117,15 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
             </nav>
 
             <div className="flex items-center gap-2">
+              {/* Theme Toggle */}
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                title={darkMode ? "Modo claro" : "Modo escuro"}
+              >
+                {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
+
               {/* Notification Bell */}
               <button
                 onClick={() => setNotifOpen(!notifOpen)}
