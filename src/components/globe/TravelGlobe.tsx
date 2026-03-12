@@ -127,6 +127,11 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
         // Routes
         rRoutes.forEach((route) => cesiumLib.addFlightArc(viewer, route));
 
+        // Force resize so viewer fills the container correctly
+        viewer.resize();
+        await new Promise((r) => setTimeout(r, 100));
+        viewer.resize();
+
         // ── Camera ──
         if (initialTarget) {
           cesiumLib.flyTo(viewer, initialTarget.lat, initialTarget.lng, initialTarget.height || 8_000_000, 4);
