@@ -319,3 +319,48 @@ export function computeDistanceKm(lat1: number, lng1: number, lat2: number, lng2
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Math.round(R * c);
 }
+
+/* ═══ Search result marker ═══ */
+let _searchMarker: Cesium.Entity | null = null;
+
+export function addSearchMarker(
+  viewer: Cesium.Viewer,
+  lat: number,
+  lng: number,
+  label: string,
+): Cesium.Entity {
+  removeSearchMarker(viewer);
+
+  const entity = viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(lng, lat, 400),
+    point: {
+      pixelSize: 14,
+      color: Cesium.Color.fromCssColorString("#f43f5e"),
+      outlineColor: Cesium.Color.WHITE.withAlpha(0.9),
+      outlineWidth: 3,
+      heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    },
+    label: {
+      text: label,
+      font: "600 13px 'Inter', system-ui, sans-serif",
+      fillColor: Cesium.Color.WHITE,
+      outlineColor: Cesium.Color.BLACK.withAlpha(0.7),
+      outlineWidth: 4,
+      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      pixelOffset: new Cesium.Cartesian2(0, -18),
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    },
+  });
+
+  _searchMarker = entity;
+  return entity;
+}
+
+export function removeSearchMarker(viewer: Cesium.Viewer) {
+  if (_searchMarker) {
+    viewer.entities.remove(_searchMarker);
+    _searchMarker = null;
+  }
+}

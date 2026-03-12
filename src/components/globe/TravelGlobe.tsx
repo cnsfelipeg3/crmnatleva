@@ -6,7 +6,8 @@ import { useEffect, useRef, useState, useCallback, memo } from "react";
 import { AnimatePresence } from "framer-motion";
 import type * as CesiumType from "cesium";
 import type { GlobeFlightRoute, GlobeWaypoint } from "@/lib/cesium";
-import { GlobeFallback, GlobeHud, GlobeLoading, RouteInfoPanel } from "./TravelGlobeOverlays";
+import { GlobeFallback, GlobeHud, GlobeLoading, RouteInfoPanel, SearchResultPanel } from "./TravelGlobeOverlays";
+import MapSearchBar, { type SearchResult } from "./MapSearchBar";
 import type { GlobeStatus, SelectedRouteInfo, TravelGlobeProps } from "./travelGlobe.types";
 
 /* ═══ Helpers ═══ */
@@ -63,6 +64,7 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<SelectedRouteInfo | null>(null);
   const [currentLocationId, setCurrentLocationId] = useState<string | null>(null);
+  const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
 
   const isMobile = useIsMobile();
 
@@ -234,6 +236,46 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
     cesiumLibRef.current.animateAirplane(viewerRef.current, selectedRoute.route, 5);
   }, [selectedRoute]);
 
+  const handleSearchSelect = useCallback((result: SearchResult) => {
+    if (!viewerRef.current || !cesiumRef.current || !cesiumLibRef.current) return;
+    setSearchResult(result);
+    setSelectedRoute(null);
+
+    cesiumLibRef.current.addSearchMarker(viewerRef.current, result.lat, result.lng, result.name);
+
+    viewerRef.current.camera.flyTo({
+      destination: cesiumRef.current.Cartesian3.fromDegrees(result.lng, result.lat, 15_000),
+      orientation: {
+        heading: cesiumRef.current.Math.toRadians(0),
+        pitch: cesiumRef.current.Math.toRadians(-45),
+        roll: 0,
+      },
+      duration: 2.5,
+      easingFunction: cesiumRef.current.EasingFunction.QUINTIC_IN_OUT,
+    });
+  }, []);
+
+  const handleSearchClear = useCallback(() => {
+    if (viewerRef.current && cesiumLibRef.current) {
+      cesiumLibRef.current.removeSearchMarker(viewerRef.current);
+    }
+    setSearchResult(null);
+  }, []);
+
+  const handleSearchRecenter = useCallback(() => {
+    if (!searchResult || !viewerRef.current || !cesiumRef.current) return;
+    viewerRef.current.camera.flyTo({
+      destination: cesiumRef.current.Cartesian3.fromDegrees(searchResult.lng, searchResult.lat, 15_000),
+      orientation: {
+        heading: cesiumRef.current.Math.toRadians(0),
+        pitch: cesiumRef.current.Math.toRadians(-45),
+        roll: 0,
+      },
+      duration: 2,
+      easingFunction: cesiumRef.current.EasingFunction.QUINTIC_IN_OUT,
+    });
+  }, [searchResult]);
+
   const showFallback = status !== "loading" && status !== "ready";
 
   // Current location label for HUD
@@ -268,11 +310,24 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
             onToggleFullscreen={toggleFullscreen}
             currentLocation={currentLocationLabel}
           />
+          <MapSearchBar
+            onSelect={handleSearchSelect}
+            onClear={handleSearchClear}
+            isMobile={isMobile}
+          />
           {selectedRoute && (
             <RouteInfoPanel
               info={{ ...selectedRoute, currentLocationId }}
               onClose={() => setSelectedRoute(null)}
               onAnimate={handleAnimate}
+              isMobile={isMobile}
+            />
+          )}
+          {searchResult && !selectedRoute && (
+            <SearchResultPanel
+              result={searchResult}
+              onClose={handleSearchClear}
+              onRecenter={handleSearchRecenter}
               isMobile={isMobile}
             />
           )}
