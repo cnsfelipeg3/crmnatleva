@@ -1,0 +1,1 @@
+UPDATE conversations SET contact_name = display_name WHERE (contact_name IS NULL OR TRIM(contact_name) = '') AND display_name IS NOT NULL AND TRIM(display_name) != ''
