@@ -479,6 +479,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_suggestions: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          id: string
+          suggested_action: string | null
+          suggested_stage: string | null
+          suggested_tags: string[] | null
+          suggested_text: string | null
+          used: boolean | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          suggested_action?: string | null
+          suggested_stage?: string | null
+          suggested_tags?: string[] | null
+          suggested_text?: string | null
+          used?: boolean | null
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          id?: string
+          suggested_action?: string | null
+          suggested_stage?: string | null
+          suggested_tags?: string[] | null
+          suggested_text?: string | null
+          used?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_suggestions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       airline_checkin_rules: {
         Row: {
           airline_iata: string
@@ -911,6 +952,47 @@ export type Database = {
           },
         ]
       }
+      chatbot_sessions: {
+        Row: {
+          current_node_id: string | null
+          flow_id: string | null
+          id: string
+          last_activity_at: string | null
+          phone: string
+          session_data: Json | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          current_node_id?: string | null
+          flow_id?: string | null
+          id?: string
+          last_activity_at?: string | null
+          phone: string
+          session_data?: Json | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          current_node_id?: string | null
+          flow_id?: string | null
+          id?: string
+          last_activity_at?: string | null
+          phone?: string
+          session_data?: Json | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_sessions_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checkin_tasks: {
         Row: {
           assigned_to_user_id: string | null
@@ -1182,53 +1264,86 @@ export type Database = {
         Row: {
           assigned_to: string | null
           client_id: string | null
+          contact_name: string | null
           created_at: string
           display_name: string | null
+          external_conversation_id: string | null
           external_id: string | null
           funnel_stage: string | null
           id: string
+          is_pinned: boolean | null
+          is_vip: boolean | null
           last_message_at: string | null
           last_message_preview: string | null
+          lead_id: string | null
+          payment_method: string | null
           phone: string | null
+          price_range: string | null
+          score_potential: number | null
+          score_risk: number | null
           source: string | null
+          stage: string | null
           status: string
           tags: string[] | null
           unread_count: number | null
           updated_at: string
+          vehicle_interest: string | null
         }
         Insert: {
           assigned_to?: string | null
           client_id?: string | null
+          contact_name?: string | null
           created_at?: string
           display_name?: string | null
+          external_conversation_id?: string | null
           external_id?: string | null
           funnel_stage?: string | null
           id?: string
+          is_pinned?: boolean | null
+          is_vip?: boolean | null
           last_message_at?: string | null
           last_message_preview?: string | null
+          lead_id?: string | null
+          payment_method?: string | null
           phone?: string | null
+          price_range?: string | null
+          score_potential?: number | null
+          score_risk?: number | null
           source?: string | null
+          stage?: string | null
           status?: string
           tags?: string[] | null
           unread_count?: number | null
           updated_at?: string
+          vehicle_interest?: string | null
         }
         Update: {
           assigned_to?: string | null
           client_id?: string | null
+          contact_name?: string | null
           created_at?: string
           display_name?: string | null
+          external_conversation_id?: string | null
           external_id?: string | null
           funnel_stage?: string | null
           id?: string
+          is_pinned?: boolean | null
+          is_vip?: boolean | null
           last_message_at?: string | null
           last_message_preview?: string | null
+          lead_id?: string | null
+          payment_method?: string | null
           phone?: string | null
+          price_range?: string | null
+          score_potential?: number | null
+          score_risk?: number | null
           source?: string | null
+          stage?: string | null
           status?: string
           tags?: string[] | null
           unread_count?: number | null
           updated_at?: string
+          vehicle_interest?: string | null
         }
         Relationships: [
           {
@@ -1803,6 +1918,271 @@ export type Database = {
           },
         ]
       }
+      flow_edges: {
+        Row: {
+          created_at: string
+          edge_id: string
+          flow_id: string
+          id: string
+          label: string | null
+          source_handle: string | null
+          source_node_id: string
+          target_handle: string | null
+          target_node_id: string
+        }
+        Insert: {
+          created_at?: string
+          edge_id: string
+          flow_id: string
+          id?: string
+          label?: string | null
+          source_handle?: string | null
+          source_node_id: string
+          target_handle?: string | null
+          target_node_id: string
+        }
+        Update: {
+          created_at?: string
+          edge_id?: string
+          flow_id?: string
+          id?: string
+          label?: string | null
+          source_handle?: string | null
+          source_node_id?: string
+          target_handle?: string | null
+          target_node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flow_edges_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flow_execution_logs: {
+        Row: {
+          completed_at: string | null
+          contact_name: string | null
+          conversation_id: string | null
+          current_node_id: string | null
+          error_message: string | null
+          execution_data: Json | null
+          execution_path: Json | null
+          flow_id: string | null
+          id: string
+          is_simulation: boolean | null
+          phone: string | null
+          started_at: string | null
+          status: string | null
+          trigger_type: string | null
+          variables_snapshot: Json | null
+        }
+        Insert: {
+          completed_at?: string | null
+          contact_name?: string | null
+          conversation_id?: string | null
+          current_node_id?: string | null
+          error_message?: string | null
+          execution_data?: Json | null
+          execution_path?: Json | null
+          flow_id?: string | null
+          id?: string
+          is_simulation?: boolean | null
+          phone?: string | null
+          started_at?: string | null
+          status?: string | null
+          trigger_type?: string | null
+          variables_snapshot?: Json | null
+        }
+        Update: {
+          completed_at?: string | null
+          contact_name?: string | null
+          conversation_id?: string | null
+          current_node_id?: string | null
+          error_message?: string | null
+          execution_data?: Json | null
+          execution_path?: Json | null
+          flow_id?: string | null
+          id?: string
+          is_simulation?: boolean | null
+          phone?: string | null
+          started_at?: string | null
+          status?: string | null
+          trigger_type?: string | null
+          variables_snapshot?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flow_execution_logs_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flow_nodes: {
+        Row: {
+          config: Json | null
+          created_at: string
+          flow_id: string
+          id: string
+          label: string | null
+          node_id: string
+          node_type: string
+          position_x: number | null
+          position_y: number | null
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string
+          flow_id: string
+          id?: string
+          label?: string | null
+          node_id: string
+          node_type: string
+          position_x?: number | null
+          position_y?: number | null
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string
+          flow_id?: string
+          id?: string
+          label?: string | null
+          node_id?: string
+          node_type?: string
+          position_x?: number | null
+          position_y?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flow_nodes_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flow_router_rules: {
+        Row: {
+          created_at: string
+          flow_id: string
+          id: string
+          is_active: boolean | null
+          keywords: string[] | null
+          label: string
+          priority: number | null
+        }
+        Insert: {
+          created_at?: string
+          flow_id: string
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          label: string
+          priority?: number | null
+        }
+        Update: {
+          created_at?: string
+          flow_id?: string
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[] | null
+          label?: string
+          priority?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flow_router_rules_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flow_versions: {
+        Row: {
+          created_at: string
+          edges_snapshot: Json | null
+          flow_id: string
+          id: string
+          nodes_snapshot: Json | null
+          version: number | null
+        }
+        Insert: {
+          created_at?: string
+          edges_snapshot?: Json | null
+          flow_id: string
+          id?: string
+          nodes_snapshot?: Json | null
+          version?: number | null
+        }
+        Update: {
+          created_at?: string
+          edges_snapshot?: Json | null
+          flow_id?: string
+          id?: string
+          nodes_snapshot?: Json | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flow_versions_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flows: {
+        Row: {
+          created_at: string
+          description: string | null
+          edges: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          nodes: Json | null
+          status: string | null
+          trigger_keyword: string | null
+          updated_at: string
+          version: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          edges?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          nodes?: Json | null
+          status?: string | null
+          trigger_keyword?: string | null
+          updated_at?: string
+          version?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          edges?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          nodes?: Json | null
+          status?: string | null
+          trigger_keyword?: string | null
+          updated_at?: string
+          version?: number | null
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           bonus_on_100: number | null
@@ -2011,6 +2391,30 @@ export type Database = {
         }
         Relationships: []
       }
+      livechat_users: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       lodging_confirmation_tasks: {
         Row: {
           assigned_to_user_id: string | null
@@ -2128,6 +2532,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "message_queue_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          external_message_id: string | null
+          id: string
+          media_url: string | null
+          message_type: string
+          sender_type: string
+          status: string | null
+          text: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          external_message_id?: string | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          sender_type?: string
+          status?: string | null
+          text?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          external_message_id?: string | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          sender_type?: string
+          status?: string | null
+          text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
@@ -3613,6 +4061,39 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_cloud_config: {
+        Row: {
+          access_token: string | null
+          connected_at: string | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          phone_number_id: string | null
+          verify_token: string | null
+          waba_id: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          phone_number_id?: string | null
+          verify_token?: string | null
+          waba_id?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          phone_number_id?: string | null
+          verify_token?: string | null
+          waba_id?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_config: {
         Row: {
           access_token: string | null
@@ -3664,6 +4145,200 @@ export type Database = {
           verify_token?: string | null
           waba_id?: string | null
           webhook_url?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_dispatch_logs: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          client_phone: string | null
+          created_at: string
+          dispatched_by: string | null
+          error_message: string | null
+          id: string
+          message_sent: string | null
+          status: string | null
+          template_id: string | null
+          template_name: string | null
+          trigger_event: string | null
+          vehicle_description: string | null
+          vehicle_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          dispatched_by?: string | null
+          error_message?: string | null
+          id?: string
+          message_sent?: string | null
+          status?: string | null
+          template_id?: string | null
+          template_name?: string | null
+          trigger_event?: string | null
+          vehicle_description?: string | null
+          vehicle_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          client_name?: string | null
+          client_phone?: string | null
+          created_at?: string
+          dispatched_by?: string | null
+          error_message?: string | null
+          id?: string
+          message_sent?: string | null
+          status?: string | null
+          template_id?: string | null
+          template_name?: string | null
+          trigger_event?: string | null
+          vehicle_description?: string | null
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_dispatch_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_qr_sessions: {
+        Row: {
+          connected_phone: string | null
+          created_at: string
+          id: string
+          last_check: string | null
+          qr_code: string | null
+          status: string | null
+        }
+        Insert: {
+          connected_phone?: string | null
+          created_at?: string
+          id?: string
+          last_check?: string | null
+          qr_code?: string | null
+          status?: string | null
+        }
+        Update: {
+          connected_phone?: string | null
+          created_at?: string
+          id?: string
+          last_check?: string | null
+          qr_code?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_templates: {
+        Row: {
+          created_at: string
+          delay_minutes: number | null
+          id: string
+          is_active: boolean | null
+          message_body: string | null
+          name: string
+          notes: string | null
+          trigger_event: string | null
+          variables: Json | null
+        }
+        Insert: {
+          created_at?: string
+          delay_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          message_body?: string | null
+          name: string
+          notes?: string | null
+          trigger_event?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          created_at?: string
+          delay_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          message_body?: string | null
+          name?: string
+          notes?: string | null
+          trigger_event?: string | null
+          variables?: Json | null
+        }
+        Relationships: []
+      }
+      zapi_contacts: {
+        Row: {
+          id: string
+          lid: string | null
+          name: string | null
+          phone: string
+          profile_picture_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          lid?: string | null
+          name?: string | null
+          phone: string
+          profile_picture_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          lid?: string | null
+          name?: string | null
+          phone?: string
+          profile_picture_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      zapi_messages: {
+        Row: {
+          created_at: string
+          from_me: boolean | null
+          id: string
+          media_url: string | null
+          message_id: string | null
+          message_type: string | null
+          phone: string
+          raw_data: Json | null
+          status: string | null
+          text: string | null
+          timestamp: number | null
+          type: string | null
+        }
+        Insert: {
+          created_at?: string
+          from_me?: boolean | null
+          id?: string
+          media_url?: string | null
+          message_id?: string | null
+          message_type?: string | null
+          phone: string
+          raw_data?: Json | null
+          status?: string | null
+          text?: string | null
+          timestamp?: number | null
+          type?: string | null
+        }
+        Update: {
+          created_at?: string
+          from_me?: boolean | null
+          id?: string
+          media_url?: string | null
+          message_id?: string | null
+          message_type?: string | null
+          phone?: string
+          raw_data?: Json | null
+          status?: string | null
+          text?: string | null
+          timestamp?: number | null
+          type?: string | null
         }
         Relationships: []
       }
