@@ -117,6 +117,15 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
             </nav>
 
             <div className="flex items-center gap-2">
+              {/* Theme Toggle */}
+              <button
+                onClick={() => setDarkMode(!darkMode)}
+                className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                title={darkMode ? "Modo claro" : "Modo escuro"}
+              >
+                {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
+
               {/* Notification Bell */}
               <button
                 onClick={() => setNotifOpen(!notifOpen)}
