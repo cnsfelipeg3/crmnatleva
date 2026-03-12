@@ -263,6 +263,17 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/portal-admin/notificacoes", icon: MessageSquare, label: "Notificações" },
               { to: "/portal-admin/config", icon: Cog, label: "Configurações" },
             ].map((item) => renderNavItem(item, true))}
+            <a
+              href="/portal/login"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onNavigate}
+              className="flex items-center gap-3 pl-8 px-3 py-2.5 rounded-lg text-xs font-medium text-sidebar-primary/80 hover:bg-sidebar-accent/40 hover:text-sidebar-primary transition-all duration-200"
+            >
+              <TestTube className="w-4 h-4 shrink-0" />
+              <span>Acessar ambiente teste</span>
+              <ArrowUpRight className="w-3 h-3 ml-auto opacity-50" />
+            </a>
           </div>
         )}
 

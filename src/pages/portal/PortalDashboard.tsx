@@ -12,6 +12,7 @@ import {
   MessageCircle, ChevronRight, Sparkles, Timer, Eye,
 } from "lucide-react";
 import { iataToLabel } from "@/lib/iataUtils";
+import { getMockTripsForDashboard } from "@/lib/portalMockTrips";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -84,9 +85,16 @@ export default function PortalDashboard() {
         const { data, error } = await supabase.functions.invoke("portal-api", {
           body: { action: "trips" },
         });
-        if (data?.trips) setTrips(data.trips);
+        const apiTrips = data?.trips || [];
+        // Merge mock trips for demo
+        const mockTrips = getMockTripsForDashboard();
+        const existingIds = new Set(apiTrips.map((t: any) => t.sale_id));
+        const newMocks = mockTrips.filter((m) => !existingIds.has(m.sale_id));
+        setTrips([...apiTrips, ...newMocks]);
       } catch (err) {
         console.error("Failed to fetch portal trips:", err);
+        // Still show mocks on error
+        setTrips(getMockTripsForDashboard());
       } finally {
         setLoading(false);
       }

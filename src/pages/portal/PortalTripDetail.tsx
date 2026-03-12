@@ -16,6 +16,7 @@ import { iataToLabel } from "@/lib/iataUtils";
 import PortalJourneyMap from "@/components/portal/PortalJourneyMap";
 import PortalChecklist from "@/components/portal/PortalChecklist";
 import PortalDocumentsCenter from "@/components/portal/PortalDocumentsCenter";
+import { getMockTripDetail } from "@/lib/portalMockTrips";
 
 const fmt = (v: number) => v?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00";
 const fmtDate = (d: string | null) => {
@@ -51,20 +52,40 @@ function Section({ title, icon: Icon, children, defaultOpen = true }: {
 }
 
 export default function PortalTripDetail() {
-  const { id } = useParams();
+  const { saleId } = useParams();
+  const id = saleId;
   const navigate = useNavigate();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetch = async () => {
+    const fetchData = async () => {
+      // Check if it's a mock trip first
+      const mockData = getMockTripDetail(id || "");
+      if (mockData) {
+        setData({
+          published: { custom_title: mockData.custom_title, cover_image_url: mockData.cover_image_url, notes_for_client: mockData.notes_for_client },
+          sale: mockData.sale,
+          segments: mockData.segments,
+          hotels: mockData.hotels,
+          services: mockData.services,
+          lodging: mockData.lodging,
+          attachments: mockData.attachments,
+          financial: mockData.financial,
+          passengers: mockData.passengers,
+          sellerName: mockData.sellerName,
+        });
+        setLoading(false);
+        return;
+      }
+
       const { data: res } = await supabase.functions.invoke("portal-api", {
         body: { action: "trip-detail", sale_id: id },
       });
       if (res && !res.error) setData(res);
       setLoading(false);
     };
-    if (id) fetch();
+    if (id) fetchData();
   }, [id]);
 
   if (loading) {
