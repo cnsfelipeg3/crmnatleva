@@ -102,7 +102,7 @@ export default function Lodging() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterMilestone, setFilterMilestone] = useState("all");
   const [mainTab, setMainTab] = useState<"active" | "history">("active");
-  const [viewMode, setViewMode] = useState<"agenda" | "cards">("agenda");
+  const [viewMode, setViewMode] = useState<"agenda" | "cards" | "calendar">("agenda");
 
   const [confirmDialog, setConfirmDialog] = useState<LodgingTask | null>(null);
   const [confirmMethod, setConfirmMethod] = useState("");
