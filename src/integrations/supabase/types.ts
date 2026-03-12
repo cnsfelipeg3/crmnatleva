@@ -2880,6 +2880,69 @@ export type Database = {
         }
         Relationships: []
       }
+      portal_checklist_items: {
+        Row: {
+          category: string
+          client_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_auto_generated: boolean
+          is_mandatory: boolean
+          metadata: Json | null
+          sale_id: string
+          sort_order: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          client_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_auto_generated?: boolean
+          is_mandatory?: boolean
+          metadata?: Json | null
+          sale_id: string
+          sort_order?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_auto_generated?: boolean
+          is_mandatory?: boolean
+          metadata?: Json | null
+          sale_id?: string
+          sort_order?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_checklist_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_checklist_items_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portal_notifications: {
         Row: {
           channel: string
