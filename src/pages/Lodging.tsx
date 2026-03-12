@@ -21,6 +21,7 @@ import {
   Eye, User, Search, RefreshCw, Loader2, Shield,
   XCircle, Phone, Calendar, List, LayoutGrid,
 } from "lucide-react";
+import TaskCalendarView from "@/components/TaskCalendarView";
 
 interface LodgingTask {
   id: string;
@@ -102,7 +103,7 @@ export default function Lodging() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterMilestone, setFilterMilestone] = useState("all");
   const [mainTab, setMainTab] = useState<"active" | "history">("active");
-  const [viewMode, setViewMode] = useState<"agenda" | "cards">("agenda");
+  const [viewMode, setViewMode] = useState<"agenda" | "cards" | "calendar">("agenda");
 
   const [confirmDialog, setConfirmDialog] = useState<LodgingTask | null>(null);
   const [confirmMethod, setConfirmMethod] = useState("");
@@ -538,6 +539,9 @@ export default function Lodging() {
           <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded ${viewMode === "cards" ? "bg-background shadow-sm" : ""}`}>
             <LayoutGrid className="w-3.5 h-3.5" />
           </button>
+          <button onClick={() => setViewMode("calendar")} className={`p-1.5 rounded ${viewMode === "calendar" ? "bg-background shadow-sm" : ""}`}>
+            <Calendar className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
@@ -556,6 +560,24 @@ export default function Lodging() {
             </Button>
           )}
         </Card>
+      ) : viewMode === "calendar" ? (
+        <TaskCalendarView
+          tasks={filtered.map(t => {
+            const milestoneCfg = MILESTONE_CONFIG[t.milestone] || MILESTONE_CONFIG.D14;
+            const statusCfg = STATUS_CONFIG[t.status] || STATUS_CONFIG.PENDENTE;
+            const dateStr = t.hotel_checkin_datetime_utc || t.scheduled_at_utc;
+            return {
+              id: t.id,
+              date: dateStr,
+              label: t.hotel_name || "Hotel",
+              sublabel: `${milestoneCfg.short} — ${t.sale?.name || ""}`,
+              statusDot: statusCfg.dot,
+              statusLabel: statusCfg.label,
+              onClick: () => navigate(`/sales/${t.sale_id}`),
+            };
+          })}
+          emptyMessage="Nenhuma hospedagem neste mês"
+        />
       ) : (
         <div className="space-y-4">
           {groupedByDate.map(([key, group]) => (

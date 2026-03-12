@@ -24,6 +24,7 @@ import {
   ArrowRight, Timer, Zap,
 } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
+import TaskCalendarView from "@/components/TaskCalendarView";
 
 interface CheckinTask {
   id: string;
@@ -102,7 +103,7 @@ function getDaysUntil(dateStr: string | null): number {
   return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-type ViewMode = "agenda" | "cards" | "pipeline";
+type ViewMode = "agenda" | "cards" | "pipeline" | "calendar";
 type TimeFilter = "all" | "today" | "tomorrow" | "3days" | "7days";
 
 export default function Checkin() {
@@ -688,7 +689,6 @@ export default function Checkin() {
           </Select>
         )}
 
-        {/* View toggle */}
         <div className="flex gap-0.5 bg-muted rounded-md p-0.5">
           <button onClick={() => setViewMode("agenda")} className={`p-1.5 rounded ${viewMode === "agenda" ? "bg-background shadow-sm" : ""}`} title="Lista">
             <List className="w-3.5 h-3.5" />
@@ -698,6 +698,9 @@ export default function Checkin() {
           </button>
           <button onClick={() => setViewMode("pipeline")} className={`p-1.5 rounded ${viewMode === "pipeline" ? "bg-background shadow-sm" : ""}`} title="Pipeline">
             <Columns3 className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={() => setViewMode("calendar")} className={`p-1.5 rounded ${viewMode === "calendar" ? "bg-background shadow-sm" : ""}`} title="Calendário">
+            <Calendar className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -740,6 +743,23 @@ export default function Checkin() {
           {renderPipelineCol("Pendente", "PENDENTE", pipelineCols.PENDENTE)}
           {renderPipelineCol("Concluído", "CONCLUIDO", pipelineCols.CONCLUIDO)}
         </div>
+      ) : viewMode === "calendar" ? (
+        <TaskCalendarView
+          tasks={filtered.map(t => {
+            const d = getTaskDetails(t);
+            const depDate = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
+            return {
+              id: t.id,
+              date: depDate,
+              label: `${d.origin} → ${d.dest}`,
+              sublabel: `${d.airline} ${d.flightNum} ${d.paxNames.join(", ")}`,
+              statusDot: d.statusCfg.dot,
+              statusLabel: d.statusCfg.label,
+              onClick: () => navigate(`/sales/${t.sale_id}`),
+            };
+          })}
+          emptyMessage="Nenhum check-in neste mês"
+        />
       ) : (
         <div className="space-y-4">
           {groupedByDate.map(([key, group]) => (
