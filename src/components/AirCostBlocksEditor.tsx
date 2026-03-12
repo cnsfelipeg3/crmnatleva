@@ -94,8 +94,43 @@ export default function AirCostBlocksEditor({
 
   const validSegments = segments.filter(s => s.origin_iata && s.destination_iata);
 
+  // Generate a descriptive label from segment indices
+  const generateLabelFromSegments = (indices: number[]): string => {
+    if (indices.length === 0) return "Novo Detalhamento";
+    const segs = indices.map(i => validSegments[i]).filter(Boolean);
+    if (segs.length === 0) return "Novo Detalhamento";
+    
+    // If all segments selected, show full route
+    if (indices.length === validSegments.length && validSegments.length > 1) {
+      const first = segs[0];
+      const last = segs[segs.length - 1];
+      return `${first.origin_iata} → ${last.destination_iata} (Todos os trechos)`;
+    }
+    
+    // Check if it's ida+volta combined
+    const hasIda = segs.some(s => s.direction === "ida");
+    const hasVolta = segs.some(s => s.direction === "volta");
+    if (hasIda && hasVolta) {
+      const idaFirst = segs.find(s => s.direction === "ida");
+      const voltaLast = segs.filter(s => s.direction === "volta").pop();
+      return `${idaFirst?.origin_iata} → ${voltaLast?.destination_iata} (Ida + Volta)`;
+    }
+    
+    // Single or multiple segments of same direction
+    if (segs.length === 1) {
+      const s = segs[0];
+      const dir = s.direction === "ida" ? "Ida" : s.direction === "volta" ? "Volta" : "Interno";
+      return `${s.origin_iata} → ${s.destination_iata} (${dir})`;
+    }
+    
+    const first = segs[0];
+    const last = segs[segs.length - 1];
+    const dir = first.direction === "ida" ? "Ida" : first.direction === "volta" ? "Volta" : "Interno";
+    return `${first.origin_iata} → ${last.destination_iata} (${dir})`;
+  };
+
   const addBlock = () => {
-    const newBlock = createEmptyAirCostBlock(`Bloco ${blocks.length + 1}`);
+    const newBlock = createEmptyAirCostBlock("Novo Detalhamento");
     onChange([...blocks, newBlock]);
     setExpandedBlocks(prev => new Set([...prev, newBlock.id]));
   };
