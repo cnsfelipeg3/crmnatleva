@@ -69,6 +69,15 @@ import FechamentoFornecedores from "@/pages/financeiro/FechamentoFornecedores";
 // Admin
 import AdminUsers from "@/pages/admin/AdminUsers";
 
+// Operação Diária
+import OperacaoInbox from "@/pages/operacao/OperacaoInbox";
+import OperacaoFlowBuilder from "@/pages/operacao/OperacaoFlowBuilder";
+import OperacaoIntegracoes from "@/pages/operacao/OperacaoIntegracoes";
+import OperacaoAgentesIA from "@/pages/operacao/OperacaoAgentesIA";
+import OperacaoTagsPipeline from "@/pages/operacao/OperacaoTagsPipeline";
+import OperacaoSimulador from "@/pages/operacao/OperacaoSimulador";
+import OperacaoLogs from "@/pages/operacao/OperacaoLogs";
+
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -145,6 +154,15 @@ function AppRoutes() {
 
         {/* Admin */}
         <Route path="/admin/users" element={<AdminUsers />} />
+
+        {/* Operação Diária */}
+        <Route path="/operacao/inbox" element={<OperacaoInbox />} />
+        <Route path="/operacao/flows" element={<OperacaoFlowBuilder />} />
+        <Route path="/operacao/integracoes" element={<OperacaoIntegracoes />} />
+        <Route path="/operacao/agentes" element={<OperacaoAgentesIA />} />
+        <Route path="/operacao/pipeline" element={<OperacaoTagsPipeline />} />
+        <Route path="/operacao/simulador" element={<OperacaoSimulador />} />
+        <Route path="/operacao/logs" element={<OperacaoLogs />} />
 
         {/* Apresentação */}
         <Route path="/apresentacao" element={<ApresentacaoGeral />} />

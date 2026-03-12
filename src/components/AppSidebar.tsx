@@ -9,6 +9,7 @@ import {
   Percent, FolderTree, Users2, BarChart3, Cog, Calculator,
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
   GitBranch, Plug, Zap, BookOpen, FileDown, Presentation, RotateCcw,
+  Inbox, Bot, Tag, TestTube, ScrollText,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -57,6 +58,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [financeOpen, setFinanceOpen] = useState(false);
   const [rhOpen, setRhOpen] = useState(false);
   const [livechatOpen, setLivechatOpen] = useState(false);
+  const [operacaoOpen, setOperacaoOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const isCollapsed = mobile ? false : collapsed;
 
@@ -74,6 +76,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     if (window.location.pathname.startsWith("/financeiro")) setFinanceOpen(true);
     if (window.location.pathname.startsWith("/rh")) setRhOpen(true);
     if (window.location.pathname.startsWith("/livechat")) setLivechatOpen(true);
+    if (window.location.pathname.startsWith("/operacao")) setOperacaoOpen(true);
     if (window.location.pathname.startsWith("/admin")) setAdminOpen(true);
   }, []);
 
@@ -162,6 +165,39 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/livechat/knowledge-base", icon: BookOpen, label: "Base de Conhecimento" },
               { to: "/livechat/import-chatguru", icon: FileDown, label: "Importar Conversas" },
               { to: "/livechat/analise", icon: Brain, label: "Análise de Atendimento" },
+            ].map((item) => renderNavItem(item, true))}
+          </div>
+        )}
+
+        {/* Operação Diária section */}
+        <button
+          onClick={() => setOperacaoOpen(!operacaoOpen)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
+            operacaoOpen
+              ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
+              : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+          )}
+        >
+          <Zap className={cn("w-5 h-5 shrink-0", operacaoOpen && "text-sidebar-primary")} />
+          {!isCollapsed && (
+            <>
+              <span className="flex-1 text-left">Operação Diária</span>
+              <ChevronDown className={cn("w-4 h-4 transition-transform", operacaoOpen && "rotate-180")} />
+            </>
+          )}
+        </button>
+
+        {operacaoOpen && !isCollapsed && (
+          <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
+            {[
+              { to: "/operacao/inbox", icon: Inbox, label: "Inbox" },
+              { to: "/operacao/flows", icon: GitBranch, label: "Flow Builder" },
+              { to: "/operacao/integracoes", icon: Plug, label: "Integrações" },
+              { to: "/operacao/agentes", icon: Bot, label: "Agentes IA" },
+              { to: "/operacao/pipeline", icon: Tag, label: "Tags & Pipeline" },
+              { to: "/operacao/simulador", icon: TestTube, label: "Simulador" },
+              { to: "/operacao/logs", icon: ScrollText, label: "Logs & Auditoria" },
             ].map((item) => renderNavItem(item, true))}
           </div>
         )}
