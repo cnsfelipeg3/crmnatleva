@@ -87,15 +87,11 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
   // ── Init ──
   useEffect(() => {
     let destroyed = false;
+    let clickHandler: Cesium.ScreenSpaceEventHandler | null = null;
 
     const init = async () => {
       try {
-        const cesiumLib = await import("@/lib/cesium");
-        const Cesium = await import("cesium");
-        cesiumLibRef.current = cesiumLib;
-        cesiumRef.current = Cesium;
-
-        const configStatus = cesiumLib.checkCesiumConfig();
+        const configStatus = checkCesiumConfig();
         if (!configStatus.allReady) {
           setMissingKeys(configStatus.missingKeys);
           setStatus(resolveStatusFromConfig(configStatus));
@@ -104,15 +100,16 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
 
         if (!containerRef.current || destroyed) return;
 
-        await import("cesium/Build/Cesium/Widgets/widgets.css");
-        cesiumLib.initIon();
-
-        const viewer = cesiumLib.createViewer({ container: containerRef.current, minimal: true });
-        if (destroyed) { viewer.destroy(); return; }
+        initIon();
+        const viewer = createViewer({ container: containerRef.current, minimal: true });
+        if (destroyed) {
+          viewer.destroy();
+          return;
+        }
         viewerRef.current = viewer;
 
         // 3D Tiles
-        const tilesLoad = await cesiumLib.addGooglePhotorealistic3DTiles(viewer);
+        const tilesLoad = await addGooglePhotorealistic3DTiles(viewer);
         if (!tilesLoad.tileset) {
           setErrorMessage(tilesLoad.errorMessage || "Tileset fotorealista indisponível.");
           setStatus("tileset-unavailable");
@@ -120,28 +117,28 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
         }
 
         // ── Entities ──
-        const rWaypoints = resolveWaypoints(waypoints, cesiumLib.TEST_WAYPOINTS);
-        const rRoutes = resolveRoutes(routes, rWaypoints, cesiumLib.TEST_ROUTES);
+        const rWaypoints = resolveWaypoints(waypoints, TEST_WAYPOINTS);
+        const rRoutes = resolveRoutes(routes, rWaypoints, TEST_ROUTES);
         resolvedRoutesRef.current = rRoutes;
         resolvedWaypointsRef.current = rWaypoints;
 
         // Journey intelligence
-        const curLocId = cesiumLib.resolveCurrentLocation(rRoutes);
+        const curLocId = resolveCurrentLocation(rRoutes);
         setCurrentLocationId(curLocId);
 
         // Markers
         rWaypoints.forEach((wp) => {
-          cesiumLib.addWaypointMarker(viewer, wp, wp.id === curLocId);
+          addWaypointMarker(viewer, wp, wp.id === curLocId);
         });
 
         // Current location beacon
         if (curLocId) {
           const curWp = rWaypoints.find((w) => w.id === curLocId);
-          if (curWp) cesiumLib.addCurrentLocationBeacon(viewer, curWp);
+          if (curWp) addCurrentLocationBeacon(viewer, curWp);
         }
 
         // Routes
-        rRoutes.forEach((route) => cesiumLib.addFlightArc(viewer, route));
+        rRoutes.forEach((route) => addFlightArc(viewer, route));
 
         // Force resize so viewer fills the container correctly
         viewer.resize();
@@ -150,9 +147,9 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
 
         // ── Camera ──
         if (initialTarget) {
-          cesiumLib.flyTo(viewer, initialTarget.lat, initialTarget.lng, initialTarget.height || 8_000_000, 4);
+          flyTo(viewer, initialTarget.lat, initialTarget.lng, initialTarget.height || 8_000_000, 4);
         } else {
-          const centered = cesiumLib.computeCenteredView(rWaypoints);
+          const centered = computeCenteredView(rWaypoints);
           viewer.camera.flyTo({
             destination: Cesium.Cartesian3.fromDegrees(centered.lng, centered.lat, centered.height),
             orientation: {
@@ -165,26 +162,54 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
           });
         }
 
+        const handleRouteSelect = (route: GlobeFlightRoute, position: Cesium.Cartesian2) => {
+          setSelectedRoute({
+            route,
+            screenX: position.x,
+            screenY: position.y,
+            allRoutes: resolvedRoutesRef.current,
+            allWaypoints: resolvedWaypointsRef.current,
+            currentLocationId: curLocId,
+          });
+
+          // Fly camera to show the route nicely
+          const midLat = (route.from.lat + route.to.lat) / 2;
+          const midLng = (route.from.lng + route.to.lng) / 2;
+          const dist = computeDistanceKm(route.from.lat, route.from.lng, route.to.lat, route.to.lng);
+          const camHeight = Math.max(500_000, dist * 2000);
+
+          viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(midLng, midLat, camHeight),
+            orientation: {
+              heading: Cesium.Math.toRadians(0),
+              pitch: Cesium.Math.toRadians(-55),
+              roll: 0,
+            },
+            duration: 2,
+            easingFunction: Cesium.EasingFunction.QUINTIC_IN_OUT,
+          });
+        };
+
         // ── Click handler ──
-        const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
-        handler.setInputAction((click: { position: CesiumType.Cartesian2 }) => {
+        clickHandler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+        clickHandler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
           const picked = viewer.scene.pick(click.position);
           if (!Cesium.defined(picked) || !picked?.id) {
             setSelectedRoute(null);
             return;
           }
 
-          const entity = picked.id as CesiumType.Entity;
-          const meta = cesiumLib.getEntityMetadata(entity);
+          const entity = picked.id as Cesium.Entity;
+          const meta = getEntityMetadata(entity);
 
           if (meta?.kind === "route") {
-            handleRouteSelect(meta.route, click.position, viewer, Cesium, cesiumLib);
+            handleRouteSelect(meta.route, click.position);
           } else if (meta?.kind === "waypoint") {
             const matchingRoute = rRoutes.find(
-              (r) => r.from.id === meta.waypoint.id || r.to.id === meta.waypoint.id
+              (r) => r.from.id === meta.waypoint.id || r.to.id === meta.waypoint.id,
             );
             if (matchingRoute) {
-              handleRouteSelect(matchingRoute, click.position, viewer, Cesium, cesiumLib);
+              handleRouteSelect(matchingRoute, click.position);
             }
           } else {
             setSelectedRoute(null);
@@ -199,44 +224,13 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
       }
     };
 
-    const handleRouteSelect = (
-      route: GlobeFlightRoute,
-      position: CesiumType.Cartesian2,
-      viewer: CesiumType.Viewer,
-      Cesium: typeof import("cesium"),
-      cesiumLib: typeof import("@/lib/cesium"),
-    ) => {
-      setSelectedRoute({
-        route,
-        screenX: position.x,
-        screenY: position.y,
-        allRoutes: resolvedRoutesRef.current,
-        allWaypoints: resolvedWaypointsRef.current,
-        currentLocationId: currentLocationId,
-      });
-
-      // Fly camera to show the route nicely
-      const midLat = (route.from.lat + route.to.lat) / 2;
-      const midLng = (route.from.lng + route.to.lng) / 2;
-      const dist = cesiumLib.computeDistanceKm(route.from.lat, route.from.lng, route.to.lat, route.to.lng);
-      const camHeight = Math.max(500_000, dist * 2000);
-
-      viewer.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(midLng, midLat, camHeight),
-        orientation: {
-          heading: Cesium.Math.toRadians(0),
-          pitch: Cesium.Math.toRadians(-55),
-          roll: 0,
-        },
-        duration: 2,
-        easingFunction: Cesium.EasingFunction.QUINTIC_IN_OUT,
-      });
-    };
-
-    init();
+    void init();
 
     return () => {
       destroyed = true;
+      if (clickHandler && !clickHandler.isDestroyed()) {
+        clickHandler.destroy();
+      }
       if (viewerRef.current && !viewerRef.current.isDestroyed()) viewerRef.current.destroy();
       viewerRef.current = null;
     };
@@ -264,47 +258,47 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
   const toggleFullscreen = useCallback(() => setIsFullscreen((p) => !p), []);
 
   const handleAnimate = useCallback(() => {
-    if (!selectedRoute || !viewerRef.current || !cesiumLibRef.current) return;
-    cesiumLibRef.current.animateAirplane(viewerRef.current, selectedRoute.route, 5);
+    if (!selectedRoute || !viewerRef.current) return;
+    animateAirplane(viewerRef.current, selectedRoute.route, 5);
   }, [selectedRoute]);
 
   const handleSearchSelect = useCallback((result: SearchResult) => {
-    if (!viewerRef.current || !cesiumRef.current || !cesiumLibRef.current) return;
+    if (!viewerRef.current) return;
     setSearchResult(result);
     setSelectedRoute(null);
 
-    cesiumLibRef.current.addSearchMarker(viewerRef.current, result.lat, result.lng, result.name);
+    addSearchMarker(viewerRef.current, result.lat, result.lng, result.name);
 
     viewerRef.current.camera.flyTo({
-      destination: cesiumRef.current.Cartesian3.fromDegrees(result.lng, result.lat, 15_000),
+      destination: Cesium.Cartesian3.fromDegrees(result.lng, result.lat, 15_000),
       orientation: {
-        heading: cesiumRef.current.Math.toRadians(0),
-        pitch: cesiumRef.current.Math.toRadians(-45),
+        heading: Cesium.Math.toRadians(0),
+        pitch: Cesium.Math.toRadians(-45),
         roll: 0,
       },
       duration: 2.5,
-      easingFunction: cesiumRef.current.EasingFunction.QUINTIC_IN_OUT,
+      easingFunction: Cesium.EasingFunction.QUINTIC_IN_OUT,
     });
   }, []);
 
   const handleSearchClear = useCallback(() => {
-    if (viewerRef.current && cesiumLibRef.current) {
-      cesiumLibRef.current.removeSearchMarker(viewerRef.current);
+    if (viewerRef.current) {
+      removeSearchMarker(viewerRef.current);
     }
     setSearchResult(null);
   }, []);
 
   const handleSearchRecenter = useCallback(() => {
-    if (!searchResult || !viewerRef.current || !cesiumRef.current) return;
+    if (!searchResult || !viewerRef.current) return;
     viewerRef.current.camera.flyTo({
-      destination: cesiumRef.current.Cartesian3.fromDegrees(searchResult.lng, searchResult.lat, 15_000),
+      destination: Cesium.Cartesian3.fromDegrees(searchResult.lng, searchResult.lat, 15_000),
       orientation: {
-        heading: cesiumRef.current.Math.toRadians(0),
-        pitch: cesiumRef.current.Math.toRadians(-45),
+        heading: Cesium.Math.toRadians(0),
+        pitch: Cesium.Math.toRadians(-45),
         roll: 0,
       },
       duration: 2,
-      easingFunction: cesiumRef.current.EasingFunction.QUINTIC_IN_OUT,
+      easingFunction: Cesium.EasingFunction.QUINTIC_IN_OUT,
     });
   }, [searchResult]);
 
