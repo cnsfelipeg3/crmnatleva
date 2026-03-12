@@ -451,6 +451,7 @@ export default function NewSale() {
             taxes: parseFloat(p.miles_tax) || 0,
             total_item_cost: cost,
             reservation_code: p.reservation_code || null,
+            supplier_id: p.supplier_id || null,
           });
         }
       }
