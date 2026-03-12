@@ -812,9 +812,9 @@ export default function LiveChat() {
               return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
             });
           }
-          return [{ id: waKey, phone: cleanPhone || u.phone, contact_name: u.contact_name,
-            stage: u.stage as Stage, tags: u.tags || [], source: u.source,
-            last_message_at: u.last_message_at, last_message_preview: u.last_message_preview || "",
+          return [{ id: waKey, phone: cleanPhone || String(u.phone), contact_name: getSafeContactName(u.contact_name, cleanPhone || u.phone),
+            stage: (u.stage as Stage) || "novo_lead", tags: u.tags || [], source: u.source || "whatsapp",
+            last_message_at: u.last_message_at || new Date().toISOString(), last_message_preview: u.last_message_preview || "",
             unread_count: u.unread_count || 0, is_vip: u.is_vip || false,
             assigned_to: u.assigned_to || "", score_potential: u.score_potential || 0, score_risk: u.score_risk || 0,
           }, ...prev];
