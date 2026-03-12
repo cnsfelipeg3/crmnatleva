@@ -4347,6 +4347,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_client_names: { Args: never; Returns: Json }
       deduplicate_passengers: { Args: never; Returns: Json }
       deduplicate_sales: { Args: never; Returns: Json }
       extract_person_name: { Args: { raw_name: string }; Returns: string }
