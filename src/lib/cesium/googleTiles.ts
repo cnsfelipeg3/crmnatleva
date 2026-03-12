@@ -19,8 +19,8 @@ export async function addGooglePhotorealistic3DTiles(
   }
 
   try {
-    // Use Cesium's built-in helper which handles the Google endpoint
-    const tileset = await Cesium.createGooglePhotorealistic3DTileset(apiKey);
+    // Use Cesium's built-in helper with Google API key
+    const tileset = await Cesium.createGooglePhotorealistic3DTileset({ key: apiKey });
     viewer.scene.primitives.add(tileset);
     return tileset;
   } catch (err) {
