@@ -31,6 +31,11 @@ export interface AirCostBlock {
   cash_value: string;
   reservation_code: string;
   notes: string;
+  // Pagante payment details
+  payment_method: string;
+  payment_currency: string;
+  payment_card_label: string;
+  payment_installments: string;
 }
 
 export function createEmptyAirCostBlock(label?: string): AirCostBlock {
@@ -48,6 +53,10 @@ export function createEmptyAirCostBlock(label?: string): AirCostBlock {
     cash_value: "",
     reservation_code: "",
     notes: "",
+    payment_method: "",
+    payment_currency: "BRL",
+    payment_card_label: "",
+    payment_installments: "1",
   };
 }
 
@@ -443,23 +452,88 @@ export default function AirCostBlocksEditor({
                         </div>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Valor Pago R$</Label>
-                          <Input
-                            type="number" step="0.01" className="h-9 text-sm"
-                            value={block.cash_value}
-                            onChange={e => updateBlock(block.id, "cash_value", e.target.value)}
-                          />
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Valor Pago</Label>
+                            <Input
+                              type="number" step="0.01" className="h-9 text-sm"
+                              value={block.cash_value}
+                              onChange={e => updateBlock(block.id, "cash_value", e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Moeda</Label>
+                            <Select value={block.payment_currency || "BRL"} onValueChange={v => updateBlock(block.id, "payment_currency", v)}>
+                              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="BRL">R$ — Real</SelectItem>
+                                <SelectItem value="USD">US$ — Dólar</SelectItem>
+                                <SelectItem value="EUR">€ — Euro</SelectItem>
+                                <SelectItem value="GBP">£ — Libra</SelectItem>
+                                <SelectItem value="ARS">ARS — Peso Argentino</SelectItem>
+                                <SelectItem value="CLP">CLP — Peso Chileno</SelectItem>
+                                <SelectItem value="COP">COP — Peso Colombiano</SelectItem>
+                                <SelectItem value="MXN">MXN — Peso Mexicano</SelectItem>
+                                <SelectItem value="PEN">PEN — Sol Peruano</SelectItem>
+                                <SelectItem value="JPY">¥ — Iene</SelectItem>
+                                <SelectItem value="CAD">CAD — Dólar Canadense</SelectItem>
+                                <SelectItem value="AUD">AUD — Dólar Australiano</SelectItem>
+                                <SelectItem value="CHF">CHF — Franco Suíço</SelectItem>
+                                <SelectItem value="OTHER">Outra</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Emissão por</Label>
-                          <Input
-                            className="h-9 text-sm"
-                            value={block.emission_source}
-                            onChange={e => updateBlock(block.id, "emission_source", e.target.value)}
-                            placeholder="Site, app..."
-                          />
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Forma de Pagamento</Label>
+                            <Select value={block.payment_method || ""} onValueChange={v => updateBlock(block.id, "payment_method", v)}>
+                              <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                                <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
+                                <SelectItem value="pix">PIX</SelectItem>
+                                <SelectItem value="transferencia">Transferência Bancária</SelectItem>
+                                <SelectItem value="boleto">Boleto</SelectItem>
+                                <SelectItem value="wise">Wise</SelectItem>
+                                <SelectItem value="paypal">PayPal</SelectItem>
+                                <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                                <SelectItem value="outro">Outro</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Cartão / Conta</Label>
+                            <Input
+                              className="h-9 text-sm"
+                              value={block.payment_card_label || ""}
+                              onChange={e => updateBlock(block.id, "payment_card_label", e.target.value)}
+                              placeholder="Ex: Visa final 1234, Wise..."
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Parcelas</Label>
+                            <Select value={block.payment_installments || "1"} onValueChange={v => updateBlock(block.id, "payment_installments", v)}>
+                              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
+                                  <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Emissão por</Label>
+                            <Input
+                              className="h-9 text-sm"
+                              value={block.emission_source}
+                              onChange={e => updateBlock(block.id, "emission_source", e.target.value)}
+                              placeholder="Site, app, telefone..."
+                            />
+                          </div>
                         </div>
                       </div>
                     )}
