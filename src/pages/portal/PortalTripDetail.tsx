@@ -9,10 +9,11 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft, Plane, Hotel, Users, DollarSign, FileText, Calendar, MapPin,
   Clock, Download, Eye, Shield, Briefcase, MessageCircle, Phone, CheckCircle2,
-  AlertTriangle, Info, CreditCard, ChevronDown, ChevronUp,
+  AlertTriangle, Info, CreditCard, ChevronDown, ChevronUp, Map as MapIcon,
 } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
 import { iataToLabel } from "@/lib/iataUtils";
+import PortalJourneyMap from "@/components/portal/PortalJourneyMap";
 
 const fmt = (v: number) => v?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00";
 const fmtDate = (d: string | null) => {
