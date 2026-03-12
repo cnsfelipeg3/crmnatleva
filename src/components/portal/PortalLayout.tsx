@@ -1,15 +1,50 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { useNavigate, Link, useLocation, Navigate } from "react-router-dom";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, Menu, X, User, Home, Map, MessageCircle } from "lucide-react";
+import { LogOut, Menu, X, User, Home, Map, MessageCircle, Bell } from "lucide-react";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
+import PortalNotificationPanel from "@/components/portal/PortalNotificationPanel";
 
 export default function PortalLayout({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading, signOut, user } = usePortalAuth();
+  const { isAuthenticated, isLoading, signOut, user, portalAccess } = usePortalAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch unread count
+  useEffect(() => {
+    if (!portalAccess?.client_id) return;
+    const fetchCount = async () => {
+      const { count } = await (supabase as any)
+        .from("portal_notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("client_id", portalAccess.client_id)
+        .eq("read_status", "unread");
+      setUnreadCount(count || 0);
+    };
+    fetchCount();
+
+    // Realtime subscription
+    const channel = supabase
+      .channel("portal-notifs")
+      .on("postgres_changes", {
+        event: "INSERT",
+        schema: "public",
+        table: "portal_notifications",
+      }, () => fetchCount())
+      .on("postgres_changes", {
+        event: "UPDATE",
+        schema: "public",
+        table: "portal_notifications",
+      }, () => fetchCount())
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [portalAccess?.client_id]);
 
   if (isLoading) {
     return (
@@ -62,7 +97,21 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
               ))}
             </nav>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {/* Notification Bell */}
+              <button
+                onClick={() => setNotifOpen(!notifOpen)}
+                className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                title="Notificações"
+              >
+                <Bell className="h-4.5 w-4.5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full px-1">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+
               <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
                 <User className="h-4 w-4" />
                 <span className="max-w-[180px] truncate">{user?.email}</span>
@@ -77,6 +126,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
+        {/* Mobile menu */}
         <AnimatePresence>
           {menuOpen && (
             <motion.div
@@ -107,6 +157,13 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
           )}
         </AnimatePresence>
       </header>
+
+      {/* Notification Panel */}
+      <PortalNotificationPanel
+        open={notifOpen}
+        onClose={() => setNotifOpen(false)}
+        clientId={portalAccess?.client_id || null}
+      />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {children}

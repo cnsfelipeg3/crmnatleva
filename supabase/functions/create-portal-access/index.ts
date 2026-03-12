@@ -125,6 +125,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Create "trip published" notification
+    await admin.from("portal_notifications").insert({
+      client_id,
+      sale_id,
+      notification_type: "trip_published",
+      title: "Sua viagem está pronta no portal NatLeva! 🎉",
+      message: `Organizamos todos os detalhes da sua viagem${custom_title ? ` "${custom_title}"` : ""}. Acesse o portal para conferir voos, hotéis, documentos e itinerário completo.`,
+      channel: "portal",
+      status: "sent",
+      sent_at: new Date().toISOString(),
+      metadata: { key: `published_${sale_id}` },
+    });
+
     return new Response(JSON.stringify({
       success: true,
       message: "Viagem publicada no portal do cliente",
