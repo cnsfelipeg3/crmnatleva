@@ -1,6 +1,6 @@
-import { motion } from "framer-motion";
-import { AlertTriangle, Globe2, MapPin, Maximize2, Minimize2, Satellite } from "lucide-react";
-import type { GlobeStatus } from "./travelGlobe.types";
+import { motion, AnimatePresence } from "framer-motion";
+import { AlertTriangle, Globe2, MapPin, Maximize2, Minimize2, Satellite, Plane, ArrowRight, X, Clock, MapPinned } from "lucide-react";
+import type { GlobeStatus, SelectedRouteInfo } from "./travelGlobe.types";
 
 function GlobeFallback({
   status,
@@ -128,4 +128,129 @@ function GlobeHud({
   );
 }
 
-export { GlobeFallback, GlobeHud, GlobeLoading };
+const statusLabelMap: Record<string, { label: string; color: string }> = {
+  active: { label: "Em andamento", color: "bg-green-500" },
+  upcoming: { label: "Próximo", color: "bg-blue-500" },
+  past: { label: "Concluído", color: "bg-muted-foreground/50" },
+};
+
+const typeIconMap: Record<string, string> = {
+  origin: "🛫",
+  connection: "🔄",
+  destination: "🛬",
+  hotel: "🏨",
+  experience: "🎯",
+  poi: "📍",
+};
+
+function RouteInfoPanel({
+  info,
+  onClose,
+}: {
+  info: SelectedRouteInfo;
+  onClose: () => void;
+}) {
+  const { route } = info;
+  const statusInfo = statusLabelMap[route.status] || statusLabelMap.upcoming;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 20, scale: 0.95 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        className="absolute bottom-6 left-1/2 z-20 w-[420px] -translate-x-1/2 rounded-2xl border border-border/40 bg-background/95 p-5 shadow-2xl backdrop-blur-2xl"
+      >
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full border border-border/30 bg-muted/50 text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+
+        {/* Status badge */}
+        <div className="mb-4 flex items-center gap-2">
+          <div className={`h-2 w-2 rounded-full ${statusInfo.color}`} />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            {statusInfo.label}
+          </span>
+        </div>
+
+        {/* Route header */}
+        <div className="mb-4 flex items-center gap-3">
+          <div className="flex flex-col items-center">
+            <span className="text-lg">{typeIconMap[route.from.type] || "📍"}</span>
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold text-foreground">{route.from.label}</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {route.from.type === "origin" ? "Origem" : "Conexão"}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 rounded-full border border-border/30 bg-muted/30 px-3 py-1.5">
+            <Plane className="h-3.5 w-3.5 text-primary" />
+            <ArrowRight className="h-3 w-3 text-muted-foreground" />
+          </div>
+
+          <div className="flex-1 text-right">
+            <p className="text-sm font-bold text-foreground">{route.to.label}</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              {route.to.type === "destination" ? "Destino" : "Conexão"}
+            </p>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-lg">{typeIconMap[route.to.type] || "📍"}</span>
+          </div>
+        </div>
+
+        {/* Details grid */}
+        <div className="grid grid-cols-3 gap-3 rounded-xl border border-border/20 bg-muted/20 p-3">
+          <div className="flex flex-col items-center gap-1">
+            <Plane className="h-4 w-4 text-primary/70" />
+            <span className="text-[10px] font-medium text-muted-foreground">Trecho</span>
+            <span className="text-xs font-bold text-foreground">
+              {route.from.id.toUpperCase()} → {route.to.id.toUpperCase()}
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <Clock className="h-4 w-4 text-primary/70" />
+            <span className="text-[10px] font-medium text-muted-foreground">Distância</span>
+            <span className="text-xs font-bold text-foreground">
+              {computeDistanceKm(route.from.lat, route.from.lng, route.to.lat, route.to.lng)} km
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <MapPinned className="h-4 w-4 text-primary/70" />
+            <span className="text-[10px] font-medium text-muted-foreground">Coordenadas</span>
+            <span className="text-xs font-bold text-foreground">
+              {route.to.lat.toFixed(1)}°, {route.to.lng.toFixed(1)}°
+            </span>
+          </div>
+        </div>
+
+        {/* Tip */}
+        <p className="mt-3 text-center text-[10px] text-muted-foreground/60">
+          Clique nos destinos para mais detalhes · Zoom para explorar
+        </p>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+function computeDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): string {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c).toLocaleString("pt-BR");
+}
+
+export { GlobeFallback, GlobeHud, GlobeLoading, RouteInfoPanel };

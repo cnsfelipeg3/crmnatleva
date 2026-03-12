@@ -25,3 +25,9 @@ export type GlobeStatus =
   | "missing-both"
   | "tileset-unavailable"
   | "error";
+
+export interface SelectedRouteInfo {
+  route: GlobeFlightRoute;
+  screenX: number;
+  screenY: number;
+}
