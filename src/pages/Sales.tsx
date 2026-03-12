@@ -36,6 +36,7 @@ interface SaleRow {
 }
 
 export default function Sales() {
+  const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -45,11 +46,12 @@ export default function Sales() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (authLoading || !user) return;
     fetchAllRows("sales", "*", { order: { column: "created_at", ascending: false } }).then((data) => {
       setSales(data as SaleRow[]);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
-  }, []);
+  }, [user, authLoading]);
 
   const statuses = useMemo(() => [...new Set(sales.map(s => s.status))], [sales]);
   const destinations = useMemo(() => [...new Set(sales.map(s => s.destination_iata).filter(Boolean))].sort(), [sales]);
