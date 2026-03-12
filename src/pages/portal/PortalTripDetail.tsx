@@ -173,6 +173,21 @@ export default function PortalTripDetail() {
           </motion.div>
         )}
 
+        {/* Journey Map */}
+        {segments?.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}>
+            <Section title="Mapa da Viagem" icon={MapIcon}>
+              <PortalJourneyMap
+                segments={segments}
+                hotels={hotels}
+                lodging={lodging}
+                services={services}
+                sale={sale}
+              />
+            </Section>
+          </motion.div>
+        )}
+
         {/* Flights */}
         {segments?.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
