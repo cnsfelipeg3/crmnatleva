@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { useAuth } from "@/contexts/AuthContext";
 import { analyzeClients, getSegmento, type ClientAnalysis, type ClientSale } from "@/lib/clientScoring";
 import { generateRecommendations, type Recommendation } from "@/lib/clientRecommendations";
 import { Card } from "@/components/ui/card";
@@ -48,6 +49,7 @@ const SEGMENTO_COLORS: Record<string, string> = {
 
 export default function ClientIntelligence() {
   const navigate = useNavigate();
+  const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<ClientSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -74,9 +76,18 @@ export default function ClientIntelligence() {
   }, []);
 
   useEffect(() => {
+    if (authLoading || !user) return;
+    setLoading(true);
     fetchAllRows("sales", "*", { order: { column: "created_at", ascending: false } })
-      .then((data) => { setSales(data as ClientSale[]); setLoading(false); });
-  }, []);
+      .then((data) => {
+        setSales(data as ClientSale[]);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("ClientIntelligence fetch error:", err);
+        setLoading(false);
+      });
+  }, [user, authLoading]);
 
   const analysisData = useMemo(() => analyzeClients(sales), [sales]);
 
