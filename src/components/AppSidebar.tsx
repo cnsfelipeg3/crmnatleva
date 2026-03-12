@@ -60,6 +60,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [operacaoOpen, setOperacaoOpen] = useState(false);
   const [implOpen, setImplOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [portalAdminOpen, setPortalAdminOpen] = useState(false);
   const isCollapsed = mobile ? false : collapsed;
 
   useEffect(() => {
