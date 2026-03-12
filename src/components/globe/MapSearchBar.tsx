@@ -6,7 +6,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, X, MapPin, Building2, Plane, Landmark, Navigation } from "lucide-react";
-import { getGoogleMapsApiKey } from "@/lib/cesium";
+import { getGoogleMapsApiKey } from "@/lib/cesium/config";
 
 /* ═══ Types ═══ */
 export interface SearchResult {
