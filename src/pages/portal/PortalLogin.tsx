@@ -35,18 +35,28 @@ export default function PortalLogin() {
       return;
     }
 
-    const { data: portal } = await (supabase as any)
-      .from("portal_access")
-      .select("*")
+    // Check if user is admin (bypass portal_access check)
+    const { data: adminRole } = await (supabase as any)
+      .from("user_roles")
+      .select("role")
       .eq("user_id", user.id)
-      .eq("is_active", true)
-      .single();
+      .eq("role", "admin")
+      .maybeSingle();
 
-    if (!portal) {
-      toast.error("Você não tem acesso ao portal de viagens.");
-      await supabase.auth.signOut();
-      setLoading(false);
-      return;
+    if (!adminRole) {
+      const { data: portal } = await (supabase as any)
+        .from("portal_access")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .single();
+
+      if (!portal) {
+        toast.error("Você não tem acesso ao portal de viagens.");
+        await supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
     }
 
     toast.success("Bem-vindo ao seu portal de viagens!");

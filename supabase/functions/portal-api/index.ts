@@ -33,32 +33,53 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Check portal access
-    const { data: access } = await admin
-      .from("portal_access")
-      .select("*")
+    // Check if user is admin
+    const { data: adminRole } = await admin
+      .from("user_roles")
+      .select("role")
       .eq("user_id", user.id)
-      .eq("is_active", true)
-      .single();
+      .eq("role", "admin")
+      .maybeSingle();
 
-    if (!access) {
-      return new Response(JSON.stringify({ error: "No portal access" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const isAdmin = !!adminRole;
+
+    // Check portal access (not required for admins)
+    let access: any = null;
+    let clientId: string | null = null;
+
+    if (!isAdmin) {
+      const { data: portalAccess } = await admin
+        .from("portal_access")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .single();
+
+      if (!portalAccess) {
+        return new Response(JSON.stringify({ error: "No portal access" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      access = portalAccess;
+      clientId = portalAccess.client_id;
     }
-
-    const clientId = access.client_id;
     const body = await req.json().catch(() => ({}));
     const action = body.action;
 
     // ---- LIST TRIPS ----
     if (action === "trips") {
-      const { data: published } = await admin
+      let query = admin
         .from("portal_published_sales")
         .select("*")
-        .eq("client_id", clientId)
         .eq("is_active", true)
         .order("published_at", { ascending: false });
+
+      // Non-admin: filter by client_id
+      if (!isAdmin && clientId) {
+        query = query.eq("client_id", clientId);
+      }
+
+      const { data: published } = await query;
 
       if (!published?.length) {
         return new Response(JSON.stringify({ trips: [], portalAccess: access }), {
@@ -99,13 +120,17 @@ Deno.serve(async (req) => {
         });
       }
 
-      const { data: pub } = await admin
+      let detailQuery = admin
         .from("portal_published_sales")
         .select("*")
         .eq("sale_id", saleId)
-        .eq("client_id", clientId)
-        .eq("is_active", true)
-        .single();
+        .eq("is_active", true);
+
+      if (!isAdmin && clientId) {
+        detailQuery = detailQuery.eq("client_id", clientId);
+      }
+
+      const { data: pub } = await detailQuery.single();
 
       if (!pub) {
         return new Response(JSON.stringify({ error: "Trip not found" }), {
