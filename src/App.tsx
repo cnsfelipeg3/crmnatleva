@@ -71,6 +71,12 @@ import FechamentoFornecedores from "@/pages/financeiro/FechamentoFornecedores";
 // Admin
 import AdminUsers from "@/pages/admin/AdminUsers";
 
+// Portal Admin
+import PortalAdminDashboard from "@/pages/portal-admin/PortalAdminDashboard";
+import PortalAdminTrips from "@/pages/portal-admin/PortalAdminTrips";
+import PortalAdminTripDetail from "@/pages/portal-admin/PortalAdminTripDetail";
+import PortalAdminClients from "@/pages/portal-admin/PortalAdminClients";
+
 // Portal do Cliente
 import { PortalAuthProvider } from "@/contexts/PortalAuthContext";
 import PortalLogin from "@/pages/portal/PortalLogin";
