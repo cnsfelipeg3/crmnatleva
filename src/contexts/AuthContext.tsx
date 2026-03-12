@@ -1,6 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 
 export type UserRole = "admin" | "gestor" | "vendedor" | "operacional" | "financeiro" | "leitura";
 
@@ -23,48 +23,72 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+const DEFAULT_ROLE: UserRole = "vendedor";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [role, setRole] = useState<UserRole>("vendedor");
+  const [role, setRole] = useState<UserRole>(DEFAULT_ROLE);
   const [isLoading, setIsLoading] = useState(true);
 
+  const loadUserContext = useCallback(async (userId: string | null) => {
+    if (!userId) {
+      setProfile(null);
+      setRole(DEFAULT_ROLE);
+      return;
+    }
+
+    const [profileRes, roleRes] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, full_name, email, avatar_url")
+        .eq("id", userId)
+        .maybeSingle(),
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle(),
+    ]);
+
+    if (profileRes.error) console.error("Profile fetch error:", profileRes.error);
+    if (roleRes.error) console.error("Role fetch error:", roleRes.error);
+
+    setProfile((profileRes.data as Profile | null) ?? null);
+    setRole((roleRes.data?.role as UserRole) ?? DEFAULT_ROLE);
+  }, []);
+
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    let isMounted = true;
+
+    const hydrateSession = async (session: Session | null) => {
+      if (!isMounted) return;
+
       const currentUser = session?.user ?? null;
       setUser(currentUser);
 
-      if (currentUser) {
-        // Fetch profile and role with setTimeout to avoid race condition
-        setTimeout(async () => {
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("id", currentUser.id)
-            .single();
-          if (profileData) setProfile(profileData as Profile);
-
-          const { data: roleData } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", currentUser.id)
-            .single();
-          if (roleData) setRole(roleData.role as UserRole);
-        }, 0);
-      } else {
-        setProfile(null);
-        setRole("vendedor");
+      try {
+        await loadUserContext(currentUser?.id ?? null);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-      setIsLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      void hydrateSession(session);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) setIsLoading(false);
-    });
+    void (async () => {
+      setIsLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      await hydrateSession(session ?? null);
+    })();
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, [loadUserContext]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -98,3 +122,4 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be within AuthProvider");
   return ctx;
 }
+

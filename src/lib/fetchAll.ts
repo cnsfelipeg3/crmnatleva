@@ -1,38 +1,77 @@
 import { supabase } from "@/integrations/supabase/client";
 
+interface FetchAllOptions {
+  order?: { column: string; ascending?: boolean };
+  maxConcurrency?: number;
+}
+
+const inFlightRequests = new Map<string, Promise<any[]>>();
+
 /**
- * Fetch all rows from a Supabase table, paginating past the 1000-row default limit.
+ * Fetch all rows from a table, paginating past the 1000-row default limit
+ * and loading pages in parallel (limited concurrency) for better performance.
  */
 export async function fetchAllRows(
   table: string,
   select: string = "*",
-  options?: {
-    order?: { column: string; ascending?: boolean };
-  },
-  batchSize: number = 1000
+  options?: FetchAllOptions,
+  batchSize: number = 1000,
 ): Promise<any[]> {
-  const allData: any[] = [];
-  let offset = 0;
-  let hasMore = true;
+  const maxConcurrency = Math.max(1, Math.min(options?.maxConcurrency ?? 4, 8));
+  const requestKey = JSON.stringify({ table, select, options, batchSize });
 
-  while (hasMore) {
-    let query = (supabase.from as any)(table).select(select).range(offset, offset + batchSize - 1);
+  const existingRequest = inFlightRequests.get(requestKey);
+  if (existingRequest) return existingRequest;
 
-    if (options?.order) {
-      query = query.order(options.order.column, { ascending: options.order.ascending ?? true });
+  const requestPromise = (async () => {
+    const { count, error: countError } = await (supabase.from as any)(table)
+      .select("*", { count: "exact", head: true });
+
+    if (countError) throw countError;
+
+    const totalRows = count ?? 0;
+    if (totalRows === 0) return [];
+
+    const totalPages = Math.ceil(totalRows / batchSize);
+    const pagesData: any[][] = new Array(totalPages);
+
+    for (let i = 0; i < totalPages; i += maxConcurrency) {
+      const chunk = Array.from(
+        { length: Math.min(maxConcurrency, totalPages - i) },
+        (_, idx) => i + idx,
+      );
+
+      await Promise.all(
+        chunk.map(async (pageIndex) => {
+          const from = pageIndex * batchSize;
+          const to = from + batchSize - 1;
+
+          let query = (supabase.from as any)(table)
+            .select(select)
+            .range(from, to);
+
+          if (options?.order) {
+            query = query.order(options.order.column, {
+              ascending: options.order.ascending ?? true,
+            });
+          }
+
+          const { data, error } = await query;
+          if (error) throw error;
+
+          pagesData[pageIndex] = data ?? [];
+        }),
+      );
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
+    return pagesData.flat();
+  })();
 
-    if (data && data.length > 0) {
-      allData.push(...data);
-      offset += batchSize;
-      hasMore = data.length === batchSize;
-    } else {
-      hasMore = false;
-    }
+  inFlightRequests.set(requestKey, requestPromise);
+
+  try {
+    return await requestPromise;
+  } finally {
+    inFlightRequests.delete(requestKey);
   }
-
-  return allData;
 }

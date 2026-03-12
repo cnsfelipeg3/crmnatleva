@@ -77,7 +77,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (authLoading || !user) return;
     Promise.all([
-      fetchAllRows("sales", "*", { order: { column: "created_at", ascending: false } }),
+      fetchAllRows("sales", "id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, airline, locators, created_at, close_date, emission_status, hotel_name, is_international, miles_program, seller_id, client_id", { order: { column: "created_at", ascending: false } }),
       fetchAllRows("profiles", "id, full_name"),
       fetchAllRows("clients", "id, display_name, created_at"),
       fetchAllRows("flight_segments", "sale_id, origin_iata, destination_iata"),
