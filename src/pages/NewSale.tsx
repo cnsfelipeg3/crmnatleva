@@ -40,7 +40,7 @@ interface ExtractionResult {
 }
 
 interface OtherProduct {
-  id: string; type: string; description: string; supplier: string;
+  id: string; type: string; description: string; supplier_id: string;
   date: string; emission_type: "milhas" | "pagante";
   miles_program: string; miles_qty: string; miles_tax: string; cash_value: string;
   reservation_code: string;
@@ -60,6 +60,7 @@ const PRODUCT_TYPES = [
   { value: "passeio", label: "Passeio / Experiência", icon: Ticket },
   { value: "ingresso", label: "Ingresso", icon: Ticket },
   { value: "aluguel_carro", label: "Aluguel de Carro", icon: Car },
+  { value: "roteiro", label: "Roteiro Personalizado", icon: MapPin },
   { value: "outros", label: "Outros", icon: ShoppingBag },
 ];
 
@@ -255,7 +256,7 @@ export default function NewSale() {
   // ─── Other Products ─────────────────────────────────
   const addProduct = () => {
     setOtherProducts(prev => [...prev, {
-      id: crypto.randomUUID(), type: "transfer", description: "", supplier: "",
+      id: crypto.randomUUID(), type: "transfer", description: "", supplier_id: "",
       date: "", emission_type: "pagante", miles_program: "", miles_qty: "",
       miles_tax: "", cash_value: "", reservation_code: "",
     }]);
@@ -450,6 +451,7 @@ export default function NewSale() {
             taxes: parseFloat(p.miles_tax) || 0,
             total_item_cost: cost,
             reservation_code: p.reservation_code || null,
+            supplier_id: p.supplier_id || null,
           });
         }
       }
@@ -819,7 +821,22 @@ export default function NewSale() {
                           <SelectContent>{PRODUCT_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2"><Label>Fornecedor</Label><Input value={product.supplier} onChange={(e) => updateProduct(product.id, "supplier", e.target.value)} /></div>
+                      <div className="space-y-2">
+                        <Label>Fornecedor</Label>
+                        <div className="flex gap-2">
+                          <Select value={product.supplier_id} onValueChange={(v) => updateProduct(product.id, "supplier_id", v)}>
+                            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                            <SelectContent>
+                              {suppliers.map((s: any) => (
+                                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button type="button" variant="outline" size="icon" className="shrink-0" title="Cadastrar novo fornecedor" onClick={() => window.open("/financeiro/fornecedores", "_blank")}>
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
                       <div className="space-y-2"><Label>Descrição</Label><Input value={product.description} onChange={(e) => updateProduct(product.id, "description", e.target.value)} placeholder="Detalhes do produto" /></div>
                       <div className="space-y-2"><Label>Data</Label><Input type="date" value={product.date} onChange={(e) => updateProduct(product.id, "date", e.target.value)} /></div>
                       <div className="space-y-2"><Label>Código de Reserva</Label><Input value={product.reservation_code} onChange={(e) => updateProduct(product.id, "reservation_code", e.target.value.toUpperCase())} placeholder="Localizador / confirmação" className="font-mono" /></div>
