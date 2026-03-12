@@ -682,19 +682,21 @@ function FlightGroupCard({
             </div>
           </div>
 
-          {/* ─── Nº do Voo (acima da consulta Amadeus) ─── */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">Nº do Voo</Label>
-              <Input
-                value={first?.flight_number || ""}
-                onChange={e => onSegmentUpdate(0, "flight_number", e.target.value.toUpperCase())}
-                placeholder="EK262"
-                className="font-mono text-sm"
-              />
-              <p className="text-[10px] text-muted-foreground">Opcional — ajuda o Amadeus a localizar o voo exato</p>
+          {/* ─── Nº do Voo (only for direct flights — multi-segment has it per segment) ─── */}
+          {group.connectionType === "direto" && (
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Nº do Voo</Label>
+                <Input
+                  value={first?.flight_number || ""}
+                  onChange={e => onSegmentUpdate(0, "flight_number", e.target.value.toUpperCase())}
+                  placeholder="EK262"
+                  className="font-mono text-sm"
+                />
+                <p className="text-[10px] text-muted-foreground">Opcional — ajuda o Amadeus a localizar o voo exato</p>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* ─── STEP 2: Amadeus Lookup Button ─── */}
           <div className="flex flex-wrap items-center gap-3">
@@ -780,7 +782,8 @@ interface SegmentCardProps {
 }
 
 function SegmentCard({ seg, segIndex, totalSegments, onUpdate, defaultAirline, defaultDate, isConnection }: SegmentCardProps) {
-  const label = totalSegments === 1
+  const isSingleSegment = totalSegments === 1;
+  const label = isSingleSegment
     ? "Detalhes do Voo"
     : `Segmento ${segIndex + 1} de ${totalSegments}`;
 
@@ -810,37 +813,39 @@ function SegmentCard({ seg, segIndex, totalSegments, onUpdate, defaultAirline, d
         )}
       </div>
 
-      {/* Row 1: Flight Number + Route + Date */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="space-y-1">
-          <Label className="text-xs">Nº do Voo *</Label>
-          <Input
-            value={seg.flight_number}
-            onChange={e => onUpdate("flight_number", e.target.value.toUpperCase())}
-            placeholder="LA8084"
-            className={cn("font-mono text-sm", !hasFlight && "border-amber-300/50")}
-          />
+      {/* Row 1: Flight Number + Route + Date — only for multi-segment (single already has these in the group header) */}
+      {!isSingleSegment && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Nº do Voo *</Label>
+            <Input
+              value={seg.flight_number}
+              onChange={e => onUpdate("flight_number", e.target.value.toUpperCase())}
+              placeholder="LA8084"
+              className={cn("font-mono text-sm", !hasFlight && "border-amber-300/50")}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Origem</Label>
+            <AirportAutocomplete value={seg.origin_iata} onChange={iata => onUpdate("origin_iata", iata)} placeholder="GRU" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Destino</Label>
+            <AirportAutocomplete value={seg.destination_iata} onChange={iata => onUpdate("destination_iata", iata)} placeholder="FCO" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Data</Label>
+            <Input
+              type="date"
+              value={seg.departure_date || defaultDate}
+              onChange={e => onUpdate("departure_date", e.target.value)}
+              className="text-sm"
+            />
+          </div>
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Origem</Label>
-          <AirportAutocomplete value={seg.origin_iata} onChange={iata => onUpdate("origin_iata", iata)} placeholder="GRU" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Destino</Label>
-          <AirportAutocomplete value={seg.destination_iata} onChange={iata => onUpdate("destination_iata", iata)} placeholder="FCO" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Data</Label>
-          <Input
-            type="date"
-            value={seg.departure_date || defaultDate}
-            onChange={e => onUpdate("departure_date", e.target.value)}
-            className="text-sm"
-          />
-        </div>
-      </div>
+      )}
 
-      {/* Row 2: Times, Duration, Class */}
+      {/* Times, Duration, Class */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="space-y-1">
           <Label className="text-xs">Horário Saída</Label>
@@ -868,8 +873,8 @@ function SegmentCard({ seg, segIndex, totalSegments, onUpdate, defaultAirline, d
         </div>
       </div>
 
-      {/* Row 3: Terminal, Operated By, Connection Time */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Terminal, Operated By, Connection Time */}
+      <div className={cn("grid gap-3", segIndex > 0 ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2")}>
         <div className="space-y-1">
           <Label className="text-xs">Terminal</Label>
           <Input value={seg.terminal} onChange={e => onUpdate("terminal", e.target.value)} className="text-sm" placeholder="T3" />
@@ -877,13 +882,6 @@ function SegmentCard({ seg, segIndex, totalSegments, onUpdate, defaultAirline, d
         <div className="space-y-1">
           <Label className="text-xs">Operado por</Label>
           <Input value={seg.operated_by} onChange={e => onUpdate("operated_by", e.target.value)} className="text-sm" placeholder="Codeshare" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Companhia</Label>
-          <AirlineAutocomplete
-            value={seg.airline || defaultAirline}
-            onChange={(iata) => onUpdate("airline", iata)}
-          />
         </div>
         {segIndex > 0 && (
           <div className="space-y-1">
