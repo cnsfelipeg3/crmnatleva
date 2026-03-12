@@ -14,7 +14,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe } from "lucide-react";
+import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe, BookOpen } from "lucide-react";
 import PublishToPortalDialog from "@/components/portal/PublishToPortalDialog";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import { useToast } from "@/hooks/use-toast";
@@ -328,6 +328,9 @@ export default function SaleDetail() {
               <Button variant="outline" size="sm" onClick={startEdit}><Pencil className="w-4 h-4 mr-1" /> Editar</Button>
               <Button variant="outline" size="sm" onClick={() => setPortalOpen(true)} className="text-accent border-accent/30 hover:bg-accent/10">
                 <Globe className="w-4 h-4 mr-1" /> Portal do Cliente
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate(`/itinerario?sale_id=${id}`)}>
+                <BookOpen className="w-4 h-4 mr-1" /> Itinerário
               </Button>
               <Button size="sm" onClick={handleGenerateSummary}>
                 <FileText className="w-4 h-4 mr-1" /> Resumo NatLeva

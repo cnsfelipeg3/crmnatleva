@@ -35,6 +35,7 @@ import AnaliseAtendimento from "@/pages/AnaliseAtendimento";
 import ApresentacaoGeral from "@/pages/ApresentacaoGeral";
 import TripDetail from "@/pages/TripDetail";
 import TripAlterations from "@/pages/TripAlterations";
+import Itinerary from "@/pages/Itinerary";
 
 // RH
 import RHIndex from "@/pages/rh/RHIndex";
@@ -107,6 +108,7 @@ function AppRoutes() {
         <Route path="/sales" element={<Sales />} />
         <Route path="/sales/new" element={<NewSale />} />
         <Route path="/sales/:id" element={<SaleDetail />} />
+        <Route path="/itinerario" element={<Itinerary />} />
         <Route path="/viagens" element={<Viagens />} />
         <Route path="/viagens/:id" element={<TripDetail />} />
         <Route path="/checkin" element={<Checkin />} />
