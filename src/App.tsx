@@ -125,7 +125,8 @@ function AppRoutes() {
         <Route path="/pendencias" element={<Pendencias />} />
         <Route path="/livechat" element={<LiveChat />} />
         <Route path="/livechat/integration" element={<WhatsAppIntegration />} />
-         <Route path="/livechat/flows" element={<FlowBuilder />} />
+          <Route path="/livechat/whatsapp-qr" element={<WhatsAppQRConnect />} />
+          <Route path="/livechat/flows" element={<FlowBuilder />} />
          <Route path="/livechat/integrations" element={<AIIntegrations />} />
          <Route path="/livechat/knowledge-base" element={<AIKnowledgeBase />} />
          <Route path="/livechat/import-chatguru" element={<ImportChatGuru />} />
