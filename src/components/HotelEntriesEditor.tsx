@@ -214,15 +214,19 @@ export default function HotelEntriesEditor({
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-xs">Fornecedor</Label>
-                        <Select value={hotel.supplier_id} onValueChange={v => updateHotel(hotel.id, "supplier_id", v)}>
-                          <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                          <SelectContent>
-                            {suppliers.map((s: any) => (
-                              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                        <div className="flex gap-2">
+                          <Select value={hotel.supplier_id} onValueChange={v => updateHotel(hotel.id, "supplier_id", v)}>
+                            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                            <SelectContent>
+                              {suppliers.map((s: any) => (
+                                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button type="button" variant="outline" size="icon" className="shrink-0 h-9 w-9" title="Cadastrar novo fornecedor" onClick={() => window.open("/financeiro/fornecedores", "_blank")}>
+                            <Plus className="w-4 h-4" />
+                          </Button>
+                        </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Tipo de Pagamento</Label>
                         <div className="flex gap-2">
