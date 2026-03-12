@@ -1873,7 +1873,7 @@ export default function LiveChat() {
                               />
                             ) : null}
                             <div className={`h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-sm font-bold text-foreground ${profilePicsRef.current.get(conv.id) ? 'hidden' : ''}`}>
-                              {conv.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                              {contactInitials}
                             </div>
                           </div>
                           <div className="flex-1 min-w-0 pr-1">
