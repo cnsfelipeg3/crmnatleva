@@ -14,6 +14,7 @@ import {
 import AirlineLogo from "@/components/AirlineLogo";
 import { iataToLabel } from "@/lib/iataUtils";
 import PortalJourneyMap from "@/components/portal/PortalJourneyMap";
+import PortalChecklist from "@/components/portal/PortalChecklist";
 
 const fmt = (v: number) => v?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00";
 const fmtDate = (d: string | null) => {
@@ -188,7 +189,22 @@ export default function PortalTripDetail() {
           </motion.div>
         )}
 
-        {/* Flights */}
+        {/* Checklist */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.19 }}>
+          <Section title="Preparação da Viagem" icon={CheckCircle2}>
+            <PortalChecklist
+              sale={sale}
+              segments={segments || []}
+              hotels={hotels || []}
+              services={services || []}
+              passengers={passengers || []}
+              attachments={attachments || []}
+              financial={financial || { receivables: [] }}
+              lodging={lodging || []}
+            />
+          </Section>
+        </motion.div>
+
         {segments?.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <Section title="Voos" icon={Plane}>
