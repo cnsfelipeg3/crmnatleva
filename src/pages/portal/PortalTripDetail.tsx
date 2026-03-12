@@ -14,6 +14,7 @@ import {
 import AirlineLogo from "@/components/AirlineLogo";
 import { iataToLabel } from "@/lib/iataUtils";
 import PortalJourneyMap from "@/components/portal/PortalJourneyMap";
+import PortalChecklist from "@/components/portal/PortalChecklist";
 
 const fmt = (v: number) => v?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00";
 const fmtDate = (d: string | null) => {
