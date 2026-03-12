@@ -737,6 +737,7 @@ export default function NewSale() {
               formLocator={form.locator}
               formFlightClass={form.flight_class}
               onFormChange={updateForm}
+              onGroupLocatorsChange={setGroupLocators}
             />
 
             {/* Air Cost Blocks */}
