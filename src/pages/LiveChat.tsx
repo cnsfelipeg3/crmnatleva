@@ -1755,7 +1755,7 @@ export default function LiveChat() {
   return (
     <div
       ref={livechatContainerRef}
-      className={`flex flex-col overflow-hidden bg-background ${isMobile ? "fixed inset-0 z-50" : "h-[calc(100dvh-5rem)] -m-6"}`}
+      className={`flex min-h-0 flex-col overflow-hidden bg-background ${isMobile ? "fixed inset-0 z-50" : "h-full"}`}
       style={isMobile ? { height: mobileHeight } : undefined}
     >
       {/* Header - compact, no submenu tabs (now in sidebar) */}
