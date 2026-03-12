@@ -4,10 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { MessageSquare, Brain, Globe, Shield, ExternalLink, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { MessageSquare, Brain, Globe, Shield, ExternalLink, CheckCircle2, XCircle, AlertTriangle, Smartphone, ChevronRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { WhatsAppQRCard } from "./WhatsAppQRCard";
 import { WhatsAppCloudAPICard } from "./WhatsAppCloudAPICard";
+import { useNavigate } from "react-router-dom";
 
 const integrations = [
   {
