@@ -245,7 +245,7 @@ export default function OperacaoInbox() {
                               ? "bg-primary text-primary-foreground rounded-br-sm"
                               : "bg-muted text-foreground rounded-bl-sm"
                           )}>
-                            <p className="whitespace-pre-wrap break-words">{msg.content || "[mídia]"}</p>
+                            <p className="whitespace-pre-wrap break-words">{msg.text || (msg.media_url ? `[${msg.message_type}]` : "[mídia]")}</p>
                             <span className={cn("text-[10px] mt-1 block", isAgent ? "text-primary-foreground/60" : "text-muted-foreground")}>
                               {format(new Date(msg.created_at), "HH:mm", { locale: ptBR })}
                             </span>
