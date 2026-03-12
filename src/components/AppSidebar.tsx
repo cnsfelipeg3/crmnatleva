@@ -56,7 +56,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const [financeOpen, setFinanceOpen] = useState(false);
   const [rhOpen, setRhOpen] = useState(false);
-  const [livechatOpen, setLivechatOpen] = useState(false);
+  
   const [operacaoOpen, setOperacaoOpen] = useState(false);
   const [implOpen, setImplOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -76,7 +76,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   useEffect(() => {
     if (window.location.pathname.startsWith("/financeiro")) setFinanceOpen(true);
     if (window.location.pathname.startsWith("/rh")) setRhOpen(true);
-    if (window.location.pathname.startsWith("/livechat")) setLivechatOpen(true);
+    
     if (window.location.pathname.startsWith("/operacao")) setOperacaoOpen(true);
     if (window.location.pathname.startsWith("/implementacao") || window.location.pathname.startsWith("/import") || window.location.pathname.startsWith("/livechat/import")) setImplOpen(true);
     if (window.location.pathname.startsWith("/admin")) setAdminOpen(true);
@@ -139,37 +139,8 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
       <nav className="relative flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => renderNavItem(item))}
 
-        {/* LiveChat section */}
-        <button
-          onClick={() => setLivechatOpen(!livechatOpen)}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
-            livechatOpen
-              ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
-              : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
-          )}
-        >
-          <MessageSquare className={cn("w-5 h-5 shrink-0", livechatOpen && "text-sidebar-primary")} />
-          {!isCollapsed && (
-            <>
-              <span className="flex-1 text-left">LiveChat WhatsApp</span>
-              <ChevronDown className={cn("w-4 h-4 transition-transform", livechatOpen && "rotate-180")} />
-            </>
-          )}
-        </button>
 
-        {livechatOpen && !isCollapsed && (
-          <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
-            {[
-              { to: "/livechat", icon: MessageSquare, label: "Conversas" },
-              { to: "/livechat/flows", icon: GitBranch, label: "Automação / Agentes" },
-              { to: "/livechat/integration", icon: Zap, label: "WhatsApp API" },
-              { to: "/livechat/integrations", icon: Plug, label: "Integrações de IA" },
-              { to: "/livechat/knowledge-base", icon: BookOpen, label: "Base de Conhecimento" },
-              { to: "/livechat/analise", icon: Brain, label: "Análise de Atendimento" },
-            ].map((item) => renderNavItem(item, true))}
-          </div>
-        )}
+
 
         {/* Operação Diária section */}
         <button
