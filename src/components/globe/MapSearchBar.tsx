@@ -1,3 +1,4 @@
+/// <reference types="google.maps" />
 /**
  * MapSearchBar — Google Places Autocomplete search for the Journey Globe.
  * Premium, minimal overlay that floats above the Cesium canvas.
