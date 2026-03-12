@@ -357,7 +357,45 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
                 <Input className="h-9" value={payment.notes} onChange={e => updatePayment(payment.id, "notes", e.target.value)} placeholder="Opcional" />
               </div>
             </div>
-          </Card>
+
+            {/* Receipt attachment */}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Comprovante</Label>
+              {payment.receipt_url ? (
+                <div className="flex items-center gap-2 bg-muted/40 rounded-lg px-3 py-2">
+                  <FileText className="w-4 h-4 text-primary shrink-0" />
+                  <span className="text-xs truncate flex-1">{payment.receipt_name || "Comprovante"}</span>
+                  <a href={payment.receipt_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                  <button onClick={() => removeReceipt(payment.id)} className="text-destructive hover:text-destructive/80">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center gap-2 border border-dashed border-border rounded-lg px-3 py-2 cursor-pointer hover:border-primary/50 transition-colors">
+                  {uploadingPaymentId === payment.id ? (
+                    <span className="text-xs text-muted-foreground">Enviando...</span>
+                  ) : (
+                    <>
+                      <Paperclip className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Anexar comprovante</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="hidden"
+                    disabled={uploadingPaymentId === payment.id}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleReceiptUpload(payment.id, file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
+              )}
+            </div>
         );
       })}
 
