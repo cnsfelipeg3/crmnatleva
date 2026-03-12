@@ -89,7 +89,7 @@ export default function PortalDashboard() {
   if (loading) {
     return (
       <PortalLayout>
-        <div className="flex items-center justify-center py-40">
+        <div className="flex items-center justify-center py-40 px-4">
           <div className="flex flex-col items-center gap-5">
             <div className="w-12 h-12 border-[3px] border-accent/20 border-t-accent rounded-full animate-spin" />
             <p className="text-muted-foreground text-sm tracking-wide">Carregando suas jornadas...</p>
