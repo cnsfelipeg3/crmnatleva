@@ -170,6 +170,9 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
         {children}
       </main>
 
+      {/* AI Assistant */}
+      <PortalAssistant />
+
       {/* Footer */}
       <footer className="border-t border-border bg-card/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

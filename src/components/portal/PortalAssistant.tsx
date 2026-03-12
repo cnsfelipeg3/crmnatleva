@@ -178,7 +178,7 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
                 <div>
                   <p className="text-sm font-semibold text-foreground">Assistente NatLeva</p>
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500" /> Online
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" /> Online
                   </p>
                 </div>
               </div>
