@@ -803,7 +803,7 @@ export default function LiveChat() {
               last_message_at: bestTime,
               unread_count: isOpen ? 0 : Math.max(c.unread_count, u.unread_count ?? 0),
               stage: (u.stage as Stage) || c.stage, tags: u.tags || c.tags,
-              contact_name: c.contact_name || u.contact_name,
+              contact_name: getSafeContactName(c.contact_name, c.phone) || getSafeContactName(u.contact_name, cleanPhone || u.phone),
               source: u.source || c.source,
             } : c).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
             return updated.sort((a, b) => {
