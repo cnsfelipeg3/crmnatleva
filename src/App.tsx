@@ -71,6 +71,12 @@ import FechamentoFornecedores from "@/pages/financeiro/FechamentoFornecedores";
 // Admin
 import AdminUsers from "@/pages/admin/AdminUsers";
 
+// Portal Admin
+import PortalAdminDashboard from "@/pages/portal-admin/PortalAdminDashboard";
+import PortalAdminTrips from "@/pages/portal-admin/PortalAdminTrips";
+import PortalAdminTripDetail from "@/pages/portal-admin/PortalAdminTripDetail";
+import PortalAdminClients from "@/pages/portal-admin/PortalAdminClients";
+
 // Portal do Cliente
 import { PortalAuthProvider } from "@/contexts/PortalAuthContext";
 import PortalLogin from "@/pages/portal/PortalLogin";
@@ -164,6 +170,12 @@ function AppRoutes() {
 
         {/* Admin */}
         <Route path="/admin/users" element={<AdminUsers />} />
+
+        {/* Portal Admin */}
+        <Route path="/portal-admin" element={<PortalAdminDashboard />} />
+        <Route path="/portal-admin/viagens" element={<PortalAdminTrips />} />
+        <Route path="/portal-admin/viagens/:id" element={<PortalAdminTripDetail />} />
+        <Route path="/portal-admin/clientes" element={<PortalAdminClients />} />
 
         {/* Operação Diária */}
         <Route path="/operacao/inbox" element={<OperacaoInbox />} />

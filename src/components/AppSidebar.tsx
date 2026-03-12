@@ -9,7 +9,7 @@ import {
   Percent, FolderTree, Users2, BarChart3, Cog, Calculator,
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
   GitBranch, Plug, Zap, BookOpen, FileDown, Presentation, RotateCcw,
-  Inbox, Bot, Tag, TestTube, ScrollText, PackageOpen, Upload, Database,
+  Inbox, Bot, Tag, TestTube, ScrollText, PackageOpen, Upload, Database, Globe,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -60,6 +60,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [operacaoOpen, setOperacaoOpen] = useState(false);
   const [implOpen, setImplOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [portalAdminOpen, setPortalAdminOpen] = useState(false);
   const isCollapsed = mobile ? false : collapsed;
 
   useEffect(() => {
@@ -79,6 +80,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     if (window.location.pathname.startsWith("/operacao")) setOperacaoOpen(true);
     if (window.location.pathname.startsWith("/implementacao") || window.location.pathname.startsWith("/import") || window.location.pathname.startsWith("/livechat/import")) setImplOpen(true);
     if (window.location.pathname.startsWith("/admin")) setAdminOpen(true);
+    if (window.location.pathname.startsWith("/portal-admin")) setPortalAdminOpen(true);
   }, []);
 
   const renderNavItem = (item: typeof navItems[0], indent = false) => (
@@ -227,6 +229,39 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/import", icon: FileUp, label: "Importar Planilhas" },
               { to: "/livechat/import-chatguru", icon: FileDown, label: "Importar Conversas" },
               { to: "/implementacao/base-conhecimento", icon: BookOpen, label: "Base de Conhecimento" },
+            ].map((item) => renderNavItem(item, true))}
+          </div>
+        )}
+
+        {/* Portal do Viajante section */}
+        <button
+          onClick={() => setPortalAdminOpen(!portalAdminOpen)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
+            portalAdminOpen
+              ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
+              : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+          )}
+        >
+          <Globe className={cn("w-5 h-5 shrink-0", portalAdminOpen && "text-sidebar-primary")} />
+          {!isCollapsed && (
+            <>
+              <span className="flex-1 text-left">Portal do Viajante</span>
+              <ChevronDown className={cn("w-4 h-4 transition-transform", portalAdminOpen && "rotate-180")} />
+            </>
+          )}
+        </button>
+
+        {portalAdminOpen && !isCollapsed && (
+          <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
+            {[
+              { to: "/portal-admin", icon: BarChart3, label: "Dashboard" },
+              { to: "/portal-admin/viagens", icon: Plane, label: "Viagens" },
+              { to: "/portal-admin/clientes", icon: Users, label: "Clientes" },
+              { to: "/portal-admin/documentos", icon: FileText, label: "Documentos" },
+              { to: "/itinerario", icon: FileText, label: "Itinerários" },
+              { to: "/portal-admin/notificacoes", icon: MessageSquare, label: "Notificações" },
+              { to: "/portal-admin/config", icon: Cog, label: "Configurações" },
             ].map((item) => renderNavItem(item, true))}
           </div>
         )}
