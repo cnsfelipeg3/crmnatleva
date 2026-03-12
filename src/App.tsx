@@ -93,6 +93,7 @@ const BaseConhecimento = lazy(() => import("@/pages/implementacao/BaseConhecimen
 const PortalLogin = lazy(() => import("@/pages/portal/PortalLogin"));
 const PortalDashboard = lazy(() => import("@/pages/portal/PortalDashboard"));
 const PortalTripDetail = lazy(() => import("@/pages/portal/PortalTripDetail"));
+const PortalDemoTrip = lazy(() => import("@/pages/portal/PortalDemoTrip"));
 
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
