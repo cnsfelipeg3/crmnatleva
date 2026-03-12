@@ -9,7 +9,7 @@ import {
   Percent, FolderTree, Users2, BarChart3, Cog, Calculator,
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
   GitBranch, Plug, Zap, BookOpen, FileDown, Presentation, RotateCcw,
-  Inbox, Bot, Tag, TestTube, ScrollText,
+  Inbox, Bot, Tag, TestTube, ScrollText, PackageOpen, FileUp, Upload, Database,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
