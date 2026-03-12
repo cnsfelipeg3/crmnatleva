@@ -6,7 +6,7 @@ import { formatDateBR, formatTimeBR } from "@/lib/dateFormat";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Plane, Hotel, Car, Ticket, Shield, ShoppingBag, Train, MapPin, Clock,
+  Plane, Hotel, Car, Ticket, Shield, ShoppingBag, Train, MapPin, Clock, Calendar,
 } from "lucide-react";
 
 const AIRPORT_COORDS: Record<string, [number, number]> = {
@@ -43,6 +43,7 @@ const AIRPORT_COORDS: Record<string, [number, number]> = {
   ATH: [37.9364, 23.9445], WAW: [52.1672, 20.9679], ARN: [59.6519, 17.9186],
   GVA: [46.2381, 6.1089], BRU: [50.9014, 4.4844], EDI: [55.9500, -3.3725],
   JNB: [-26.1392, 28.2460], CPT: [-33.9649, 18.6017], NBO: [-1.3192, 36.9278],
+  STR: [48.6899, 9.2220],
 };
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -53,10 +54,22 @@ const TYPE_ICON: Record<string, typeof Plane> = {
   aluguel_carro: Car, outros: ShoppingBag,
 };
 
-const TYPE_COLOR: Record<string, string> = {
-  aereo: "text-blue-400", hotel: "text-amber-400", trem: "text-purple-400",
-  transfer: "text-green-400", passeio: "text-pink-400", seguro: "text-cyan-400",
-  ingresso: "text-orange-400", aluguel_carro: "text-teal-400", outros: "text-muted-foreground",
+const TYPE_LABEL: Record<string, string> = {
+  aereo: "Voo", hotel: "Hospedagem", trem: "Trem", transfer: "Transfer",
+  passeio: "Passeio", seguro: "Seguro", ingresso: "Ingresso",
+  aluguel_carro: "Aluguel", outros: "Serviço",
+};
+
+const TYPE_BG: Record<string, string> = {
+  aereo: "bg-blue-500/15 text-blue-400 ring-blue-500/20",
+  hotel: "bg-amber-500/15 text-amber-400 ring-amber-500/20",
+  trem: "bg-purple-500/15 text-purple-400 ring-purple-500/20",
+  transfer: "bg-emerald-500/15 text-emerald-400 ring-emerald-500/20",
+  passeio: "bg-pink-500/15 text-pink-400 ring-pink-500/20",
+  seguro: "bg-cyan-500/15 text-cyan-400 ring-cyan-500/20",
+  ingresso: "bg-orange-500/15 text-orange-400 ring-orange-500/20",
+  aluguel_carro: "bg-teal-500/15 text-teal-400 ring-teal-500/20",
+  outros: "bg-muted/50 text-muted-foreground ring-border",
 };
 
 export interface TripSegment {
@@ -148,7 +161,7 @@ export default function TripRouteMap({ segments, services, hotelInfo, height = "
       if (!(layer instanceof L.TileLayer)) map.removeLayer(layer);
     });
 
-    // Draw route lines with animation feel
+    // Draw route lines
     for (let i = 0; i < segments.length; i++) {
       const seg = segments[i];
       const o = seg.origin_iata && AIRPORT_COORDS[seg.origin_iata];
@@ -173,7 +186,7 @@ export default function TripRouteMap({ segments, services, hotelInfo, height = "
         smoothFactor: 3,
         dashArray: isReturn ? "8 6" : undefined,
       }).bindPopup(
-        `<div style="font-family:sans-serif;font-size:12px;">
+        `<div style="font-family:system-ui,sans-serif;font-size:12px;line-height:1.5;">
           <strong>${seg.airline || ""} ${seg.flight_number || ""}</strong><br/>
           ${iataToLabel(seg.origin_iata!)} → ${iataToLabel(seg.destination_iata!)}<br/>
           ${seg.departure_date ? formatDateBR(seg.departure_date) : ""}
@@ -182,7 +195,7 @@ export default function TripRouteMap({ segments, services, hotelInfo, height = "
       ).addTo(map);
     }
 
-    // Draw airport markers with sequence numbers
+    // Draw airport markers
     routePoints.forEach((pt, idx) => {
       const isFirst = idx === 0;
       const isLast = idx === routePoints.length - 1;
@@ -196,24 +209,21 @@ export default function TripRouteMap({ segments, services, hotelInfo, height = "
       });
 
       marker.bindPopup(
-        `<div style="font-family:sans-serif;font-size:13px;font-weight:700;">
+        `<div style="font-family:system-ui,sans-serif;font-size:13px;font-weight:700;">
           ${isFirst ? "🛫 " : isLast ? "🛬 " : "📍 "}${iataToLabel(pt.iata)}
         </div>`
       );
 
-      // Add label
       const label = L.divIcon({
         className: "",
-        html: `<div style="font-family:sans-serif;font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.8);white-space:nowrap;transform:translateX(-50%);">${pt.iata}</div>`,
+        html: `<div style="font-family:system-ui,sans-serif;font-size:10px;font-weight:700;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,0.8);white-space:nowrap;transform:translateX(-50%);">${pt.iata}</div>`,
         iconSize: [40, 14],
         iconAnchor: [20, -8],
       });
       L.marker(pt.coords, { icon: label, interactive: false }).addTo(map);
-
       marker.addTo(map);
     });
 
-    // Fit bounds
     if (routePoints.length >= 2) {
       const bounds = routePoints.map(p => p.coords);
       map.fitBounds(bounds as L.LatLngBoundsExpression, { padding: [50, 50] });
@@ -222,21 +232,21 @@ export default function TripRouteMap({ segments, services, hotelInfo, height = "
     }
   }, [segments, routePoints]);
 
-  // Build all items for sidebar
+  // Build itinerary items
   const allItems = useMemo(() => {
     const items: TripService[] = [];
 
     segments.forEach(seg => {
       items.push({
         type: "aereo",
-        title: `${seg.origin_iata || "?"} → ${seg.destination_iata || "?"}`,
-        subtitle: `${seg.airline || ""} ${seg.flight_number || ""} • ${seg.flight_class || ""}`.trim(),
+        title: `${iataToLabel(seg.origin_iata || "?")} → ${iataToLabel(seg.destination_iata || "?")}`,
+        subtitle: [seg.airline, seg.flight_number, seg.flight_class].filter(Boolean).join(" • "),
         date: seg.departure_date,
         time: seg.departure_time,
         details: {
-          ...(seg.departure_time ? { "Partida": formatTimeBR(seg.departure_time) } : {}),
-          ...(seg.arrival_time ? { "Chegada": formatTimeBR(seg.arrival_time) } : {}),
-          ...(seg.duration_minutes ? { "Duração": `${Math.floor(seg.duration_minutes / 60)}h${seg.duration_minutes % 60 > 0 ? `${seg.duration_minutes % 60}min` : ""}` } : {}),
+          ...(seg.departure_time ? { "Embarque": formatTimeBR(seg.departure_time) } : {}),
+          ...(seg.arrival_time ? { "Pouso": formatTimeBR(seg.arrival_time) } : {}),
+          ...(seg.duration_minutes ? { "Duração": `${Math.floor(seg.duration_minutes / 60)}h${seg.duration_minutes % 60 > 0 ? `${String(seg.duration_minutes % 60).padStart(2, "0")}min` : ""}` } : {}),
           ...(seg.terminal ? { "Terminal": seg.terminal } : {}),
         },
       });
@@ -245,8 +255,8 @@ export default function TripRouteMap({ segments, services, hotelInfo, height = "
     if (hotelInfo?.name) {
       items.push({
         type: "hotel",
-        title: `Check-in: ${hotelInfo.name}`,
-        subtitle: `${hotelInfo.city || ""} • ${hotelInfo.room || ""} ${hotelInfo.mealPlan || ""}`.trim(),
+        title: hotelInfo.name,
+        subtitle: [hotelInfo.city, hotelInfo.room ? `Quarto ${hotelInfo.room}` : null, hotelInfo.mealPlan].filter(Boolean).join(" · "),
         date: hotelInfo.checkinDate,
         time: "14:00",
         reservationCode: hotelInfo.reservationCode,
@@ -259,8 +269,8 @@ export default function TripRouteMap({ segments, services, hotelInfo, height = "
       if (hotelInfo.checkoutDate) {
         items.push({
           type: "hotel",
-          title: `Check-out: ${hotelInfo.name}`,
-          subtitle: hotelInfo.city || "",
+          title: hotelInfo.name,
+          subtitle: `Check-out · ${hotelInfo.city || ""}`,
           date: hotelInfo.checkoutDate,
           time: "12:00",
           reservationCode: hotelInfo.reservationCode,
@@ -282,92 +292,159 @@ export default function TripRouteMap({ segments, services, hotelInfo, height = "
     return items;
   }, [segments, hotelInfo, services]);
 
-  let lastDate = "";
+  // Group items by date for cleaner presentation
+  const groupedByDate = useMemo(() => {
+    const groups: { date: string; items: TripService[] }[] = [];
+    let currentDate = "";
+    allItems.forEach(item => {
+      const d = item.date || "sem-data";
+      if (d !== currentDate) {
+        currentDate = d;
+        groups.push({ date: d, items: [item] });
+      } else {
+        groups[groups.length - 1].items.push(item);
+      }
+    });
+    return groups;
+  }, [allItems]);
 
   return (
-    <div className="flex flex-col lg:flex-row gap-0 rounded-xl overflow-hidden border border-border bg-card" style={{ height }}>
+    <div className="flex flex-col lg:flex-row gap-0 rounded-xl overflow-hidden border border-border/50 bg-card shadow-lg" style={{ height }}>
       {/* Map */}
       <div className="flex-1 min-h-[250px] relative">
         <div ref={containerRef} className="absolute inset-0" />
         {/* Legend overlay */}
-        <div className="absolute bottom-3 left-3 z-[1000] bg-card/90 backdrop-blur rounded-lg px-3 py-2 border border-border text-[10px] flex items-center gap-3">
-          <span className="flex items-center gap-1.5">
-            <span className="w-5 h-0.5 bg-[hsl(160,60%,50%)] inline-block rounded" /> Ida
+        <div className="absolute bottom-3 left-3 z-[1000] bg-card/90 backdrop-blur-md rounded-lg px-3.5 py-2.5 border border-border/50 shadow-md flex items-center gap-4">
+          <span className="flex items-center gap-2 text-[11px] text-foreground/80 font-medium">
+            <span className="w-6 h-0.5 bg-[hsl(160,60%,50%)] inline-block rounded-full" /> Ida
           </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-5 h-0.5 border-t-2 border-dashed border-[hsl(38,92%,50%)] inline-block" /> Volta
+          <span className="flex items-center gap-2 text-[11px] text-foreground/80 font-medium">
+            <span className="w-6 h-0.5 border-t-2 border-dashed border-[hsl(38,92%,50%)] inline-block" /> Volta
           </span>
         </div>
       </div>
 
-      {/* Sidebar */}
-      <div className="lg:w-[340px] w-full border-t lg:border-t-0 lg:border-l border-border bg-card/50">
-        <div className="p-3 border-b border-border flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-primary" />
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Itinerário Completo</h4>
-          <Badge variant="outline" className="text-[9px] ml-auto">{allItems.length} itens</Badge>
+      {/* Sidebar – Itinerário */}
+      <div className="lg:w-[370px] w-full border-t lg:border-t-0 lg:border-l border-border/50 bg-gradient-to-b from-card to-card/80 flex flex-col">
+        {/* Header */}
+        <div className="px-4 py-3.5 border-b border-border/50 flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+            <MapPin className="w-3.5 h-3.5 text-primary" />
+          </div>
+          <div className="flex-1">
+            <h4 className="text-[13px] font-bold text-foreground tracking-tight">Itinerário Completo</h4>
+            <p className="text-[10px] text-muted-foreground">Cronologia da viagem</p>
+          </div>
+          <Badge variant="secondary" className="text-[10px] font-semibold tabular-nums px-2.5">
+            {allItems.length} {allItems.length === 1 ? "item" : "itens"}
+          </Badge>
         </div>
-        <ScrollArea className="h-[calc(100%-42px)]">
-          <div className="p-2 space-y-1">
-            {allItems.map((item, i) => {
-              const Icon = TYPE_ICON[item.type] || ShoppingBag;
-              const color = TYPE_COLOR[item.type] || "text-muted-foreground";
-              const showDate = item.date && item.date !== lastDate;
-              if (item.date) lastDate = item.date;
 
-              return (
-                <div key={i}>
-                  {showDate && (
-                    <div className="flex items-center gap-2 px-2 pt-2 pb-1">
-                      <Clock className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        {formatDateBR(item.date!)}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-start gap-2.5 px-2 py-2 rounded-lg hover:bg-muted/30 transition-colors">
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-muted/50 ${color}`}>
-                      <Icon className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        {item.time && (
-                          <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                            {formatTimeBR(item.time)}
-                          </span>
-                        )}
-                        <p className="text-xs font-semibold text-foreground truncate">{item.title}</p>
-                      </div>
-                      {item.subtitle && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{item.subtitle}</p>
-                      )}
-                      {item.details && Object.keys(item.details).length > 0 && (
-                        <div className="flex flex-wrap gap-x-3 gap-y-0 mt-1">
-                          {Object.entries(item.details).map(([k, v]) => v && (
-                            <span key={k} className="text-[10px] text-muted-foreground">
-                              <span className="opacity-60">{k}:</span> <span className="font-medium text-foreground/70">{v}</span>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      {item.reservationCode && (
-                        <span className="text-[9px] font-mono bg-muted/50 px-1.5 py-0.5 rounded mt-1 inline-block">
-                          {item.reservationCode}
-                        </span>
-                      )}
-                      {item.value != null && item.value > 0 && (
-                        <span className="text-[10px] font-semibold text-primary ml-2">{fmt(item.value)}</span>
-                      )}
-                    </div>
+        {/* Items */}
+        <ScrollArea className="flex-1">
+          <div className="p-3 space-y-0.5">
+            {groupedByDate.map((group, gi) => (
+              <div key={gi}>
+                {/* Date header */}
+                {group.date !== "sem-data" && (
+                  <div className="flex items-center gap-2 px-1 pt-3 pb-2 first:pt-0">
+                    <Calendar className="w-3.5 h-3.5 text-primary/60" />
+                    <span className="text-[11px] font-bold text-foreground/80 tracking-wide">
+                      {formatDateBR(group.date)}
+                    </span>
+                    <div className="flex-1 h-px bg-border/40 ml-1" />
                   </div>
-                </div>
-              );
-            })}
+                )}
+
+                {/* Items within date */}
+                {group.items.map((item, i) => {
+                  const Icon = TYPE_ICON[item.type] || ShoppingBag;
+                  const bgClass = TYPE_BG[item.type] || TYPE_BG.outros;
+                  const label = TYPE_LABEL[item.type] || "Serviço";
+                  const isCheckin = item.title?.toLowerCase().includes("check-in") || 
+                    (item.type === "hotel" && !item.subtitle?.toLowerCase().includes("check-out"));
+                  const isCheckout = item.subtitle?.toLowerCase().includes("check-out");
+
+                  return (
+                    <div
+                      key={`${gi}-${i}`}
+                      className="group relative flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-muted/20 transition-all duration-200"
+                    >
+                      {/* Timeline connector */}
+                      {i < group.items.length - 1 && (
+                        <div className="absolute left-[22px] top-[38px] bottom-0 w-px bg-border/30" />
+                      )}
+
+                      {/* Icon */}
+                      <div className={`w-8 h-8 rounded-xl ring-1 flex items-center justify-center shrink-0 ${bgClass}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0 space-y-1">
+                        {/* Top row: time + type badge */}
+                        <div className="flex items-center gap-2">
+                          {item.time && (
+                            <span className="text-[11px] font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                              {formatTimeBR(item.time)}
+                            </span>
+                          )}
+                          <span className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                            {isCheckin ? "Check-in" : isCheckout ? "Check-out" : label}
+                          </span>
+                        </div>
+
+                        {/* Title */}
+                        <p className="text-[13px] font-semibold text-foreground leading-tight">
+                          {item.title}
+                        </p>
+
+                        {/* Subtitle */}
+                        {item.subtitle && (
+                          <p className="text-[11px] text-muted-foreground leading-snug">
+                            {item.subtitle}
+                          </p>
+                        )}
+
+                        {/* Details grid */}
+                        {item.details && Object.keys(item.details).length > 0 && (
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5">
+                            {Object.entries(item.details).map(([k, v]) => v && (
+                              <div key={k} className="flex items-baseline gap-1">
+                                <span className="text-[10px] text-muted-foreground/50 font-medium">{k}</span>
+                                <span className="text-[11px] font-medium text-foreground/80">{v}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Bottom row: reservation code + value */}
+                        {(item.reservationCode || (item.value != null && item.value > 0)) && (
+                          <div className="flex items-center gap-3 mt-1.5">
+                            {item.reservationCode && (
+                              <span className="text-[10px] font-mono font-medium bg-muted/60 text-muted-foreground px-2 py-0.5 rounded-md border border-border/30">
+                                {item.reservationCode}
+                              </span>
+                            )}
+                            {item.value != null && item.value > 0 && (
+                              <span className="text-[11px] font-bold text-primary">{fmt(item.value)}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
 
             {allItems.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <MapPin className="w-6 h-6 mx-auto mb-2 opacity-40" />
-                <p className="text-xs">Nenhum item no itinerário</p>
+              <div className="text-center py-12 text-muted-foreground">
+                <div className="w-12 h-12 rounded-2xl bg-muted/30 flex items-center justify-center mx-auto mb-3">
+                  <MapPin className="w-5 h-5 opacity-40" />
+                </div>
+                <p className="text-sm font-medium">Nenhum item no itinerário</p>
+                <p className="text-xs text-muted-foreground/60 mt-1">Adicione voos, hospedagens ou serviços</p>
               </div>
             )}
           </div>
