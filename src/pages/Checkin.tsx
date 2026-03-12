@@ -102,7 +102,7 @@ function getDaysUntil(dateStr: string | null): number {
   return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-type ViewMode = "agenda" | "cards" | "pipeline";
+type ViewMode = "agenda" | "cards" | "pipeline" | "calendar";
 type TimeFilter = "all" | "today" | "tomorrow" | "3days" | "7days";
 
 export default function Checkin() {
