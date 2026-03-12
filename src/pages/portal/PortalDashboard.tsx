@@ -15,6 +15,7 @@ import {
 } from "@/components/travel-ui";
 
 const GlobeScene = lazy(() => import("@/components/portal/GlobeScene"));
+const TravelGlobe = lazy(() => import("@/components/globe/TravelGlobe"));
 
 /* ═══ Quick Action ═══ */
 function QuickAction({ icon: Icon, label, onClick, delay }: {
