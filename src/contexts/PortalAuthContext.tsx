@@ -30,6 +30,26 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
 
   const fetchPortalAccess = async (userId: string) => {
     try {
+      // Check if user is admin first
+      const { data: roleData } = await (supabase as any)
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (roleData) {
+        // Admin gets full portal access without needing portal_access entry
+        setPortalAccess({
+          id: "admin",
+          client_id: "admin",
+          must_change_password: false,
+          first_login_at: new Date().toISOString(),
+          is_admin: true,
+        });
+        return;
+      }
+
       const { data, error } = await (supabase as any)
         .from("portal_access")
         .select("id, client_id, must_change_password, first_login_at")
