@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ const integrations: Integration[] = [
 ];
 
 export default function OperacaoIntegracoes() {
+  const navigate = useNavigate();
   const [selected, setSelected] = useState<Integration | null>(null);
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
@@ -63,6 +65,10 @@ export default function OperacaoIntegracoes() {
 
   const handleOpen = (int: Integration) => {
     if (!int.configurable) return;
+    if (int.id === "whatsapp-qrcode") {
+      navigate("/livechat/whatsapp-qr");
+      return;
+    }
     setSelected(int);
     setCredentials({});
     setShowSecrets({});
