@@ -99,6 +99,7 @@ export default function PortalTripDetail() {
       const mockData = getMockTripDetail(id || "");
       if (mockData) {
         setData({
+          subtitle: mockData.subtitle,
           published: { custom_title: mockData.custom_title, cover_image_url: mockData.cover_image_url, notes_for_client: mockData.notes_for_client },
           sale: mockData.sale,
           segments: mockData.segments,
@@ -153,6 +154,7 @@ export default function PortalTripDetail() {
   const status = getTripStatus(sale || {});
   const tripDays = getTripDays(sale || {});
   const title = published?.custom_title || sale?.name || "Sua Jornada";
+  const subtitle = data?.subtitle || published?.subtitle || undefined;
   const imageUrl = getDestinationImage(sale?.destination_iata, published?.cover_image_url);
 
   return (
@@ -161,6 +163,7 @@ export default function PortalTripDetail() {
 
         <JourneyHero
           title={title}
+          subtitle={subtitle}
           imageUrl={imageUrl}
           originIata={sale?.origin_iata}
           destinationIata={sale?.destination_iata}

@@ -71,6 +71,7 @@ export { Countdown } from "./Countdown";
 /* ── Journey Hero ── */
 interface JourneyHeroProps {
   title: string;
+  subtitle?: string;
   imageUrl: string;
   originIata?: string | null;
   destinationIata?: string | null;
@@ -83,7 +84,7 @@ interface JourneyHeroProps {
 }
 
 export default function JourneyHero({
-  title, imageUrl, originIata, destinationIata,
+  title, subtitle, imageUrl, originIata, destinationIata,
   departureDate, returnDate, status, tripDays, onBack, children,
 }: JourneyHeroProps) {
   return (
@@ -129,6 +130,9 @@ export default function JourneyHero({
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-[0.95] tracking-tighter">
             {title}
           </h1>
+          {subtitle && (
+            <p className="text-base sm:text-lg text-white/50 font-light tracking-wide mt-2">{subtitle}</p>
+          )}
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-4 text-sm text-white/60 font-light tracking-wide">
             {originIata && destinationIata && (
@@ -141,7 +145,7 @@ export default function JourneyHero({
             {departureDate && (
               <span className="flex items-center gap-1.5">
                 <Calendar className="h-3.5 w-3.5 text-white/40" />
-                {fmtShort(departureDate)} — {fmtShort(returnDate)}
+                {fmtShort(departureDate)} · {fmtShort(returnDate)}
               </span>
             )}
             {(tripDays ?? 0) > 0 && (
