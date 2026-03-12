@@ -185,19 +185,7 @@ export default function PortalTripDetail() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
           <JourneyProgress departureDate={sale?.departure_date} returnDate={sale?.return_date} />
-          <NextAction sale={sale} segments={segments || []} financial={financial} attachments={attachments || []} />
-
-          {published?.notes_for_client && (
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-10">
-              <div className="relative pl-5 border-l-2 border-accent/30">
-                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-accent/20 flex items-center justify-center">
-                  <Sparkles className="h-2.5 w-2.5 text-accent" />
-                </div>
-                <p className="text-[10px] text-accent/70 uppercase tracking-[0.3em] font-medium mb-2">Mensagem da NatLeva</p>
-                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{published.notes_for_client}</p>
-              </div>
-            </motion.div>
-          )}
+          <WelcomeBlock sale={sale} segments={segments || []} financial={financial} attachments={attachments || []} message={published?.notes_for_client} />
 
           {segments?.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-8">
