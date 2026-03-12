@@ -75,28 +75,69 @@ export default function Dashboard() {
   const [region, setRegion] = useState("all");
 
   useEffect(() => {
-    if (authLoading || !user) return;
-    Promise.all([
-      fetchAllRows("sales", "id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, airline, locators, created_at, close_date, emission_status, hotel_name, is_international, miles_program, seller_id, client_id", { order: { column: "created_at", ascending: false } }),
-      fetchAllRows("profiles", "id, full_name"),
-      fetchAllRows("clients", "id, display_name, created_at"),
-      fetchAllRows("flight_segments", "sale_id, origin_iata, destination_iata"),
-      fetchAllRows("cost_items", "sale_id, category, miles_quantity, miles_price_per_thousand, miles_program, cash_value, total_item_cost"),
-      fetchAllRows("checkin_tasks", "status, checkin_open_datetime_utc, completed_at, created_at"),
-      fetchAllRows("lodging_confirmation_tasks", "status, milestone, scheduled_at_utc, issue_type"),
-    ]).then(([salesData, profilesData, clientsData, segmentsData, costsData, checkinData, lodgingData]) => {
-      setSales(salesData as Sale[]);
-      setProfiles(profilesData as Profile[]);
-      setClients(clientsData as Client[]);
-      setSegments(segmentsData as Segment[]);
-      setCostItems(costsData as CostItem[]);
-      setCheckinTasks(checkinData as CheckinTask[]);
-      setLodgingTasks(lodgingData as LodgingTask[]);
+    if (authLoading) return;
+    if (!user) {
       setLoading(false);
-    }).catch(err => {
-      console.error("Dashboard fetch error:", err);
+      return;
+    }
+
+    let isMounted = true;
+    setLoading(true);
+
+    const loadDashboard = async () => {
+      const [salesRes, profilesRes, clientsRes] = await Promise.allSettled([
+        fetchAllRows(
+          "sales",
+          "id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, airline, locators, created_at, close_date, emission_status, hotel_name, is_international, miles_program, seller_id, client_id",
+          { order: { column: "created_at", ascending: false }, maxRows: 5000 },
+        ),
+        fetchAllRows("profiles", "id, full_name", { cacheMs: 30000 }),
+        fetchAllRows("clients", "id, display_name, created_at", { maxRows: 15000 }),
+      ]);
+
+      if (!isMounted) return;
+
+      if (salesRes.status === "fulfilled") setSales(salesRes.value as Sale[]);
+      else console.error("Dashboard sales fetch error:", salesRes.reason);
+
+      if (profilesRes.status === "fulfilled") setProfiles(profilesRes.value as Profile[]);
+      else console.error("Dashboard profiles fetch error:", profilesRes.reason);
+
+      if (clientsRes.status === "fulfilled") setClients(clientsRes.value as Client[]);
+      else console.error("Dashboard clients fetch error:", clientsRes.reason);
+
       setLoading(false);
+
+      const [segmentsRes, costsRes, checkinRes, lodgingRes] = await Promise.allSettled([
+        fetchAllRows("flight_segments", "sale_id, origin_iata, destination_iata", { maxRows: 10000 }),
+        fetchAllRows("cost_items", "sale_id, category, miles_quantity, miles_price_per_thousand, miles_program, cash_value, total_item_cost", { maxRows: 10000 }),
+        fetchAllRows("checkin_tasks", "status, checkin_open_datetime_utc, completed_at, created_at", { maxRows: 5000 }),
+        fetchAllRows("lodging_confirmation_tasks", "status, milestone, scheduled_at_utc, issue_type", { maxRows: 5000 }),
+      ]);
+
+      if (!isMounted) return;
+
+      if (segmentsRes.status === "fulfilled") setSegments(segmentsRes.value as Segment[]);
+      else console.error("Dashboard segments fetch error:", segmentsRes.reason);
+
+      if (costsRes.status === "fulfilled") setCostItems(costsRes.value as CostItem[]);
+      else console.error("Dashboard costs fetch error:", costsRes.reason);
+
+      if (checkinRes.status === "fulfilled") setCheckinTasks(checkinRes.value as CheckinTask[]);
+      else console.error("Dashboard checkin fetch error:", checkinRes.reason);
+
+      if (lodgingRes.status === "fulfilled") setLodgingTasks(lodgingRes.value as LodgingTask[]);
+      else console.error("Dashboard lodging fetch error:", lodgingRes.reason);
+    };
+
+    loadDashboard().catch((err) => {
+      console.error("Dashboard bootstrap error:", err);
+      if (isMounted) setLoading(false);
     });
+
+    return () => {
+      isMounted = false;
+    };
   }, [user, authLoading]);
 
   const sellerNames = useMemo(() => {

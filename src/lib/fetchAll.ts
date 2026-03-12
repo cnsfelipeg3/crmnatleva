@@ -11,6 +11,7 @@ const inFlightRequests = new Map<string, Promise<any[]>>();
 const resultCache = new Map<string, { rows: any[]; expiresAt: number }>();
 const DEFAULT_CACHE_MS = 15000;
 const MAX_CACHE_ENTRIES = 40;
+const MAX_PAGE_FETCHES = 500;
 
 function pruneCache() {
   if (resultCache.size <= MAX_CACHE_ENTRIES) return;
@@ -47,8 +48,18 @@ export async function fetchAllRows(
     const allRows: any[] = [];
     let from = 0;
     let hasMore = true;
+    let pageFetches = 0;
 
     while (hasMore) {
+      pageFetches += 1;
+      if (pageFetches > MAX_PAGE_FETCHES) {
+        console.warn(`fetchAllRows reached safety page limit for table "${table}". Returning partial data.`, {
+          table,
+          fetchedRows: allRows.length,
+          batchSize: safeBatchSize,
+        });
+        break;
+      }
       const to = from + safeBatchSize - 1;
 
       let query = (supabase.from as any)(table)
