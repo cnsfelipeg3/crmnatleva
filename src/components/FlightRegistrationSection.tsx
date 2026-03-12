@@ -710,13 +710,13 @@ function FlightGroupCard({
 
             {!canLookup && (
               <span className="text-xs text-muted-foreground">
-                Preencha companhia, origem, destino e data para consultar.
+                Preencha companhia + nº do voo, ou companhia + origem + destino + data.
               </span>
             )}
 
             {canLookup && !loading && (
               <span className="text-xs text-muted-foreground">
-                Pronto para buscar voos {effectiveAirline} {effectiveOrigin} → {effectiveDestination}
+                Pronto para buscar voos {effectiveAirline} {effectiveFlightNumber ? effectiveFlightNumber : `${effectiveOrigin} → ${effectiveDestination}`}
               </span>
             )}
 
