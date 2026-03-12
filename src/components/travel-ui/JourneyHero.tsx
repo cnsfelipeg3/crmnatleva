@@ -130,24 +130,25 @@ export default function JourneyHero({
             {title}
           </h1>
 
-          <div className="flex flex-wrap items-center gap-2 mt-4">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mt-4 text-sm text-white/60 font-light tracking-wide">
             {originIata && destinationIata && (
-              <div className="flex items-center gap-2 bg-white/[0.07] backdrop-blur-xl text-white/80 text-sm px-4 py-2 rounded-full border border-white/[0.06]">
-                <span className="font-mono tracking-[0.15em] text-white font-bold">{originIata}</span>
-                <ArrowRight className="h-3.5 w-3.5 text-accent" />
-                <span className="font-mono tracking-[0.15em] text-white font-bold">{destinationIata}</span>
-              </div>
+              <span className="flex items-center gap-2">
+                <span className="text-white font-semibold tracking-[0.2em] text-base">{originIata}</span>
+                <ArrowRight className="h-3 w-3 text-accent" />
+                <span className="text-white font-semibold tracking-[0.2em] text-base">{destinationIata}</span>
+              </span>
             )}
             {departureDate && (
-              <div className="flex items-center gap-1.5 bg-white/[0.07] backdrop-blur-xl text-white/70 text-sm px-4 py-2 rounded-full border border-white/[0.06]">
-                <Calendar className="h-3.5 w-3.5" />
+              <span className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-white/40" />
                 {fmtShort(departureDate)} — {fmtShort(returnDate)}
-              </div>
+              </span>
             )}
             {(tripDays ?? 0) > 0 && (
-              <div className="flex items-center gap-1.5 bg-white/[0.07] backdrop-blur-xl text-white/70 text-sm px-4 py-2 rounded-full border border-white/[0.06]">
-                <Clock className="h-3.5 w-3.5" /> {tripDays}d
-              </div>
+              <span className="flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5 text-white/40" />
+                {tripDays} dias
+              </span>
             )}
           </div>
 
