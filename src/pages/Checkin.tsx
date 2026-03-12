@@ -743,6 +743,23 @@ export default function Checkin() {
           {renderPipelineCol("Pendente", "PENDENTE", pipelineCols.PENDENTE)}
           {renderPipelineCol("Concluído", "CONCLUIDO", pipelineCols.CONCLUIDO)}
         </div>
+      ) : viewMode === "calendar" ? (
+        <TaskCalendarView
+          tasks={filtered.map(t => {
+            const d = getTaskDetails(t);
+            const depDate = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
+            return {
+              id: t.id,
+              date: depDate,
+              label: `${d.origin} → ${d.dest}`,
+              sublabel: `${d.airline} ${d.flightNum} ${d.paxNames.join(", ")}`,
+              statusDot: d.statusCfg.dot,
+              statusLabel: d.statusCfg.label,
+              onClick: () => navigate(`/sales/${t.sale_id}`),
+            };
+          })}
+          emptyMessage="Nenhum check-in neste mês"
+        />
       ) : (
         <div className="space-y-4">
           {groupedByDate.map(([key, group]) => (

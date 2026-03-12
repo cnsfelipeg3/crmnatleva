@@ -21,6 +21,7 @@ import {
   Eye, User, Search, RefreshCw, Loader2, Shield,
   XCircle, Phone, Calendar, List, LayoutGrid,
 } from "lucide-react";
+import TaskCalendarView from "@/components/TaskCalendarView";
 
 interface LodgingTask {
   id: string;
