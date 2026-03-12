@@ -326,6 +326,9 @@ export default function SaleDetail() {
           ) : (
             <>
               <Button variant="outline" size="sm" onClick={startEdit}><Pencil className="w-4 h-4 mr-1" /> Editar</Button>
+              <Button variant="outline" size="sm" onClick={() => setPortalOpen(true)} className="text-accent border-accent/30 hover:bg-accent/10">
+                <Globe className="w-4 h-4 mr-1" /> Portal do Cliente
+              </Button>
               <Button size="sm" onClick={handleGenerateSummary}>
                 <FileText className="w-4 h-4 mr-1" /> Resumo NatLeva
               </Button>
