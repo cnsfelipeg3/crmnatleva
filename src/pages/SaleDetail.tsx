@@ -48,6 +48,8 @@ export default function SaleDetail() {
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const [enrichmentOpen, setEnrichmentOpen] = useState(false);
+  const [portalOpen, setPortalOpen] = useState(false);
+  const [clientEmail, setClientEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
