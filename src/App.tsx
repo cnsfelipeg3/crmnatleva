@@ -81,6 +81,12 @@ const PortalAdminDashboard = lazy(() => import("@/pages/portal-admin/PortalAdmin
 const PortalAdminTrips = lazy(() => import("@/pages/portal-admin/PortalAdminTrips"));
 const PortalAdminTripDetail = lazy(() => import("@/pages/portal-admin/PortalAdminTripDetail"));
 const PortalAdminClients = lazy(() => import("@/pages/portal-admin/PortalAdminClients"));
+const PortalAdminDocuments = lazy(() => import("@/pages/portal-admin/PortalAdminDocuments"));
+const PortalAdminNotifications = lazy(() => import("@/pages/portal-admin/PortalAdminNotifications"));
+const PortalAdminConfig = lazy(() => import("@/pages/portal-admin/PortalAdminConfig"));
+
+// Implementação
+const BaseConhecimento = lazy(() => import("@/pages/implementacao/BaseConhecimento"));
 
 // Portal do Cliente
 const PortalLogin = lazy(() => import("@/pages/portal/PortalLogin"));
