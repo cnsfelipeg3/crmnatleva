@@ -1001,7 +1001,7 @@ export default function NewSale() {
                   onClick={() => document.getElementById("file-upload-new")?.click()}
                 >
                   <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground mb-1">Arraste arquivos ou clique</p>
+                  <p className="text-sm font-medium text-foreground mb-1">Anexar espelho da emissão</p>
                   <p className="text-xs text-muted-foreground">PDF, imagens, prints de emissão, WhatsApp, comprovantes</p>
                   <input type="file" accept="image/*,.pdf,.csv,.xlsx" multiple onChange={(e) => handleFiles(e.target.files)} className="hidden" id="file-upload-new" />
                 </div>
