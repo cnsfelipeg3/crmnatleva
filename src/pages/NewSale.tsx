@@ -359,7 +359,7 @@ export default function NewSale() {
         destination_iata: form.destination_iata || null, destination_city: null,
         departure_date: form.departure_date || null, return_date: form.return_date || null,
         airline: form.airline || null, flight_class: form.flight_class || null,
-        locators: form.locator ? [form.locator] : [],
+        locators: groupLocators.length > 0 ? groupLocators : (form.locator ? [form.locator] : []),
         connections: form.connections ? form.connections.split(",").map(c => c.trim()) : [],
         miles_program: form.miles_program || null,
         emission_source: form.emission_source || null,
