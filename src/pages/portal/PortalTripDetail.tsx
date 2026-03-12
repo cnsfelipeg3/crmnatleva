@@ -22,14 +22,14 @@ import { getMockTripDetail } from "@/lib/portalMockTrips";
 
 const fmt = (v: number) => v?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00";
 
-function NextAction({ sale, segments, financial, attachments }: {
-  sale: any; segments: any[]; financial: any; attachments: any[];
+function WelcomeBlock({ sale, segments, financial, attachments, message }: {
+  sale: any; segments: any[]; financial: any; attachments: any[]; message?: string | null;
 }) {
-  const actions: { icon: React.ReactNode; label: string; detail?: string; type: "urgent" | "warning" | "info" }[] = [];
+  const actions: { icon: React.ReactNode; label: string; detail?: string; accent: string }[] = [];
   const receivables = financial?.receivables || [];
   const pending = receivables.filter((r: any) => r.status !== "recebido");
   if (pending.length > 0) {
-    actions.push({ icon: <CreditCard className="h-4 w-4" />, label: "Parcela pendente", detail: fmt(pending[0].gross_value), type: "warning" });
+    actions.push({ icon: <CreditCard className="h-4 w-4" />, label: "Parcela pendente", detail: fmt(pending[0].gross_value), accent: "text-amber-500" });
   }
   if (segments.length > 0) {
     const now = new Date();
@@ -37,34 +37,51 @@ function NextAction({ sale, segments, financial, attachments }: {
     const dep = first?.departure_date ? new Date(first.departure_date + "T00:00:00") : null;
     const hours = dep ? (dep.getTime() - now.getTime()) / 3600000 : Infinity;
     if (hours <= 48 && hours > 0) {
-      actions.push({ icon: <Plane className="h-4 w-4" />, label: "Check-in disponível", detail: `${first.airline || ""} ${first.flight_number || ""}`.trim(), type: "urgent" });
+      actions.push({ icon: <Plane className="h-4 w-4" />, label: "Check-in disponível", detail: `${first.airline || ""} ${first.flight_number || ""}`.trim(), accent: "text-destructive" });
     }
   }
   if (attachments.length === 0 && segments.length > 0) {
-    actions.push({ icon: <FileText className="h-4 w-4" />, label: "Documentos em preparação", detail: "Nossa equipe está trabalhando nisso", type: "info" });
+    actions.push({ icon: <FileText className="h-4 w-4" />, label: "Documentos em preparação", detail: "Nossa equipe está trabalhando nisso", accent: "text-muted-foreground" });
   }
-  if (actions.length === 0) return null;
 
-  const accentMap = {
-    urgent: "text-destructive",
-    warning: "text-amber-500",
-    info: "text-muted-foreground",
-  };
+  if (!message && actions.length === 0) return null;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-10">
-      <p className="text-[10px] text-muted-foreground/60 uppercase tracking-[0.4em] font-medium mb-4">Próximo passo</p>
-      <div className="space-y-3">
-        {actions.map((a, i) => (
-          <div key={i} className="flex items-center gap-4 group">
-            <span className={`${accentMap[a.type]} opacity-70`}>{a.icon}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-foreground leading-tight">{a.label}</p>
-              {a.detail && <p className="text-xs text-muted-foreground/70 mt-0.5">{a.detail}</p>}
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-10">
+      <div className="rounded-2xl border border-border/40 bg-card overflow-hidden">
+        {/* Message */}
+        {message && (
+          <div className="p-6 sm:p-8">
+            <div className="flex items-center gap-2.5 mb-4">
+              <Sparkles className="h-4 w-4 text-accent" />
+              <p className="text-[10px] text-accent uppercase tracking-[0.4em] font-semibold">Equipe NatLeva</p>
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-muted-foreground/50 transition-colors" />
+            <p className="text-sm sm:text-base text-foreground/80 leading-relaxed whitespace-pre-wrap">{message}</p>
           </div>
-        ))}
+        )}
+
+        {/* Actions */}
+        {actions.length > 0 && (
+          <div className={message ? "border-t border-border/30" : ""}>
+            <div className="p-5 sm:px-8 sm:py-5">
+              <p className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.4em] font-medium mb-4">
+                {actions.length === 1 ? "Ação pendente" : `${actions.length} ações pendentes`}
+              </p>
+              <div className="space-y-1">
+                {actions.map((a, i) => (
+                  <div key={i} className="flex items-center gap-4 py-2.5 group cursor-pointer hover:bg-muted/30 -mx-3 px-3 rounded-xl transition-colors">
+                    <span className={`${a.accent} opacity-60`}>{a.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">{a.label}</p>
+                      {a.detail && <p className="text-xs text-muted-foreground/60 mt-0.5">{a.detail}</p>}
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/15 group-hover:text-muted-foreground/40 transition-colors" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -168,19 +185,7 @@ export default function PortalTripDetail() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
           <JourneyProgress departureDate={sale?.departure_date} returnDate={sale?.return_date} />
-          <NextAction sale={sale} segments={segments || []} financial={financial} attachments={attachments || []} />
-
-          {published?.notes_for_client && (
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="mb-10">
-              <div className="relative pl-5 border-l-2 border-accent/30">
-                <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-accent/20 flex items-center justify-center">
-                  <Sparkles className="h-2.5 w-2.5 text-accent" />
-                </div>
-                <p className="text-[10px] text-accent/70 uppercase tracking-[0.3em] font-medium mb-2">Mensagem da NatLeva</p>
-                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{published.notes_for_client}</p>
-              </div>
-            </motion.div>
-          )}
+          <WelcomeBlock sale={sale} segments={segments || []} financial={financial} attachments={attachments || []} message={published?.notes_for_client} />
 
           {segments?.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-8">
