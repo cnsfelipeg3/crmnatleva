@@ -1745,7 +1745,7 @@ export default function LiveChat() {
   // If editing a flow, show full-screen canvas
   if (editingFlow) {
     return (
-      <div className="h-[calc(100vh-5rem)] -m-6">
+      <div className="h-full min-h-0">
         <FlowCanvas
           flowId={editingFlow.id}
           flowName={editingFlow.name}
