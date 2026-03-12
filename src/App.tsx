@@ -27,6 +27,7 @@ import NotFound from "@/pages/NotFound";
 import UserLocations from "@/pages/settings/UserLocations";
 import LiveChat from "@/pages/LiveChat";
 import WhatsAppIntegration from "@/pages/WhatsAppIntegration";
+import WhatsAppQRConnect from "@/pages/WhatsAppQRConnect";
 import FlowBuilder from "@/pages/FlowBuilder";
 import AIIntegrations from "@/pages/AIIntegrations";
 import AIKnowledgeBase from "@/pages/AIKnowledgeBase";
@@ -124,7 +125,8 @@ function AppRoutes() {
         <Route path="/pendencias" element={<Pendencias />} />
         <Route path="/livechat" element={<LiveChat />} />
         <Route path="/livechat/integration" element={<WhatsAppIntegration />} />
-         <Route path="/livechat/flows" element={<FlowBuilder />} />
+          <Route path="/livechat/whatsapp-qr" element={<WhatsAppQRConnect />} />
+          <Route path="/livechat/flows" element={<FlowBuilder />} />
          <Route path="/livechat/integrations" element={<AIIntegrations />} />
          <Route path="/livechat/knowledge-base" element={<AIKnowledgeBase />} />
          <Route path="/livechat/import-chatguru" element={<ImportChatGuru />} />

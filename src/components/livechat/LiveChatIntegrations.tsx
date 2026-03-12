@@ -4,10 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { MessageSquare, Brain, Globe, Shield, ExternalLink, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { MessageSquare, Brain, Globe, Shield, ExternalLink, CheckCircle2, XCircle, AlertTriangle, Smartphone, ChevronRight } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { WhatsAppQRCard } from "./WhatsAppQRCard";
 import { WhatsAppCloudAPICard } from "./WhatsAppCloudAPICard";
+import { useNavigate } from "react-router-dom";
 
 const integrations = [
   {
@@ -59,6 +59,8 @@ const futureIntegrations = [
 ];
 
 export function LiveChatIntegrations() {
+  const navigate = useNavigate();
+
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -67,7 +69,28 @@ export function LiveChatIntegrations() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <WhatsAppQRCard />
+        {/* WhatsApp QR - clickable card that navigates to dedicated page */}
+        <Card
+          className="relative overflow-hidden cursor-pointer hover:shadow-md transition-shadow group"
+          onClick={() => navigate("/livechat/whatsapp-qr")}
+        >
+          <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: "#25D366" }} />
+          <CardContent className="p-4 flex items-center gap-3">
+            <div
+              className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0"
+              style={{ backgroundColor: "rgba(37,211,102,0.12)" }}
+            >
+              <Smartphone className="h-5 w-5" style={{ color: "#25D366" }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold">WhatsApp QRCode</p>
+              <p className="text-[10px] text-muted-foreground">WhatsApp via leitura de QR Code</p>
+            </div>
+            <Badge variant="outline" className="text-[9px] shrink-0">Inativo</Badge>
+            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+          </CardContent>
+        </Card>
+
         <WhatsAppCloudAPICard />
         {integrations.map(integ => (
           <Card key={integ.id} className="relative overflow-hidden">
