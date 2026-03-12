@@ -161,37 +161,44 @@ export default function TripDetail() {
     }
 
     // Hotel — split into Check-in and Check-out entries
-    if (sale.hotel_name) {
+    const hotelName = clean(sale.hotel_name);
+    const hotelCity = clean(sale.hotel_city);
+    const hotelRoom = clean(sale.hotel_room);
+    const hotelMeal = clean(sale.hotel_meal_plan);
+    const hotelCode = clean(sale.hotel_reservation_code);
+    const hotelAddr = clean(sale.hotel_address);
+
+    if (hotelName) {
+      const subtitleParts = [hotelCity, hotelRoom ? `Quarto ${hotelRoom}` : null, hotelMeal].filter(Boolean);
+      const details: Record<string, string> = { "Horário": "14:00 (padrão)" };
+      if (hotelRoom) details["Quarto"] = hotelRoom;
+      if (hotelMeal) details["Refeição"] = hotelMeal;
+      if (hotelCode) details["Reserva"] = hotelCode;
+      if (hotelAddr) details["Endereço"] = hotelAddr;
+
       items.push({
         date: sale.hotel_checkin_date || sale.departure_date || "",
         time: "14:00",
         type: "hotel",
-        title: `🏨 Check-in: ${sale.hotel_name}`,
-        subtitle: `${sale.hotel_city || ""} • ${sale.hotel_room || ""} ${sale.hotel_meal_plan || ""}`.trim(),
-        details: {
-          "Horário": "14:00 (padrão)",
-          "Quarto": sale.hotel_room || "—",
-          "Refeição": sale.hotel_meal_plan || "—",
-          "Reserva": sale.hotel_reservation_code || "—",
-          "Endereço": sale.hotel_address || "—",
-        },
+        title: `🏨 Check-in: ${hotelName}`,
+        subtitle: subtitleParts.join(" · ") || "",
+        details,
         status: getLodgingStatus(),
-        reservationCode: sale.hotel_reservation_code || undefined,
+        reservationCode: hotelCode,
         icon: Hotel,
       });
       if (sale.hotel_checkout_date) {
+        const coDetails: Record<string, string> = { "Horário": "12:00 (padrão)" };
+        if (hotelCode) coDetails["Reserva"] = hotelCode;
         items.push({
           date: sale.hotel_checkout_date,
           time: "12:00",
           type: "hotel",
-          title: `🏨 Check-out: ${sale.hotel_name}`,
-          subtitle: `${sale.hotel_city || ""}`,
-          details: {
-            "Horário": "12:00 (padrão)",
-            "Reserva": sale.hotel_reservation_code || "—",
-          },
+          title: `🏨 Check-out: ${hotelName}`,
+          subtitle: hotelCity || "",
+          details: coDetails,
           status: getLodgingStatus(),
-          reservationCode: sale.hotel_reservation_code || undefined,
+          reservationCode: hotelCode,
           icon: Hotel,
         });
       }
