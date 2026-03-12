@@ -49,7 +49,7 @@ export async function fetchAllRows(
       });
     }
 
-    const { data: firstPageData, error: firstPageError, count } = await firstQuery;
+    const { data: firstPageData, error: firstPageError, count } = await withQueryTimeout(firstQuery, `${table} (primeira página)`);
     if (firstPageError) throw firstPageError;
 
     const firstPage = firstPageData ?? [];
