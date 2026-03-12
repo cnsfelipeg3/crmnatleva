@@ -1267,6 +1267,7 @@ export type Database = {
           contact_name: string | null
           created_at: string
           display_name: string | null
+          external_conversation_id: string | null
           external_id: string | null
           funnel_stage: string | null
           id: string
@@ -1275,11 +1276,13 @@ export type Database = {
           last_message_at: string | null
           last_message_preview: string | null
           lead_id: string | null
+          payment_method: string | null
           phone: string | null
           price_range: string | null
           score_potential: number | null
           score_risk: number | null
           source: string | null
+          stage: string | null
           status: string
           tags: string[] | null
           unread_count: number | null
@@ -1292,6 +1295,7 @@ export type Database = {
           contact_name?: string | null
           created_at?: string
           display_name?: string | null
+          external_conversation_id?: string | null
           external_id?: string | null
           funnel_stage?: string | null
           id?: string
@@ -1300,11 +1304,13 @@ export type Database = {
           last_message_at?: string | null
           last_message_preview?: string | null
           lead_id?: string | null
+          payment_method?: string | null
           phone?: string | null
           price_range?: string | null
           score_potential?: number | null
           score_risk?: number | null
           source?: string | null
+          stage?: string | null
           status?: string
           tags?: string[] | null
           unread_count?: number | null
@@ -1317,6 +1323,7 @@ export type Database = {
           contact_name?: string | null
           created_at?: string
           display_name?: string | null
+          external_conversation_id?: string | null
           external_id?: string | null
           funnel_stage?: string | null
           id?: string
@@ -1325,11 +1332,13 @@ export type Database = {
           last_message_at?: string | null
           last_message_preview?: string | null
           lead_id?: string | null
+          payment_method?: string | null
           phone?: string | null
           price_range?: string | null
           score_potential?: number | null
           score_risk?: number | null
           source?: string | null
+          stage?: string | null
           status?: string
           tags?: string[] | null
           unread_count?: number | null
@@ -1959,39 +1968,51 @@ export type Database = {
           contact_name: string | null
           conversation_id: string | null
           current_node_id: string | null
+          error_message: string | null
           execution_data: Json | null
+          execution_path: Json | null
           flow_id: string | null
           id: string
           is_simulation: boolean | null
           phone: string | null
           started_at: string | null
           status: string | null
+          trigger_type: string | null
+          variables_snapshot: Json | null
         }
         Insert: {
           completed_at?: string | null
           contact_name?: string | null
           conversation_id?: string | null
           current_node_id?: string | null
+          error_message?: string | null
           execution_data?: Json | null
+          execution_path?: Json | null
           flow_id?: string | null
           id?: string
           is_simulation?: boolean | null
           phone?: string | null
           started_at?: string | null
           status?: string | null
+          trigger_type?: string | null
+          variables_snapshot?: Json | null
         }
         Update: {
           completed_at?: string | null
           contact_name?: string | null
           conversation_id?: string | null
           current_node_id?: string | null
+          error_message?: string | null
           execution_data?: Json | null
+          execution_path?: Json | null
           flow_id?: string | null
           id?: string
           is_simulation?: boolean | null
           phone?: string | null
           started_at?: string | null
           status?: string | null
+          trigger_type?: string | null
+          variables_snapshot?: Json | null
         }
         Relationships: [
           {
@@ -2132,6 +2153,7 @@ export type Database = {
           status: string | null
           trigger_keyword: string | null
           updated_at: string
+          version: number | null
         }
         Insert: {
           created_at?: string
@@ -2144,6 +2166,7 @@ export type Database = {
           status?: string | null
           trigger_keyword?: string | null
           updated_at?: string
+          version?: number | null
         }
         Update: {
           created_at?: string
@@ -2156,6 +2179,7 @@ export type Database = {
           status?: string | null
           trigger_keyword?: string | null
           updated_at?: string
+          version?: number | null
         }
         Relationships: []
       }
@@ -4286,6 +4310,7 @@ export type Database = {
           status: string | null
           text: string | null
           timestamp: number | null
+          type: string | null
         }
         Insert: {
           created_at?: string
@@ -4299,6 +4324,7 @@ export type Database = {
           status?: string | null
           text?: string | null
           timestamp?: number | null
+          type?: string | null
         }
         Update: {
           created_at?: string
@@ -4312,6 +4338,7 @@ export type Database = {
           status?: string | null
           text?: string | null
           timestamp?: number | null
+          type?: string | null
         }
         Relationships: []
       }
