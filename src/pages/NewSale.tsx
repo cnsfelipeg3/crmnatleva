@@ -468,6 +468,13 @@ export default function NewSale() {
       if (hotelTariff.fare_name) {
         tariffConditions.push({ sale_id: saleId, product_type: "hotel", product_label: "Hospedagem", ...hotelTariff });
       }
+      // Product-level tariffs
+      for (const p of otherProducts) {
+        if (p.tariff.fare_name) {
+          const label = PRODUCT_TYPES.find(t => t.value === p.type)?.label || p.type;
+          tariffConditions.push({ sale_id: saleId, product_type: p.type, product_label: `${label} — ${p.description || ""}`.trim(), ...p.tariff });
+        }
+      }
       if (tariffConditions.length > 0) await supabase.from("tariff_conditions").insert(tariffConditions);
 
       // Flight segments
