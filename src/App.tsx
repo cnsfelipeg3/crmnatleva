@@ -69,6 +69,12 @@ import FechamentoFornecedores from "@/pages/financeiro/FechamentoFornecedores";
 // Admin
 import AdminUsers from "@/pages/admin/AdminUsers";
 
+// Portal do Cliente
+import { PortalAuthProvider } from "@/contexts/PortalAuthContext";
+import PortalLogin from "@/pages/portal/PortalLogin";
+import PortalDashboard from "@/pages/portal/PortalDashboard";
+import PortalTripDetail from "@/pages/portal/PortalTripDetail";
+
 // Operação Diária
 import OperacaoInbox from "@/pages/operacao/OperacaoInbox";
 import OperacaoFlowBuilder from "@/pages/operacao/OperacaoFlowBuilder";
@@ -179,6 +185,11 @@ function AppRoutes() {
         <Route path="/settings/calc-rules" element={<GenericSettingsList title="Regras de Cálculo" defaultItems={["Milheiro padrão: R$ 20,00", "Taxa fixa emissão: R$ 50,00", "Markup padrão: 15%"]} />} />
         <Route path="/settings/user-locations" element={<UserLocations />} />
       </Route>
+      {/* Portal do Cliente - rotas separadas fora do CRM */}
+      <Route path="/portal/login" element={<PortalLogin />} />
+      <Route path="/portal" element={<PortalDashboard />} />
+      <Route path="/portal/viagem/:saleId" element={<PortalTripDetail />} />
+
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -190,9 +201,11 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <PortalAuthProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </PortalAuthProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

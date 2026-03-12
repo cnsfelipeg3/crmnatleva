@@ -14,7 +14,8 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase } from "lucide-react";
+import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe } from "lucide-react";
+import PublishToPortalDialog from "@/components/portal/PublishToPortalDialog";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import { useToast } from "@/hooks/use-toast";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
@@ -47,6 +48,8 @@ export default function SaleDetail() {
   const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
   const [enrichmentOpen, setEnrichmentOpen] = useState(false);
+  const [portalOpen, setPortalOpen] = useState(false);
+  const [clientEmail, setClientEmail] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,8 +59,11 @@ export default function SaleDetail() {
         setEditForm(saleData);
         setPayerPassengerId(saleData.payer_passenger_id || null);
         if (saleData.client_id) {
-          const { data: clientData } = await supabase.from("clients").select("display_name").eq("id", saleData.client_id).single();
-          if (clientData) setClientName(clientData.display_name);
+          const { data: clientData } = await supabase.from("clients").select("display_name, email").eq("id", saleData.client_id).single();
+          if (clientData) {
+            setClientName(clientData.display_name);
+            setClientEmail(clientData.email || null);
+          }
         }
       }
 
@@ -320,6 +326,9 @@ export default function SaleDetail() {
           ) : (
             <>
               <Button variant="outline" size="sm" onClick={startEdit}><Pencil className="w-4 h-4 mr-1" /> Editar</Button>
+              <Button variant="outline" size="sm" onClick={() => setPortalOpen(true)} className="text-accent border-accent/30 hover:bg-accent/10">
+                <Globe className="w-4 h-4 mr-1" /> Portal do Cliente
+              </Button>
               <Button size="sm" onClick={handleGenerateSummary}>
                 <FileText className="w-4 h-4 mr-1" /> Resumo NatLeva
               </Button>
@@ -740,6 +749,14 @@ export default function SaleDetail() {
         </div>
         </>
       )}
+      <PublishToPortalDialog
+        open={portalOpen}
+        onOpenChange={setPortalOpen}
+        saleId={id!}
+        clientId={sale?.client_id}
+        clientEmail={clientEmail}
+        saleName={sale?.name}
+      />
     </div>
   );
 }
