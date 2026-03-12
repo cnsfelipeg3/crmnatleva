@@ -1724,7 +1724,7 @@ export default function LiveChat() {
       {isMobile && !(selectedId && activeSection === "inbox") && (
         <div className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0 px-4 py-2">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={toggleSidebar}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => window.history.back()}>
               <Menu className="h-5 w-5" />
             </Button>
             <div className="h-8 w-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
