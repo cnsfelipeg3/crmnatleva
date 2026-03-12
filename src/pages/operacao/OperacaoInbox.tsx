@@ -180,9 +180,9 @@ export default function OperacaoInbox() {
                           <p className="text-xs text-muted-foreground truncate mt-0.5">{conv.last_message_preview}</p>
                         )}
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          {conv.funnel_stage && (
-                            <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", stageColors[conv.funnel_stage] || "bg-muted text-muted-foreground")}>
-                              {stageLabels[conv.funnel_stage] || conv.funnel_stage}
+                          {(conv.funnel_stage || conv.stage) && (
+                            <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", stageColors[(conv.funnel_stage || conv.stage)!] || "bg-muted text-muted-foreground")}>
+                              {stageLabels[(conv.funnel_stage || conv.stage)!] || (conv.funnel_stage || conv.stage)}
                             </span>
                           )}
                           {(conv.unread_count || 0) > 0 && (
