@@ -8,12 +8,17 @@ import { Badge } from "@/components/ui/badge";
 
 interface SaleRow {
   id: string;
-  name: string | null;
-  status: string | null;
-  travel_date: string | null;
+  name: string;
+  status: string;
+  departure_date: string | null;
   return_date: string | null;
-  total_price: number | null;
   client_id: string | null;
+  created_at: string;
+  clientName?: string;
+  segmentCount?: number;
+  hotelCount?: number;
+  paxCount?: number;
+}
   created_at: string;
   clientName?: string;
   segmentCount?: number;
