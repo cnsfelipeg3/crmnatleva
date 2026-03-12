@@ -163,10 +163,10 @@ export default function ItineraryListPage() {
                 </div>
                 <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
                   <span className="flex items-center gap-1"><Users className="w-3 h-3" />{sale.clientName}</span>
-                  {sale.travel_date && (
+                  {sale.departure_date && (
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {fmtDate(sale.travel_date)}{sale.return_date ? ` — ${fmtDate(sale.return_date)}` : ""}
+                      {fmtDate(sale.departure_date)}{sale.return_date ? ` — ${fmtDate(sale.return_date)}` : ""}
                     </span>
                   )}
                 </div>
