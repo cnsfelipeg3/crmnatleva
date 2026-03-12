@@ -49,6 +49,7 @@ const SEGMENTO_COLORS: Record<string, string> = {
 
 export default function ClientIntelligence() {
   const navigate = useNavigate();
+  const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<ClientSale[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
