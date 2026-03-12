@@ -276,8 +276,8 @@ export default function AirCostBlocksEditor({
       {blocks.length === 0 && (
         <div className="text-center py-8 bg-muted/30 rounded-xl mb-4">
           <Package className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-50" />
-          <p className="text-sm text-muted-foreground mb-2">Nenhum bloco de custo criado</p>
-          <p className="text-xs text-muted-foreground mb-4">Agrupe seus trechos por emissão para registrar os custos corretamente</p>
+          <p className="text-sm text-muted-foreground mb-2">Nenhum custo detalhado</p>
+          <p className="text-xs text-muted-foreground mb-4">Selecione trechos individuais ou todos juntos para registrar os custos</p>
           <div className="flex justify-center gap-2">
             {validSegments.length > 0 && (
               <Button variant="outline" onClick={suggestAutoGroup} size="sm">
@@ -285,7 +285,7 @@ export default function AirCostBlocksEditor({
               </Button>
             )}
             <Button onClick={addBlock} size="sm">
-              <Plus className="w-4 h-4 mr-2" /> Criar bloco manual
+              <Plus className="w-4 h-4 mr-2" /> Detalhar custos
             </Button>
           </div>
         </div>
