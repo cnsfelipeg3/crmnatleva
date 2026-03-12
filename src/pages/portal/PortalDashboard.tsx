@@ -89,7 +89,7 @@ export default function PortalDashboard() {
   if (loading) {
     return (
       <PortalLayout>
-        <div className="flex items-center justify-center py-40">
+        <div className="flex items-center justify-center py-40 px-4">
           <div className="flex flex-col items-center gap-5">
             <div className="w-12 h-12 border-[3px] border-accent/20 border-t-accent rounded-full animate-spin" />
             <p className="text-muted-foreground text-sm tracking-wide">Carregando suas jornadas...</p>
@@ -102,7 +102,7 @@ export default function PortalDashboard() {
   if (trips.length === 0) {
     return (
       <PortalLayout>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-40">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-40 px-4">
           <Plane className="h-24 w-24 text-muted-foreground/15 mx-auto mb-8" />
           <h2 className="text-3xl font-bold text-foreground mb-4 tracking-tight">Nenhuma jornada ainda</h2>
           <p className="text-muted-foreground text-sm max-w-md mx-auto">
@@ -122,7 +122,7 @@ export default function PortalDashboard() {
 
   return (
     <PortalLayout>
-      <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-6 sm:-mt-8">
+      <div>
 
         {/* ═══════════ GLOBE + HERO SECTION ═══════════ */}
         <div className="relative overflow-hidden bg-gradient-to-b from-[hsl(160,30%,3%)] via-[hsl(160,25%,6%)] to-background">

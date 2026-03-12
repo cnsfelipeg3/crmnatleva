@@ -99,7 +99,7 @@ export default function PortalDemoTrip() {
 
   return (
     <PortalLayout>
-      <div className="space-y-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
         {/* Demo Banner */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <Card className="p-3 bg-warning/10 border-warning/30 flex items-center gap-3">
