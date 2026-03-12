@@ -374,12 +374,12 @@ export default function LiveChat() {
     document.body.style.top = "0";
     
     const vv = window.visualViewport;
-    if (!vv) return;
+    const lockScroll = () => window.scrollTo(0, 0);
 
     const syncHeight = () => {
-      setMobileHeight(`${vv.height}px`);
+      setMobileHeight(vv ? `${vv.height}px` : "100dvh");
       // Prevent iOS from scrolling the fixed body
-      window.scrollTo(0, 0);
+      lockScroll();
       // After resize, scroll messages to bottom
       requestAnimationFrame(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
@@ -389,11 +389,16 @@ export default function LiveChat() {
     // Set initial height
     syncHeight();
 
-    vv.addEventListener("resize", syncHeight);
-    vv.addEventListener("scroll", () => window.scrollTo(0, 0));
+    if (vv) {
+      vv.addEventListener("resize", syncHeight);
+      vv.addEventListener("scroll", lockScroll);
+    }
     
     return () => {
-      vv.removeEventListener("resize", syncHeight);
+      if (vv) {
+        vv.removeEventListener("resize", syncHeight);
+        vv.removeEventListener("scroll", lockScroll);
+      }
       document.body.style.overflow = "";
       document.body.style.position = "";
       document.body.style.width = "";
