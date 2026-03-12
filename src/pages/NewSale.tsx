@@ -917,12 +917,59 @@ export default function NewSale() {
                 )}
               </div>
 
+              {/* Miles breakdown */}
+              {totalMiles > 0 && (() => {
+                const milesDetails: { source: string; program: string; qty: number; pricePerK: number; cost: number }[] = [];
+                airCostBlocks.filter(b => b.emission_type === "milhas" && (parseFloat(b.miles_qty) || 0) > 0).forEach(b => {
+                  const supplierName = suppliers.find((s: any) => s.id === b.supplier_id)?.name || "—";
+                  milesDetails.push({
+                    source: `Aéreo – ${supplierName}`, program: b.miles_program || "—",
+                    qty: parseFloat(b.miles_qty) || 0, pricePerK: parseFloat(b.miles_price) || 0,
+                    cost: ((parseFloat(b.miles_qty) || 0) / 1000) * (parseFloat(b.miles_price) || 0),
+                  });
+                });
+                hotelEntries.filter(h => h.emission_type === "milhas" && (parseFloat(h.miles_qty) || 0) > 0).forEach(h => {
+                  const supplierName = suppliers.find((s: any) => s.id === h.supplier_id)?.name || "—";
+                  milesDetails.push({
+                    source: `Hotel – ${supplierName}`, program: h.miles_program || "—",
+                    qty: parseFloat(h.miles_qty) || 0, pricePerK: parseFloat(h.miles_price) || 0,
+                    cost: ((parseFloat(h.miles_qty) || 0) / 1000) * (parseFloat(h.miles_price) || 0),
+                  });
+                });
+                otherProducts.filter(p => p.emission_type === "milhas" && (parseFloat(p.miles_qty) || 0) > 0).forEach(p => {
+                  const supplierName = suppliers.find((s: any) => s.id === p.supplier_id)?.name || "—";
+                  milesDetails.push({
+                    source: `${PRODUCT_TYPES.find(t => t.value === p.type)?.label || p.type} – ${supplierName}`,
+                    program: p.miles_program || "—",
+                    qty: parseFloat(p.miles_qty) || 0, pricePerK: 0, cost: parseFloat(p.miles_tax) || 0,
+                  });
+                });
+
+                return (
+                  <Card className="p-4 mt-4 bg-muted/20 border-muted">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">🎯 Detalhamento de Milhas</h4>
+                    <div className="space-y-2">
+                      {milesDetails.map((m, i) => (
+                        <div key={i} className="grid grid-cols-5 gap-2 text-xs items-center py-1.5 px-2 bg-background rounded-md">
+                          <span className="col-span-2 font-medium truncate" title={m.source}>{m.source}</span>
+                          <span className="text-muted-foreground">{m.program}</span>
+                          <span className="text-right font-mono">{m.qty.toLocaleString()} mi</span>
+                          <span className="text-right font-mono">{m.pricePerK > 0 ? `R$ ${m.pricePerK.toFixed(2)}/k` : "—"}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between items-center mt-3 pt-2 border-t text-sm">
+                      <span className="font-semibold">Total Milhas</span>
+                      <span className="font-bold">{totalMiles.toLocaleString()}</span>
+                    </div>
+                  </Card>
+                );
+              })()}
+
               <Card className="p-4 mt-4 bg-primary/5 border-primary/20">
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <span className="text-muted-foreground">Custo Total</span>
                   <span className="font-bold text-right">{fmt(totalCost)}</span>
-                  <span className="text-muted-foreground">Total Milhas Utilizadas</span>
-                  <span className="font-bold text-right">{totalMiles.toLocaleString()}</span>
                   <span className="text-muted-foreground">Valor Recebido</span>
                   <span className="font-bold text-right text-success">{fmt(receivedValue)}</span>
                   <div className="col-span-2 border-t my-1" />
