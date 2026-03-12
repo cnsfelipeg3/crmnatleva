@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { LogOut, Menu, X, User, Home, Map, MessageCircle, Bell } from "lucide-react";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
 import PortalNotificationPanel from "@/components/portal/PortalNotificationPanel";
+import PortalAssistant from "@/components/portal/PortalAssistant";
 
 export default function PortalLayout({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading, signOut, user, portalAccess } = usePortalAuth();
@@ -168,6 +169,9 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {children}
       </main>
+
+      {/* AI Assistant */}
+      <PortalAssistant />
 
       {/* Footer */}
       <footer className="border-t border-border bg-card/50">

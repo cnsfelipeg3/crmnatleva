@@ -2853,6 +2853,33 @@ export type Database = {
           },
         ]
       }
+      portal_assistant_logs: {
+        Row: {
+          answer: string
+          client_id: string
+          created_at: string
+          id: string
+          question: string
+          sale_id: string | null
+        }
+        Insert: {
+          answer: string
+          client_id: string
+          created_at?: string
+          id?: string
+          question: string
+          sale_id?: string | null
+        }
+        Update: {
+          answer?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          question?: string
+          sale_id?: string | null
+        }
+        Relationships: []
+      }
       portal_notifications: {
         Row: {
           channel: string
