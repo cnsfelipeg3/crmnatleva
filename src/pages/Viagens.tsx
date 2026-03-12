@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
