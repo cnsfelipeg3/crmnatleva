@@ -526,7 +526,19 @@ export default function AirCostBlocksEditor({
                             </Select>
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
+                        {(block.payment_method === "cartao_credito" || block.payment_method === "cartao_debito") && (
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label className="text-xs">Titular do Cartão</Label>
+                              <Input
+                                className="h-9 text-sm"
+                                value={block.payment_card_holder || ""}
+                                onChange={e => updateBlock(block.id, "payment_card_holder", e.target.value)}
+                                placeholder="Nome como está no cartão"
+                              />
+                            </div>
+                          </div>
+                        )}
                           <div className="space-y-1.5">
                             <Label className="text-xs">Emissão por</Label>
                             <Input
