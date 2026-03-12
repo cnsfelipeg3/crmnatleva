@@ -451,7 +451,7 @@ export default function SaleDetail() {
             <div className="space-y-2 text-sm">
               {sale.departure_date && <div className="flex justify-between"><span className="text-muted-foreground">Ida</span><span>{formatDateBR(sale.departure_date)}</span></div>}
               {sale.return_date && <div className="flex justify-between"><span className="text-muted-foreground">Volta</span><span>{formatDateBR(sale.return_date)}</span></div>}
-              {sale.airline && <div className="flex justify-between items-center"><span className="text-muted-foreground">Companhia</span><span className="flex items-center gap-1.5"><AirlineLogo iata={sale.airline} size={18} />{sale.airline}</span></div>}
+              {sale.airline && <div className="flex justify-between items-center"><span className="text-muted-foreground">Companhia</span><span className="flex items-center gap-2"><AirlineLogo iata={sale.airline} size={28} />{sale.airline}</span></div>}
               {sale.locators?.length > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Localizador</span><span className="font-mono font-semibold">{sale.locators.join(", ")}</span></div>}
               {sale.miles_program && <div className="flex justify-between"><span className="text-muted-foreground">Milhas</span><Badge variant="outline">{sale.miles_program}</Badge></div>}
             </div>
