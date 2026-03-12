@@ -12,7 +12,7 @@ export default function BaseConhecimento() {
 
   useEffect(() => {
     const load = async () => {
-      const data = await fetchAllRows("ai_knowledge_base", "*", undefined, { cacheMs: 30000 });
+      const data = await fetchAllRows("ai_knowledge_base", "*", { cacheMs: 30000 });
       setItems(data);
       setLoading(false);
     };

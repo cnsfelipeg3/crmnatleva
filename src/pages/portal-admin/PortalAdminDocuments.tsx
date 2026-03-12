@@ -15,7 +15,7 @@ export default function PortalAdminDocuments() {
 
   useEffect(() => {
     const load = async () => {
-      const data = await fetchAllRows("attachments", "*", undefined, { cacheMs: 30000 });
+      const data = await fetchAllRows("attachments", "*", { cacheMs: 30000 });
       setDocuments(data);
       setLoading(false);
     };
