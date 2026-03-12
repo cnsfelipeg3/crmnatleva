@@ -24,18 +24,29 @@ export async function fetchAllRows(
   if (existingRequest) return existingRequest;
 
   const requestPromise = (async () => {
-    const { count, error: countError } = await (supabase.from as any)(table)
-      .select("*", { count: "exact", head: true });
+    let firstQuery = (supabase.from as any)(table)
+      .select(select, { count: "exact" })
+      .range(0, batchSize - 1);
 
-    if (countError) throw countError;
+    if (options?.order) {
+      firstQuery = firstQuery.order(options.order.column, {
+        ascending: options.order.ascending ?? true,
+      });
+    }
 
-    const totalRows = count ?? 0;
-    if (totalRows === 0) return [];
+    const { data: firstPageData, error: firstPageError, count } = await firstQuery;
+    if (firstPageError) throw firstPageError;
+
+    const firstPage = firstPageData ?? [];
+    const totalRows = count ?? firstPage.length;
+
+    if (totalRows <= firstPage.length) return firstPage;
 
     const totalPages = Math.ceil(totalRows / batchSize);
     const pagesData: any[][] = new Array(totalPages);
+    pagesData[0] = firstPage;
 
-    for (let i = 0; i < totalPages; i += maxConcurrency) {
+    for (let i = 1; i < totalPages; i += maxConcurrency) {
       const chunk = Array.from(
         { length: Math.min(maxConcurrency, totalPages - i) },
         (_, idx) => i + idx,
