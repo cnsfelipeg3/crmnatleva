@@ -93,6 +93,14 @@ export default function TripDetail() {
     });
   }, [id]);
 
+  // Helper: treat "Não", "não", "N/A", "—", empty as null
+  const clean = (v: string | null | undefined): string | undefined => {
+    if (!v) return undefined;
+    const t = v.trim();
+    if (!t || /^(não|nao|n\/a|—|-|\.+)$/i.test(t)) return undefined;
+    return t;
+  };
+
   // Build timeline items
   const timeline = useMemo(() => {
     if (!sale) return [];
@@ -153,37 +161,44 @@ export default function TripDetail() {
     }
 
     // Hotel — split into Check-in and Check-out entries
-    if (sale.hotel_name) {
+    const hotelName = clean(sale.hotel_name);
+    const hotelCity = clean(sale.hotel_city);
+    const hotelRoom = clean(sale.hotel_room);
+    const hotelMeal = clean(sale.hotel_meal_plan);
+    const hotelCode = clean(sale.hotel_reservation_code);
+    const hotelAddr = clean(sale.hotel_address);
+
+    if (hotelName) {
+      const subtitleParts = [hotelCity, hotelRoom ? `Quarto ${hotelRoom}` : null, hotelMeal].filter(Boolean);
+      const details: Record<string, string> = { "Horário": "14:00 (padrão)" };
+      if (hotelRoom) details["Quarto"] = hotelRoom;
+      if (hotelMeal) details["Refeição"] = hotelMeal;
+      if (hotelCode) details["Reserva"] = hotelCode;
+      if (hotelAddr) details["Endereço"] = hotelAddr;
+
       items.push({
         date: sale.hotel_checkin_date || sale.departure_date || "",
         time: "14:00",
         type: "hotel",
-        title: `🏨 Check-in: ${sale.hotel_name}`,
-        subtitle: `${sale.hotel_city || ""} • ${sale.hotel_room || ""} ${sale.hotel_meal_plan || ""}`.trim(),
-        details: {
-          "Horário": "14:00 (padrão)",
-          "Quarto": sale.hotel_room || "—",
-          "Refeição": sale.hotel_meal_plan || "—",
-          "Reserva": sale.hotel_reservation_code || "—",
-          "Endereço": sale.hotel_address || "—",
-        },
+        title: `🏨 Check-in: ${hotelName}`,
+        subtitle: subtitleParts.join(" · ") || "",
+        details,
         status: getLodgingStatus(),
-        reservationCode: sale.hotel_reservation_code || undefined,
+        reservationCode: hotelCode,
         icon: Hotel,
       });
       if (sale.hotel_checkout_date) {
+        const coDetails: Record<string, string> = { "Horário": "12:00 (padrão)" };
+        if (hotelCode) coDetails["Reserva"] = hotelCode;
         items.push({
           date: sale.hotel_checkout_date,
           time: "12:00",
           type: "hotel",
-          title: `🏨 Check-out: ${sale.hotel_name}`,
-          subtitle: `${sale.hotel_city || ""}`,
-          details: {
-            "Horário": "12:00 (padrão)",
-            "Reserva": sale.hotel_reservation_code || "—",
-          },
+          title: `🏨 Check-out: ${hotelName}`,
+          subtitle: hotelCity || "",
+          details: coDetails,
           status: getLodgingStatus(),
-          reservationCode: sale.hotel_reservation_code || undefined,
+          reservationCode: hotelCode,
           icon: Hotel,
         });
       }
@@ -365,15 +380,15 @@ export default function TripDetail() {
               value: ci.total_item_cost,
               reservationCode: ci.reservation_code,
             }))}
-            hotelInfo={sale?.hotel_name ? {
-              name: sale.hotel_name,
-              city: sale.hotel_city,
+            hotelInfo={clean(sale?.hotel_name) ? {
+              name: clean(sale.hotel_name)!,
+              city: clean(sale.hotel_city),
               checkinDate: sale.hotel_checkin_date || sale.departure_date,
               checkoutDate: sale.hotel_checkout_date,
-              room: sale.hotel_room,
-              mealPlan: sale.hotel_meal_plan,
-              reservationCode: sale.hotel_reservation_code,
-              address: sale.hotel_address,
+              room: clean(sale.hotel_room),
+              mealPlan: clean(sale.hotel_meal_plan),
+              reservationCode: clean(sale.hotel_reservation_code),
+              address: clean(sale.hotel_address),
             } : undefined}
             height="480px"
           />
