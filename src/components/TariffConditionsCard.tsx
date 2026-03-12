@@ -51,7 +51,7 @@ export const EMPTY_TARIFF: TariffCondition = {
 };
 
 const FARE_NAMES = [
-  "Light", "Plus", "Flex", "Top", "Executiva", "Econômica Promocional",
+  "Light", "Standard", "Plus", "Flex", "Top", "Executiva", "Econômica Promocional",
   "Econômica", "Premium Economy", "Primeira Classe", "Outra",
 ];
 
