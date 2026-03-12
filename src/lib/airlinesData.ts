@@ -14,11 +14,12 @@ export const ALL_AIRLINES: AirlineData[] = [
   { iata: "2Z", icao: "VES", name: "Voepass (Passaredo)" },
   { iata: "O6", icao: "ONE", name: "Avianca Brasil" },
   { iata: "M3", icao: "TUS", name: "LATAM Cargo Brasil" },
-  // === LATIN AMERICA ===
+  // === LATIN AMERICA & CARIBBEAN ===
   { iata: "AV", icao: "AVA", name: "Avianca" },
   { iata: "CM", icao: "CMP", name: "Copa Airlines" },
   { iata: "AR", icao: "ARG", name: "Aerolíneas Argentinas" },
   { iata: "AM", icao: "AMX", name: "Aeroméxico" },
+  { iata: "DM", icao: "ARJ", name: "Arajet" },
   { iata: "4O", icao: "AIJ", name: "Interjet" },
   { iata: "Y4", icao: "VOI", name: "Volaris" },
   { iata: "VB", icao: "VIV", name: "VivaAerobus" },
@@ -41,6 +42,11 @@ export const ALL_AIRLINES: AirlineData[] = [
   { iata: "FO", icao: "FIA", name: "Flybondi" },
   { iata: "5J", icao: "CEB", name: "Cebu Pacific" },
   { iata: "XP", icao: "CXP", name: "Xtra Airways" },
+  { iata: "VR", icao: "TCV", name: "TACV Cabo Verde Airlines" },
+  { iata: "P5", icao: "RPB", name: "Wingo" },
+  { iata: "2K", icao: "GLG", name: "Avianca Ecuador" },
+  { iata: "4M", icao: "DSM", name: "LATAM Airlines Argentina" },
+  { iata: "GF", icao: "GFA", name: "Gulf Air" },
   // === USA & CANADA ===
   { iata: "AA", icao: "AAL", name: "American Airlines" },
   { iata: "UA", icao: "UAL", name: "United Airlines" },
