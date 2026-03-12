@@ -226,11 +226,22 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Resize ──
+  // ── Resize (fullscreen + ResizeObserver) ──
   useEffect(() => {
     if (!viewerRef.current || status !== "ready") return;
     const raf = requestAnimationFrame(() => viewerRef.current?.resize());
-    return () => cancelAnimationFrame(raf);
+
+    const ro = containerRef.current
+      ? new ResizeObserver(() => {
+          if (viewerRef.current && !viewerRef.current.isDestroyed()) viewerRef.current.resize();
+        })
+      : null;
+    if (ro && containerRef.current) ro.observe(containerRef.current);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+    };
   }, [isFullscreen, status]);
 
   // ── Handlers ──
