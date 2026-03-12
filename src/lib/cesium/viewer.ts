@@ -31,24 +31,45 @@ export function createViewer({ container, minimal = true }: ViewerOptions): Cesi
     vrButton: false,
     infoBox: false,
     selectionIndicator: false,
-    creditContainer: document.createElement("div"), // hide credits overlay
-    globe: false, // we'll use 3D Tiles instead
+    scene3DOnly: true,
+    globe: false,
     skyAtmosphere: new Cesium.SkyAtmosphere(),
     orderIndependentTranslucency: true,
+    requestRenderMode: false,
     contextOptions: {
-      webgl: { alpha: true },
+      webgl: {
+        alpha: true,
+        antialias: true,
+        powerPreference: "high-performance",
+      },
     },
   });
 
-  // Enable atmosphere
+  // Enable atmosphere and transparent background for smooth compositing
   viewer.scene.skyAtmosphere.show = true;
   viewer.scene.backgroundColor = Cesium.Color.TRANSPARENT;
 
-  // Performance tweaks
+  // Performance and camera tuning for Google-Earth-like navigation
   viewer.scene.fog.enabled = true;
-  viewer.scene.globe && (viewer.scene.globe.enableLighting = true);
   viewer.scene.highDynamicRange = false;
   viewer.scene.postProcessStages.fxaa.enabled = true;
+
+  const cameraController = viewer.scene.screenSpaceCameraController;
+  cameraController.enableCollisionDetection = true;
+  cameraController.enableTilt = true;
+  cameraController.enableLook = true;
+  cameraController.minimumZoomDistance = 15;
+  cameraController.maximumZoomDistance = 35_000_000;
+  cameraController.inertiaSpin = 0.9;
+  cameraController.inertiaTranslate = 0.9;
+  cameraController.inertiaZoom = 0.82;
+
+  if (minimal) {
+    const creditContainer = viewer.cesiumWidget.creditContainer as HTMLElement | null;
+    if (creditContainer) {
+      creditContainer.style.opacity = "0.75";
+    }
+  }
 
   return viewer;
 }
@@ -65,7 +86,7 @@ export function flyTo(
     destination: Cesium.Cartesian3.fromDegrees(lng, lat, height),
     orientation: {
       heading: Cesium.Math.toRadians(0),
-      pitch: Cesium.Math.toRadians(-45),
+      pitch: Cesium.Math.toRadians(-38),
       roll: 0,
     },
     duration,
@@ -75,10 +96,10 @@ export function flyTo(
 /** Orbit overview — planet view */
 export function orbitView(viewer: Cesium.Viewer, duration = 4) {
   viewer.camera.flyTo({
-    destination: Cesium.Cartesian3.fromDegrees(-46.63, -23.55, 25_000_000),
+    destination: Cesium.Cartesian3.fromDegrees(-46.63, -23.55, 15_000_000),
     orientation: {
       heading: 0,
-      pitch: Cesium.Math.toRadians(-90),
+      pitch: Cesium.Math.toRadians(-86),
       roll: 0,
     },
     duration,
