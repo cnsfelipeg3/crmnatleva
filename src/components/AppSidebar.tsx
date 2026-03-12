@@ -233,6 +233,39 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           </div>
         )}
 
+        {/* Portal do Viajante section */}
+        <button
+          onClick={() => setPortalAdminOpen(!portalAdminOpen)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
+            portalAdminOpen
+              ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
+              : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+          )}
+        >
+          <Globe className={cn("w-5 h-5 shrink-0", portalAdminOpen && "text-sidebar-primary")} />
+          {!isCollapsed && (
+            <>
+              <span className="flex-1 text-left">Portal do Viajante</span>
+              <ChevronDown className={cn("w-4 h-4 transition-transform", portalAdminOpen && "rotate-180")} />
+            </>
+          )}
+        </button>
+
+        {portalAdminOpen && !isCollapsed && (
+          <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
+            {[
+              { to: "/portal-admin", icon: BarChart3, label: "Dashboard" },
+              { to: "/portal-admin/viagens", icon: Plane, label: "Viagens" },
+              { to: "/portal-admin/clientes", icon: Users, label: "Clientes" },
+              { to: "/portal-admin/documentos", icon: FileText, label: "Documentos" },
+              { to: "/itinerario", icon: FileText, label: "Itinerários" },
+              { to: "/portal-admin/notificacoes", icon: MessageSquare, label: "Notificações" },
+              { to: "/portal-admin/config", icon: Cog, label: "Configurações" },
+            ].map((item) => renderNavItem(item, true))}
+          </div>
+        )}
+
         {/* Finance section */}
         <button
           onClick={() => setFinanceOpen(!financeOpen)}
