@@ -127,6 +127,11 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
         // Routes
         rRoutes.forEach((route) => cesiumLib.addFlightArc(viewer, route));
 
+        // Force resize so viewer fills the container correctly
+        viewer.resize();
+        await new Promise((r) => setTimeout(r, 100));
+        viewer.resize();
+
         // ── Camera ──
         if (initialTarget) {
           cesiumLib.flyTo(viewer, initialTarget.lat, initialTarget.lng, initialTarget.height || 8_000_000, 4);
@@ -221,11 +226,22 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Resize ──
+  // ── Resize (fullscreen + ResizeObserver) ──
   useEffect(() => {
     if (!viewerRef.current || status !== "ready") return;
     const raf = requestAnimationFrame(() => viewerRef.current?.resize());
-    return () => cancelAnimationFrame(raf);
+
+    const ro = containerRef.current
+      ? new ResizeObserver(() => {
+          if (viewerRef.current && !viewerRef.current.isDestroyed()) viewerRef.current.resize();
+        })
+      : null;
+    if (ro && containerRef.current) ro.observe(containerRef.current);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+    };
   }, [isFullscreen, status]);
 
   // ── Handlers ──
