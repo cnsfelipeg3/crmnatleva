@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.portal-notifications-engine]
 verify_jwt = false
+
+[functions.portal-assistant]
+verify_jwt = false
