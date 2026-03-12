@@ -155,6 +155,15 @@ function AppRoutes() {
         {/* Admin */}
         <Route path="/admin/users" element={<AdminUsers />} />
 
+        {/* Operação Diária */}
+        <Route path="/operacao/inbox" element={<OperacaoInbox />} />
+        <Route path="/operacao/flows" element={<OperacaoFlowBuilder />} />
+        <Route path="/operacao/integracoes" element={<OperacaoIntegracoes />} />
+        <Route path="/operacao/agentes" element={<OperacaoAgentesIA />} />
+        <Route path="/operacao/pipeline" element={<OperacaoTagsPipeline />} />
+        <Route path="/operacao/simulador" element={<OperacaoSimulador />} />
+        <Route path="/operacao/logs" element={<OperacaoLogs />} />
+
         {/* Apresentação */}
         <Route path="/apresentacao" element={<ApresentacaoGeral />} />
 
