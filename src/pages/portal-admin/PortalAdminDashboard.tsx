@@ -184,7 +184,7 @@ export default function PortalAdminDashboard() {
                 acc[st] = (acc[st] || 0) + 1;
                 return acc;
               }, {})
-            ).sort(([, a], [, b]) => b - a).map(([status, count]) => (
+            ).sort(([, a], [, b]) => (b as number) - (a as number)).map(([status, count]) => (
               <div key={status} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className={cn("text-[10px]", statusStyle[status])}>{statusLabel[status] || status}</Badge>
