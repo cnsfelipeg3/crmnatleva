@@ -33,21 +33,36 @@ Deno.serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Check portal access
-    const { data: access } = await admin
-      .from("portal_access")
-      .select("*")
+    // Check if user is admin
+    const { data: adminRole } = await admin
+      .from("user_roles")
+      .select("role")
       .eq("user_id", user.id)
-      .eq("is_active", true)
-      .single();
+      .eq("role", "admin")
+      .maybeSingle();
 
-    if (!access) {
-      return new Response(JSON.stringify({ error: "No portal access" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const isAdmin = !!adminRole;
+
+    // Check portal access (not required for admins)
+    let access: any = null;
+    let clientId: string | null = null;
+
+    if (!isAdmin) {
+      const { data: portalAccess } = await admin
+        .from("portal_access")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .single();
+
+      if (!portalAccess) {
+        return new Response(JSON.stringify({ error: "No portal access" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      access = portalAccess;
+      clientId = portalAccess.client_id;
     }
-
-    const clientId = access.client_id;
     const body = await req.json().catch(() => ({}));
     const action = body.action;
 
