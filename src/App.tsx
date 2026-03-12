@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import airplaneImg from "@/assets/airplane-loader.png";
+import NatLevaLoader from "@/components/NatLevaLoader";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -107,27 +107,7 @@ const OperacaoLogs = lazy(() => import("@/pages/operacao/OperacaoLogs"));
 const queryClient = new QueryClient();
 
 function ScreenLoader() {
-  return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background">
-      <div className="relative w-48 h-24">
-        {/* Runway */}
-        <div className="absolute bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent" />
-        {/* Runway dashes */}
-        <div className="absolute bottom-[7px] left-4 right-4 flex justify-between">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="w-3 h-[2px] bg-muted-foreground/20" />
-          ))}
-        </div>
-        {/* Airplane */}
-        <div className="absolute bottom-3 animate-takeoff">
-          <img src={airplaneImg} alt="Avião" className="w-10 h-10 object-contain" />
-        </div>
-        {/* Trail */}
-        <div className="absolute bottom-4 left-0 w-12 h-[3px] rounded-full bg-gradient-to-r from-primary/0 via-primary/20 to-primary/40 animate-trail" />
-      </div>
-      <p className="text-sm text-muted-foreground mt-4 animate-pulse">Preparando decolagem...</p>
-    </div>
-  );
+  return <NatLevaLoader />;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
