@@ -247,46 +247,60 @@ function TripSection({ title, icon: Icon, trips, onOpen, formatDate }: {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {trips.map((trip, i) => (
-          <Card
-            key={trip.id || i}
-            className="overflow-hidden cursor-pointer hover:shadow-lg hover:border-accent/20 transition-all group"
-            onClick={() => onOpen(trip.sale_id)}
-          >
-            <div className="relative h-40 overflow-hidden">
-              <img
-                src={trip.cover_image_url || destinationImages.default}
-                alt=""
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              <div className="absolute bottom-3 left-3 right-3">
-                <TripStatusBadge sale={trip.sale} />
-              </div>
-            </div>
-            <div className="p-4">
-              <h4 className="font-semibold text-foreground truncate">{trip.custom_title || trip.sale?.name || "Viagem"}</h4>
-              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                {trip.sale?.origin_iata && trip.sale?.destination_iata && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {trip.sale.origin_iata} → {trip.sale.destination_iata}
-                  </span>
+        {trips.map((trip, i) => {
+          const dep = trip.sale?.departure_date ? new Date(trip.sale.departure_date + "T00:00:00") : null;
+          const now = new Date();
+          const daysUntil = dep ? Math.ceil((dep.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)) : null;
+
+          return (
+            <Card
+              key={trip.id || i}
+              className="overflow-hidden cursor-pointer hover:shadow-lg hover:border-accent/20 transition-all group"
+              onClick={() => onOpen(trip.sale_id)}
+            >
+              <div className="relative h-44 overflow-hidden">
+                <img
+                  src={trip.cover_image_url || destinationImages.default}
+                  alt=""
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                <div className="absolute top-3 left-3">
+                  <TripStatusBadge sale={trip.sale} />
+                </div>
+                {daysUntil !== null && daysUntil > 0 && daysUntil <= 60 && (
+                  <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-sm text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <Timer className="h-3 w-3" />
+                    {daysUntil}d
+                  </div>
                 )}
+                <div className="absolute bottom-3 left-3 right-3">
+                  <h4 className="font-bold text-white text-sm truncate drop-shadow">{trip.custom_title || trip.sale?.name || "Viagem"}</h4>
+                </div>
               </div>
-              {trip.sale?.departure_date && (
-                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {formatDate(trip.sale.departure_date)}
-                  {trip.sale.return_date && ` — ${formatDate(trip.sale.return_date)}`}
-                </p>
-              )}
-              <div className="mt-3 flex items-center text-accent text-xs font-medium group-hover:underline">
-                Ver detalhes <ChevronRight className="h-3 w-3 ml-0.5" />
+              <div className="p-4">
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  {trip.sale?.origin_iata && trip.sale?.destination_iata && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />
+                      {trip.sale.origin_iata} → {trip.sale.destination_iata}
+                    </span>
+                  )}
+                </div>
+                {trip.sale?.departure_date && (
+                  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {formatDate(trip.sale.departure_date)}
+                    {trip.sale.return_date && ` — ${formatDate(trip.sale.return_date)}`}
+                  </p>
+                )}
+                <div className="mt-3 flex items-center text-accent text-xs font-medium group-hover:gap-2 transition-all">
+                  Ver detalhes <ChevronRight className="h-3 w-3 ml-0.5 group-hover:ml-1.5 transition-all" />
+                </div>
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
     </motion.div>
   );
