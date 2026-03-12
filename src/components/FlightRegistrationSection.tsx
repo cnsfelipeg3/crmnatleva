@@ -113,7 +113,7 @@ async function lookupAmadeus(origin: string, destination: string, date: string, 
 export default function FlightRegistrationSection({
   segments, onSegmentsChange,
   formOrigin, formDestination, formDepartureDate, formReturnDate, formAirline,
-  formLocator, formFlightClass, onFormChange,
+  formLocator, formFlightClass, onFormChange, onGroupLocatorsChange,
 }: Props) {
   const { toast } = useToast();
 
