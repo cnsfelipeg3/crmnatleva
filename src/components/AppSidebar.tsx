@@ -76,6 +76,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     if (window.location.pathname.startsWith("/financeiro")) setFinanceOpen(true);
     if (window.location.pathname.startsWith("/rh")) setRhOpen(true);
     if (window.location.pathname.startsWith("/livechat")) setLivechatOpen(true);
+    if (window.location.pathname.startsWith("/operacao")) setOperacaoOpen(true);
     if (window.location.pathname.startsWith("/admin")) setAdminOpen(true);
   }, []);
 
