@@ -298,6 +298,8 @@ export default function LiveChat() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const selected = conversations.find(c => c.id === selectedId);
+  const selectedDisplayName = selected ? getSafeContactName(selected.contact_name, selected.phone) : "Contato sem nome";
+  const selectedInitials = selected ? getContactInitials(selected.contact_name, selected.phone) : "CN";
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
 
   // Load active flow name for selected conversation
