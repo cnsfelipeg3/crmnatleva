@@ -31,6 +31,11 @@ export interface AirCostBlock {
   cash_value: string;
   reservation_code: string;
   notes: string;
+  // Pagante payment details
+  payment_method: string;
+  payment_currency: string;
+  payment_card_label: string;
+  payment_installments: string;
 }
 
 export function createEmptyAirCostBlock(label?: string): AirCostBlock {
@@ -48,6 +53,10 @@ export function createEmptyAirCostBlock(label?: string): AirCostBlock {
     cash_value: "",
     reservation_code: "",
     notes: "",
+    payment_method: "",
+    payment_currency: "BRL",
+    payment_card_label: "",
+    payment_installments: "1",
   };
 }
 
