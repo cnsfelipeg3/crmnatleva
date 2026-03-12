@@ -4,8 +4,26 @@
  */
 import { useEffect, useRef, useState, useCallback, memo } from "react";
 import { AnimatePresence } from "framer-motion";
-import type * as CesiumType from "cesium";
-import type { GlobeFlightRoute, GlobeWaypoint } from "@/lib/cesium";
+import * as Cesium from "cesium";
+import "cesium/Build/Cesium/Widgets/widgets.css";
+import type { GlobeFlightRoute, GlobeWaypoint } from "@/lib/cesium/routes";
+import { checkCesiumConfig } from "@/lib/cesium/config";
+import { createViewer, flyTo, initIon } from "@/lib/cesium/viewer";
+import { addGooglePhotorealistic3DTiles } from "@/lib/cesium/googleTiles";
+import {
+  TEST_ROUTES,
+  TEST_WAYPOINTS,
+  addCurrentLocationBeacon,
+  addFlightArc,
+  addSearchMarker,
+  addWaypointMarker,
+  animateAirplane,
+  computeCenteredView,
+  computeDistanceKm,
+  getEntityMetadata,
+  removeSearchMarker,
+  resolveCurrentLocation,
+} from "@/lib/cesium/routes";
 import { GlobeFallback, GlobeHud, GlobeLoading, RouteInfoPanel, SearchResultPanel } from "./TravelGlobeOverlays";
 import MapSearchBar, { type SearchResult } from "./MapSearchBar";
 import type { GlobeStatus, SelectedRouteInfo, TravelGlobeProps } from "./travelGlobe.types";
