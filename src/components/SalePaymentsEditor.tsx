@@ -25,6 +25,8 @@ export interface SalePayment {
   due_date: string;
   status: "pago" | "a_receber" | "vencido";
   notes: string;
+  receipt_url?: string;
+  receipt_name?: string;
 }
 
 const PAYMENT_METHODS = [
