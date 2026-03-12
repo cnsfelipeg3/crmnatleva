@@ -28,7 +28,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { LayerDivider } from "@/components/LayerDivider";
+import LayerDivider from "@/components/LayerDivider";
 import { toast } from "@/hooks/use-toast";
 import { FlowListPage } from "@/components/flowbuilder/FlowListPage";
 import { FlowCanvas } from "@/components/flowbuilder/FlowCanvas";
