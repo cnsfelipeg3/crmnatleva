@@ -1,4 +1,4 @@
-import type { GlobeFlightRoute, GlobeWaypoint } from "@/lib/cesium";
+import type { GlobeFlightRoute, GlobeWaypoint } from "@/lib/cesium/routes";
 
 export interface TravelGlobeProps {
   waypoints?: GlobeWaypoint[];
