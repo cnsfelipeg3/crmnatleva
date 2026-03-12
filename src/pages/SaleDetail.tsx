@@ -14,7 +14,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe } from "lucide-react";
+import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe, BookOpen } from "lucide-react";
 import PublishToPortalDialog from "@/components/portal/PublishToPortalDialog";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import { useToast } from "@/hooks/use-toast";
