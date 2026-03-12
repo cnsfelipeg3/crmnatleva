@@ -571,8 +571,10 @@ function FlightGroupCard({
 
   const allFilled = group.segments.every(s => s.origin_iata && s.destination_iata && s.flight_number);
 
-  // Check if Amadeus lookup can be triggered
-  const canLookup = !!(effectiveAirline && effectiveOrigin && effectiveDestination && effectiveDate);
+  const effectiveFlightNumber = first?.flight_number || "";
+
+  // Can lookup with (airline + flight number) OR (airline + origin + destination + date)
+  const canLookup = !!(effectiveAirline && effectiveFlightNumber) || !!(effectiveAirline && effectiveOrigin && effectiveDestination && effectiveDate);
 
   return (
     <Card className={cn("overflow-hidden border", colorClass)}>
