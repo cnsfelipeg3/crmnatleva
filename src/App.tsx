@@ -117,7 +117,7 @@ function ScreenLoader() {
           ))}
         </div>
         {/* Airplane */}
-        <div className="absolute bottom-3 animate-[takeoff_1.8s_ease-in-out_infinite]">
+        <div className="absolute bottom-3 animate-takeoff">
           <svg
             viewBox="0 0 24 24"
             fill="none"
