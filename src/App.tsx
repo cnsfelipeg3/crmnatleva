@@ -69,6 +69,15 @@ import FechamentoFornecedores from "@/pages/financeiro/FechamentoFornecedores";
 // Admin
 import AdminUsers from "@/pages/admin/AdminUsers";
 
+// Operação Diária
+import OperacaoInbox from "@/pages/operacao/OperacaoInbox";
+import OperacaoFlowBuilder from "@/pages/operacao/OperacaoFlowBuilder";
+import OperacaoIntegracoes from "@/pages/operacao/OperacaoIntegracoes";
+import OperacaoAgentesIA from "@/pages/operacao/OperacaoAgentesIA";
+import OperacaoTagsPipeline from "@/pages/operacao/OperacaoTagsPipeline";
+import OperacaoSimulador from "@/pages/operacao/OperacaoSimulador";
+import OperacaoLogs from "@/pages/operacao/OperacaoLogs";
+
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
