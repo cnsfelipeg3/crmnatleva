@@ -2146,7 +2146,7 @@ export default function LiveChat() {
                                       <img
                                         src={msg.media_url}
                                         alt="Imagem"
-                                        className="rounded-lg max-w-[250px] max-h-[300px] object-cover cursor-pointer mb-1"
+                                        className="rounded-lg w-full max-w-[220px] sm:max-w-[280px] lg:max-w-[340px] max-h-[320px] object-cover cursor-pointer mb-1"
                                         onClick={() => setLightboxUrl(msg.media_url!)}
                                       />
                                       <div className="flex items-center gap-2 mt-1">
