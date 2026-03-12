@@ -467,8 +467,7 @@ export default function SaleDetail() {
           </Card>
         </div>
       ) : (
-        /* ═══ VIEW MODE — Rich Dashboard ═══ */
-
+        <>
         {/* KPI Cards Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <Card className="p-4 glass-card">
