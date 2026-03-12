@@ -80,6 +80,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     if (window.location.pathname.startsWith("/operacao")) setOperacaoOpen(true);
     if (window.location.pathname.startsWith("/implementacao") || window.location.pathname.startsWith("/import") || window.location.pathname.startsWith("/livechat/import")) setImplOpen(true);
     if (window.location.pathname.startsWith("/admin")) setAdminOpen(true);
+    if (window.location.pathname.startsWith("/portal-admin")) setPortalAdminOpen(true);
   }, []);
 
   const renderNavItem = (item: typeof navItems[0], indent = false) => (
