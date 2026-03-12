@@ -9,6 +9,8 @@ import { formatDateBR, formatTimeBR } from "@/lib/dateFormat";
 import { iataToLabel, iataToCityName } from "@/lib/iataUtils";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import AirlineLogo, { AirlineLogosStack } from "@/components/AirlineLogo";
+import { Suspense, lazy } from "react";
+const TripRouteMap = lazy(() => import("@/components/TripRouteMap"));
 import {
   ArrowLeft, Plane, Hotel, Users, DollarSign, MapPin, Calendar,
   ExternalLink, Clock, ShoppingBag, Shield, Car, Ticket, Train,
