@@ -539,6 +539,9 @@ export default function Lodging() {
           <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded ${viewMode === "cards" ? "bg-background shadow-sm" : ""}`}>
             <LayoutGrid className="w-3.5 h-3.5" />
           </button>
+          <button onClick={() => setViewMode("calendar")} className={`p-1.5 rounded ${viewMode === "calendar" ? "bg-background shadow-sm" : ""}`}>
+            <Calendar className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
