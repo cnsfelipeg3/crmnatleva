@@ -1,9 +1,10 @@
 /**
  * Route / waypoint utilities for the Travel Globe.
- * Provides helpers to create flight arcs, markers, and animated paths.
+ * Journey-aware markers, flight arcs, airplane animation, current-location pin.
  */
 import * as Cesium from "cesium";
 
+/* ═══ Types ═══ */
 export interface GlobeWaypoint {
   id: string;
   label: string;
@@ -18,21 +19,10 @@ export interface GlobeFlightRoute {
   status: "active" | "upcoming" | "past";
 }
 
-/** Metadata attached to route entities for click handling */
-export interface RouteEntityMetadata {
-  kind: "route";
-  route: GlobeFlightRoute;
-}
-
-/** Metadata attached to waypoint entities for click handling */
-export interface WaypointEntityMetadata {
-  kind: "waypoint";
-  waypoint: GlobeWaypoint;
-}
-
+export interface RouteEntityMetadata { kind: "route"; route: GlobeFlightRoute; }
+export interface WaypointEntityMetadata { kind: "waypoint"; waypoint: GlobeWaypoint; }
 export type GlobeEntityMetadata = RouteEntityMetadata | WaypointEntityMetadata;
 
-/** Custom property key used to store metadata on Cesium entities */
 const METADATA_KEY = "__globeMeta";
 
 export function getEntityMetadata(entity: Cesium.Entity): GlobeEntityMetadata | null {
@@ -43,58 +33,77 @@ function setEntityMetadata(entity: Cesium.Entity, meta: GlobeEntityMetadata) {
   (entity as unknown as Record<string, unknown>)[METADATA_KEY] = meta;
 }
 
-/** Test waypoints for initial validation */
+/* ═══ Test data ═══ */
 export const TEST_WAYPOINTS: GlobeWaypoint[] = [
   { id: "gru", label: "São Paulo (GRU)", lat: -23.43, lng: -46.47, type: "origin" },
   { id: "mia", label: "Miami (MIA)", lat: 25.79, lng: -80.29, type: "connection" },
   { id: "mco", label: "Orlando (MCO)", lat: 28.43, lng: -81.31, type: "destination" },
 ];
 
-/** Test routes */
 export const TEST_ROUTES: GlobeFlightRoute[] = [
-  { from: TEST_WAYPOINTS[0], to: TEST_WAYPOINTS[1], status: "upcoming" },
+  { from: TEST_WAYPOINTS[0], to: TEST_WAYPOINTS[1], status: "past" },
   { from: TEST_WAYPOINTS[1], to: TEST_WAYPOINTS[2], status: "active" },
 ];
 
-/**
- * Add a pulsing point marker at a waypoint location.
- */
+/* ═══ Journey intelligence ═══ */
+export function resolveCurrentLocation(routes: GlobeFlightRoute[]): string | null {
+  const active = routes.find((r) => r.status === "active");
+  if (active) return active.from.id; // in transit from this city
+  const lastPast = [...routes].reverse().find((r) => r.status === "past");
+  if (lastPast) return lastPast.to.id; // arrived at destination
+  if (routes.length > 0) return routes[0].from.id; // pre-trip, still at origin
+  return null;
+}
+
+/* ═══ Colors per status ═══ */
+const ROUTE_COLORS: Record<string, { color: string; glow: number; width: number; alpha: number }> = {
+  past:     { color: "#94a3b8", glow: 0.08, width: 2,   alpha: 0.35 },
+  active:   { color: "#22c55e", glow: 0.35, width: 4,   alpha: 1 },
+  upcoming: { color: "#60a5fa", glow: 0.15, width: 2.5, alpha: 0.6 },
+};
+
+const WP_COLORS: Record<GlobeWaypoint["type"], string> = {
+  origin: "#22c55e",
+  connection: "#60a5fa",
+  destination: "#f59e0b",
+  hotel: "#a78bfa",
+  experience: "#ec4899",
+  poi: "#94a3b8",
+};
+
+/* ═══ Waypoint Marker ═══ */
 export function addWaypointMarker(
   viewer: Cesium.Viewer,
-  wp: GlobeWaypoint
+  wp: GlobeWaypoint,
+  isCurrent = false,
 ): Cesium.Entity {
-  const colorMap: Record<GlobeWaypoint["type"], Cesium.Color> = {
-    origin: Cesium.Color.fromCssColorString("#22c55e"),
-    connection: Cesium.Color.fromCssColorString("#4ade80"),
-    destination: Cesium.Color.fromCssColorString("#16a34a"),
-    hotel: Cesium.Color.fromCssColorString("#facc15"),
-    experience: Cesium.Color.fromCssColorString("#f97316"),
-    poi: Cesium.Color.fromCssColorString("#8b5cf6"),
-  };
+  const hex = WP_COLORS[wp.type] || "#ffffff";
+  const color = Cesium.Color.fromCssColorString(hex);
+  const size = isCurrent ? 16 : 10;
 
   const entity = viewer.entities.add({
-    position: Cesium.Cartesian3.fromDegrees(wp.lng, wp.lat, 200),
+    position: Cesium.Cartesian3.fromDegrees(wp.lng, wp.lat, 300),
     point: {
-      pixelSize: 12,
-      color: colorMap[wp.type] || Cesium.Color.WHITE,
-      outlineColor: Cesium.Color.WHITE.withAlpha(0.6),
-      outlineWidth: 2,
+      pixelSize: size,
+      color: isCurrent ? color : color.withAlpha(0.85),
+      outlineColor: Cesium.Color.WHITE.withAlpha(isCurrent ? 0.9 : 0.5),
+      outlineWidth: isCurrent ? 3 : 1.5,
       heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
       disableDepthTestDistance: Number.POSITIVE_INFINITY,
     },
     label: {
       text: wp.label,
-      font: "13px 'Space Grotesk', sans-serif",
-      fillColor: Cesium.Color.WHITE,
-      outlineColor: Cesium.Color.BLACK,
-      outlineWidth: 3,
+      font: `${isCurrent ? "600 14px" : "500 12px"} 'Inter', 'SF Pro Display', system-ui, sans-serif`,
+      fillColor: Cesium.Color.WHITE.withAlpha(isCurrent ? 1 : 0.8),
+      outlineColor: Cesium.Color.BLACK.withAlpha(0.6),
+      outlineWidth: 4,
       style: Cesium.LabelStyle.FILL_AND_OUTLINE,
       verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-      pixelOffset: new Cesium.Cartesian2(0, -18),
+      pixelOffset: new Cesium.Cartesian2(0, isCurrent ? -24 : -16),
       disableDepthTestDistance: Number.POSITIVE_INFINITY,
       showBackground: true,
-      backgroundColor: Cesium.Color.fromCssColorString("rgba(10, 22, 40, 0.85)"),
-      backgroundPadding: new Cesium.Cartesian2(8, 5),
+      backgroundColor: Cesium.Color.fromCssColorString("rgba(2, 6, 14, 0.82)"),
+      backgroundPadding: new Cesium.Cartesian2(10, 6),
     },
   });
 
@@ -102,33 +111,47 @@ export function addWaypointMarker(
   return entity;
 }
 
-/**
- * Draw a flight arc between two waypoints.
- * Uses a polyline with altitude for a visible arc effect.
- */
+/* ═══ Current-location beacon ═══ */
+export function addCurrentLocationBeacon(
+  viewer: Cesium.Viewer,
+  wp: GlobeWaypoint,
+): Cesium.Entity {
+  return viewer.entities.add({
+    position: Cesium.Cartesian3.fromDegrees(wp.lng, wp.lat, 350),
+    ellipse: {
+      semiMinorAxis: 35_000,
+      semiMajorAxis: 35_000,
+      material: Cesium.Color.fromCssColorString("#22c55e").withAlpha(0.12),
+      outline: true,
+      outlineColor: Cesium.Color.fromCssColorString("#22c55e").withAlpha(0.3),
+      outlineWidth: 1.5,
+      heightReference: Cesium.HeightReference.RELATIVE_TO_GROUND,
+    },
+  });
+}
+
+/* ═══ Flight Arc ═══ */
 export function addFlightArc(
   viewer: Cesium.Viewer,
-  route: GlobeFlightRoute
+  route: GlobeFlightRoute,
 ): Cesium.Entity {
-  const colorMap: Record<string, string> = {
-    active: "#22c55e",
-    upcoming: "#4ade80",
-    past: "#0d3a1e",
-  };
+  const style = ROUTE_COLORS[route.status] || ROUTE_COLORS.upcoming;
 
   const positions = computeArcPositions(
     route.from.lat, route.from.lng,
     route.to.lat, route.to.lng,
-    60, 150_000
+    80, 180_000,
   );
+
+  const baseColor = Cesium.Color.fromCssColorString(style.color).withAlpha(style.alpha);
 
   const entity = viewer.entities.add({
     polyline: {
       positions,
-      width: route.status === "past" ? 1.5 : 3,
+      width: style.width,
       material: new Cesium.PolylineGlowMaterialProperty({
-        glowPower: 0.25,
-        color: Cesium.Color.fromCssColorString(colorMap[route.status] || "#22c55e"),
+        glowPower: style.glow,
+        color: baseColor,
       }),
       clampToGround: false,
     },
@@ -138,12 +161,117 @@ export function addFlightArc(
   return entity;
 }
 
-/** Compute arc positions with altitude curve */
-function computeArcPositions(
+/* ═══ Airplane animation ═══ */
+let activeAirplaneEntity: Cesium.Entity | null = null;
+let airplaneAnimationId: number | null = null;
+
+export function animateAirplane(
+  viewer: Cesium.Viewer,
+  route: GlobeFlightRoute,
+  durationSec = 6,
+): void {
+  // Remove previous
+  stopAirplaneAnimation(viewer);
+
+  const positions = computeArcPositions(
+    route.from.lat, route.from.lng,
+    route.to.lat, route.to.lng,
+    120, 180_000,
+  );
+
+  // Create airplane entity (a small bright point with label)
+  activeAirplaneEntity = viewer.entities.add({
+    position: positions[0],
+    point: {
+      pixelSize: 8,
+      color: Cesium.Color.WHITE,
+      outlineColor: Cesium.Color.fromCssColorString("#22c55e"),
+      outlineWidth: 3,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    },
+    label: {
+      text: "  ✈",
+      font: "18px system-ui",
+      fillColor: Cesium.Color.WHITE,
+      style: Cesium.LabelStyle.FILL,
+      verticalOrigin: Cesium.VerticalOrigin.CENTER,
+      horizontalOrigin: Cesium.HorizontalOrigin.LEFT,
+      pixelOffset: new Cesium.Cartesian2(6, 0),
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    },
+  });
+
+  // Trail polyline (builds up over time)
+  const trailPositions = [positions[0]];
+  const trailEntity = viewer.entities.add({
+    polyline: {
+      positions: new Cesium.CallbackProperty(() => trailPositions, false) as unknown as Cesium.Cartesian3[],
+      width: 2,
+      material: new Cesium.PolylineGlowMaterialProperty({
+        glowPower: 0.3,
+        color: Cesium.Color.WHITE.withAlpha(0.5),
+      }),
+      clampToGround: false,
+    },
+  });
+
+  const startTime = performance.now();
+  const totalMs = durationSec * 1000;
+
+  const tick = () => {
+    const elapsed = performance.now() - startTime;
+    const t = Math.min(elapsed / totalMs, 1);
+
+    // Ease in-out
+    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+
+    const idx = Math.min(Math.floor(eased * (positions.length - 1)), positions.length - 1);
+
+    if (activeAirplaneEntity?.position) {
+      (activeAirplaneEntity.position as unknown as Cesium.ConstantPositionProperty).setValue(positions[idx]);
+    }
+
+    // Update trail
+    if (trailPositions.length < idx + 1) {
+      for (let i = trailPositions.length; i <= idx; i++) {
+        trailPositions.push(positions[i]);
+      }
+    }
+
+    if (t < 1) {
+      airplaneAnimationId = requestAnimationFrame(tick);
+    } else {
+      // Clean up after brief pause
+      setTimeout(() => {
+        if (activeAirplaneEntity && !viewer.isDestroyed()) {
+          viewer.entities.remove(activeAirplaneEntity);
+          viewer.entities.remove(trailEntity);
+          activeAirplaneEntity = null;
+        }
+      }, 1500);
+    }
+  };
+
+  airplaneAnimationId = requestAnimationFrame(tick);
+}
+
+export function stopAirplaneAnimation(viewer: Cesium.Viewer): void {
+  if (airplaneAnimationId) {
+    cancelAnimationFrame(airplaneAnimationId);
+    airplaneAnimationId = null;
+  }
+  if (activeAirplaneEntity && !viewer.isDestroyed()) {
+    viewer.entities.remove(activeAirplaneEntity);
+    activeAirplaneEntity = null;
+  }
+}
+
+/* ═══ Arc geometry ═══ */
+export function computeArcPositions(
   lat1: number, lng1: number,
   lat2: number, lng2: number,
   segments: number,
-  maxAlt: number
+  maxAlt: number,
 ): Cesium.Cartesian3[] {
   const positions: Cesium.Cartesian3[] = [];
   for (let i = 0; i <= segments; i++) {
@@ -156,13 +284,9 @@ function computeArcPositions(
   return positions;
 }
 
-/**
- * Compute centroid camera view to perfectly center all waypoints with equal margins.
- */
+/* ═══ Centroid camera ═══ */
 export function computeCenteredView(waypoints: GlobeWaypoint[]): {
-  lat: number;
-  lng: number;
-  height: number;
+  lat: number; lng: number; height: number;
 } {
   if (!waypoints.length) return { lat: 0, lng: -50, height: 20_000_000 };
 
@@ -171,18 +295,27 @@ export function computeCenteredView(waypoints: GlobeWaypoint[]): {
   const centroidLat = latSum / waypoints.length;
   const centroidLng = lngSum / waypoints.length;
 
-  // Compute span to determine altitude
   const latMin = Math.min(...waypoints.map((w) => w.lat));
   const latMax = Math.max(...waypoints.map((w) => w.lat));
   const lngMin = Math.min(...waypoints.map((w) => w.lng));
   const lngMax = Math.max(...waypoints.map((w) => w.lng));
 
-  const latSpan = latMax - latMin;
-  const lngSpan = lngMax - lngMin;
-  const maxSpan = Math.max(latSpan, lngSpan);
-
-  // Map span to camera height — generous padding for equal margins
-  const height = Math.max(2_000_000, maxSpan * 120_000);
+  const maxSpan = Math.max(latMax - latMin, lngMax - lngMin);
+  const height = Math.max(2_500_000, maxSpan * 130_000);
 
   return { lat: centroidLat, lng: centroidLng, height: Math.min(height, 20_000_000) };
+}
+
+/* ═══ Distance helper ═══ */
+export function computeDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Math.round(R * c);
 }
