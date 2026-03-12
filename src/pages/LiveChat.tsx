@@ -2062,7 +2062,7 @@ export default function LiveChat() {
                               </span>
                             </div>
                           ) : (
-                            <div className="group relative max-w-[70%]">
+                            <div className="group relative max-w-[86%] sm:max-w-[80%] xl:max-w-[70%]">
                               <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 z-10 ${
                                 msg.sender_type === "atendente" ? "-left-[72px]" : "-right-[72px]"
                               }`}>
