@@ -1880,7 +1880,7 @@ export default function LiveChat() {
                             {/* Row 1: Name + Time — WhatsApp style using CSS Grid */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '4px' }}>
                               <span className={`text-sm truncate ${conv.unread_count > 0 ? "font-bold text-foreground" : "font-medium text-foreground"}`}>
-                                {/^\d{10,}$/.test(conv.contact_name) ? formatPhoneDisplay(conv.contact_name) : conv.contact_name}
+                                {displayName}
                               </span>
                               <span className="text-[11px] text-foreground whitespace-nowrap">
                                 {(() => {
