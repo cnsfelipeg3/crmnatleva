@@ -560,6 +560,24 @@ export default function Lodging() {
             </Button>
           )}
         </Card>
+      ) : viewMode === "calendar" ? (
+        <TaskCalendarView
+          tasks={filtered.map(t => {
+            const milestoneCfg = MILESTONE_CONFIG[t.milestone] || MILESTONE_CONFIG.D14;
+            const statusCfg = STATUS_CONFIG[t.status] || STATUS_CONFIG.PENDENTE;
+            const dateStr = t.hotel_checkin_datetime_utc || t.scheduled_at_utc;
+            return {
+              id: t.id,
+              date: dateStr,
+              label: t.hotel_name || "Hotel",
+              sublabel: `${milestoneCfg.short} — ${t.sale?.name || ""}`,
+              statusDot: statusCfg.dot,
+              statusLabel: statusCfg.label,
+              onClick: () => navigate(`/sales/${t.sale_id}`),
+            };
+          })}
+          emptyMessage="Nenhuma hospedagem neste mês"
+        />
       ) : (
         <div className="space-y-4">
           {groupedByDate.map(([key, group]) => (
