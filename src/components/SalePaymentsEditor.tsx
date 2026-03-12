@@ -58,6 +58,8 @@ interface Props {
 }
 
 export default function SalePaymentsEditor({ payments, onChange, totalSaleValue = 0 }: Props) {
+  const [uploadingPaymentId, setUploadingPaymentId] = useState<string | null>(null);
+
   const { data: feeRules = [] } = useQuery({
     queryKey: ["payment-fee-rules-all"],
     queryFn: async () => {
