@@ -689,7 +689,6 @@ export default function Checkin() {
           </Select>
         )}
 
-        {/* View toggle */}
         <div className="flex gap-0.5 bg-muted rounded-md p-0.5">
           <button onClick={() => setViewMode("agenda")} className={`p-1.5 rounded ${viewMode === "agenda" ? "bg-background shadow-sm" : ""}`} title="Lista">
             <List className="w-3.5 h-3.5" />
@@ -699,6 +698,9 @@ export default function Checkin() {
           </button>
           <button onClick={() => setViewMode("pipeline")} className={`p-1.5 rounded ${viewMode === "pipeline" ? "bg-background shadow-sm" : ""}`} title="Pipeline">
             <Columns3 className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={() => setViewMode("calendar")} className={`p-1.5 rounded ${viewMode === "calendar" ? "bg-background shadow-sm" : ""}`} title="Calendário">
+            <Calendar className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
