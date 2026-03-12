@@ -856,8 +856,36 @@ function SegmentCard({ seg, segIndex, totalSegments, onUpdate, defaultAirline, d
           <Input type="time" value={seg.arrival_time} onChange={e => onUpdate("arrival_time", e.target.value)} className="text-sm" />
         </div>
         <div className="space-y-1">
-          <Label className="text-xs">Duração (min)</Label>
-          <Input type="number" value={seg.duration_minutes || ""} onChange={e => onUpdate("duration_minutes", parseInt(e.target.value) || 0)} className="text-sm" />
+          <Label className="text-xs">Duração</Label>
+          <div className="flex gap-1 items-center">
+            <Input
+              type="number"
+              min={0}
+              placeholder="h"
+              value={seg.duration_minutes ? Math.floor(seg.duration_minutes / 60) : ""}
+              onChange={e => {
+                const hours = parseInt(e.target.value) || 0;
+                const currentMin = (seg.duration_minutes || 0) % 60;
+                onUpdate("duration_minutes", hours * 60 + currentMin);
+              }}
+              className="text-sm w-16"
+            />
+            <span className="text-xs text-muted-foreground">h</span>
+            <Input
+              type="number"
+              min={0}
+              max={59}
+              placeholder="min"
+              value={seg.duration_minutes ? seg.duration_minutes % 60 : ""}
+              onChange={e => {
+                const mins = Math.min(parseInt(e.target.value) || 0, 59);
+                const currentH = Math.floor((seg.duration_minutes || 0) / 60);
+                onUpdate("duration_minutes", currentH * 60 + mins);
+              }}
+              className="text-sm w-16"
+            />
+            <span className="text-xs text-muted-foreground">min</span>
+          </div>
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Classe</Label>
