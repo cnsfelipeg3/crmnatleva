@@ -637,7 +637,7 @@ export default function AirCostBlocksEditor({
       {/* Add block */}
       {blocks.length > 0 && (
         <Button variant="outline" onClick={addBlock} className="w-full mt-3">
-          <Plus className="w-4 h-4 mr-2" /> Adicionar Bloco de Custo
+          <Plus className="w-4 h-4 mr-2" /> Detalhar outro custo
         </Button>
       )}
 
