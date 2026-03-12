@@ -42,7 +42,7 @@ export default function ItineraryListPage() {
       setLoading(true);
       const { data: salesData } = await supabase
         .from("sales")
-        .select("id, name, status, travel_date, return_date, total_price, client_id, created_at")
+        .select("id, name, status, departure_date, return_date, client_id, created_at")
         .order("created_at", { ascending: false })
         .limit(50);
 
