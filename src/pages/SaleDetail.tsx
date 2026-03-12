@@ -226,19 +226,84 @@ export default function SaleDetail() {
     </div>
   );
 
+  const statusColor: Record<string, string> = {
+    "Rascunho": "bg-muted text-muted-foreground",
+    "Pendente": "bg-amber-500/15 text-amber-700 border-amber-300",
+    "Em andamento": "bg-blue-500/15 text-blue-700 border-blue-300",
+    "Emitido": "bg-emerald-500/15 text-emerald-700 border-emerald-300",
+    "Fechado": "bg-primary/15 text-primary border-primary/30",
+    "Cancelado": "bg-destructive/15 text-destructive border-destructive/30",
+    "Concluída": "bg-emerald-500/15 text-emerald-700 border-emerald-300",
+    "Concluida": "bg-emerald-500/15 text-emerald-700 border-emerald-300",
+  };
+
+  const tripDays = useMemo(() => {
+    if (!sale?.departure_date) return null;
+    const end = sale.return_date || sale.departure_date;
+    const d1 = new Date(sale.departure_date);
+    const d2 = new Date(end);
+    return Math.max(1, Math.round((d2.getTime() - d1.getTime()) / 86400000));
+  }, [sale]);
+
+  const uniqueAirlines = useMemo(() => {
+    const set = new Set<string>();
+    if (sale?.airline) set.add(sale.airline);
+    segments.forEach(s => { if (s.airline) set.add(s.airline); });
+    return [...set];
+  }, [sale, segments]);
+
   return (
     <div className="p-6 space-y-5 animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/sales")}><ArrowLeft className="w-4 h-4" /></Button>
+      {/* ═══ HEADER ═══ */}
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div className="flex items-start gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/sales")} className="mt-1"><ArrowLeft className="w-4 h-4" /></Button>
           <div>
-            <h1 className="text-2xl font-serif text-foreground">{sale.name}</h1>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{sale.display_id} · {formatDateBR(sale.close_date)}</span>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-serif text-foreground">{sale.name}</h1>
+              <Badge className={`text-[10px] px-2 py-0.5 border ${statusColor[sale.status] || "bg-muted"}`}>{sale.status}</Badge>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5">
+              <span className="font-mono text-xs">{sale.display_id}</span>
+              <span>·</span>
+              <span>{formatDateBR(sale.close_date)}</span>
               {sale.client_id && clientName && (
-                <button onClick={() => navigate(`/clients/${sale.client_id}`)} className="text-primary hover:underline text-xs font-medium">
-                  👤 {clientName}
-                </button>
+                <>
+                  <span>·</span>
+                  <button onClick={() => navigate(`/clients/${sale.client_id}`)} className="text-primary hover:underline text-xs font-medium flex items-center gap-1">
+                    <Users className="w-3 h-3" /> {clientName}
+                  </button>
+                </>
+              )}
+            </div>
+            {/* Quick trip badge row */}
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {sale.destination_iata && (
+                <Badge variant="outline" className="text-xs gap-1">
+                  <MapPin className="w-3 h-3" /> {iataToLabel(sale.destination_iata)}
+                </Badge>
+              )}
+              {sale.departure_date && (
+                <Badge variant="outline" className="text-xs gap-1">
+                  <Calendar className="w-3 h-3" /> {formatDateBR(sale.departure_date)}
+                  {sale.return_date && ` → ${formatDateBR(sale.return_date)}`}
+                </Badge>
+              )}
+              {tripDays && (
+                <Badge variant="outline" className="text-xs gap-1">
+                  <Clock className="w-3 h-3" /> {tripDays} {tripDays === 1 ? "dia" : "dias"}
+                </Badge>
+              )}
+              {uniqueAirlines.length > 0 && (
+                <Badge variant="outline" className="text-xs gap-1.5 pr-2">
+                  <AirlineLogosStack iatas={uniqueAirlines} size={16} />
+                  {uniqueAirlines.join(", ")}
+                </Badge>
+              )}
+              {sale.miles_program && (
+                <Badge variant="outline" className="text-xs gap-1 bg-accent/10">
+                  <Tag className="w-3 h-3" /> {sale.miles_program}
+                </Badge>
               )}
             </div>
           </div>
@@ -260,7 +325,6 @@ export default function SaleDetail() {
               </Button>
             </>
           )}
-          <Badge variant="outline" className="self-center">{sale.status}</Badge>
         </div>
       </div>
 
