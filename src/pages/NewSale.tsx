@@ -44,6 +44,7 @@ interface OtherProduct {
   date: string; emission_type: "milhas" | "pagante";
   miles_program: string; miles_qty: string; miles_tax: string; cash_value: string;
   reservation_code: string;
+  tariff: TariffCondition;
 }
 
 const defaultSegment: FlightSegment = {
@@ -260,6 +261,7 @@ export default function NewSale() {
       id: crypto.randomUUID(), type: "transfer", description: "", supplier_id: "",
       date: "", emission_type: "pagante", miles_program: "", miles_qty: "",
       miles_tax: "", cash_value: "", reservation_code: "",
+      tariff: { ...EMPTY_TARIFF },
     }]);
   };
   const updateProduct = (id: string, field: string, value: any) => {
@@ -465,6 +467,13 @@ export default function NewSale() {
       }
       if (hotelTariff.fare_name) {
         tariffConditions.push({ sale_id: saleId, product_type: "hotel", product_label: "Hospedagem", ...hotelTariff });
+      }
+      // Product-level tariffs
+      for (const p of otherProducts) {
+        if (p.tariff.fare_name) {
+          const label = PRODUCT_TYPES.find(t => t.value === p.type)?.label || p.type;
+          tariffConditions.push({ sale_id: saleId, product_type: p.type, product_label: `${label} — ${p.description || ""}`.trim(), ...p.tariff });
+        }
       }
       if (tariffConditions.length > 0) await supabase.from("tariff_conditions").insert(tariffConditions);
 
@@ -865,6 +874,15 @@ export default function NewSale() {
                     ) : (
                       <div className="space-y-2"><Label>Valor Pago R$</Label><Input type="number" step="0.01" value={product.cash_value} onChange={(e) => updateProduct(product.id, "cash_value", e.target.value)} /></div>
                     )}
+
+
+                    {/* Tariff conditions for this product */}
+                    <TariffConditionsCard
+                      value={product.tariff}
+                      onChange={(v) => updateProduct(product.id, "tariff", v)}
+                      productLabel={typeInfo?.label || "Produto"}
+                      compact
+                    />
                   </Card>
                 );
               })}
