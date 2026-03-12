@@ -64,6 +64,7 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<SelectedRouteInfo | null>(null);
   const [currentLocationId, setCurrentLocationId] = useState<string | null>(null);
+  const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
 
   const isMobile = useIsMobile();
 
