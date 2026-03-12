@@ -169,6 +169,39 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           </div>
         )}
 
+        {/* Operação Diária section */}
+        <button
+          onClick={() => setOperacaoOpen(!operacaoOpen)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
+            operacaoOpen
+              ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
+              : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+          )}
+        >
+          <Zap className={cn("w-5 h-5 shrink-0", operacaoOpen && "text-sidebar-primary")} />
+          {!isCollapsed && (
+            <>
+              <span className="flex-1 text-left">Operação Diária</span>
+              <ChevronDown className={cn("w-4 h-4 transition-transform", operacaoOpen && "rotate-180")} />
+            </>
+          )}
+        </button>
+
+        {operacaoOpen && !isCollapsed && (
+          <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
+            {[
+              { to: "/operacao/inbox", icon: Inbox, label: "Inbox" },
+              { to: "/operacao/flows", icon: GitBranch, label: "Flow Builder" },
+              { to: "/operacao/integracoes", icon: Plug, label: "Integrações" },
+              { to: "/operacao/agentes", icon: Bot, label: "Agentes IA" },
+              { to: "/operacao/pipeline", icon: Tag, label: "Tags & Pipeline" },
+              { to: "/operacao/simulador", icon: TestTube, label: "Simulador" },
+              { to: "/operacao/logs", icon: ScrollText, label: "Logs & Auditoria" },
+            ].map((item) => renderNavItem(item, true))}
+          </div>
+        )}
+
         {/* Finance section */}
         <button
           onClick={() => setFinanceOpen(!financeOpen)}
