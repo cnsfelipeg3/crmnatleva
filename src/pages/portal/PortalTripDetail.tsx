@@ -15,6 +15,7 @@ import AirlineLogo from "@/components/AirlineLogo";
 import { iataToLabel } from "@/lib/iataUtils";
 import PortalJourneyMap from "@/components/portal/PortalJourneyMap";
 import PortalChecklist from "@/components/portal/PortalChecklist";
+import PortalDocumentsCenter from "@/components/portal/PortalDocumentsCenter";
 
 const fmt = (v: number) => v?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00";
 const fmtDate = (d: string | null) => {
@@ -311,34 +312,18 @@ export default function PortalTripDetail() {
           </motion.div>
         )}
 
-        {/* Documents */}
-        {attachments?.length > 0 && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
-            <Section title="Documentos" icon={FileText}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {attachments.map((att: any, i: number) => (
-                  <div key={att.id || i} className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 border border-border/50">
-                    <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
-                      <FileText className="h-5 w-5 text-accent" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{att.file_name}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{att.category || "Documento"}</p>
-                    </div>
-                    <div className="flex gap-1">
-                      <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg hover:bg-muted transition-colors" title="Visualizar">
-                        <Eye className="h-4 w-4 text-muted-foreground" />
-                      </a>
-                      <a href={att.file_url} download className="p-2 rounded-lg hover:bg-muted transition-colors" title="Baixar">
-                        <Download className="h-4 w-4 text-muted-foreground" />
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Section>
-          </motion.div>
-        )}
+        {/* Documents Center */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+          <Section title="Central de Documentos" icon={FileText}>
+            <PortalDocumentsCenter
+              attachments={attachments || []}
+              sale={sale}
+              segments={segments || []}
+              hotels={allHotels}
+              services={services || []}
+            />
+          </Section>
+        </motion.div>
 
         {/* Financial */}
         {financial?.receivables?.length > 0 && (
