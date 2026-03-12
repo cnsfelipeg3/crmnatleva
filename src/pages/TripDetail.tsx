@@ -380,15 +380,15 @@ export default function TripDetail() {
               value: ci.total_item_cost,
               reservationCode: ci.reservation_code,
             }))}
-            hotelInfo={sale?.hotel_name ? {
-              name: sale.hotel_name,
-              city: sale.hotel_city,
+            hotelInfo={clean(sale?.hotel_name) ? {
+              name: clean(sale.hotel_name)!,
+              city: clean(sale.hotel_city),
               checkinDate: sale.hotel_checkin_date || sale.departure_date,
               checkoutDate: sale.hotel_checkout_date,
-              room: sale.hotel_room,
-              mealPlan: sale.hotel_meal_plan,
-              reservationCode: sale.hotel_reservation_code,
-              address: sale.hotel_address,
+              room: clean(sale.hotel_room),
+              mealPlan: clean(sale.hotel_meal_plan),
+              reservationCode: clean(sale.hotel_reservation_code),
+              address: clean(sale.hotel_address),
             } : undefined}
             height="480px"
           />
