@@ -56,7 +56,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const [financeOpen, setFinanceOpen] = useState(false);
   const [rhOpen, setRhOpen] = useState(false);
-  const [livechatOpen, setLivechatOpen] = useState(false);
+  
   const [operacaoOpen, setOperacaoOpen] = useState(false);
   const [implOpen, setImplOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
