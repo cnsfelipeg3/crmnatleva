@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, Suspense, lazy } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
@@ -6,12 +6,13 @@ import PortalLayout from "@/components/portal/PortalLayout";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import {
-  Plane, Calendar, MapPin, ArrowRight, FileText, DollarSign,
-  MessageCircle, Timer, ChevronLeft, ChevronRight, Sparkles,
-  Clock, CheckSquare, Eye, Hotel, Users, Compass,
+  Plane, Calendar, ArrowRight, FileText, DollarSign,
+  MessageCircle, Timer, ChevronLeft, ChevronRight,
+  Clock, CheckSquare, Compass, Globe2,
 } from "lucide-react";
-import { iataToLabel } from "@/lib/iataUtils";
 import { getMockTripsForDashboard } from "@/lib/portalMockTrips";
+
+const GlobeScene = lazy(() => import("@/components/portal/GlobeScene"));
 
 /* ═══ Helpers ═══ */
 function getStatusCategory(sale: any): "upcoming" | "active" | "past" {
@@ -74,19 +75,19 @@ function CinemaCountdown({ departureDate }: { departureDate: string }) {
 
   return (
     <div>
-      <p className="text-white/30 text-[10px] uppercase tracking-[0.35em] mb-3 font-semibold">Sua jornada começa em</p>
-      <div className="flex items-end gap-1.5 sm:gap-2.5">
+      <p className="text-white/30 text-[10px] uppercase tracking-[0.35em] mb-3 font-semibold">Embarque em</p>
+      <div className="flex items-end gap-1.5 sm:gap-2">
         {[
           { val: days, label: "dias" },
-          { val: hours, label: "horas" },
+          { val: hours, label: "hrs" },
           { val: mins, label: "min" },
           { val: secs, label: "seg" },
         ].map((item, i) => (
           <div key={i} className="text-center">
-            <div className="bg-white/[0.07] backdrop-blur-xl text-white font-bold text-2xl sm:text-4xl lg:text-5xl px-3 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl min-w-[52px] sm:min-w-[80px] tabular-nums border border-white/[0.08] shadow-2xl">
+            <div className="bg-white/[0.06] backdrop-blur-xl text-white font-bold text-2xl sm:text-3xl lg:text-4xl px-2.5 sm:px-4 py-1.5 sm:py-2.5 rounded-xl min-w-[44px] sm:min-w-[68px] tabular-nums border border-white/[0.06]">
               {String(item.val).padStart(2, "0")}
             </div>
-            <span className="text-white/25 text-[9px] sm:text-[10px] uppercase tracking-wider mt-1.5 block">{item.label}</span>
+            <span className="text-white/20 text-[8px] sm:text-[9px] uppercase tracking-wider mt-1 block">{item.label}</span>
           </div>
         ))}
       </div>
@@ -159,13 +160,12 @@ function TripShelf({ title, emoji, trips, onOpen }: {
         </div>
       </div>
 
-      {/* Gradient fade edges */}
       {canL && <div className="absolute left-0 top-14 bottom-0 w-12 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none" />}
       {canR && <div className="absolute right-0 top-14 bottom-0 w-12 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none" />}
 
       <div
         ref={ref}
-        className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 snap-x snap-mandatory"
+        className="flex gap-4 sm:gap-5 overflow-x-auto pb-4 snap-x snap-mandatory"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
         {trips.map((trip, i) => (
@@ -205,11 +205,9 @@ function CinemaCard({ trip, onOpen, index }: { trip: any; onOpen: (id: string) =
           alt=""
           className="w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-110"
         />
-        {/* Multi-layer gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-80" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
 
-        {/* Top */}
         <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 flex items-start justify-between">
           <StatusBadge sale={trip.sale} size="sm" />
           {daysUntil !== null && daysUntil > 0 && daysUntil <= 90 && (
@@ -220,7 +218,6 @@ function CinemaCard({ trip, onOpen, index }: { trip: any; onOpen: (id: string) =
           )}
         </div>
 
-        {/* Bottom info */}
         <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
           <h4 className="font-bold text-white text-lg sm:text-xl leading-tight drop-shadow-xl line-clamp-2 tracking-tight">
             {trip.custom_title || trip.sale?.name || "Viagem"}
@@ -239,7 +236,6 @@ function CinemaCard({ trip, onOpen, index }: { trip: any; onOpen: (id: string) =
           </div>
         </div>
 
-        {/* Hover: preview overlay */}
         <AnimatePresence>
           {hovered && (
             <motion.div
@@ -265,18 +261,6 @@ function CinemaCard({ trip, onOpen, index }: { trip: any; onOpen: (id: string) =
               >
                 Explorar viagem
               </motion.span>
-              {/* Mini stats */}
-              <motion.div
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.15 }}
-                className="flex items-center gap-4 text-white/60 text-xs"
-              >
-                {trip.sale?.departure_date && (
-                  <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {fmtShort(trip.sale.departure_date)} – {fmtShort(trip.sale.return_date)}</span>
-                )}
-                {tripDays && <span>{tripDays} dias</span>}
-              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -341,6 +325,21 @@ export default function PortalDashboard() {
     past: trips.filter((t) => getStatusCategory(t.sale) === "past"),
   }), [trips]);
 
+  // Build globe routes
+  const globeRoutes = useMemo(() => {
+    return trips.map((t) => {
+      const cities: string[] = [];
+      if (t.sale?.origin_iata) cities.push(t.sale.origin_iata);
+      if (t.sale?.destination_iata && !cities.includes(t.sale.destination_iata)) cities.push(t.sale.destination_iata);
+      return {
+        cities,
+        status: getStatusCategory(t.sale),
+        saleId: t.sale_id,
+        label: t.custom_title || t.sale?.name || "Viagem",
+      };
+    }).filter((r) => r.cities.length >= 2);
+  }, [trips]);
+
   if (loading) {
     return (
       <PortalLayout>
@@ -360,7 +359,7 @@ export default function PortalDashboard() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-40">
           <Plane className="h-24 w-24 text-muted-foreground/15 mx-auto mb-8" />
           <h2 className="text-3xl font-bold text-foreground mb-4 tracking-tight">Nenhuma jornada ainda</h2>
-          <p className="text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
+          <p className="text-muted-foreground text-sm max-w-md mx-auto">
             Suas viagens aparecerão aqui assim que forem publicadas pela equipe NatLeva.
           </p>
         </motion.div>
@@ -371,99 +370,138 @@ export default function PortalDashboard() {
   return (
     <PortalLayout>
       <div className="-mx-4 sm:-mx-6 lg:-mx-8 -mt-6 sm:-mt-8">
-        {/* ═══════════ FULLSCREEN HERO ═══════════ */}
-        {nextTrip && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1 }}
-          >
-            <div
-              className="relative overflow-hidden h-[85vh] min-h-[500px] max-h-[800px] cursor-pointer group"
-              onClick={() => navigate(`/portal/viagem/${nextTrip.sale_id}`)}
-            >
-              {/* Background image with slow zoom */}
-              <motion.img
-                src={getImg(nextTrip.sale?.destination_iata, nextTrip.cover_image_url)}
-                alt=""
-                className="absolute inset-0 w-full h-full object-cover"
-                initial={{ scale: 1.05 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 20, ease: "linear", repeat: Infinity, repeatType: "reverse" }}
-              />
 
-              {/* Cinematic overlays */}
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-black/50 to-black/20" />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/20 to-transparent" />
-              {/* Bottom fade into content */}
-              <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background to-transparent" />
+        {/* ═══════════ GLOBE + HERO SECTION ═══════════ */}
+        <div className="relative overflow-hidden bg-gradient-to-b from-[#050a18] via-[#0a1628] to-background">
+          {/* Subtle grid pattern */}
+          <div className="absolute inset-0 opacity-[0.03]" style={{
+            backgroundImage: "linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+          }} />
 
-              {/* Content */}
-              <div className="absolute inset-0 flex flex-col justify-end px-4 sm:px-6 lg:px-8 pb-12 sm:pb-16 max-w-7xl mx-auto w-full">
-                <motion.div
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4, duration: 0.7 }}
-                  className="max-w-2xl"
-                >
-                  <StatusBadge sale={nextTrip.sale} />
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-8 items-center min-h-[85vh]">
+              {/* Left: Trip Info */}
+              <motion.div
+                initial={{ opacity: 0, x: -40 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+                className="relative z-10 py-12 lg:py-0"
+              >
+                <div className="flex items-center gap-2 mb-6">
+                  <Globe2 className="h-4 w-4 text-accent/60" />
+                  <span className="text-accent/60 text-[10px] uppercase tracking-[0.3em] font-bold">Explorar jornadas</span>
+                </div>
 
-                  <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white mt-5 leading-[0.95] tracking-tighter">
-                    {nextTrip.custom_title || nextTrip.sale?.name || "Sua próxima jornada"}
-                  </h1>
+                {nextTrip && (
+                  <>
+                    <StatusBadge sale={nextTrip.sale} />
 
-                  {/* Route pills */}
-                  <div className="flex flex-wrap items-center gap-3 mt-5">
-                    {nextTrip.sale?.origin_iata && nextTrip.sale?.destination_iata && (
-                      <div className="flex items-center gap-2.5 bg-white/[0.08] backdrop-blur-xl text-white/80 text-sm px-4 py-2 rounded-full border border-white/[0.08]">
-                        <span className="font-mono tracking-[0.2em] text-white font-bold">{nextTrip.sale.origin_iata}</span>
-                        <ArrowRight className="h-3.5 w-3.5 text-accent" />
-                        <span className="font-mono tracking-[0.2em] text-white font-bold">{nextTrip.sale.destination_iata}</span>
+                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mt-5 leading-[0.95] tracking-tighter">
+                      {nextTrip.custom_title || nextTrip.sale?.name || "Sua próxima jornada"}
+                    </h1>
+
+                    {/* Route pills */}
+                    <div className="flex flex-wrap items-center gap-3 mt-6">
+                      {nextTrip.sale?.origin_iata && nextTrip.sale?.destination_iata && (
+                        <div className="flex items-center gap-2.5 bg-white/[0.06] backdrop-blur-xl text-white/80 text-sm px-4 py-2 rounded-full border border-white/[0.06]">
+                          <span className="font-mono tracking-[0.2em] text-white font-bold">{nextTrip.sale.origin_iata}</span>
+                          <ArrowRight className="h-3.5 w-3.5 text-accent" />
+                          <span className="font-mono tracking-[0.2em] text-white font-bold">{nextTrip.sale.destination_iata}</span>
+                        </div>
+                      )}
+                      {nextTrip.sale?.departure_date && (
+                        <div className="flex items-center gap-2 bg-white/[0.06] backdrop-blur-xl text-white/70 text-sm px-4 py-2 rounded-full border border-white/[0.06]">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {fmtShort(nextTrip.sale.departure_date)} — {fmtShort(nextTrip.sale.return_date)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Countdown */}
+                    {nextTrip.sale?.departure_date && getStatusCategory(nextTrip.sale) === "upcoming" && (
+                      <div className="mt-8">
+                        <CinemaCountdown departureDate={nextTrip.sale.departure_date} />
                       </div>
                     )}
-                    {nextTrip.sale?.departure_date && (
-                      <div className="flex items-center gap-2 bg-white/[0.08] backdrop-blur-xl text-white/70 text-sm px-4 py-2 rounded-full border border-white/[0.08]">
-                        <Calendar className="h-3.5 w-3.5" />
-                        {fmtShort(nextTrip.sale.departure_date)} — {fmtShort(nextTrip.sale.return_date)}
+                    {getStatusCategory(nextTrip.sale) === "active" && (
+                      <div className="mt-8 flex items-center gap-3">
+                        <span className="relative flex h-4 w-4">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+                          <span className="relative inline-flex rounded-full h-4 w-4 bg-accent" />
+                        </span>
+                        <span className="text-white font-bold text-xl">Viagem em andamento</span>
                       </div>
                     )}
+
+                    {/* CTA */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.9 }}
+                      className="mt-10"
+                    >
+                      <button
+                        onClick={() => navigate(`/portal/viagem/${nextTrip.sale_id}`)}
+                        className="inline-flex items-center gap-3 text-white text-sm font-bold bg-accent hover:bg-accent/90 px-8 py-4 rounded-full transition-all shadow-2xl shadow-accent/30 hover:shadow-accent/50 hover:scale-105"
+                      >
+                        <Compass className="h-5 w-5" />
+                        Explorar viagem
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </motion.div>
+
+              {/* Right: 3D Globe */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 1, delay: 0.4 }}
+                className="relative hidden lg:block"
+              >
+                {/* Glow behind globe */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-[500px] h-[500px] rounded-full bg-accent/5 blur-[100px]" />
+                </div>
+                <Suspense fallback={
+                  <div className="h-[600px] flex items-center justify-center">
+                    <div className="w-10 h-10 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
                   </div>
+                }>
+                  <GlobeScene
+                    className="h-[600px] w-full"
+                    routes={globeRoutes}
+                    onMarkerClick={(saleId) => navigate(`/portal/viagem/${saleId}`)}
+                  />
+                </Suspense>
+              </motion.div>
 
-                  {/* Countdown */}
-                  {nextTrip.sale?.departure_date && getStatusCategory(nextTrip.sale) === "upcoming" && (
-                    <div className="mt-8">
-                      <CinemaCountdown departureDate={nextTrip.sale.departure_date} />
-                    </div>
-                  )}
-
-                  {getStatusCategory(nextTrip.sale) === "active" && (
-                    <div className="mt-8 flex items-center gap-3">
-                      <span className="relative flex h-4 w-4">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-                        <span className="relative inline-flex rounded-full h-4 w-4 bg-accent" />
-                      </span>
-                      <span className="text-white font-bold text-xl">Viagem em andamento</span>
-                    </div>
-                  )}
-
-                  {/* CTA */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.8 }}
-                    className="mt-8"
-                  >
-                    <span className="inline-flex items-center gap-3 text-white text-sm font-bold bg-accent hover:bg-accent/90 px-8 py-4 rounded-full transition-all shadow-2xl shadow-accent/30 group-hover:shadow-accent/50 group-hover:scale-105">
-                      <Compass className="h-5 w-5" />
-                      Explorar viagem
-                      <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </span>
-                  </motion.div>
-                </motion.div>
-              </div>
+              {/* Mobile: destination image instead of globe */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="lg:hidden relative -mx-4 sm:-mx-6 aspect-[16/9] overflow-hidden rounded-2xl mx-0 mt-4 mb-8"
+              >
+                {nextTrip && (
+                  <>
+                    <img
+                      src={getImg(nextTrip.sale?.destination_iata, nextTrip.cover_image_url)}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-transparent to-transparent" />
+                  </>
+                )}
+              </motion.div>
             </div>
-          </motion.div>
-        )}
+          </div>
+
+          {/* Bottom fade */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
+        </div>
 
         {/* ═══════════ CONTENT ═══════════ */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 py-8 sm:py-12">
