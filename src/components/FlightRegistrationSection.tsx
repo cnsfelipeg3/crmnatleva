@@ -403,11 +403,7 @@ export default function FlightRegistrationSection({
         </div>
 
         {/* Global fields */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-          <div className="space-y-1">
-            <Label className="text-xs">Localizador</Label>
-            <Input value={formLocator} onChange={e => onFormChange("locator", e.target.value.toUpperCase())} className="font-mono text-sm" placeholder="ABC123" />
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
           <div className="space-y-1">
             <Label className="text-xs">Classe Geral</Label>
             <Select value={formFlightClass} onValueChange={v => onFormChange("flight_class", v)}>
