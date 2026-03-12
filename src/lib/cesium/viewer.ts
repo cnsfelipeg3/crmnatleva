@@ -67,7 +67,7 @@ export function createViewer({ container, minimal = true }: ViewerOptions): Cesi
   if (minimal) {
     const creditContainer = viewer.cesiumWidget.creditContainer as HTMLElement | null;
     if (creditContainer) {
-      creditContainer.style.opacity = "0.75";
+      creditContainer.style.display = "none";
     }
   }
 
