@@ -274,7 +274,25 @@ export default function PortalDashboard() {
             ))}
           </div>
 
-          {/* Shelves */}
+          {/* ═══ Journey Globe — Photorealistic 3D ═══ */}
+          <motion.section
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Globe2 className="h-4 w-4 text-accent/60" />
+              <h2 className="text-sm font-bold text-foreground tracking-wide uppercase">Journey Globe</h2>
+              <span className="text-[10px] text-muted-foreground bg-accent/10 px-2 py-0.5 rounded-full font-mono">3D</span>
+            </div>
+            <Suspense fallback={
+              <div className="h-[500px] rounded-2xl bg-card/40 border border-border/20 flex items-center justify-center">
+                <div className="w-10 h-10 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
+              </div>
+            }>
+              <TravelGlobe className="h-[500px] lg:h-[600px] w-full" />
+            </Suspense>
+          </motion.section>
           {categorized.active.length > 0 && (
             <TripShelf emoji="🔥" title="Em viagem agora" trips={categorized.active} onOpen={(id) => navigate(`/portal/viagem/${id}`)} />
           )}
