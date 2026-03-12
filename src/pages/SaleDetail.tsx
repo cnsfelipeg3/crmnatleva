@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { formatDateBR } from "@/lib/dateFormat";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X } from "lucide-react";
+import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase } from "lucide-react";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import { useToast } from "@/hooks/use-toast";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
@@ -24,6 +24,7 @@ import HotelAutocomplete from "@/components/HotelAutocomplete";
 import AirlineLogo, { AirlineLogosStack } from "@/components/AirlineLogo";
 import ClientAutocomplete from "@/components/ClientAutocomplete";
 import SalePassengersManager from "@/components/SalePassengersManager";
+import { iataToLabel } from "@/lib/iataUtils";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -217,6 +218,32 @@ export default function SaleDetail() {
     toast({ title: "Resumo copiado!" });
   };
 
+  const statusColor: Record<string, string> = {
+    "Rascunho": "bg-muted text-muted-foreground",
+    "Pendente": "bg-amber-500/15 text-amber-700 border-amber-300",
+    "Em andamento": "bg-blue-500/15 text-blue-700 border-blue-300",
+    "Emitido": "bg-emerald-500/15 text-emerald-700 border-emerald-300",
+    "Fechado": "bg-primary/15 text-primary border-primary/30",
+    "Cancelado": "bg-destructive/15 text-destructive border-destructive/30",
+    "Concluída": "bg-emerald-500/15 text-emerald-700 border-emerald-300",
+    "Concluida": "bg-emerald-500/15 text-emerald-700 border-emerald-300",
+  };
+
+  const tripDays = useMemo(() => {
+    if (!sale?.departure_date) return null;
+    const end = sale.return_date || sale.departure_date;
+    const d1 = new Date(sale.departure_date);
+    const d2 = new Date(end);
+    return Math.max(1, Math.round((d2.getTime() - d1.getTime()) / 86400000));
+  }, [sale]);
+
+  const uniqueAirlines = useMemo(() => {
+    const set = new Set<string>();
+    if (sale?.airline) set.add(sale.airline);
+    segments.forEach(s => { if (s.airline) set.add(s.airline); });
+    return [...set];
+  }, [sale, segments]);
+
   if (loading) return <div className="p-6 text-center text-muted-foreground animate-fade-in">Carregando...</div>;
   if (!sale) return (
     <div className="p-6 animate-fade-in">
@@ -227,17 +254,56 @@ export default function SaleDetail() {
 
   return (
     <div className="p-6 space-y-5 animate-fade-in">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/sales")}><ArrowLeft className="w-4 h-4" /></Button>
+      {/* ═══ HEADER ═══ */}
+      <div className="flex items-start justify-between flex-wrap gap-3">
+        <div className="flex items-start gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/sales")} className="mt-1"><ArrowLeft className="w-4 h-4" /></Button>
           <div>
-            <h1 className="text-2xl font-serif text-foreground">{sale.name}</h1>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{sale.display_id} · {formatDateBR(sale.close_date)}</span>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-serif text-foreground">{sale.name}</h1>
+              <Badge className={`text-[10px] px-2 py-0.5 border ${statusColor[sale.status] || "bg-muted"}`}>{sale.status}</Badge>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground mt-0.5">
+              <span className="font-mono text-xs">{sale.display_id}</span>
+              <span>·</span>
+              <span>{formatDateBR(sale.close_date)}</span>
               {sale.client_id && clientName && (
-                <button onClick={() => navigate(`/clients/${sale.client_id}`)} className="text-primary hover:underline text-xs font-medium">
-                  👤 {clientName}
-                </button>
+                <>
+                  <span>·</span>
+                  <button onClick={() => navigate(`/clients/${sale.client_id}`)} className="text-primary hover:underline text-xs font-medium flex items-center gap-1">
+                    <Users className="w-3 h-3" /> {clientName}
+                  </button>
+                </>
+              )}
+            </div>
+            {/* Quick trip badge row */}
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              {sale.destination_iata && (
+                <Badge variant="outline" className="text-xs gap-1">
+                  <MapPin className="w-3 h-3" /> {iataToLabel(sale.destination_iata)}
+                </Badge>
+              )}
+              {sale.departure_date && (
+                <Badge variant="outline" className="text-xs gap-1">
+                  <Calendar className="w-3 h-3" /> {formatDateBR(sale.departure_date)}
+                  {sale.return_date && ` → ${formatDateBR(sale.return_date)}`}
+                </Badge>
+              )}
+              {tripDays && (
+                <Badge variant="outline" className="text-xs gap-1">
+                  <Clock className="w-3 h-3" /> {tripDays} {tripDays === 1 ? "dia" : "dias"}
+                </Badge>
+              )}
+              {uniqueAirlines.length > 0 && (
+                <Badge variant="outline" className="text-xs gap-1.5 pr-2">
+                  <AirlineLogosStack airlines={uniqueAirlines} size={16} />
+                  {uniqueAirlines.join(", ")}
+                </Badge>
+              )}
+              {sale.miles_program && (
+                <Badge variant="outline" className="text-xs gap-1 bg-accent/10">
+                  <Tag className="w-3 h-3" /> {sale.miles_program}
+                </Badge>
               )}
             </div>
           </div>
@@ -259,7 +325,6 @@ export default function SaleDetail() {
               </Button>
             </>
           )}
-          <Badge variant="outline" className="self-center">{sale.status}</Badge>
         </div>
       </div>
 
@@ -402,70 +467,235 @@ export default function SaleDetail() {
           </Card>
         </div>
       ) : (
-        /* View mode */
+        <>
+        {/* KPI Cards Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <Card className="p-4 glass-card">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+              </div>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Receita</span>
+            </div>
+            <p className="text-lg font-bold text-foreground">{fmt(sale.received_value || 0)}</p>
+          </Card>
+          <Card className="p-4 glass-card">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-destructive/10 flex items-center justify-center">
+                <CreditCard className="w-3.5 h-3.5 text-destructive" />
+              </div>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Custo</span>
+            </div>
+            <p className="text-lg font-bold text-foreground">{fmt(sale.total_cost || 0)}</p>
+          </Card>
+          <Card className="p-4 glass-card">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                <TrendingUp className="w-3.5 h-3.5 text-primary" />
+              </div>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Lucro</span>
+            </div>
+            <p className={`text-lg font-bold ${(sale.profit || 0) >= 0 ? "text-emerald-600" : "text-destructive"}`}>{fmt(sale.profit || 0)}</p>
+          </Card>
+          <Card className="p-4 glass-card">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center">
+                <TrendingUp className="w-3.5 h-3.5 text-accent" />
+              </div>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Margem</span>
+            </div>
+            <p className={`text-lg font-bold ${(sale.margin || 0) >= 10 ? "text-emerald-600" : (sale.margin || 0) >= 0 ? "text-amber-600" : "text-destructive"}`}>{(sale.margin || 0).toFixed(1)}%</p>
+          </Card>
+        </div>
+
+        {/* Main Grid: 2 columns */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* Financial */}
-          <Card className="p-5 glass-card">
-            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-accent" /> Financeiro
-            </h3>
-            <div className="space-y-3">
-              <div className="flex justify-between"><span className="text-muted-foreground text-sm">Valor Recebido</span><span className="font-semibold text-success">{fmt(sale.received_value || 0)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground text-sm">Custo Total</span><span className="font-medium">{fmt(sale.total_cost || 0)}</span></div>
-              <div className="border-t border-border pt-2 flex justify-between"><span className="text-muted-foreground text-sm">Lucro</span><span className="font-bold text-primary">{fmt(sale.profit || 0)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground text-sm">Margem</span><span className="font-bold text-accent">{(sale.margin || 0).toFixed(1)}%</span></div>
-              {sale.payment_method && <div className="flex justify-between"><span className="text-muted-foreground text-sm">Pagamento</span><span className="text-sm">{sale.payment_method}</span></div>}
-            </div>
+          {/* LEFT — Aéreo + Hotel (2 cols) */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Aéreo Section */}
+            <Card className="p-5 glass-card">
+              <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Plane className="w-3.5 h-3.5 text-primary" />
+                </div>
+                Aéreo
+              </h3>
 
-            {costItems.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-border space-y-2">
-                <h4 className="text-xs font-semibold text-muted-foreground">Detalhamento de Custos</h4>
-                {costItems.map((ci: any) => (
-                  <div key={ci.id} className="text-xs bg-muted/50 rounded p-2 space-y-1">
-                    <div className="flex justify-between"><span className="font-medium capitalize">{ci.category}</span><span className="font-semibold">{fmt(ci.total_item_cost || 0)}</span></div>
-                    {ci.cash_value > 0 && <div className="flex justify-between text-muted-foreground"><span>Cash</span><span>{fmt(ci.cash_value)}</span></div>}
-                    {ci.miles_cost_brl > 0 && <div className="flex justify-between text-muted-foreground"><span>Milhas ({ci.miles_quantity?.toLocaleString()} × R${ci.miles_price_per_thousand})</span><span>{fmt(ci.miles_cost_brl)}</span></div>}
-                    {ci.taxes > 0 && <div className="flex justify-between text-muted-foreground"><span>Taxas{ci.taxes_included_in_cash ? " (incl.)" : ""}</span><span>{fmt(ci.taxes)}</span></div>}
+              {/* Route visual */}
+              <div className="flex items-center justify-center gap-6 py-4 mb-3">
+                <div className="text-center">
+                  <p className="text-3xl font-bold font-mono text-primary">{sale.origin_iata || "?"}</p>
+                  {sale.origin_iata && <p className="text-[10px] text-muted-foreground mt-0.5">{iataToLabel(sale.origin_iata).split(" (")[0]}</p>}
+                </div>
+                <div className="flex-1 max-w-[200px] relative">
+                  <div className="border-t-2 border-dashed border-border" />
+                  <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-primary bg-card p-0.5" />
+                </div>
+                <div className="text-center">
+                  <p className="text-3xl font-bold font-mono text-primary">{sale.destination_iata || "?"}</p>
+                  {sale.destination_iata && <p className="text-[10px] text-muted-foreground mt-0.5">{iataToLabel(sale.destination_iata).split(" (")[0]}</p>}
+                </div>
+              </div>
+
+              {/* Flight details grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm mb-4">
+                {sale.departure_date && (
+                  <div className="bg-muted/30 rounded-lg p-2.5">
+                    <span className="text-[10px] text-muted-foreground uppercase block mb-0.5">Ida</span>
+                    <span className="font-medium text-xs">{formatDateBR(sale.departure_date)}</span>
                   </div>
-                ))}
+                )}
+                {sale.return_date && (
+                  <div className="bg-muted/30 rounded-lg p-2.5">
+                    <span className="text-[10px] text-muted-foreground uppercase block mb-0.5">Volta</span>
+                    <span className="font-medium text-xs">{formatDateBR(sale.return_date)}</span>
+                  </div>
+                )}
+                {sale.airline && (
+                  <div className="bg-muted/30 rounded-lg p-2.5">
+                    <span className="text-[10px] text-muted-foreground uppercase block mb-0.5">Companhia</span>
+                    <span className="font-medium text-xs flex items-center gap-1.5">
+                      <AirlineLogo iata={sale.airline} size={18} />
+                      {sale.airline}
+                    </span>
+                  </div>
+                )}
+                {sale.flight_class && (
+                  <div className="bg-muted/30 rounded-lg p-2.5">
+                    <span className="text-[10px] text-muted-foreground uppercase block mb-0.5">Classe</span>
+                    <span className="font-medium text-xs capitalize">{sale.flight_class}</span>
+                  </div>
+                )}
+                {sale.locators?.length > 0 && (
+                  <div className="bg-muted/30 rounded-lg p-2.5">
+                    <span className="text-[10px] text-muted-foreground uppercase block mb-0.5">Localizador</span>
+                    <span className="font-mono font-bold text-xs">{sale.locators.join(", ")}</span>
+                  </div>
+                )}
               </div>
+
+              {/* Flight segments timeline */}
+              {segments.length > 0 && (
+                <div className="pt-3 border-t border-border">
+                  <h4 className="text-xs font-semibold text-muted-foreground mb-3">Trechos ({segments.length})</h4>
+                  <FlightTimeline segments={segments} showAll />
+                </div>
+              )}
+            </Card>
+
+            {/* Hotel Section */}
+            {sale.hotel_name && (
+              <Card className="p-5 glass-card">
+                <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <Hotel className="w-3.5 h-3.5 text-accent" />
+                  </div>
+                  Hospedagem
+                </h3>
+                <div className="flex items-start gap-4">
+                  <div className="flex-1 space-y-2">
+                    <p className="text-base font-semibold">{sale.hotel_name}</p>
+                    {sale.hotel_city && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <MapPin className="w-3 h-3" /> {[sale.hotel_city, sale.hotel_country].filter(Boolean).join(", ")}
+                      </p>
+                    )}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+                      {sale.hotel_checkin_date && (
+                        <div className="bg-muted/30 rounded-lg p-2.5">
+                          <span className="text-[10px] text-muted-foreground uppercase block mb-0.5">Check-in</span>
+                          <span className="font-medium text-xs">{formatDateBR(sale.hotel_checkin_date)}</span>
+                        </div>
+                      )}
+                      {sale.hotel_checkout_date && (
+                        <div className="bg-muted/30 rounded-lg p-2.5">
+                          <span className="text-[10px] text-muted-foreground uppercase block mb-0.5">Check-out</span>
+                          <span className="font-medium text-xs">{formatDateBR(sale.hotel_checkout_date)}</span>
+                        </div>
+                      )}
+                      {sale.hotel_room && (
+                        <div className="bg-muted/30 rounded-lg p-2.5">
+                          <span className="text-[10px] text-muted-foreground uppercase block mb-0.5">Quarto</span>
+                          <span className="font-medium text-xs">{sale.hotel_room}</span>
+                        </div>
+                      )}
+                      {sale.hotel_meal_plan && (
+                        <div className="bg-muted/30 rounded-lg p-2.5">
+                          <span className="text-[10px] text-muted-foreground uppercase block mb-0.5">Alimentação</span>
+                          <span className="font-medium text-xs">{sale.hotel_meal_plan}</span>
+                        </div>
+                      )}
+                      {sale.hotel_reservation_code && (
+                        <div className="bg-muted/30 rounded-lg p-2.5">
+                          <span className="text-[10px] text-muted-foreground uppercase block mb-0.5">Reserva</span>
+                          <span className="font-mono font-bold text-xs">{sale.hotel_reservation_code}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
             )}
-          </Card>
 
-          {/* Flight */}
-          <Card className="p-5 glass-card">
-            <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
-              <Plane className="w-4 h-4 text-primary" /> Aéreo
-            </h3>
-            <div className="flex items-center justify-center gap-4 py-3">
-              <div className="text-center">
-                <p className="text-2xl font-bold font-mono text-primary">{sale.origin_iata || "?"}</p>
+            {/* Financial Breakdown */}
+            <Card className="p-5 glass-card">
+              <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
+                </div>
+                Detalhamento Financeiro
+              </h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between py-1.5">
+                  <span className="text-muted-foreground">Valor Recebido</span>
+                  <span className="font-semibold text-emerald-600">{fmt(sale.received_value || 0)}</span>
+                </div>
+                <div className="flex justify-between py-1.5">
+                  <span className="text-muted-foreground">Custo Total</span>
+                  <span className="font-medium">{fmt(sale.total_cost || 0)}</span>
+                </div>
+                <div className="border-t border-border pt-2 flex justify-between">
+                  <span className="font-semibold">Lucro</span>
+                  <span className={`font-bold ${(sale.profit || 0) >= 0 ? "text-emerald-600" : "text-destructive"}`}>{fmt(sale.profit || 0)}</span>
+                </div>
+                {sale.payment_method && (
+                  <div className="flex justify-between py-1.5">
+                    <span className="text-muted-foreground">Forma de Pagamento</span>
+                    <Badge variant="outline" className="text-xs">{sale.payment_method}</Badge>
+                  </div>
+                )}
               </div>
-              <div className="flex-1 border-t border-dashed border-border relative">
-                <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground bg-card" />
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold font-mono text-primary">{sale.destination_iata || "?"}</p>
-              </div>
-            </div>
-            <div className="space-y-2 text-sm">
-              {sale.departure_date && <div className="flex justify-between"><span className="text-muted-foreground">Ida</span><span>{formatDateBR(sale.departure_date)}</span></div>}
-              {sale.return_date && <div className="flex justify-between"><span className="text-muted-foreground">Volta</span><span>{formatDateBR(sale.return_date)}</span></div>}
-              {sale.airline && <div className="flex justify-between items-center"><span className="text-muted-foreground">Companhia</span><span className="flex items-center gap-2"><AirlineLogo iata={sale.airline} size={28} />{sale.airline}</span></div>}
-              {sale.locators?.length > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Localizador</span><span className="font-mono font-semibold">{sale.locators.join(", ")}</span></div>}
-              {sale.miles_program && <div className="flex justify-between"><span className="text-muted-foreground">Milhas</span><Badge variant="outline">{sale.miles_program}</Badge></div>}
-            </div>
 
-            {segments.length > 0 && (
-              <div className="mt-4 pt-3 border-t border-border">
-                <FlightTimeline segments={segments} showAll />
-              </div>
-            )}
-          </Card>
+              {costItems.length > 0 && (
+                <div className="mt-4 pt-3 border-t border-border space-y-2">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Itens de Custo ({costItems.length})</h4>
+                  {costItems.map((ci: any) => (
+                    <div key={ci.id} className="bg-muted/30 rounded-lg p-3 space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[10px] capitalize">{ci.category}</Badge>
+                          {ci.description && <span className="text-xs text-muted-foreground">{ci.description}</span>}
+                          {ci.miles_program && <Badge variant="outline" className="text-[10px] bg-accent/10">{ci.miles_program}</Badge>}
+                        </div>
+                        <span className="font-bold text-sm">{fmt(ci.total_item_cost || 0)}</span>
+                      </div>
+                      <div className="flex gap-4 text-[11px] text-muted-foreground">
+                        {ci.cash_value > 0 && <span>Cash: {fmt(ci.cash_value)}</span>}
+                        {ci.miles_quantity > 0 && <span>Milhas: {ci.miles_quantity?.toLocaleString()} × R${ci.miles_price_per_thousand}</span>}
+                        {ci.miles_cost_brl > 0 && <span>= {fmt(ci.miles_cost_brl)}</span>}
+                        {ci.taxes > 0 && <span>Taxas: {fmt(ci.taxes)}{ci.taxes_included_in_cash ? " (incl.)" : ""}</span>}
+                        {ci.reservation_code && <span className="font-mono">Loc: {ci.reservation_code}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
 
-          {/* PAX & Hotel */}
+          {/* RIGHT — Passengers + PAX + Obs */}
           <div className="space-y-4">
-            {/* Passengers linked - view mode */}
+            {/* Passengers */}
             <Card className="p-5 glass-card">
               <SalePassengersManager
                 saleId={id!}
@@ -475,41 +705,40 @@ export default function SaleDetail() {
               />
             </Card>
 
-            <Card className="p-5 glass-card">
+            {/* PAX Count */}
+            <Card className="p-4 glass-card">
               <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                <Users className="w-4 h-4 text-info" /> Contagem PAX
+                <div className="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Users className="w-3.5 h-3.5 text-blue-600" />
+                </div>
+                Contagem PAX
               </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Adultos</span><span>{sale.adults}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Crianças</span><span>{sale.children}</span></div>
-                {sale.children_ages?.length > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Idades</span><span>{sale.children_ages.join(", ")} anos</span></div>}
-                <div className="flex justify-between font-semibold border-t border-border pt-2"><span>PAX Total</span><span>{(sale.adults || 0) + (sale.children || 0)}</span></div>
+              <div className="space-y-1.5 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Adultos</span><span className="font-medium">{sale.adults}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Crianças</span><span className="font-medium">{sale.children}</span></div>
+                {sale.children_ages?.length > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Idades</span><span className="text-xs">{sale.children_ages.join(", ")} anos</span></div>}
+                <div className="flex justify-between font-semibold border-t border-border pt-2">
+                  <span>PAX Total</span>
+                  <span className="text-primary">{(sale.adults || 0) + (sale.children || 0)}</span>
+                </div>
               </div>
             </Card>
 
-            {sale.hotel_name && (
-              <Card className="p-5 glass-card">
-                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <Hotel className="w-4 h-4 text-accent" /> Hotel
-                </h3>
-                <p className="text-sm font-medium">{sale.hotel_name}</p>
-                {sale.hotel_city && <p className="text-xs text-muted-foreground">📍 {[sale.hotel_city, sale.hotel_country].filter(Boolean).join(", ")}</p>}
-                {sale.hotel_room && <p className="text-xs text-muted-foreground">🛏️ {sale.hotel_room}</p>}
-                {sale.hotel_meal_plan && <p className="text-xs text-muted-foreground">🍽️ {sale.hotel_meal_plan}</p>}
-                {sale.hotel_reservation_code && <p className="text-xs font-mono mt-1">📋 {sale.hotel_reservation_code}</p>}
-                {sale.hotel_checkin_date && <p className="text-xs text-muted-foreground">📅 Check-in: {formatDateBR(sale.hotel_checkin_date)}</p>}
-                {sale.hotel_checkout_date && <p className="text-xs text-muted-foreground">📅 Check-out: {formatDateBR(sale.hotel_checkout_date)}</p>}
-              </Card>
-            )}
-
+            {/* Observations */}
             {sale.observations && (
-              <Card className="p-5 glass-card">
-                <h3 className="text-sm font-semibold text-foreground mb-2">Observações</h3>
-                <p className="text-sm text-muted-foreground">{sale.observations}</p>
+              <Card className="p-4 glass-card">
+                <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center">
+                    <Briefcase className="w-3.5 h-3.5 text-muted-foreground" />
+                  </div>
+                  Observações
+                </h3>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{sale.observations}</p>
               </Card>
             )}
           </div>
         </div>
+        </>
       )}
     </div>
   );
