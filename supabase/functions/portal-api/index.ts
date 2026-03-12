@@ -120,13 +120,17 @@ Deno.serve(async (req) => {
         });
       }
 
-      const { data: pub } = await admin
+      let detailQuery = admin
         .from("portal_published_sales")
         .select("*")
         .eq("sale_id", saleId)
-        .eq("client_id", clientId)
-        .eq("is_active", true)
-        .single();
+        .eq("is_active", true);
+
+      if (!isAdmin && clientId) {
+        detailQuery = detailQuery.eq("client_id", clientId);
+      }
+
+      const { data: pub } = await detailQuery.single();
 
       if (!pub) {
         return new Response(JSON.stringify({ error: "Trip not found" }), {
