@@ -1,19 +1,14 @@
 import type { GlobeFlightRoute, GlobeWaypoint } from "@/lib/cesium";
 
 export interface TravelGlobeProps {
-  /** Waypoints to display on the globe */
   waypoints?: GlobeWaypoint[];
-  /** Routes between waypoints */
   routes?: Array<{
     fromId: string;
     toId: string;
     status: GlobeFlightRoute["status"];
   }>;
-  /** Initial camera target */
   initialTarget?: { lat: number; lng: number; height?: number };
-  /** CSS class for the container */
   className?: string;
-  /** Callback when a waypoint is clicked */
   onWaypointClick?: (waypointId: string) => void;
 }
 
@@ -30,4 +25,13 @@ export interface SelectedRouteInfo {
   route: GlobeFlightRoute;
   screenX: number;
   screenY: number;
+  allRoutes: GlobeFlightRoute[];
+  allWaypoints: GlobeWaypoint[];
+  currentLocationId?: string | null;
+}
+
+export interface JourneyState {
+  currentLocationId: string | null;
+  currentRouteIndex: number;
+  phase: "pre-trip" | "in-transit" | "at-destination" | "post-trip";
 }

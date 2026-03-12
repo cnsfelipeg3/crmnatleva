@@ -1,6 +1,5 @@
 /**
- * Cesium Viewer factory — initialises Ion + creates a Viewer instance.
- * Kept separate so the heavy Cesium import is only pulled when needed.
+ * Cesium Viewer factory — premium rendering pipeline.
  */
 import * as Cesium from "cesium";
 import { getCesiumIonToken } from "./config";
@@ -14,7 +13,6 @@ export function initIon(): boolean {
 
 export interface ViewerOptions {
   container: HTMLElement;
-  /** Hide default Cesium UI chrome for a clean look */
   minimal?: boolean;
 }
 
@@ -36,51 +34,58 @@ export function createViewer({ container, minimal = true }: ViewerOptions): Cesi
     skyAtmosphere: new Cesium.SkyAtmosphere(),
     orderIndependentTranslucency: true,
     requestRenderMode: false,
+    msaaSamples: 4,
+    useBrowserRecommendedResolution: true,
     contextOptions: {
       webgl: {
         alpha: true,
         antialias: true,
         powerPreference: "high-performance",
+        stencil: true,
       },
     },
   });
 
-  // Enable atmosphere and transparent background for smooth compositing
+  // ── Atmosphere ──
   viewer.scene.skyAtmosphere.show = true;
-  viewer.scene.backgroundColor = Cesium.Color.TRANSPARENT;
+  viewer.scene.skyAtmosphere.brightnessShift = 0.02;
+  viewer.scene.skyAtmosphere.saturationShift = 0.1;
+  viewer.scene.backgroundColor = Cesium.Color.fromCssColorString("rgba(2,4,12,1)");
 
-  // Performance and camera tuning for Google-Earth-like navigation
+  // ── Rendering quality ──
   viewer.scene.fog.enabled = true;
+  viewer.scene.fog.density = 0.0002;
   viewer.scene.highDynamicRange = false;
   viewer.scene.postProcessStages.fxaa.enabled = true;
+  viewer.resolutionScale = Math.min(window.devicePixelRatio, 2);
 
-  const cameraController = viewer.scene.screenSpaceCameraController;
-  cameraController.enableCollisionDetection = true;
-  cameraController.enableTilt = true;
-  cameraController.enableLook = true;
-  cameraController.minimumZoomDistance = 15;
-  cameraController.maximumZoomDistance = 35_000_000;
-  cameraController.inertiaSpin = 0.9;
-  cameraController.inertiaTranslate = 0.9;
-  cameraController.inertiaZoom = 0.82;
+  // ── Camera controller ──
+  const cam = viewer.scene.screenSpaceCameraController;
+  cam.enableCollisionDetection = true;
+  cam.enableTilt = true;
+  cam.enableLook = true;
+  cam.minimumZoomDistance = 15;
+  cam.maximumZoomDistance = 35_000_000;
+  cam.inertiaSpin = 0.9;
+  cam.inertiaTranslate = 0.9;
+  cam.inertiaZoom = 0.85;
 
+  // ── Credits ──
   if (minimal) {
-    const creditContainer = viewer.cesiumWidget.creditContainer as HTMLElement | null;
-    if (creditContainer) {
-      creditContainer.style.display = "none";
-    }
+    const cc = viewer.cesiumWidget.creditContainer as HTMLElement | null;
+    if (cc) cc.style.display = "none";
   }
 
   return viewer;
 }
 
-/** Smooth camera fly-to a lat/lng/height */
+/** Smooth camera fly-to */
 export function flyTo(
   viewer: Cesium.Viewer,
   lat: number,
   lng: number,
   height = 800,
-  duration = 3
+  duration = 3,
 ) {
   viewer.camera.flyTo({
     destination: Cesium.Cartesian3.fromDegrees(lng, lat, height),
@@ -90,10 +95,11 @@ export function flyTo(
       roll: 0,
     },
     duration,
+    easingFunction: Cesium.EasingFunction.QUINTIC_IN_OUT,
   });
 }
 
-/** Orbit overview — planet view */
+/** Orbit overview */
 export function orbitView(viewer: Cesium.Viewer, duration = 4) {
   viewer.camera.flyTo({
     destination: Cesium.Cartesian3.fromDegrees(-46.63, -23.55, 15_000_000),
@@ -103,5 +109,6 @@ export function orbitView(viewer: Cesium.Viewer, duration = 4) {
       roll: 0,
     },
     duration,
+    easingFunction: Cesium.EasingFunction.QUINTIC_IN_OUT,
   });
 }
