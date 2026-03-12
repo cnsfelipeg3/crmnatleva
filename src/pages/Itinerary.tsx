@@ -112,7 +112,7 @@ export default function Itinerary() {
     }
   };
 
-  if (!saleId) return <div className="p-8 text-center text-muted-foreground">Nenhuma venda selecionada.</div>;
+  if (!saleId) return <ItineraryListPage />;
 
   return (
     <div className="min-h-screen bg-muted/30">
