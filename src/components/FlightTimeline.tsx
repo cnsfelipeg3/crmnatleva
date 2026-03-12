@@ -95,7 +95,7 @@ function SegmentRow({ seg }: { seg: FlightSegment }) {
         <div className="flex justify-center mt-2">
           <div className="flex flex-col items-center gap-1">
             {seg.airline ? (
-              <AirlineLogo iata={seg.airline} size={28} />
+              <AirlineLogo iata={seg.airline} size={36} />
             ) : (
               <Plane className="w-5 h-5 text-primary" />
             )}
