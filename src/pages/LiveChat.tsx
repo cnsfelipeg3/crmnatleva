@@ -594,7 +594,7 @@ export default function LiveChat() {
           text: m.text || mediaInfo.caption || "",
           media_url: mediaInfo.mediaUrl,
           status: mapZapiStatus(m.status, m.from_me),
-          created_at: m.timestamp || m.created_at,
+          created_at: String(m.timestamp || m.created_at),
           };
         });
 
