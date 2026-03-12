@@ -18,6 +18,7 @@ interface Conversation {
   phone: string | null;
   status: string;
   funnel_stage: string | null;
+  stage: string | null;
   last_message_at: string | null;
   last_message_preview: string | null;
   unread_count: number | null;
@@ -27,10 +28,11 @@ interface Conversation {
 
 interface Message {
   id: string;
-  content: string | null;
+  text: string | null;
   sender_type: string;
   created_at: string;
   message_type: string;
+  media_url: string | null;
 }
 
 const stageLabels: Record<string, string> = {
@@ -69,7 +71,7 @@ export default function OperacaoInbox() {
     setLoading(true);
     const { data } = await supabase
       .from("conversations")
-      .select("id, contact_name, display_name, phone, status, funnel_stage, last_message_at, last_message_preview, unread_count, tags, source")
+      .select("id, contact_name, display_name, phone, status, funnel_stage, stage, last_message_at, last_message_preview, unread_count, tags, source")
       .order("last_message_at", { ascending: false })
       .limit(500);
     setConversations(data || []);
@@ -80,7 +82,7 @@ export default function OperacaoInbox() {
 
   const filtered = useMemo(() => {
     let list = conversations;
-    if (stageFilter !== "all") list = list.filter(c => c.funnel_stage === stageFilter);
+    if (stageFilter !== "all") list = list.filter(c => (c.funnel_stage || c.stage) === stageFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(c =>
@@ -96,8 +98,8 @@ export default function OperacaoInbox() {
     setSelectedConv(conv);
     setLoadingMsgs(true);
     const { data } = await supabase
-      .from("chat_messages")
-      .select("id, content, sender_type, created_at, message_type")
+      .from("messages")
+      .select("id, text, sender_type, created_at, message_type, media_url")
       .eq("conversation_id", conv.id)
       .order("created_at", { ascending: true })
       .limit(200);
@@ -178,9 +180,9 @@ export default function OperacaoInbox() {
                           <p className="text-xs text-muted-foreground truncate mt-0.5">{conv.last_message_preview}</p>
                         )}
                         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          {conv.funnel_stage && (
-                            <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", stageColors[conv.funnel_stage] || "bg-muted text-muted-foreground")}>
-                              {stageLabels[conv.funnel_stage] || conv.funnel_stage}
+                          {(conv.funnel_stage || conv.stage) && (
+                            <span className={cn("text-[10px] px-1.5 py-0.5 rounded-full font-medium", stageColors[(conv.funnel_stage || conv.stage)!] || "bg-muted text-muted-foreground")}>
+                              {stageLabels[(conv.funnel_stage || conv.stage)!] || (conv.funnel_stage || conv.stage)}
                             </span>
                           )}
                           {(conv.unread_count || 0) > 0 && (
@@ -244,7 +246,7 @@ export default function OperacaoInbox() {
                               ? "bg-primary text-primary-foreground rounded-br-sm"
                               : "bg-muted text-foreground rounded-bl-sm"
                           )}>
-                            <p className="whitespace-pre-wrap break-words">{msg.content || "[mídia]"}</p>
+                            <p className="whitespace-pre-wrap break-words">{msg.text || (msg.media_url ? `[${msg.message_type}]` : "[mídia]")}</p>
                             <span className={cn("text-[10px] mt-1 block", isAgent ? "text-primary-foreground/60" : "text-muted-foreground")}>
                               {format(new Date(msg.created_at), "HH:mm", { locale: ptBR })}
                             </span>
