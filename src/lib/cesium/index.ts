@@ -14,6 +14,8 @@ export {
   computeCenteredView,
   computeDistanceKm,
   getEntityMetadata,
+  addSearchMarker,
+  removeSearchMarker,
   TEST_WAYPOINTS,
   TEST_ROUTES,
 } from "./routes";
