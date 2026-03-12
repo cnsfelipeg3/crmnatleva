@@ -749,6 +749,14 @@ export default function SaleDetail() {
         </div>
         </>
       )}
+      <PublishToPortalDialog
+        open={portalOpen}
+        onOpenChange={setPortalOpen}
+        saleId={id!}
+        clientId={sale?.client_id}
+        clientEmail={clientEmail}
+        saleName={sale?.name}
+      />
     </div>
   );
 }

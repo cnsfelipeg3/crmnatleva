@@ -83,3 +83,9 @@ verify_jwt = false
 
 [functions.execute-flow]
 verify_jwt = false
+
+[functions.portal-api]
+verify_jwt = false
+
+[functions.create-portal-access]
+verify_jwt = false
