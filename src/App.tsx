@@ -93,6 +93,7 @@ const BaseConhecimento = lazy(() => import("@/pages/implementacao/BaseConhecimen
 const PortalLogin = lazy(() => import("@/pages/portal/PortalLogin"));
 const PortalDashboard = lazy(() => import("@/pages/portal/PortalDashboard"));
 const PortalTripDetail = lazy(() => import("@/pages/portal/PortalTripDetail"));
+const PortalDemoTrip = lazy(() => import("@/pages/portal/PortalDemoTrip"));
 
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
@@ -248,6 +249,7 @@ function AppRoutes() {
         <Route path="/portal/login" element={<PortalLogin />} />
         <Route path="/portal" element={<PortalDashboard />} />
         <Route path="/portal/viagem/:saleId" element={<PortalTripDetail />} />
+        <Route path="/portal/modelo" element={<PortalDemoTrip />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

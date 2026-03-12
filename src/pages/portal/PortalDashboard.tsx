@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Plane, Calendar, MapPin, Clock, ArrowRight, Luggage, FileText, DollarSign,
-  MessageCircle, ChevronRight, Sparkles, Timer,
+  MessageCircle, ChevronRight, Sparkles, Timer, Eye,
 } from "lucide-react";
 import { iataToLabel } from "@/lib/iataUtils";
 
@@ -108,6 +108,18 @@ export default function PortalDashboard() {
 
   return (
     <PortalLayout>
+      {/* Demo Button */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+        <Button
+          variant="outline"
+          className="w-full sm:w-auto gap-2 border-accent/30 text-accent hover:bg-accent/10"
+          onClick={() => navigate("/portal/modelo")}
+        >
+          <Eye className="h-4 w-4" />
+          Visualizar modelo do Portal
+        </Button>
+      </motion.div>
+
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="w-8 h-8 border-[3px] border-accent/20 border-t-accent rounded-full animate-spin" />
