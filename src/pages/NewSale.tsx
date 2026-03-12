@@ -44,6 +44,7 @@ interface OtherProduct {
   date: string; emission_type: "milhas" | "pagante";
   miles_program: string; miles_qty: string; miles_tax: string; cash_value: string;
   reservation_code: string;
+  tariff: TariffCondition;
 }
 
 const defaultSegment: FlightSegment = {
