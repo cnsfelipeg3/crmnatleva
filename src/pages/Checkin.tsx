@@ -24,6 +24,7 @@ import {
   ArrowRight, Timer, Zap,
 } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
+import TaskCalendarView from "@/components/TaskCalendarView";
 
 interface CheckinTask {
   id: string;
