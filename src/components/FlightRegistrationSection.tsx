@@ -285,9 +285,14 @@ export default function FlightRegistrationSection({
     try {
       let offers: AmadeusOffer[];
 
-      if (hasByNumber && !hasFullRoute) {
-        // Lookup by flight number (no origin/destination needed)
+      if (hasByNumber) {
+        // Try lookup by flight number first
         offers = await lookupAmadeusByNumber(airline, flightNumber, date);
+        
+        // If empty, fallback to flight_schedule if we have origin/destination
+        if (!offers.length && hasFullRoute) {
+          offers = await lookupAmadeus(origin, destination, date, airline, flightNumber || undefined);
+        }
       } else {
         // Full route lookup
         offers = await lookupAmadeus(origin, destination, date, airline, flightNumber || undefined);

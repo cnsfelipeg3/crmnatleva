@@ -239,12 +239,13 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       } catch (err: unknown) {
-        // If schedule API fails, return empty so frontend can fall back
         console.error("Flight schedule lookup failed:", err);
-        return new Response(JSON.stringify({ data: [], fallback: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
       }
+
+      // Schedule API returned nothing or failed — return empty with fallback flag
+      return new Response(JSON.stringify({ data: [], fallback: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (action === "flight_schedule") {
