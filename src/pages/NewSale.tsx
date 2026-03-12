@@ -261,6 +261,7 @@ export default function NewSale() {
       id: crypto.randomUUID(), type: "transfer", description: "", supplier_id: "",
       date: "", emission_type: "pagante", miles_program: "", miles_qty: "",
       miles_tax: "", cash_value: "", reservation_code: "",
+      tariff: { ...EMPTY_TARIFF },
     }]);
   };
   const updateProduct = (id: string, field: string, value: any) => {
