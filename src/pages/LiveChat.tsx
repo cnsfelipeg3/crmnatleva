@@ -202,8 +202,9 @@ function mapZapiStatus(zapiStatus: string | null | undefined, fromMe: boolean): 
 }
 
 // Helper: format Brazilian phone number for display
-function formatPhoneDisplay(number: string): string {
-  const clean = number.replace(/\D/g, "");
+function formatPhoneDisplay(number?: string | null): string {
+  const raw = typeof number === "string" ? number : "";
+  const clean = raw.replace(/\D/g, "");
   if (clean.startsWith("55") && clean.length >= 12) {
     const ddd = clean.slice(2, 4);
     const rest = clean.slice(4);
@@ -211,7 +212,28 @@ function formatPhoneDisplay(number: string): string {
     if (rest.length === 8) return `+55 (${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
   }
   if (clean.length >= 10) return `+${clean}`;
-  return number;
+  return raw || "Sem telefone";
+}
+
+function getSafeContactName(contactName?: string | null, phone?: string | null): string {
+  const trimmedName = (contactName || "").trim();
+  if (trimmedName) return trimmedName;
+  const trimmedPhone = (phone || "").trim();
+  if (trimmedPhone) return formatPhoneDisplay(trimmedPhone);
+  return "Contato sem nome";
+}
+
+function getContactInitials(contactName?: string | null, phone?: string | null): string {
+  const safeName = getSafeContactName(contactName, phone);
+  const initials = safeName
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  return initials || "CN";
 }
 
 // Z-API helper
@@ -276,6 +298,8 @@ export default function LiveChat() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const selected = conversations.find(c => c.id === selectedId);
+  const selectedDisplayName = selected ? getSafeContactName(selected.contact_name, selected.phone) : "Contato sem nome";
+  const selectedInitials = selected ? getContactInitials(selected.contact_name, selected.phone) : "CN";
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
 
   // Load active flow name for selected conversation
@@ -350,12 +374,12 @@ export default function LiveChat() {
     document.body.style.top = "0";
     
     const vv = window.visualViewport;
-    if (!vv) return;
+    const lockScroll = () => window.scrollTo(0, 0);
 
     const syncHeight = () => {
-      setMobileHeight(`${vv.height}px`);
+      setMobileHeight(vv ? `${vv.height}px` : "100dvh");
       // Prevent iOS from scrolling the fixed body
-      window.scrollTo(0, 0);
+      lockScroll();
       // After resize, scroll messages to bottom
       requestAnimationFrame(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
@@ -365,11 +389,16 @@ export default function LiveChat() {
     // Set initial height
     syncHeight();
 
-    vv.addEventListener("resize", syncHeight);
-    vv.addEventListener("scroll", () => window.scrollTo(0, 0));
+    if (vv) {
+      vv.addEventListener("resize", syncHeight);
+      vv.addEventListener("scroll", lockScroll);
+    }
     
     return () => {
-      vv.removeEventListener("resize", syncHeight);
+      if (vv) {
+        vv.removeEventListener("resize", syncHeight);
+        vv.removeEventListener("scroll", lockScroll);
+      }
       document.body.style.overflow = "";
       document.body.style.position = "";
       document.body.style.width = "";
@@ -437,19 +466,31 @@ export default function LiveChat() {
           }
         }
         const dbConvs: Conversation[] = data.map(c => {
-          const cleanPhone = c.phone.replace(/\D/g, "");
+          const rawPhone = (c.phone || "").toString();
+          const cleanPhone = rawPhone.replace(/\D/g, "");
           const canonicalId = cleanPhone ? `wa_${cleanPhone}` : c.id;
           const fallback = previewMap.get(c.id);
           const preview = c.last_message_preview || (fallback ? (fallback.text || `📎 ${fallback.message_type}`) : "");
           const msgAt = c.last_message_at || (fallback ? fallback.created_at : c.last_message_at);
+          const safeName = getSafeContactName(c.contact_name, rawPhone);
+
           return {
-            id: canonicalId, phone: cleanPhone || c.phone, contact_name: c.contact_name,
-            stage: c.stage as Stage, tags: c.tags || [], source: c.source,
-            last_message_at: msgAt, last_message_preview: preview,
-            unread_count: c.unread_count, is_vip: c.is_vip,
-            assigned_to: c.assigned_to || "", score_potential: c.score_potential || 0,
-            score_risk: c.score_risk || 0, vehicle_interest: c.vehicle_interest || undefined,
-            price_range: c.price_range || undefined, payment_method: c.payment_method || undefined,
+            id: canonicalId,
+            phone: cleanPhone || rawPhone,
+            contact_name: safeName,
+            stage: (c.stage as Stage) || "novo_lead",
+            tags: c.tags || [],
+            source: c.source || "whatsapp",
+            last_message_at: msgAt || new Date().toISOString(),
+            last_message_preview: preview,
+            unread_count: c.unread_count || 0,
+            is_vip: c.is_vip || false,
+            assigned_to: c.assigned_to || "",
+            score_potential: c.score_potential || 0,
+            score_risk: c.score_risk || 0,
+            vehicle_interest: c.vehicle_interest || undefined,
+            price_range: c.price_range || undefined,
+            payment_method: c.payment_method || undefined,
             is_pinned: (c as any).is_pinned || false,
           };
         });
@@ -762,7 +803,7 @@ export default function LiveChat() {
               last_message_at: bestTime,
               unread_count: isOpen ? 0 : Math.max(c.unread_count, u.unread_count ?? 0),
               stage: (u.stage as Stage) || c.stage, tags: u.tags || c.tags,
-              contact_name: c.contact_name || u.contact_name,
+              contact_name: getSafeContactName(c.contact_name, c.phone) || getSafeContactName(u.contact_name, cleanPhone || u.phone),
               source: u.source || c.source,
             } : c).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
             return updated.sort((a, b) => {
@@ -771,9 +812,9 @@ export default function LiveChat() {
               return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
             });
           }
-          return [{ id: waKey, phone: cleanPhone || u.phone, contact_name: u.contact_name,
-            stage: u.stage as Stage, tags: u.tags || [], source: u.source,
-            last_message_at: u.last_message_at, last_message_preview: u.last_message_preview || "",
+          return [{ id: waKey, phone: cleanPhone || String(u.phone), contact_name: getSafeContactName(u.contact_name, cleanPhone || u.phone),
+            stage: (u.stage as Stage) || "novo_lead", tags: u.tags || [], source: u.source || "whatsapp",
+            last_message_at: u.last_message_at || new Date().toISOString(), last_message_preview: u.last_message_preview || "",
             unread_count: u.unread_count || 0, is_vip: u.is_vip || false,
             assigned_to: u.assigned_to || "", score_potential: u.score_potential || 0, score_risk: u.score_risk || 0,
           }, ...prev];
@@ -1045,7 +1086,9 @@ export default function LiveChat() {
     const filtered = conversations.filter(c => {
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        if (!c.contact_name.toLowerCase().includes(q) && !c.phone.includes(q) &&
+        const safeName = getSafeContactName(c.contact_name, c.phone).toLowerCase();
+        const safePhone = (c.phone || "").toLowerCase();
+        if (!safeName.includes(q) && !safePhone.includes(q) &&
             !(c.vehicle_interest || "").toLowerCase().includes(q))
           return false;
       }
@@ -1065,7 +1108,7 @@ export default function LiveChat() {
     // Deduplicate by normalized phone - keep most recent (first after sort)
     const seen = new Set<string>();
     return filtered.filter(c => {
-      const norm = c.phone.replace(/\D/g, "");
+      const norm = (c.phone || "").replace(/\D/g, "");
       if (!norm) return true;
       if (seen.has(norm)) return false;
       seen.add(norm);
@@ -1607,7 +1650,7 @@ export default function LiveChat() {
     if (!conv) return;
     const newPinned = !conv.is_pinned;
     setConversations(prev => prev.map(c => c.id === convId ? { ...c, is_pinned: newPinned } : c));
-    const cleanPhone = conv.phone.replace(/\D/g, "");
+    const cleanPhone = (conv.phone || "").replace(/\D/g, "");
     if (cleanPhone) {
       await supabase.from("conversations").update({ is_pinned: newPinned } as any).eq("phone", cleanPhone);
     }
@@ -1702,7 +1745,7 @@ export default function LiveChat() {
   // If editing a flow, show full-screen canvas
   if (editingFlow) {
     return (
-      <div className="h-[calc(100vh-5rem)] -m-6">
+      <div className="h-full min-h-0">
         <FlowCanvas
           flowId={editingFlow.id}
           flowName={editingFlow.name}
@@ -1717,7 +1760,7 @@ export default function LiveChat() {
   return (
     <div
       ref={livechatContainerRef}
-      className={`flex flex-col overflow-hidden bg-background ${isMobile ? "fixed inset-0 z-50" : "h-[calc(100dvh-5rem)] -m-6"}`}
+      className={`flex min-h-0 flex-col overflow-hidden bg-background ${isMobile ? "fixed inset-0 z-50" : "h-full"}`}
       style={isMobile ? { height: mobileHeight } : undefined}
     >
       {/* Header - compact, no submenu tabs (now in sidebar) */}
@@ -1739,11 +1782,11 @@ export default function LiveChat() {
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden min-h-0">
         {activeSection === "inbox" && (
-          <div className="flex h-full">
+          <div className="flex h-full min-h-0">
             {/* ─── Column 1: Conversations List ─── */}
-            <div className={`md:w-[340px] w-full border-r border-border flex flex-col bg-card/30 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
+            <div className={`w-full md:w-[320px] lg:w-[360px] border-r border-border flex flex-col bg-card/30 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
               <div className="p-3 space-y-2 shrink-0">
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
@@ -1809,6 +1852,8 @@ export default function LiveChat() {
                   {filteredConversations.map(conv => {
                     const stageInfo = getStageInfo(conv.stage);
                     const isSelected = conv.id === selectedId;
+                    const displayName = getSafeContactName(conv.contact_name, conv.phone);
+                    const contactInitials = getContactInitials(conv.contact_name, conv.phone);
                     const _previewRaw = (conv.last_message_preview || "").replace(/\n/g, " ").trim();
                     const _previewTruncated = _previewRaw.length > 35 ? _previewRaw.slice(0, 35) + "…" : _previewRaw;
                     return (
@@ -1833,14 +1878,14 @@ export default function LiveChat() {
                               />
                             ) : null}
                             <div className={`h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-sm font-bold text-foreground ${profilePicsRef.current.get(conv.id) ? 'hidden' : ''}`}>
-                              {conv.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                              {contactInitials}
                             </div>
                           </div>
                           <div className="flex-1 min-w-0 pr-1">
                             {/* Row 1: Name + Time — WhatsApp style using CSS Grid */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '4px' }}>
                               <span className={`text-sm truncate ${conv.unread_count > 0 ? "font-bold text-foreground" : "font-medium text-foreground"}`}>
-                                {/^\d{10,}$/.test(conv.contact_name) ? formatPhoneDisplay(conv.contact_name) : conv.contact_name}
+                                {displayName}
                               </span>
                               <span className="text-[11px] text-foreground whitespace-nowrap">
                                 {(() => {
@@ -1951,11 +1996,11 @@ export default function LiveChat() {
                           />
                         ) : null}
                         <div className={`h-8 w-8 md:h-9 md:w-9 rounded-full bg-secondary flex items-center justify-center text-xs md:text-sm font-bold shrink-0 ${profilePicsRef.current.get(selected.id) ? 'hidden' : ''}`}>
-                          {selected.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                          {selectedInitials}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-bold truncate">{/^\d{10,}$/.test(selected.contact_name) ? formatPhoneDisplay(selected.contact_name) : selected.contact_name}</span>
+                            <span className="text-sm font-bold truncate">{selectedDisplayName}</span>
                             {selected.is_vip && <Badge className="bg-amber-500/10 text-amber-500 text-[8px] px-1.5 py-0 shrink-0">VIP</Badge>}
                           </div>
                           <p className="text-[10px] text-muted-foreground truncate">
@@ -2024,7 +2069,7 @@ export default function LiveChat() {
                               </span>
                             </div>
                           ) : (
-                            <div className="group relative max-w-[70%]">
+                            <div className="group relative max-w-[86%] sm:max-w-[80%] xl:max-w-[70%]">
                               <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 z-10 ${
                                 msg.sender_type === "atendente" ? "-left-[72px]" : "-right-[72px]"
                               }`}>
@@ -2106,7 +2151,7 @@ export default function LiveChat() {
                                       <img
                                         src={msg.media_url}
                                         alt="Imagem"
-                                        className="rounded-lg max-w-[250px] max-h-[300px] object-cover cursor-pointer mb-1"
+                                        className="rounded-lg w-full max-w-[220px] sm:max-w-[280px] lg:max-w-[340px] max-h-[320px] object-cover cursor-pointer mb-1"
                                         onClick={() => setLightboxUrl(msg.media_url!)}
                                       />
                                       <div className="flex items-center gap-2 mt-1">
@@ -2134,7 +2179,7 @@ export default function LiveChat() {
                                 <div>
                                   {msg.media_url ? (
                                     <>
-                                      <video controls className="rounded-lg max-w-[250px] max-h-[300px] mb-1">
+                                      <video controls className="rounded-lg w-full max-w-[220px] sm:max-w-[280px] lg:max-w-[340px] max-h-[320px] mb-1">
                                         <source src={msg.media_url} />
                                       </video>
                                       <div className="flex items-center gap-2 mt-1">
