@@ -40,7 +40,7 @@ interface ExtractionResult {
 }
 
 interface OtherProduct {
-  id: string; type: string; description: string; supplier: string;
+  id: string; type: string; description: string; supplier_id: string;
   date: string; emission_type: "milhas" | "pagante";
   miles_program: string; miles_qty: string; miles_tax: string; cash_value: string;
   reservation_code: string;
