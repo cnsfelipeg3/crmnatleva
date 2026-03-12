@@ -97,27 +97,35 @@ export default function Passengers() {
   });
 
   const fetchPassengers = async () => {
-    const data = await fetchAllRows("passengers", "*", { order: { column: "created_at", ascending: false } });
-    setPassengers(data as Passenger[]);
-    setLoading(false);
+    try {
+      const data = await fetchAllRows("passengers", "*", { order: { column: "created_at", ascending: false } });
+      setPassengers(data as Passenger[]);
+      setLoading(false);
 
-    const links = await fetchAllRows("sale_passengers", "passenger_id, sale_id, sales:sale_id(name, display_id)");
-    if (links) {
-      const map: Record<string, SaleLink[]> = {};
-      for (const link of links as any[]) {
-        const pId = link.passenger_id;
-        if (!map[pId]) map[pId] = [];
-        map[pId].push({
-          sale_id: link.sale_id,
-          sale_name: link.sales?.name || "",
-          sale_display_id: link.sales?.display_id || "",
-        });
+      const links = await fetchAllRows("sale_passengers", "passenger_id, sale_id, sales:sale_id(name, display_id)");
+      if (links) {
+        const map: Record<string, SaleLink[]> = {};
+        for (const link of links as any[]) {
+          const pId = link.passenger_id;
+          if (!map[pId]) map[pId] = [];
+          map[pId].push({
+            sale_id: link.sale_id,
+            sale_name: link.sales?.name || "",
+            sale_display_id: link.sales?.display_id || "",
+          });
+        }
+        setSaleLinks(map);
       }
-      setSaleLinks(map);
+    } catch (err) {
+      console.error("Passengers fetch error:", err);
+      setLoading(false);
     }
   };
 
-  useEffect(() => { fetchPassengers(); }, []);
+  useEffect(() => {
+    if (!user) return;
+    fetchPassengers();
+  }, [user]);
 
   const handleSync = async () => {
     setSyncing(true);

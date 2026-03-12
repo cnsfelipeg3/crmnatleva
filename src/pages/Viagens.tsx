@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,7 @@ const STATUS_CONFIG: Record<TripStatus, { label: string; color: string; icon: ty
 type FilterMode = "all" | "em_viagem" | "48h" | "7d" | "critico" | "sem_data";
 
 export default function Viagens() {
+  const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [segments, setSegments] = useState<Segment[]>([]);
@@ -104,6 +106,7 @@ export default function Viagens() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (authLoading || !user) return;
     Promise.all([
       fetchAllRows("sales", "*", { order: { column: "departure_date", ascending: true } }),
       fetchAllRows("profiles", "id, full_name"),
@@ -113,8 +116,11 @@ export default function Viagens() {
       setProfiles(p as Profile[]);
       setSegments(seg as Segment[]);
       setLoading(false);
+    }).catch(err => {
+      console.error("Viagens fetch error:", err);
+      setLoading(false);
     });
-  }, []);
+  }, [user, authLoading]);
 
   const sellerNames = useMemo(() => {
     const m: Record<string, string> = {};

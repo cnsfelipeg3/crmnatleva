@@ -3,6 +3,7 @@ import { formatDateBR } from "@/lib/dateFormat";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,7 @@ interface SaleRow {
 }
 
 export default function Sales() {
+  const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -43,11 +45,12 @@ export default function Sales() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (authLoading || !user) return;
     fetchAllRows("sales", "*", { order: { column: "created_at", ascending: false } }).then((data) => {
       setSales(data as SaleRow[]);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
-  }, []);
+  }, [user, authLoading]);
 
   const statuses = useMemo(() => [...new Set(sales.map(s => s.status))], [sales]);
   const destinations = useMemo(() => [...new Set(sales.map(s => s.destination_iata).filter(Boolean))].sort(), [sales]);
