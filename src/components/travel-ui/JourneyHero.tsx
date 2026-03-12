@@ -22,8 +22,19 @@ const destImages: Record<string, string> = {
   default: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=2560&h=1440&fit=crop&q=95&auto=format",
 };
 
+/** Enhance any image URL for maximum quality on hero displays */
+export function enhanceImageUrl(url: string): string {
+  if (!url) return url;
+  // Unsplash: force max quality params
+  if (url.includes("unsplash.com")) {
+    const base = url.split("?")[0];
+    return `${base}?w=2560&h=1440&fit=crop&q=95&auto=format`;
+  }
+  return url;
+}
+
 export function getDestinationImage(iata: string | null, cover?: string | null) {
-  if (cover) return cover;
+  if (cover) return enhanceImageUrl(cover);
   if (iata && destImages[iata]) return destImages[iata];
   return destImages.default;
 }
