@@ -162,6 +162,7 @@ export default function PortalTripDetail() {
 
         <JourneyHero
           title={title}
+          subtitle={subtitle}
           imageUrl={imageUrl}
           originIata={sale?.origin_iata}
           destinationIata={sale?.destination_iata}
