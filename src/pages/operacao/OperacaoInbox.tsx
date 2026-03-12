@@ -81,7 +81,7 @@ export default function OperacaoInbox() {
 
   const filtered = useMemo(() => {
     let list = conversations;
-    if (stageFilter !== "all") list = list.filter(c => c.funnel_stage === stageFilter);
+    if (stageFilter !== "all") list = list.filter(c => (c.funnel_stage || c.stage) === stageFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(c =>
