@@ -58,6 +58,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [financeOpen, setFinanceOpen] = useState(false);
   const [rhOpen, setRhOpen] = useState(false);
   const [livechatOpen, setLivechatOpen] = useState(false);
+  const [operacaoOpen, setOperacaoOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const isCollapsed = mobile ? false : collapsed;
 
