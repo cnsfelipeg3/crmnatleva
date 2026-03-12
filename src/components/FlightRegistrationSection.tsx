@@ -682,19 +682,21 @@ function FlightGroupCard({
             </div>
           </div>
 
-          {/* ─── Nº do Voo (acima da consulta Amadeus) ─── */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">Nº do Voo</Label>
-              <Input
-                value={first?.flight_number || ""}
-                onChange={e => onSegmentUpdate(0, "flight_number", e.target.value.toUpperCase())}
-                placeholder="EK262"
-                className="font-mono text-sm"
-              />
-              <p className="text-[10px] text-muted-foreground">Opcional — ajuda o Amadeus a localizar o voo exato</p>
+          {/* ─── Nº do Voo (only for direct flights — multi-segment has it per segment) ─── */}
+          {group.connectionType === "direto" && (
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Nº do Voo</Label>
+                <Input
+                  value={first?.flight_number || ""}
+                  onChange={e => onSegmentUpdate(0, "flight_number", e.target.value.toUpperCase())}
+                  placeholder="EK262"
+                  className="font-mono text-sm"
+                />
+                <p className="text-[10px] text-muted-foreground">Opcional — ajuda o Amadeus a localizar o voo exato</p>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* ─── STEP 2: Amadeus Lookup Button ─── */}
           <div className="flex flex-wrap items-center gap-3">
