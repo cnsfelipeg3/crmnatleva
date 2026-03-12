@@ -185,6 +185,11 @@ function AppRoutes() {
         <Route path="/settings/calc-rules" element={<GenericSettingsList title="Regras de Cálculo" defaultItems={["Milheiro padrão: R$ 20,00", "Taxa fixa emissão: R$ 50,00", "Markup padrão: 15%"]} />} />
         <Route path="/settings/user-locations" element={<UserLocations />} />
       </Route>
+      {/* Portal do Cliente - rotas separadas fora do CRM */}
+      <Route path="/portal/login" element={<PortalLogin />} />
+      <Route path="/portal" element={<PortalDashboard />} />
+      <Route path="/portal/viagem/:saleId" element={<PortalTripDetail />} />
+
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
