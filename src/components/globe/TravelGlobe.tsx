@@ -70,9 +70,7 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
   const { waypoints, routes, initialTarget, className = "" } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const viewerRef = useRef<CesiumType.Viewer | null>(null);
-  const cesiumLibRef = useRef<typeof import("@/lib/cesium") | null>(null);
-  const cesiumRef = useRef<typeof import("cesium") | null>(null);
+  const viewerRef = useRef<Cesium.Viewer | null>(null);
   const resolvedRoutesRef = useRef<GlobeFlightRoute[]>([]);
   const resolvedWaypointsRef = useRef<GlobeWaypoint[]>([]);
 
