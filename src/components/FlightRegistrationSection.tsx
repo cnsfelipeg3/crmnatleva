@@ -64,6 +64,7 @@ function createGroup(type: FlightGroup["type"], label: string): FlightGroup {
     connectionType: "direto",
     hasStopover: false,
     stopoverIata: "",
+    locator: "",
     segments: [{ ...defaultSegment, direction: type === "main_return" ? "volta" : "ida", segment_order: 1 }],
   };
 }
