@@ -296,7 +296,7 @@ export default function SaleDetail() {
               )}
               {uniqueAirlines.length > 0 && (
                 <Badge variant="outline" className="text-xs gap-1.5 pr-2">
-                  <AirlineLogosStack iatas={uniqueAirlines} size={16} />
+                  <AirlineLogosStack airlines={uniqueAirlines} size={16} />
                   {uniqueAirlines.join(", ")}
                 </Badge>
               )}
