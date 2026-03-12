@@ -277,4 +277,84 @@ function MetricCell({ icon, label, value }: { icon: React.ReactNode; label: stri
   );
 }
 
-export { GlobeFallback, GlobeHud, GlobeLoading, RouteInfoPanel };
+/* ═══ Search Result Detail Panel ═══ */
+function SearchResultPanel({
+  result, onClose, onRecenter, isMobile,
+}: {
+  result: { name: string; address: string; category: string; lat: number; lng: number };
+  onClose: () => void;
+  onRecenter: () => void;
+  isMobile: boolean;
+}) {
+  const content = (
+    <>
+      <button onClick={onClose}
+        className="absolute right-4 top-4 z-10 flex h-7 w-7 items-center justify-center rounded-lg border border-border/20 bg-muted/20 text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+
+      {/* Header */}
+      <div className="mb-4 flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/15 bg-rose-500/10">
+          <MapPin className="h-4 w-4 text-rose-400" />
+        </div>
+        <div>
+          <p className="text-sm font-bold text-foreground">{result.name}</p>
+          <p className="text-[11px] text-muted-foreground/60">{result.category}</p>
+        </div>
+      </div>
+
+      {/* Address */}
+      <div className="mb-4 rounded-lg border border-border/10 bg-muted/10 px-3.5 py-2.5">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/50 mb-1">Endereço</p>
+        <p className="text-xs text-foreground/80">{result.address}</p>
+      </div>
+
+      {/* Coordinates */}
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border/15 bg-border/10">
+        <MetricCell icon={<Compass className="h-3.5 w-3.5" />} label="Latitude" value={result.lat.toFixed(4) + "°"} />
+        <MetricCell icon={<Compass className="h-3.5 w-3.5" />} label="Longitude" value={result.lng.toFixed(4) + "°"} />
+      </div>
+
+      {/* Action */}
+      <div className="mt-4">
+        <button onClick={onRecenter}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/[0.06] px-4 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+        >
+          <Navigation className="h-3.5 w-3.5" />
+          Centralizar no globo
+        </button>
+      </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <AnimatePresence>
+        <motion.div
+          initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          className="absolute inset-x-0 bottom-0 z-20 max-h-[60vh] overflow-y-auto rounded-t-2xl border-t border-border/20 bg-background/95 p-5 pb-8 shadow-2xl backdrop-blur-2xl"
+        >
+          <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border/30" />
+          {content}
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 16 }}
+        transition={{ type: "spring", stiffness: 350, damping: 30 }}
+        className="absolute right-4 top-14 z-20 w-[320px] rounded-xl border border-border/20 bg-background/90 p-5 shadow-2xl backdrop-blur-2xl"
+      >
+        {content}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+export { GlobeFallback, GlobeHud, GlobeLoading, RouteInfoPanel, SearchResultPanel };
