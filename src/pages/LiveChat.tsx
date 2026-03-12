@@ -240,7 +240,7 @@ const SUBMENU_ITEMS = [
 // ════════════════════════════════════════
 export default function LiveChat() {
   const isMobile = useIsMobile();
-  const { toggleSidebar } = useSidebar();
+  
   const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState("inbox");
   
