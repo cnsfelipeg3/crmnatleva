@@ -867,6 +867,15 @@ export default function NewSale() {
                     ) : (
                       <div className="space-y-2"><Label>Valor Pago R$</Label><Input type="number" step="0.01" value={product.cash_value} onChange={(e) => updateProduct(product.id, "cash_value", e.target.value)} /></div>
                     )}
+
+
+                    {/* Tariff conditions for this product */}
+                    <TariffConditionsCard
+                      value={product.tariff}
+                      onChange={(v) => updateProduct(product.id, "tariff", v)}
+                      productLabel={typeInfo?.label || "Produto"}
+                      compact
+                    />
                   </Card>
                 );
               })}
