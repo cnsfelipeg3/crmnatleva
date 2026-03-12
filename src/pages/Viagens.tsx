@@ -300,7 +300,20 @@ export default function Viagens() {
               <Globe className="w-4 h-4 text-blue-400" /> Radar de Viagens
             </h3>
           </div>
-          <RoutesMap routes={routes} height="340px" />
+          <RoutesMap
+            routes={routes}
+            height="340px"
+            sales={filtered.filter(t => t.origin_iata && t.destination_iata).map(t => ({
+              id: t.id,
+              display_id: t.display_id,
+              name: t.name,
+              origin_iata: t.origin_iata,
+              destination_iata: t.destination_iata,
+              departure_date: t.departure_date,
+              received_value: t.received_value,
+            }))}
+            onSaleClick={(saleId) => navigate(`/sales/${saleId}`)}
+          />
         </Card>
       </div>
 
