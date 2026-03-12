@@ -53,6 +53,7 @@ interface LodgingTask {
 }
 
 export default function Dashboard() {
+  const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -74,6 +75,7 @@ export default function Dashboard() {
   const [region, setRegion] = useState("all");
 
   useEffect(() => {
+    if (authLoading || !user) return;
     Promise.all([
       fetchAllRows("sales", "*", { order: { column: "created_at", ascending: false } }),
       fetchAllRows("profiles", "id, full_name"),
@@ -91,8 +93,11 @@ export default function Dashboard() {
       setCheckinTasks(checkinData as CheckinTask[]);
       setLodgingTasks(lodgingData as LodgingTask[]);
       setLoading(false);
+    }).catch(err => {
+      console.error("Dashboard fetch error:", err);
+      setLoading(false);
     });
-  }, []);
+  }, [user, authLoading]);
 
   const sellerNames = useMemo(() => {
     const map: Record<string, string> = {};
