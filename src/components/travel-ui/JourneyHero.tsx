@@ -71,6 +71,7 @@ export { Countdown } from "./Countdown";
 /* ── Journey Hero ── */
 interface JourneyHeroProps {
   title: string;
+  subtitle?: string;
   imageUrl: string;
   originIata?: string | null;
   destinationIata?: string | null;
@@ -83,7 +84,7 @@ interface JourneyHeroProps {
 }
 
 export default function JourneyHero({
-  title, imageUrl, originIata, destinationIata,
+  title, subtitle, imageUrl, originIata, destinationIata,
   departureDate, returnDate, status, tripDays, onBack, children,
 }: JourneyHeroProps) {
   return (
