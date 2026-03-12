@@ -459,19 +459,31 @@ export default function LiveChat() {
           }
         }
         const dbConvs: Conversation[] = data.map(c => {
-          const cleanPhone = c.phone.replace(/\D/g, "");
+          const rawPhone = (c.phone || "").toString();
+          const cleanPhone = rawPhone.replace(/\D/g, "");
           const canonicalId = cleanPhone ? `wa_${cleanPhone}` : c.id;
           const fallback = previewMap.get(c.id);
           const preview = c.last_message_preview || (fallback ? (fallback.text || `📎 ${fallback.message_type}`) : "");
           const msgAt = c.last_message_at || (fallback ? fallback.created_at : c.last_message_at);
+          const safeName = getSafeContactName(c.contact_name, rawPhone);
+
           return {
-            id: canonicalId, phone: cleanPhone || c.phone, contact_name: c.contact_name,
-            stage: c.stage as Stage, tags: c.tags || [], source: c.source,
-            last_message_at: msgAt, last_message_preview: preview,
-            unread_count: c.unread_count, is_vip: c.is_vip,
-            assigned_to: c.assigned_to || "", score_potential: c.score_potential || 0,
-            score_risk: c.score_risk || 0, vehicle_interest: c.vehicle_interest || undefined,
-            price_range: c.price_range || undefined, payment_method: c.payment_method || undefined,
+            id: canonicalId,
+            phone: cleanPhone || rawPhone,
+            contact_name: safeName,
+            stage: (c.stage as Stage) || "novo_lead",
+            tags: c.tags || [],
+            source: c.source || "whatsapp",
+            last_message_at: msgAt || new Date().toISOString(),
+            last_message_preview: preview,
+            unread_count: c.unread_count || 0,
+            is_vip: c.is_vip || false,
+            assigned_to: c.assigned_to || "",
+            score_potential: c.score_potential || 0,
+            score_risk: c.score_risk || 0,
+            vehicle_interest: c.vehicle_interest || undefined,
+            price_range: c.price_range || undefined,
+            payment_method: c.payment_method || undefined,
             is_pinned: (c as any).is_pinned || false,
           };
         });
