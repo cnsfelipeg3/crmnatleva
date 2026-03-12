@@ -249,6 +249,7 @@ function AppRoutes() {
         <Route path="/portal/login" element={<PortalLogin />} />
         <Route path="/portal" element={<PortalDashboard />} />
         <Route path="/portal/viagem/:saleId" element={<PortalTripDetail />} />
+        <Route path="/portal/modelo" element={<PortalDemoTrip />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

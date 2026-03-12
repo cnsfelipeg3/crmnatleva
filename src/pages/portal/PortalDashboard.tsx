@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Plane, Calendar, MapPin, Clock, ArrowRight, Luggage, FileText, DollarSign,
-  MessageCircle, ChevronRight, Sparkles, Timer,
+  MessageCircle, ChevronRight, Sparkles, Timer, Eye,
 } from "lucide-react";
 import { iataToLabel } from "@/lib/iataUtils";
 
