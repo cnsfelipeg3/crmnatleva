@@ -45,7 +45,23 @@ function formatDuration(mins: number) {
   return `${h}h${m > 0 ? `${m}min` : ""}`;
 }
 
+function isNextDayArrival(seg: FlightSegment): boolean {
+  if (!seg.departure_time || !seg.arrival_time) return false;
+  const dep = seg.departure_time.split(":").slice(0, 2).map(Number);
+  const arr = seg.arrival_time.split(":").slice(0, 2).map(Number);
+  if (dep.length < 2 || arr.length < 2) return false;
+  const depMins = dep[0] * 60 + dep[1];
+  const arrMins = arr[0] * 60 + arr[1];
+  // If duration is known and > 0, use it; otherwise heuristic
+  if (seg.duration_minutes && seg.duration_minutes > 0) {
+    return (depMins + seg.duration_minutes) >= 1440 || arrMins < depMins;
+  }
+  return arrMins < depMins;
+}
+
 function SegmentRow({ seg }: { seg: FlightSegment }) {
+  const nextDay = isNextDayArrival(seg);
+
   return (
     <div className="flex items-center gap-3 py-2.5">
       {/* Origin */}
@@ -99,7 +115,10 @@ function SegmentRow({ seg }: { seg: FlightSegment }) {
       <div className="text-center w-16 shrink-0">
         <p className="text-lg font-bold font-mono text-primary leading-tight">{seg.destination_iata}</p>
         {seg.arrival_time && (
-          <p className="text-xs text-muted-foreground">{formatTimeBR(seg.arrival_time)}</p>
+          <p className="text-xs text-muted-foreground">
+            {formatTimeBR(seg.arrival_time)}
+            {nextDay && <span className="text-[9px] text-warning-foreground font-semibold ml-0.5 align-super">+1</span>}
+          </p>
         )}
       </div>
     </div>
