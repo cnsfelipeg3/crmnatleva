@@ -171,6 +171,12 @@ function AppRoutes() {
         {/* Admin */}
         <Route path="/admin/users" element={<AdminUsers />} />
 
+        {/* Portal Admin */}
+        <Route path="/portal-admin" element={<PortalAdminDashboard />} />
+        <Route path="/portal-admin/viagens" element={<PortalAdminTrips />} />
+        <Route path="/portal-admin/viagens/:id" element={<PortalAdminTripDetail />} />
+        <Route path="/portal-admin/clientes" element={<PortalAdminClients />} />
+
         {/* Operação Diária */}
         <Route path="/operacao/inbox" element={<OperacaoInbox />} />
         <Route path="/operacao/flows" element={<OperacaoFlowBuilder />} />
