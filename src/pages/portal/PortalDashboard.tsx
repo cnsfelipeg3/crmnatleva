@@ -102,7 +102,7 @@ export default function PortalDashboard() {
   if (trips.length === 0) {
     return (
       <PortalLayout>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-40">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-40 px-4">
           <Plane className="h-24 w-24 text-muted-foreground/15 mx-auto mb-8" />
           <h2 className="text-3xl font-bold text-foreground mb-4 tracking-tight">Nenhuma jornada ainda</h2>
           <p className="text-muted-foreground text-sm max-w-md mx-auto">
