@@ -1079,7 +1079,9 @@ export default function LiveChat() {
     const filtered = conversations.filter(c => {
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        if (!c.contact_name.toLowerCase().includes(q) && !c.phone.includes(q) &&
+        const safeName = getSafeContactName(c.contact_name, c.phone).toLowerCase();
+        const safePhone = (c.phone || "").toLowerCase();
+        if (!safeName.includes(q) && !safePhone.includes(q) &&
             !(c.vehicle_interest || "").toLowerCase().includes(q))
           return false;
       }
