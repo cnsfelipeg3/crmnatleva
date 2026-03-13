@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { iataToLabel, iataToCityName } from "@/lib/iataUtils";
 import { formatDateBR, formatTimeBR } from "@/lib/dateFormat";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import {
   Plane, Hotel, Car, Ticket, Shield, MapPin, Calendar, Clock,
   ChevronRight, ExternalLink, Map as MapIcon, List, Filter,
   Navigation, Maximize2, Eye,
 } from "lucide-react";
-import { getGoogleMapsApiKey } from "@/lib/cesium/config";
 
 /* ───────── Airport Coordinates ───────── */
 const AIRPORT_COORDS: Record<string, [number, number]> = {
@@ -48,9 +49,12 @@ const AIRPORT_COORDS: Record<string, [number, number]> = {
   SLZ: [-2.5853, -44.2341], THE: [-5.0594, -42.8236], PMW: [-10.2915, -48.3572],
   JED: [21.6706, 39.1506], AMM: [31.7226, 35.9932], TLV: [32.0114, 34.8867],
   PEK: [40.0725, 116.5975], PVG: [31.1434, 121.8052],
+  FTE: [-51.6092, -69.3125], AEP: [-34.5592, -58.4156],
 };
 
 /* ───────── Types ───────── */
+type FilterType = "all" | "flights" | "hotels" | "services";
+
 interface JourneyItem {
   id: string;
   type: "flight" | "hotel" | "service" | "transfer" | "experience";
@@ -59,93 +63,76 @@ interface JourneyItem {
   date?: string;
   time?: string;
   iata?: string;
-  coords?: [number, number];
-  details: Record<string, string>;
-  direction?: string;
   originIata?: string;
   destIata?: string;
+  coords?: [number, number];
+  direction?: string;
+  details: Record<string, string>;
 }
-
-interface PortalJourneyMapProps {
-  segments: any[];
-  hotels: any[];
-  lodging: any[];
-  services: any[];
-  sale: any;
-}
-
-type FilterType = "all" | "flights" | "hotels" | "experiences";
 
 const FILTER_OPTIONS: { key: FilterType; label: string; icon: typeof Plane }[] = [
-  { key: "all", label: "Tudo", icon: MapIcon },
+  { key: "all", label: "Tudo", icon: Navigation },
   { key: "flights", label: "Voos", icon: Plane },
   { key: "hotels", label: "Hotéis", icon: Hotel },
-  { key: "experiences", label: "Serviços", icon: Ticket },
+  { key: "services", label: "Serviços", icon: Ticket },
 ];
 
-const TYPE_COLORS: Record<string, { bg: string; border: string; text: string; marker: string }> = {
-  flight: { bg: "bg-accent/10", border: "border-accent/30", text: "text-accent", marker: "#34d399" },
-  hotel: { bg: "bg-warning/10", border: "border-warning/30", text: "text-warning", marker: "#f59e0b" },
-  service: { bg: "bg-info/10", border: "border-info/30", text: "text-info", marker: "#60a5fa" },
-  transfer: { bg: "bg-success/10", border: "border-success/30", text: "text-success", marker: "#34d399" },
-  experience: { bg: "bg-primary/10", border: "border-primary/30", text: "text-primary", marker: "#a78bfa" },
+const TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  flight: { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20" },
+  hotel: { bg: "bg-accent/10", text: "text-accent", border: "border-accent/20" },
+  service: { bg: "bg-muted", text: "text-muted-foreground", border: "border-border" },
+  transfer: { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20" },
+  experience: { bg: "bg-accent/10", text: "text-accent", border: "border-accent/20" },
 };
 
 const TYPE_ICONS: Record<string, typeof Plane> = {
   flight: Plane, hotel: Hotel, service: Ticket, transfer: Car, experience: Ticket,
 };
 
-/* ───────── Google Maps Loader Singleton ───────── */
-let googleMapsReady: Promise<void> | null = null;
-
-function loadGoogleMaps(): Promise<void> {
-  if (googleMapsReady) return googleMapsReady;
-  if (typeof google !== "undefined" && google.maps) {
-    googleMapsReady = Promise.resolve();
-    return googleMapsReady;
-  }
-  const apiKey = getGoogleMapsApiKey();
-  if (!apiKey) return Promise.reject(new Error("Google Maps API key missing"));
-
-  googleMapsReady = new Promise((resolve, reject) => {
-    const existing = document.querySelector('script[src*="maps.googleapis.com"]');
-    if (existing) { resolve(); return; }
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&language=pt-BR&region=BR`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Google Maps"));
-    document.head.appendChild(script);
-  });
-  return googleMapsReady;
-}
-
-/* ───────── Pin SVG Generators ───────── */
-function createPinSvg(color: string, emoji: string, size: number = 36): string {
-  return `data:image/svg+xml,${encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size + 8}" viewBox="0 0 ${size} ${size + 8}">
+/* ───────── Leaflet Icon helpers ───────── */
+function createDivIcon(emoji: string, color: string, size: number = 36): L.DivIcon {
+  return L.divIcon({
+    className: "",
+    iconSize: [size, size + 8],
+    iconAnchor: [size / 2, size + 8],
+    popupAnchor: [0, -(size + 8)],
+    html: `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size + 8}" viewBox="0 0 ${size} ${size + 8}">
       <filter id="s"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.25"/></filter>
       <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 2}" fill="${color}" stroke="white" stroke-width="2.5" filter="url(#s)"/>
       <text x="${size / 2}" y="${size / 2 + 1}" text-anchor="middle" dominant-baseline="central" font-size="${size * 0.4}" font-family="system-ui">${emoji}</text>
       <polygon points="${size / 2 - 4},${size - 2} ${size / 2},${size + 6} ${size / 2 + 4},${size - 2}" fill="${color}"/>
-    </svg>
-  `)}`;
+    </svg>`,
+  });
+}
+
+function createLabelIcon(text: string): L.DivIcon {
+  return L.divIcon({
+    className: "",
+    iconSize: [120, 28],
+    iconAnchor: [60, 36],
+    html: `<div style="background:rgba(255,255,255,0.92);border:1px solid #e2e2e2;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;font-family:system-ui;color:#333;text-align:center;white-space:nowrap;">${text}</div>`,
+  });
+}
+
+interface PortalJourneyMapProps {
+  segments: any[];
+  hotels: any[];
+  lodging?: any[];
+  services?: any[];
+  sale?: any;
 }
 
 /* ═══════════════════════════════════════════════════════════ */
 
 export default function PortalJourneyMap({ segments, hotels, lodging, services, sale }: PortalJourneyMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const overlaysRef = useRef<(google.maps.Marker | google.maps.Polyline | google.maps.InfoWindow)[]>([]);
-  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const layerGroupRef = useRef<L.LayerGroup | null>(null);
   const [filter, setFilter] = useState<FilterType>("all");
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
-  const [mapReady, setMapReady] = useState(false);
 
-  // ───── Build journey items (unchanged logic) ─────
+  // ───── Build journey items ─────
   const journeyItems = useMemo(() => {
     const items: JourneyItem[] = [];
 
@@ -260,60 +247,39 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
     return points;
   }, [segments]);
 
-  // ───── Initialize Google Map ─────
+  // ───── Initialize Leaflet Map ─────
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    let cancelled = false;
-
-    loadGoogleMaps().then(() => {
-      if (cancelled || !mapContainerRef.current) return;
-
-      const map = new window.google.maps.Map(mapContainerRef.current, {
-        center: { lat: -15, lng: -50 },
-        zoom: 3,
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false,
-        zoomControl: true,
-        zoomControlOptions: { position: window.google.maps.ControlPosition.TOP_RIGHT },
-        gestureHandling: "greedy",
-        styles: [
-          { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
-          { featureType: "transit", stylers: [{ visibility: "off" }] },
-          { featureType: "water", elementType: "geometry.fill", stylers: [{ color: "#c9e8f5" }] },
-          { featureType: "landscape.natural", stylers: [{ color: "#f0f4e8" }] },
-        ],
-      });
-
-      infoWindowRef.current = new window.google.maps.InfoWindow();
-      mapRef.current = map;
-      setMapReady(true);
-    }).catch((err) => {
-      console.error("Failed to load Google Maps:", err);
+    const map = L.map(mapContainerRef.current, {
+      center: [-15, -50],
+      zoom: 3,
+      zoomControl: true,
+      attributionControl: false,
     });
 
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      maxZoom: 19,
+    }).addTo(map);
+
+    layerGroupRef.current = L.layerGroup().addTo(map);
+    mapRef.current = map;
+
     return () => {
-      cancelled = true;
+      map.remove();
       mapRef.current = null;
-      setMapReady(false);
+      layerGroupRef.current = null;
     };
   }, []);
 
   // ───── Update markers & polylines ─────
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !mapReady) return;
+    const lg = layerGroupRef.current;
+    if (!map || !lg) return;
 
-    // Clear previous overlays
-    overlaysRef.current.forEach(o => {
-      if (o instanceof google.maps.Marker) o.setMap(null);
-      else if (o instanceof google.maps.Polyline) o.setMap(null);
-      else if (o instanceof google.maps.InfoWindow) o.close();
-    });
-    overlaysRef.current = [];
-
-    const bounds = new google.maps.LatLngBounds();
+    lg.clearLayers();
+    const bounds = L.latLngBounds([]);
 
     // ── Draw flight routes ──
     if (filter === "all" || filter === "flights") {
@@ -324,35 +290,16 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
 
         const isReturn = seg.direction === "volta";
 
-        // Create a curved path using geodesic polyline
-        const path = [
-          { lat: o[0], lng: o[1] },
-          { lat: d[0], lng: d[1] },
-        ];
-
-        const polyline = new google.maps.Polyline({
-          path,
-          geodesic: true,
-          strokeColor: isReturn ? "#f59e0b" : "#34d399",
-          strokeOpacity: 0.8,
-          strokeWeight: 3,
-          icons: isReturn ? [{
-            icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 3 },
-            offset: "0",
-            repeat: "16px",
-          }] : [{
-            icon: {
-              path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-              scale: 3,
-              strokeColor: "#34d399",
-              fillColor: "#34d399",
-              fillOpacity: 1,
-            },
-            offset: "50%",
-          }],
-        });
-        polyline.setMap(map);
-        overlaysRef.current.push(polyline);
+        const polyline = L.polyline(
+          [L.latLng(o[0], o[1]), L.latLng(d[0], d[1])],
+          {
+            color: isReturn ? "#f59e0b" : "#34d399",
+            weight: 3,
+            opacity: 0.8,
+            dashArray: isReturn ? "8 6" : undefined,
+          }
+        );
+        lg.addLayer(polyline);
       });
     }
 
@@ -365,69 +312,38 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
         const emoji = isFirst ? "🛫" : isLast ? "🛬" : "📍";
         const color = isFirst ? "#34d399" : isLast ? "#f59e0b" : "#60a5fa";
 
-        const marker = new google.maps.Marker({
-          position: { lat: pt.coords[0], lng: pt.coords[1] },
-          map,
-          icon: {
-            url: createPinSvg(color, emoji, isFirst || isLast ? 40 : 32),
-            scaledSize: new google.maps.Size(
-              isFirst || isLast ? 40 : 32,
-              isFirst || isLast ? 48 : 40,
-            ),
-            anchor: new google.maps.Point(
-              (isFirst || isLast ? 40 : 32) / 2,
-              isFirst || isLast ? 48 : 40,
-            ),
-          },
-          title: iataToCityName(pt.iata),
-          zIndex: isFirst || isLast ? 10 : 5,
+        const marker = L.marker([pt.coords[0], pt.coords[1]], {
+          icon: createDivIcon(emoji, color, isFirst || isLast ? 40 : 32),
+          zIndexOffset: isFirst || isLast ? 1000 : 500,
         });
 
-        // InfoWindow on click
-        marker.addListener("click", () => {
-          const iw = infoWindowRef.current;
-          if (!iw) return;
-          iw.setContent(`
-            <div style="font-family:system-ui;padding:6px 2px;min-width:120px;">
-              <p style="font-size:15px;font-weight:700;margin:0 0 2px;">${emoji} ${iataToCityName(pt.iata)}</p>
-              <p style="font-size:12px;color:#666;margin:0;">Parada ${idx + 1} de ${routePoints.length}</p>
-            </div>
-          `);
-          iw.open(map, marker);
-        });
+        marker.bindPopup(`
+          <div style="font-family:system-ui;padding:6px 2px;min-width:120px;">
+            <p style="font-size:15px;font-weight:700;margin:0 0 2px;">${emoji} ${iataToCityName(pt.iata)}</p>
+            <p style="font-size:12px;color:#666;margin:0;">Parada ${idx + 1} de ${routePoints.length}</p>
+          </div>
+        `);
 
-        overlaysRef.current.push(marker);
-        bounds.extend({ lat: pt.coords[0], lng: pt.coords[1] });
+        lg.addLayer(marker);
+        bounds.extend([pt.coords[0], pt.coords[1]]);
 
         // City label
-        const label = new google.maps.Marker({
-          position: { lat: pt.coords[0], lng: pt.coords[1] },
-          map,
-          icon: {
-            url: `data:image/svg+xml,${encodeURIComponent(`
-              <svg xmlns="http://www.w3.org/2000/svg" width="120" height="28">
-                <rect x="0" y="0" width="120" height="28" rx="8" fill="white" fill-opacity="0.92" stroke="#e2e2e2" stroke-width="1"/>
-                <text x="60" y="18" text-anchor="middle" font-size="11" font-weight="700" font-family="system-ui" fill="#333">${iataToCityName(pt.iata)}</text>
-              </svg>
-            `)}`,
-            scaledSize: new google.maps.Size(120, 28),
-            anchor: new google.maps.Point(60, -8),
-          },
-          clickable: false,
-          zIndex: 3,
+        const label = L.marker([pt.coords[0], pt.coords[1]], {
+          icon: createLabelIcon(iataToCityName(pt.iata)),
+          interactive: false,
+          zIndexOffset: 300,
         });
-        overlaysRef.current.push(label);
+        lg.addLayer(label);
       });
     }
 
     // ── Fit bounds ──
-    if (routePoints.length >= 2 && showFlights) {
-      map.fitBounds(bounds, { top: 60, bottom: 60, left: 60, right: 60 });
+    if (routePoints.length >= 2 && showFlights && bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [60, 60] });
     } else if (routePoints.length === 1) {
-      map.setCenter({ lat: routePoints[0].coords[0], lng: routePoints[0].coords[1] });
-      map.setZoom(6);
+      map.setView([routePoints[0].coords[0], routePoints[0].coords[1]], 6);
     }
-  }, [segments, routePoints, filter, filteredItems, mapReady]);
+  }, [segments, routePoints, filter, filteredItems]);
 
   // ───── Sidebar item click → fly to ─────
   const handleItemClick = useCallback((item: JourneyItem) => {
@@ -445,17 +361,15 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
     }
 
     if (target) {
-      map.panTo({ lat: target[0], lng: target[1] });
-      map.setZoom(zoom);
+      map.flyTo([target[0], target[1]], zoom, { duration: 1 });
     }
   }, [selectedItem]);
 
   const handleFitAll = useCallback(() => {
     const map = mapRef.current;
     if (!map || routePoints.length < 2) return;
-    const bounds = new google.maps.LatLngBounds();
-    routePoints.forEach(p => bounds.extend({ lat: p.coords[0], lng: p.coords[1] }));
-    map.fitBounds(bounds, { top: 60, bottom: 60, left: 60, right: 60 });
+    const bounds = L.latLngBounds(routePoints.map(p => L.latLng(p.coords[0], p.coords[1])));
+    map.fitBounds(bounds, { padding: [60, 60] });
   }, [routePoints]);
 
   const handleOpenExternal = useCallback((item: JourneyItem) => {
@@ -578,7 +492,7 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
           <div className="flex-1 min-h-[300px] lg:min-h-[480px] relative">
             <div ref={mapContainerRef} className="absolute inset-0" />
             {/* Legend */}
-            <div className="absolute bottom-3 left-3 z-[10] bg-card/90 backdrop-blur-md rounded-xl px-3.5 py-2 border border-border shadow-md flex items-center gap-4">
+            <div className="absolute bottom-3 left-3 z-[1000] bg-card/90 backdrop-blur-md rounded-xl px-3.5 py-2 border border-border shadow-md flex items-center gap-4">
               <span className="flex items-center gap-2 text-[11px] text-foreground/80 font-medium">
                 <span className="w-5 h-0.5 bg-accent inline-block rounded-full" /> Ida
               </span>
