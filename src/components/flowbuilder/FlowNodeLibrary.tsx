@@ -2,14 +2,19 @@ import { useState } from "react";
 import { NODE_CATEGORIES, type NodeDefinition } from "./nodeTypes";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, ChevronDown, ChevronRight, GripVertical } from "lucide-react";
-import {
-  Zap, MessageSquare, HelpCircle, GitBranch, Cog, Brain, UserCog, Wrench, Network,
-} from "lucide-react";
+import { icons, Search, ChevronDown, ChevronRight, GripVertical, Zap } from "lucide-react";
 
 const CAT_ICONS: Record<string, React.ElementType> = {
-  Zap, MessageSquare, HelpCircle, GitBranch, Cog, Brain, UserCog, Wrench, Network,
+  Zap: icons.Zap, MessageSquare: icons.MessageSquare, HelpCircle: icons.HelpCircle,
+  GitBranch: icons.GitBranch, Cog: icons.Cog, Brain: icons.Brain,
+  UserCog: icons.UserCog, Wrench: icons.Wrench, Network: icons.Network,
 };
+
+function NodeIcon({ name, color, size = 16 }: { name: string; color: string; size?: number }) {
+  const Icon = (icons as any)[name];
+  if (!Icon) return <Zap size={size} style={{ color }} />;
+  return <Icon size={size} style={{ color }} />;
+}
 
 interface Props {
   onDragStart: (def: NodeDefinition) => void;
@@ -32,9 +37,11 @@ export function FlowNodeLibrary({ onDragStart }: Props) {
   })).filter(cat => cat.nodes.length > 0);
 
   return (
-    <div className="w-[240px] border-r border-border bg-card/50 flex flex-col shrink-0">
+    <div className="w-[260px] border-r border-border bg-card/50 flex flex-col shrink-0">
       <div className="p-3 border-b border-border">
-        <h3 className="text-xs font-extrabold uppercase tracking-widest text-primary mb-2">Blocos</h3>
+        <h3 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-muted-foreground mb-2.5">
+          Blocos Disponíveis
+        </h3>
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
@@ -48,7 +55,7 @@ export function FlowNodeLibrary({ onDragStart }: Props) {
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-1">
           {filtered.map(cat => {
-            const CatIcon = CAT_ICONS[cat.icon] || Zap;
+            const CatIcon = CAT_ICONS[cat.icon] || icons.Zap;
             return (
               <div key={cat.id}>
                 <button
@@ -57,10 +64,10 @@ export function FlowNodeLibrary({ onDragStart }: Props) {
                 >
                   <CatIcon className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="flex-1 text-left">{cat.label}</span>
-                  {expanded[cat.id] ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  {expanded[cat.id] ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
                 </button>
                 {expanded[cat.id] && (
-                  <div className="ml-2 space-y-0.5 mt-0.5">
+                  <div className="ml-1 space-y-0.5 mt-0.5">
                     {cat.nodes.map(node => (
                       <div
                         key={node.type}
@@ -70,16 +77,19 @@ export function FlowNodeLibrary({ onDragStart }: Props) {
                           e.dataTransfer.effectAllowed = "move";
                           onDragStart(node);
                         }}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-grab hover:bg-secondary/70 active:cursor-grabbing transition-colors group"
+                        className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-grab hover:bg-secondary/70 active:cursor-grabbing active:scale-[0.97] transition-all group border border-transparent hover:border-border/50"
                       >
-                        <GripVertical className="h-3 w-3 text-muted-foreground/50 group-hover:text-muted-foreground" />
+                        <GripVertical className="h-3 w-3 text-muted-foreground/30 group-hover:text-muted-foreground/60 shrink-0 transition-colors" />
                         <div
-                          className="h-5 w-5 rounded flex items-center justify-center shrink-0"
-                          style={{ backgroundColor: `${node.color}20` }}
+                          className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
+                          style={{ backgroundColor: `${node.color}18`, border: `1px solid ${node.color}30` }}
                         >
-                          <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: node.color }} />
+                          <NodeIcon name={node.icon} color={node.color} size={16} />
                         </div>
-                        <span className="text-[11px] text-foreground truncate">{node.label}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-semibold text-foreground truncate leading-tight">{node.label}</p>
+                          <p className="text-[10px] text-muted-foreground truncate leading-tight">{node.description}</p>
+                        </div>
                       </div>
                     ))}
                   </div>
