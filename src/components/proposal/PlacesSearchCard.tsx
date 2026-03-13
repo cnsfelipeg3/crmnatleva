@@ -152,11 +152,8 @@ export default function PlacesSearchCard({
     setLoading(true);
     setError(null);
     try {
-      const body: any = { action: "search", query: q };
-      if (destinationContext) body.query = `${q} ${destinationContext}`;
-      const { data, error: fnErr } = await supabase.functions.invoke("places-search", { body });
-      if (fnErr) throw fnErr;
-      setResults(data?.results || []);
+      const data = await searchPlaces(destinationContext ? `${q} ${destinationContext}` : q);
+      setResults(data);
     } catch {
       setError("Não foi possível buscar locais");
       setResults([]);
