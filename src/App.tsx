@@ -107,7 +107,7 @@ const OperacaoLogs = lazy(() => import("@/pages/operacao/OperacaoLogs"));
 const queryClient = new QueryClient();
 
 function ScreenLoader() {
-  return <NatLevaLoader />;
+  return null;
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
