@@ -1,4 +1,5 @@
 // Fictional trips for portal demo / test environment
+import patagoniaImg from "@/assets/destination-patagonia.jpg";
 
 export interface MockTrip {
   id: string;
