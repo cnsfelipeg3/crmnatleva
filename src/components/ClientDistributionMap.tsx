@@ -373,15 +373,22 @@ export default function ClientDistributionMap() {
     mapRef.current?.setZoom(4);
   };
   const handleLocate = useCallback(() => {
-    const map = mapRef.current;
-    if (!map) return;
     const points = filtered.map(c => CITY_COORDS[c.city]).filter(Boolean);
-    if (points.length >= 2) {
-      const bounds = new google.maps.LatLngBounds();
-      points.forEach(p => bounds.extend({ lat: p[0], lng: p[1] }));
-      map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+
+    if (fallbackMode) {
+      const map = leafletMapRef.current;
+      if (!map || points.length < 2) return;
+      map.fitBounds(points as L.LatLngBoundsExpression, { padding: [30, 30] });
+      return;
     }
-  }, [filtered]);
+
+    const map = mapRef.current;
+    if (!map || points.length < 2) return;
+
+    const bounds = new google.maps.LatLngBounds();
+    points.forEach(p => bounds.extend({ lat: p[0], lng: p[1] }));
+    map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+  }, [fallbackMode, filtered]);
 
   const handleCityClick = useCallback((city: string) => {
     const coords = CITY_COORDS[city];
