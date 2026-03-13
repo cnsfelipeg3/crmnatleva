@@ -19,12 +19,54 @@ const destImages: Record<string, string> = {
   MLE: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=2560&h=1440&fit=crop&q=95&auto=format",
   FTE: "https://images.unsplash.com/photo-1531761535209-180857e67b1e?w=2560&h=1440&fit=crop&q=95&auto=format",
   DXB: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=2560&h=1440&fit=crop&q=95&auto=format",
+  JFK: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=2560&h=1440&fit=crop&q=95&auto=format",
+  LAX: "https://images.unsplash.com/photo-1534190760961-74e8c1c5c3da?w=2560&h=1440&fit=crop&q=95&auto=format",
+  LHR: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=2560&h=1440&fit=crop&q=95&auto=format",
+  NRT: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=2560&h=1440&fit=crop&q=95&auto=format",
+  SYD: "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=2560&h=1440&fit=crop&q=95&auto=format",
+  BCN: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=2560&h=1440&fit=crop&q=95&auto=format",
+  MAD: "https://images.unsplash.com/photo-1543783207-ec64e4d95325?w=2560&h=1440&fit=crop&q=95&auto=format",
+  GIG: "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=2560&h=1440&fit=crop&q=95&auto=format",
+  SDU: "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=2560&h=1440&fit=crop&q=95&auto=format",
+  SSA: "https://images.unsplash.com/photo-1594489428504-5c0c480a15cb?w=2560&h=1440&fit=crop&q=95&auto=format",
+  REC: "https://images.unsplash.com/photo-1626625030889-b7f6b89e5210?w=2560&h=1440&fit=crop&q=95&auto=format",
+  FLN: "https://images.unsplash.com/photo-1598981457915-aea220950616?w=2560&h=1440&fit=crop&q=95&auto=format",
+  AMS: "https://images.unsplash.com/photo-1534351590666-13e3e96b5017?w=2560&h=1440&fit=crop&q=95&auto=format",
+  IST: "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=2560&h=1440&fit=crop&q=95&auto=format",
+  BKK: "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=2560&h=1440&fit=crop&q=95&auto=format",
+  SIN: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=2560&h=1440&fit=crop&q=95&auto=format",
+  SCL: "https://images.unsplash.com/photo-1510693206972-df098062cb71?w=2560&h=1440&fit=crop&q=95&auto=format",
+  BOG: "https://images.unsplash.com/photo-1568632234157-ce7aecd03d0d?w=2560&h=1440&fit=crop&q=95&auto=format",
+  LIM: "https://images.unsplash.com/photo-1531968455002-3014c4051b7e?w=2560&h=1440&fit=crop&q=95&auto=format",
+  ATH: "https://images.unsplash.com/photo-1555993539-1732b0258235?w=2560&h=1440&fit=crop&q=95&auto=format",
+  CAI: "https://images.unsplash.com/photo-1572252009286-268acec5ca0a?w=2560&h=1440&fit=crop&q=95&auto=format",
+  CPT: "https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=2560&h=1440&fit=crop&q=95&auto=format",
   default: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=2560&h=1440&fit=crop&q=95&auto=format",
 };
 
+/** Generic travel fallback images — rotated by hash so each trip gets a unique photo */
+const GENERIC_TRAVEL_IMAGES = [
+  "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=2560&h=1440&fit=crop&q=95&auto=format",
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=2560&h=1440&fit=crop&q=95&auto=format",
+  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=2560&h=1440&fit=crop&q=95&auto=format",
+  "https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=2560&h=1440&fit=crop&q=95&auto=format",
+  "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=2560&h=1440&fit=crop&q=95&auto=format",
+  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=2560&h=1440&fit=crop&q=95&auto=format",
+  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=2560&h=1440&fit=crop&q=95&auto=format",
+  "https://images.unsplash.com/photo-1433838552652-f9a46b332c40?w=2560&h=1440&fit=crop&q=95&auto=format",
+];
+
+function hashCode(str: string): number {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
 /** Enhance any image URL for maximum quality on hero displays */
 export function enhanceImageUrl(url: string): string {
-  if (!url) return url;
+  if (!url) return destImages.default;
   // Unsplash: force max quality params
   if (url.includes("unsplash.com")) {
     const base = url.split("?")[0];
@@ -33,10 +75,13 @@ export function enhanceImageUrl(url: string): string {
   return url;
 }
 
-export function getDestinationImage(iata: string | null, cover?: string | null) {
-  if (cover) return enhanceImageUrl(cover);
+export function getDestinationImage(iata: string | null, cover?: string | null, saleId?: string) {
+  if (cover && cover.trim()) return enhanceImageUrl(cover);
   if (iata && destImages[iata]) return destImages[iata];
-  return destImages.default;
+  // Rotate through generic travel images based on iata or saleId for variety
+  const seed = iata || saleId || "trip";
+  const idx = hashCode(seed) % GENERIC_TRAVEL_IMAGES.length;
+  return GENERIC_TRAVEL_IMAGES[idx];
 }
 
 /* ── Status helpers ── */
