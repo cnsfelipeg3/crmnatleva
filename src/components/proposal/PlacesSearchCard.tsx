@@ -154,6 +154,9 @@ export default function PlacesSearchCard({
 
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const requestIdRef = useRef(0);
+  const disableEdgeSearchRef = useRef(false);
+  const disableClientGoogleRef = useRef(false);
 
   /* ── Search ── */
   const search = useCallback(async (q: string) => {
