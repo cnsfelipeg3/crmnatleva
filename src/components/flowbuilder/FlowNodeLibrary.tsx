@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NODE_CATEGORIES, type NodeDefinition } from "./nodeTypes";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,10 +10,29 @@ const CAT_ICONS: Record<string, React.ElementType> = {
   UserCog: icons.UserCog, Wrench: icons.Wrench, Network: icons.Network,
 };
 
+function darkenHex(hex: string, factor: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgb(${Math.round(r * factor)}, ${Math.round(g * factor)}, ${Math.round(b * factor)})`;
+}
+
+function useIsDark() {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+  useEffect(() => {
+    const obs = new MutationObserver(() => setDark(document.documentElement.classList.contains("dark")));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
+}
+
 function NodeIcon({ name, color, size = 18 }: { name: string; color: string; size?: number }) {
   const Icon = (icons as any)[name];
-  if (!Icon) return <Zap size={size} style={{ color }} />;
-  return <Icon size={size} style={{ color }} />;
+  const isDark = useIsDark();
+  const displayColor = isDark ? color : darkenHex(color, 0.65);
+  if (!Icon) return <Zap size={size} style={{ color: displayColor }} />;
+  return <Icon size={size} style={{ color: displayColor }} />;
 }
 
 interface Props {
