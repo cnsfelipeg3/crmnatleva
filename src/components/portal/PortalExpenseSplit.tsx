@@ -674,7 +674,7 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
                 )}
               </div>
             ))}
-            <Button variant="outline" size="sm" className="gap-1 text-xs rounded-xl" onClick={addMemberField}>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs rounded-xl border-accent/30 text-accent font-bold hover:bg-accent/10 hover:border-accent/50 hover:shadow-[0_0_10px_-3px_hsl(var(--accent)/0.2)] transition-all duration-200" onClick={addMemberField}>
               <Plus className="h-3 w-3" /> Adicionar nome
             </Button>
           </div>
