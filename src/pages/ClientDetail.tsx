@@ -6,14 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDateBR } from "@/lib/dateFormat";
+import { getVisitedCountries } from "@/lib/countryFlags";
 import AirlineLogo from "@/components/AirlineLogo";
 import {
   ArrowLeft, Users, Phone, Mail, MapPin, Plus, Tag, DollarSign,
   TrendingUp, Target, Plane, Hotel, Calendar, Eye, Clock,
   AlertTriangle, CheckCircle2, Send, FileText, Loader2,
+  Heart, Compass, Utensils, Armchair, Star, Save, Globe,
 } from "lucide-react";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -41,6 +45,41 @@ interface SaleRow {
   created_at: string; close_date: string | null;
 }
 
+interface TravelPreferences {
+  seat_preference: string;
+  meal_preference: string;
+  cabin_class: string;
+  hotel_category: string;
+  trip_style: string;
+  travel_pace: string;
+  special_needs: string;
+  loyalty_programs: string[];
+  preferred_airlines: string[];
+  preferred_hotel_chains: string[];
+  notes: string;
+}
+
+const defaultPrefs: TravelPreferences = {
+  seat_preference: "Indiferente",
+  meal_preference: "Sem restrição",
+  cabin_class: "Econômica",
+  hotel_category: "Conforto",
+  trip_style: "Lazer",
+  travel_pace: "Moderado",
+  special_needs: "",
+  loyalty_programs: [],
+  preferred_airlines: [],
+  preferred_hotel_chains: [],
+  notes: "",
+};
+
+const SEAT_OPTIONS = ["Janela", "Corredor", "Indiferente"];
+const MEAL_OPTIONS = ["Sem restrição", "Vegetariano", "Vegano", "Sem glúten", "Sem lactose", "Kosher", "Halal"];
+const CABIN_OPTIONS = ["Econômica", "Premium Economy", "Executiva", "Primeira Classe"];
+const HOTEL_OPTIONS = ["Econômico", "Conforto", "Superior", "Luxo", "Resort"];
+const STYLE_OPTIONS = ["Lazer", "Aventura", "Cultural", "Romântico", "Família", "Corporativo", "Lua de mel"];
+const PACE_OPTIONS = ["Relaxado", "Moderado", "Intenso"];
+
 export default function ClientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -57,19 +96,45 @@ export default function ClientDetail() {
   const [savingNote, setSavingNote] = useState(false);
   const [timelineTab, setTimelineTab] = useState<"all" | "past" | "future">("all");
 
+  // Travel preferences
+  const [prefs, setPrefs] = useState<TravelPreferences>({ ...defaultPrefs });
+  const [editingPrefs, setEditingPrefs] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [newLoyalty, setNewLoyalty] = useState("");
+  const [newAirline, setNewAirline] = useState("");
+  const [newHotelChain, setNewHotelChain] = useState("");
+
   useEffect(() => {
     if (!id) return;
     const fetchAll = async () => {
-      const [clientRes, salesRes, notesRes] = await Promise.all([
+      const [clientRes, salesRes, notesRes, prefsRes] = await Promise.all([
         supabase.from("clients").select("*").eq("id", id).single(),
         supabase.from("sales").select("*").eq("client_id", id).order("departure_date", { ascending: false }),
         supabase.from("client_notes").select("*, profiles:author_id(full_name)").eq("client_id", id).order("created_at", { ascending: false }),
+        supabase.from("client_travel_preferences").select("*").eq("client_id", id).maybeSingle(),
       ]);
 
       setClient(clientRes.data as ClientData | null);
       const salesData = (salesRes.data || []) as SaleRow[];
       setSales(salesData);
       setNotes(notesRes.data || []);
+
+      if (prefsRes.data) {
+        const p = prefsRes.data as any;
+        setPrefs({
+          seat_preference: p.seat_preference || defaultPrefs.seat_preference,
+          meal_preference: p.meal_preference || defaultPrefs.meal_preference,
+          cabin_class: p.cabin_class || defaultPrefs.cabin_class,
+          hotel_category: p.hotel_category || defaultPrefs.hotel_category,
+          trip_style: p.trip_style || defaultPrefs.trip_style,
+          travel_pace: p.travel_pace || defaultPrefs.travel_pace,
+          special_needs: p.special_needs || "",
+          loyalty_programs: p.loyalty_programs || [],
+          preferred_airlines: p.preferred_airlines || [],
+          preferred_hotel_chains: p.preferred_hotel_chains || [],
+          notes: p.notes || "",
+        });
+      }
 
       // Fetch operational tasks for this client's sales
       const saleIds = salesData.map(s => s.id);
@@ -99,12 +164,45 @@ export default function ClientDetail() {
       toast({ title: "Erro ao salvar nota", variant: "destructive" });
     } else {
       setNewNote("");
-      // Refresh notes
       const { data } = await supabase.from("client_notes").select("*, profiles:author_id(full_name)").eq("client_id", id).order("created_at", { ascending: false });
       setNotes(data || []);
       toast({ title: "Nota adicionada!" });
     }
     setSavingNote(false);
+  };
+
+  const handleSavePrefs = async () => {
+    if (!id) return;
+    setSavingPrefs(true);
+    try {
+      const payload = {
+        client_id: id,
+        seat_preference: prefs.seat_preference,
+        meal_preference: prefs.meal_preference,
+        cabin_class: prefs.cabin_class,
+        hotel_category: prefs.hotel_category,
+        trip_style: prefs.trip_style,
+        travel_pace: prefs.travel_pace,
+        special_needs: prefs.special_needs || null,
+        loyalty_programs: prefs.loyalty_programs,
+        preferred_airlines: prefs.preferred_airlines,
+        preferred_hotel_chains: prefs.preferred_hotel_chains,
+        notes: prefs.notes || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from("client_travel_preferences")
+        .upsert(payload, { onConflict: "client_id" });
+
+      if (error) throw error;
+      toast({ title: "Preferências salvas!" });
+      setEditingPrefs(false);
+    } catch (err: any) {
+      toast({ title: "Erro ao salvar preferências", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingPrefs(false);
+    }
   };
 
   // KPIs
@@ -115,12 +213,10 @@ export default function ClientDetail() {
     const avgMargin = sales.length > 0 ? sales.reduce((s, v) => s + (v.margin || 0), 0) / sales.length : 0;
     const avgTicket = sales.length > 0 ? totalReceived / sales.length : 0;
 
-    // Top destinations
     const destCount: Record<string, number> = {};
     sales.forEach(s => { if (s.destination_iata) destCount[s.destination_iata] = (destCount[s.destination_iata] || 0) + 1; });
     const topDests = Object.entries(destCount).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([d]) => d);
 
-    // Last & next trip
     const now = new Date();
     const pastSales = sales.filter(s => s.departure_date && new Date(s.departure_date) < now).sort((a, b) => new Date(b.departure_date!).getTime() - new Date(a.departure_date!).getTime());
     const futureSales = sales.filter(s => s.departure_date && new Date(s.departure_date) >= now).sort((a, b) => new Date(a.departure_date!).getTime() - new Date(b.departure_date!).getTime());
@@ -133,6 +229,12 @@ export default function ClientDetail() {
     };
   }, [sales]);
 
+  // Visited countries
+  const visitedCountries = useMemo(() => {
+    const destinations = sales.map(s => s.destination_iata);
+    return getVisitedCountries(destinations);
+  }, [sales]);
+
   // Timeline
   const timelineSales = useMemo(() => {
     const now = new Date();
@@ -140,6 +242,16 @@ export default function ClientDetail() {
     if (timelineTab === "future") return sales.filter(s => s.departure_date && new Date(s.departure_date) >= now);
     return sales;
   }, [sales, timelineTab]);
+
+  const addToList = (field: "loyalty_programs" | "preferred_airlines" | "preferred_hotel_chains", value: string, setter: (v: string) => void) => {
+    if (!value.trim()) return;
+    setPrefs(prev => ({ ...prev, [field]: [...prev[field], value.trim()] }));
+    setter("");
+  };
+
+  const removeFromList = (field: "loyalty_programs" | "preferred_airlines" | "preferred_hotel_chains", idx: number) => {
+    setPrefs(prev => ({ ...prev, [field]: prev[field].filter((_, i) => i !== idx) }));
+  };
 
   if (loading) return <div className="p-6 text-center text-muted-foreground animate-fade-in">Carregando...</div>;
   if (!client) return (
@@ -179,6 +291,29 @@ export default function ClientDetail() {
         </div>
       </div>
 
+      {/* Visited Countries Flag Badges */}
+      {visitedCountries.length > 0 && (
+        <Card className="p-4 glass-card">
+          <div className="flex items-center gap-2 mb-3">
+            <Globe className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-semibold text-foreground">Países Visitados</h3>
+            <Badge variant="secondary" className="text-[10px] ml-auto">{visitedCountries.length} {visitedCountries.length === 1 ? "país" : "países"}</Badge>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {visitedCountries.map(c => (
+              <div
+                key={c.code}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/60 border border-border/50 hover:bg-muted transition-colors"
+                title={c.name}
+              >
+                <span className="text-lg leading-none">{c.flag}</span>
+                <span className="text-xs font-medium text-foreground">{c.name}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
         {[
@@ -201,184 +336,375 @@ export default function ClientDetail() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Timeline */}
-        <div className="lg:col-span-2 space-y-4">
-          <Card className="p-5 glass-card">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-foreground">Timeline de Vendas</h3>
-              <div className="flex gap-1 bg-muted rounded-lg p-0.5">
-                {(["all", "past", "future"] as const).map(t => (
-                  <button key={t} onClick={() => setTimelineTab(t)}
-                    className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${timelineTab === t ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
-                  >
-                    {t === "all" ? "Todas" : t === "past" ? "Passadas" : "Futuras"}
-                  </button>
-                ))}
-              </div>
-            </div>
+      {/* Main Tabs */}
+      <Tabs defaultValue="timeline" className="space-y-4">
+        <TabsList className="bg-muted/50">
+          <TabsTrigger value="timeline" className="text-xs gap-1.5"><Plane className="w-3.5 h-3.5" /> Timeline</TabsTrigger>
+          <TabsTrigger value="preferences" className="text-xs gap-1.5"><Heart className="w-3.5 h-3.5" /> Preferências de Viagem</TabsTrigger>
+        </TabsList>
 
-            {timelineSales.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Nenhuma venda encontrada</p>
-            ) : (
-              <div className="space-y-3">
-                {timelineSales.map(sale => (
-                  <div key={sale.id}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/60 cursor-pointer transition-colors border border-border/50"
-                    onClick={() => navigate(`/sales/${sale.id}`)}
-                  >
-                    <div className="mt-1 shrink-0">
-                      {sale.airline && <AirlineLogo iata={sale.airline} size={24} />}
-                      {!sale.airline && <Plane className="w-5 h-5 text-muted-foreground" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-sm font-semibold text-foreground truncate">
-                          {sale.destination_iata || sale.name}
-                        </span>
-                        <Badge variant="outline" className="text-[10px] shrink-0">{sale.status}</Badge>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="font-mono">{sale.origin_iata || "?"} → {sale.destination_iata || "?"}</span>
-                        {sale.departure_date && <span>· {formatDateBR(sale.departure_date)}</span>}
-                        {sale.return_date && <span>→ {formatDateBR(sale.return_date)}</span>}
-                      </div>
-                      <div className="flex gap-1.5 mt-1">
-                        {sale.products?.map(p => (
-                          <Badge key={p} variant="secondary" className="text-[10px] h-4 px-1.5">
-                            {p === "Aéreo" && <Plane className="w-2.5 h-2.5 mr-0.5" />}
-                            {p === "Hotel" && <Hotel className="w-2.5 h-2.5 mr-0.5" />}
-                            {p}
-                          </Badge>
-                        ))}
-                      </div>
-                      {sale.hotel_name && (
-                        <p className="text-[10px] text-muted-foreground mt-0.5">🏨 {sale.hotel_name}</p>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs font-semibold text-success">{fmt(sale.received_value || 0)}</p>
-                      <p className="text-[10px] text-muted-foreground">Custo: {fmt(sale.total_cost || 0)}</p>
-                      <p className="text-[10px] font-medium text-primary">{fmt(sale.profit || 0)} ({(sale.margin || 0).toFixed(1)}%)</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
-        </div>
-
-        {/* Right column */}
-        <div className="space-y-4">
-          {/* Operational */}
-          {(checkinTasks.length > 0 || lodgingTasks.length > 0) && (
-            <Card className="p-4 glass-card">
-              <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-warning" /> Pendências Operacionais
-              </h3>
-              {checkinTasks.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-[10px] font-semibold text-muted-foreground mb-1.5 uppercase">Check-ins</p>
-                  {checkinTasks.slice(0, 5).map(t => {
-                    const sale = sales.find(s => s.id === t.sale_id);
-                    return (
-                      <div key={t.id}
-                        className="flex items-center gap-2 p-2 rounded bg-muted/50 mb-1 cursor-pointer hover:bg-muted"
-                        onClick={() => navigate("/checkin")}
+        <TabsContent value="timeline">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* Timeline */}
+            <div className="lg:col-span-2 space-y-4">
+              <Card className="p-5 glass-card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-foreground">Timeline de Vendas</h3>
+                  <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+                    {(["all", "past", "future"] as const).map(t => (
+                      <button key={t} onClick={() => setTimelineTab(t)}
+                        className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${timelineTab === t ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
                       >
-                        <Clock className="w-3 h-3 text-warning shrink-0" />
-                        <span className="text-xs text-foreground truncate">
-                          {sale?.destination_iata || "?"} · {t.direction}
-                        </span>
-                        <Badge variant="outline" className="text-[10px] ml-auto shrink-0">{t.status}</Badge>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {lodgingTasks.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-semibold text-muted-foreground mb-1.5 uppercase">Hospedagens</p>
-                  {lodgingTasks.slice(0, 5).map(t => (
-                    <div key={t.id}
-                      className="flex items-center gap-2 p-2 rounded bg-muted/50 mb-1 cursor-pointer hover:bg-muted"
-                      onClick={() => navigate("/hospedagem")}
-                    >
-                      <Hotel className="w-3 h-3 text-accent shrink-0" />
-                      <span className="text-xs text-foreground truncate">{t.hotel_name || "Hotel"}</span>
-                      <Badge variant="outline" className="text-[10px] ml-auto shrink-0">{t.milestone}</Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
-          )}
-
-          {/* Notes */}
-          <Card className="p-4 glass-card">
-            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-info" /> Notas Internas
-            </h3>
-            <div className="flex gap-2 mb-3">
-              <Textarea
-                value={newNote}
-                onChange={(e) => setNewNote(e.target.value)}
-                placeholder="Adicionar nota..."
-                rows={2}
-                className="text-xs"
-              />
-              <Button size="sm" onClick={handleAddNote} disabled={savingNote || !newNote.trim()} className="shrink-0 self-end">
-                {savingNote ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              </Button>
-            </div>
-            {notes.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-3">Nenhuma nota ainda</p>
-            ) : (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                {notes.map(n => (
-                  <div key={n.id} className="p-2.5 rounded bg-muted/50 text-xs">
-                    <p className="text-foreground whitespace-pre-wrap">{n.content}</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      {n.profiles?.full_name || "Sistema"} · {new Date(n.created_at).toLocaleString("pt-BR")}
-                    </p>
+                        {t === "all" ? "Todas" : t === "past" ? "Passadas" : "Futuras"}
+                      </button>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </Card>
+                </div>
 
-          {/* Preferences (auto-generated) */}
-          {sales.length >= 2 && (
-            <Card className="p-4 glass-card">
-              <h3 className="text-sm font-semibold text-foreground mb-3">Perfil do Cliente</h3>
-              <div className="space-y-2 text-xs">
-                {(() => {
-                  const avgValue = kpis.totalReceived / kpis.totalSales;
-                  const style = avgValue > 8000 ? "Premium" : avgValue > 3000 ? "Conforto" : "Econômico";
-                  return <div className="flex justify-between"><span className="text-muted-foreground">Estilo</span><Badge variant="secondary" className="text-[10px]">{style}</Badge></div>;
-                })()}
-                {kpis.topDests.length > 0 && (
-                  <div className="flex justify-between"><span className="text-muted-foreground">Destinos preferidos</span><span className="font-mono">{kpis.topDests.join(", ")}</span></div>
+                {timelineSales.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">Nenhuma venda encontrada</p>
+                ) : (
+                  <div className="space-y-3">
+                    {timelineSales.map(sale => (
+                      <div key={sale.id}
+                        className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/60 cursor-pointer transition-colors border border-border/50"
+                        onClick={() => navigate(`/sales/${sale.id}`)}
+                      >
+                        <div className="mt-1 shrink-0">
+                          {sale.airline && <AirlineLogo iata={sale.airline} size={24} />}
+                          {!sale.airline && <Plane className="w-5 h-5 text-muted-foreground" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-sm font-semibold text-foreground truncate">
+                              {sale.destination_iata || sale.name}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] shrink-0">{sale.status}</Badge>
+                          </div>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span className="font-mono">{sale.origin_iata || "?"} → {sale.destination_iata || "?"}</span>
+                            {sale.departure_date && <span>· {formatDateBR(sale.departure_date)}</span>}
+                            {sale.return_date && <span>→ {formatDateBR(sale.return_date)}</span>}
+                          </div>
+                          <div className="flex gap-1.5 mt-1">
+                            {sale.products?.map(p => (
+                              <Badge key={p} variant="secondary" className="text-[10px] h-4 px-1.5">
+                                {p === "Aéreo" && <Plane className="w-2.5 h-2.5 mr-0.5" />}
+                                {p === "Hotel" && <Hotel className="w-2.5 h-2.5 mr-0.5" />}
+                                {p}
+                              </Badge>
+                            ))}
+                          </div>
+                          {sale.hotel_name && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5">🏨 {sale.hotel_name}</p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-xs font-semibold text-success">{fmt(sale.received_value || 0)}</p>
+                          <p className="text-[10px] text-muted-foreground">Custo: {fmt(sale.total_cost || 0)}</p>
+                          <p className="text-[10px] font-medium text-primary">{fmt(sale.profit || 0)} ({(sale.margin || 0).toFixed(1)}%)</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
-                {(() => {
-                  const hotels = sales.map(s => s.hotel_name).filter(Boolean);
-                  const unique = [...new Set(hotels)];
-                  if (unique.length > 0) return <div className="flex justify-between"><span className="text-muted-foreground">Hotéis</span><span className="truncate max-w-[120px]">{unique.slice(0, 2).join(", ")}</span></div>;
-                  return null;
-                })()}
-              </div>
-            </Card>
-          )}
+              </Card>
+            </div>
 
-          {/* Observations */}
-          {client.observations && (
-            <Card className="p-4 glass-card">
-              <h3 className="text-sm font-semibold text-foreground mb-2">Observações</h3>
-              <p className="text-xs text-muted-foreground whitespace-pre-wrap">{client.observations}</p>
-            </Card>
-          )}
-        </div>
+            {/* Right column */}
+            <div className="space-y-4">
+              {(checkinTasks.length > 0 || lodgingTasks.length > 0) && (
+                <Card className="p-4 glass-card">
+                  <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-warning" /> Pendências Operacionais
+                  </h3>
+                  {checkinTasks.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-[10px] font-semibold text-muted-foreground mb-1.5 uppercase">Check-ins</p>
+                      {checkinTasks.slice(0, 5).map(t => {
+                        const sale = sales.find(s => s.id === t.sale_id);
+                        return (
+                          <div key={t.id}
+                            className="flex items-center gap-2 p-2 rounded bg-muted/50 mb-1 cursor-pointer hover:bg-muted"
+                            onClick={() => navigate("/checkin")}
+                          >
+                            <Clock className="w-3 h-3 text-warning shrink-0" />
+                            <span className="text-xs text-foreground truncate">
+                              {sale?.destination_iata || "?"} · {t.direction}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] ml-auto shrink-0">{t.status}</Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {lodgingTasks.length > 0 && (
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted-foreground mb-1.5 uppercase">Hospedagens</p>
+                      {lodgingTasks.slice(0, 5).map(t => (
+                        <div key={t.id}
+                          className="flex items-center gap-2 p-2 rounded bg-muted/50 mb-1 cursor-pointer hover:bg-muted"
+                          onClick={() => navigate("/hospedagem")}
+                        >
+                          <Hotel className="w-3 h-3 text-accent shrink-0" />
+                          <span className="text-xs text-foreground truncate">{t.hotel_name || "Hotel"}</span>
+                          <Badge variant="outline" className="text-[10px] ml-auto shrink-0">{t.milestone}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              )}
+
+              {/* Notes */}
+              <Card className="p-4 glass-card">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-info" /> Notas Internas
+                </h3>
+                <div className="flex gap-2 mb-3">
+                  <Textarea
+                    value={newNote}
+                    onChange={(e) => setNewNote(e.target.value)}
+                    placeholder="Adicionar nota..."
+                    rows={2}
+                    className="text-xs"
+                  />
+                  <Button size="sm" onClick={handleAddNote} disabled={savingNote || !newNote.trim()} className="shrink-0 self-end">
+                    {savingNote ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  </Button>
+                </div>
+                {notes.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-3">Nenhuma nota ainda</p>
+                ) : (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {notes.map(n => (
+                      <div key={n.id} className="p-2.5 rounded bg-muted/50 text-xs">
+                        <p className="text-foreground whitespace-pre-wrap">{n.content}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">
+                          {n.profiles?.full_name || "Sistema"} · {new Date(n.created_at).toLocaleString("pt-BR")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
+              {/* Auto Profile */}
+              {sales.length >= 2 && (
+                <Card className="p-4 glass-card">
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Perfil do Cliente</h3>
+                  <div className="space-y-2 text-xs">
+                    {(() => {
+                      const avgValue = kpis.totalReceived / kpis.totalSales;
+                      const style = avgValue > 8000 ? "Premium" : avgValue > 3000 ? "Conforto" : "Econômico";
+                      return <div className="flex justify-between"><span className="text-muted-foreground">Estilo</span><Badge variant="secondary" className="text-[10px]">{style}</Badge></div>;
+                    })()}
+                    {kpis.topDests.length > 0 && (
+                      <div className="flex justify-between"><span className="text-muted-foreground">Destinos preferidos</span><span className="font-mono">{kpis.topDests.join(", ")}</span></div>
+                    )}
+                    {(() => {
+                      const hotels = sales.map(s => s.hotel_name).filter(Boolean);
+                      const unique = [...new Set(hotels)];
+                      if (unique.length > 0) return <div className="flex justify-between"><span className="text-muted-foreground">Hotéis</span><span className="truncate max-w-[120px]">{unique.slice(0, 2).join(", ")}</span></div>;
+                      return null;
+                    })()}
+                  </div>
+                </Card>
+              )}
+
+              {/* Observations */}
+              {client.observations && (
+                <Card className="p-4 glass-card">
+                  <h3 className="text-sm font-semibold text-foreground mb-2">Observações</h3>
+                  <p className="text-xs text-muted-foreground whitespace-pre-wrap">{client.observations}</p>
+                </Card>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Travel Preferences Tab */}
+        <TabsContent value="preferences">
+          <Card className="p-6 glass-card">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <Heart className="w-5 h-5 text-primary" />
+                <h3 className="text-base font-semibold text-foreground">Preferências de Viagem</h3>
+              </div>
+              {!editingPrefs ? (
+                <Button size="sm" variant="outline" onClick={() => setEditingPrefs(true)}>
+                  <Compass className="w-3.5 h-3.5 mr-1.5" /> Editar
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleSavePrefs} disabled={savingPrefs}>
+                    {savingPrefs ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Save className="w-3.5 h-3.5 mr-1" />}
+                    Salvar
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditingPrefs(false)}>Cancelar</Button>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Voo */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border pb-2">
+                  <Plane className="w-4 h-4 text-primary" /> Voo
+                </h4>
+                <PrefSelect label="Assento" value={prefs.seat_preference} options={SEAT_OPTIONS} editing={editingPrefs}
+                  onChange={v => setPrefs(p => ({ ...p, seat_preference: v }))} icon={Armchair} />
+                <PrefSelect label="Classe" value={prefs.cabin_class} options={CABIN_OPTIONS} editing={editingPrefs}
+                  onChange={v => setPrefs(p => ({ ...p, cabin_class: v }))} icon={Star} />
+                <PrefSelect label="Refeição" value={prefs.meal_preference} options={MEAL_OPTIONS} editing={editingPrefs}
+                  onChange={v => setPrefs(p => ({ ...p, meal_preference: v }))} icon={Utensils} />
+              </div>
+
+              {/* Hospedagem */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border pb-2">
+                  <Hotel className="w-4 h-4 text-primary" /> Hospedagem
+                </h4>
+                <PrefSelect label="Categoria" value={prefs.hotel_category} options={HOTEL_OPTIONS} editing={editingPrefs}
+                  onChange={v => setPrefs(p => ({ ...p, hotel_category: v }))} icon={Star} />
+              </div>
+
+              {/* Estilo */}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border pb-2">
+                  <Compass className="w-4 h-4 text-primary" /> Estilo de Viagem
+                </h4>
+                <PrefSelect label="Tipo" value={prefs.trip_style} options={STYLE_OPTIONS} editing={editingPrefs}
+                  onChange={v => setPrefs(p => ({ ...p, trip_style: v }))} icon={Heart} />
+                <PrefSelect label="Ritmo" value={prefs.travel_pace} options={PACE_OPTIONS} editing={editingPrefs}
+                  onChange={v => setPrefs(p => ({ ...p, travel_pace: v }))} icon={Clock} />
+              </div>
+            </div>
+
+            {/* Lists */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 pt-6 border-t border-border">
+              <ChipList
+                label="Programas de Fidelidade"
+                items={prefs.loyalty_programs}
+                editing={editingPrefs}
+                inputValue={newLoyalty}
+                onInputChange={setNewLoyalty}
+                onAdd={() => addToList("loyalty_programs", newLoyalty, setNewLoyalty)}
+                onRemove={i => removeFromList("loyalty_programs", i)}
+                placeholder="Ex: LATAM Pass"
+              />
+              <ChipList
+                label="Cias Aéreas Preferidas"
+                items={prefs.preferred_airlines}
+                editing={editingPrefs}
+                inputValue={newAirline}
+                onInputChange={setNewAirline}
+                onAdd={() => addToList("preferred_airlines", newAirline, setNewAirline)}
+                onRemove={i => removeFromList("preferred_airlines", i)}
+                placeholder="Ex: LATAM"
+              />
+              <ChipList
+                label="Redes Hoteleiras"
+                items={prefs.preferred_hotel_chains}
+                editing={editingPrefs}
+                inputValue={newHotelChain}
+                onInputChange={setNewHotelChain}
+                onAdd={() => addToList("preferred_hotel_chains", newHotelChain, setNewHotelChain)}
+                onRemove={i => removeFromList("preferred_hotel_chains", i)}
+                placeholder="Ex: Marriott"
+              />
+            </div>
+
+            {/* Special needs & notes */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-border">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Necessidades Especiais</label>
+                {editingPrefs ? (
+                  <Textarea value={prefs.special_needs} onChange={e => setPrefs(p => ({ ...p, special_needs: e.target.value }))}
+                    placeholder="Ex: Cadeira de rodas, alergia..." rows={3} className="text-xs" />
+                ) : (
+                  <p className="text-sm text-foreground">{prefs.special_needs || <span className="text-muted-foreground italic">Nenhuma</span>}</p>
+                )}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Observações de Viagem</label>
+                {editingPrefs ? (
+                  <Textarea value={prefs.notes} onChange={e => setPrefs(p => ({ ...p, notes: e.target.value }))}
+                    placeholder="Notas adicionais sobre preferências..." rows={3} className="text-xs" />
+                ) : (
+                  <p className="text-sm text-foreground">{prefs.notes || <span className="text-muted-foreground italic">Nenhuma</span>}</p>
+                )}
+              </div>
+            </div>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+/* ─── Helper Components ───────────────────────────────────────── */
+
+function PrefSelect({ label, value, options, editing, onChange, icon: Icon }: {
+  label: string; value: string; options: string[]; editing: boolean;
+  onChange: (v: string) => void; icon?: typeof Plane;
+}) {
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+        {Icon && <Icon className="w-3 h-3" />} {label}
+      </label>
+      {editing ? (
+        <Select value={value} onValueChange={onChange}>
+          <SelectTrigger className="h-9 text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map(o => <SelectItem key={o} value={o} className="text-xs">{o}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ) : (
+        <Badge variant="secondary" className="text-xs">{value}</Badge>
+      )}
+    </div>
+  );
+}
+
+function ChipList({ label, items, editing, inputValue, onInputChange, onAdd, onRemove, placeholder }: {
+  label: string; items: string[]; editing: boolean;
+  inputValue: string; onInputChange: (v: string) => void;
+  onAdd: () => void; onRemove: (i: number) => void; placeholder: string;
+}) {
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground mb-2 block">{label}</label>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {items.length === 0 && !editing && (
+          <span className="text-xs text-muted-foreground italic">Nenhum</span>
+        )}
+        {items.map((item, i) => (
+          <Badge key={i} variant="secondary" className="text-[11px] gap-1">
+            {item}
+            {editing && (
+              <button onClick={() => onRemove(i)} className="ml-0.5 hover:text-destructive">×</button>
+            )}
+          </Badge>
+        ))}
       </div>
+      {editing && (
+        <div className="flex gap-1.5">
+          <Input
+            value={inputValue}
+            onChange={e => onInputChange(e.target.value)}
+            placeholder={placeholder}
+            className="h-8 text-xs"
+            onKeyDown={e => e.key === "Enter" && (e.preventDefault(), onAdd())}
+          />
+          <Button size="sm" variant="outline" className="h-8 px-2.5" onClick={onAdd}>
+            <Plus className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
