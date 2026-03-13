@@ -350,9 +350,40 @@ export default function LiveChat() {
     return () => { cancelled = true; };
   }, [selectedId]);
 
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    requestAnimationFrame(() => {
+      const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+      if (viewport) {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior });
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior });
+      }
+    });
+  }, []);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [currentMessages.length]);
+    if (!isUserScrolledUpRef.current) {
+      scrollToBottom();
+    }
+  }, [currentMessages.length, currentMessages[currentMessages.length - 1]?.id, scrollToBottom]);
+
+  useEffect(() => {
+    if (selectedId) {
+      isUserScrolledUpRef.current = false;
+      scrollToBottom("instant" as ScrollBehavior);
+    }
+  }, [selectedId, scrollToBottom]);
+
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+    if (!viewport) return;
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = viewport;
+      isUserScrolledUpRef.current = scrollHeight - scrollTop - clientHeight > 100;
+    };
+    viewport.addEventListener("scroll", handleScroll);
+    return () => viewport.removeEventListener("scroll", handleScroll);
+  }, [selectedId]);
 
   // Reset textarea height when input is cleared
   useEffect(() => {
