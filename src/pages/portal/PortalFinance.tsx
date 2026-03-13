@@ -564,6 +564,10 @@ export default function PortalFinance() {
               <PortalExpenseSplit saleId={saleId!} />
             </TabsContent>
 
+            <TabsContent value="cambio" className="space-y-6">
+              <CurrencyPanel />
+            </TabsContent>
+
             <TabsContent value="history" className="space-y-6">
               <HistorySection expenses={expenses} receivables={receivables} categories={categories} cards={cards} />
             </TabsContent>
