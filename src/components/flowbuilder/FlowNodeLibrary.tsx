@@ -35,6 +35,27 @@ function NodeIcon({ name, color, size = 18 }: { name: string; color: string; siz
   return <Icon size={size} style={{ color: displayColor }} />;
 }
 
+function NodeIconBox({ color, children }: { color: string; children: React.ReactNode }) {
+  const isDark = useIsDark();
+  const bgAlpha = isDark ? "25" : "15";
+  const bgAlpha2 = isDark ? "40" : "25";
+  const borderAlpha = isDark ? "50" : "40";
+  const shadowAlpha = isDark ? "15" : "08";
+
+  return (
+    <div
+      className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-all group-hover:scale-110 group-hover:shadow-md"
+      style={{
+        background: `linear-gradient(135deg, ${color}${bgAlpha}, ${color}${bgAlpha2})`,
+        border: `1.5px solid ${color}${borderAlpha}`,
+        boxShadow: `0 2px 8px ${color}${shadowAlpha}`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 interface Props {
   onDragStart: (def: NodeDefinition) => void;
 }
@@ -101,7 +122,6 @@ export function FlowNodeLibrary({ onDragStart }: Props) {
                         <NodeIconBox color={node.color}>
                           <NodeIcon name={node.icon} color={node.color} size={18} />
                         </NodeIconBox>
-                        </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[11px] font-semibold text-foreground truncate leading-tight">{node.label}</p>
                           <p className="text-[10px] text-muted-foreground truncate leading-tight mt-0.5">{node.description}</p>
