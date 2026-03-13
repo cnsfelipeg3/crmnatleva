@@ -1,16 +1,18 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import PortalLayout from "@/components/portal/PortalLayout";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import {
   CircleDollarSign, Wallet, CreditCard, PiggyBank, TrendingUp,
   Plus, ArrowUpRight, ArrowDownRight, Receipt, ShoppingBag,
   UtensilsCrossed, Car, Ticket, ShieldCheck, Package, Sparkles,
   ChevronRight, Calendar, Clock, CheckCircle2, AlertCircle,
   Banknote, BadgeDollarSign, BarChart3, PieChart, Target,
-  X, Save, Trash2, Edit2,
+  X, Save, Trash2, Edit2, Zap, Eye, EyeOff, ArrowRight,
+  Flame, TrendingDown, Activity, Gauge, DollarSign,
+  Plane, Coffee, Heart, Globe, Shield, Star,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -27,6 +29,8 @@ const pct = (used: number, total: number) =>
   total > 0 ? Math.round((used / total) * 100) : 0;
 const fmtDate = (d: string) =>
   new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+const fmtDateFull = (d: string) =>
+  new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 
 const CATEGORY_ICONS: Record<string, any> = {
   alimentacao: UtensilsCrossed,
@@ -49,11 +53,11 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const PAYMENT_METHODS = [
-  { value: "cartao_credito", label: "Cartão de Crédito" },
-  { value: "cartao_debito", label: "Cartão de Débito" },
-  { value: "dinheiro", label: "Dinheiro" },
-  { value: "pix", label: "PIX" },
-  { value: "outro", label: "Outro" },
+  { value: "cartao_credito", label: "Cartão de Crédito", icon: CreditCard },
+  { value: "cartao_debito", label: "Cartão de Débito", icon: CreditCard },
+  { value: "dinheiro", label: "Dinheiro", icon: Banknote },
+  { value: "pix", label: "PIX", icon: Zap },
+  { value: "outro", label: "Outro", icon: DollarSign },
 ];
 
 const DEFAULT_CATEGORIES = [
@@ -66,6 +70,62 @@ const DEFAULT_CATEGORIES = [
   { name: "Outros", icon: "outros", color: CATEGORY_COLORS.outros },
 ];
 
+/* ─── Animated Counter ─── */
+function AnimatedNumber({ value, prefix = "" }: { value: number; prefix?: string }) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    const duration = 1200;
+    const start = Date.now();
+    const from = display;
+    const step = () => {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 4);
+      setDisplay(from + (value - from) * eased);
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [value]);
+  return <span>{prefix}{fmt(Math.round(display))}</span>;
+}
+
+/* ─── Circular Gauge ─── */
+function CircularGauge({ percentage, size = 120, strokeWidth = 8, color = "accent", children }: {
+  percentage: number; size?: number; strokeWidth?: number; color?: string; children?: React.ReactNode;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (Math.min(percentage, 100) / 100) * circumference;
+
+  return (
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none"
+          stroke="hsl(var(--muted) / 0.2)"
+          strokeWidth={strokeWidth}
+        />
+        <motion.circle
+          cx={size / 2} cy={size / 2} r={radius}
+          fill="none"
+          stroke={`hsl(var(--${color}))`}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 2, ease: [0.16, 1, 0.3, 1] }}
+          style={{ filter: `drop-shadow(0 0 6px hsl(var(--${color}) / 0.4))` }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════
    MAIN PAGE
    ═══════════════════════════════════════════════════════ */
@@ -74,26 +134,21 @@ export default function PortalFinance() {
   const [searchParams] = useSearchParams();
   const saleId = searchParams.get("sale");
 
-  // Agency receivables
   const [receivables, setReceivables] = useState<any[]>([]);
   const [sale, setSale] = useState<any>(null);
-
-  // Personal finance
   const [budget, setBudget] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [cashItems, setCashItems] = useState<any[]>([]);
   const [cards, setCards] = useState<any[]>([]);
+  const [balanceVisible, setBalanceVisible] = useState(true);
 
-  // Dialogs
   const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
   const [cardDialogOpen, setCardDialogOpen] = useState(false);
   const [cashDialogOpen, setCashDialogOpen] = useState(false);
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
-
   const [activeTab, setActiveTab] = useState("overview");
 
-  // Load data
   useEffect(() => {
     if (!saleId || !portalAccess?.client_id) return;
     loadAllData();
@@ -101,35 +156,22 @@ export default function PortalFinance() {
 
   const loadAllData = async () => {
     if (!saleId || !portalAccess?.client_id) return;
-
-    // Sale info
     const { data: saleData } = await supabase
-      .from("sales")
-      .select("id, locator, destination, total_received, total_cost, sale_date")
-      .eq("id", saleId)
-      .single();
+      .from("sales").select("id, locator, destination, total_received, total_cost, sale_date")
+      .eq("id", saleId).single();
     setSale(saleData);
 
-    // Receivables
     const { data: recvData } = await supabase
-      .from("accounts_receivable")
-      .select("*")
-      .eq("sale_id", saleId)
-      .order("due_date");
+      .from("accounts_receivable").select("*").eq("sale_id", saleId).order("due_date");
     setReceivables(recvData || []);
 
-    // Budget
     const { data: budgetData } = await supabase
-      .from("portal_travel_budgets" as any)
-      .select("*")
-      .eq("sale_id", saleId)
-      .eq("client_id", portalAccess!.client_id)
-      .maybeSingle();
+      .from("portal_travel_budgets" as any).select("*")
+      .eq("sale_id", saleId).eq("client_id", portalAccess!.client_id).maybeSingle();
 
     if (budgetData) {
       setBudget(budgetData);
       const bid = (budgetData as any).id;
-
       const [catRes, expRes, cashRes, cardRes] = await Promise.all([
         supabase.from("portal_budget_categories" as any).select("*").eq("budget_id", bid).order("sort_order"),
         supabase.from("portal_expenses" as any).select("*").eq("budget_id", bid).order("expense_date", { ascending: false }),
@@ -143,69 +185,68 @@ export default function PortalFinance() {
     }
   };
 
-  // Create budget if needed
   const ensureBudget = async () => {
     if (budget) return budget;
     if (!saleId || !portalAccess?.client_id) return null;
-
     const { data, error } = await supabase
       .from("portal_travel_budgets" as any)
       .insert({ sale_id: saleId, client_id: portalAccess.client_id, total_budget: 0 } as any)
-      .select()
-      .single();
-
+      .select().single();
     if (error) { toast.error("Erro ao criar orçamento"); return null; }
-
-    // Create default categories
     const bid = (data as any).id;
     const cats = DEFAULT_CATEGORIES.map((c, i) => ({
       budget_id: bid, name: c.name, icon: c.icon, color: c.color, planned_amount: 0, sort_order: i,
     }));
     await supabase.from("portal_budget_categories" as any).insert(cats as any);
-
     setBudget(data);
     await loadAllData();
     return data;
   };
 
-  /* ─── Computed values ─── */
   const agencyTotal = receivables.reduce((s, r) => s + (r.gross_value || 0), 0);
   const agencyPaid = receivables.filter(r => r.status === "recebido").reduce((s, r) => s + (r.gross_value || 0), 0);
-  const agencyPending = agencyTotal - agencyPaid;
-
   const totalBudget = budget?.total_budget || 0;
   const totalSpent = expenses.reduce((s, e) => s + ((e as any).amount || 0), 0);
   const budgetRemaining = totalBudget - totalSpent;
-
   const totalCashInitial = cashItems.reduce((s, c) => s + ((c as any).initial_amount || 0), 0);
-  const cashExpenses = expenses.filter(e => (e as any).payment_method === "dinheiro");
-  const cashSpent = cashExpenses.reduce((s, e) => s + ((e as any).amount || 0), 0);
+  const cashSpent = expenses.filter(e => (e as any).payment_method === "dinheiro").reduce((s, e) => s + ((e as any).amount || 0), 0);
   const cashRemaining = totalCashInitial - cashSpent;
+  const cardTotalSpent = expenses.filter((e: any) => e.payment_method === "cartao_credito" || e.payment_method === "cartao_debito").reduce((s, e) => s + ((e as any).amount || 0), 0);
 
   const categorySpending = useMemo(() => {
     const map: Record<string, number> = {};
-    expenses.forEach((e: any) => {
-      const catId = e.category_id || "outros";
-      map[catId] = (map[catId] || 0) + (e.amount || 0);
-    });
+    expenses.forEach((e: any) => { map[e.category_id || "outros"] = (map[e.category_id || "outros"] || 0) + (e.amount || 0); });
     return map;
   }, [expenses]);
 
   const cardSpending = useMemo(() => {
     const map: Record<string, number> = {};
-    expenses.filter((e: any) => e.card_id).forEach((e: any) => {
-      map[e.card_id] = (map[e.card_id] || 0) + (e.amount || 0);
-    });
+    expenses.filter((e: any) => e.card_id).forEach((e: any) => { map[e.card_id] = (map[e.card_id] || 0) + (e.amount || 0); });
     return map;
+  }, [expenses]);
+
+  const dailySpending = useMemo(() => {
+    const map: Record<string, number> = {};
+    expenses.forEach((e: any) => { map[e.expense_date] = (map[e.expense_date] || 0) + (e.amount || 0); });
+    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).slice(-7);
   }, [expenses]);
 
   if (!saleId) {
     return (
       <PortalLayout>
-        <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-          <Wallet className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
-          <h1 className="text-2xl font-bold text-foreground mb-2">Meu Financeiro</h1>
-          <p className="text-muted-foreground">Selecione uma viagem para acessar o controle financeiro.</p>
+        <div className="min-h-[70vh] flex items-center justify-center px-4">
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-6">
+            <div className="relative mx-auto w-24 h-24">
+              <div className="absolute inset-0 rounded-full bg-accent/10 animate-ping" style={{ animationDuration: "3s" }} />
+              <div className="relative h-24 w-24 rounded-full bg-accent/5 border border-accent/20 flex items-center justify-center">
+                <Wallet className="h-10 w-10 text-accent/60" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-3xl font-black text-foreground mb-2">Meu Financeiro</h1>
+              <p className="text-muted-foreground max-w-sm mx-auto">Selecione uma viagem para acessar seu painel de controle financeiro</p>
+            </div>
+          </motion.div>
         </div>
       </PortalLayout>
     );
@@ -213,180 +254,299 @@ export default function PortalFinance() {
 
   return (
     <PortalLayout>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8">
-        {/* ═══ HEADER ═══ */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5 text-accent" />
-            <span>Portal do Viajante</span>
-            <ChevronRight className="h-3 w-3" />
-            <span>{sale?.destination || "Viagem"}</span>
+      <div className="relative">
+        {/* ═══ HERO HEADER ═══ */}
+        <div className="relative overflow-hidden">
+          {/* Ambient background */}
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-accent/[0.04] blur-[100px]" />
+            <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-chart-2/[0.03] blur-[80px]" />
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 120, repeat: Infinity, ease: "linear" }}
+              className="absolute top-10 right-10 w-[500px] h-[500px] opacity-[0.02]"
+              style={{
+                background: "conic-gradient(from 0deg, hsl(var(--accent)), transparent, hsl(var(--chart-3)), transparent, hsl(var(--accent)))",
+                borderRadius: "50%",
+              }}
+            />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground">
-            Meu Financeiro
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Controle total sobre o investimento e gastos da sua viagem
-          </p>
-        </motion.div>
 
-        {/* ═══ KPI STRIP ═══ */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <KpiCard
-            icon={BadgeDollarSign} label="Investimento Total" value={fmt(agencyTotal)}
-            sub={`${pct(agencyPaid, agencyTotal)}% pago`}
-            accent
-          />
-          <KpiCard
-            icon={Target} label="Budget da Viagem" value={fmt(totalBudget)}
-            sub={totalBudget > 0 ? `${pct(totalSpent, totalBudget)}% usado` : "Defina seu budget"}
-            onClick={async () => { await ensureBudget(); setBudgetDialogOpen(true); }}
-          />
-          <KpiCard
-            icon={TrendingUp} label="Total Gasto" value={fmt(totalSpent)}
-            sub={budgetRemaining >= 0 ? `${fmt(budgetRemaining)} restante` : `${fmt(Math.abs(budgetRemaining))} acima`}
-            warning={budgetRemaining < 0}
-          />
-          <KpiCard
-            icon={Banknote} label="Dinheiro em Espécie" value={fmt(cashRemaining)}
-            sub={totalCashInitial > 0 ? `de ${fmt(totalCashInitial)}` : "Registre seu cash"}
-          />
+          <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 pb-6">
+            {/* Breadcrumb */}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-6"
+            >
+              <Globe className="h-3.5 w-3.5 text-accent" />
+              <span>Portal do Viajante</span>
+              <ChevronRight className="h-3 w-3" />
+              <span className="text-foreground">{sale?.destination || "Viagem"}</span>
+            </motion.div>
+
+            {/* Title + Hide balance */}
+            <div className="flex items-start justify-between mb-8">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-foreground mb-2">
+                  Meu Financeiro
+                </h1>
+                <p className="text-sm text-muted-foreground/70 max-w-md">
+                  Controle total sobre investimento, gastos e orçamento da sua viagem
+                </p>
+              </motion.div>
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                onClick={() => setBalanceVisible(!balanceVisible)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-muted/30 text-xs font-medium text-muted-foreground hover:bg-muted/50 transition-all mt-2"
+              >
+                {balanceVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                {balanceVisible ? "Ocultar" : "Mostrar"}
+              </motion.button>
+            </div>
+
+            {/* ═══ HERO BALANCE CARD ═══ */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="relative rounded-3xl border border-accent/10 bg-gradient-to-br from-accent/[0.06] via-card/90 to-card/80 backdrop-blur-xl p-6 sm:p-8 overflow-hidden mb-6"
+            >
+              {/* Shimmer */}
+              <motion.div
+                initial={{ x: "-100%" }}
+                animate={{ x: "200%" }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear", repeatDelay: 6 }}
+                className="absolute inset-y-0 w-1/4 bg-gradient-to-r from-transparent via-accent/[0.04] to-transparent pointer-events-none"
+              />
+
+              <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+                {/* Main balance */}
+                <div className="col-span-2 lg:col-span-1">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent/60 mb-2">
+                    Investimento Total
+                  </p>
+                  <p className="text-3xl sm:text-4xl font-black tabular-nums text-foreground mb-1">
+                    {balanceVisible ? <AnimatedNumber value={agencyTotal} /> : "••••••"}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <div className={`h-1.5 w-1.5 rounded-full ${agencyPaid >= agencyTotal ? "bg-accent" : "bg-warning animate-pulse"}`} />
+                    <span className="text-[11px] text-muted-foreground">
+                      {balanceVisible ? `${pct(agencyPaid, agencyTotal)}% quitado` : "••••"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Mini metrics */}
+                <MiniMetric
+                  icon={CheckCircle2} label="Pago" value={agencyPaid} color="accent"
+                  visible={balanceVisible}
+                />
+                <MiniMetric
+                  icon={Clock} label="Pendente" value={agencyTotal - agencyPaid} color="warning"
+                  visible={balanceVisible}
+                />
+                <MiniMetric
+                  icon={Activity} label="Gastos Viagem" value={totalSpent} color="chart-3"
+                  visible={balanceVisible}
+                />
+              </div>
+            </motion.div>
+
+            {/* ═══ QUICK ACTIONS ═══ */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
+            >
+              <QuickActionPill icon={Plus} label="Registrar Gasto" onClick={async () => { await ensureBudget(); setExpenseDialogOpen(true); }} accent />
+              <QuickActionPill icon={Target} label="Definir Budget" onClick={async () => { await ensureBudget(); setBudgetDialogOpen(true); }} />
+              <QuickActionPill icon={CreditCard} label="Adicionar Cartão" onClick={async () => { await ensureBudget(); setCardDialogOpen(true); }} />
+              <QuickActionPill icon={Banknote} label="Registrar Cash" onClick={async () => { await ensureBudget(); setCashDialogOpen(true); }} />
+            </motion.div>
+          </div>
         </div>
 
-        {/* ═══ TABS ═══ */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-muted/30 p-1 rounded-xl w-full justify-start overflow-x-auto">
-            <TabsTrigger value="overview" className="rounded-lg text-xs sm:text-sm gap-1.5">
-              <PieChart className="h-3.5 w-3.5" /> Visão Geral
-            </TabsTrigger>
-            <TabsTrigger value="agency" className="rounded-lg text-xs sm:text-sm gap-1.5">
-              <ShieldCheck className="h-3.5 w-3.5" /> Agência
-            </TabsTrigger>
-            <TabsTrigger value="expenses" className="rounded-lg text-xs sm:text-sm gap-1.5">
-              <Receipt className="h-3.5 w-3.5" /> Gastos
-            </TabsTrigger>
-            <TabsTrigger value="cards" className="rounded-lg text-xs sm:text-sm gap-1.5">
-              <CreditCard className="h-3.5 w-3.5" /> Cartões
-            </TabsTrigger>
-            <TabsTrigger value="history" className="rounded-lg text-xs sm:text-sm gap-1.5">
-              <Calendar className="h-3.5 w-3.5" /> Histórico
-            </TabsTrigger>
-          </TabsList>
+        {/* ═══ MAIN CONTENT ═══ */}
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 space-y-8">
 
-          {/* ── OVERVIEW ── */}
-          <TabsContent value="overview" className="space-y-6">
-            <OverviewSection
-              categories={categories}
-              categorySpending={categorySpending}
-              totalBudget={totalBudget}
-              totalSpent={totalSpent}
-              agencyTotal={agencyTotal}
-              agencyPaid={agencyPaid}
-              expenses={expenses}
+          {/* ═══ GAUGES ROW ═══ */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+          >
+            <GaugeCard
+              label="Budget Usado"
+              percentage={pct(totalSpent, totalBudget)}
+              value={totalBudget > 0 ? fmt(budgetRemaining) : "—"}
+              sub={totalBudget > 0 ? "restante" : "Defina seu budget"}
+              color={pct(totalSpent, totalBudget) > 80 ? "destructive" : "accent"}
             />
-          </TabsContent>
-
-          {/* ── AGENCY ── */}
-          <TabsContent value="agency" className="space-y-6">
-            <AgencySection receivables={receivables} agencyTotal={agencyTotal} agencyPaid={agencyPaid} />
-          </TabsContent>
-
-          {/* ── EXPENSES ── */}
-          <TabsContent value="expenses" className="space-y-6">
-            <ExpensesSection
-              expenses={expenses}
-              categories={categories}
-              cards={cards}
-              onAddExpense={async () => { await ensureBudget(); setExpenseDialogOpen(true); }}
+            <GaugeCard
+              label="Agência"
+              percentage={pct(agencyPaid, agencyTotal)}
+              value={fmt(agencyPaid)}
+              sub={`de ${fmt(agencyTotal)}`}
+              color="accent"
             />
-          </TabsContent>
-
-          {/* ── CARDS & CASH ── */}
-          <TabsContent value="cards" className="space-y-6">
-            <CardsAndCashSection
-              cards={cards}
-              cardSpending={cardSpending}
-              cashItems={cashItems}
-              cashRemaining={cashRemaining}
-              totalCashInitial={totalCashInitial}
-              cashSpent={cashSpent}
-              onAddCard={async () => { await ensureBudget(); setCardDialogOpen(true); }}
-              onAddCash={async () => { await ensureBudget(); setCashDialogOpen(true); }}
+            <GaugeCard
+              label="Cash Disponível"
+              percentage={totalCashInitial > 0 ? pct(cashRemaining, totalCashInitial) : 0}
+              value={balanceVisible ? fmt(cashRemaining) : "••••"}
+              sub={totalCashInitial > 0 ? `de ${fmt(totalCashInitial)}` : "Registre"}
+              color="chart-2"
             />
-          </TabsContent>
-
-          {/* ── HISTORY ── */}
-          <TabsContent value="history" className="space-y-6">
-            <HistorySection
-              expenses={expenses}
-              receivables={receivables}
-              categories={categories}
-              cards={cards}
+            <GaugeCard
+              label="Cartões"
+              percentage={0}
+              value={balanceVisible ? fmt(cardTotalSpent) : "••••"}
+              sub={`${cards.length} cartão(ões)`}
+              color="chart-4"
+              noGauge
+              icon={CreditCard}
             />
-          </TabsContent>
-        </Tabs>
+          </motion.div>
+
+          {/* ═══ TABS ═══ */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="bg-card/80 backdrop-blur-sm border border-border/30 p-1.5 rounded-2xl w-full justify-start overflow-x-auto h-auto gap-1">
+              {[
+                { v: "overview", icon: PieChart, l: "Visão Geral" },
+                { v: "agency", icon: Shield, l: "Agência" },
+                { v: "expenses", icon: Receipt, l: "Gastos" },
+                { v: "cards", icon: CreditCard, l: "Cartões & Cash" },
+                { v: "history", icon: Calendar, l: "Histórico" },
+              ].map(t => (
+                <TabsTrigger
+                  key={t.v}
+                  value={t.v}
+                  className="rounded-xl text-xs sm:text-sm gap-1.5 py-2.5 px-4 data-[state=active]:bg-accent/10 data-[state=active]:text-accent data-[state=active]:shadow-none transition-all"
+                >
+                  <t.icon className="h-3.5 w-3.5" /> {t.l}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            <TabsContent value="overview" className="space-y-6">
+              <OverviewSection
+                categories={categories} categorySpending={categorySpending}
+                totalBudget={totalBudget} totalSpent={totalSpent}
+                agencyTotal={agencyTotal} agencyPaid={agencyPaid}
+                expenses={expenses} dailySpending={dailySpending}
+                balanceVisible={balanceVisible}
+              />
+            </TabsContent>
+
+            <TabsContent value="agency" className="space-y-6">
+              <AgencySection receivables={receivables} agencyTotal={agencyTotal} agencyPaid={agencyPaid} balanceVisible={balanceVisible} />
+            </TabsContent>
+
+            <TabsContent value="expenses" className="space-y-6">
+              <ExpensesSection
+                expenses={expenses} categories={categories} cards={cards}
+                onAddExpense={async () => { await ensureBudget(); setExpenseDialogOpen(true); }}
+              />
+            </TabsContent>
+
+            <TabsContent value="cards" className="space-y-6">
+              <CardsAndCashSection
+                cards={cards} cardSpending={cardSpending}
+                cashItems={cashItems} cashRemaining={cashRemaining}
+                totalCashInitial={totalCashInitial} cashSpent={cashSpent}
+                balanceVisible={balanceVisible}
+                onAddCard={async () => { await ensureBudget(); setCardDialogOpen(true); }}
+                onAddCash={async () => { await ensureBudget(); setCashDialogOpen(true); }}
+              />
+            </TabsContent>
+
+            <TabsContent value="history" className="space-y-6">
+              <HistorySection expenses={expenses} receivables={receivables} categories={categories} cards={cards} />
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
 
       {/* ═══ DIALOGS ═══ */}
-      <AddExpenseDialog
-        open={expenseDialogOpen}
-        onClose={() => setExpenseDialogOpen(false)}
-        budgetId={budget?.id}
-        categories={categories}
-        cards={cards}
-        onSaved={loadAllData}
-      />
-      <AddCardDialog
-        open={cardDialogOpen}
-        onClose={() => setCardDialogOpen(false)}
-        budgetId={budget?.id}
-        onSaved={loadAllData}
-      />
-      <AddCashDialog
-        open={cashDialogOpen}
-        onClose={() => setCashDialogOpen(false)}
-        budgetId={budget?.id}
-        onSaved={loadAllData}
-      />
-      <BudgetDialog
-        open={budgetDialogOpen}
-        onClose={() => setBudgetDialogOpen(false)}
-        budget={budget}
-        categories={categories}
-        onSaved={loadAllData}
-      />
+      <AddExpenseDialog open={expenseDialogOpen} onClose={() => setExpenseDialogOpen(false)} budgetId={budget?.id} categories={categories} cards={cards} onSaved={loadAllData} />
+      <AddCardDialog open={cardDialogOpen} onClose={() => setCardDialogOpen(false)} budgetId={budget?.id} onSaved={loadAllData} />
+      <AddCashDialog open={cashDialogOpen} onClose={() => setCashDialogOpen(false)} budgetId={budget?.id} onSaved={loadAllData} />
+      <BudgetDialog open={budgetDialogOpen} onClose={() => setBudgetDialogOpen(false)} budget={budget} categories={categories} onSaved={loadAllData} />
     </PortalLayout>
   );
 }
 
 /* ═══════════════════════════════════════════════════════
-   KPI CARD
+   MINI METRIC (Hero card)
    ═══════════════════════════════════════════════════════ */
-function KpiCard({ icon: Icon, label, value, sub, accent, warning, onClick }: {
-  icon: any; label: string; value: string; sub: string; accent?: boolean; warning?: boolean; onClick?: () => void;
+function MiniMetric({ icon: Icon, label, value, color, visible }: any) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-1.5">
+        <Icon className={`h-3.5 w-3.5 text-${color}`} />
+        <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50">{label}</span>
+      </div>
+      <p className={`text-xl sm:text-2xl font-black tabular-nums text-${color}`}>
+        {visible ? fmt(value) : "••••"}
+      </p>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   QUICK ACTION PILL
+   ═══════════════════════════════════════════════════════ */
+function QuickActionPill({ icon: Icon, label, onClick, accent }: { icon: any; label: string; onClick: () => void; accent?: boolean }) {
+  return (
+    <motion.button
+      whileHover={{ scale: 1.03 }}
+      whileTap={{ scale: 0.97 }}
+      onClick={onClick}
+      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+        accent
+          ? "bg-accent text-accent-foreground shadow-lg shadow-accent/20"
+          : "bg-card/80 border border-border/30 text-foreground hover:border-accent/30"
+      }`}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </motion.button>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   GAUGE CARD
+   ═══════════════════════════════════════════════════════ */
+function GaugeCard({ label, percentage, value, sub, color, noGauge, icon: Icon }: {
+  label: string; percentage: number; value: string; sub: string; color: string; noGauge?: boolean; icon?: any;
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={onClick ? { scale: 1.02 } : undefined}
-      whileTap={onClick ? { scale: 0.98 } : undefined}
-      onClick={onClick}
-      className={`relative overflow-hidden rounded-2xl border p-4 sm:p-5 transition-all ${
-        accent ? "border-accent/20 bg-accent/[0.04]" : "border-border/30 bg-card/80"
-      } ${warning ? "border-destructive/20" : ""} ${onClick ? "cursor-pointer" : ""} backdrop-blur-sm`}
+      className="relative rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm p-5 flex flex-col items-center text-center overflow-hidden group hover:border-accent/10 transition-all"
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${
-          accent ? "bg-accent/10" : warning ? "bg-destructive/10" : "bg-muted/50"
-        }`}>
-          <Icon className={`h-4.5 w-4.5 ${accent ? "text-accent" : warning ? "text-destructive" : "text-muted-foreground"}`} />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-muted/[0.03] opacity-0 group-hover:opacity-100 transition-opacity" />
+
+      {noGauge && Icon ? (
+        <div className={`h-16 w-16 rounded-2xl bg-${color}/10 flex items-center justify-center mb-3`}>
+          <Icon className={`h-7 w-7 text-${color}`} />
         </div>
-        {onClick && <ChevronRight className="h-4 w-4 text-muted-foreground/40" />}
-      </div>
-      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60 mb-1">{label}</p>
-      <p className="text-xl sm:text-2xl font-black tabular-nums text-foreground">{value}</p>
-      <p className={`text-[11px] mt-1 ${warning ? "text-destructive" : "text-muted-foreground/60"}`}>{sub}</p>
+      ) : (
+        <div className="mb-3">
+          <CircularGauge percentage={percentage} size={88} strokeWidth={6} color={color}>
+            <span className="text-lg font-black tabular-nums text-foreground">{percentage}%</span>
+          </CircularGauge>
+        </div>
+      )}
+
+      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50 mb-1">{label}</p>
+      <p className="text-base font-black tabular-nums text-foreground">{value}</p>
+      <p className="text-[10px] text-muted-foreground/40 mt-0.5">{sub}</p>
     </motion.div>
   );
 }
@@ -394,143 +554,229 @@ function KpiCard({ icon: Icon, label, value, sub, accent, warning, onClick }: {
 /* ═══════════════════════════════════════════════════════
    OVERVIEW SECTION
    ═══════════════════════════════════════════════════════ */
-function OverviewSection({ categories, categorySpending, totalBudget, totalSpent, agencyTotal, agencyPaid, expenses }: any) {
+function OverviewSection({ categories, categorySpending, totalBudget, totalSpent, agencyTotal, agencyPaid, expenses, dailySpending, balanceVisible }: any) {
   const usedPct = pct(totalSpent, totalBudget);
+  const maxDaily = Math.max(...dailySpending.map(([, v]: any) => v), 1);
 
   return (
     <>
-      {/* Budget progress */}
+      {/* Budget progress — immersive */}
       {totalBudget > 0 && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="rounded-2xl border border-border/30 bg-card/80 backdrop-blur-sm p-6"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative rounded-3xl border border-border/20 bg-gradient-to-br from-card/90 to-muted/10 backdrop-blur-sm p-6 sm:p-8 overflow-hidden"
         >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Target className="h-4 w-4 text-accent" />
-              <span className="text-sm font-bold text-foreground">Budget da Viagem</span>
+          <div className="absolute -top-20 -right-20 w-56 h-56 rounded-full opacity-[0.04]"
+            style={{ background: "radial-gradient(circle, hsl(var(--accent)) 0%, transparent 70%)" }}
+          />
+
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2.5">
+              <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                <Target className="h-5 w-5 text-accent" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-foreground">Budget da Viagem</p>
+                <p className="text-[10px] text-muted-foreground/60">Planejamento vs. realizado</p>
+              </div>
             </div>
-            <span className="text-2xl font-black tabular-nums text-foreground">{usedPct}%</span>
+            <div className="text-right">
+              <p className="text-3xl font-black tabular-nums text-foreground">{usedPct}%</p>
+              <p className="text-[10px] text-muted-foreground/50">utilizado</p>
+            </div>
           </div>
-          <div className="relative h-3 w-full overflow-hidden rounded-full bg-muted/30 mb-3">
+
+          {/* Animated bar */}
+          <div className="relative h-4 w-full overflow-hidden rounded-full bg-muted/20 mb-4">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(usedPct, 100)}%` }}
-              transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
-              className={`h-full rounded-full ${
+              transition={{ duration: 2, ease: [0.16, 1, 0.3, 1] }}
+              className={`h-full rounded-full relative ${
                 usedPct > 90 ? "bg-destructive" : usedPct > 70 ? "bg-warning" : "bg-accent"
               }`}
-            />
+              style={{ boxShadow: `0 0 20px hsl(var(--${usedPct > 90 ? "destructive" : usedPct > 70 ? "warning" : "accent"}) / 0.3)` }}
+            >
+              {/* Shimmer */}
+              <motion.div
+                animate={{ x: ["-100%", "200%"] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                className="absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+              />
+            </motion.div>
           </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{fmt(totalSpent)} gasto</span>
-            <span>{fmt(totalBudget - totalSpent)} restante</span>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Planejado</p>
+              <p className="text-lg font-black tabular-nums">{balanceVisible ? fmt(totalBudget) : "••••"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-accent/50">Gasto</p>
+              <p className="text-lg font-black tabular-nums text-accent">{balanceVisible ? fmt(totalSpent) : "••••"}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Restante</p>
+              <p className={`text-lg font-black tabular-nums ${budgetRemaining < 0 ? "text-destructive" : ""}`}>
+                {balanceVisible ? fmt(totalBudget - totalSpent) : "••••"}
+              </p>
+            </div>
           </div>
         </motion.div>
       )}
 
-      {/* Category breakdown */}
-      <div className="rounded-2xl border border-border/30 bg-card/80 backdrop-blur-sm p-6">
+      {/* Daily spending mini chart */}
+      {dailySpending.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm p-6"
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Activity className="h-4 w-4 text-accent" />
+            <span className="text-sm font-bold text-foreground">Gastos Diários</span>
+            <span className="text-[10px] text-muted-foreground/40 ml-auto">Últimos 7 dias</span>
+          </div>
+          <div className="flex items-end gap-1.5 h-24">
+            {dailySpending.map(([date, val]: [string, number], i: number) => {
+              const h = (val / maxDaily) * 100;
+              return (
+                <motion.div
+                  key={date}
+                  initial={{ height: 0 }}
+                  animate={{ height: `${h}%` }}
+                  transition={{ duration: 0.8, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                  className="flex-1 rounded-t-lg bg-accent/20 hover:bg-accent/40 transition-colors relative group cursor-default min-h-[4px]"
+                >
+                  {/* Tooltip */}
+                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-2 py-1 text-[9px] font-bold text-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg pointer-events-none">
+                    {fmt(val)}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+          <div className="flex gap-1.5 mt-2">
+            {dailySpending.map(([date]: [string, number]) => (
+              <span key={date} className="flex-1 text-center text-[8px] text-muted-foreground/40 tabular-nums">
+                {new Date(date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit" })}
+              </span>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Category breakdown — visual ring + bars */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.15 }}
+        className="rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm p-6"
+      >
         <div className="flex items-center gap-2 mb-5">
           <BarChart3 className="h-4 w-4 text-accent" />
           <span className="text-sm font-bold text-foreground">Gastos por Categoria</span>
         </div>
         {categories.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            Registre gastos para ver a distribuição por categoria
-          </p>
+          <p className="text-sm text-muted-foreground text-center py-8">Registre gastos para ver a distribuição</p>
         ) : (
-          <div className="space-y-3">
-            {categories.map((cat: any) => {
+          <div className="space-y-4">
+            {categories.map((cat: any, i: number) => {
               const spent = categorySpending[cat.id] || 0;
               const planned = cat.planned_amount || 0;
-              const catPct = planned > 0 ? pct(spent, planned) : 0;
+              const catPct = planned > 0 ? pct(spent, planned) : (totalSpent > 0 ? pct(spent, totalSpent) : 0);
               const IconComp = CATEGORY_ICONS[cat.icon] || Package;
+              if (spent === 0 && planned === 0) return null;
               return (
-                <div key={cat.id} className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + "15" }}>
-                        <IconComp className="h-3.5 w-3.5" style={{ color: cat.color }} />
-                      </div>
-                      <span className="text-xs font-semibold text-foreground">{cat.name}</span>
+                <motion.div
+                  key={cat.id}
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="group"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-9 w-9 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ backgroundColor: cat.color + "15" }}>
+                      <IconComp className="h-4 w-4" style={{ color: cat.color }} />
                     </div>
-                    <div className="text-right">
-                      <span className="text-xs font-black tabular-nums text-foreground">{fmt(spent)}</span>
-                      {planned > 0 && (
-                        <span className="text-[10px] text-muted-foreground ml-1">/ {fmt(planned)}</span>
-                      )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-foreground">{cat.name}</span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-sm font-black tabular-nums text-foreground">{fmt(spent)}</span>
+                          {planned > 0 && <span className="text-[10px] text-muted-foreground/50">/ {fmt(planned)}</span>}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  {planned > 0 && (
-                    <div className="h-1.5 w-full rounded-full bg-muted/30 overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-700"
+                  <div className="ml-12 relative">
+                    <div className="h-2 w-full rounded-full bg-muted/20 overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(catPct, 100)}%` }}
+                        transition={{ duration: 1.2, delay: i * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                        className="h-full rounded-full"
                         style={{
-                          width: `${Math.min(catPct, 100)}%`,
                           backgroundColor: catPct > 90 ? "hsl(var(--destructive))" : cat.color,
+                          boxShadow: `0 0 8px ${catPct > 90 ? "hsl(var(--destructive) / 0.3)" : cat.color + "40"}`,
                         }}
                       />
                     </div>
-                  )}
-                </div>
+                    {planned > 0 && (
+                      <span className={`text-[9px] font-bold mt-0.5 inline-block ${catPct > 90 ? "text-destructive" : "text-muted-foreground/40"}`}>
+                        {catPct}%
+                      </span>
+                    )}
+                  </div>
+                </motion.div>
               );
             })}
           </div>
         )}
-      </div>
-
-      {/* Agency summary mini */}
-      <div className="rounded-2xl border border-border/30 bg-card/80 backdrop-blur-sm p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <ShieldCheck className="h-4 w-4 text-accent" />
-          <span className="text-sm font-bold text-foreground">Investimento na Agência</span>
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Total</p>
-            <p className="text-lg font-black tabular-nums">{fmt(agencyTotal)}</p>
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-accent/60">Pago</p>
-            <p className="text-lg font-black tabular-nums text-accent">{fmt(agencyPaid)}</p>
-          </div>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-warning/60">Pendente</p>
-            <p className="text-lg font-black tabular-nums text-warning">{fmt(agencyTotal - agencyPaid)}</p>
-          </div>
-        </div>
-      </div>
+      </motion.div>
 
       {/* Recent expenses */}
       {expenses.length > 0 && (
-        <div className="rounded-2xl border border-border/30 bg-card/80 backdrop-blur-sm p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Clock className="h-4 w-4 text-accent" />
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm overflow-hidden"
+        >
+          <div className="p-5 flex items-center gap-2 border-b border-border/10">
+            <Flame className="h-4 w-4 text-accent" />
             <span className="text-sm font-bold text-foreground">Últimos Gastos</span>
+            <span className="text-[10px] text-muted-foreground/40 ml-auto">{expenses.length} total</span>
           </div>
-          <div className="space-y-2">
-            {expenses.slice(0, 5).map((e: any) => {
+          <div className="divide-y divide-border/5">
+            {expenses.slice(0, 5).map((e: any, i: number) => {
               const cat = categories.find((c: any) => c.id === e.category_id);
               const IconComp = CATEGORY_ICONS[cat?.icon] || Package;
               return (
-                <div key={e.id} className="flex items-center justify-between py-2 border-b border-border/10 last:border-0">
+                <motion.div
+                  key={e.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 + i * 0.04 }}
+                  className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/10 transition-colors"
+                >
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-muted/40">
-                      <IconComp className="h-3.5 w-3.5 text-muted-foreground" />
+                    <div className="h-9 w-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: (cat?.color || "hsl(var(--muted))") + "12" }}>
+                      <IconComp className="h-4 w-4" style={{ color: cat?.color }} />
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-foreground">{e.description}</p>
-                      <p className="text-[10px] text-muted-foreground">{fmtDate(e.expense_date)}</p>
+                      <p className="text-sm font-semibold text-foreground">{e.description}</p>
+                      <p className="text-[10px] text-muted-foreground/50">{fmtDate(e.expense_date)} · {cat?.name || "Outros"}</p>
                     </div>
                   </div>
-                  <p className="text-sm font-black tabular-nums text-foreground">{fmt(e.amount)}</p>
-                </div>
+                  <p className="text-sm font-black tabular-nums">{fmt(e.amount)}</p>
+                </motion.div>
               );
             })}
           </div>
-        </div>
+        </motion.div>
       )}
     </>
   );
@@ -539,88 +785,98 @@ function OverviewSection({ categories, categorySpending, totalBudget, totalSpent
 /* ═══════════════════════════════════════════════════════
    AGENCY SECTION
    ═══════════════════════════════════════════════════════ */
-function AgencySection({ receivables, agencyTotal, agencyPaid }: any) {
-  const agencyPending = agencyTotal - agencyPaid;
+function AgencySection({ receivables, agencyTotal, agencyPaid, balanceVisible }: any) {
   const progressPct = pct(agencyPaid, agencyTotal);
   const paidCount = receivables.filter((r: any) => r.status === "recebido").length;
 
   return (
     <>
-      {/* Progress */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-2xl border border-border/30 bg-card/80 backdrop-blur-sm p-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-bold text-foreground">Progresso do Pagamento</span>
-          <span className="text-xl font-black tabular-nums">{progressPct}%</span>
-        </div>
-        <div className="relative h-3 w-full overflow-hidden rounded-full bg-muted/30 mb-3">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${progressPct}%` }}
-            transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
-            className="h-full rounded-full bg-accent"
-            style={{ boxShadow: "0 0 12px hsl(var(--accent) / 0.3)" }}
-          />
-        </div>
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>{paidCount} de {receivables.length} parcelas pagas</span>
-          <span>{fmt(agencyPending)} pendente</span>
+      {/* Progress ring */}
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-3xl border border-border/20 bg-card/60 backdrop-blur-sm p-6 sm:p-8">
+        <div className="flex flex-col sm:flex-row items-center gap-6">
+          <CircularGauge percentage={progressPct} size={140} strokeWidth={10} color="accent">
+            <p className="text-2xl font-black tabular-nums text-foreground">{progressPct}%</p>
+            <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/40">quitado</p>
+          </CircularGauge>
+          <div className="flex-1 space-y-3 text-center sm:text-left">
+            <h3 className="text-lg font-black text-foreground">Investimento com a NatLeva</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Total</p>
+                <p className="text-xl font-black tabular-nums">{balanceVisible ? fmt(agencyTotal) : "••••"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-accent/50">Pago</p>
+                <p className="text-xl font-black tabular-nums text-accent">{balanceVisible ? fmt(agencyPaid) : "••••"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-warning/50">Pendente</p>
+                <p className="text-xl font-black tabular-nums text-warning">{balanceVisible ? fmt(agencyTotal - agencyPaid) : "••••"}</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground/50">{paidCount} de {receivables.length} parcelas pagas</p>
+          </div>
         </div>
       </motion.div>
 
-      {/* Parcelas */}
-      <div className="rounded-2xl border border-border/30 bg-card/80 backdrop-blur-sm overflow-hidden">
-        <div className="p-5 border-b border-border/20">
+      {/* Parcelas timeline */}
+      <div className="rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm overflow-hidden">
+        <div className="p-5 border-b border-border/10 flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-accent" />
           <span className="text-sm font-bold text-foreground">Cronograma de Parcelas</span>
         </div>
-        <div className="divide-y divide-border/10">
-          {receivables.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Nenhuma parcela encontrada</p>
-          ) : (
-            receivables.map((r: any, i: number) => {
+        {receivables.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-10">Nenhuma parcela encontrada</p>
+        ) : (
+          <div className="p-4 space-y-2">
+            {receivables.map((r: any, i: number) => {
               const isPaid = r.status === "recebido";
+              const isOverdue = !isPaid && r.due_date && new Date(r.due_date + "T00:00:00") < new Date();
               return (
                 <motion.div
                   key={r.id}
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={{ opacity: 0, x: -16 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="flex items-center justify-between px-5 py-4 hover:bg-muted/20 transition-colors"
+                  transition={{ delay: i * 0.06 }}
+                  className={`relative flex items-center gap-4 px-4 py-4 rounded-xl transition-all hover:scale-[1.005] ${
+                    isPaid ? "bg-accent/[0.03] border border-accent/[0.08]" : isOverdue ? "bg-destructive/[0.03] border border-destructive/[0.08]" : "bg-warning/[0.02] border border-warning/[0.06]"
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-xs font-black ${
-                      isPaid ? "bg-accent/10 text-accent" : "bg-warning/10 text-warning"
-                    }`}>
-                      {r.installment_number || i + 1}
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {r.description || `Parcela ${r.installment_number || i + 1}`}
-                        {(r.installment_total || 0) > 1 && (
-                          <span className="text-muted-foreground/50 font-normal"> / {r.installment_total}</span>
-                        )}
-                      </p>
-                      {r.due_date && (
-                        <p className="text-[11px] text-muted-foreground/60 mt-0.5">
-                          Vencimento: {fmtDate(r.due_date)}
-                          {r.payment_method && ` · ${r.payment_method}`}
-                        </p>
-                      )}
-                    </div>
+                  {/* Timeline dot */}
+                  <div className={`relative flex-shrink-0 h-10 w-10 rounded-xl flex items-center justify-center text-xs font-black ${
+                    isPaid ? "bg-accent/10 text-accent" : isOverdue ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
+                  }`}>
+                    {isPaid ? <CheckCircle2 className="h-5 w-5" /> : r.installment_number || i + 1}
+                    {!isPaid && isOverdue && (
+                      <div className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-destructive animate-pulse" />
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">
+                      {r.description || `Parcela ${r.installment_number || i + 1}`}
+                      {(r.installment_total || 0) > 1 && <span className="text-muted-foreground/40 font-normal"> / {r.installment_total}</span>}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+                      {r.due_date ? fmtDateFull(r.due_date) : "Sem vencimento"}
+                      {r.payment_method && ` · ${r.payment_method}`}
+                      {isOverdue && " · Vencida"}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
                     <p className="text-sm font-black tabular-nums">{fmt(r.gross_value)}</p>
-                    <div className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
-                      isPaid ? "bg-accent/10 text-accent" : "bg-warning/10 text-warning"
+                    <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                      isPaid ? "bg-accent/10 text-accent" : isOverdue ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
                     }`}>
-                      {isPaid ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                      {isPaid ? "Pago" : "Aberto"}
-                    </div>
+                      {isPaid ? "✓ Pago" : isOverdue ? "Vencida" : "Pendente"}
+                    </span>
                   </div>
                 </motion.div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )}
       </div>
     </>
   );
@@ -633,55 +889,68 @@ function ExpensesSection({ expenses, categories, cards, onAddExpense }: any) {
   return (
     <>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-bold text-foreground">Gastos da Viagem</span>
-        <Button size="sm" onClick={onAddExpense} className="rounded-xl gap-1.5 bg-accent hover:bg-accent/90 text-accent-foreground">
+        <div>
+          <span className="text-sm font-bold text-foreground block">Gastos da Viagem</span>
+          <span className="text-[10px] text-muted-foreground/50">{expenses.length} registros</span>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={onAddExpense}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-accent text-accent-foreground text-xs font-bold shadow-lg shadow-accent/20"
+        >
           <Plus className="h-3.5 w-3.5" /> Registrar Gasto
-        </Button>
+        </motion.button>
       </div>
 
       {expenses.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="rounded-2xl border border-dashed border-border/40 p-12 text-center"
-        >
-          <Receipt className="h-12 w-12 mx-auto text-muted-foreground/20 mb-3" />
-          <p className="text-sm font-semibold text-muted-foreground mb-1">Nenhum gasto registrado</p>
-          <p className="text-xs text-muted-foreground/60">Comece registrando seus gastos durante a viagem</p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-3xl border border-dashed border-border/30 p-16 text-center">
+          <div className="relative mx-auto w-20 h-20 mb-4">
+            <div className="absolute inset-0 rounded-full bg-accent/5 animate-ping" style={{ animationDuration: "3s" }} />
+            <div className="relative h-20 w-20 rounded-full bg-muted/20 flex items-center justify-center">
+              <Receipt className="h-8 w-8 text-muted-foreground/20" />
+            </div>
+          </div>
+          <p className="text-sm font-bold text-muted-foreground mb-1">Nenhum gasto registrado</p>
+          <p className="text-xs text-muted-foreground/50 max-w-xs mx-auto">Comece registrando seus gastos para ter controle total do seu orçamento de viagem</p>
         </motion.div>
       ) : (
-        <div className="rounded-2xl border border-border/30 bg-card/80 backdrop-blur-sm overflow-hidden divide-y divide-border/10">
-          {expenses.map((e: any, i: number) => {
-            const cat = categories.find((c: any) => c.id === e.category_id);
-            const card = cards.find((c: any) => c.id === e.card_id);
-            const IconComp = CATEGORY_ICONS[cat?.icon] || Package;
-            const pm = PAYMENT_METHODS.find(p => p.value === e.payment_method);
+        <div className="rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm overflow-hidden">
+          <div className="divide-y divide-border/5">
+            {expenses.map((e: any, i: number) => {
+              const cat = categories.find((c: any) => c.id === e.category_id);
+              const card = cards.find((c: any) => c.id === e.card_id);
+              const IconComp = CATEGORY_ICONS[cat?.icon] || Package;
+              const pm = PAYMENT_METHODS.find(p => p.value === e.payment_method);
+              const PmIcon = pm?.icon || DollarSign;
 
-            return (
-              <motion.div
-                key={e.id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.03 }}
-                className="flex items-center justify-between px-5 py-4 hover:bg-muted/20 transition-colors"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-9 w-9 flex-shrink-0 rounded-xl flex items-center justify-center" style={{ backgroundColor: (cat?.color || "hsl(var(--muted))") + "15" }}>
-                    <IconComp className="h-4 w-4" style={{ color: cat?.color || "hsl(var(--muted-foreground))" }} />
+              return (
+                <motion.div
+                  key={e.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.03 }}
+                  className="flex items-center gap-3 px-5 py-4 hover:bg-muted/10 transition-colors group"
+                >
+                  <div className="h-10 w-10 flex-shrink-0 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ backgroundColor: (cat?.color || "hsl(var(--muted))") + "12" }}>
+                    <IconComp className="h-4.5 w-4.5" style={{ color: cat?.color || "hsl(var(--muted-foreground))" }} />
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{e.description}</p>
-                    <p className="text-[10px] text-muted-foreground/60">
-                      {fmtDate(e.expense_date)}
-                      {pm && ` · ${pm.label}`}
-                      {card && ` · •••${card.last_digits}`}
-                    </p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">{e.description}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <PmIcon className="h-2.5 w-2.5 text-muted-foreground/30" />
+                      <p className="text-[10px] text-muted-foreground/50">
+                        {fmtDate(e.expense_date)}
+                        {pm && ` · ${pm.label}`}
+                        {card && ` · •••${card.last_digits}`}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <p className="text-sm font-black tabular-nums text-foreground flex-shrink-0">{fmt(e.amount)}</p>
-              </motion.div>
-            );
-          })}
+                  <p className="text-sm font-black tabular-nums text-foreground flex-shrink-0">{fmt(e.amount)}</p>
+                </motion.div>
+              );
+            })}
+          </div>
         </div>
       )}
     </>
@@ -691,48 +960,62 @@ function ExpensesSection({ expenses, categories, cards, onAddExpense }: any) {
 /* ═══════════════════════════════════════════════════════
    CARDS & CASH SECTION
    ═══════════════════════════════════════════════════════ */
-function CardsAndCashSection({ cards, cardSpending, cashItems, cashRemaining, totalCashInitial, cashSpent, onAddCard, onAddCash }: any) {
+function CardsAndCashSection({ cards, cardSpending, cashItems, cashRemaining, totalCashInitial, cashSpent, balanceVisible, onAddCard, onAddCash }: any) {
   return (
     <>
       {/* Cards */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-foreground">Meus Cartões</span>
-          <Button size="sm" variant="outline" onClick={onAddCard} className="rounded-xl gap-1.5 text-xs">
+          <div>
+            <span className="text-sm font-bold text-foreground block">Meus Cartões</span>
+            <span className="text-[10px] text-muted-foreground/50">{cards.length} cadastrado(s)</span>
+          </div>
+          <Button size="sm" variant="outline" onClick={onAddCard} className="rounded-xl gap-1.5 text-xs border-border/30 hover:border-accent/30">
             <Plus className="h-3 w-3" /> Adicionar
           </Button>
         </div>
 
         {cards.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border/40 p-8 text-center">
-            <CreditCard className="h-10 w-10 mx-auto text-muted-foreground/20 mb-2" />
-            <p className="text-xs text-muted-foreground">Adicione cartões para rastrear gastos</p>
+          <div className="rounded-2xl border border-dashed border-border/30 p-10 text-center">
+            <CreditCard className="h-10 w-10 mx-auto text-muted-foreground/15 mb-3" />
+            <p className="text-xs text-muted-foreground/50">Adicione cartões para rastrear gastos</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {cards.map((card: any) => {
+            {cards.map((card: any, i: number) => {
               const spent = cardSpending[card.id] || 0;
+              const brandColors: Record<string, string> = {
+                visa: "from-blue-900/40 to-blue-800/20",
+                mastercard: "from-orange-900/30 to-red-900/20",
+                elo: "from-yellow-900/30 to-amber-900/20",
+                amex: "from-slate-800/40 to-slate-700/20",
+              };
               return (
                 <motion.div
                   key={card.id}
-                  initial={{ opacity: 0, y: 8 }}
+                  initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="relative rounded-2xl border border-border/30 bg-gradient-to-br from-card to-muted/20 p-5 overflow-hidden"
+                  transition={{ delay: i * 0.08 }}
+                  whileHover={{ scale: 1.02, y: -4 }}
+                  className={`relative rounded-2xl bg-gradient-to-br ${brandColors[card.brand] || "from-card to-muted/20"} border border-border/20 p-5 sm:p-6 overflow-hidden cursor-default`}
                 >
-                  <div className="absolute top-0 right-0 w-32 h-32 rounded-full bg-accent/[0.03] -translate-y-1/2 translate-x-1/2" />
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">
-                      {card.brand || "Cartão"}
-                    </span>
-                    <CreditCard className="h-4 w-4 text-muted-foreground/30" />
+                  {/* Card chip decoration */}
+                  <div className="absolute top-4 right-5 opacity-[0.06]">
+                    <div className="w-10 h-7 rounded-md border-2 border-foreground" />
                   </div>
-                  <p className="text-sm font-bold text-foreground mb-0.5">{card.nickname}</p>
-                  <p className="text-xs text-muted-foreground/60 tabular-nums mb-3">
-                    •••• •••• •••• {card.last_digits || "0000"}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-widest text-muted-foreground/40">Gasto na viagem</span>
-                    <span className="text-lg font-black tabular-nums text-foreground">{fmt(spent)}</span>
+
+                  <div className="relative">
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 block mb-4">
+                      {card.brand?.toUpperCase() || "CARTÃO"} · {card.card_type === "credito" ? "CRÉDITO" : card.card_type === "debito" ? "DÉBITO" : "MÚLTIPLO"}
+                    </span>
+                    <p className="text-lg font-mono tabular-nums text-foreground/70 mb-4 tracking-[0.3em]">
+                      •••• •••• •••• {card.last_digits || "0000"}
+                    </p>
+                    <p className="text-xs font-bold text-foreground mb-4">{card.nickname}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] uppercase tracking-widest text-muted-foreground/30">Total na viagem</span>
+                      <span className="text-xl font-black tabular-nums text-foreground">{balanceVisible ? fmt(spent) : "••••"}</span>
+                    </div>
                   </div>
                 </motion.div>
               );
@@ -744,42 +1027,53 @@ function CardsAndCashSection({ cards, cardSpending, cashItems, cashRemaining, to
       {/* Cash */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-foreground">Dinheiro em Espécie</span>
-          <Button size="sm" variant="outline" onClick={onAddCash} className="rounded-xl gap-1.5 text-xs">
+          <div>
+            <span className="text-sm font-bold text-foreground block">Dinheiro em Espécie</span>
+            <span className="text-[10px] text-muted-foreground/50">Controle de cash</span>
+          </div>
+          <Button size="sm" variant="outline" onClick={onAddCash} className="rounded-xl gap-1.5 text-xs border-border/30 hover:border-accent/30">
             <Plus className="h-3 w-3" /> Registrar
           </Button>
         </div>
 
-        <div className="rounded-2xl border border-border/30 bg-card/80 backdrop-blur-sm p-6">
+        <div className="rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm p-6">
           {cashItems.length === 0 ? (
-            <div className="text-center py-4">
-              <Banknote className="h-10 w-10 mx-auto text-muted-foreground/20 mb-2" />
-              <p className="text-xs text-muted-foreground">Registre quanto levou em dinheiro</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/50">Inicial</p>
-                  <p className="text-lg font-black tabular-nums text-foreground">{fmt(totalCashInitial)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-destructive/50">Usado</p>
-                  <p className="text-lg font-black tabular-nums text-destructive">{fmt(cashSpent)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-accent/50">Saldo</p>
-                  <p className="text-lg font-black tabular-nums text-accent">{fmt(cashRemaining)}</p>
+            <div className="text-center py-6">
+              <div className="relative mx-auto w-16 h-16 mb-3">
+                <div className="absolute inset-0 rounded-full bg-chart-2/5 animate-ping" style={{ animationDuration: "4s" }} />
+                <div className="relative h-16 w-16 rounded-full bg-muted/20 flex items-center justify-center">
+                  <Banknote className="h-7 w-7 text-muted-foreground/15" />
                 </div>
               </div>
-              {totalCashInitial > 0 && (
-                <div className="h-2 w-full rounded-full bg-muted/30 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-accent transition-all duration-700"
-                    style={{ width: `${Math.max(0, pct(cashRemaining, totalCashInitial))}%` }}
-                  />
+              <p className="text-xs text-muted-foreground/50">Registre quanto levou em dinheiro</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex items-center justify-center">
+                <CircularGauge
+                  percentage={totalCashInitial > 0 ? pct(cashRemaining, totalCashInitial) : 0}
+                  size={120} strokeWidth={8} color="chart-2"
+                >
+                  <Banknote className="h-4 w-4 text-muted-foreground/30 mb-0.5" />
+                  <span className="text-lg font-black tabular-nums text-foreground">
+                    {balanceVisible ? fmt(cashRemaining) : "••••"}
+                  </span>
+                </CircularGauge>
+              </div>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Inicial</p>
+                  <p className="text-base font-black tabular-nums">{balanceVisible ? fmt(totalCashInitial) : "••••"}</p>
                 </div>
-              )}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-destructive/40">Usado</p>
+                  <p className="text-base font-black tabular-nums text-destructive">{balanceVisible ? fmt(cashSpent) : "••••"}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-accent/40">Saldo</p>
+                  <p className="text-base font-black tabular-nums text-accent">{balanceVisible ? fmt(cashRemaining) : "••••"}</p>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -789,14 +1083,11 @@ function CardsAndCashSection({ cards, cardSpending, cashItems, cashRemaining, to
 }
 
 /* ═══════════════════════════════════════════════════════
-   HISTORY SECTION (Timeline Financeira)
+   HISTORY SECTION
    ═══════════════════════════════════════════════════════ */
 function HistorySection({ expenses, receivables, categories, cards }: any) {
-  // Merge all financial events into a single sorted list
   const events = useMemo(() => {
-    const items: { date: string; type: string; description: string; amount: number; icon: any; color: string; meta?: string }[] = [];
-
-    // Agency payments
+    const items: any[] = [];
     receivables.forEach((r: any) => {
       const isPaid = r.status === "recebido";
       items.push({
@@ -806,11 +1097,10 @@ function HistorySection({ expenses, receivables, categories, cards }: any) {
         amount: r.gross_value || 0,
         icon: isPaid ? CheckCircle2 : Clock,
         color: isPaid ? "text-accent" : "text-warning",
+        isAgency: true,
         meta: r.payment_method || undefined,
       });
     });
-
-    // Personal expenses
     expenses.forEach((e: any) => {
       const cat = categories.find((c: any) => c.id === e.category_id);
       const card = cards.find((c: any) => c.id === e.card_id);
@@ -822,69 +1112,80 @@ function HistorySection({ expenses, receivables, categories, cards }: any) {
         amount: e.amount,
         icon: CATEGORY_ICONS[cat?.icon] || Receipt,
         color: "text-foreground",
+        catColor: cat?.color,
         meta: [pm?.label, card ? `•••${card.last_digits}` : null].filter(Boolean).join(" · "),
       });
     });
-
-    // Sort by date descending
     items.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
     return items;
   }, [expenses, receivables, categories, cards]);
 
-  // Group by date
   const grouped = useMemo(() => {
-    const map: Record<string, typeof events> = {};
-    events.forEach(e => {
-      const d = e.date || "sem-data";
-      if (!map[d]) map[d] = [];
-      map[d].push(e);
-    });
+    const map: Record<string, any[]> = {};
+    events.forEach(e => { const d = e.date || "sem-data"; if (!map[d]) map[d] = []; map[d].push(e); });
     return Object.entries(map);
   }, [events]);
 
   return (
-    <div className="rounded-2xl border border-border/30 bg-card/80 backdrop-blur-sm overflow-hidden">
-      <div className="p-5 border-b border-border/20">
-        <span className="text-sm font-bold text-foreground">Histórico Financeiro</span>
+    <div className="rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm overflow-hidden">
+      <div className="p-5 border-b border-border/10 flex items-center gap-2">
+        <Calendar className="h-4 w-4 text-accent" />
+        <span className="text-sm font-bold text-foreground">Timeline Financeira</span>
+        <span className="text-[10px] text-muted-foreground/40 ml-auto">{events.length} movimentações</span>
       </div>
 
       {events.length === 0 ? (
         <p className="text-sm text-muted-foreground text-center py-12">Nenhuma movimentação registrada</p>
       ) : (
-        <div className="divide-y divide-border/10">
-          {grouped.map(([date, items]) => (
+        <div>
+          {grouped.map(([date, items], gi) => (
             <div key={date}>
-              {/* Date header */}
-              <div className="px-5 py-2.5 bg-muted/20 sticky top-0">
-                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60">
-                  {date !== "sem-data" ? fmtDate(date) : "Sem data"}
-                </span>
+              <div className="px-5 py-3 bg-muted/10 border-b border-border/5 sticky top-0 z-10">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-lg bg-accent/10 flex items-center justify-center">
+                    <span className="text-[9px] font-black text-accent tabular-nums">
+                      {date !== "sem-data" ? new Date(date + "T00:00:00").getDate() : "?"}
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-foreground">
+                    {date !== "sem-data" ? fmtDateFull(date) : "Sem data"}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground/40 ml-auto tabular-nums">
+                    {fmt(items.reduce((s: number, e: any) => s + e.amount, 0))}
+                  </span>
+                </div>
               </div>
               {items.map((ev, i) => {
                 const Icon = ev.icon;
                 return (
                   <motion.div
                     key={`${date}-${i}`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.03 }}
-                    className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/20 transition-colors"
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: (gi * items.length + i) * 0.02 }}
+                    className="flex items-center gap-3 px-5 py-3.5 hover:bg-muted/10 transition-colors relative"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`h-8 w-8 flex-shrink-0 rounded-lg flex items-center justify-center bg-muted/40`}>
-                        <Icon className={`h-3.5 w-3.5 ${ev.color}`} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{ev.description}</p>
-                        <p className="text-[10px] text-muted-foreground/60">
-                          {ev.type}
-                          {ev.meta && ` · ${ev.meta}`}
-                        </p>
-                      </div>
+                    {/* Timeline line */}
+                    {i < items.length - 1 && (
+                      <div className="absolute left-[37px] top-[44px] bottom-0 w-px bg-border/10" />
+                    )}
+                    <div className={`relative z-10 h-8 w-8 flex-shrink-0 rounded-lg flex items-center justify-center ${
+                      ev.isAgency ? "bg-accent/10" : "bg-muted/20"
+                    }`} style={ev.catColor ? { backgroundColor: ev.catColor + "12" } : undefined}>
+                      <Icon className={`h-3.5 w-3.5 ${ev.color}`} style={ev.catColor ? { color: ev.catColor } : undefined} />
                     </div>
-                    <p className="text-sm font-black tabular-nums text-foreground flex-shrink-0 ml-3">
-                      {fmt(ev.amount)}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-foreground truncate">{ev.description}</p>
+                      <p className="text-[9px] text-muted-foreground/40">
+                        {ev.type}{ev.meta && ` · ${ev.meta}`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <p className="text-sm font-black tabular-nums">{fmt(ev.amount)}</p>
+                      {ev.isAgency && (
+                        <Shield className="h-3 w-3 text-accent/40" />
+                      )}
+                    </div>
                   </motion.div>
                 );
               })}
@@ -913,89 +1214,74 @@ function AddExpenseDialog({ open, onClose, budgetId, categories, cards, onSaved 
     if (!desc || !amount || !budgetId) return;
     setSaving(true);
     const { error } = await supabase.from("portal_expenses" as any).insert({
-      budget_id: budgetId,
-      description: desc,
-      amount: parseFloat(amount),
-      category_id: catId || null,
-      expense_date: date,
-      payment_method: payMethod,
-      card_id: cardId || null,
-      notes: notes || null,
+      budget_id: budgetId, description: desc, amount: parseFloat(amount),
+      category_id: catId || null, expense_date: date, payment_method: payMethod,
+      card_id: cardId || null, notes: notes || null,
     } as any);
     setSaving(false);
     if (error) { toast.error("Erro ao salvar gasto"); return; }
     toast.success("Gasto registrado!");
     setDesc(""); setAmount(""); setCatId(""); setNotes(""); setCardId("");
-    onClose();
-    onSaved();
+    onClose(); onSaved();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-accent" /> Registrar Gasto
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <div className="h-8 w-8 rounded-xl bg-accent/10 flex items-center justify-center">
+              <Receipt className="h-4 w-4 text-accent" />
+            </div>
+            Registrar Gasto
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Descrição *</label>
-            <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ex: Almoço no restaurante" />
+            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Descrição *</label>
+            <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ex: Almoço no restaurante" className="rounded-xl" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Valor (R$) *</label>
-              <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
+              <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Valor (R$) *</label>
+              <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" className="rounded-xl" />
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Data</label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Data</label>
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-xl" />
             </div>
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Categoria</label>
+            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Categoria</label>
             <Select value={catId} onValueChange={setCatId}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>
-                {categories.map((c: any) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
+              <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>{categories.map((c: any) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}</SelectContent>
             </Select>
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Forma de Pagamento</label>
+            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Pagamento</label>
             <Select value={payMethod} onValueChange={setPayMethod}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {PAYMENT_METHODS.map(p => (
-                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                ))}
-              </SelectContent>
+              <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+              <SelectContent>{PAYMENT_METHODS.map(p => (<SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>))}</SelectContent>
             </Select>
           </div>
           {(payMethod === "cartao_credito" || payMethod === "cartao_debito") && cards.length > 0 && (
             <div>
-              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Cartão</label>
+              <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Cartão</label>
               <Select value={cardId} onValueChange={setCardId}>
-                <SelectTrigger><SelectValue placeholder="Selecione o cartão" /></SelectTrigger>
-                <SelectContent>
-                  {cards.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nickname} •{c.last_digits}</SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>{cards.map((c: any) => (<SelectItem key={c.id} value={c.id}>{c.nickname} •{c.last_digits}</SelectItem>))}</SelectContent>
               </Select>
             </div>
           )}
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Observação</label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Opcional" rows={2} />
+            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Observação</label>
+            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Opcional" rows={2} className="rounded-xl" />
           </div>
         </div>
         <DialogFooter>
-          <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
-          <Button onClick={handleSave} disabled={saving || !desc || !amount} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+          <DialogClose asChild><Button variant="ghost" className="rounded-xl">Cancelar</Button></DialogClose>
+          <Button onClick={handleSave} disabled={saving || !desc || !amount} className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl shadow-lg shadow-accent/20">
             {saving ? "Salvando..." : "Salvar Gasto"}
           </Button>
         </DialogFooter>
@@ -1029,22 +1315,25 @@ function AddCardDialog({ open, onClose, budgetId, onSaved }: any) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-sm rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-accent" /> Adicionar Cartão
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <div className="h-8 w-8 rounded-xl bg-accent/10 flex items-center justify-center">
+              <CreditCard className="h-4 w-4 text-accent" />
+            </div>
+            Adicionar Cartão
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Apelido do Cartão *</label>
-            <Input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Ex: Nubank Crédito" />
+            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Apelido *</label>
+            <Input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Ex: Nubank Crédito" className="rounded-xl" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Bandeira</label>
+              <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Bandeira</label>
               <Select value={brand} onValueChange={setBrand}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="visa">Visa</SelectItem>
                   <SelectItem value="mastercard">Mastercard</SelectItem>
@@ -1055,14 +1344,14 @@ function AddCardDialog({ open, onClose, budgetId, onSaved }: any) {
               </Select>
             </div>
             <div>
-              <label className="text-xs font-semibold text-muted-foreground mb-1 block">Final</label>
-              <Input value={lastDigits} onChange={(e) => setLastDigits(e.target.value.slice(0, 4))} placeholder="1234" maxLength={4} />
+              <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Final</label>
+              <Input value={lastDigits} onChange={(e) => setLastDigits(e.target.value.slice(0, 4))} placeholder="1234" maxLength={4} className="rounded-xl" />
             </div>
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Tipo</label>
+            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Tipo</label>
             <Select value={cardType} onValueChange={setCardType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="credito">Crédito</SelectItem>
                 <SelectItem value="debito">Débito</SelectItem>
@@ -1072,8 +1361,8 @@ function AddCardDialog({ open, onClose, budgetId, onSaved }: any) {
           </div>
         </div>
         <DialogFooter>
-          <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
-          <Button onClick={handleSave} disabled={saving || !nickname} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+          <DialogClose asChild><Button variant="ghost" className="rounded-xl">Cancelar</Button></DialogClose>
+          <Button onClick={handleSave} disabled={saving || !nickname} className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl shadow-lg shadow-accent/20">
             {saving ? "Salvando..." : "Adicionar"}
           </Button>
         </DialogFooter>
@@ -1098,7 +1387,7 @@ function AddCashDialog({ open, onClose, budgetId, onSaved }: any) {
       budget_id: budgetId, initial_amount: parseFloat(amount), currency, description: desc || null,
     } as any);
     setSaving(false);
-    if (error) { toast.error("Erro ao registrar dinheiro"); return; }
+    if (error) { toast.error("Erro ao registrar"); return; }
     toast.success("Dinheiro registrado!");
     setAmount(""); setDesc("");
     onClose(); onSaved();
@@ -1106,39 +1395,42 @@ function AddCashDialog({ open, onClose, budgetId, onSaved }: any) {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-sm rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Banknote className="h-5 w-5 text-accent" /> Registrar Dinheiro
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <div className="h-8 w-8 rounded-xl bg-chart-2/10 flex items-center justify-center">
+              <Banknote className="h-4 w-4 text-chart-2" />
+            </div>
+            Registrar Dinheiro
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Valor Inicial *</label>
-            <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
+            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Valor Inicial *</label>
+            <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" className="rounded-xl" />
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Moeda</label>
+            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Moeda</label>
             <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="BRL">BRL - Real</SelectItem>
-                <SelectItem value="USD">USD - Dólar</SelectItem>
-                <SelectItem value="EUR">EUR - Euro</SelectItem>
-                <SelectItem value="GBP">GBP - Libra</SelectItem>
-                <SelectItem value="ARS">ARS - Peso Argentino</SelectItem>
-                <SelectItem value="CLP">CLP - Peso Chileno</SelectItem>
+                <SelectItem value="BRL">BRL · Real</SelectItem>
+                <SelectItem value="USD">USD · Dólar</SelectItem>
+                <SelectItem value="EUR">EUR · Euro</SelectItem>
+                <SelectItem value="GBP">GBP · Libra</SelectItem>
+                <SelectItem value="ARS">ARS · Peso Argentino</SelectItem>
+                <SelectItem value="CLP">CLP · Peso Chileno</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Descrição</label>
-            <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ex: Dinheiro trocado no aeroporto" />
+            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Descrição</label>
+            <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ex: Câmbio no aeroporto" className="rounded-xl" />
           </div>
         </div>
         <DialogFooter>
-          <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
-          <Button onClick={handleSave} disabled={saving || !amount} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+          <DialogClose asChild><Button variant="ghost" className="rounded-xl">Cancelar</Button></DialogClose>
+          <Button onClick={handleSave} disabled={saving || !amount} className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl shadow-lg shadow-accent/20">
             {saving ? "Salvando..." : "Registrar"}
           </Button>
         </DialogFooter>
@@ -1165,56 +1457,48 @@ function BudgetDialog({ open, onClose, budget, categories, onSaved }: any) {
   const handleSave = async () => {
     if (!budget) return;
     setSaving(true);
-
-    await supabase
-      .from("portal_travel_budgets" as any)
-      .update({ total_budget: parseFloat(totalBudget) || 0 } as any)
-      .eq("id", budget.id);
-
+    await supabase.from("portal_travel_budgets" as any).update({ total_budget: parseFloat(totalBudget) || 0 } as any).eq("id", budget.id);
     for (const cat of categories) {
-      const val = parseFloat(catBudgets[cat.id]) || 0;
-      await supabase
-        .from("portal_budget_categories" as any)
-        .update({ planned_amount: val } as any)
-        .eq("id", cat.id);
+      await supabase.from("portal_budget_categories" as any).update({ planned_amount: parseFloat(catBudgets[cat.id]) || 0 } as any).eq("id", cat.id);
     }
-
     setSaving(false);
     toast.success("Orçamento atualizado!");
-    onClose();
-    onSaved();
+    onClose(); onSaved();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md rounded-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-accent" /> Definir Orçamento
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <div className="h-8 w-8 rounded-xl bg-accent/10 flex items-center justify-center">
+              <Target className="h-4 w-4 text-accent" />
+            </div>
+            Definir Orçamento
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
-            <label className="text-xs font-semibold text-muted-foreground mb-1 block">Orçamento Total da Viagem (R$)</label>
-            <Input type="number" value={totalBudget} onChange={(e) => setTotalBudget(e.target.value)} placeholder="5000" />
+            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Orçamento Total (R$)</label>
+            <Input type="number" value={totalBudget} onChange={(e) => setTotalBudget(e.target.value)} placeholder="5000" className="rounded-xl text-lg font-black" />
           </div>
-          <div className="border-t border-border/20 pt-3">
-            <p className="text-xs font-bold text-muted-foreground mb-3">Orçamento por Categoria</p>
-            <div className="space-y-2.5">
+          <div className="border-t border-border/10 pt-4">
+            <p className="text-xs font-bold text-muted-foreground/60 mb-3">Por Categoria</p>
+            <div className="space-y-3">
               {categories.map((cat: any) => {
                 const IconComp = CATEGORY_ICONS[cat.icon] || Package;
                 return (
                   <div key={cat.id} className="flex items-center gap-3">
-                    <div className="h-7 w-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: cat.color + "15" }}>
+                    <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: cat.color + "12" }}>
                       <IconComp className="h-3.5 w-3.5" style={{ color: cat.color }} />
                     </div>
-                    <span className="text-xs font-medium text-foreground flex-1">{cat.name}</span>
+                    <span className="text-xs font-semibold text-foreground flex-1">{cat.name}</span>
                     <Input
                       type="number"
                       value={catBudgets[cat.id] || ""}
                       onChange={(e) => setCatBudgets(prev => ({ ...prev, [cat.id]: e.target.value }))}
                       placeholder="0"
-                      className="w-28 text-right"
+                      className="w-28 text-right rounded-xl"
                     />
                   </div>
                 );
@@ -1223,8 +1507,8 @@ function BudgetDialog({ open, onClose, budget, categories, onSaved }: any) {
           </div>
         </div>
         <DialogFooter>
-          <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
-          <Button onClick={handleSave} disabled={saving} className="bg-accent hover:bg-accent/90 text-accent-foreground">
+          <DialogClose asChild><Button variant="ghost" className="rounded-xl">Cancelar</Button></DialogClose>
+          <Button onClick={handleSave} disabled={saving} className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl shadow-lg shadow-accent/20">
             {saving ? "Salvando..." : "Salvar Orçamento"}
           </Button>
         </DialogFooter>
