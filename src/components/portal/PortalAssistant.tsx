@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Loader2, Sparkles, Plane, Hotel, DollarSign, User, CloudSun, MapPin, Trash2, FileText, MessageCircle, ExternalLink, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
