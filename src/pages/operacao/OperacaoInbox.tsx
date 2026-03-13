@@ -217,6 +217,12 @@ function OperacaoInboxInner() {
   const selected = conversations.find(c => c.id === selectedId);
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
 
+  const getZapiPhoneCandidates = useCallback((conversationId: string) => {
+    const phone = conversationId.replace("wa_", "").trim();
+    if (!phone) return [] as string[];
+    return Array.from(new Set([phone, `${phone}-group`, `${phone}@g.us`]));
+  }, []);
+
   // Load active flow name for selected conversation
   useEffect(() => {
     if (!selectedId) { setActiveFlowName(null); return; }
