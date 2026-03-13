@@ -437,7 +437,22 @@ function OperacaoInboxInner() {
         const previewMap = new Map<string, { text: string; message_type: string; created_at: string }>();
         if (convIdsNeedingPreview.length > 0) {
           for (const convId of convIdsNeedingPreview) {
-            const { data: lastMsg } = await supabase.from("chat_messages").select("content, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+            // Try chat_messages first
+            let { data: lastMsg } = await supabase.from("chat_messages").select("content, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+            // Fallback to messages table
+            if (!lastMsg) {
+              const { data: legacyMsg } = await supabase.from("messages").select("text, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+              if (legacyMsg) lastMsg = { content: (legacyMsg as any).text, message_type: (legacyMsg as any).message_type, created_at: (legacyMsg as any).created_at };
+            }
+            // Fallback to zapi_messages by phone
+            if (!lastMsg) {
+              const convRecord = data.find(c => c.id === convId);
+              const phone = (convRecord?.phone || "").replace(/\D/g, "");
+              if (phone) {
+                const { data: zapiMsg } = await supabase.from("zapi_messages" as any).select("text, type, timestamp").in("phone", [phone, `${phone}@c.us`]).order("timestamp", { ascending: false }).limit(1).maybeSingle();
+                if (zapiMsg) lastMsg = { content: (zapiMsg as any).text || `📎 ${(zapiMsg as any).type}`, message_type: (zapiMsg as any).type || "text", created_at: (zapiMsg as any).timestamp };
+              }
+            }
             if (lastMsg) {
               const previewEntry = { text: lastMsg.content || "", message_type: lastMsg.message_type, created_at: lastMsg.created_at };
               previewMap.set(convId, previewEntry);
@@ -839,6 +854,23 @@ function OperacaoInboxInner() {
           });
           if (chatPhoto && typeof chatPhoto === "string" && chatPhoto.startsWith("http")) {
             profilePicsRef.current.set(convId, chatPhoto);
+          }
+        }
+        // Backfill empty previews from zapi_messages
+        for (const conv of newConvs) {
+          if (!conv.last_message_preview && conv.phone) {
+            try {
+              const { data: lastZapi } = await supabase.from("zapi_messages" as any)
+                .select("text, type, timestamp")
+                .in("phone", [conv.phone, `${conv.phone}@c.us`])
+                .order("timestamp", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              if (lastZapi) {
+                conv.last_message_preview = (lastZapi as any).text || `📎 ${(lastZapi as any).type || "mensagem"}`;
+                if ((lastZapi as any).timestamp) conv.last_message_at = (lastZapi as any).timestamp;
+              }
+            } catch {}
           }
         }
         if (newConvs.length > 0) {
@@ -1367,7 +1399,7 @@ function OperacaoInboxInner() {
       <div className="flex-1 overflow-hidden min-h-0">
         <div className="flex h-full min-h-0">
           {/* ─── Column 1: Conversations List ─── */}
-          <div className={`md:w-[340px] w-full border-r border-border flex flex-col min-h-0 bg-card/30 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
+          <div className={`md:w-[340px] w-full border-r border-border flex flex-col min-h-0 overflow-hidden bg-card/30 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
             <div className="p-3 space-y-2 shrink-0">
               {/* ChatLive title row */}
               <div className="flex items-center gap-2 pb-1">
