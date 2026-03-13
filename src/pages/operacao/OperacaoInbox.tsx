@@ -454,8 +454,9 @@ function OperacaoInboxInner() {
   useEffect(() => {
     if (!selectedId) return;
     if (selectedId.startsWith("wa_")) {
-      const phone = selectedId.replace("wa_", "");
-      supabase.from("zapi_messages" as any).select("*").eq("phone", phone).order("timestamp", { ascending: true }).limit(200).then(({ data: zapiData, error: zapiErr }) => {
+      const phoneCandidates = getZapiPhoneCandidates(selectedId);
+      if (phoneCandidates.length === 0) return;
+      supabase.from("zapi_messages" as any).select("*").in("phone", phoneCandidates).order("timestamp", { ascending: true }).limit(200).then(({ data: zapiData, error: zapiErr }) => {
         if (zapiErr) { console.error("Error fetching zapi_messages:", zapiErr); return; }
         const rawMsgs = zapiData || [];
         const parsed: Message[] = rawMsgs.map((m: any) => {
