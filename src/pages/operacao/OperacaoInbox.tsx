@@ -465,15 +465,29 @@ function OperacaoInboxInner() {
     if (!selectedId) return;
     let cancelled = false;
 
-    const mapChatMessages = (rows: any[], conversationKey: string): Message[] => (
+    const normalizeDbMessageType = (value: string | null | undefined): MsgType => {
+      const raw = (value || "text").toLowerCase();
+      if (raw === "ptt") return "audio";
+      if (raw === "image" || raw === "audio" || raw === "video" || raw === "document") return raw;
+      return "text";
+    };
+
+    const normalizeDbStatus = (value: string | null | undefined): MsgStatus => {
+      const raw = (value || "sent").toLowerCase();
+      if (["read", "lido", "seen", "played"].includes(raw)) return "read";
+      if (["delivered", "entregue", "received", "delivery_ack"].includes(raw)) return "delivered";
+      return "sent";
+    };
+
+    const mapDbMessages = (rows: any[], conversationKey: string): Message[] => (
       (rows || []).map((m: any) => ({
         id: m.id,
         conversation_id: conversationKey,
         sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
-        message_type: m.message_type as MsgType,
-        text: m.content || "",
+        message_type: normalizeDbMessageType(m.message_type),
+        text: m.text ?? m.content ?? "",
         media_url: m.media_url || undefined,
-        status: (m.read_status || "sent") as MsgStatus,
+        status: normalizeDbStatus(m.status ?? m.read_status),
         created_at: m.created_at,
       }))
     );
