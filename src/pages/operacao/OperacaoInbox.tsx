@@ -191,7 +191,7 @@ async function callZapiProxy(action: string, payload?: any) {
 // ════════════════════════════════════════
 // MAIN COMPONENT
 // ════════════════════════════════════════
-export default function OperacaoInbox() {
+function OperacaoInboxInner() {
   const isMobile = useIsMobile();
   const { toggleSidebar } = useSidebar();
 
