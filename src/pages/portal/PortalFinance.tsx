@@ -941,12 +941,12 @@ function AgencySection({ receivables, agencyTotal, agencyPaid, balanceVisible }:
                   }`}
                 >
                   {/* Timeline dot */}
-                  <div className={`relative flex-shrink-0 h-10 w-10 rounded-xl flex items-center justify-center text-xs font-black ${
+                  <div className={`relative flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl flex items-center justify-center text-[10px] sm:text-xs font-black ${
                     isPaid ? "bg-accent/10 text-accent" : isOverdue ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
                   }`}>
-                    {isPaid ? <CheckCircle2 className="h-5 w-5" /> : r.installment_number || i + 1}
+                    {isPaid ? <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" /> : r.installment_number || i + 1}
                     {!isPaid && isOverdue && (
-                      <div className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-destructive animate-pulse" />
+                      <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
                     )}
                   </div>
 
