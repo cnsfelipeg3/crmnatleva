@@ -217,7 +217,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
       </main>
 
       {/* AI Assistant */}
-      <PortalAssistant />
+      <PortalAssistant saleId={assistantSaleId} />
 
       {/* Footer */}
       <footer className="border-t border-border bg-card/50">

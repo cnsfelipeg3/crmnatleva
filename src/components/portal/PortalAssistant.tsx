@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Loader2, Sparkles, Plane, Hotel, DollarSign, User, CloudSun, MapPin, Trash2, ChevronDown } from "lucide-react";
+import { X, Send, Loader2, Sparkles, Plane, Hotel, DollarSign, User, CloudSun, MapPin, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
 import { supabase } from "@/integrations/supabase/client";
+import { getMockTripDetail } from "@/lib/portalMockTrips";
 
 const ASSISTANT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-assistant`;
 
@@ -26,14 +27,69 @@ const quickActions = [
   { icon: User, label: "Meu consultor", question: "Quem é meu consultor da NatLeva e como posso entrar em contato?" },
 ];
 
+function pickBestTrip(trips: any[]): any | null {
+  if (!trips.length) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const score = (trip: any) => {
+    const sale = trip?.sale || {};
+    const dep = sale.departure_date ? new Date(`${sale.departure_date}T00:00:00`) : null;
+    const ret = sale.return_date ? new Date(`${sale.return_date}T00:00:00`) : null;
+
+    if (dep && dep > today) return { rank: 0, ts: dep.getTime() }; // próxima viagem
+    if (dep && ret && dep <= today && ret >= today) return { rank: 1, ts: dep.getTime() }; // viagem ativa
+    return { rank: 2, ts: -(ret?.getTime() || dep?.getTime() || 0) }; // mais recente finalizada
+  };
+
+  return [...trips].sort((a, b) => {
+    const sa = score(a);
+    const sb = score(b);
+    if (sa.rank !== sb.rank) return sa.rank - sb.rank;
+    return sa.ts - sb.ts;
+  })[0] || null;
+}
+
 export default function PortalAssistant({ saleId }: PortalAssistantProps) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [inferredSaleId, setInferredSaleId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  const effectiveSaleId = saleId || inferredSaleId || null;
+  const currentMockTrip = useMemo(() => {
+    if (!effectiveSaleId || !effectiveSaleId.startsWith("mock-")) return null;
+    return getMockTripDetail(effectiveSaleId) || null;
+  }, [effectiveSaleId]);
+
+  useEffect(() => {
+    if (saleId) {
+      setInferredSaleId(null);
+      return;
+    }
+
+    let cancelled = false;
+    const inferTripContext = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("portal-api", { body: { action: "trips" } });
+        if (cancelled || error) return;
+        const trips = (data?.trips || []) as any[];
+        const best = pickBestTrip(trips);
+        setInferredSaleId(best?.sale_id || null);
+      } catch {
+        if (!cancelled) setInferredSaleId(null);
+      }
+    };
+
+    void inferTripContext();
+    return () => {
+      cancelled = true;
+    };
+  }, [saleId]);
 
   // Auto-scroll
   useEffect(() => {
@@ -63,17 +119,35 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error("Sua sessão expirou. Faça login novamente para continuar.");
+      }
 
       const resp = await fetch(ASSISTANT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           question: text.trim(),
-          sale_id: saleId || null,
+          sale_id: effectiveSaleId,
           conversation_history: newMessages.slice(-12),
+          mock_trip: currentMockTrip
+            ? {
+                sale_id: currentMockTrip.sale_id,
+                custom_title: currentMockTrip.custom_title,
+                sale: currentMockTrip.sale,
+                segments: currentMockTrip.segments,
+                hotels: currentMockTrip.hotels,
+                lodging: currentMockTrip.lodging,
+                services: currentMockTrip.services,
+                attachments: currentMockTrip.attachments,
+                financial: currentMockTrip.financial,
+                passengers: currentMockTrip.passengers,
+                sellerName: currentMockTrip.sellerName,
+              }
+            : null,
         }),
         signal: controller.signal,
       });
@@ -128,13 +202,13 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
       if (err.name !== "AbortError") {
         setMessages(prev => [...prev, {
           role: "assistant",
-          content: "Ocorreu um erro de conexão. Por favor, tente novamente.",
+          content: err?.message || "Ocorreu um erro de conexão. Por favor, tente novamente.",
         }]);
       }
     } finally {
       setIsStreaming(false);
     }
-  }, [messages, isStreaming, saleId]);
+  }, [messages, isStreaming, effectiveSaleId, currentMockTrip]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -283,8 +357,6 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
                 </div>
               )}
             </div>
-
-            {/* Scroll to bottom indicator */}
 
             {/* Input */}
             <div className="border-t border-border p-3 shrink-0 bg-card">
