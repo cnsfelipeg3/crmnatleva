@@ -936,7 +936,7 @@ function AgencySection({ receivables, agencyTotal, agencyPaid, balanceVisible }:
                   initial={{ opacity: 0, x: -16 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.06 }}
-                  className={`relative flex items-center gap-4 px-4 py-4 rounded-xl transition-all hover:scale-[1.005] ${
+                  className={`relative flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 sm:py-4 rounded-xl transition-all hover:scale-[1.005] ${
                     isPaid ? "bg-accent/[0.03] border border-accent/[0.08]" : isOverdue ? "bg-destructive/[0.03] border border-destructive/[0.08]" : "bg-warning/[0.02] border border-warning/[0.06]"
                   }`}
                 >
