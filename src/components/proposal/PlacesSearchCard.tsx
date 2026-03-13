@@ -1,7 +1,6 @@
 /**
- * PlacesSearchCard — Google Places search + enrichment for the Proposal Editor.
- * Lets consultants search for hotels, attractions, restaurants via Google Places,
- * then auto-imports name, address, rating, photos, and details.
+ * PlacesSearchCard — Advanced Google Places search + photo curation for proposals.
+ * Three-step flow: Search → Review & Curate Photos → Confirm
  */
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,10 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   Search, Loader2, Star, MapPin, Phone, Globe, Image as ImageIcon,
-  X, ChevronLeft, ChevronRight, RotateCcw, Check, Camera,
+  X, ChevronLeft, ChevronRight, RotateCcw, Check, Camera, Upload,
+  GripVertical, Eye, Crown, CheckSquare, Square, Maximize2,
+  Info, Sparkles,
 } from "lucide-react";
 
 /* ═══ Types ═══ */
@@ -51,6 +53,14 @@ interface PlaceDetails {
   reviews: { author: string; rating: number; text: string; time: string }[];
 }
 
+interface CuratedPhoto {
+  url: string;
+  label: string;
+  selected: boolean;
+  isCover: boolean;
+  source: "google" | "manual";
+}
+
 export interface PlacesEnrichmentData {
   place_id: string;
   name: string;
@@ -62,18 +72,16 @@ export interface PlacesEnrichmentData {
   location: { lat: number; lng: number } | null;
   types: string[];
   editorial_summary: string | null;
-  photos: string[]; // resolved URLs
+  photos: string[];
+  selectedPhotos: string[];
   mainPhotoIndex: number;
+  photoLabels: string[];
 }
 
 interface PlacesSearchCardProps {
-  /** Pre-fill search query (e.g., hotel name already typed) */
   initialQuery?: string;
-  /** Destination context for biased search (e.g., "Milan, Italy") */
   destinationContext?: string;
-  /** Called with enrichment data when user confirms selection */
   onEnrich: (data: PlacesEnrichmentData) => void;
-  /** Called when user cancels/closes */
   onCancel: () => void;
   className?: string;
 }
@@ -90,27 +98,22 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 function resolveType(types: string[]): string {
-  for (const t of types) {
-    if (TYPE_LABELS[t]) return TYPE_LABELS[t];
-  }
+  for (const t of types) if (TYPE_LABELS[t]) return TYPE_LABELS[t];
   return "Local";
 }
 
-function renderStars(rating: number | null) {
-  if (!rating) return null;
-  return (
-    <span className="inline-flex items-center gap-1 text-warning">
-      <Star className="h-3.5 w-3.5 fill-warning" />
-      <span className="text-xs font-semibold">{rating.toFixed(1)}</span>
-    </span>
-  );
-}
+const PHOTO_LABELS = [
+  "Fachada", "Lobby", "Quarto Deluxe", "Suíte Junior", "Suíte Master",
+  "Piscina", "Restaurante", "Spa", "Vista", "Área Comum", "Bar", "Jardim",
+];
 
-const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-
-function photoUrl(ref: string, maxWidth = 600): string {
-  // We'll resolve this through the edge function
-  return `https://${PROJECT_ID}.supabase.co/functions/v1/places-search`;
+function guessPhotoLabel(index: number): string {
+  if (index === 0) return "Fachada";
+  if (index === 1) return "Lobby";
+  if (index <= 4) return `Quarto ${index}`;
+  if (index === 5) return "Piscina";
+  if (index === 6) return "Restaurante";
+  return `Foto ${index + 1}`;
 }
 
 /* ═══ Component ═══ */
@@ -121,6 +124,7 @@ export default function PlacesSearchCard({
   onCancel,
   className,
 }: PlacesSearchCardProps) {
+  // Search state
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<PlaceResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -129,12 +133,15 @@ export default function PlacesSearchCard({
   // Details state
   const [selectedPlace, setSelectedPlace] = useState<PlaceDetails | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [resolvedPhotos, setResolvedPhotos] = useState<string[]>([]);
-  const [mainPhotoIdx, setMainPhotoIdx] = useState(0);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
 
+  // Curation state
+  const [curatedPhotos, setCuratedPhotos] = useState<CuratedPhoto[]>([]);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout>>();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   /* ── Search ── */
   const search = useCallback(async (q: string) => {
@@ -143,10 +150,7 @@ export default function PlacesSearchCard({
     setError(null);
     try {
       const body: any = { action: "search", query: q };
-      // If we have destination context, try to geocode bias
-      if (destinationContext) {
-        body.query = `${q} ${destinationContext}`;
-      }
+      if (destinationContext) body.query = `${q} ${destinationContext}`;
       const { data, error: fnErr } = await supabase.functions.invoke("places-search", { body });
       if (fnErr) throw fnErr;
       setResults(data?.results || []);
@@ -164,7 +168,7 @@ export default function PlacesSearchCard({
     debounceRef.current = setTimeout(() => search(val), 400);
   };
 
-  /* ── Select & get details ── */
+  /* ── Select place & load details ── */
   const selectPlace = useCallback(async (placeId: string) => {
     setLoadingDetails(true);
     setError(null);
@@ -176,22 +180,26 @@ export default function PlacesSearchCard({
       setSelectedPlace(data);
       setResults([]);
 
-      // Resolve photo URLs
       if (data?.photos?.length > 0) {
         setLoadingPhotos(true);
-        const urls: string[] = [];
-        for (const photo of data.photos.slice(0, 8)) {
+        const photos: CuratedPhoto[] = [];
+        for (const [i, photo] of data.photos.slice(0, 10).entries()) {
           try {
             const { data: photoData } = await supabase.functions.invoke("places-search", {
               body: { action: "photo", photo_reference: photo.photo_reference, max_width: 800 },
             });
-            if (photoData?.url) urls.push(photoData.url);
-          } catch {
-            // Skip failed photos
-          }
+            if (photoData?.url) {
+              photos.push({
+                url: photoData.url,
+                label: guessPhotoLabel(i),
+                selected: i < 6, // Auto-select first 6
+                isCover: i === 0,
+                source: "google",
+              });
+            }
+          } catch { /* skip */ }
         }
-        setResolvedPhotos(urls);
-        setMainPhotoIdx(0);
+        setCuratedPhotos(photos);
         setLoadingPhotos(false);
       }
     } catch {
@@ -201,9 +209,70 @@ export default function PlacesSearchCard({
     }
   }, []);
 
-  /* ── Confirm enrichment ── */
+  /* ── Photo curation actions ── */
+  const toggleSelect = (idx: number) => {
+    setCuratedPhotos(prev => prev.map((p, i) => i === idx ? { ...p, selected: !p.selected } : p));
+  };
+
+  const setCover = (idx: number) => {
+    setCuratedPhotos(prev => prev.map((p, i) => ({
+      ...p,
+      isCover: i === idx,
+      selected: i === idx ? true : p.selected, // Cover must be selected
+    })));
+  };
+
+  const updateLabel = (idx: number, label: string) => {
+    setCuratedPhotos(prev => prev.map((p, i) => i === idx ? { ...p, label } : p));
+  };
+
+  const removePhoto = (idx: number) => {
+    setCuratedPhotos(prev => {
+      const next = prev.filter((_, i) => i !== idx);
+      if (prev[idx].isCover && next.length > 0) next[0].isCover = true;
+      return next;
+    });
+  };
+
+  const handleDragStart = (idx: number) => setDragIdx(idx);
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) return;
+    setCuratedPhotos(prev => {
+      const next = [...prev];
+      const [moved] = next.splice(dragIdx, 1);
+      next.splice(idx, 0, moved);
+      return next;
+    });
+    setDragIdx(idx);
+  };
+  const handleDragEnd = () => setDragIdx(null);
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach(file => {
+      const url = URL.createObjectURL(file);
+      setCuratedPhotos(prev => [...prev, {
+        url,
+        label: file.name.replace(/\.[^.]+$/, ""),
+        selected: true,
+        isCover: false,
+        source: "manual",
+      }]);
+    });
+    e.target.value = "";
+  };
+
+  /* ── Confirm ── */
   const handleConfirm = useCallback(() => {
     if (!selectedPlace) return;
+    const selected = curatedPhotos.filter(p => p.selected);
+    const coverIdx = selected.findIndex(p => p.isCover);
+    const allUrls = curatedPhotos.map(p => p.url);
+    const selectedUrls = selected.map(p => p.url);
+    const labels = selected.map(p => p.label);
+
     onEnrich({
       place_id: selectedPlace.place_id,
       name: selectedPlace.name,
@@ -215,258 +284,427 @@ export default function PlacesSearchCard({
       location: selectedPlace.location,
       types: selectedPlace.types,
       editorial_summary: selectedPlace.editorial_summary,
-      photos: resolvedPhotos,
-      mainPhotoIndex: mainPhotoIdx,
+      photos: allUrls,
+      selectedPhotos: selectedUrls,
+      mainPhotoIndex: coverIdx >= 0 ? coverIdx : 0,
+      photoLabels: labels,
     });
-  }, [selectedPlace, resolvedPhotos, mainPhotoIdx, onEnrich]);
+  }, [selectedPlace, curatedPhotos, onEnrich]);
 
-  /* ── Reset ── */
   const handleReset = () => {
     setSelectedPlace(null);
-    setResolvedPhotos([]);
-    setMainPhotoIdx(0);
+    setCuratedPhotos([]);
+    setLightboxIdx(null);
     setQuery("");
     setResults([]);
     setError(null);
   };
 
-  /* ═══ Render: Details View ═══ */
+  const selectedCount = curatedPhotos.filter(p => p.selected).length;
+  const coverPhoto = curatedPhotos.find(p => p.isCover && p.selected);
+
+  /* ═══════════════════════════════════════════════════════ */
+  /* ═══ STEP 2: Details + Photo Curation View ═══ */
+  /* ═══════════════════════════════════════════════════════ */
   if (selectedPlace) {
     return (
-      <div ref={containerRef} className={cn("border border-border rounded-xl bg-card overflow-hidden", className)}>
+      <div className={cn("border border-border rounded-2xl bg-card overflow-hidden shadow-lg", className)}>
         {/* Header */}
-        <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <Camera className="h-4 w-4 text-primary shrink-0" />
-            <span className="text-sm font-semibold text-foreground truncate">Conteúdo importado do Google</span>
+        <div className="px-5 py-3.5 border-b border-border bg-gradient-to-r from-primary/5 to-transparent flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+              <Camera className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-sm font-bold text-foreground block truncate">Curadoria de Conteúdo</span>
+              <span className="text-[10px] text-muted-foreground">Google Places</span>
+            </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <Button variant="ghost" size="sm" onClick={handleReset} className="h-7 px-2 text-xs gap-1">
               <RotateCcw className="h-3 w-3" /> Buscar outro
             </Button>
-            <Button variant="ghost" size="sm" onClick={onCancel} className="h-7 px-2 text-xs">
-              <X className="h-3 w-3" />
+            <Button variant="ghost" size="icon" onClick={onCancel} className="h-7 w-7">
+              <X className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
 
-        {/* Photos Gallery */}
-        {loadingPhotos ? (
-          <div className="h-48 flex items-center justify-center bg-muted/20">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            <span className="ml-2 text-sm text-muted-foreground">Carregando fotos...</span>
-          </div>
-        ) : resolvedPhotos.length > 0 ? (
-          <div className="relative">
-            <div className="h-52 overflow-hidden bg-muted/10">
-              <img
-                src={resolvedPhotos[mainPhotoIdx]}
-                alt={selectedPlace.name}
-                className="w-full h-full object-cover"
-              />
+        {/* Place info bar */}
+        <div className="px-5 py-3 bg-muted/20 border-b border-border/50 flex items-start gap-3">
+          {coverPhoto && (
+            <div className="w-16 h-12 rounded-lg overflow-hidden shrink-0 shadow-sm">
+              <img src={coverPhoto.url} alt="" className="w-full h-full object-cover" />
             </div>
-            {resolvedPhotos.length > 1 && (
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-border/50">
-                <button
-                  onClick={() => setMainPhotoIdx(i => Math.max(0, i - 1))}
-                  disabled={mainPhotoIdx === 0}
-                  className="p-0.5 text-foreground/70 hover:text-foreground disabled:opacity-30"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                </button>
-                <span className="text-[10px] font-medium text-foreground/70 min-w-[40px] text-center">
-                  {mainPhotoIdx + 1} / {resolvedPhotos.length}
-                </span>
-                <button
-                  onClick={() => setMainPhotoIdx(i => Math.min(resolvedPhotos.length - 1, i + 1))}
-                  disabled={mainPhotoIdx === resolvedPhotos.length - 1}
-                  className="p-0.5 text-foreground/70 hover:text-foreground disabled:opacity-30"
-                >
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
-            {/* Mini thumbnails */}
-            {resolvedPhotos.length > 1 && (
-              <div className="px-3 py-2 flex gap-1.5 overflow-x-auto border-b border-border/50">
-                {resolvedPhotos.map((url, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setMainPhotoIdx(i)}
-                    className={cn(
-                      "w-14 h-10 rounded-md overflow-hidden shrink-0 border-2 transition-all",
-                      i === mainPhotoIdx ? "border-primary ring-1 ring-primary/30" : "border-transparent opacity-60 hover:opacity-100"
-                    )}
-                  >
-                    <img src={url} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="h-32 flex items-center justify-center bg-muted/10">
-            <ImageIcon className="h-8 w-8 text-muted-foreground/30" />
-            <span className="ml-2 text-sm text-muted-foreground">Sem fotos disponíveis</span>
-          </div>
-        )}
-
-        {/* Info */}
-        <div className="p-4 space-y-3">
-          <div>
-            <h3 className="text-base font-bold text-foreground">{selectedPlace.name}</h3>
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+          )}
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-bold text-foreground truncate">{selectedPlace.name}</h3>
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
               <MapPin className="h-3 w-3 shrink-0" /> {selectedPlace.address}
             </p>
+            <div className="flex items-center gap-2 mt-1">
+              {selectedPlace.rating && (
+                <span className="inline-flex items-center gap-1 text-warning text-xs font-semibold">
+                  <Star className="h-3 w-3 fill-warning" /> {selectedPlace.rating.toFixed(1)}
+                  <span className="text-muted-foreground/60 font-normal">({selectedPlace.user_ratings_total})</span>
+                </span>
+              )}
+              <Badge variant="outline" className="text-[9px] h-4">{resolveType(selectedPlace.types)}</Badge>
+              {selectedPlace.price_level != null && (
+                <Badge variant="outline" className="text-[9px] h-4">{"$".repeat(selectedPlace.price_level)}</Badge>
+              )}
+            </div>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            {selectedPlace.rating && (
-              <Badge variant="secondary" className="gap-1">
-                <Star className="h-3 w-3 fill-warning text-warning" />
-                {selectedPlace.rating.toFixed(1)}
-                <span className="text-muted-foreground/70 font-normal">({selectedPlace.user_ratings_total})</span>
-              </Badge>
-            )}
-            <Badge variant="outline" className="text-[10px]">{resolveType(selectedPlace.types)}</Badge>
-            {selectedPlace.price_level != null && (
-              <Badge variant="outline" className="text-[10px]">{"$".repeat(selectedPlace.price_level)}</Badge>
-            )}
-          </div>
-
-          {selectedPlace.editorial_summary && (
-            <p className="text-xs text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-3 italic">
-              {selectedPlace.editorial_summary}
-            </p>
-          )}
-
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            {selectedPlace.phone && (
-              <span className="flex items-center gap-1"><Phone className="h-3 w-3" /> {selectedPlace.phone}</span>
-            )}
+          <div className="flex flex-col gap-1 shrink-0 text-right">
             {selectedPlace.website && (
-              <a href={selectedPlace.website} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+              <a href={selectedPlace.website} target="_blank" rel="noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-1 justify-end">
                 <Globe className="h-3 w-3" /> Website
               </a>
             )}
+            {selectedPlace.phone && (
+              <span className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end">
+                <Phone className="h-3 w-3" /> {selectedPlace.phone}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {selectedPlace.editorial_summary && (
+          <div className="px-5 py-2.5 border-b border-border/30">
+            <p className="text-xs text-muted-foreground leading-relaxed border-l-2 border-primary/30 pl-3 italic">
+              {selectedPlace.editorial_summary}
+            </p>
+          </div>
+        )}
+
+        {/* ── Photo Gallery Curation ── */}
+        <div className="px-5 py-3 border-b border-border/30">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 text-primary" />
+              <span className="text-xs font-bold text-foreground">Galeria de Fotos</span>
+              <Badge variant="secondary" className="text-[9px] h-4">
+                {selectedCount} selecionada{selectedCount !== 1 ? "s" : ""}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {selectedCount < 5 && (
+                <span className="text-[9px] text-muted-foreground/60 flex items-center gap-1">
+                  <Info className="h-3 w-3" /> Ideal: 5–8 fotos
+                </span>
+              )}
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="h-7 px-2 text-[10px] gap-1">
+                <Upload className="h-3 w-3" /> Upload
+              </Button>
+              <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileUpload} />
+            </div>
           </div>
 
-          {/* Confirm button */}
-          <Button onClick={handleConfirm} className="w-full gap-2 mt-2">
-            <Check className="h-4 w-4" /> Usar na proposta
+          {loadingPhotos ? (
+            <div className="flex items-center justify-center py-10 gap-2">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <span className="text-sm text-muted-foreground">Carregando fotos do Google...</span>
+            </div>
+          ) : curatedPhotos.length > 0 ? (
+            <ScrollArea className="max-h-[360px]">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {curatedPhotos.map((photo, i) => (
+                  <div
+                    key={i}
+                    draggable
+                    onDragStart={() => handleDragStart(i)}
+                    onDragOver={(e) => handleDragOver(e, i)}
+                    onDragEnd={handleDragEnd}
+                    className={cn(
+                      "group relative rounded-xl overflow-hidden border-2 transition-all cursor-grab active:cursor-grabbing",
+                      photo.selected
+                        ? photo.isCover
+                          ? "border-primary ring-2 ring-primary/20 shadow-md"
+                          : "border-primary/50 shadow-sm"
+                        : "border-border/30 opacity-50 hover:opacity-80",
+                      dragIdx === i && "scale-95 opacity-70"
+                    )}
+                  >
+                    {/* Image */}
+                    <div className="aspect-[4/3] bg-muted/20 relative">
+                      <img src={photo.url} alt={photo.label} className="w-full h-full object-cover" loading="lazy" />
+
+                      {/* Overlay actions */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                      {/* Top-left: Selection checkbox */}
+                      <button
+                        onClick={() => toggleSelect(i)}
+                        className="absolute top-1.5 left-1.5 z-10"
+                      >
+                        {photo.selected ? (
+                          <CheckSquare className="h-5 w-5 text-primary drop-shadow-md" />
+                        ) : (
+                          <Square className="h-5 w-5 text-white/80 drop-shadow-md" />
+                        )}
+                      </button>
+
+                      {/* Top-right: Drag handle + actions */}
+                      <div className="absolute top-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <button onClick={() => setLightboxIdx(i)} className="w-6 h-6 rounded-md bg-black/40 backdrop-blur-sm flex items-center justify-center hover:bg-black/60">
+                          <Maximize2 className="h-3 w-3 text-white" />
+                        </button>
+                        <button onClick={() => removePhoto(i)} className="w-6 h-6 rounded-md bg-black/40 backdrop-blur-sm flex items-center justify-center hover:bg-destructive/80">
+                          <X className="h-3 w-3 text-white" />
+                        </button>
+                      </div>
+
+                      {/* Cover badge */}
+                      {photo.isCover && photo.selected && (
+                        <div className="absolute top-1.5 left-1/2 -translate-x-1/2 z-10">
+                          <Badge className="bg-primary text-primary-foreground text-[8px] h-4 px-1.5 gap-0.5 shadow-md">
+                            <Crown className="h-2.5 w-2.5" /> CAPA
+                          </Badge>
+                        </div>
+                      )}
+
+                      {/* Source badge */}
+                      {photo.source === "manual" && (
+                        <div className="absolute bottom-1.5 right-1.5 z-10">
+                          <Badge variant="secondary" className="text-[8px] h-4 px-1.5 bg-background/80 backdrop-blur-sm">
+                            Upload
+                          </Badge>
+                        </div>
+                      )}
+
+                      {/* Bottom: Label + Set as cover */}
+                      <div className="absolute bottom-0 left-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-end justify-between gap-1">
+                        {photo.selected && !photo.isCover && (
+                          <button
+                            onClick={() => setCover(i)}
+                            className="text-[9px] font-medium text-white bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-md hover:bg-primary/80 transition-colors flex items-center gap-1 whitespace-nowrap"
+                          >
+                            <Crown className="h-2.5 w-2.5" /> Definir capa
+                          </button>
+                        )}
+                        <div className="flex-1" />
+                        <GripVertical className="h-4 w-4 text-white/60" />
+                      </div>
+                    </div>
+
+                    {/* Label */}
+                    <div className="px-2 py-1.5 bg-card">
+                      <input
+                        type="text"
+                        value={photo.label}
+                        onChange={(e) => updateLabel(i, e.target.value)}
+                        className="w-full text-[10px] font-medium text-foreground bg-transparent outline-none placeholder:text-muted-foreground/40 truncate"
+                        placeholder="Legenda..."
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          ) : (
+            <div className="text-center py-8">
+              <ImageIcon className="h-10 w-10 text-muted-foreground/20 mx-auto mb-2" />
+              <p className="text-xs text-muted-foreground">Sem fotos disponíveis</p>
+              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="mt-2 text-xs gap-1">
+                <Upload className="h-3 w-3" /> Adicionar fotos manualmente
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Proposal Preview ── */}
+        {selectedCount > 0 && (
+          <div className="px-5 py-3 border-b border-border/30 bg-muted/10">
+            <div className="flex items-center gap-2 mb-2">
+              <Eye className="h-3.5 w-3.5 text-primary" />
+              <span className="text-[10px] font-bold text-foreground uppercase tracking-wider">Preview na Proposta</span>
+            </div>
+            <div className="rounded-xl border border-border/50 overflow-hidden bg-card shadow-sm">
+              {coverPhoto && (
+                <div className="h-32 overflow-hidden">
+                  <img src={coverPhoto.url} alt="" className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="p-3">
+                <h4 className="text-sm font-bold text-foreground">{selectedPlace.name}</h4>
+                <p className="text-[10px] text-muted-foreground mt-0.5">{selectedPlace.address}</p>
+                {selectedPlace.rating && (
+                  <span className="text-[10px] text-warning flex items-center gap-0.5 mt-1">
+                    <Star className="h-3 w-3 fill-warning" /> {selectedPlace.rating.toFixed(1)}
+                  </span>
+                )}
+                {selectedCount > 1 && (
+                  <div className="flex gap-1 mt-2 overflow-x-auto">
+                    {curatedPhotos.filter(p => p.selected && !p.isCover).slice(0, 4).map((p, i) => (
+                      <div key={i} className="w-12 h-9 rounded-md overflow-hidden shrink-0">
+                        <img src={p.url} alt="" className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                    {selectedCount > 5 && (
+                      <div className="w-12 h-9 rounded-md bg-muted/60 flex items-center justify-center shrink-0 text-[9px] font-semibold text-muted-foreground">
+                        +{selectedCount - 5}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Actions ── */}
+        <div className="px-5 py-3 flex items-center gap-2">
+          <Button onClick={handleConfirm} disabled={selectedCount === 0} className="flex-1 gap-2">
+            <Sparkles className="h-4 w-4" /> Usar na proposta · {selectedCount} foto{selectedCount !== 1 ? "s" : ""}
           </Button>
         </div>
+
+        {/* ── Lightbox ── */}
+        <Dialog open={lightboxIdx !== null} onOpenChange={() => setLightboxIdx(null)}>
+          <DialogContent className="max-w-3xl p-0 overflow-hidden bg-black/95 border-none">
+            {lightboxIdx !== null && curatedPhotos[lightboxIdx] && (
+              <div className="relative">
+                <img
+                  src={curatedPhotos[lightboxIdx].url}
+                  alt={curatedPhotos[lightboxIdx].label}
+                  className="w-full max-h-[80vh] object-contain"
+                />
+                <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                  <p className="text-white text-sm font-semibold">{curatedPhotos[lightboxIdx].label}</p>
+                  <p className="text-white/60 text-xs">{resolveType(selectedPlace.types)} · Foto {lightboxIdx + 1} de {curatedPhotos.length}</p>
+                </div>
+                {lightboxIdx > 0 && (
+                  <button onClick={() => setLightboxIdx(i => i !== null ? i - 1 : null)} className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70">
+                    <ChevronLeft className="h-5 w-5" />
+                  </button>
+                )}
+                {lightboxIdx < curatedPhotos.length - 1 && (
+                  <button onClick={() => setLightboxIdx(i => i !== null ? i + 1 : null)} className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70">
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
 
-  /* ═══ Render: Search View ═══ */
+  /* ═══════════════════════════════════════════════════════ */
+  /* ═══ STEP 1: Search View ═══ */
+  /* ═══════════════════════════════════════════════════════ */
   return (
-    <div ref={containerRef} className={cn("border border-border rounded-xl bg-card overflow-hidden", className)}>
+    <div className={cn("border border-border rounded-2xl bg-card overflow-hidden shadow-lg", className)}>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Search className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-foreground">Buscar no Google Places</span>
+      <div className="px-5 py-3.5 border-b border-border bg-gradient-to-r from-primary/5 to-transparent flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Search className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <span className="text-sm font-bold text-foreground block">Buscar no Google Places</span>
+            <span className="text-[10px] text-muted-foreground">Hotéis, atrações, restaurantes</span>
+          </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={onCancel} className="h-7 px-2">
-          <X className="h-3 w-3" />
+        <Button variant="ghost" size="icon" onClick={onCancel} className="h-7 w-7">
+          <X className="h-3.5 w-3.5" />
         </Button>
       </div>
 
       {/* Search Input */}
-      <div className="p-3">
+      <div className="p-4">
         <div className="relative">
           <Input
             value={query}
             onChange={(e) => handleInput(e.target.value)}
-            placeholder="Buscar hotel, atração ou restaurante..."
-            className="pr-8"
+            placeholder="Buscar hotel, lugar ou atração..."
+            className="pr-8 h-11 text-sm"
             autoFocus
           />
-          <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
             ) : (
-              <Search className="h-4 w-4 text-muted-foreground/50" />
+              <Search className="h-4 w-4 text-muted-foreground/40" />
             )}
           </div>
         </div>
         {destinationContext && (
-          <p className="text-[10px] text-muted-foreground mt-1.5 flex items-center gap-1">
+          <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
             <MapPin className="h-2.5 w-2.5" /> Prioridade: {destinationContext}
           </p>
         )}
       </div>
 
-      {/* Error */}
       {error && (
-        <div className="px-3 pb-3">
+        <div className="px-4 pb-3">
           <p className="text-xs text-destructive bg-destructive/10 rounded-lg px-3 py-2">{error}</p>
         </div>
       )}
 
-      {/* Loading details */}
       {loadingDetails && (
-        <div className="px-3 pb-4 flex items-center justify-center gap-2 py-8">
-          <Loader2 className="h-5 w-5 animate-spin text-primary" />
-          <span className="text-sm text-muted-foreground">Importando dados do local...</span>
+        <div className="flex flex-col items-center justify-center py-12 gap-3">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Importando dados e fotos...</span>
+          <span className="text-[10px] text-muted-foreground/60">Isso pode levar alguns segundos</span>
         </div>
       )}
 
-      {/* Results */}
       {results.length > 0 && !loadingDetails && (
-        <ScrollArea className="max-h-[320px]">
+        <ScrollArea className="max-h-[380px]">
           <div className="px-3 pb-3 space-y-1">
             {results.map((place) => (
               <button
                 key={place.place_id}
                 onClick={() => selectPlace(place.place_id)}
-                className="w-full text-left flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-muted/50 transition-colors border border-transparent hover:border-border/50"
+                className="w-full text-left flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-muted/50 transition-all border border-transparent hover:border-border/50 hover:shadow-sm"
               >
-                {/* Thumbnail */}
                 {place.photo_reference ? (
-                  <div className="w-14 h-14 rounded-lg overflow-hidden bg-muted/20 shrink-0">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted/20 shrink-0 shadow-sm">
                     <PlaceThumbnail photoRef={place.photo_reference} alt={place.name} />
                   </div>
                 ) : (
-                  <div className="w-14 h-14 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
+                  <div className="w-16 h-16 rounded-lg bg-muted/30 flex items-center justify-center shrink-0">
                     <MapPin className="h-5 w-5 text-muted-foreground/40" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{place.name}</p>
-                  <p className="text-[11px] text-muted-foreground truncate">{place.address}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {place.rating && renderStars(place.rating)}
+                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">{place.address}</p>
+                  <div className="flex items-center gap-2 mt-1.5">
+                    {place.rating && (
+                      <span className="inline-flex items-center gap-1 text-warning text-xs font-semibold">
+                        <Star className="h-3 w-3 fill-warning" /> {place.rating.toFixed(1)}
+                      </span>
+                    )}
                     {place.user_ratings_total > 0 && (
                       <span className="text-[10px] text-muted-foreground">({place.user_ratings_total})</span>
                     )}
                     <Badge variant="outline" className="text-[9px] h-4 px-1.5">{resolveType(place.types)}</Badge>
                   </div>
                 </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/30 shrink-0 mt-5" />
               </button>
             ))}
           </div>
         </ScrollArea>
       )}
 
-      {/* Empty state */}
       {query.length >= 2 && results.length === 0 && !loading && !loadingDetails && !error && (
-        <div className="px-3 pb-4 text-center py-6">
-          <MapPin className="h-8 w-8 text-muted-foreground/20 mx-auto mb-2" />
+        <div className="px-4 pb-6 text-center py-8">
+          <MapPin className="h-10 w-10 text-muted-foreground/15 mx-auto mb-3" />
           <p className="text-xs text-muted-foreground">Nenhum local encontrado</p>
-          <p className="text-[10px] text-muted-foreground/60 mt-0.5">Tente outro nome ou endereço</p>
+          <p className="text-[10px] text-muted-foreground/50 mt-1">Tente outro nome ou endereço</p>
         </div>
       )}
     </div>
   );
 }
 
-/* ═══ Photo Thumbnail (lazy-loaded via edge function) ═══ */
+/* ═══ Thumbnail subcomponent ═══ */
 function PlaceThumbnail({ photoRef, alt }: { photoRef: string; alt: string }) {
   const [url, setUrl] = useState<string | null>(null);
-
   useEffect(() => {
     let cancelled = false;
     supabase.functions.invoke("places-search", {
@@ -476,7 +714,6 @@ function PlaceThumbnail({ photoRef, alt }: { photoRef: string; alt: string }) {
     });
     return () => { cancelled = true; };
   }, [photoRef]);
-
   if (!url) return <div className="w-full h-full bg-muted/30 animate-pulse" />;
   return <img src={url} alt={alt} className="w-full h-full object-cover" />;
 }
