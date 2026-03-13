@@ -272,7 +272,7 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-foreground">Participantes</h3>
-              <button onClick={() => setAddMemberOpen(true)} className="flex items-center gap-1 text-xs text-accent font-semibold hover:underline">
+              <button onClick={() => setAddMemberOpen(true)} className="flex items-center gap-1.5 text-xs text-accent-foreground font-bold bg-gradient-to-r from-accent to-accent/80 px-3 py-1.5 rounded-lg shadow-sm hover:shadow-[0_0_12px_-3px_hsl(var(--accent)/0.4)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-200">
                 <UserPlus className="h-3.5 w-3.5" /> Adicionar
               </button>
             </div>
