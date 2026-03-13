@@ -98,7 +98,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link to="/portal" className="flex items-center gap-3">
-              <img src={logoNatleva} alt="NatLeva" className="h-8" />
+              <img src={logoNatleva} alt="NatLeva" className="h-8 dark:brightness-[1.8]" />
               <span className="hidden sm:inline text-sm font-semibold text-foreground">Minhas Viagens</span>
             </Link>
 
@@ -208,7 +208,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <img src={logoNatleva} alt="NatLeva" className="h-5 opacity-40" />
+              <img src={logoNatleva} alt="NatLeva" className="h-5 opacity-40 dark:brightness-[1.8]" />
               <span className="text-xs text-muted-foreground">© {new Date().getFullYear()} NatLeva Viagens</span>
             </div>
             <a
