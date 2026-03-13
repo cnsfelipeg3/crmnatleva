@@ -152,16 +152,51 @@ export default function PlacesSearchCard({
     setLoading(true);
     setError(null);
 
+    // Primary: use places-search edge function (server-side Google API key)
     try {
-      const data = await searchPlaces(destinationContext ? `${q} ${destinationContext}` : q);
-      setResults(data);
+      const { data, error: fnError } = await supabase.functions.invoke("places-search", {
+        body: {
+          action: "search",
+          query: destinationContext ? `${q} ${destinationContext}` : q,
+        },
+      });
+
+      if (fnError) throw fnError;
+      if (data?.error) throw new Error(data.error);
+
+      const mapped: PlaceResult[] = (data?.results || []).map((item: any) => ({
+        place_id: item.place_id,
+        name: item.name,
+        address: item.address || "",
+        rating: item.rating ?? null,
+        user_ratings_total: item.user_ratings_total || 0,
+        types: item.types || [],
+        photo_reference: item.photo_reference || null,
+        location: item.location || null,
+        price_level: item.price_level ?? null,
+      }));
+
+      setResults(mapped);
+      if (mapped.length === 0) setError("Nenhum local encontrado");
       setLoading(false);
       return;
     } catch (err) {
-      console.error("Places search error:", err);
+      console.error("places-search edge function error:", err);
     }
 
-    // Fallback: hotel-search (texto livre + coordenadas básicas)
+    // Fallback: client-side Google Maps JS SDK
+    try {
+      const data = await searchPlaces(destinationContext ? `${q} ${destinationContext}` : q);
+      if (data.length > 0) {
+        setResults(data);
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.error("Client-side Places search error:", err);
+    }
+
+    // Last resort: hotel-search (Nominatim)
     try {
       const { data, error: fnError } = await supabase.functions.invoke("hotel-search", {
         body: { query: q },
@@ -187,8 +222,7 @@ export default function PlacesSearchCard({
       setError(fallbackResults.length === 0 ? "Nenhum hotel encontrado" : null);
     } catch (fallbackErr) {
       console.error("Fallback hotel-search error:", fallbackErr);
-      const message = fallbackErr instanceof Error ? fallbackErr.message : "Não foi possível buscar locais";
-      setError(message);
+      setError("Não foi possível buscar locais. Tente novamente.");
       setResults([]);
     } finally {
       setLoading(false);
