@@ -349,6 +349,32 @@ function OperacaoInboxInner() {
   const clearedAtRef = useRef<number | null>(null);
   const profilePicsRef = useRef<Map<string, string>>(new Map());
   const [profilePicsVersion, setProfilePicsVersion] = useState(0);
+  const profilePicsSaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const profilePicsCacheLoaded = useRef(false);
+
+  // Load profile pics cache from localStorage on mount
+  useEffect(() => {
+    if (profilePicsCacheLoaded.current) return;
+    profilePicsCacheLoaded.current = true;
+    try {
+      const cached = localStorage.getItem("natleva_profile_pics");
+      if (cached) {
+        const parsed = JSON.parse(cached) as [string, string][];
+        for (const [k, v] of parsed) profilePicsRef.current.set(k, v);
+        if (parsed.length > 0) setProfilePicsVersion(v => v + 1);
+      }
+    } catch {}
+  }, []);
+
+  const saveProfilePicsCache = useCallback(() => {
+    clearTimeout(profilePicsSaveTimer.current);
+    profilePicsSaveTimer.current = setTimeout(() => {
+      try {
+        const entries = Array.from(profilePicsRef.current.entries()).slice(-100);
+        localStorage.setItem("natleva_profile_pics", JSON.stringify(entries));
+      } catch {}
+    }, 2000);
+  }, []);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showMediaMenu, setShowMediaMenu] = useState(false);
@@ -856,6 +882,8 @@ function OperacaoInboxInner() {
             profilePicsRef.current.set(convId, chatPhoto);
           }
         }
+        // Save any inline chat photos to cache
+        if (newConvs.length > 0) saveProfilePicsCache();
         // Backfill empty previews from zapi_messages
         for (const conv of newConvs) {
           if (!conv.last_message_preview && conv.phone) {
@@ -901,17 +929,23 @@ function OperacaoInboxInner() {
             });
           });
           for (const conv of dedupedConvs) persistConversation(conv).catch(() => {});
-          // Fetch profile pictures
-          for (const conv of dedupedConvs.slice(0, 30)) {
-            if (!profilePicsRef.current.has(conv.id)) {
-              callZapiProxy("get-profile-picture", { phone: conv.phone }).then(data => {
-                const picUrl = data?.link || data?.profilePictureUrl || "";
-                if (picUrl && typeof picUrl === "string" && picUrl.startsWith("http")) {
-                  profilePicsRef.current.set(conv.id, picUrl);
-                  setProfilePicsVersion(v => v + 1);
-                }
-              }).catch(() => {});
+          // Fetch profile pictures in parallel batches
+          const needsPic = dedupedConvs.filter(c => !profilePicsRef.current.has(c.id)).slice(0, 20);
+          if (needsPic.length > 0) {
+            const BATCH = 5;
+            for (let i = 0; i < needsPic.length; i += BATCH) {
+              const batch = needsPic.slice(i, i + BATCH);
+              await Promise.allSettled(batch.map(conv =>
+                callZapiProxy("get-profile-picture", { phone: conv.phone }).then(data => {
+                  const picUrl = data?.link || data?.profilePictureUrl || "";
+                  if (picUrl && typeof picUrl === "string" && picUrl.startsWith("http")) {
+                    profilePicsRef.current.set(conv.id, picUrl);
+                  }
+                }).catch(() => {})
+              ));
             }
+            setProfilePicsVersion(v => v + 1);
+            saveProfilePicsCache();
           }
         }
         chatsLoadedRef.current = true;
@@ -1518,10 +1552,19 @@ function OperacaoInboxInner() {
                   );
                 })}
                 {filteredConversations.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                    <MessageSquare className="h-10 w-10 text-muted-foreground/20 mb-3" />
-                    <p className="text-sm text-muted-foreground">{searchQuery ? "Nenhuma conversa encontrada" : "Nenhuma conversa ainda"}</p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">{searchQuery ? "Tente buscar por outro termo" : "As mensagens recebidas aparecerão aqui"}</p>
+                  <div className="flex flex-col items-center justify-center min-h-[300px] h-full text-center px-4">
+                    {!chatsLoadedRef.current ? (
+                      <>
+                        <Loader2 className="h-8 w-8 text-muted-foreground/30 mb-3 animate-spin" />
+                        <p className="text-sm text-muted-foreground">Carregando conversas...</p>
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquare className="h-10 w-10 text-muted-foreground/20 mb-3" />
+                        <p className="text-sm text-muted-foreground">{searchQuery ? "Nenhuma conversa encontrada" : "Nenhuma conversa ainda"}</p>
+                        <p className="text-xs text-muted-foreground/60 mt-1">{searchQuery ? "Tente buscar por outro termo" : "As mensagens recebidas aparecerão aqui"}</p>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
