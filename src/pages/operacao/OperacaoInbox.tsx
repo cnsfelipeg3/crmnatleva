@@ -876,13 +876,13 @@ function OperacaoInboxInner() {
         } catch (err) { console.error("Error sending via official API:", err); }
       }
 
-      const { data } = await supabase.from("messages").select("*").eq("conversation_id", selectedId).order("created_at");
+      const { data } = await supabase.from("chat_messages").select("*").eq("conversation_id", selectedId).order("created_at");
       if (data) {
         setMessages(prev => ({ ...prev, [selectedId]: data.map(m => ({
           id: m.id, conversation_id: m.conversation_id,
           sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
           message_type: m.message_type as MsgType,
-          text: m.text || "", status: m.status as MsgStatus, created_at: m.created_at,
+          text: m.content || "", status: (m.read_status || "sent") as MsgStatus, created_at: m.created_at,
         })) }));
       }
     }
