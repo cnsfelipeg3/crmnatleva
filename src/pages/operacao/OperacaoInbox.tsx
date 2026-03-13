@@ -1314,14 +1314,14 @@ export default function OperacaoInbox() {
                         <img src={profilePicsRef.current.get(selected.id)} alt="" className="h-8 w-8 md:h-9 md:w-9 rounded-full object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
                       ) : null}
                       <div className={`h-8 w-8 md:h-9 md:w-9 rounded-full bg-secondary flex items-center justify-center text-xs md:text-sm font-bold shrink-0 ${profilePicsRef.current.get(selected.id) ? 'hidden' : ''}`}>
-                        {selected.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                        {(selected.contact_name || "Sem nome").split(" ").map(w => w[0]).join("").slice(0, 2)}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-bold truncate">{/^\d{10,}$/.test(selected.contact_name) ? formatPhoneDisplay(selected.contact_name) : selected.contact_name}</span>
+                          <span className="text-sm font-bold truncate">{/^\d{10,}$/.test(selected.contact_name || "") ? formatPhoneDisplay(selected.contact_name || "") : (selected.contact_name || "Sem nome")}</span>
                           {selected.is_vip && <Badge className="bg-amber-500/10 text-amber-500 text-[8px] px-1.5 py-0 shrink-0">VIP</Badge>}
                         </div>
-                        <p className="text-[10px] text-muted-foreground truncate">{formatPhoneDisplay(selected.phone)}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{formatPhoneDisplay(selected.phone || "")}</p>
                       </div>
                     </div>
                   </div>
