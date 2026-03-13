@@ -86,7 +86,7 @@ function TripStatsBar({ segments, hotels, services, passengers, days }: {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.15 }}
-      className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 py-4"
+      className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-3 py-3 sm:py-4"
     >
       {stats.map((s, i) => (
         <motion.div
@@ -94,12 +94,12 @@ function TripStatsBar({ segments, hotels, services, passengers, days }: {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 + i * 0.05 }}
-          className="relative flex flex-col items-center gap-1.5 py-4 rounded-2xl bg-card/60 border border-border/30 backdrop-blur-sm overflow-hidden group hover:border-accent/20 transition-all"
+          className="relative flex flex-col items-center gap-1 sm:gap-1.5 py-2.5 sm:py-4 rounded-xl sm:rounded-2xl bg-card/60 border border-border/30 backdrop-blur-sm overflow-hidden group hover:border-accent/20 transition-all"
         >
           <div className="absolute inset-0 bg-gradient-to-b from-accent/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <s.icon className="h-5 w-5 text-accent/70" />
-          <p className="text-2xl font-black text-foreground tabular-nums">{s.value}</p>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-medium">{s.label}</p>
+          <s.icon className="h-4 w-4 sm:h-5 sm:w-5 text-accent/70" />
+          <p className="text-lg sm:text-2xl font-black text-foreground tabular-nums">{s.value}</p>
+          <p className="text-[8px] sm:text-[10px] text-muted-foreground uppercase tracking-[0.1em] sm:tracking-[0.15em] font-medium">{s.label}</p>
         </motion.div>
       ))}
     </motion.div>
