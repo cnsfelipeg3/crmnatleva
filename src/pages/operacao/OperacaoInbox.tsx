@@ -476,14 +476,14 @@ function OperacaoInboxInner() {
         }
       });
     } else if (selectedId.length > 10) {
-      supabase.from("messages").select("*").eq("conversation_id", selectedId).order("created_at").then(({ data }) => {
+      supabase.from("chat_messages").select("*").eq("conversation_id", selectedId).order("created_at").then(({ data }) => {
         if (data && data.length > 0) {
           const dbMsgs: Message[] = data.map(m => ({
             id: m.id, conversation_id: m.conversation_id,
             sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
             message_type: m.message_type as MsgType,
-            text: m.text || "", media_url: m.media_url || undefined,
-            status: m.status as MsgStatus, created_at: m.created_at,
+            text: m.content || "", media_url: m.media_url || undefined,
+            status: (m.read_status || "sent") as MsgStatus, created_at: m.created_at,
           }));
           setMessages(prev => ({ ...prev, [selectedId]: dbMsgs }));
         }
