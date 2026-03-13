@@ -770,66 +770,93 @@ function OverviewSection({ categories, categorySpending, totalBudget, totalSpent
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.15 }}
-        className="rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm p-6"
+        className="rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm p-4 sm:p-6"
       >
         <div className="flex items-center gap-2 mb-5">
           <BarChart3 className="h-4 w-4 text-accent" />
           <span className="text-sm font-bold text-foreground">Gastos por Categoria</span>
+          {totalSpent > 0 && (
+            <span className="text-[10px] text-muted-foreground/40 ml-auto tabular-nums">{fmt(totalSpent)} total</span>
+          )}
         </div>
         {categories.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Registre gastos para ver a distribuição</p>
         ) : (
-          <div className="space-y-4">
-            {categories.map((cat: any, i: number) => {
-              const spent = categorySpending[cat.id] || 0;
-              const planned = cat.planned_amount || 0;
-              const catPct = planned > 0 ? pct(spent, planned) : (totalSpent > 0 ? pct(spent, totalSpent) : 0);
-              const IconComp = CATEGORY_ICONS[cat.icon] || Package;
-              if (spent === 0 && planned === 0) return null;
-              return (
-                <motion.div
-                  key={cat.id}
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="group"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="h-9 w-9 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ backgroundColor: cat.color + "15" }}>
-                      <IconComp className="h-4 w-4" style={{ color: cat.color }} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-foreground">{cat.name}</span>
-                        <div className="flex items-baseline gap-1.5">
-                          <span className="text-sm font-black tabular-nums text-foreground">{fmt(spent)}</span>
-                          {planned > 0 && <span className="text-[10px] text-muted-foreground/50">/ {fmt(planned)}</span>}
+          <div className="space-y-3">
+            {categories
+              .map((cat: any) => ({ ...cat, spent: categorySpending[cat.id] || 0 }))
+              .sort((a: any, b: any) => b.spent - a.spent)
+              .map((cat: any, i: number) => {
+                const spent = cat.spent;
+                const planned = cat.planned_amount || 0;
+                const catPct = planned > 0
+                  ? pct(spent, planned)
+                  : totalSpent > 0
+                    ? pct(spent, totalSpent)
+                    : 0;
+                const shareOfTotal = totalSpent > 0 ? pct(spent, totalSpent) : 0;
+                const IconComp = CATEGORY_ICONS[cat.icon] || Package;
+
+                return (
+                  <motion.div
+                    key={cat.id}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="group"
+                  >
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <div
+                        className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
+                        style={{ backgroundColor: (spent > 0 ? cat.color : "hsl(var(--muted))") + "15" }}
+                      >
+                        <IconComp className="h-4 w-4" style={{ color: spent > 0 ? cat.color : "hsl(var(--muted-foreground))" }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-bold text-foreground truncate">{cat.name}</span>
+                          <div className="flex items-baseline gap-1.5 shrink-0">
+                            <span className={`text-sm font-black tabular-nums ${spent > 0 ? "text-foreground" : "text-muted-foreground/30"}`}>
+                              {spent > 0 ? fmt(spent) : "—"}
+                            </span>
+                            {planned > 0 && (
+                              <span className="text-[10px] text-muted-foreground/50">/ {fmt(planned)}</span>
+                            )}
+                          </div>
                         </div>
+                        {spent > 0 && totalSpent > 0 && (
+                          <span className="text-[9px] text-muted-foreground/40 font-medium">{shareOfTotal}% do total</span>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  <div className="ml-12 relative">
-                    <div className="h-2 w-full rounded-full bg-muted/20 overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${Math.min(catPct, 100)}%` }}
-                        transition={{ duration: 1.2, delay: i * 0.05, ease: [0.16, 1, 0.3, 1] }}
-                        className="h-full rounded-full"
-                        style={{
-                          backgroundColor: catPct > 90 ? "hsl(var(--destructive))" : cat.color,
-                          boxShadow: `0 0 8px ${catPct > 90 ? "hsl(var(--destructive) / 0.3)" : cat.color + "40"}`,
-                        }}
-                      />
+                    <div className="ml-12 relative">
+                      <div className="h-2 w-full rounded-full bg-muted/20 overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(catPct, 100)}%` }}
+                          transition={{ duration: 1.2, delay: i * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                          className="h-full rounded-full"
+                          style={{
+                            backgroundColor: spent === 0
+                              ? "transparent"
+                              : catPct > 90
+                                ? "hsl(var(--destructive))"
+                                : cat.color,
+                            boxShadow: spent > 0
+                              ? `0 0 8px ${catPct > 90 ? "hsl(var(--destructive) / 0.3)" : cat.color + "40"}`
+                              : "none",
+                          }}
+                        />
+                      </div>
+                      {planned > 0 && spent > 0 && (
+                        <span className={`text-[9px] font-bold mt-0.5 inline-block ${catPct > 90 ? "text-destructive" : "text-muted-foreground/40"}`}>
+                          {catPct}%
+                        </span>
+                      )}
                     </div>
-                    {planned > 0 && (
-                      <span className={`text-[9px] font-bold mt-0.5 inline-block ${catPct > 90 ? "text-destructive" : "text-muted-foreground/40"}`}>
-                        {catPct}%
-                      </span>
-                    )}
-                  </div>
-                </motion.div>
-              );
-            })}
+                  </motion.div>
+                );
+              })}
           </div>
         )}
       </motion.div>
