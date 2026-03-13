@@ -684,15 +684,22 @@ export default function PortalTripDetail() {
           {/* ── Viajantes ── */}
           {passengers?.length > 0 && (
             <div id="viajantes" data-section className="scroll-mt-28">
-              <SectionHeader id="viajantes-header" icon={Users} title="Viajantes" subtitle="Passageiros desta viagem" count={passengers.length}>
+              <SectionHeader id="viajantes-header" icon={Users} title="Viajantes" subtitle="Passageiros desta viagem — convide-os para acessar o portal" count={passengers.length}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {passengers.map((pax: any, i: number) => (
-                    <PassengerCard key={pax.id || i} pax={pax} index={i} />
+                    <PassengerCard key={pax.id || i} pax={pax} index={i} onInvite={(p) => { setSelectedPassenger(p); setInviteOpen(true); }} />
                   ))}
                 </div>
               </SectionHeader>
             </div>
           )}
+
+          <InviteCompanionDialog
+            open={inviteOpen}
+            onOpenChange={setInviteOpen}
+            passenger={selectedPassenger}
+            saleId={id || ""}
+          />
 
           {/* ── CTA / Suporte ── */}
           <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }} className="mb-8 mt-4">
