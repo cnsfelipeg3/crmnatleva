@@ -123,24 +123,45 @@ export default function ClientDistributionMap() {
 
   // Init Google Map
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (fallbackMode || !containerRef.current) return;
+
     let cancelled = false;
+    let authTimer: number | undefined;
 
-    loadGoogleMapsCore().then(({ Map }) => {
-      if (cancelled || !containerRef.current) return;
-      const map = new Map(containerRef.current, {
-        center: { lat: -14, lng: -51 },
-        zoom: 4,
-        disableDefaultUI: true,
-        zoomControl: false,
-        styles: DARK_STYLE,
-        backgroundColor: "#0e1626",
+    loadGoogleMapsCore()
+      .then(({ Map }) => {
+        if (cancelled || !containerRef.current) return;
+        if (hasGoogleMapsAuthFailure()) throw new Error("Google Maps auth failure");
+
+        const map = new Map(containerRef.current, {
+          center: { lat: -14, lng: -51 },
+          zoom: 4,
+          disableDefaultUI: true,
+          zoomControl: false,
+          styles: DARK_STYLE,
+          backgroundColor: "#0e1626",
+        });
+        mapRef.current = map;
+
+        authTimer = window.setTimeout(() => {
+          const hasDomError = !!containerRef.current?.querySelector(".gm-err-container");
+          if ((hasGoogleMapsAuthFailure() || hasDomError) && !cancelled) {
+            mapRef.current = null;
+            if (containerRef.current) containerRef.current.innerHTML = "";
+            setFallbackMode(true);
+          }
+        }, 1200);
+      })
+      .catch((err) => {
+        console.error("Google map init error:", err);
+        if (!cancelled) setFallbackMode(true);
       });
-      mapRef.current = map;
-    });
 
-    return () => { cancelled = true; };
-  }, []);
+    return () => {
+      cancelled = true;
+      if (authTimer) window.clearTimeout(authTimer);
+    };
+  }, [fallbackMode]);
 
   // Filtered data
   const filtered = useMemo(() => {
