@@ -1156,24 +1156,22 @@ function OperacaoInboxInner() {
   return (
     <div
       ref={livechatContainerRef}
-      className={`flex flex-col overflow-hidden bg-background ${isMobile ? "fixed inset-0 z-50" : "h-[calc(100dvh)] -m-6"}`}
+      className={`flex flex-col overflow-hidden bg-background ${isMobile ? "fixed inset-0 z-50" : "h-[calc(100dvh-3rem)] -m-6"}`}
       style={isMobile ? { height: mobileHeight } : undefined}
     >
-      {/* Mobile header */}
-      {isMobile && !selectedId && (
-        <div className="border-b border-border bg-card/50 backdrop-blur-sm shrink-0 px-4 py-2">
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={toggleSidebar}>
-              <Menu className="h-5 w-5" />
-            </Button>
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <MessageSquare className="h-4 w-4 text-primary" />
-            </div>
-            <h1 className="text-base font-extrabold tracking-tight">Inbox</h1>
-            {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-xs">{totalUnread}</Badge>}
-          </div>
+      {/* ChatLive header */}
+      <div className="border-b border-border bg-card/60 backdrop-blur-sm shrink-0 px-4 py-2 flex items-center gap-2">
+        {isMobile && !selectedId && (
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={toggleSidebar}>
+            <Menu className="h-5 w-5" />
+          </Button>
+        )}
+        <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+          <MessageSquare className="h-3.5 w-3.5 text-primary" />
         </div>
-      )}
+        <h1 className="text-sm font-bold tracking-tight">ChatLive</h1>
+        {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0">{totalUnread}</Badge>}
+      </div>
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
