@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Loader2, Sparkles, Plane, Hotel, DollarSign, User, CloudSun, MapPin, Trash2, FileText, MessageCircle, ExternalLink, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,16 +28,43 @@ type ParsedAction = ActionNav | ActionDoc | ActionContact;
 const ACTION_REGEX = /\[(NAV|DOC|CONTACT_CONSULTANT)(?::([^|\]]+))?(?:\|([^\]]+))?\]/g;
 
 const ROUTE_MAP: Record<string, string> = {
-  itinerario: "/portal",
+  itinerario: "/portal/viagens",
   financeiro: "/portal/financeiro",
-  documentos: "/portal",
+  documentos: "/portal/viagens",
   "nova-cotacao": "/portal/nova-cotacao",
   perfil: "/portal/perfil",
 };
 
 const ROUTE_SECTION_MAP: Record<string, string> = {
+  itinerario: "jornada",
+  financeiro: "financeiro",
   documentos: "documentos",
 };
+
+function scrollToSection(sectionId?: string) {
+  if (!sectionId) {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+
+  let attempts = 0;
+  const maxAttempts = 12;
+
+  const tryScroll = () => {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    attempts += 1;
+    if (attempts < maxAttempts) {
+      window.setTimeout(tryScroll, 120);
+    }
+  };
+
+  tryScroll();
+}
 
 function parseActions(content: string): { cleanContent: string; actions: ParsedAction[] } {
   const actions: ParsedAction[] = [];
@@ -87,7 +114,19 @@ function pickBestTrip(trips: any[]): any | null {
 }
 
 /* ── Action Buttons Component ── */
-function ActionButtons({ actions, saleId, onNavigate }: { actions: ParsedAction[]; saleId?: string | null; onNavigate?: () => void }) {
+function ActionButtons({
+  actions,
+  saleId,
+  onNavigate,
+  resolveSaleId,
+  currentPath,
+}: {
+  actions: ParsedAction[];
+  saleId?: string | null;
+  onNavigate?: () => void;
+  resolveSaleId?: () => Promise<string | null>;
+  currentPath: string;
+}) {
   const navigate = useNavigate();
 
   if (!actions.length) return null;
@@ -96,30 +135,32 @@ function ActionButtons({ actions, saleId, onNavigate }: { actions: ParsedAction[
     <div className="flex flex-wrap gap-1.5 mt-2.5">
       {actions.map((action, i) => {
         if (action.type === "nav") {
-          const section = ROUTE_SECTION_MAP[action.route];
-          let path: string;
-
-          if (action.route === "itinerario" && saleId) {
-            path = `/portal/viagem/${saleId}`;
-          } else if (action.route === "financeiro") {
-            path = saleId ? `/portal/viagem/${saleId}` : "/portal/financeiro";
-          } else {
-            path = ROUTE_MAP[action.route] || "/portal";
-          }
-
-          const sectionTarget = action.route === "financeiro" ? "financeiro" : section;
-
           return (
             <button
               key={i}
               onClick={() => {
-                onNavigate?.();
-                navigate(path);
-                if (sectionTarget) {
-                  setTimeout(() => {
-                    document.getElementById(sectionTarget)?.scrollIntoView({ behavior: "smooth" });
-                  }, 400);
-                }
+                void (async () => {
+                  const resolvedSaleId = saleId || (await resolveSaleId?.()) || null;
+                  const sectionTarget = ROUTE_SECTION_MAP[action.route];
+
+                  let path: string;
+                  if (action.route === "itinerario") {
+                    path = resolvedSaleId ? `/portal/viagem/${resolvedSaleId}` : "/portal/viagens";
+                  } else if (action.route === "financeiro") {
+                    path = resolvedSaleId ? `/portal/viagem/${resolvedSaleId}` : "/portal/financeiro";
+                  } else if (action.route === "documentos") {
+                    path = resolvedSaleId ? `/portal/viagem/${resolvedSaleId}` : "/portal/viagens";
+                  } else {
+                    path = ROUTE_MAP[action.route] || "/portal";
+                  }
+
+                  navigate(path);
+                  if (path === currentPath || path.startsWith("/portal/viagem/")) {
+                    scrollToSection(sectionTarget);
+                  }
+
+                  onNavigate?.();
+                })();
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20 text-[11px] font-semibold transition-all hover:shadow-sm"
             >
@@ -134,12 +175,14 @@ function ActionButtons({ actions, saleId, onNavigate }: { actions: ParsedAction[
             <button
               key={i}
               onClick={() => {
-                onNavigate?.();
-                const path = saleId ? `/portal/viagem/${saleId}` : "/portal";
-                navigate(path);
-                setTimeout(() => {
-                  document.getElementById("documentos")?.scrollIntoView({ behavior: "smooth" });
-                }, 400);
+                void (async () => {
+                  const resolvedSaleId = saleId || (await resolveSaleId?.()) || null;
+                  const path = resolvedSaleId ? `/portal/viagem/${resolvedSaleId}` : "/portal/viagens";
+
+                  navigate(path);
+                  scrollToSection("documentos");
+                  onNavigate?.();
+                })();
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 text-[11px] font-semibold transition-all hover:shadow-sm"
             >
@@ -172,6 +215,7 @@ function ActionButtons({ actions, saleId, onNavigate }: { actions: ParsedAction[
 }
 
 export default function PortalAssistant({ saleId }: PortalAssistantProps) {
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -464,7 +508,12 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
                             )}
                           </div>
                           {!isStreaming && actions.length > 0 && (
-                            <ActionButtons actions={actions} saleId={effectiveSaleId} onNavigate={() => setOpen(false)} />
+                            <ActionButtons
+                              actions={actions}
+                              saleId={effectiveSaleId}
+                              currentPath={location.pathname}
+                              onNavigate={() => setOpen(false)}
+                            />
                           )}
                         </>
                       ) : (
