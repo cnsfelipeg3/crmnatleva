@@ -697,3 +697,86 @@ function maskValue(val: string): string {
   if (!val || val.length < 4) return val ? "•".repeat(val.length) : "";
   return "•".repeat(val.length - 3) + val.slice(-3);
 }
+
+interface OptionPickerProps {
+  label: string;
+  icon?: typeof User;
+  options: string[];
+  value: string;
+  field: keyof ProfileData;
+  editing: boolean;
+  onChange: (field: keyof ProfileData, value: string) => void;
+  wrap?: boolean;
+}
+
+function OptionPicker({ label, icon: Icon, options, value, field, editing, onChange, wrap }: OptionPickerProps) {
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+        {Icon && <Icon className="h-3 w-3" />} {label}
+      </label>
+      <div className={`flex gap-2 ${wrap ? "flex-wrap" : ""}`}>
+        {options.map(opt => (
+          <button
+            key={opt}
+            disabled={!editing}
+            onClick={() => onChange(field, opt)}
+            className={`py-2 px-3 rounded-full text-xs font-medium transition-all ${
+              value === opt
+                ? "bg-accent text-accent-foreground shadow-md"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+            } ${!editing ? "cursor-default" : "cursor-pointer"}`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface MultiOptionPickerProps {
+  label: string;
+  icon?: typeof User;
+  options: string[];
+  value: string; // comma-separated
+  field: keyof ProfileData;
+  editing: boolean;
+  onChange: (field: keyof ProfileData, value: string) => void;
+}
+
+function MultiOptionPicker({ label, icon: Icon, options, value, field, editing, onChange }: MultiOptionPickerProps) {
+  const selected = value ? value.split(",").map(s => s.trim()).filter(Boolean) : [];
+
+  const toggle = (opt: string) => {
+    const next = selected.includes(opt)
+      ? selected.filter(s => s !== opt)
+      : [...selected, opt];
+    onChange(field, next.join(", "));
+  };
+
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+        {Icon && <Icon className="h-3 w-3" />} {label}
+        <span className="text-[10px] text-muted-foreground/60">(múltipla escolha)</span>
+      </label>
+      <div className="flex flex-wrap gap-2">
+        {options.map(opt => (
+          <button
+            key={opt}
+            disabled={!editing}
+            onClick={() => toggle(opt)}
+            className={`py-2 px-3 rounded-full text-xs font-medium transition-all ${
+              selected.includes(opt)
+                ? "bg-accent text-accent-foreground shadow-md"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+            } ${!editing ? "cursor-default" : "cursor-pointer"}`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
