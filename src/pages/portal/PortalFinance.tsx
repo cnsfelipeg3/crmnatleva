@@ -507,21 +507,21 @@ export default function PortalFinance() {
 
           {/* ═══ TABS ═══ */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="bg-card/80 backdrop-blur-sm border border-border/30 p-1.5 rounded-2xl w-full justify-start overflow-x-auto h-auto gap-1">
+            <TabsList className="bg-card/80 backdrop-blur-sm border border-border/30 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl w-full justify-start overflow-x-auto h-auto gap-0.5 sm:gap-1 scrollbar-hide flex-nowrap">
               {[
                 { v: "overview", icon: PieChart, l: "Visão Geral" },
                 { v: "agency", icon: Shield, l: "Agência" },
                 { v: "expenses", icon: Receipt, l: "Gastos" },
-                { v: "cards", icon: CreditCard, l: "Cartões & Cash" },
+                { v: "cards", icon: CreditCard, l: "Cartões" },
                 { v: "split", icon: Users, l: "Rateio" },
                 { v: "history", icon: Calendar, l: "Histórico" },
               ].map(t => (
                 <TabsTrigger
                   key={t.v}
                   value={t.v}
-                  className="rounded-xl text-xs sm:text-sm gap-1.5 py-2.5 px-4 data-[state=active]:bg-accent/10 data-[state=active]:text-accent data-[state=active]:shadow-none transition-all"
+                  className="rounded-lg sm:rounded-xl text-[11px] sm:text-sm gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2.5 sm:px-4 data-[state=active]:bg-accent/10 data-[state=active]:text-accent data-[state=active]:shadow-none transition-all whitespace-nowrap shrink-0"
                 >
-                  <t.icon className="h-3.5 w-3.5" /> {t.l}
+                  <t.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> {t.l}
                 </TabsTrigger>
               ))}
             </TabsList>
