@@ -328,7 +328,7 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
                     }`}
                   >
                     {msg.role === "assistant" ? (
-                      <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:mb-1.5 [&>p:last-child]:mb-0 [&>ul]:my-1 [&>ol]:my-1 [&>table]:text-xs [&>table]:my-2 [&_th]:px-2 [&_th]:py-1 [&_td]:px-2 [&_td]:py-1">
+                      <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:mb-1.5 [&>p:last-child]:mb-0 [&>ul]:my-1 [&>ol]:my-1 [&_strong]:text-foreground [&_strong]:font-bold [&>hr]:my-2 [&>hr]:border-border/40 leading-relaxed">
                         {msg.content ? <ReactMarkdown>{msg.content}</ReactMarkdown> : (
                           <div className="flex items-center gap-2">
                             <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
