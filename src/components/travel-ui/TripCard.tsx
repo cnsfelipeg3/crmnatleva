@@ -53,6 +53,7 @@ export default function TripCard({ trip, onOpen, index = 0 }: TripCardProps) {
         <img
           src={getDestinationImage(sale?.destination_iata || null, trip.cover_image_url, trip.sale_id)}
           alt=""
+          loading="lazy"
           className="w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-110"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent opacity-80" />
