@@ -1124,14 +1124,20 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
                       <button
                         key={opt.type}
                         onClick={handleClick}
-                        className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
+                        className={`w-full text-left px-4 py-3.5 rounded-xl border-2 transition-all duration-200 ${
                           isActive
-                            ? "bg-accent/10 border-accent/30"
-                            : "bg-card border-border/20 hover:border-accent/20"
+                            ? "bg-gradient-to-r from-accent/12 to-accent/5 border-accent/40 shadow-[0_0_14px_-4px_hsl(var(--accent)/0.25)] scale-[1.01]"
+                            : "bg-card/60 backdrop-blur-sm border-border/15 hover:border-accent/25 hover:bg-accent/[0.03] hover:shadow-sm"
                         }`}
                       >
-                        <p className={`text-xs font-bold ${isActive ? "text-accent" : "text-foreground"}`}>{opt.label}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{opt.desc}</p>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isActive ? "border-accent bg-accent" : "border-muted-foreground/30"}`}>
+                            {isActive && <Check className="h-2.5 w-2.5 text-accent-foreground" />}
+                          </div>
+                          <p className={`text-xs font-bold ${isActive ? "text-accent" : "text-foreground"}`}>{opt.label}</p>
+                          {opt.type === suggestion.default && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-accent/15 text-accent ml-auto">Recomendado</span>}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1 ml-6">{opt.desc}</p>
                       </button>
                     );
                   })}
