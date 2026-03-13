@@ -95,3 +95,6 @@ verify_jwt = false
 
 [functions.portal-assistant]
 verify_jwt = false
+
+[functions.invite-trip-companion]
+verify_jwt = false
