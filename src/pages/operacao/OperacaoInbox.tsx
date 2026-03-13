@@ -882,6 +882,8 @@ function OperacaoInboxInner() {
             profilePicsRef.current.set(convId, chatPhoto);
           }
         }
+        // Save any inline chat photos to cache
+        if (newConvs.length > 0) saveProfilePicsCache();
         // Backfill empty previews from zapi_messages
         for (const conv of newConvs) {
           if (!conv.last_message_preview && conv.phone) {
