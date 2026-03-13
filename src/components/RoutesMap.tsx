@@ -258,6 +258,7 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
   // Init Leaflet fallback
   useEffect(() => {
     if (!fallbackMode || !containerRef.current || leafletMapRef.current) return;
+    containerRef.current.innerHTML = "";
 
     const map = L.map(containerRef.current, {
       scrollWheelZoom: true,
