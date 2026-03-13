@@ -86,6 +86,7 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
       .eq("client_id", clientId!)
       .order("created_at", { ascending: false });
     if (!isMock && saleId) query = query.eq("sale_id", saleId);
+    const { data } = await query;
     const g = (data as any[] || []) as Group[];
     setGroups(g);
     if (g.length > 0 && !selectedGroup) setSelectedGroup(g[0]);
