@@ -623,7 +623,7 @@ export default function PortalProfile() {
                         <p className="text-sm font-medium text-foreground">E-mail da conta</p>
                         <p className="text-xs text-muted-foreground">{user?.email}</p>
                       </div>
-                      <Check className="h-4 w-4 text-green-500" />
+                      <Check className="h-4 w-4 text-accent" />
                     </div>
                   </FieldGroup>
                 </div>
