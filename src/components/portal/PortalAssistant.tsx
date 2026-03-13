@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Loader2, Sparkles, Plane, Hotel, DollarSign, User, CloudSun, MapPin, Trash2 } from "lucide-react";
+import { X, Send, Loader2, Sparkles, Plane, Hotel, DollarSign, User, CloudSun, MapPin, Trash2, FileText, MessageCircle, ExternalLink, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
@@ -16,6 +17,41 @@ interface ChatMessage {
 
 interface PortalAssistantProps {
   saleId?: string | null;
+}
+
+/* ── Action tag types ── */
+interface ActionNav { type: "nav"; route: string; label: string }
+interface ActionDoc { type: "doc"; filename: string; label: string }
+interface ActionContact { type: "contact" }
+type ParsedAction = ActionNav | ActionDoc | ActionContact;
+
+const ACTION_REGEX = /\[(NAV|DOC|CONTACT_CONSULTANT)(?::([^|\]]+))?(?:\|([^\]]+))?\]/g;
+
+const ROUTE_MAP: Record<string, string> = {
+  itinerario: "/portal",
+  financeiro: "/portal/financeiro",
+  documentos: "/portal",
+  "nova-cotacao": "/portal/nova-cotacao",
+  perfil: "/portal/perfil",
+};
+
+const ROUTE_SECTION_MAP: Record<string, string> = {
+  documentos: "documentos",
+};
+
+function parseActions(content: string): { cleanContent: string; actions: ParsedAction[] } {
+  const actions: ParsedAction[] = [];
+  const cleanContent = content.replace(ACTION_REGEX, (_, type, param, label) => {
+    if (type === "NAV" && param) {
+      actions.push({ type: "nav", route: param.trim(), label: (label || param).trim() });
+    } else if (type === "DOC" && param) {
+      actions.push({ type: "doc", filename: param.trim(), label: (label || param).trim() });
+    } else if (type === "CONTACT_CONSULTANT") {
+      actions.push({ type: "contact" });
+    }
+    return "";
+  }).trim();
+  return { cleanContent, actions };
 }
 
 const quickActions = [
@@ -37,9 +73,9 @@ function pickBestTrip(trips: any[]): any | null {
     const dep = sale.departure_date ? new Date(`${sale.departure_date}T00:00:00`) : null;
     const ret = sale.return_date ? new Date(`${sale.return_date}T00:00:00`) : null;
 
-    if (dep && dep > today) return { rank: 0, ts: dep.getTime() }; // próxima viagem
-    if (dep && ret && dep <= today && ret >= today) return { rank: 1, ts: dep.getTime() }; // viagem ativa
-    return { rank: 2, ts: -(ret?.getTime() || dep?.getTime() || 0) }; // mais recente finalizada
+    if (dep && dep > today) return { rank: 0, ts: dep.getTime() };
+    if (dep && ret && dep <= today && ret >= today) return { rank: 1, ts: dep.getTime() };
+    return { rank: 2, ts: -(ret?.getTime() || dep?.getTime() || 0) };
   };
 
   return [...trips].sort((a, b) => {
@@ -48,6 +84,83 @@ function pickBestTrip(trips: any[]): any | null {
     if (sa.rank !== sb.rank) return sa.rank - sb.rank;
     return sa.ts - sb.ts;
   })[0] || null;
+}
+
+/* ── Action Buttons Component ── */
+function ActionButtons({ actions, saleId }: { actions: ParsedAction[]; saleId?: string | null }) {
+  const navigate = useNavigate();
+
+  if (!actions.length) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2.5">
+      {actions.map((action, i) => {
+        if (action.type === "nav") {
+          const basePath = ROUTE_MAP[action.route] || "/portal";
+          const section = ROUTE_SECTION_MAP[action.route];
+          const path = action.route === "itinerario" && saleId
+            ? `/portal/viagem/${saleId}`
+            : basePath;
+
+          return (
+            <button
+              key={i}
+              onClick={() => {
+                navigate(path);
+                if (section) {
+                  setTimeout(() => {
+                    document.getElementById(section)?.scrollIntoView({ behavior: "smooth" });
+                  }, 300);
+                }
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20 text-[11px] font-semibold transition-all hover:shadow-sm"
+            >
+              <ChevronRight className="h-3 w-3" />
+              {action.label}
+            </button>
+          );
+        }
+
+        if (action.type === "doc") {
+          return (
+            <button
+              key={i}
+              onClick={() => {
+                const path = saleId ? `/portal/viagem/${saleId}` : "/portal";
+                navigate(path);
+                setTimeout(() => {
+                  document.getElementById("documentos")?.scrollIntoView({ behavior: "smooth" });
+                }, 300);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 text-[11px] font-semibold transition-all hover:shadow-sm"
+            >
+              <FileText className="h-3 w-3" />
+              {action.label}
+            </button>
+          );
+        }
+
+        if (action.type === "contact") {
+          return (
+            <button
+              key={i}
+              onClick={() => {
+                // Open WhatsApp or navigate to consultant contact
+                const whatsappUrl = "https://wa.me/5511999999999?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20com%20minha%20viagem";
+                window.open(whatsappUrl, "_blank");
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[hsl(142,70%,45%)]/10 text-[hsl(142,70%,35%)] hover:bg-[hsl(142,70%,45%)]/20 border border-[hsl(142,70%,45%)]/20 text-[11px] font-semibold transition-all hover:shadow-sm"
+            >
+              <MessageCircle className="h-3 w-3" />
+              Falar com meu consultor
+            </button>
+          );
+        }
+
+        return null;
+      })}
+    </div>
+  );
 }
 
 export default function PortalAssistant({ saleId }: PortalAssistantProps) {
@@ -313,35 +426,46 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
                 </div>
               )}
 
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : ""}`}>
-                  {msg.role === "assistant" && (
-                    <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <Sparkles className="h-4 w-4 text-accent" />
-                    </div>
-                  )}
-                  <div
-                    className={`rounded-2xl px-4 py-3 max-w-[85%] ${
-                      msg.role === "user"
-                        ? "bg-accent text-accent-foreground rounded-tr-sm"
-                        : "bg-muted rounded-tl-sm"
-                    }`}
-                  >
-                    {msg.role === "assistant" ? (
-                      <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:mb-1.5 [&>p:last-child]:mb-0 [&>ul]:my-1 [&>ol]:my-1 [&_strong]:text-foreground [&_strong]:font-bold [&>hr]:my-2 [&>hr]:border-border/40 leading-relaxed">
-                        {msg.content ? <ReactMarkdown>{msg.content}</ReactMarkdown> : (
-                          <div className="flex items-center gap-2">
-                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">Consultando seu itinerário...</span>
-                          </div>
-                        )}
+              {messages.map((msg, i) => {
+                const { cleanContent, actions } = msg.role === "assistant"
+                  ? parseActions(msg.content)
+                  : { cleanContent: msg.content, actions: [] };
+
+                return (
+                  <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : ""}`}>
+                    {msg.role === "assistant" && (
+                      <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
+                        <Sparkles className="h-4 w-4 text-accent" />
                       </div>
-                    ) : (
-                      <p className="text-sm">{msg.content}</p>
                     )}
+                    <div
+                      className={`rounded-2xl px-4 py-3 max-w-[85%] ${
+                        msg.role === "user"
+                          ? "bg-accent text-accent-foreground rounded-tr-sm"
+                          : "bg-muted rounded-tl-sm"
+                      }`}
+                    >
+                      {msg.role === "assistant" ? (
+                        <>
+                          <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:mb-1.5 [&>p:last-child]:mb-0 [&>ul]:my-1 [&>ol]:my-1 [&_strong]:text-foreground [&_strong]:font-bold [&>hr]:my-2 [&>hr]:border-border/40 leading-relaxed">
+                            {cleanContent ? <ReactMarkdown>{cleanContent}</ReactMarkdown> : (
+                              <div className="flex items-center gap-2">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">Consultando seu itinerário...</span>
+                              </div>
+                            )}
+                          </div>
+                          {!isStreaming && actions.length > 0 && (
+                            <ActionButtons actions={actions} saleId={effectiveSaleId} />
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm">{msg.content}</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
               {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
                 <div className="flex gap-2.5">
