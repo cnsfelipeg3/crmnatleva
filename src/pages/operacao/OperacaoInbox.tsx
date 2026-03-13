@@ -1078,6 +1078,8 @@ function OperacaoInboxInner() {
           message_type: m.message_type as MsgType,
           text: m.content || "", status: (m.read_status || "sent") as MsgStatus, created_at: m.created_at,
         })) }));
+        isUserScrolledUpRef.current = false;
+        scrollToBottom();
       }
     }
 
