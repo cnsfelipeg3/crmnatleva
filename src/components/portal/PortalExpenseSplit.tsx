@@ -52,6 +52,9 @@ interface Expense { id: string; group_id: string; description: string; amount: n
 interface Split { id: string; expense_id: string; member_id: string; amount: number; }
 interface Settlement { id: string; group_id: string; from_member_id: string; to_member_id: string; amount: number; currency: string; is_paid: boolean; paid_at: string | null; }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ADMIN_DEMO_CLIENT_ID = "00000000-0000-0000-0000-000000000001";
+
 /* ═══════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════ */
@@ -70,12 +73,17 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
   const [addMemberOpen, setAddMemberOpen] = useState(false);
 
   const clientId = portalAccess?.client_id;
+  const isAdmin = !!portalAccess?.is_admin;
+  const effectiveClientId = useMemo(
+    () => (clientId && UUID_REGEX.test(clientId) ? clientId : ADMIN_DEMO_CLIENT_ID),
+    [clientId],
+  );
 
   // Load groups
   useEffect(() => {
-    if (!clientId || !saleId) return;
+    if (!saleId || (!isAdmin && !clientId)) return;
     loadGroups();
-  }, [clientId, saleId]);
+  }, [clientId, isAdmin, saleId]);
 
   const loadGroups = async () => {
     setLoading(true);
@@ -83,9 +91,11 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
     let query = supabase
       .from("portal_expense_groups" as any)
       .select("*")
-      .eq("client_id", clientId!)
       .order("created_at", { ascending: false });
+
+    if (!isAdmin) query = query.eq("client_id", effectiveClientId);
     if (!isMock && saleId) query = query.eq("sale_id", saleId);
+
     const { data } = await query;
     const g = (data as any[] || []) as Group[];
     setGroups(g);
@@ -228,7 +238,7 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
           open={createGroupOpen}
           onClose={() => setCreateGroupOpen(false)}
           saleId={saleId}
-          clientId={clientId!}
+          clientId={effectiveClientId}
           passengers={passengers}
           onCreated={(g) => { setGroups([g]); setSelectedGroup(g); setCreateGroupOpen(false); }}
         />
@@ -493,7 +503,7 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
         open={createGroupOpen}
         onClose={() => setCreateGroupOpen(false)}
         saleId={saleId}
-        clientId={clientId!}
+        clientId={effectiveClientId}
         passengers={passengers}
         onCreated={(g) => { setGroups(prev => [g, ...prev]); setSelectedGroup(g); setCreateGroupOpen(false); }}
       />
@@ -583,10 +593,14 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
 
   const handleCreate = async () => {
     if (!name.trim()) { toast.error("Informe o nome do grupo"); return; }
-    const allNames = [
-      ...Array.from(selectedPassengers),
-      ...memberNames.filter(n => n.trim()),
-    ];
+
+    const allNames = Array.from(
+      new Set([
+        ...Array.from(selectedPassengers),
+        ...memberNames.map((n) => n.trim()).filter(Boolean),
+      ]),
+    );
+
     if (allNames.length < 2) { toast.error("Adicione pelo menos 2 participantes"); return; }
     setLoading(true);
 
@@ -598,7 +612,12 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
       .from("portal_expense_groups" as any)
       .insert(insertPayload as any)
       .select().single();
-    if (error || !group) { toast.error("Erro ao criar grupo"); setLoading(false); return; }
+
+    if (error || !group) {
+      toast.error(error?.message || "Erro ao criar grupo");
+      setLoading(false);
+      return;
+    }
 
     const membersToInsert = allNames.map((n, i) => ({
       group_id: (group as any).id,
@@ -606,7 +625,17 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
       avatar_color: AVATAR_COLORS[i % AVATAR_COLORS.length],
     }));
 
-    await supabase.from("portal_expense_group_members" as any).insert(membersToInsert as any);
+    const { error: membersError } = await supabase
+      .from("portal_expense_group_members" as any)
+      .insert(membersToInsert as any);
+
+    if (membersError) {
+      await supabase.from("portal_expense_groups" as any).delete().eq("id", (group as any).id);
+      toast.error(membersError.message || "Erro ao adicionar participantes");
+      setLoading(false);
+      return;
+    }
+
     toast.success("Grupo criado com sucesso!");
     setLoading(false);
     setName(""); setMemberNames([""]); setSelectedPassengers(new Set());
