@@ -1586,6 +1586,11 @@ function OperacaoInboxInner() {
                         </div>
                       </Fragment>
                     ))}
+                    {currentMessages.length === 0 && !flowRunning && (
+                      <div className="flex justify-center py-14">
+                        <p className="text-sm text-muted-foreground">Sem mensagens nesta conversa.</p>
+                      </div>
+                    )}
                     {flowRunning && (
                       <div className="flex justify-center">
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2.5 bg-muted/50 border border-border rounded-xl px-4 py-2.5">
