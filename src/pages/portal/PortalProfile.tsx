@@ -87,30 +87,58 @@ export default function PortalProfile() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPass, setChangingPass] = useState(false);
 
+  const isUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+
   // Load profile from clients table
   useEffect(() => {
     if (!portalAccess?.client_id) return;
+
     const load = async () => {
-      const { data } = await supabase
-        .from("clients")
-        .select("*")
-        .eq("id", portalAccess.client_id)
-        .single();
-      if (data) {
-        setProfile(prev => ({
-          ...prev,
-          full_name: data.display_name || "",
-          email: data.email || user?.email || "",
-          phone: data.phone || "",
-          city: data.city || "",
-          state: data.state || "",
-          country: data.country || "Brasil",
-          ...(data.observations ? tryParseExtras(data.observations) : {}),
-        }));
+      try {
+        if (!isUuid(portalAccess.client_id)) {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("full_name, email, avatar_url")
+            .eq("id", user?.id)
+            .maybeSingle();
+
+          if (profileData) {
+            setProfile((prev) => ({
+              ...prev,
+              full_name: profileData.full_name || prev.full_name,
+              email: profileData.email || user?.email || "",
+              avatar_url: profileData.avatar_url || prev.avatar_url,
+            }));
+          }
+          return;
+        }
+
+        const { data } = await supabase
+          .from("clients")
+          .select("*")
+          .eq("id", portalAccess.client_id)
+          .maybeSingle();
+
+        if (data) {
+          setProfile((prev) => ({
+            ...prev,
+            full_name: data.display_name || "",
+            email: data.email || user?.email || "",
+            phone: data.phone || "",
+            city: data.city || "",
+            state: data.state || "",
+            country: data.country || "Brasil",
+            ...(data.observations ? tryParseExtras(data.observations) : {}),
+          }));
+        }
+      } catch (err) {
+        console.error("Erro ao carregar perfil:", err);
       }
     };
-    load();
-  }, [portalAccess?.client_id]);
+
+    void load();
+  }, [portalAccess?.client_id, user?.id, user?.email]);
 
   // Calc completion
   useEffect(() => {
@@ -132,7 +160,11 @@ export default function PortalProfile() {
   }
 
   const handleSave = async () => {
-    if (!portalAccess?.client_id) return;
+    if (!portalAccess?.client_id || !isUuid(portalAccess.client_id)) {
+      toast.error("Perfil sem vínculo de cliente para edição completa");
+      return;
+    }
+
     setSaving(true);
     try {
       const { full_name, email, phone, city, state, country, ...extras } = profile;
@@ -150,8 +182,8 @@ export default function PortalProfile() {
         .eq("id", portalAccess.client_id);
       toast.success("Perfil atualizado com sucesso!");
       setEditing(false);
-    } catch {
-      toast.error("Erro ao salvar perfil");
+    } catch (err: any) {
+      toast.error(err?.message || "Erro ao salvar perfil");
     } finally {
       setSaving(false);
     }
@@ -159,19 +191,57 @@ export default function PortalProfile() {
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !portalAccess?.client_id) return;
+    if (!file || !user?.id) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione uma imagem válida");
+      return;
+    }
+
     setAvatarUploading(true);
     try {
-      const ext = file.name.split(".").pop();
-      const path = `portal-avatars/${portalAccess.client_id}.${ext}`;
-      const { error } = await supabase.storage.from("media").upload(path, file, { upsert: true });
+      const ext = (file.type.split("/")[1] || file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `portal-avatars/${user.id}/${Date.now()}.${ext}`;
+
+      const { error } = await supabase.storage.from("media").upload(path, file, {
+        upsert: false,
+        contentType: file.type,
+        cacheControl: "3600",
+      });
       if (error) throw error;
+
       const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
-      setProfile(prev => ({ ...prev, avatar_url: urlData.publicUrl + "?t=" + Date.now() }));
+      const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      setProfile((prev) => ({ ...prev, avatar_url: avatarUrl }));
+
+      if (portalAccess?.client_id && isUuid(portalAccess.client_id)) {
+        const { full_name, email, phone, city, state, country, ...extras } = {
+          ...profile,
+          avatar_url: avatarUrl,
+        };
+        await supabase
+          .from("clients")
+          .update({
+            display_name: full_name,
+            email,
+            phone,
+            city,
+            state,
+            country,
+            observations: JSON.stringify(extras),
+          })
+          .eq("id", portalAccess.client_id);
+      } else {
+        await supabase.from("profiles").update({ avatar_url: avatarUrl }).eq("id", user.id);
+      }
+
       toast.success("Foto atualizada!");
-    } catch {
-      toast.error("Erro ao enviar foto");
+    } catch (err: any) {
+      console.error("Erro ao enviar foto:", err);
+      toast.error(err?.message || "Erro ao enviar foto");
     } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
       setAvatarUploading(false);
     }
   };
