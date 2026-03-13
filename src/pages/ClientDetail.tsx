@@ -682,12 +682,12 @@ function PrefSelect({ label, value, options, editing, onChange, icon: Icon }: {
 }) {
   return (
     <div>
-      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
-        {Icon && <Icon className="w-3 h-3" />} {label}
+      <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+        {Icon && <Icon className="w-3 h-3 text-accent/60" />} {label}
       </label>
       {editing ? (
         <Select value={value} onValueChange={onChange}>
-          <SelectTrigger className="h-9 text-xs">
+          <SelectTrigger className="h-9 text-xs rounded-xl border-border/30 focus:border-accent/40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -695,43 +695,50 @@ function PrefSelect({ label, value, options, editing, onChange, icon: Icon }: {
           </SelectContent>
         </Select>
       ) : (
-        <Badge variant="secondary" className="text-xs">{value}</Badge>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/30 border border-border/15">
+          <span className="text-sm font-semibold text-foreground">{value}</span>
+        </div>
       )}
     </div>
   );
 }
 
-function ChipList({ label, items, editing, inputValue, onInputChange, onAdd, onRemove, placeholder }: {
+function ChipList({ label, items, editing, inputValue, onInputChange, onAdd, onRemove, placeholder, icon: Icon, color = "accent" }: {
   label: string; items: string[]; editing: boolean;
   inputValue: string; onInputChange: (v: string) => void;
   onAdd: () => void; onRemove: (i: number) => void; placeholder: string;
+  icon?: typeof Plane; color?: string;
 }) {
   return (
-    <div>
-      <label className="text-xs font-medium text-muted-foreground mb-2 block">{label}</label>
-      <div className="flex flex-wrap gap-1.5 mb-2">
+    <div className="rounded-2xl border border-border/30 bg-card p-5">
+      <label className="text-xs font-bold text-foreground mb-3 flex items-center gap-2">
+        {Icon && <Icon className={`w-3.5 h-3.5 text-${color}`} />} {label}
+      </label>
+      <div className="flex flex-wrap gap-1.5 mb-2 min-h-[28px]">
         {items.length === 0 && !editing && (
-          <span className="text-xs text-muted-foreground italic">Nenhum</span>
+          <span className="text-xs text-muted-foreground/50 italic">Nenhum cadastrado</span>
         )}
         {items.map((item, i) => (
-          <Badge key={i} variant="secondary" className="text-[11px] gap-1">
+          <span key={i} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-${color}/10 text-${color} border border-${color}/15`}>
             {item}
             {editing && (
-              <button onClick={() => onRemove(i)} className="ml-0.5 hover:text-destructive">×</button>
+              <button onClick={() => onRemove(i)} className="hover:text-destructive transition-colors">
+                <Plus className="w-3 h-3 rotate-45" />
+              </button>
             )}
-          </Badge>
+          </span>
         ))}
       </div>
       {editing && (
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 mt-2">
           <Input
             value={inputValue}
             onChange={e => onInputChange(e.target.value)}
             placeholder={placeholder}
-            className="h-8 text-xs"
+            className="h-8 text-xs rounded-lg border-border/30 focus:border-accent/40"
             onKeyDown={e => e.key === "Enter" && (e.preventDefault(), onAdd())}
           />
-          <Button size="sm" variant="outline" className="h-8 px-2.5" onClick={onAdd}>
+          <Button size="sm" variant="outline" className="h-8 px-2.5 rounded-lg border-accent/25 text-accent hover:bg-accent/5 hover:border-accent/40 transition-all" onClick={onAdd}>
             <Plus className="w-3.5 h-3.5" />
           </Button>
         </div>
