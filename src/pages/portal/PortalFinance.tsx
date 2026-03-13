@@ -422,6 +422,7 @@ export default function PortalFinance() {
                 { v: "agency", icon: Shield, l: "Agência" },
                 { v: "expenses", icon: Receipt, l: "Gastos" },
                 { v: "cards", icon: CreditCard, l: "Cartões & Cash" },
+                { v: "split", icon: Users, l: "Rateio" },
                 { v: "history", icon: Calendar, l: "Histórico" },
               ].map(t => (
                 <TabsTrigger
