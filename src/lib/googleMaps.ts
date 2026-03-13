@@ -2,18 +2,26 @@ import { Loader } from "@googlemaps/js-api-loader";
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
-let loaderInstance: Loader | null = null;
-let loadPromise: Promise<typeof google> | null = null;
+let loader: Loader | null = null;
 
-export function loadGoogleMaps(): Promise<typeof google> {
-  if (loadPromise) return loadPromise;
+function getLoader(): Loader {
+  if (!loader) {
+    loader = new Loader({
+      apiKey: API_KEY,
+      version: "weekly",
+    });
+  }
+  return loader;
+}
 
-  loaderInstance = new Loader({
-    apiKey: API_KEY,
-    version: "weekly",
-    libraries: ["marker"],
-  });
+export async function loadGoogleMapsCore() {
+  const l = getLoader();
+  const { Map } = await l.importLibrary("maps") as google.maps.MapsLibrary;
+  return { Map };
+}
 
-  loadPromise = loaderInstance.load();
-  return loadPromise;
+export async function loadGoogleMapsMarker() {
+  const l = getLoader();
+  const lib = await l.importLibrary("marker") as google.maps.MarkerLibrary;
+  return lib;
 }
