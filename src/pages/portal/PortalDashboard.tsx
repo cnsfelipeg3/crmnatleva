@@ -278,27 +278,70 @@ export default function PortalDashboard() {
                 )}
               </motion.div>
 
-              {/* Right: 3D Globe */}
+              {/* Right: Destination Showcase */}
               <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1, delay: 0.4 }}
-                className="relative hidden lg:block"
+                initial={{ opacity: 0, scale: 0.85, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 1.2, delay: 0.4, type: "spring", stiffness: 80 }}
+                className="relative hidden lg:flex items-center justify-center"
               >
+                {/* Ambient glow behind card */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="w-[500px] h-[500px] rounded-full bg-accent/5 blur-[100px]" />
+                  <div className="w-[420px] h-[420px] rounded-full bg-accent/8 blur-[120px]" />
                 </div>
-                <Suspense fallback={
-                  <div className="h-[600px] flex items-center justify-center">
-                    <div className="w-10 h-10 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
-                  </div>
-                }>
-                  <GlobeScene
-                    className="h-[600px] w-full"
-                    routes={globeRoutes}
-                    onMarkerClick={(saleId) => navigate(`/portal/viagem/${saleId}`)}
-                  />
-                </Suspense>
+
+                {nextTrip && (
+                  <motion.div
+                    className="relative w-[480px] h-[540px] rounded-[2.5rem] overflow-hidden shadow-2xl shadow-black/40 border border-white/[0.08] group cursor-pointer"
+                    whileHover={{ scale: 1.03, rotateY: -2 }}
+                    transition={{ type: "spring", stiffness: 200 }}
+                    onClick={() => navigate(`/portal/viagem/${nextTrip.sale_id}`)}
+                  >
+                    {/* Destination image */}
+                    <motion.img
+                      src={getDestinationImage(nextTrip.sale?.destination_iata, nextTrip.cover_image_url)}
+                      alt={nextTrip.custom_title || nextTrip.sale?.name || "Destino"}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      initial={{ scale: 1.1 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 20, ease: "linear", repeat: Infinity, repeatType: "reverse" }}
+                    />
+
+                    {/* Gradient overlays */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-accent/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+                    {/* Bottom content */}
+                    <div className="absolute bottom-0 left-0 right-0 p-8">
+                      <div className="flex items-center gap-2 mb-3">
+                        <MapPin className="h-3.5 w-3.5 text-accent" />
+                        <span className="text-accent text-xs font-bold uppercase tracking-[0.2em]">
+                          {nextTrip.sale?.destination_iata || "Destino"}
+                        </span>
+                      </div>
+                      <h3 className="text-2xl font-black text-white leading-tight tracking-tight">
+                        {nextTrip.custom_title || nextTrip.sale?.name || "Sua próxima aventura"}
+                      </h3>
+                      <p className="text-white/40 text-sm mt-2 font-light">
+                        {fmtShort(nextTrip.sale?.departure_date)} · {fmtShort(nextTrip.sale?.return_date)}
+                      </p>
+
+                      {/* Explore hint */}
+                      <div className="flex items-center gap-2 mt-5 text-accent/80 text-xs font-bold uppercase tracking-wider opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Explorar destino
+                        <ArrowRight className="h-3 w-3" />
+                      </div>
+                    </div>
+
+                    {/* Top decorative badge */}
+                    <div className="absolute top-6 right-6">
+                      <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-xl flex items-center justify-center border border-white/10">
+                        <Plane className="h-5 w-5 text-white/80 rotate-45" />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </motion.div>
 
               {/* Mobile: destination image */}
