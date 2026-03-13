@@ -588,9 +588,13 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
     if (allNames.length < 2) { toast.error("Adicione pelo menos 2 participantes"); return; }
     setLoading(true);
 
+    const isMock = saleId?.startsWith("mock-");
+    const insertPayload: Record<string, any> = { client_id: clientId, name: name.trim(), currency };
+    if (!isMock && saleId) insertPayload.sale_id = saleId;
+
     const { data: group, error } = await supabase
       .from("portal_expense_groups" as any)
-      .insert({ sale_id: saleId, client_id: clientId, name: name.trim(), currency } as any)
+      .insert(insertPayload as any)
       .select().single();
     if (error || !group) { toast.error("Erro ao criar grupo"); setLoading(false); return; }
 
