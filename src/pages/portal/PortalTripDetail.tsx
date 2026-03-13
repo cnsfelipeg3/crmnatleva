@@ -6,7 +6,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Compass, MessageCircle, Map as MapIcon, ListOrdered, CalendarDays, Sparkles,
-  CreditCard, Plane, FileText, ChevronRight, Users, Hotel, Ticket,
+  CreditCard, Plane, FileText, ChevronRight, Users, Hotel, Ticket, CircleDollarSign,
   Clock, Download, Share2, Shield, MapPin, ArrowDown, Star,
 } from "lucide-react";
 import {
@@ -517,6 +517,16 @@ export default function PortalTripDetail() {
             <div id="financeiro" data-section className="scroll-mt-28">
               <SectionHeader id="financeiro-header" icon={CreditCard} title="Financeiro" subtitle="Resumo de pagamentos e parcelas">
                 <FinanceSummary receivables={financial.receivables} />
+                <motion.a
+                  href={`/portal/financeiro?sale=${saleId}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-4 flex items-center justify-center gap-2 py-3 rounded-xl border border-accent/20 bg-accent/[0.04] text-accent text-sm font-semibold hover:bg-accent/10 transition-all"
+                >
+                  <CircleDollarSign className="h-4 w-4" />
+                  Abrir Painel Financeiro Completo
+                  <ChevronRight className="h-4 w-4" />
+                </motion.a>
               </SectionHeader>
             </div>
           )}

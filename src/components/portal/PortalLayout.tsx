@@ -3,7 +3,7 @@ import { useNavigate, Link, useLocation, Navigate } from "react-router-dom";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, Menu, X, User, Home, Map, MessageCircle, Bell, Sun, Moon } from "lucide-react";
+import { LogOut, Menu, X, User, Home, Map, MessageCircle, Bell, Sun, Moon, Wallet } from "lucide-react";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
 import PortalNotificationPanel from "@/components/portal/PortalNotificationPanel";
 import PortalAssistant from "@/components/portal/PortalAssistant";
@@ -86,6 +86,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   const navItems = [
     { to: "/portal", icon: Home, label: "Início" },
     { to: "/portal/viagens", icon: Map, label: "Minhas Viagens" },
+    { to: "/portal/financeiro", icon: Wallet, label: "Financeiro" },
   ];
 
   return (
