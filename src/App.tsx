@@ -151,6 +151,7 @@ function AppRoutes() {
           <Route path="/birthdays" element={<Birthdays />} />
           <Route path="/import" element={<ImportData />} />
           <Route path="/pendencias" element={<Pendencias />} />
+          <Route path="/cotacoes" element={<QuoteRequests />} />
           <Route path="/livechat" element={<LiveChat />} />
           <Route path="/livechat/integration" element={<WhatsAppIntegration />} />
           <Route path="/livechat/whatsapp-qr" element={<WhatsAppQRConnect />} />

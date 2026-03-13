@@ -87,6 +87,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
     { to: "/portal", icon: Home, label: "Início" },
     { to: "/portal/viagens", icon: Map, label: "Minhas Viagens" },
     { to: "/portal/financeiro", icon: Wallet, label: "Financeiro" },
+    { to: "/portal/nova-cotacao", icon: PlaneTakeoff, label: "Nova Cotação" },
   ];
 
   return (
