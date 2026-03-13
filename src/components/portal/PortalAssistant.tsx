@@ -508,7 +508,12 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
                             )}
                           </div>
                           {!isStreaming && actions.length > 0 && (
-                            <ActionButtons actions={actions} saleId={effectiveSaleId} onNavigate={() => setOpen(false)} />
+                            <ActionButtons
+                              actions={actions}
+                              saleId={effectiveSaleId}
+                              currentPath={location.pathname}
+                              onNavigate={() => setOpen(false)}
+                            />
                           )}
                         </>
                       ) : (
