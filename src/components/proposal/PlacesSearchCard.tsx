@@ -191,8 +191,10 @@ export default function PlacesSearchCard({
         setCuratedPhotos(photos);
         setLoadingPhotos(false);
       }
-    } catch {
-      setError("Não foi possível carregar detalhes do local");
+    } catch (err) {
+      console.error("Places details error:", err);
+      const message = err instanceof Error ? err.message : "Não foi possível carregar detalhes do local";
+      setError(message);
     } finally {
       setLoadingDetails(false);
     }
