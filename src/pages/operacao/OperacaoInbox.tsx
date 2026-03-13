@@ -692,11 +692,17 @@ function OperacaoInboxInner() {
             const bestTime = incomingTime > existingTime ? u.last_message_at : target.last_message_at;
             const bestPreview = (incomingTime > existingTime && u.last_message_preview) ? u.last_message_preview : (target.last_message_preview || u.last_message_preview);
             const updated = prev.map(c => (c.id === target.id) ? {
-              ...c, id: waKey, phone: cleanPhone || c.phone,
-              last_message_preview: bestPreview, last_message_at: bestTime,
+              ...c,
+              id: waKey,
+              db_id: c.db_id || u.id,
+              phone: cleanPhone || c.phone,
+              last_message_preview: bestPreview,
+              last_message_at: bestTime,
               unread_count: isOpen ? 0 : Math.max(c.unread_count, u.unread_count ?? 0),
-              stage: (u.stage as Stage) || c.stage, tags: u.tags || c.tags,
-              contact_name: c.contact_name || u.contact_name, source: u.source || c.source,
+              stage: (u.stage as Stage) || c.stage,
+              tags: u.tags || c.tags,
+              contact_name: c.contact_name || u.contact_name,
+              source: u.source || c.source,
             } : c).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
             return updated.sort((a, b) => {
               if (a.is_pinned && !b.is_pinned) return -1;
@@ -704,11 +710,21 @@ function OperacaoInboxInner() {
               return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
             });
           }
-          return [{ id: waKey, phone: cleanPhone || u.phone, contact_name: u.contact_name || u.display_name || u.phone || "Sem nome",
-            stage: (u.stage || u.funnel_stage || "novo_lead") as Stage, tags: u.tags || [], source: u.source || "",
-            last_message_at: u.last_message_at || "", last_message_preview: u.last_message_preview || "",
-            unread_count: u.unread_count || 0, is_vip: u.is_vip || false,
-            assigned_to: u.assigned_to || "", score_potential: u.score_potential || 0, score_risk: u.score_risk || 0,
+          return [{
+            id: waKey,
+            db_id: u.id,
+            phone: cleanPhone || u.phone,
+            contact_name: u.contact_name || u.display_name || u.phone || "Sem nome",
+            stage: (u.stage || u.funnel_stage || "novo_lead") as Stage,
+            tags: u.tags || [],
+            source: u.source || "",
+            last_message_at: u.last_message_at || "",
+            last_message_preview: u.last_message_preview || "",
+            unread_count: u.unread_count || 0,
+            is_vip: u.is_vip || false,
+            assigned_to: u.assigned_to || "",
+            score_potential: u.score_potential || 0,
+            score_risk: u.score_risk || 0,
           }, ...prev];
         });
       })
