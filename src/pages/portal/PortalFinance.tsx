@@ -515,6 +515,7 @@ export default function PortalFinance() {
                 { v: "expenses", icon: Receipt, l: "Gastos" },
                 { v: "cards", icon: CreditCard, l: "Cartões" },
                 { v: "split", icon: Users, l: "Rateio" },
+                { v: "cambio", icon: Globe, l: "Câmbio" },
                 { v: "history", icon: Calendar, l: "Histórico" },
               ].map(t => (
                 <TabsTrigger
