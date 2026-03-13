@@ -52,6 +52,9 @@ interface Expense { id: string; group_id: string; description: string; amount: n
 interface Split { id: string; expense_id: string; member_id: string; amount: number; }
 interface Settlement { id: string; group_id: string; from_member_id: string; to_member_id: string; amount: number; currency: string; is_paid: boolean; paid_at: string | null; }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ADMIN_DEMO_CLIENT_ID = "00000000-0000-0000-0000-000000000001";
+
 /* ═══════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════ */
