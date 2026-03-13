@@ -4,10 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import PortalLayout from "@/components/portal/PortalLayout";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   Compass, MessageCircle, Map as MapIcon, ListOrdered, CalendarDays, Sparkles,
   CreditCard, Plane, FileText, ChevronRight, Users, Hotel, Ticket, CircleDollarSign,
-  Clock, Download, Share2, Shield, MapPin, ArrowDown, Star,
+  Clock, Download, Share2, Shield, MapPin, ArrowDown, Star, Mail, UserPlus, Copy, Check, Loader2,
 } from "lucide-react";
 import {
   JourneyHero, getDestinationImage, getTripStatus, getTripDays,
