@@ -211,7 +211,7 @@ export const mockTrips: MockTrip[] = [
     sale_id: "mock-patagonia",
     custom_title: "Patagônia Argentina",
     subtitle: "Aventura & Natureza",
-    cover_image_url: "https://images.unsplash.com/photo-1531761535209-180857e67b1e?w=1200&h=600&fit=crop",
+    cover_image_url: patagoniaImg,
     notes_for_client: "Tiago, aproveite cada segundo dessa aventura na Patagônia! 🏔️❄️\n\nO Perito Moreno é de tirar o fôlego. Não esqueça de levar roupas bem quentes!\n\nEquipe NatLeva",
     sale: {
       id: "mock-patagonia",
