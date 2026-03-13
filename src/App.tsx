@@ -95,6 +95,10 @@ const PortalDashboard = lazy(() => import("@/pages/portal/PortalDashboard"));
 const PortalTripDetail = lazy(() => import("@/pages/portal/PortalTripDetail"));
 const PortalDemoTrip = lazy(() => import("@/pages/portal/PortalDemoTrip"));
 const PortalFinance = lazy(() => import("@/pages/portal/PortalFinance"));
+const PortalNewQuote = lazy(() => import("@/pages/portal/PortalNewQuote"));
+
+// CRM
+const QuoteRequests = lazy(() => import("@/pages/QuoteRequests"));
 
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
