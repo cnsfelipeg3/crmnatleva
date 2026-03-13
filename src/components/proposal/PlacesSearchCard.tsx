@@ -154,8 +154,10 @@ export default function PlacesSearchCard({
     try {
       const data = await searchPlaces(destinationContext ? `${q} ${destinationContext}` : q);
       setResults(data);
-    } catch {
-      setError("Não foi possível buscar locais");
+    } catch (err) {
+      console.error("Places search error:", err);
+      const message = err instanceof Error ? err.message : "Não foi possível buscar locais";
+      setError(message);
       setResults([]);
     } finally {
       setLoading(false);
