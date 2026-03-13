@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import {
   Camera, User, Mail, Phone, MapPin, Calendar, Globe, Shield,
   Edit3, Check, X, Plane, Heart, Star, ChevronRight, Sparkles,
-  CreditCard, FileText, Lock, Eye, EyeOff, Save
+  CreditCard, FileText, Lock, Eye, EyeOff, Save, Hotel, Compass,
+  Utensils, Armchair, Baby, Luggage, Clock, Mountain, Palmtree,
+  Wifi, CircleDollarSign, PlaneTakeoff
 } from "lucide-react";
 
 interface ProfileData {
@@ -27,35 +29,46 @@ interface ProfileData {
   zip_code: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
-  dietary_preferences: string;
+  // Travel preferences (expanded)
   seat_preference: string;
+  dietary_preferences: string;
   frequent_flyer: string;
+  cabin_class: string;
+  hotel_category: string;
+  trip_style: string;
+  travel_pace: string;
+  room_type: string;
+  bed_preference: string;
+  smoking_preference: string;
+  special_assistance: string;
+  preferred_airlines: string;
+  preferred_hotel_chains: string;
+  loyalty_hotel: string;
+  travel_insurance: string;
+  luggage_preference: string;
+  transfer_preference: string;
+  interests: string;
+  travel_companion: string;
+  budget_range: string;
+  travel_notes: string;
   avatar_url: string;
   bio: string;
 }
 
 const defaultProfile: ProfileData = {
-  full_name: "",
-  email: "",
-  phone: "",
-  birth_date: "",
-  cpf: "",
-  rg: "",
-  passport_number: "",
-  passport_expiry: "",
-  nationality: "Brasileira",
-  city: "",
-  state: "",
-  country: "Brasil",
-  address: "",
-  zip_code: "",
-  emergency_contact_name: "",
-  emergency_contact_phone: "",
-  dietary_preferences: "",
-  seat_preference: "",
-  frequent_flyer: "",
-  avatar_url: "",
-  bio: "",
+  full_name: "", email: "", phone: "", birth_date: "",
+  cpf: "", rg: "", passport_number: "", passport_expiry: "",
+  nationality: "Brasileira", city: "", state: "", country: "Brasil",
+  address: "", zip_code: "",
+  emergency_contact_name: "", emergency_contact_phone: "",
+  seat_preference: "", dietary_preferences: "", frequent_flyer: "",
+  cabin_class: "", hotel_category: "", trip_style: "", travel_pace: "",
+  room_type: "", bed_preference: "", smoking_preference: "Não fumante",
+  special_assistance: "", preferred_airlines: "", preferred_hotel_chains: "",
+  loyalty_hotel: "", travel_insurance: "", luggage_preference: "",
+  transfer_preference: "", interests: "", travel_companion: "",
+  budget_range: "", travel_notes: "",
+  avatar_url: "", bio: "",
 };
 
 type TabKey = "pessoal" | "documentos" | "viagem" | "seguranca";
@@ -69,6 +82,19 @@ const tabs: { key: TabKey; label: string; icon: typeof User }[] = [
 
 const seatOptions = ["Janela", "Corredor", "Indiferente"];
 const dietOptions = ["Sem restrição", "Vegetariano", "Vegano", "Sem glúten", "Sem lactose", "Kosher", "Halal"];
+const cabinOptions = ["Econômica", "Premium Economy", "Executiva", "Primeira Classe"];
+const hotelCategoryOptions = ["Econômico", "Conforto", "Superior", "Luxo", "Resort All-Inclusive"];
+const tripStyleOptions = ["Lazer", "Aventura", "Cultural", "Romântico", "Família", "Corporativo", "Lua de mel", "Ecoturismo", "Gastronômico"];
+const travelPaceOptions = ["Relaxado", "Moderado", "Intenso"];
+const roomTypeOptions = ["Standard", "Superior", "Suíte", "Suíte Premium", "Villa/Bangalô"];
+const bedOptions = ["Casal", "Solteiro", "Twin (2 camas)", "Indiferente"];
+const smokingOptions = ["Não fumante", "Fumante"];
+const luggageOptions = ["Somente mão", "1 mala despachada", "2+ malas despachadas", "Flexível"];
+const transferOptions = ["Shuttle/Compartilhado", "Transfer privativo", "Aluguel de carro", "Táxi/Uber", "Indiferente"];
+const companionOptions = ["Solo", "Casal", "Família com crianças", "Família sem crianças", "Grupo de amigos", "Corporativo"];
+const budgetOptions = ["Econômico (até R$3.000)", "Moderado (R$3.000-8.000)", "Conforto (R$8.000-15.000)", "Premium (R$15.000-30.000)", "Luxo (R$30.000+)"];
+const insuranceOptions = ["Sempre contrato", "Apenas internacional", "Apenas quando exigido", "Não costumo contratar"];
+const interestOptions = ["Praias", "Montanhas", "Cidades históricas", "Gastronomia", "Compras", "Vida noturna", "Natureza/Trilhas", "Esportes", "Spa/Bem-estar", "Parques temáticos", "Mergulho/Snorkel", "Fotografia", "Vinícolas", "Arte/Museus"];
 
 export default function PortalProfile() {
   const { user, portalAccess } = usePortalAuth();
