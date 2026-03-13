@@ -343,8 +343,7 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
                       </div>
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="gap-1 text-xs rounded-xl border-accent/20 text-accent hover:bg-accent/10"
+                        className="gap-1.5 text-xs rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold shadow-[0_0_12px_-3px_hsl(var(--accent)/0.35)] hover:shadow-[0_0_20px_-3px_hsl(var(--accent)/0.5)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-200"
                         onClick={() => markSettled(s.from, s.to, s.amount)}
                       >
                         <Check className="h-3 w-3" /> Pago
