@@ -1045,6 +1045,8 @@ function OperacaoInboxInner() {
       };
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), newMsg] }));
       lastMsgIdsRef.current.add(tempId);
+      isUserScrolledUpRef.current = false;
+      scrollToBottom();
       try {
         const sendPayload: any = { phone, message: text };
         if (replyRef?.id && !replyRef.id.startsWith("temp_")) sendPayload.messageId = replyRef.id;
