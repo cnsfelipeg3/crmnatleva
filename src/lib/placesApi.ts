@@ -136,7 +136,6 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResu
           "types",
           "geometry",
           "photos",
-          "editorial_summary",
           "reviews",
         ],
       },
