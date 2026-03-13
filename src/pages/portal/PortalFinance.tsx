@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
@@ -13,6 +13,7 @@ import {
   X, Save, Trash2, Edit2, Zap, Eye, EyeOff, ArrowRight,
   Flame, TrendingDown, Activity, Gauge, DollarSign,
   Plane, Coffee, Heart, Globe, Shield, Star,
+  Camera, ImageIcon,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -1198,7 +1199,7 @@ function HistorySection({ expenses, receivables, categories, cards }: any) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   ADD EXPENSE DIALOG
+   ADD EXPENSE DIALOG (with AI Receipt Scanner)
    ═══════════════════════════════════════════════════════ */
 function AddExpenseDialog({ open, onClose, budgetId, categories, cards, onSaved }: any) {
   const [desc, setDesc] = useState("");
@@ -1209,6 +1210,20 @@ function AddExpenseDialog({ open, onClose, budgetId, categories, cards, onSaved 
   const [cardId, setCardId] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // AI Receipt Scanner state
+  const [scanning, setScanning] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [aiConfidence, setAiConfidence] = useState<number | null>(null);
+  const [aiApplied, setAiApplied] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const resetForm = () => {
+    setDesc(""); setAmount(""); setCatId(""); setNotes(""); setCardId("");
+    setPreviewUrl(null); setAiConfidence(null); setAiApplied(false);
+  };
 
   const handleSave = async () => {
     if (!desc || !amount || !budgetId) return;
@@ -1221,13 +1236,65 @@ function AddExpenseDialog({ open, onClose, budgetId, categories, cards, onSaved 
     setSaving(false);
     if (error) { toast.error("Erro ao salvar gasto"); return; }
     toast.success("Gasto registrado!");
-    setDesc(""); setAmount(""); setCatId(""); setNotes(""); setCardId("");
+    resetForm();
     onClose(); onSaved();
   };
 
+  const processReceipt = async (file: File) => {
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    setScanning(true);
+    setAiApplied(false);
+
+    try {
+      // Convert to base64
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      const base64 = btoa(binary);
+
+      const { data, error } = await supabase.functions.invoke("receipt-extract", {
+        body: { image_base64: base64 },
+      });
+
+      if (error) throw error;
+      if (!data?.success || !data?.data) throw new Error("Extraction failed");
+
+      const extracted = data.data;
+      // Apply extracted data to form
+      if (extracted.description) setDesc(extracted.description);
+      if (extracted.amount) setAmount(String(extracted.amount));
+      if (extracted.date) setDate(extracted.date);
+      if (extracted.payment_method) setPayMethod(extracted.payment_method);
+      if (extracted.notes) setNotes(extracted.notes);
+      if (extracted.confidence) setAiConfidence(extracted.confidence);
+
+      // Match category by icon key
+      if (extracted.category && categories.length > 0) {
+        const match = categories.find((c: any) => c.icon === extracted.category);
+        if (match) setCatId(match.id);
+      }
+
+      setAiApplied(true);
+      toast.success("Dados extraídos com IA! Revise antes de salvar.", { duration: 4000 });
+    } catch (e: any) {
+      console.error("Receipt scan error:", e);
+      toast.error("Não foi possível ler o comprovante. Preencha manualmente.");
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processReceipt(file);
+    e.target.value = "";
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+    <Dialog open={open} onOpenChange={(v) => { if (!v) { resetForm(); onClose(); } }}>
+      <DialogContent className="sm:max-w-md rounded-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <div className="h-8 w-8 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -1236,55 +1303,165 @@ function AddExpenseDialog({ open, onClose, budgetId, categories, cards, onSaved 
             Registrar Gasto
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div>
-            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Descrição *</label>
-            <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ex: Almoço no restaurante" className="rounded-xl" />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Valor (R$) *</label>
-              <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" className="rounded-xl" />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Data</label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-xl" />
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Categoria</label>
-            <Select value={catId} onValueChange={setCatId}>
-              <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>{categories.map((c: any) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}</SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Pagamento</label>
-            <Select value={payMethod} onValueChange={setPayMethod}>
-              <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
-              <SelectContent>{PAYMENT_METHODS.map(p => (<SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>))}</SelectContent>
-            </Select>
-          </div>
-          {(payMethod === "cartao_credito" || payMethod === "cartao_debito") && cards.length > 0 && (
-            <div>
-              <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Cartão</label>
-              <Select value={cardId} onValueChange={setCardId}>
-                <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>{cards.map((c: any) => (<SelectItem key={c.id} value={c.id}>{c.nickname} •{c.last_digits}</SelectItem>))}</SelectContent>
-              </Select>
-            </div>
+
+        {/* AI Receipt Scanner */}
+        <div className="space-y-3">
+          {!previewUrl && !scanning && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="border-2 border-dashed border-accent/30 rounded-2xl p-5 text-center bg-accent/[0.03] hover:bg-accent/[0.06] transition-colors"
+            >
+              <div className="mx-auto w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center mb-3">
+                <Camera className="w-5 h-5 text-accent" />
+              </div>
+              <p className="text-sm font-semibold text-foreground mb-1">Escanear Comprovante</p>
+              <p className="text-xs text-muted-foreground mb-4">Tire uma foto ou envie uma imagem do recibo e a IA preenche tudo automaticamente</p>
+              <div className="flex gap-2 justify-center">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="rounded-xl gap-2 text-xs"
+                >
+                  <Camera className="w-3.5 h-3.5" /> Câmera
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-xl gap-2 text-xs"
+                >
+                  <ImageIcon className="w-3.5 h-3.5" /> Galeria
+                </Button>
+              </div>
+              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileChange} />
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+            </motion.div>
           )}
-          <div>
-            <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Observação</label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Opcional" rows={2} className="rounded-xl" />
-          </div>
+
+          {scanning && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="border border-accent/20 rounded-2xl p-5 text-center bg-accent/[0.03]"
+            >
+              {previewUrl && (
+                <div className="relative mx-auto w-32 h-32 mb-4 rounded-xl overflow-hidden border border-border">
+                  <img src={previewUrl} alt="Receipt" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                      className="w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full"
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="flex items-center justify-center gap-2 text-sm text-accent font-medium">
+                <Sparkles className="w-4 h-4 animate-pulse" />
+                Analisando comprovante com IA...
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Extraindo valores, categoria e data</p>
+            </motion.div>
+          )}
+
+          {previewUrl && !scanning && aiApplied && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center gap-3 p-3 rounded-xl bg-accent/5 border border-accent/20"
+            >
+              <div className="w-12 h-12 rounded-lg overflow-hidden border border-border shrink-0">
+                <img src={previewUrl} alt="Receipt" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 text-xs font-semibold text-accent">
+                  <Sparkles className="w-3 h-3" /> IA preencheu os campos
+                </div>
+                {aiConfidence !== null && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Confiança: {Math.round(aiConfidence * 100)}% — revise e edite se necessário
+                  </p>
+                )}
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => { setPreviewUrl(null); setAiApplied(false); setAiConfidence(null); }}
+                className="shrink-0 text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </motion.div>
+          )}
         </div>
-        <DialogFooter>
-          <DialogClose asChild><Button variant="ghost" className="rounded-xl">Cancelar</Button></DialogClose>
-          <Button onClick={handleSave} disabled={saving || !desc || !amount} className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl shadow-lg shadow-accent/20">
-            {saving ? "Salvando..." : "Salvar Gasto"}
-          </Button>
-        </DialogFooter>
+
+        {/* Divider */}
+        {!scanning && (
+          <>
+            {(previewUrl || !previewUrl) && (
+              <div className="flex items-center gap-3 text-xs text-muted-foreground/60">
+                <div className="flex-1 h-px bg-border" />
+                {!previewUrl ? "ou preencha manualmente" : "edite os campos abaixo"}
+                <div className="flex-1 h-px bg-border" />
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Descrição *</label>
+                <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Ex: Almoço no restaurante" className="rounded-xl" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Valor (R$) *</label>
+                  <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" className="rounded-xl" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Data</label>
+                  <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-xl" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Categoria</label>
+                <Select value={catId} onValueChange={setCatId}>
+                  <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>{categories.map((c: any) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Pagamento</label>
+                <Select value={payMethod} onValueChange={setPayMethod}>
+                  <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>{PAYMENT_METHODS.map(p => (<SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>))}</SelectContent>
+                </Select>
+              </div>
+              {(payMethod === "cartao_credito" || payMethod === "cartao_debito") && cards.length > 0 && (
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Cartão</label>
+                  <Select value={cardId} onValueChange={setCardId}>
+                    <SelectTrigger className="rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>{cards.map((c: any) => (<SelectItem key={c.id} value={c.id}>{c.nickname} •{c.last_digits}</SelectItem>))}</SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div>
+                <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Observação</label>
+                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Opcional" rows={2} className="rounded-xl" />
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild><Button variant="ghost" className="rounded-xl">Cancelar</Button></DialogClose>
+              <Button onClick={handleSave} disabled={saving || !desc || !amount} className="bg-accent hover:bg-accent/90 text-accent-foreground rounded-xl shadow-lg shadow-accent/20">
+                {saving ? "Salvando..." : "Salvar Gasto"}
+              </Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
