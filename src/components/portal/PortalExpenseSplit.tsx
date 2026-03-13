@@ -1152,14 +1152,18 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
                     <div key={m.id} className="flex items-center gap-3">
                       <button
                         onClick={() => toggleSplitMember(m.id)}
-                        className={`flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
-                          splitAmong.has(m.id) ? "bg-accent/10 border-accent/30 text-accent" : "bg-muted/20 border-border/30 text-muted-foreground"
+                        className={`flex items-center gap-2.5 flex-1 px-3.5 py-3 rounded-xl text-xs font-bold border-2 transition-all duration-200 ${
+                          splitAmong.has(m.id)
+                            ? "bg-gradient-to-r from-accent/12 to-accent/5 border-accent/35 text-accent shadow-[0_0_10px_-4px_hsl(var(--accent)/0.2)]"
+                            : "bg-card/50 backdrop-blur-sm border-border/20 text-muted-foreground hover:border-accent/20 hover:bg-accent/[0.03]"
                         }`}
                       >
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-black" style={{ backgroundColor: m.avatar_color }}>{m.name[0]?.toUpperCase()}</div>
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-black shrink-0 transition-all duration-200 ${splitAmong.has(m.id) ? "ring-2 ring-accent/30 ring-offset-1 ring-offset-background" : ""}`} style={{ backgroundColor: m.avatar_color }}>{m.name[0]?.toUpperCase()}</div>
                         {m.name}
-                        {m.id === paidBy && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent/20 ml-1">pagou</span>}
-                        {splitAmong.has(m.id) && <Check className="h-3 w-3 ml-auto" />}
+                        {m.id === paidBy && <span className="text-[9px] px-2 py-0.5 rounded-full bg-accent/20 text-accent font-bold ml-1">pagou</span>}
+                        <div className={`ml-auto w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${splitAmong.has(m.id) ? "border-accent bg-accent" : "border-muted-foreground/25"}`}>
+                          {splitAmong.has(m.id) && <Check className="h-3 w-3 text-accent-foreground" />}
+                        </div>
                       </button>
                       {(splitType === "custom" || splitType === "percentage") && splitAmong.has(m.id) && (
                         <Input
