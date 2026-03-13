@@ -30,25 +30,25 @@ function useIsDark() {
 function NodeIcon({ name, color, size = 18 }: { name: string; color: string; size?: number }) {
   const Icon = (icons as any)[name];
   const isDark = useIsDark();
-  const displayColor = isDark ? color : darkenHex(color, 0.65);
-  if (!Icon) return <Zap size={size} style={{ color: displayColor }} />;
-  return <Icon size={size} style={{ color: displayColor }} />;
+  // In light mode, darken colors significantly so they're visible against light backgrounds
+  const displayColor = isDark ? color : darkenHex(color, 0.55);
+  const iconStyle = { color: displayColor, filter: isDark ? "none" : "saturate(1.3)" };
+  if (!Icon) return <Zap size={size} style={iconStyle} />;
+  return <Icon size={size} style={iconStyle} />;
 }
 
 function NodeIconBox({ color, children }: { color: string; children: React.ReactNode }) {
   const isDark = useIsDark();
-  const bgAlpha = isDark ? "25" : "15";
-  const bgAlpha2 = isDark ? "40" : "25";
-  const borderAlpha = isDark ? "50" : "40";
-  const shadowAlpha = isDark ? "15" : "08";
 
   return (
     <div
       className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-all group-hover:scale-110 group-hover:shadow-md"
       style={{
-        background: `linear-gradient(135deg, ${color}${bgAlpha}, ${color}${bgAlpha2})`,
-        border: `1.5px solid ${color}${borderAlpha}`,
-        boxShadow: `0 2px 8px ${color}${shadowAlpha}`,
+        background: isDark
+          ? `linear-gradient(135deg, ${color}25, ${color}40)`
+          : `linear-gradient(135deg, ${color}20, ${color}30)`,
+        border: `1.5px solid ${isDark ? `${color}50` : `${color}45`}`,
+        boxShadow: isDark ? `0 2px 8px ${color}15` : `0 2px 8px ${color}10`,
       }}
     >
       {children}
