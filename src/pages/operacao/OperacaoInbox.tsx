@@ -703,7 +703,7 @@ export default function OperacaoInbox() {
         const rawMsgs = zapiData || [];
         const newMsgs: Message[] = [];
         for (const m of rawMsgs) {
-          const msgId = (m as any).message_id || m.id;
+          const msgId = (m as any).message_id || (m as any).id;
           if (lastMsgIdsRef.current.has(msgId)) continue;
           lastMsgIdsRef.current.add(msgId);
           const mediaInfo3 = extractMediaFromRawData((m as any).raw_data, (m as any).type || "text");
