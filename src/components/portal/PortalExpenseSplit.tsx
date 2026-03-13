@@ -593,10 +593,14 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
 
   const handleCreate = async () => {
     if (!name.trim()) { toast.error("Informe o nome do grupo"); return; }
-    const allNames = [
-      ...Array.from(selectedPassengers),
-      ...memberNames.filter(n => n.trim()),
-    ];
+
+    const allNames = Array.from(
+      new Set([
+        ...Array.from(selectedPassengers),
+        ...memberNames.map((n) => n.trim()).filter(Boolean),
+      ]),
+    );
+
     if (allNames.length < 2) { toast.error("Adicione pelo menos 2 participantes"); return; }
     setLoading(true);
 
@@ -608,7 +612,12 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
       .from("portal_expense_groups" as any)
       .insert(insertPayload as any)
       .select().single();
-    if (error || !group) { toast.error("Erro ao criar grupo"); setLoading(false); return; }
+
+    if (error || !group) {
+      toast.error(error?.message || "Erro ao criar grupo");
+      setLoading(false);
+      return;
+    }
 
     const membersToInsert = allNames.map((n, i) => ({
       group_id: (group as any).id,
@@ -616,7 +625,17 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
       avatar_color: AVATAR_COLORS[i % AVATAR_COLORS.length],
     }));
 
-    await supabase.from("portal_expense_group_members" as any).insert(membersToInsert as any);
+    const { error: membersError } = await supabase
+      .from("portal_expense_group_members" as any)
+      .insert(membersToInsert as any);
+
+    if (membersError) {
+      await supabase.from("portal_expense_groups" as any).delete().eq("id", (group as any).id);
+      toast.error(membersError.message || "Erro ao adicionar participantes");
+      setLoading(false);
+      return;
+    }
+
     toast.success("Grupo criado com sucesso!");
     setLoading(false);
     setName(""); setMemberNames([""]); setSelectedPassengers(new Set());
