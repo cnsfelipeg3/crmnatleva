@@ -232,15 +232,6 @@ function RouteInfoPanel({
         <MetricCell icon={<Navigation className="h-3.5 w-3.5" />} label="Tipo" value="Aéreo" />
       </div>
 
-      {/* Actions */}
-      <div className="mt-4 flex gap-2">
-        <button onClick={onAnimate}
-          className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/[0.06] px-4 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
-        >
-          <Play className="h-3.5 w-3.5" />
-          Animar trecho
-        </button>
-      </div>
     </>
   );
 
