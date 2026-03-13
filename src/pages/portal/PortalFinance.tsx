@@ -890,29 +890,29 @@ function AgencySection({ receivables, agencyTotal, agencyPaid, balanceVisible }:
   return (
     <>
       {/* Progress ring */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-3xl border border-border/20 bg-card/60 backdrop-blur-sm p-6 sm:p-8">
-        <div className="flex flex-col sm:flex-row items-center gap-6">
-          <CircularGauge percentage={progressPct} size={140} strokeWidth={10} color="accent">
-            <p className="text-2xl font-black tabular-nums text-foreground">{progressPct}%</p>
-            <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/40">quitado</p>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-2xl sm:rounded-3xl border border-border/20 bg-card/60 backdrop-blur-sm p-5 sm:p-8">
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+          <CircularGauge percentage={progressPct} size={100} strokeWidth={8} color="accent">
+            <p className="text-xl font-black tabular-nums text-foreground">{progressPct}%</p>
+            <p className="text-[7px] font-bold uppercase tracking-widest text-muted-foreground/40">quitado</p>
           </CircularGauge>
-          <div className="flex-1 space-y-3 text-center sm:text-left">
-            <h3 className="text-lg font-black text-foreground">Investimento com a NatLeva</h3>
-            <div className="grid grid-cols-3 gap-4">
+          <div className="flex-1 space-y-3 text-center sm:text-left w-full">
+            <h3 className="text-sm sm:text-lg font-black text-foreground">Investimento com a NatLeva</h3>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Total</p>
-                <p className="text-xl font-black tabular-nums">{balanceVisible ? fmt(agencyTotal) : "••••"}</p>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Total</p>
+                <p className="text-sm sm:text-xl font-black tabular-nums truncate">{balanceVisible ? fmt(agencyTotal) : "••••"}</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-accent/50">Pago</p>
-                <p className="text-xl font-black tabular-nums text-accent">{balanceVisible ? fmt(agencyPaid) : "••••"}</p>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-accent/50">Pago</p>
+                <p className="text-sm sm:text-xl font-black tabular-nums text-accent truncate">{balanceVisible ? fmt(agencyPaid) : "••••"}</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-warning/50">Pendente</p>
-                <p className="text-xl font-black tabular-nums text-warning">{balanceVisible ? fmt(agencyTotal - agencyPaid) : "••••"}</p>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-warning/50">Pendente</p>
+                <p className="text-sm sm:text-xl font-black tabular-nums text-warning truncate">{balanceVisible ? fmt(agencyTotal - agencyPaid) : "••••"}</p>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground/50">{paidCount} de {receivables.length} parcelas pagas</p>
+            <p className="text-[11px] text-muted-foreground/50">{paidCount} de {receivables.length} parcelas pagas</p>
           </div>
         </div>
       </motion.div>
