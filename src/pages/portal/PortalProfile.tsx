@@ -582,12 +582,8 @@ export default function PortalProfile() {
                   </FieldGroup>
                 </div>
               )}
-                      editing={editing} onChange={updateField}
-                      placeholder="Ex: Smiles Gold - 123456789"
-                    />
-                  </FieldGroup>
-                </div>
-              )}
+
+
 
               {activeTab === "seguranca" && (
                 <div className="space-y-4">
