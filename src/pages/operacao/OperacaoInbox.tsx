@@ -437,7 +437,22 @@ function OperacaoInboxInner() {
         const previewMap = new Map<string, { text: string; message_type: string; created_at: string }>();
         if (convIdsNeedingPreview.length > 0) {
           for (const convId of convIdsNeedingPreview) {
-            const { data: lastMsg } = await supabase.from("chat_messages").select("content, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+            // Try chat_messages first
+            let { data: lastMsg } = await supabase.from("chat_messages").select("content, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+            // Fallback to messages table
+            if (!lastMsg) {
+              const { data: legacyMsg } = await supabase.from("messages").select("text, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+              if (legacyMsg) lastMsg = { content: (legacyMsg as any).text, message_type: (legacyMsg as any).message_type, created_at: (legacyMsg as any).created_at };
+            }
+            // Fallback to zapi_messages by phone
+            if (!lastMsg) {
+              const convRecord = data.find(c => c.id === convId);
+              const phone = (convRecord?.phone || "").replace(/\D/g, "");
+              if (phone) {
+                const { data: zapiMsg } = await supabase.from("zapi_messages" as any).select("text, type, timestamp").in("phone", [phone, `${phone}@c.us`]).order("timestamp", { ascending: false }).limit(1).maybeSingle();
+                if (zapiMsg) lastMsg = { content: (zapiMsg as any).text || `📎 ${(zapiMsg as any).type}`, message_type: (zapiMsg as any).type || "text", created_at: (zapiMsg as any).timestamp };
+              }
+            }
             if (lastMsg) {
               const previewEntry = { text: lastMsg.content || "", message_type: lastMsg.message_type, created_at: lastMsg.created_at };
               previewMap.set(convId, previewEntry);
