@@ -462,11 +462,41 @@ function OperacaoInboxInner() {
   // Load messages for selected conversation
   useEffect(() => {
     if (!selectedId) return;
-    if (selectedId.startsWith("wa_")) {
-      const phoneCandidates = getZapiPhoneCandidates(selectedId);
-      if (phoneCandidates.length === 0) return;
-      supabase.from("zapi_messages" as any).select("*").in("phone", phoneCandidates).order("timestamp", { ascending: true }).limit(200).then(({ data: zapiData, error: zapiErr }) => {
-        if (zapiErr) { console.error("Error fetching zapi_messages:", zapiErr); return; }
+    let cancelled = false;
+
+    const mapChatMessages = (rows: any[], conversationKey: string): Message[] => (
+      (rows || []).map((m: any) => ({
+        id: m.id,
+        conversation_id: conversationKey,
+        sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
+        message_type: m.message_type as MsgType,
+        text: m.content || "",
+        media_url: m.media_url || undefined,
+        status: (m.read_status || "sent") as MsgStatus,
+        created_at: m.created_at,
+      }))
+    );
+
+    const loadMessages = async () => {
+      if (selectedId.startsWith("wa_")) {
+        const phoneCandidates = getZapiPhoneCandidates(selectedId);
+        if (phoneCandidates.length === 0) {
+          if (!cancelled) setMessages(prev => ({ ...prev, [selectedId]: [] }));
+          return;
+        }
+
+        const { data: zapiData, error: zapiErr } = await supabase
+          .from("zapi_messages" as any)
+          .select("*")
+          .in("phone", phoneCandidates)
+          .order("timestamp", { ascending: true })
+          .limit(200);
+
+        if (zapiErr) {
+          console.error("Error fetching zapi_messages:", zapiErr);
+          return;
+        }
+
         const rawMsgs = zapiData || [];
         const parsed: Message[] = rawMsgs.map((m: any) => {
           const mediaInfo = extractMediaFromRawData(m.raw_data, m.type || "text");
@@ -481,32 +511,91 @@ function OperacaoInboxInner() {
             created_at: m.timestamp || m.created_at,
           };
         });
+
         for (const p of parsed) lastMsgIdsRef.current.add(p.id);
+
         if (parsed.length > 0) {
+          if (cancelled) return;
           setMessages(prev => {
             const existing = prev[selectedId] || [];
             const existingMediaMap = new Map<string, string>();
-            for (const m of existing) { if (m.media_url) existingMediaMap.set(m.id, m.media_url); }
+            for (const m of existing) {
+              if (m.media_url) existingMediaMap.set(m.id, m.media_url);
+            }
             const merged = parsed.map(m => ({ ...m, media_url: m.media_url || existingMediaMap.get(m.id) }));
             return { ...prev, [selectedId]: merged };
           });
+          return;
         }
-      });
-    } else if (selectedId.length > 10) {
-      supabase.from("chat_messages").select("*").eq("conversation_id", selectedId).order("created_at").then(({ data }) => {
-        if (data && data.length > 0) {
-          const dbMsgs: Message[] = data.map(m => ({
-            id: m.id, conversation_id: m.conversation_id,
-            sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
-            message_type: m.message_type as MsgType,
-            text: m.content || "", media_url: m.media_url || undefined,
-            status: (m.read_status || "sent") as MsgStatus, created_at: m.created_at,
-          }));
-          setMessages(prev => ({ ...prev, [selectedId]: dbMsgs }));
+
+        let fallbackConversationId = selected?.db_id || null;
+
+        if (!fallbackConversationId) {
+          const phone = selectedId.replace("wa_", "").trim();
+          const dbPhoneCandidates = Array.from(new Set([phone, `+${phone}`, `${phone}@c.us`, `${phone}@g.us`, `${phone}-group`]));
+
+          const { data: byPhone } = await supabase
+            .from("conversations")
+            .select("id, updated_at")
+            .in("phone", dbPhoneCandidates)
+            .order("updated_at", { ascending: false })
+            .limit(1);
+
+          fallbackConversationId = byPhone?.[0]?.id ?? null;
+
+          if (!fallbackConversationId) {
+            const { data: byExternal } = await supabase
+              .from("conversations")
+              .select("id, updated_at")
+              .eq("external_conversation_id", selectedId)
+              .order("updated_at", { ascending: false })
+              .limit(1);
+
+            fallbackConversationId = byExternal?.[0]?.id ?? null;
+          }
         }
-      });
-    }
-  }, [selectedId, extractMediaFromRawData, getZapiPhoneCandidates]);
+
+        if (!fallbackConversationId) {
+          if (!cancelled) setMessages(prev => ({ ...prev, [selectedId]: [] }));
+          return;
+        }
+
+        const { data: dbData, error: dbErr } = await supabase
+          .from("chat_messages")
+          .select("*")
+          .eq("conversation_id", fallbackConversationId)
+          .order("created_at", { ascending: true })
+          .limit(500);
+
+        if (dbErr) {
+          console.error("Error fetching chat_messages fallback:", dbErr);
+          return;
+        }
+
+        if (cancelled) return;
+
+        const dbMsgs = mapChatMessages(dbData || [], selectedId);
+        for (const m of dbMsgs) lastMsgIdsRef.current.add(m.id);
+        setMessages(prev => ({ ...prev, [selectedId]: dbMsgs }));
+        return;
+      }
+
+      if (selectedId.length > 10) {
+        const { data } = await supabase
+          .from("chat_messages")
+          .select("*")
+          .eq("conversation_id", selectedId)
+          .order("created_at");
+
+        if (!cancelled) {
+          setMessages(prev => ({ ...prev, [selectedId]: mapChatMessages(data || [], selectedId) }));
+        }
+      }
+    };
+
+    loadMessages();
+    return () => { cancelled = true; };
+  }, [selectedId, selected?.db_id, extractMediaFromRawData, getZapiPhoneCandidates]);
 
   // Realtime subscription
   useEffect(() => {
