@@ -10,6 +10,7 @@ import {
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
   GitBranch, Plug, Zap, BookOpen, FileDown, Presentation, RotateCcw,
   Inbox, Bot, Tag, TestTube, ScrollText, PackageOpen, Upload, Database, Globe,
+  PlaneTakeoff,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ const navItems = [
   { to: "/natleva-intelligence", icon: Sparkles, label: "NatLeva Intelligence" },
   { to: "/birthdays", icon: Cake, label: "Aniversariantes" },
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
+  { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações Portal" },
 ];
 
 const financeItems = [

@@ -95,6 +95,10 @@ const PortalDashboard = lazy(() => import("@/pages/portal/PortalDashboard"));
 const PortalTripDetail = lazy(() => import("@/pages/portal/PortalTripDetail"));
 const PortalDemoTrip = lazy(() => import("@/pages/portal/PortalDemoTrip"));
 const PortalFinance = lazy(() => import("@/pages/portal/PortalFinance"));
+const PortalNewQuote = lazy(() => import("@/pages/portal/PortalNewQuote"));
+
+// CRM
+const QuoteRequests = lazy(() => import("@/pages/QuoteRequests"));
 
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
@@ -147,6 +151,7 @@ function AppRoutes() {
           <Route path="/birthdays" element={<Birthdays />} />
           <Route path="/import" element={<ImportData />} />
           <Route path="/pendencias" element={<Pendencias />} />
+          <Route path="/cotacoes" element={<QuoteRequests />} />
           <Route path="/livechat" element={<LiveChat />} />
           <Route path="/livechat/integration" element={<WhatsAppIntegration />} />
           <Route path="/livechat/whatsapp-qr" element={<WhatsAppQRConnect />} />
@@ -233,6 +238,7 @@ function AppRoutes() {
         <Route path="/portal/viagem/:saleId" element={<PortalTripDetail />} />
         <Route path="/portal/modelo" element={<PortalDemoTrip />} />
         <Route path="/portal/financeiro" element={<PortalFinance />} />
+        <Route path="/portal/nova-cotacao" element={<PortalNewQuote />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

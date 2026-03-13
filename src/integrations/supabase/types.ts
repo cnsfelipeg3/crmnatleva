@@ -3209,6 +3209,98 @@ export type Database = {
           },
         ]
       }
+      portal_quote_requests: {
+        Row: {
+          adults: number | null
+          budget_range: string | null
+          cabin_class: string | null
+          children: number | null
+          client_id: string | null
+          created_at: string
+          departure_date: string | null
+          destination_city: string | null
+          destination_iata: string | null
+          flexible_dates: boolean | null
+          hotel_needed: boolean | null
+          hotel_preferences: string | null
+          id: string
+          infants: number | null
+          insurance_needed: boolean | null
+          origin_city: string | null
+          origin_iata: string | null
+          portal_user_id: string
+          return_date: string | null
+          special_requests: string | null
+          status: string
+          transfer_needed: boolean | null
+          traveler_names: Json | null
+          trip_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          adults?: number | null
+          budget_range?: string | null
+          cabin_class?: string | null
+          children?: number | null
+          client_id?: string | null
+          created_at?: string
+          departure_date?: string | null
+          destination_city?: string | null
+          destination_iata?: string | null
+          flexible_dates?: boolean | null
+          hotel_needed?: boolean | null
+          hotel_preferences?: string | null
+          id?: string
+          infants?: number | null
+          insurance_needed?: boolean | null
+          origin_city?: string | null
+          origin_iata?: string | null
+          portal_user_id: string
+          return_date?: string | null
+          special_requests?: string | null
+          status?: string
+          transfer_needed?: boolean | null
+          traveler_names?: Json | null
+          trip_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          adults?: number | null
+          budget_range?: string | null
+          cabin_class?: string | null
+          children?: number | null
+          client_id?: string | null
+          created_at?: string
+          departure_date?: string | null
+          destination_city?: string | null
+          destination_iata?: string | null
+          flexible_dates?: boolean | null
+          hotel_needed?: boolean | null
+          hotel_preferences?: string | null
+          id?: string
+          infants?: number | null
+          insurance_needed?: boolean | null
+          origin_city?: string | null
+          origin_iata?: string | null
+          portal_user_id?: string
+          return_date?: string | null
+          special_requests?: string | null
+          status?: string
+          transfer_needed?: boolean | null
+          traveler_names?: Json | null
+          trip_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_quote_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portal_travel_budgets: {
         Row: {
           client_id: string
