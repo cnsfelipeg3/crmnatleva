@@ -41,6 +41,7 @@ type MsgStatus = "sent" | "delivered" | "read";
 
 interface Conversation {
   id: string;
+  db_id?: string;
   phone: string;
   contact_name: string;
   stage: Stage;
@@ -416,11 +417,19 @@ function OperacaoInboxInner() {
           const preview = c.last_message_preview || (fallback ? (fallback.text || `📎 ${fallback.message_type}`) : "");
           const msgAt = c.last_message_at || (fallback ? fallback.created_at : c.last_message_at);
           return {
-            id: canonicalId, phone: cleanPhone || c.phone || "", contact_name: c.contact_name || c.display_name || c.phone || "Sem nome",
-            stage: (c.stage || c.funnel_stage || "novo_lead") as Stage, tags: c.tags || [], source: c.source || "",
-            last_message_at: msgAt || "", last_message_preview: preview,
-            unread_count: c.unread_count || 0, is_vip: c.is_vip || false,
-            assigned_to: c.assigned_to || "", score_potential: c.score_potential || 0,
+            id: canonicalId,
+            db_id: c.id,
+            phone: cleanPhone || c.phone || "",
+            contact_name: c.contact_name || c.display_name || c.phone || "Sem nome",
+            stage: (c.stage || c.funnel_stage || "novo_lead") as Stage,
+            tags: c.tags || [],
+            source: c.source || "",
+            last_message_at: msgAt || "",
+            last_message_preview: preview,
+            unread_count: c.unread_count || 0,
+            is_vip: c.is_vip || false,
+            assigned_to: c.assigned_to || "",
+            score_potential: c.score_potential || 0,
             score_risk: c.score_risk || 0,
             is_pinned: (c as any).is_pinned || false,
           };
@@ -432,6 +441,7 @@ function OperacaoInboxInner() {
             if (existing) {
               byId.set(dc.id, {
                 ...existing,
+                db_id: dc.db_id || existing.db_id,
                 stage: dc.stage !== "novo_lead" ? dc.stage : existing.stage,
                 tags: dc.tags.length > 0 ? dc.tags : existing.tags,
                 contact_name: dc.contact_name !== "Novo Contato" ? dc.contact_name : existing.contact_name,
@@ -453,11 +463,41 @@ function OperacaoInboxInner() {
   // Load messages for selected conversation
   useEffect(() => {
     if (!selectedId) return;
-    if (selectedId.startsWith("wa_")) {
-      const phoneCandidates = getZapiPhoneCandidates(selectedId);
-      if (phoneCandidates.length === 0) return;
-      supabase.from("zapi_messages" as any).select("*").in("phone", phoneCandidates).order("timestamp", { ascending: true }).limit(200).then(({ data: zapiData, error: zapiErr }) => {
-        if (zapiErr) { console.error("Error fetching zapi_messages:", zapiErr); return; }
+    let cancelled = false;
+
+    const mapChatMessages = (rows: any[], conversationKey: string): Message[] => (
+      (rows || []).map((m: any) => ({
+        id: m.id,
+        conversation_id: conversationKey,
+        sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
+        message_type: m.message_type as MsgType,
+        text: m.content || "",
+        media_url: m.media_url || undefined,
+        status: (m.read_status || "sent") as MsgStatus,
+        created_at: m.created_at,
+      }))
+    );
+
+    const loadMessages = async () => {
+      if (selectedId.startsWith("wa_")) {
+        const phoneCandidates = getZapiPhoneCandidates(selectedId);
+        if (phoneCandidates.length === 0) {
+          if (!cancelled) setMessages(prev => ({ ...prev, [selectedId]: [] }));
+          return;
+        }
+
+        const { data: zapiData, error: zapiErr } = await supabase
+          .from("zapi_messages" as any)
+          .select("*")
+          .in("phone", phoneCandidates)
+          .order("timestamp", { ascending: true })
+          .limit(200);
+
+        if (zapiErr) {
+          console.error("Error fetching zapi_messages:", zapiErr);
+          return;
+        }
+
         const rawMsgs = zapiData || [];
         const parsed: Message[] = rawMsgs.map((m: any) => {
           const mediaInfo = extractMediaFromRawData(m.raw_data, m.type || "text");
@@ -472,32 +512,91 @@ function OperacaoInboxInner() {
             created_at: m.timestamp || m.created_at,
           };
         });
+
         for (const p of parsed) lastMsgIdsRef.current.add(p.id);
+
         if (parsed.length > 0) {
+          if (cancelled) return;
           setMessages(prev => {
             const existing = prev[selectedId] || [];
             const existingMediaMap = new Map<string, string>();
-            for (const m of existing) { if (m.media_url) existingMediaMap.set(m.id, m.media_url); }
+            for (const m of existing) {
+              if (m.media_url) existingMediaMap.set(m.id, m.media_url);
+            }
             const merged = parsed.map(m => ({ ...m, media_url: m.media_url || existingMediaMap.get(m.id) }));
             return { ...prev, [selectedId]: merged };
           });
+          return;
         }
-      });
-    } else if (selectedId.length > 10) {
-      supabase.from("chat_messages").select("*").eq("conversation_id", selectedId).order("created_at").then(({ data }) => {
-        if (data && data.length > 0) {
-          const dbMsgs: Message[] = data.map(m => ({
-            id: m.id, conversation_id: m.conversation_id,
-            sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
-            message_type: m.message_type as MsgType,
-            text: m.content || "", media_url: m.media_url || undefined,
-            status: (m.read_status || "sent") as MsgStatus, created_at: m.created_at,
-          }));
-          setMessages(prev => ({ ...prev, [selectedId]: dbMsgs }));
+
+        let fallbackConversationId = selected?.db_id || null;
+
+        if (!fallbackConversationId) {
+          const phone = selectedId.replace("wa_", "").trim();
+          const dbPhoneCandidates = Array.from(new Set([phone, `+${phone}`, `${phone}@c.us`, `${phone}@g.us`, `${phone}-group`]));
+
+          const { data: byPhone } = await supabase
+            .from("conversations")
+            .select("id, updated_at")
+            .in("phone", dbPhoneCandidates)
+            .order("updated_at", { ascending: false })
+            .limit(1);
+
+          fallbackConversationId = byPhone?.[0]?.id ?? null;
+
+          if (!fallbackConversationId) {
+            const { data: byExternal } = await supabase
+              .from("conversations")
+              .select("id, updated_at")
+              .eq("external_conversation_id", selectedId)
+              .order("updated_at", { ascending: false })
+              .limit(1);
+
+            fallbackConversationId = byExternal?.[0]?.id ?? null;
+          }
         }
-      });
-    }
-  }, [selectedId, extractMediaFromRawData, getZapiPhoneCandidates]);
+
+        if (!fallbackConversationId) {
+          if (!cancelled) setMessages(prev => ({ ...prev, [selectedId]: [] }));
+          return;
+        }
+
+        const { data: dbData, error: dbErr } = await supabase
+          .from("chat_messages")
+          .select("*")
+          .eq("conversation_id", fallbackConversationId)
+          .order("created_at", { ascending: true })
+          .limit(500);
+
+        if (dbErr) {
+          console.error("Error fetching chat_messages fallback:", dbErr);
+          return;
+        }
+
+        if (cancelled) return;
+
+        const dbMsgs = mapChatMessages(dbData || [], selectedId);
+        for (const m of dbMsgs) lastMsgIdsRef.current.add(m.id);
+        setMessages(prev => ({ ...prev, [selectedId]: dbMsgs }));
+        return;
+      }
+
+      if (selectedId.length > 10) {
+        const { data } = await supabase
+          .from("chat_messages")
+          .select("*")
+          .eq("conversation_id", selectedId)
+          .order("created_at");
+
+        if (!cancelled) {
+          setMessages(prev => ({ ...prev, [selectedId]: mapChatMessages(data || [], selectedId) }));
+        }
+      }
+    };
+
+    loadMessages();
+    return () => { cancelled = true; };
+  }, [selectedId, selected?.db_id, extractMediaFromRawData, getZapiPhoneCandidates]);
 
   // Realtime subscription
   useEffect(() => {
@@ -593,11 +692,17 @@ function OperacaoInboxInner() {
             const bestTime = incomingTime > existingTime ? u.last_message_at : target.last_message_at;
             const bestPreview = (incomingTime > existingTime && u.last_message_preview) ? u.last_message_preview : (target.last_message_preview || u.last_message_preview);
             const updated = prev.map(c => (c.id === target.id) ? {
-              ...c, id: waKey, phone: cleanPhone || c.phone,
-              last_message_preview: bestPreview, last_message_at: bestTime,
+              ...c,
+              id: waKey,
+              db_id: c.db_id || u.id,
+              phone: cleanPhone || c.phone,
+              last_message_preview: bestPreview,
+              last_message_at: bestTime,
               unread_count: isOpen ? 0 : Math.max(c.unread_count, u.unread_count ?? 0),
-              stage: (u.stage as Stage) || c.stage, tags: u.tags || c.tags,
-              contact_name: c.contact_name || u.contact_name, source: u.source || c.source,
+              stage: (u.stage as Stage) || c.stage,
+              tags: u.tags || c.tags,
+              contact_name: c.contact_name || u.contact_name,
+              source: u.source || c.source,
             } : c).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
             return updated.sort((a, b) => {
               if (a.is_pinned && !b.is_pinned) return -1;
@@ -605,11 +710,21 @@ function OperacaoInboxInner() {
               return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
             });
           }
-          return [{ id: waKey, phone: cleanPhone || u.phone, contact_name: u.contact_name || u.display_name || u.phone || "Sem nome",
-            stage: (u.stage || u.funnel_stage || "novo_lead") as Stage, tags: u.tags || [], source: u.source || "",
-            last_message_at: u.last_message_at || "", last_message_preview: u.last_message_preview || "",
-            unread_count: u.unread_count || 0, is_vip: u.is_vip || false,
-            assigned_to: u.assigned_to || "", score_potential: u.score_potential || 0, score_risk: u.score_risk || 0,
+          return [{
+            id: waKey,
+            db_id: u.id,
+            phone: cleanPhone || u.phone,
+            contact_name: u.contact_name || u.display_name || u.phone || "Sem nome",
+            stage: (u.stage || u.funnel_stage || "novo_lead") as Stage,
+            tags: u.tags || [],
+            source: u.source || "",
+            last_message_at: u.last_message_at || "",
+            last_message_preview: u.last_message_preview || "",
+            unread_count: u.unread_count || 0,
+            is_vip: u.is_vip || false,
+            assigned_to: u.assigned_to || "",
+            score_potential: u.score_potential || 0,
+            score_risk: u.score_risk || 0,
           }, ...prev];
         });
       })
@@ -673,7 +788,7 @@ function OperacaoInboxInner() {
                 const isOpen = c.id === selectedIdRef.current;
                 const existingTime = new Date(existing.last_message_at).getTime();
                 const freshTime = new Date(c.last_message_at).getTime();
-                return { ...c, contact_name: existing.contact_name || c.contact_name, last_message_at: freshTime > existingTime ? c.last_message_at : existing.last_message_at, last_message_preview: (freshTime > existingTime && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : existing.unread_count, stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned };
+                return { ...c, db_id: existing.db_id || c.db_id, contact_name: existing.contact_name || c.contact_name, last_message_at: freshTime > existingTime ? c.last_message_at : existing.last_message_at, last_message_preview: (freshTime > existingTime && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : existing.unread_count, stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned };
               }
               return c;
             });
@@ -1114,8 +1229,13 @@ function OperacaoInboxInner() {
 
   const handleSelectConversation = (id: string) => {
     setSelectedId(id); setShowAIPanel(false);
+    const target = conversations.find(c => c.id === id);
     setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c));
-    if (id.length > 10) supabase.from("conversations").update({ unread_count: 0 }).eq("id", id).then(() => {});
+    if (target?.db_id) {
+      supabase.from("conversations").update({ unread_count: 0 }).eq("id", target.db_id).then(() => {});
+    } else if (id.length > 10) {
+      supabase.from("conversations").update({ unread_count: 0 }).eq("id", id).then(() => {});
+    }
   };
 
   const handleClearConversations = useCallback(() => {
@@ -1165,14 +1285,14 @@ function OperacaoInboxInner() {
   return (
     <div
       ref={livechatContainerRef}
-      className={`flex flex-col overflow-hidden bg-background ${isMobile ? "fixed inset-0 z-50" : "h-full"}`}
+      className={`flex flex-col overflow-hidden bg-background ${isMobile ? "fixed inset-0 z-50" : "h-full min-h-0"}`}
       style={isMobile ? { height: mobileHeight } : undefined}
     >
       {/* Content */}
-      <div className="flex-1 overflow-hidden">
-        <div className="flex h-full">
+      <div className="flex-1 overflow-hidden min-h-0">
+        <div className="flex h-full min-h-0">
           {/* ─── Column 1: Conversations List ─── */}
-          <div className={`md:w-[340px] w-full border-r border-border flex flex-col bg-card/30 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
+          <div className={`md:w-[340px] w-full border-r border-border flex flex-col min-h-0 bg-card/30 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
             <div className="p-3 space-y-2 shrink-0">
               {/* ChatLive title row */}
               <div className="flex items-center gap-2 pb-1">
@@ -1302,7 +1422,7 @@ function OperacaoInboxInner() {
           </div>
 
           {/* ─── Column 2: Chat ─── */}
-          <div className={`flex-1 flex flex-col min-w-0 relative overflow-hidden ${isMobile && !selectedId ? "hidden" : ""}`}>
+          <div className={`flex-1 flex flex-col min-w-0 min-h-0 relative overflow-hidden ${isMobile && !selectedId ? "hidden" : ""}`}>
             {selected ? (
               <>
                 {/* Chat header */}
@@ -1361,7 +1481,7 @@ function OperacaoInboxInner() {
                 </div>
 
                 {/* Messages */}
-                <ScrollArea className="flex-1 px-4">
+                <ScrollArea className="flex-1 min-h-0 px-4">
                   <div className="py-4 space-y-3">
                     {currentMessages.map((msg, idx) => (
                       <Fragment key={msg.id}>
@@ -1471,6 +1591,11 @@ function OperacaoInboxInner() {
                         </div>
                       </Fragment>
                     ))}
+                    {currentMessages.length === 0 && !flowRunning && (
+                      <div className="flex justify-center py-14">
+                        <p className="text-sm text-muted-foreground">Sem mensagens nesta conversa.</p>
+                      </div>
+                    )}
                     {flowRunning && (
                       <div className="flex justify-center">
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2.5 bg-muted/50 border border-border rounded-xl px-4 py-2.5">
