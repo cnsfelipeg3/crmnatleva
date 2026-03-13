@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin } from "lucide-react";
+import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search } from "lucide-react";
+import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 
 const itemTypeIcons: Record<string, any> = {
   destination: MapPin,
@@ -60,6 +61,7 @@ export default function ProposalEditor() {
 
   const [items, setItems] = useState<any[]>([]);
   const [destInput, setDestInput] = useState("");
+  const [placesSearchIdx, setPlacesSearchIdx] = useState<number | null>(null);
 
   const { data: existing } = useQuery({
     queryKey: ["proposal", id],
@@ -221,6 +223,35 @@ export default function ProposalEditor() {
     setForm((f) => ({ ...f, payment_conditions: f.payment_conditions.filter((_, i) => i !== idx) }));
   };
 
+  const handlePlacesEnrich = (idx: number, data: PlacesEnrichmentData) => {
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== idx) return item;
+        return {
+          ...item,
+          title: data.name,
+          description: data.editorial_summary || item.description || "",
+          image_url: data.photos[data.mainPhotoIndex] || item.image_url || "",
+          data: {
+            ...item.data,
+            place_id: data.place_id,
+            location: data.address,
+            rating: data.rating,
+            user_ratings_total: data.user_ratings_total,
+            website: data.website,
+            phone: data.phone,
+            coords: data.location,
+            types: data.types,
+            photos: data.photos,
+            mainPhotoIndex: data.mainPhotoIndex,
+          },
+        };
+      })
+    );
+    setPlacesSearchIdx(null);
+    toast.success(`"${data.name}" importado com sucesso!`);
+  };
+
   const copyLink = () => {
     const slug = existing?.slug;
     if (slug) {
@@ -362,6 +393,10 @@ export default function ProposalEditor() {
             <div className="space-y-3">
               {items.map((item, idx) => {
                 const Icon = itemTypeIcons[item.item_type] || MapPin;
+                const supportsPlaces = ["hotel", "destination", "experience"].includes(item.item_type);
+                const hasPlaceData = !!item.data?.place_id;
+                const isSearchOpen = placesSearchIdx === idx;
+
                 return (
                   <Card key={idx} className="p-4">
                     <div className="flex items-start gap-3">
@@ -371,74 +406,127 @@ export default function ProposalEditor() {
                           <Icon className="w-4 h-4 text-primary" />
                         </div>
                       </div>
-                      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <Label className="text-xs">{itemTypeLabels[item.item_type]} — Título</Label>
-                          <Input value={item.title || ""} onChange={(e) => updateItem(idx, "title", e.target.value)} placeholder={`Nome do ${itemTypeLabels[item.item_type].toLowerCase()}`} />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">URL da imagem</Label>
-                          <Input value={item.image_url || ""} onChange={(e) => updateItem(idx, "image_url", e.target.value)} placeholder="https://..." />
-                        </div>
-                        <div className="md:col-span-2 space-y-1">
-                          <Label className="text-xs">Descrição</Label>
-                          <Textarea rows={2} value={item.description || ""} onChange={(e) => updateItem(idx, "description", e.target.value)} />
-                        </div>
-
-                        {/* Type-specific fields */}
-                        {item.item_type === "flight" && (
-                          <>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Companhia aérea</Label>
-                              <Input value={item.data?.airline || ""} onChange={(e) => updateItemData(idx, "airline", e.target.value)} placeholder="LATAM" />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Nº do voo</Label>
-                              <Input value={item.data?.flight_number || ""} onChange={(e) => updateItemData(idx, "flight_number", e.target.value)} placeholder="LA8084" />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Origem</Label>
-                              <Input value={item.data?.origin || ""} onChange={(e) => updateItemData(idx, "origin", e.target.value)} placeholder="GRU" />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Destino</Label>
-                              <Input value={item.data?.destination || ""} onChange={(e) => updateItemData(idx, "destination", e.target.value)} placeholder="FCO" />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Partida</Label>
-                              <Input type="datetime-local" value={item.data?.departure || ""} onChange={(e) => updateItemData(idx, "departure", e.target.value)} />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Chegada</Label>
-                              <Input type="datetime-local" value={item.data?.arrival || ""} onChange={(e) => updateItemData(idx, "arrival", e.target.value)} />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Bagagem</Label>
-                              <Input value={item.data?.baggage || ""} onChange={(e) => updateItemData(idx, "baggage", e.target.value)} placeholder="23kg despachada" />
-                            </div>
-                          </>
+                      <div className="flex-1 space-y-3">
+                        {/* Google Places search button */}
+                        {supportsPlaces && !isSearchOpen && (
+                          <Button
+                            variant={hasPlaceData ? "outline" : "default"}
+                            size="sm"
+                            onClick={() => setPlacesSearchIdx(idx)}
+                            className="gap-1.5 text-xs w-full sm:w-auto"
+                          >
+                            <Search className="w-3.5 h-3.5" />
+                            {hasPlaceData ? "Buscar outro no Google" : "Buscar no Google Places"}
+                          </Button>
                         )}
 
-                        {item.item_type === "hotel" && (
-                          <>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Categoria (estrelas)</Label>
-                              <Input value={item.data?.stars || ""} onChange={(e) => updateItemData(idx, "stars", e.target.value)} placeholder="5" />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Localização</Label>
-                              <Input value={item.data?.location || ""} onChange={(e) => updateItemData(idx, "location", e.target.value)} placeholder="Centro de Roma" />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Tipo de quarto</Label>
-                              <Input value={item.data?.room_type || ""} onChange={(e) => updateItemData(idx, "room_type", e.target.value)} placeholder="Deluxe Double" />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs">Regime</Label>
-                              <Input value={item.data?.meal_plan || ""} onChange={(e) => updateItemData(idx, "meal_plan", e.target.value)} placeholder="Café da manhã incluso" />
-                            </div>
-                          </>
+                        {/* Places Search Card */}
+                        {isSearchOpen && (
+                          <PlacesSearchCard
+                            initialQuery={item.title || ""}
+                            destinationContext={form.destinations.length > 0 ? form.destinations.join(", ") : undefined}
+                            onEnrich={(data) => handlePlacesEnrich(idx, data)}
+                            onCancel={() => setPlacesSearchIdx(null)}
+                          />
                         )}
+
+                        {/* Enrichment preview (imported photo + rating) */}
+                        {hasPlaceData && item.image_url && !isSearchOpen && (
+                          <div className="flex items-start gap-3 p-2.5 bg-muted/30 rounded-xl border border-border/50">
+                            <div className="w-20 h-14 rounded-lg overflow-hidden shrink-0 bg-muted">
+                              <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs font-semibold text-foreground truncate">{item.title}</p>
+                              {item.data?.location && (
+                                <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
+                                  <MapPin className="h-2.5 w-2.5 shrink-0" /> {item.data.location}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {item.data?.rating && (
+                                  <span className="text-[10px] font-medium text-warning flex items-center gap-0.5">
+                                    ⭐ {item.data.rating} ({item.data.user_ratings_total})
+                                  </span>
+                                )}
+                                {item.data?.photos?.length > 0 && (
+                                  <span className="text-[10px] text-muted-foreground">{item.data.photos.length} fotos</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Standard form fields */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">{itemTypeLabels[item.item_type]} — Título</Label>
+                            <Input value={item.title || ""} onChange={(e) => updateItem(idx, "title", e.target.value)} placeholder={`Nome do ${itemTypeLabels[item.item_type].toLowerCase()}`} />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">URL da imagem</Label>
+                            <Input value={item.image_url || ""} onChange={(e) => updateItem(idx, "image_url", e.target.value)} placeholder="https://..." />
+                          </div>
+                          <div className="md:col-span-2 space-y-1">
+                            <Label className="text-xs">Descrição</Label>
+                            <Textarea rows={2} value={item.description || ""} onChange={(e) => updateItem(idx, "description", e.target.value)} />
+                          </div>
+
+                          {/* Type-specific fields */}
+                          {item.item_type === "flight" && (
+                            <>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Companhia aérea</Label>
+                                <Input value={item.data?.airline || ""} onChange={(e) => updateItemData(idx, "airline", e.target.value)} placeholder="LATAM" />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Nº do voo</Label>
+                                <Input value={item.data?.flight_number || ""} onChange={(e) => updateItemData(idx, "flight_number", e.target.value)} placeholder="LA8084" />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Origem</Label>
+                                <Input value={item.data?.origin || ""} onChange={(e) => updateItemData(idx, "origin", e.target.value)} placeholder="GRU" />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Destino</Label>
+                                <Input value={item.data?.destination || ""} onChange={(e) => updateItemData(idx, "destination", e.target.value)} placeholder="FCO" />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Partida</Label>
+                                <Input type="datetime-local" value={item.data?.departure || ""} onChange={(e) => updateItemData(idx, "departure", e.target.value)} />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Chegada</Label>
+                                <Input type="datetime-local" value={item.data?.arrival || ""} onChange={(e) => updateItemData(idx, "arrival", e.target.value)} />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Bagagem</Label>
+                                <Input value={item.data?.baggage || ""} onChange={(e) => updateItemData(idx, "baggage", e.target.value)} placeholder="23kg despachada" />
+                              </div>
+                            </>
+                          )}
+
+                          {item.item_type === "hotel" && (
+                            <>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Categoria (estrelas)</Label>
+                                <Input value={item.data?.stars || ""} onChange={(e) => updateItemData(idx, "stars", e.target.value)} placeholder="5" />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Localização</Label>
+                                <Input value={item.data?.location || ""} onChange={(e) => updateItemData(idx, "location", e.target.value)} placeholder="Centro de Roma" />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Tipo de quarto</Label>
+                                <Input value={item.data?.room_type || ""} onChange={(e) => updateItemData(idx, "room_type", e.target.value)} placeholder="Deluxe Double" />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Regime</Label>
+                                <Input value={item.data?.meal_plan || ""} onChange={(e) => updateItemData(idx, "meal_plan", e.target.value)} placeholder="Café da manhã incluso" />
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                       <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeItem(idx)}>
                         <Trash2 className="w-4 h-4" />
