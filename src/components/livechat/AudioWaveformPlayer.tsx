@@ -43,7 +43,7 @@ function generateBars(id: string, count: number): number[] {
   return bars;
 }
 
-export function AudioWaveformPlayer({ src, isOutgoing = false, msgId, waveformData }: AudioWaveformPlayerProps) {
+export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlayerProps>(function AudioWaveformPlayer({ src, isOutgoing = false, msgId, waveformData }, _ref) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
