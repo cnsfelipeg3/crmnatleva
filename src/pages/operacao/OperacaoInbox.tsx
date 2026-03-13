@@ -864,7 +864,7 @@ function OperacaoInboxInner() {
         }
       } catch (err) { toast({ title: "Erro ao enviar", description: "Falha na comunicação com WhatsApp", variant: "destructive" }); }
     } else if (selectedId.length > 10) {
-      await supabase.from("messages").insert({ conversation_id: selectedId, sender_type: "atendente", message_type: "text", text, status: "sent" });
+      await supabase.from("chat_messages").insert({ conversation_id: selectedId, sender_type: "atendente", message_type: "text", content: text, read_status: "sent" });
       await supabase.from("conversations").update({ last_message_preview: text, last_message_at: new Date().toISOString(), unread_count: 0 }).eq("id", selectedId);
 
       if (selected?.source === "whatsapp" && selected?.phone) {
