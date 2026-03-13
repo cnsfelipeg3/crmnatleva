@@ -39,7 +39,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const [profileRes, roleRes] = await Promise.all([
+      const ROLE_PRIORITY: Record<string, number> = {
+        admin: 0, gestor: 1, financeiro: 2, operacional: 3, vendedor: 4, leitura: 5,
+      };
+
+      const [profileRes, rolesRes] = await Promise.all([
         supabase
           .from("profiles")
           .select("id, full_name, email, avatar_url")
@@ -48,15 +52,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase
           .from("user_roles")
           .select("role")
-          .eq("user_id", userId)
-          .maybeSingle(),
+          .eq("user_id", userId),
       ]);
 
       if (profileRes.error) console.error("Profile fetch error:", profileRes.error);
-      if (roleRes.error) console.error("Role fetch error:", roleRes.error);
+      if (rolesRes.error) console.error("Role fetch error:", rolesRes.error);
 
       setProfile((profileRes.data as Profile | null) ?? null);
-      setRole((roleRes.data?.role as UserRole) ?? DEFAULT_ROLE);
+
+      // Pick the highest-priority role when user has multiple
+      const roles = (rolesRes.data ?? []) as { role: string }[];
+      const bestRole = roles
+        .sort((a, b) => (ROLE_PRIORITY[a.role] ?? 99) - (ROLE_PRIORITY[b.role] ?? 99))[0]?.role;
+      setRole((bestRole as UserRole) ?? DEFAULT_ROLE);
     } catch (error) {
       console.error("Auth context load error:", error);
       setProfile(null);
