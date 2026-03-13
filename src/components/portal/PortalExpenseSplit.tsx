@@ -73,12 +73,17 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
   const [addMemberOpen, setAddMemberOpen] = useState(false);
 
   const clientId = portalAccess?.client_id;
+  const isAdmin = !!portalAccess?.is_admin;
+  const effectiveClientId = useMemo(
+    () => (clientId && UUID_REGEX.test(clientId) ? clientId : ADMIN_DEMO_CLIENT_ID),
+    [clientId],
+  );
 
   // Load groups
   useEffect(() => {
-    if (!clientId || !saleId) return;
+    if (!saleId || (!isAdmin && !clientId)) return;
     loadGroups();
-  }, [clientId, saleId]);
+  }, [clientId, isAdmin, saleId]);
 
   const loadGroups = async () => {
     setLoading(true);
@@ -86,9 +91,11 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
     let query = supabase
       .from("portal_expense_groups" as any)
       .select("*")
-      .eq("client_id", clientId!)
       .order("created_at", { ascending: false });
+
+    if (!isAdmin) query = query.eq("client_id", effectiveClientId);
     if (!isMock && saleId) query = query.eq("sale_id", saleId);
+
     const { data } = await query;
     const g = (data as any[] || []) as Group[];
     setGroups(g);
