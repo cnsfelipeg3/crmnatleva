@@ -769,16 +769,6 @@ export default function PlacesSearchCard({
 
 /* ═══ Thumbnail subcomponent ═══ */
 function PlaceThumbnail({ photoRef, alt }: { photoRef: string; alt: string }) {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    supabase.functions.invoke("places-search", {
-      body: { action: "photo", photo_reference: photoRef, max_width: 200 },
-    }).then(({ data }) => {
-      if (!cancelled && data?.url) setUrl(data.url);
-    });
-    return () => { cancelled = true; };
-  }, [photoRef]);
-  if (!url) return <div className="w-full h-full bg-muted/30 animate-pulse" />;
+  const url = getPhotoUrl(photoRef, 200);
   return <img src={url} alt={alt} className="w-full h-full object-cover" />;
 }
