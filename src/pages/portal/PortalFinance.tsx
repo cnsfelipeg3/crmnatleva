@@ -583,12 +583,12 @@ export default function PortalFinance() {
    ═══════════════════════════════════════════════════════ */
 function MiniMetric({ icon: Icon, label, value, color, visible }: any) {
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5">
-        <Icon className={`h-3.5 w-3.5 text-${color}`} />
-        <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50">{label}</span>
+    <div className="space-y-1">
+      <div className="flex items-center gap-1">
+        <Icon className={`h-3 w-3 sm:h-3.5 sm:w-3.5 text-${color}`} />
+        <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground/50">{label}</span>
       </div>
-      <p className={`text-xl sm:text-2xl font-black tabular-nums text-${color}`}>
+      <p className={`text-base sm:text-xl font-black tabular-nums text-${color} truncate`}>
         {visible ? fmt(value) : "••••"}
       </p>
     </div>
