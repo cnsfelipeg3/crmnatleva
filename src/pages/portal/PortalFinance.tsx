@@ -256,24 +256,7 @@ export default function PortalFinance() {
   }, [expenses]);
 
   if (!saleId) {
-    return (
-      <PortalLayout>
-        <div className="min-h-[70vh] flex items-center justify-center px-4">
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center space-y-6">
-            <div className="relative mx-auto w-24 h-24">
-              <div className="absolute inset-0 rounded-full bg-accent/10 animate-ping" style={{ animationDuration: "3s" }} />
-              <div className="relative h-24 w-24 rounded-full bg-accent/5 border border-accent/20 flex items-center justify-center">
-                <Wallet className="h-10 w-10 text-accent/60" />
-              </div>
-            </div>
-            <div>
-              <h1 className="text-3xl font-black text-foreground mb-2">Meu Financeiro</h1>
-              <p className="text-muted-foreground max-w-sm mx-auto">Selecione uma viagem para acessar seu painel de controle financeiro</p>
-            </div>
-          </motion.div>
-        </div>
-      </PortalLayout>
-    );
+    return <PortalFinanceTripSelector onSelect={(id) => setSearchParams({ sale: id })} />;
   }
 
   return (
