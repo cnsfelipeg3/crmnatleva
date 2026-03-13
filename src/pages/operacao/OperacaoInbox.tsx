@@ -1608,7 +1608,7 @@ function OperacaoInboxInner() {
                 </div>
 
                 {/* Messages */}
-                <ScrollArea ref={scrollAreaRef} className="flex-1 overflow-hidden px-4">
+                <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0 overflow-hidden px-4">
                   <div className="py-4 space-y-3">
                     {currentMessages.map((msg, idx) => (
                       <Fragment key={msg.id}>

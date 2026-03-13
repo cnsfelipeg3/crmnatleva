@@ -63,7 +63,7 @@ export default function AppLayout() {
             </div>
           </header>
         )}
-        <main className={cn("flex-1 overflow-auto", isImmersive && "overflow-hidden")}>
+        <main className={cn("flex-1 overflow-auto min-h-0", isImmersive && "overflow-hidden")}>
           <Outlet />
         </main>
       </div>
