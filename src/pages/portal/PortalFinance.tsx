@@ -268,6 +268,9 @@ export default function PortalFinance() {
             <TabsTrigger value="cards" className="rounded-lg text-xs sm:text-sm gap-1.5">
               <CreditCard className="h-3.5 w-3.5" /> Cartões
             </TabsTrigger>
+            <TabsTrigger value="history" className="rounded-lg text-xs sm:text-sm gap-1.5">
+              <Calendar className="h-3.5 w-3.5" /> Histórico
+            </TabsTrigger>
           </TabsList>
 
           {/* ── OVERVIEW ── */}
