@@ -91,6 +91,11 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
     { to: "/portal/perfil", icon: User, label: "Meu Perfil" },
   ];
 
+  const tripPathMatch = location.pathname.match(/^\/portal\/viagem\/([^/]+)/);
+  const saleFromPath = tripPathMatch?.[1] ? decodeURIComponent(tripPathMatch[1]) : null;
+  const saleFromQuery = new URLSearchParams(location.search).get("sale");
+  const assistantSaleId = saleFromPath || saleFromQuery || null;
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Floating Navbar */}
@@ -212,7 +217,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
       </main>
 
       {/* AI Assistant */}
-      <PortalAssistant />
+      <PortalAssistant saleId={assistantSaleId} />
 
       {/* Footer */}
       <footer className="border-t border-border bg-card/50">
