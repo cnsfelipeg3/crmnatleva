@@ -927,17 +927,23 @@ function OperacaoInboxInner() {
             });
           });
           for (const conv of dedupedConvs) persistConversation(conv).catch(() => {});
-          // Fetch profile pictures
-          for (const conv of dedupedConvs.slice(0, 30)) {
-            if (!profilePicsRef.current.has(conv.id)) {
-              callZapiProxy("get-profile-picture", { phone: conv.phone }).then(data => {
-                const picUrl = data?.link || data?.profilePictureUrl || "";
-                if (picUrl && typeof picUrl === "string" && picUrl.startsWith("http")) {
-                  profilePicsRef.current.set(conv.id, picUrl);
-                  setProfilePicsVersion(v => v + 1);
-                }
-              }).catch(() => {});
+          // Fetch profile pictures in parallel batches
+          const needsPic = dedupedConvs.filter(c => !profilePicsRef.current.has(c.id)).slice(0, 20);
+          if (needsPic.length > 0) {
+            const BATCH = 5;
+            for (let i = 0; i < needsPic.length; i += BATCH) {
+              const batch = needsPic.slice(i, i + BATCH);
+              await Promise.allSettled(batch.map(conv =>
+                callZapiProxy("get-profile-picture", { phone: conv.phone }).then(data => {
+                  const picUrl = data?.link || data?.profilePictureUrl || "";
+                  if (picUrl && typeof picUrl === "string" && picUrl.startsWith("http")) {
+                    profilePicsRef.current.set(conv.id, picUrl);
+                  }
+                }).catch(() => {})
+              ));
             }
+            setProfilePicsVersion(v => v + 1);
+            saveProfilePicsCache();
           }
         }
         chatsLoadedRef.current = true;
