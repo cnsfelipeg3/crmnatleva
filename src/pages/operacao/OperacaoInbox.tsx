@@ -395,10 +395,11 @@ function OperacaoInboxInner() {
         const previewMap = new Map<string, { text: string; message_type: string; created_at: string }>();
         if (convIdsNeedingPreview.length > 0) {
           for (const convId of convIdsNeedingPreview) {
-            const { data: lastMsg } = await supabase.from("messages").select("text, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).single();
+            const { data: lastMsg } = await supabase.from("chat_messages").select("content, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).maybeSingle();
             if (lastMsg) {
-              previewMap.set(convId, lastMsg);
-              supabase.from("conversations").update({ last_message_preview: lastMsg.text || `📎 ${lastMsg.message_type}`, last_message_at: lastMsg.created_at }).eq("id", convId).then(() => {});
+              const previewEntry = { text: lastMsg.content || "", message_type: lastMsg.message_type, created_at: lastMsg.created_at };
+              previewMap.set(convId, previewEntry);
+              supabase.from("conversations").update({ last_message_preview: previewEntry.text || `📎 ${previewEntry.message_type}`, last_message_at: previewEntry.created_at }).eq("id", convId).then(() => {});
             }
           }
         }
@@ -476,14 +477,14 @@ function OperacaoInboxInner() {
         }
       });
     } else if (selectedId.length > 10) {
-      supabase.from("messages").select("*").eq("conversation_id", selectedId).order("created_at").then(({ data }) => {
+      supabase.from("chat_messages").select("*").eq("conversation_id", selectedId).order("created_at").then(({ data }) => {
         if (data && data.length > 0) {
           const dbMsgs: Message[] = data.map(m => ({
             id: m.id, conversation_id: m.conversation_id,
             sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
             message_type: m.message_type as MsgType,
-            text: m.text || "", media_url: m.media_url || undefined,
-            status: m.status as MsgStatus, created_at: m.created_at,
+            text: m.content || "", media_url: m.media_url || undefined,
+            status: (m.read_status || "sent") as MsgStatus, created_at: m.created_at,
           }));
           setMessages(prev => ({ ...prev, [selectedId]: dbMsgs }));
         }
@@ -864,7 +865,7 @@ function OperacaoInboxInner() {
         }
       } catch (err) { toast({ title: "Erro ao enviar", description: "Falha na comunicação com WhatsApp", variant: "destructive" }); }
     } else if (selectedId.length > 10) {
-      await supabase.from("messages").insert({ conversation_id: selectedId, sender_type: "atendente", message_type: "text", text, status: "sent" });
+      await supabase.from("chat_messages").insert({ conversation_id: selectedId, sender_type: "atendente", message_type: "text", content: text, read_status: "sent" });
       await supabase.from("conversations").update({ last_message_preview: text, last_message_at: new Date().toISOString(), unread_count: 0 }).eq("id", selectedId);
 
       if (selected?.source === "whatsapp" && selected?.phone) {
@@ -876,13 +877,13 @@ function OperacaoInboxInner() {
         } catch (err) { console.error("Error sending via official API:", err); }
       }
 
-      const { data } = await supabase.from("messages").select("*").eq("conversation_id", selectedId).order("created_at");
+      const { data } = await supabase.from("chat_messages").select("*").eq("conversation_id", selectedId).order("created_at");
       if (data) {
         setMessages(prev => ({ ...prev, [selectedId]: data.map(m => ({
           id: m.id, conversation_id: m.conversation_id,
           sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
           message_type: m.message_type as MsgType,
-          text: m.text || "", status: m.status as MsgStatus, created_at: m.created_at,
+          text: m.content || "", status: (m.read_status || "sent") as MsgStatus, created_at: m.created_at,
         })) }));
       }
     }
