@@ -4,6 +4,8 @@ import PortalExpenseSplit from "@/components/portal/PortalExpenseSplit";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import PortalLayout from "@/components/portal/PortalLayout";
+import { getMockTripDetail } from "@/lib/portalMockTrips";
+import { getMockFinanceData } from "@/lib/portalMockFinance";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import {
   CircleDollarSign, Wallet, CreditCard, PiggyBank, TrendingUp,
