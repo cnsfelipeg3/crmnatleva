@@ -1365,7 +1365,9 @@ export default function LiveChat() {
       });
     });
     setIsSending(false);
-  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending]);
+    isUserScrolledUpRef.current = false;
+    scrollToBottom();
+  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, scrollToBottom]);
 
   const handleStartEdit = useCallback((msg: Message) => {
     if (msg.sender_type !== "atendente" || msg.message_type !== "text") return;
