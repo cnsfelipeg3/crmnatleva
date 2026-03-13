@@ -265,7 +265,7 @@ function OperacaoInboxInner() {
       setActiveFlowName(name);
     })();
     return () => { cancelled = true; };
-  }, [selectedId]);
+  }, [selectedId, selected?.db_id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
