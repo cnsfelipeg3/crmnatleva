@@ -347,23 +347,25 @@ function OperacaoInboxInner() {
   const lastMsgIdsRef = useRef<Set<string>>(new Set());
   const chatsLoadedRef = useRef(false);
   const clearedAtRef = useRef<number | null>(null);
-  const profilePicsRef = useRef<Map<string, string>>(() => {
-    const map = new Map<string, string>();
+  const profilePicsRef = useRef<Map<string, string>>(new Map());
+  const [profilePicsVersion, setProfilePicsVersion] = useState(0);
+  const profilePicsSaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const profilePicsCacheLoaded = useRef(false);
+
+  // Load profile pics cache from localStorage on mount
+  useEffect(() => {
+    if (profilePicsCacheLoaded.current) return;
+    profilePicsCacheLoaded.current = true;
     try {
       const cached = localStorage.getItem("natleva_profile_pics");
       if (cached) {
         const parsed = JSON.parse(cached) as [string, string][];
-        for (const [k, v] of parsed) map.set(k, v);
+        for (const [k, v] of parsed) profilePicsRef.current.set(k, v);
+        if (parsed.length > 0) setProfilePicsVersion(v => v + 1);
       }
     } catch {}
-    return map;
-  });
-  // Initialize from IIFE
-  if (profilePicsRef.current instanceof Function) {
-    profilePicsRef.current = (profilePicsRef.current as any)();
-  }
-  const [profilePicsVersion, setProfilePicsVersion] = useState(0);
-  const profilePicsSaveTimer = useRef<ReturnType<typeof setTimeout>>();
+  }, []);
+
   const saveProfilePicsCache = useCallback(() => {
     clearTimeout(profilePicsSaveTimer.current);
     profilePicsSaveTimer.current = setTimeout(() => {
