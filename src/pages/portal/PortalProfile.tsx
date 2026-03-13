@@ -688,6 +688,41 @@ function maskValue(val: string): string {
   return "•".repeat(val.length - 3) + val.slice(-3);
 }
 
+function PreferenceCard({ icon: Icon, title, subtitle, gradient, children }: {
+  icon: typeof User; title: string; subtitle: string; gradient: string; children: React.ReactNode;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      className="relative rounded-2xl border border-border/60 bg-card overflow-hidden shadow-sm"
+    >
+      {/* Gradient accent strip */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} pointer-events-none`} />
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+
+      <div className="relative p-5 sm:p-6 space-y-5">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+            <Icon className="h-5 w-5 text-accent" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-foreground tracking-tight">{title}</h3>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="space-y-4">
+          {children}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 interface OptionPickerProps {
   label: string;
   icon?: typeof User;
@@ -702,24 +737,28 @@ interface OptionPickerProps {
 function OptionPicker({ label, icon: Icon, options, value, field, editing, onChange, wrap }: OptionPickerProps) {
   return (
     <div>
-      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+      <label className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
         {Icon && <Icon className="h-3 w-3" />} {label}
       </label>
-      <div className={`flex gap-2 ${wrap ? "flex-wrap" : ""}`}>
-        {options.map(opt => (
-          <button
-            key={opt}
-            disabled={!editing}
-            onClick={() => onChange(field, opt)}
-            className={`py-2 px-3 rounded-full text-xs font-medium transition-all ${
-              value === opt
-                ? "bg-accent text-accent-foreground shadow-md"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-            } ${!editing ? "cursor-default" : "cursor-pointer"}`}
-          >
-            {opt}
-          </button>
-        ))}
+      <div className={`flex gap-2 ${wrap ? "flex-wrap" : "overflow-x-auto no-scrollbar"}`}>
+        {options.map(opt => {
+          const isActive = value === opt;
+          return (
+            <motion.button
+              key={opt}
+              disabled={!editing}
+              onClick={() => onChange(field, opt)}
+              whileTap={editing ? { scale: 0.95 } : undefined}
+              className={`py-2 px-3.5 rounded-xl text-xs font-medium transition-all border whitespace-nowrap ${
+                isActive
+                  ? "bg-accent text-accent-foreground border-accent shadow-md shadow-accent/20"
+                  : "bg-card border-border/60 text-muted-foreground hover:border-accent/40 hover:text-foreground"
+              } ${!editing ? "cursor-default opacity-80" : "cursor-pointer"}`}
+            >
+              {opt}
+            </motion.button>
+          );
+        })}
       </div>
     </div>
   );
