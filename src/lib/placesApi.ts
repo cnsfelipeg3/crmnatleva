@@ -168,7 +168,7 @@ export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResu
     types: p.types || [],
     location: getLocation(p.geometry),
     photos,
-    editorial_summary: p.editorial_summary?.overview || null,
+    editorial_summary: (p as any).editorial_summary?.overview || null,
     reviews: (p.reviews || []).slice(0, 3).map((r) => ({
       author: r.author_name || "",
       rating: r.rating || 0,
