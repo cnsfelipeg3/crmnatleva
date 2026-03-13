@@ -523,51 +523,65 @@ export default function PortalProfile() {
 
               {activeTab === "viagem" && (
                 <div className="space-y-4">
-                  <SectionTitle icon={Plane} label="Preferências de Viagem" />
+                  {/* ✈️ Voo */}
+                  <SectionTitle icon={PlaneTakeoff} label="Preferências de Voo" />
                   <FieldGroup>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Assento preferido</label>
-                      <div className="flex gap-2">
-                        {seatOptions.map(opt => (
-                          <button
-                            key={opt}
-                            disabled={!editing}
-                            onClick={() => updateField("seat_preference", opt)}
-                            className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-medium transition-all ${
-                              profile.seat_preference === opt
-                                ? "bg-accent text-accent-foreground shadow-md"
-                                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                            } ${!editing ? "cursor-default" : "cursor-pointer"}`}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    <OptionPicker label="Assento preferido" icon={Armchair} options={seatOptions} value={profile.seat_preference} field="seat_preference" editing={editing} onChange={updateField} />
+                    <OptionPicker label="Classe preferida" icon={Star} options={cabinOptions} value={profile.cabin_class} field="cabin_class" editing={editing} onChange={updateField} />
+                    <OptionPicker label="Restrição alimentar" icon={Utensils} options={dietOptions} value={profile.dietary_preferences} field="dietary_preferences" editing={editing} onChange={updateField} wrap />
+                    <ProfileField label="Cias aéreas preferidas" icon={Plane} value={profile.preferred_airlines} field="preferred_airlines" editing={editing} onChange={updateField} placeholder="Ex: LATAM, Azul, GOL" />
+                    <ProfileField label="Programa de fidelidade aéreo" icon={Star} value={profile.frequent_flyer} field="frequent_flyer" editing={editing} onChange={updateField} placeholder="Ex: Smiles Gold - 123456789" />
+                    <OptionPicker label="Bagagem" icon={Luggage} options={luggageOptions} value={profile.luggage_preference} field="luggage_preference" editing={editing} onChange={updateField} wrap />
+                  </FieldGroup>
 
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Restrição alimentar</label>
-                      <div className="flex flex-wrap gap-2">
-                        {dietOptions.map(opt => (
-                          <button
-                            key={opt}
-                            disabled={!editing}
-                            onClick={() => updateField("dietary_preferences", opt)}
-                            className={`py-2 px-3 rounded-full text-xs font-medium transition-all ${
-                              profile.dietary_preferences === opt
-                                ? "bg-accent text-accent-foreground shadow-md"
-                                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                            } ${!editing ? "cursor-default" : "cursor-pointer"}`}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                  {/* 🏨 Hospedagem */}
+                  <SectionTitle icon={Hotel} label="Preferências de Hospedagem" />
+                  <FieldGroup>
+                    <OptionPicker label="Categoria do hotel" icon={Star} options={hotelCategoryOptions} value={profile.hotel_category} field="hotel_category" editing={editing} onChange={updateField} wrap />
+                    <OptionPicker label="Tipo de quarto" icon={Hotel} options={roomTypeOptions} value={profile.room_type} field="room_type" editing={editing} onChange={updateField} wrap />
+                    <OptionPicker label="Tipo de cama" icon={Hotel} options={bedOptions} value={profile.bed_preference} field="bed_preference" editing={editing} onChange={updateField} />
+                    <OptionPicker label="Fumante" icon={X} options={smokingOptions} value={profile.smoking_preference} field="smoking_preference" editing={editing} onChange={updateField} />
+                    <ProfileField label="Redes hoteleiras preferidas" icon={Hotel} value={profile.preferred_hotel_chains} field="preferred_hotel_chains" editing={editing} onChange={updateField} placeholder="Ex: Marriott, Accor, Hilton" />
+                    <ProfileField label="Programa de fidelidade hotel" icon={Star} value={profile.loyalty_hotel} field="loyalty_hotel" editing={editing} onChange={updateField} placeholder="Ex: Marriott Bonvoy - 123456" />
+                  </FieldGroup>
 
-                    <ProfileField
-                      label="Programa de fidelidade" icon={Star}
-                      value={profile.frequent_flyer} field="frequent_flyer"
+                  {/* 🧭 Estilo de Viagem */}
+                  <SectionTitle icon={Compass} label="Estilo de Viagem" />
+                  <FieldGroup>
+                    <OptionPicker label="Tipo de viagem" icon={Heart} options={tripStyleOptions} value={profile.trip_style} field="trip_style" editing={editing} onChange={updateField} wrap />
+                    <OptionPicker label="Ritmo de viagem" icon={Clock} options={travelPaceOptions} value={profile.travel_pace} field="travel_pace" editing={editing} onChange={updateField} />
+                    <OptionPicker label="Com quem viaja" icon={User} options={companionOptions} value={profile.travel_companion} field="travel_companion" editing={editing} onChange={updateField} wrap />
+                    <OptionPicker label="Faixa de orçamento" icon={CircleDollarSign} options={budgetOptions} value={profile.budget_range} field="budget_range" editing={editing} onChange={updateField} wrap />
+                  </FieldGroup>
+
+                  {/* 🎯 Interesses & Extras */}
+                  <SectionTitle icon={Mountain} label="Interesses & Extras" />
+                  <FieldGroup>
+                    <MultiOptionPicker label="Interesses de viagem" icon={Heart} options={interestOptions} value={profile.interests} field="interests" editing={editing} onChange={updateField} />
+                    <OptionPicker label="Transfer preferido" icon={MapPin} options={transferOptions} value={profile.transfer_preference} field="transfer_preference" editing={editing} onChange={updateField} wrap />
+                    <OptionPicker label="Seguro viagem" icon={Shield} options={insuranceOptions} value={profile.travel_insurance} field="travel_insurance" editing={editing} onChange={updateField} wrap />
+                    <ProfileField label="Necessidades especiais / Acessibilidade" icon={Heart} value={profile.special_assistance} field="special_assistance" editing={editing} onChange={updateField} placeholder="Ex: Cadeira de rodas, alergia grave..." />
+                  </FieldGroup>
+
+                  {/* 📝 Observações */}
+                  <SectionTitle icon={FileText} label="Observações de Viagem" />
+                  <FieldGroup>
+                    {editing ? (
+                      <textarea
+                        value={profile.travel_notes}
+                        onChange={e => updateField("travel_notes", e.target.value)}
+                        placeholder="Outras preferências, informações importantes para a agência..."
+                        className="w-full p-3 rounded-xl bg-muted/50 border border-border text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/30"
+                        rows={4}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        {profile.travel_notes || "Nenhuma observação adicionada"}
+                      </p>
+                    )}
+                  </FieldGroup>
+                </div>
+              )}
                       editing={editing} onChange={updateField}
                       placeholder="Ex: Smiles Gold - 123456789"
                     />
