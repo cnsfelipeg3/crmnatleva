@@ -417,11 +417,19 @@ function OperacaoInboxInner() {
           const preview = c.last_message_preview || (fallback ? (fallback.text || `📎 ${fallback.message_type}`) : "");
           const msgAt = c.last_message_at || (fallback ? fallback.created_at : c.last_message_at);
           return {
-            id: canonicalId, phone: cleanPhone || c.phone || "", contact_name: c.contact_name || c.display_name || c.phone || "Sem nome",
-            stage: (c.stage || c.funnel_stage || "novo_lead") as Stage, tags: c.tags || [], source: c.source || "",
-            last_message_at: msgAt || "", last_message_preview: preview,
-            unread_count: c.unread_count || 0, is_vip: c.is_vip || false,
-            assigned_to: c.assigned_to || "", score_potential: c.score_potential || 0,
+            id: canonicalId,
+            db_id: c.id,
+            phone: cleanPhone || c.phone || "",
+            contact_name: c.contact_name || c.display_name || c.phone || "Sem nome",
+            stage: (c.stage || c.funnel_stage || "novo_lead") as Stage,
+            tags: c.tags || [],
+            source: c.source || "",
+            last_message_at: msgAt || "",
+            last_message_preview: preview,
+            unread_count: c.unread_count || 0,
+            is_vip: c.is_vip || false,
+            assigned_to: c.assigned_to || "",
+            score_potential: c.score_potential || 0,
             score_risk: c.score_risk || 0,
             is_pinned: (c as any).is_pinned || false,
           };
