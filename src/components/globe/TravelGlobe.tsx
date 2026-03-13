@@ -172,21 +172,25 @@ const TravelGlobe = memo(function TravelGlobe(props: TravelGlobeProps) {
             currentLocationId: curLocId,
           });
 
-          // Fly camera to show the route nicely
+          // Fly camera centered on route midpoint
           const midLat = (route.from.lat + route.to.lat) / 2;
           const midLng = (route.from.lng + route.to.lng) / 2;
           const dist = computeDistanceKm(route.from.lat, route.from.lng, route.to.lat, route.to.lng);
-          const camHeight = Math.max(500_000, dist * 2000);
+          const camHeight = Math.max(800_000, dist * 2500);
 
           viewer.camera.flyTo({
             destination: Cesium.Cartesian3.fromDegrees(midLng, midLat, camHeight),
             orientation: {
               heading: Cesium.Math.toRadians(0),
-              pitch: Cesium.Math.toRadians(-55),
+              pitch: Cesium.Math.toRadians(-90),
               roll: 0,
             },
             duration: 2,
             easingFunction: Cesium.EasingFunction.QUINTIC_IN_OUT,
+            complete: () => {
+              // Auto-animate airplane on route select
+              animateAirplane(viewer, route, 5);
+            },
           });
         };
 
