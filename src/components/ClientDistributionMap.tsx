@@ -355,7 +355,15 @@ export default function ClientDistributionMap() {
     const z = mapRef.current?.getZoom();
     if (z != null) mapRef.current?.setZoom(z + 1);
   };
-  const handleZoomOut = () => { const z = mapRef.current?.getZoom(); if (z != null) mapRef.current?.setZoom(z - 1); };
+  const handleZoomOut = () => {
+    if (fallbackMode) {
+      const z = leafletMapRef.current?.getZoom();
+      if (z != null) leafletMapRef.current?.setZoom(z - 1);
+      return;
+    }
+    const z = mapRef.current?.getZoom();
+    if (z != null) mapRef.current?.setZoom(z - 1);
+  };
   const handleResetView = () => { mapRef.current?.setCenter({ lat: -14, lng: -51 }); mapRef.current?.setZoom(4); };
   const handleLocate = useCallback(() => {
     const map = mapRef.current;
