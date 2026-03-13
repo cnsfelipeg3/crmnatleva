@@ -1144,6 +1144,68 @@ export type Database = {
           },
         ]
       }
+      client_travel_preferences: {
+        Row: {
+          cabin_class: string | null
+          client_id: string
+          created_at: string
+          hotel_category: string | null
+          id: string
+          loyalty_programs: string[] | null
+          meal_preference: string | null
+          notes: string | null
+          preferred_airlines: string[] | null
+          preferred_hotel_chains: string[] | null
+          seat_preference: string | null
+          special_needs: string | null
+          travel_pace: string | null
+          trip_style: string | null
+          updated_at: string
+        }
+        Insert: {
+          cabin_class?: string | null
+          client_id: string
+          created_at?: string
+          hotel_category?: string | null
+          id?: string
+          loyalty_programs?: string[] | null
+          meal_preference?: string | null
+          notes?: string | null
+          preferred_airlines?: string[] | null
+          preferred_hotel_chains?: string[] | null
+          seat_preference?: string | null
+          special_needs?: string | null
+          travel_pace?: string | null
+          trip_style?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cabin_class?: string | null
+          client_id?: string
+          created_at?: string
+          hotel_category?: string | null
+          id?: string
+          loyalty_programs?: string[] | null
+          meal_preference?: string | null
+          notes?: string | null
+          preferred_airlines?: string[] | null
+          preferred_hotel_chains?: string[] | null
+          seat_preference?: string | null
+          special_needs?: string | null
+          travel_pace?: string | null
+          trip_style?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_travel_preferences_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           city: string | null
