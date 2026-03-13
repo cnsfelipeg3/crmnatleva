@@ -689,10 +689,78 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
   );
 }
 
-/* ═══ ADD EXPENSE DIALOG ═══ */
-function AddExpenseDialog({ open, onClose, group, members, onSaved }: {
-  open: boolean; onClose: () => void; group: Group | null; members: Member[]; onSaved: () => void;
+/* ─── Category Split Intelligence ─── */
+const CATEGORY_SUGGESTIONS: Record<string, { default: string; label: string; options: { type: string; label: string; desc: string }[] }> = {
+  alimentacao: {
+    default: "equal",
+    label: "Gasto compartilhado de alimentação",
+    options: [
+      { type: "equal", label: "Dividir igualmente", desc: "Cada um paga a mesma parte" },
+      { type: "present", label: "Só quem participou", desc: "Selecione quem estava presente" },
+      { type: "custom", label: "Por consumo", desc: "Informe quanto cada um consumiu" },
+    ],
+  },
+  bar: {
+    default: "equal",
+    label: "Conta de bar ou drinks",
+    options: [
+      { type: "equal", label: "Dividir igualmente", desc: "Dividir a conta inteira" },
+      { type: "custom", label: "Por consumo", desc: "Cada um informa o que bebeu" },
+      { type: "present", label: "Só quem participou", desc: "Selecione quem estava" },
+    ],
+  },
+  transporte: {
+    default: "equal",
+    label: "Transporte compartilhado",
+    options: [
+      { type: "equal", label: "Dividir entre passageiros", desc: "Todos que usaram o transporte" },
+      { type: "present", label: "Selecionar quem usou", desc: "Nem todos foram nesse trajeto" },
+      { type: "solo", label: "Despesa individual", desc: "Só uma pessoa usou" },
+    ],
+  },
+  passeios: {
+    default: "present",
+    label: "Passeio ou ingresso",
+    options: [
+      { type: "present", label: "Entre participantes", desc: "Selecione quem foi ao passeio" },
+      { type: "equal", label: "Dividir igualmente", desc: "Todos participaram" },
+      { type: "solo", label: "Despesa individual", desc: "Ingresso para uma pessoa" },
+    ],
+  },
+  hospedagem: {
+    default: "equal",
+    label: "Hospedagem compartilhada",
+    options: [
+      { type: "equal", label: "Dividir por hóspede", desc: "Igualmente entre todos" },
+      { type: "custom", label: "Por quarto", desc: "Valores diferentes por quarto" },
+    ],
+  },
+  compras: {
+    default: "solo",
+    label: "Compra pessoal",
+    options: [
+      { type: "solo", label: "Despesa individual", desc: "Compra pessoal, sem divisão" },
+      { type: "equal", label: "Presente coletivo", desc: "Dividir igualmente" },
+      { type: "custom", label: "Divisão personalizada", desc: "Cada um contribuiu diferente" },
+    ],
+  },
+  outros: {
+    default: "equal",
+    label: "Despesa geral",
+    options: [
+      { type: "equal", label: "Dividir igualmente", desc: "Valor igual para todos" },
+      { type: "present", label: "Só quem participou", desc: "Selecione os envolvidos" },
+      { type: "custom", label: "Personalizar", desc: "Definir valores manualmente" },
+    ],
+  },
+};
+
+/* ═══ ADD EXPENSE DIALOG (SMART) ═══ */
+function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpenses }: {
+  open: boolean; onClose: () => void; group: Group | null; members: Member[];
+  onSaved: () => void; recentExpenses?: Expense[];
 }) {
+  const [step, setStep] = useState<"form" | "split" | "preview">("form");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState(group?.currency || "BRL");
@@ -705,14 +773,41 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved }: {
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
+  // Restaurant mode
+  const [serviceCharge, setServiceCharge] = useState(false);
+  const [servicePercent, setServicePercent] = useState("10");
+  const [tipIncluded, setTipIncluded] = useState(false);
+  const [tipAmount, setTipAmount] = useState("");
 
   useEffect(() => {
     if (open && members.length > 0) {
       setPaidBy(members[0].id);
       setSplitAmong(new Set(members.map(m => m.id)));
       setCurrency(group?.currency || "BRL");
+      setStep("form");
+      setServiceCharge(false);
+      setTipIncluded(false);
+      setTipAmount("");
+      setCustomAmounts({});
     }
   }, [open, members, group]);
+
+  // Auto-suggest split type based on category
+  useEffect(() => {
+    const suggestion = CATEGORY_SUGGESTIONS[category];
+    if (suggestion) {
+      const defaultType = suggestion.default;
+      if (defaultType === "solo") {
+        setSplitType("equal");
+        setSplitAmong(new Set([paidBy]));
+      } else if (defaultType === "present") {
+        setSplitType("equal");
+      } else {
+        setSplitType(defaultType);
+        setSplitAmong(new Set(members.map(m => m.id)));
+      }
+    }
+  }, [category]);
 
   const toggleSplitMember = (id: string) => {
     setSplitAmong(prev => {
@@ -722,7 +817,6 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved }: {
     });
   };
 
-  // Receipt scanner
   const handleReceiptScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -750,205 +844,408 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved }: {
     }
   };
 
-  const handleSave = async () => {
-    if (!description.trim() || !amount || !paidBy || !group) { toast.error("Preencha todos os campos"); return; }
-    const amountNum = parseFloat(amount);
-    if (isNaN(amountNum) || amountNum <= 0) { toast.error("Valor inválido"); return; }
-    if (splitAmong.size === 0) { toast.error("Selecione pelo menos 1 participante para dividir"); return; }
-    setLoading(true);
+  // Compute effective amount (with service/tip)
+  const baseAmount = parseFloat(amount) || 0;
+  const serviceVal = serviceCharge ? baseAmount * (parseFloat(servicePercent) || 0) / 100 : 0;
+  const tipVal = tipIncluded ? (parseFloat(tipAmount) || 0) : 0;
+  const effectiveAmount = baseAmount + serviceVal + tipVal;
 
-    const { data: expense, error } = await supabase
-      .from("portal_group_expenses" as any)
-      .insert({
-        group_id: group.id,
-        description: description.trim(),
-        amount: amountNum,
-        currency,
-        category,
-        paid_by_member_id: paidBy,
-        split_type: splitType,
-        expense_date: date,
-        notes: notes || null,
-      } as any)
-      .select().single();
-
-    if (error || !expense) { toast.error("Erro ao salvar despesa"); setLoading(false); return; }
-
-    // Create splits
+  // Compute split preview
+  const computedSplits = useMemo(() => {
     const splitMembers = Array.from(splitAmong);
-    let splitsToInsert: any[] = [];
+    if (splitMembers.length === 0 || effectiveAmount <= 0) return [];
 
     if (splitType === "equal") {
-      const perPerson = Math.round((amountNum / splitMembers.length) * 100) / 100;
-      splitsToInsert = splitMembers.map(mid => ({
-        expense_id: (expense as any).id,
-        member_id: mid,
-        amount: perPerson,
-      }));
+      const perPerson = Math.round((effectiveAmount / splitMembers.length) * 100) / 100;
+      return splitMembers.map(mid => ({ member_id: mid, amount: perPerson }));
     } else if (splitType === "custom") {
-      splitsToInsert = splitMembers.map(mid => ({
-        expense_id: (expense as any).id,
+      return splitMembers.map(mid => ({
         member_id: mid,
         amount: parseFloat(customAmounts[mid] || "0"),
       }));
     } else if (splitType === "percentage") {
-      splitsToInsert = splitMembers.map(mid => {
-        const pct = parseFloat(customAmounts[mid] || "0");
-        return {
-          expense_id: (expense as any).id,
-          member_id: mid,
-          amount: Math.round((amountNum * pct / 100) * 100) / 100,
-        };
+      return splitMembers.map(mid => {
+        const pctVal = parseFloat(customAmounts[mid] || "0");
+        return { member_id: mid, amount: Math.round((effectiveAmount * pctVal / 100) * 100) / 100 };
       });
     }
+    return [];
+  }, [splitAmong, effectiveAmount, splitType, customAmounts]);
+
+  // Payer's net result
+  const payerOwes = computedSplits.find(s => s.member_id === paidBy)?.amount || 0;
+  const payerNet = effectiveAmount - payerOwes; // how much others owe the payer
+
+  const isRestaurantCategory = category === "alimentacao" || category === "bar";
+  const suggestion = CATEGORY_SUGGESTIONS[category] || CATEGORY_SUGGESTIONS.outros;
+
+  const goToSplit = () => {
+    if (!description.trim() || !amount) { toast.error("Preencha descrição e valor"); return; }
+    if (parseFloat(amount) <= 0) { toast.error("Valor inválido"); return; }
+    setStep("split");
+  };
+
+  const goToPreview = () => {
+    if (splitAmong.size === 0) { toast.error("Selecione pelo menos 1 participante"); return; }
+    if (splitType === "custom") {
+      const totalCustom = Array.from(splitAmong).reduce((s, mid) => s + (parseFloat(customAmounts[mid] || "0")), 0);
+      if (Math.abs(totalCustom - effectiveAmount) > 0.02) {
+        toast.error(`A soma dos valores (${fmt(totalCustom, currency)}) difere do total (${fmt(effectiveAmount, currency)})`);
+        return;
+      }
+    }
+    if (splitType === "percentage") {
+      const totalPct = Array.from(splitAmong).reduce((s, mid) => s + (parseFloat(customAmounts[mid] || "0")), 0);
+      if (Math.abs(totalPct - 100) > 0.5) {
+        toast.error(`Os percentuais somam ${totalPct.toFixed(1)}%, devem somar 100%`);
+        return;
+      }
+    }
+    setStep("preview");
+  };
+
+  const handleSave = async () => {
+    if (!group) return;
+    setLoading(true);
+    const fullDesc = isRestaurantCategory && (serviceCharge || tipIncluded)
+      ? `${description.trim()}${serviceCharge ? ` (+${servicePercent}% serviço)` : ""}${tipIncluded ? ` (+gorjeta ${fmt(tipVal, currency)})` : ""}`
+      : description.trim();
+
+    const { data: expense, error } = await supabase
+      .from("portal_group_expenses" as any)
+      .insert({
+        group_id: group.id, description: fullDesc, amount: effectiveAmount,
+        currency, category, paid_by_member_id: paidBy, split_type: splitType,
+        expense_date: date, notes: notes || null,
+      } as any).select().single();
+
+    if (error || !expense) { toast.error("Erro ao salvar despesa"); setLoading(false); return; }
+
+    const splitsToInsert = computedSplits.map(s => ({
+      expense_id: (expense as any).id, member_id: s.member_id, amount: s.amount,
+    }));
 
     await supabase.from("portal_expense_splits" as any).insert(splitsToInsert as any);
     toast.success("Despesa registrada!");
     setLoading(false);
     setDescription(""); setAmount(""); setCategory("outros"); setNotes("");
+    setStep("form");
     onSaved();
   };
+
+  const getMemberName = (id: string) => members.find(m => m.id === id)?.name || "?";
+  const getMemberColor = (id: string) => members.find(m => m.id === id)?.avatar_color || "#888";
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5 text-accent" /> Adicionar Despesa
+            <Receipt className="h-5 w-5 text-accent" />
+            {step === "form" ? "Nova Despesa" : step === "split" ? "Como dividir?" : "Confirmar Divisão"}
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 pt-2">
-          {/* Receipt scanner */}
-          <div className="relative">
-            <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-accent/20 bg-accent/[0.03] text-accent text-sm font-semibold cursor-pointer hover:bg-accent/[0.06] transition-all">
-              {scanning ? (
-                <><Loader2 className="h-4 w-4 animate-spin" /> Processando recibo...</>
-              ) : (
-                <><Camera className="h-4 w-4" /> Escanear Recibo com IA</>
-              )}
-              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleReceiptScan} disabled={scanning} />
-            </label>
-          </div>
 
-          <Input placeholder="Descrição (ex: Jantar no restaurante)" value={description} onChange={e => setDescription(e.target.value)} />
-
-          <div className="grid grid-cols-2 gap-3">
-            <Input type="number" step="0.01" placeholder="Valor" value={amount} onChange={e => setAmount(e.target.value)} />
-            <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">Categoria</label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.emoji} {c.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+        {/* ═══ STEP INDICATOR ═══ */}
+        <div className="flex items-center gap-1 mb-2">
+          {["form", "split", "preview"].map((s, i) => (
+            <div key={s} className="flex items-center gap-1 flex-1">
+              <div className={`h-1 flex-1 rounded-full transition-all ${
+                step === s ? "bg-accent" : i < ["form", "split", "preview"].indexOf(step) ? "bg-accent/40" : "bg-muted/30"
+              }`} />
             </div>
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">Data</label>
-              <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-foreground">Quem pagou</label>
-            <div className="flex flex-wrap gap-2">
-              {members.map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => setPaidBy(m.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                    paidBy === m.id
-                      ? "bg-accent/10 border-accent/30 text-accent"
-                      : "bg-muted/20 border-border/30 text-muted-foreground hover:border-accent/20"
-                  }`}
-                >
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-black" style={{ backgroundColor: m.avatar_color }}>
-                    {m.name[0]?.toUpperCase()}
-                  </div>
-                  {m.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-foreground">Tipo de divisão</label>
-            <div className="flex gap-2">
-              {[
-                { v: "equal", l: "Igual" },
-                { v: "custom", l: "Por valor" },
-                { v: "percentage", l: "Por %" },
-              ].map(t => (
-                <button
-                  key={t.v}
-                  onClick={() => setSplitType(t.v)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                    splitType === t.v
-                      ? "bg-accent/10 border-accent/30 text-accent"
-                      : "bg-muted/20 border-border/30 text-muted-foreground"
-                  }`}
-                >
-                  {t.l}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-foreground">Dividir entre</label>
-            <div className="space-y-1.5">
-              {members.map(m => (
-                <div key={m.id} className="flex items-center gap-3">
-                  <button
-                    onClick={() => toggleSplitMember(m.id)}
-                    className={`flex items-center gap-2 flex-1 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                      splitAmong.has(m.id)
-                        ? "bg-accent/10 border-accent/30 text-accent"
-                        : "bg-muted/20 border-border/30 text-muted-foreground"
-                    }`}
-                  >
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-black" style={{ backgroundColor: m.avatar_color }}>
-                      {m.name[0]?.toUpperCase()}
-                    </div>
-                    {m.name}
-                    {splitAmong.has(m.id) && <Check className="h-3 w-3 ml-auto" />}
-                  </button>
-                  {splitType !== "equal" && splitAmong.has(m.id) && (
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder={splitType === "percentage" ? "%" : "Valor"}
-                      className="w-24"
-                      value={customAmounts[m.id] || ""}
-                      onChange={e => setCustomAmounts(prev => ({ ...prev, [m.id]: e.target.value }))}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-            {splitType === "equal" && amount && splitAmong.size > 0 && (
-              <p className="text-xs text-muted-foreground bg-muted/20 px-3 py-2 rounded-xl">
-                {fmt(parseFloat(amount) / splitAmong.size, currency)} por pessoa
-              </p>
-            )}
-          </div>
-
-          <Textarea placeholder="Observações (opcional)" value={notes} onChange={e => setNotes(e.target.value)} rows={2} />
-
-          <Button onClick={handleSave} disabled={loading} className="w-full gap-2 rounded-xl">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-            Salvar Despesa
-          </Button>
+          ))}
         </div>
+
+        <AnimatePresence mode="wait">
+          {/* ═══ STEP 1: FORM ═══ */}
+          {step === "form" && (
+            <motion.div key="form" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
+              {/* Receipt scanner */}
+              <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-accent/20 bg-accent/[0.03] text-accent text-sm font-semibold cursor-pointer hover:bg-accent/[0.06] transition-all">
+                {scanning ? <><Loader2 className="h-4 w-4 animate-spin" /> Processando recibo...</> : <><Camera className="h-4 w-4" /> Escanear Recibo com IA</>}
+                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleReceiptScan} disabled={scanning} />
+              </label>
+
+              <Input placeholder="Descrição (ex: Jantar no restaurante)" value={description} onChange={e => setDescription(e.target.value)} />
+
+              <div className="grid grid-cols-2 gap-3">
+                <Input type="number" step="0.01" placeholder="Valor" value={amount} onChange={e => setAmount(e.target.value)} />
+                <Select value={currency} onValueChange={setCurrency}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{CURRENCIES.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-foreground">Categoria</label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{CATEGORIES.map(c => <SelectItem key={c.value} value={c.value}>{c.emoji} {c.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-foreground">Data</label>
+                  <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+                </div>
+              </div>
+
+              {/* Restaurant extras */}
+              {isRestaurantCategory && baseAmount > 0 && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-3 p-4 rounded-2xl bg-accent/[0.03] border border-accent/10">
+                  <p className="text-xs font-bold text-accent flex items-center gap-1.5">
+                    <UtensilsCrossed className="h-3.5 w-3.5" /> Modo Restaurante
+                  </p>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-foreground font-medium">Taxa de serviço</label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setServiceCharge(!serviceCharge)}
+                        className={`w-10 h-5 rounded-full transition-all flex items-center ${serviceCharge ? "bg-accent justify-end" : "bg-muted/40 justify-start"}`}
+                      >
+                        <div className="w-4 h-4 rounded-full bg-white shadow mx-0.5" />
+                      </button>
+                      {serviceCharge && (
+                        <Input type="number" value={servicePercent} onChange={e => setServicePercent(e.target.value)} className="w-16 h-7 text-xs text-center" />
+                      )}
+                      {serviceCharge && <span className="text-xs text-muted-foreground">%</span>}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs text-foreground font-medium">Gorjeta extra</label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setTipIncluded(!tipIncluded)}
+                        className={`w-10 h-5 rounded-full transition-all flex items-center ${tipIncluded ? "bg-accent justify-end" : "bg-muted/40 justify-start"}`}
+                      >
+                        <div className="w-4 h-4 rounded-full bg-white shadow mx-0.5" />
+                      </button>
+                      {tipIncluded && (
+                        <Input type="number" step="0.01" placeholder="Valor" value={tipAmount} onChange={e => setTipAmount(e.target.value)} className="w-20 h-7 text-xs" />
+                      )}
+                    </div>
+                  </div>
+                  {(serviceCharge || tipIncluded) && (
+                    <div className="text-[11px] text-muted-foreground bg-card rounded-xl px-3 py-2 space-y-0.5">
+                      <div className="flex justify-between"><span>Subtotal</span><span>{fmt(baseAmount, currency)}</span></div>
+                      {serviceCharge && <div className="flex justify-between"><span>Serviço ({servicePercent}%)</span><span>+{fmt(serviceVal, currency)}</span></div>}
+                      {tipIncluded && tipVal > 0 && <div className="flex justify-between"><span>Gorjeta</span><span>+{fmt(tipVal, currency)}</span></div>}
+                      <div className="flex justify-between font-bold text-foreground border-t border-border/20 pt-1 mt-1">
+                        <span>Total</span><span>{fmt(effectiveAmount, currency)}</span>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-foreground">Quem pagou</label>
+                <div className="flex flex-wrap gap-2">
+                  {members.map(m => (
+                    <button key={m.id} onClick={() => setPaidBy(m.id)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                        paidBy === m.id ? "bg-accent/10 border-accent/30 text-accent" : "bg-muted/20 border-border/30 text-muted-foreground hover:border-accent/20"
+                      }`}
+                    >
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-black" style={{ backgroundColor: m.avatar_color }}>{m.name[0]?.toUpperCase()}</div>
+                      {m.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Textarea placeholder="Observações (opcional)" value={notes} onChange={e => setNotes(e.target.value)} rows={2} />
+
+              <Button onClick={goToSplit} className="w-full gap-2 rounded-xl">
+                Próximo: Como dividir <ChevronRight className="h-4 w-4" />
+              </Button>
+            </motion.div>
+          )}
+
+          {/* ═══ STEP 2: SMART SPLIT ═══ */}
+          {step === "split" && (
+            <motion.div key="split" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-4">
+              {/* Smart suggestion card */}
+              <div className="p-4 rounded-2xl bg-accent/[0.04] border border-accent/15 space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="h-4 w-4 text-accent" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-foreground">Sugestão inteligente</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Essa despesa parece ser <strong>{suggestion.label}</strong>.
+                      {suggestion.default === "solo" ? " Sugerimos não dividir." : " Como deseja dividir?"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quick suggestion buttons */}
+                <div className="space-y-1.5">
+                  {suggestion.options.map(opt => {
+                    const isActive = (() => {
+                      if (opt.type === "equal" && splitType === "equal" && splitAmong.size === members.length) return true;
+                      if (opt.type === "present" && splitType === "equal" && splitAmong.size < members.length && splitAmong.size > 0) return true;
+                      if (opt.type === "custom" && splitType === "custom") return true;
+                      if (opt.type === "percentage" && splitType === "percentage") return true;
+                      if (opt.type === "solo" && splitAmong.size === 1) return true;
+                      return false;
+                    })();
+
+                    const handleClick = () => {
+                      if (opt.type === "equal") {
+                        setSplitType("equal");
+                        setSplitAmong(new Set(members.map(m => m.id)));
+                      } else if (opt.type === "present") {
+                        setSplitType("equal");
+                        // Keep current selection if already customized, otherwise default to all
+                      } else if (opt.type === "custom") {
+                        setSplitType("custom");
+                        setSplitAmong(new Set(members.map(m => m.id)));
+                      } else if (opt.type === "percentage") {
+                        setSplitType("percentage");
+                        setSplitAmong(new Set(members.map(m => m.id)));
+                        // Auto-fill equal percentages
+                        const eqPct = (100 / members.length).toFixed(1);
+                        const newAmounts: Record<string, string> = {};
+                        members.forEach(m => { newAmounts[m.id] = eqPct; });
+                        setCustomAmounts(newAmounts);
+                      } else if (opt.type === "solo") {
+                        setSplitType("equal");
+                        setSplitAmong(new Set([paidBy]));
+                      }
+                    };
+
+                    return (
+                      <button
+                        key={opt.type}
+                        onClick={handleClick}
+                        className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
+                          isActive
+                            ? "bg-accent/10 border-accent/30"
+                            : "bg-card border-border/20 hover:border-accent/20"
+                        }`}
+                      >
+                        <p className={`text-xs font-bold ${isActive ? "text-accent" : "text-foreground"}`}>{opt.label}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">{opt.desc}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Fine-tune: select participants */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-foreground">Dividir entre</label>
+                <div className="space-y-1.5">
+                  {members.map(m => (
+                    <div key={m.id} className="flex items-center gap-3">
+                      <button
+                        onClick={() => toggleSplitMember(m.id)}
+                        className={`flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
+                          splitAmong.has(m.id) ? "bg-accent/10 border-accent/30 text-accent" : "bg-muted/20 border-border/30 text-muted-foreground"
+                        }`}
+                      >
+                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-black" style={{ backgroundColor: m.avatar_color }}>{m.name[0]?.toUpperCase()}</div>
+                        {m.name}
+                        {m.id === paidBy && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent/20 ml-1">pagou</span>}
+                        {splitAmong.has(m.id) && <Check className="h-3 w-3 ml-auto" />}
+                      </button>
+                      {(splitType === "custom" || splitType === "percentage") && splitAmong.has(m.id) && (
+                        <Input
+                          type="number" step="0.01"
+                          placeholder={splitType === "percentage" ? "%" : fmt(0, currency)}
+                          className="w-24 h-9 text-xs"
+                          value={customAmounts[m.id] || ""}
+                          onChange={e => setCustomAmounts(prev => ({ ...prev, [m.id]: e.target.value }))}
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Quick preview */}
+              {splitType === "equal" && splitAmong.size > 0 && effectiveAmount > 0 && (
+                <div className="text-xs text-muted-foreground bg-muted/20 px-4 py-3 rounded-xl">
+                  <strong className="text-foreground">{fmt(effectiveAmount / splitAmong.size, currency)}</strong> por pessoa ({splitAmong.size} participante{splitAmong.size > 1 ? "s" : ""})
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep("form")} className="rounded-xl">Voltar</Button>
+                <Button onClick={goToPreview} className="flex-1 gap-2 rounded-xl">
+                  Ver Resultado <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* ═══ STEP 3: PREVIEW ═══ */}
+          {step === "preview" && (
+            <motion.div key="preview" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-4">
+              {/* Expense summary */}
+              <div className="p-4 rounded-2xl bg-card border border-border/30 space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{CATEGORIES.find(c => c.value === category)?.emoji || "🧾"}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">{description}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {new Date(date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long" })}
+                      {" · "}Pago por <strong>{getMemberName(paidBy)}</strong>
+                    </p>
+                  </div>
+                  <p className="text-lg font-black tabular-nums text-foreground">{fmt(effectiveAmount, currency)}</p>
+                </div>
+              </div>
+
+              {/* Split results */}
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-foreground">Resultado da divisão</p>
+                {computedSplits.map(s => {
+                  const isPayerSelf = s.member_id === paidBy;
+                  return (
+                    <motion.div
+                      key={s.member_id}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-3 p-3 rounded-xl border border-border/20 bg-card"
+                    >
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-black shrink-0" style={{ backgroundColor: getMemberColor(s.member_id) }}>
+                        {getMemberName(s.member_id)[0]?.toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-foreground">{getMemberName(s.member_id)}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {isPayerSelf ? "Absorve a própria parte" : `Deve para ${getMemberName(paidBy)}`}
+                        </p>
+                      </div>
+                      <p className={`text-sm font-black tabular-nums ${isPayerSelf ? "text-muted-foreground" : "text-destructive"}`}>
+                        {fmt(s.amount, currency)}
+                      </p>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Net summary for payer */}
+              {payerNet > 0.01 && (
+                <div className="p-3 rounded-xl bg-accent/[0.05] border border-accent/15 text-xs text-foreground">
+                  <strong>{getMemberName(paidBy)}</strong> receberá <strong className="text-accent">{fmt(payerNet, currency)}</strong> de volta dos outros participantes
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" onClick={() => setStep("split")} className="rounded-xl">Editar</Button>
+                <Button onClick={handleSave} disabled={loading} className="flex-1 gap-2 rounded-xl">
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  Confirmar Despesa
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </DialogContent>
     </Dialog>
   );
