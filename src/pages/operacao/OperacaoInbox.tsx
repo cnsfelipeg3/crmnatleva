@@ -1403,12 +1403,12 @@ function OperacaoInboxInner() {
   return (
     <div
       ref={livechatContainerRef}
-      className={`flex flex-col overflow-hidden bg-background ${isMobile ? "fixed inset-0 z-50" : "h-full min-h-0"}`}
-      style={isMobile ? { height: mobileHeight } : undefined}
+      className={`flex flex-col bg-background ${isMobile ? "fixed inset-0 z-50" : "h-full"}`}
+      style={isMobile ? { height: mobileHeight } : { height: '100%' }}
     >
       {/* Content */}
-      <div className="flex-1 overflow-hidden min-h-0">
-        <div className="flex h-full min-h-0">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        <div className="flex h-full w-full min-h-0">
           {/* ─── Column 1: Conversations List ─── */}
           <div className={`md:w-[340px] w-full border-r border-border flex flex-col min-h-0 overflow-hidden bg-card/30 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
             <div className="p-3 space-y-2 shrink-0">
