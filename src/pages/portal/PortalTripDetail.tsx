@@ -12,6 +12,7 @@ import {
   Compass, MessageCircle, Map as MapIcon, ListOrdered, CalendarDays, Sparkles,
   CreditCard, Plane, FileText, ChevronRight, Users, Hotel, Ticket, CircleDollarSign,
   Clock, Download, Share2, Shield, MapPin, ArrowDown, Star, Mail, UserPlus, Copy, Check, Loader2, CheckCircle2,
+  Cloud,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -24,6 +25,7 @@ import PortalChecklist from "@/components/portal/PortalChecklist";
 import PortalDocumentsCenter from "@/components/portal/PortalDocumentsCenter";
 import PortalTimeline from "@/components/portal/PortalTimeline";
 import PortalCalendar from "@/components/portal/PortalCalendar";
+import WeatherForecast from "@/components/portal/WeatherForecast";
 import { getMockTripDetail } from "@/lib/portalMockTrips";
 
 const fmt = (v: number) => v?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00";
@@ -604,6 +606,20 @@ export default function PortalTripDetail() {
           />
 
           <WelcomeBlock sale={sale} segments={segments || []} financial={financial} attachments={attachments || []} message={published?.notes_for_client} />
+
+          {/* ── Clima no destino ── */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                <Cloud className="h-5 w-5 text-accent" />
+              </div>
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-foreground">Clima no seu destino</h2>
+                <p className="text-xs text-muted-foreground">Previsão em tempo real</p>
+              </div>
+            </div>
+            <WeatherForecast sale={sale} segments={segments || []} />
+          </motion.div>
 
           <FloatingNav sections={navSections} activeSection={activeSection} />
 
