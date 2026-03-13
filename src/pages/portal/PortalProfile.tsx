@@ -522,50 +522,40 @@ export default function PortalProfile() {
               )}
 
               {activeTab === "viagem" && (
-                <div className="space-y-4">
-                  {/* ✈️ Voo */}
-                  <SectionTitle icon={PlaneTakeoff} label="Preferências de Voo" />
-                  <FieldGroup>
+                <div className="space-y-6">
+                  <PreferenceCard icon={PlaneTakeoff} title="Voo" subtitle="Sua experiência a bordo" gradient="from-accent/15 via-accent/5 to-transparent">
                     <OptionPicker label="Assento preferido" icon={Armchair} options={seatOptions} value={profile.seat_preference} field="seat_preference" editing={editing} onChange={updateField} />
                     <OptionPicker label="Classe preferida" icon={Star} options={cabinOptions} value={profile.cabin_class} field="cabin_class" editing={editing} onChange={updateField} />
                     <OptionPicker label="Restrição alimentar" icon={Utensils} options={dietOptions} value={profile.dietary_preferences} field="dietary_preferences" editing={editing} onChange={updateField} wrap />
                     <ProfileField label="Cias aéreas preferidas" icon={Plane} value={profile.preferred_airlines} field="preferred_airlines" editing={editing} onChange={updateField} placeholder="Ex: LATAM, Azul, GOL" />
                     <ProfileField label="Programa de fidelidade aéreo" icon={Star} value={profile.frequent_flyer} field="frequent_flyer" editing={editing} onChange={updateField} placeholder="Ex: Smiles Gold - 123456789" />
                     <OptionPicker label="Bagagem" icon={Luggage} options={luggageOptions} value={profile.luggage_preference} field="luggage_preference" editing={editing} onChange={updateField} wrap />
-                  </FieldGroup>
+                  </PreferenceCard>
 
-                  {/* 🏨 Hospedagem */}
-                  <SectionTitle icon={Hotel} label="Preferências de Hospedagem" />
-                  <FieldGroup>
+                  <PreferenceCard icon={Hotel} title="Hospedagem" subtitle="Onde você se sente em casa" gradient="from-info/15 via-info/5 to-transparent">
                     <OptionPicker label="Categoria do hotel" icon={Star} options={hotelCategoryOptions} value={profile.hotel_category} field="hotel_category" editing={editing} onChange={updateField} wrap />
                     <OptionPicker label="Tipo de quarto" icon={Hotel} options={roomTypeOptions} value={profile.room_type} field="room_type" editing={editing} onChange={updateField} wrap />
                     <OptionPicker label="Tipo de cama" icon={Hotel} options={bedOptions} value={profile.bed_preference} field="bed_preference" editing={editing} onChange={updateField} />
                     <OptionPicker label="Fumante" icon={X} options={smokingOptions} value={profile.smoking_preference} field="smoking_preference" editing={editing} onChange={updateField} />
                     <ProfileField label="Redes hoteleiras preferidas" icon={Hotel} value={profile.preferred_hotel_chains} field="preferred_hotel_chains" editing={editing} onChange={updateField} placeholder="Ex: Marriott, Accor, Hilton" />
                     <ProfileField label="Programa de fidelidade hotel" icon={Star} value={profile.loyalty_hotel} field="loyalty_hotel" editing={editing} onChange={updateField} placeholder="Ex: Marriott Bonvoy - 123456" />
-                  </FieldGroup>
+                  </PreferenceCard>
 
-                  {/* 🧭 Estilo de Viagem */}
-                  <SectionTitle icon={Compass} label="Estilo de Viagem" />
-                  <FieldGroup>
+                  <PreferenceCard icon={Compass} title="Estilo de Viagem" subtitle="Como você explora o mundo" gradient="from-warning/15 via-warning/5 to-transparent">
                     <OptionPicker label="Tipo de viagem" icon={Heart} options={tripStyleOptions} value={profile.trip_style} field="trip_style" editing={editing} onChange={updateField} wrap />
                     <OptionPicker label="Ritmo de viagem" icon={Clock} options={travelPaceOptions} value={profile.travel_pace} field="travel_pace" editing={editing} onChange={updateField} />
                     <OptionPicker label="Com quem viaja" icon={User} options={companionOptions} value={profile.travel_companion} field="travel_companion" editing={editing} onChange={updateField} wrap />
                     <OptionPicker label="Faixa de orçamento" icon={CircleDollarSign} options={budgetOptions} value={profile.budget_range} field="budget_range" editing={editing} onChange={updateField} wrap />
-                  </FieldGroup>
+                  </PreferenceCard>
 
-                  {/* 🎯 Interesses & Extras */}
-                  <SectionTitle icon={Mountain} label="Interesses & Extras" />
-                  <FieldGroup>
+                  <PreferenceCard icon={Mountain} title="Interesses & Extras" subtitle="O que faz sua viagem especial" gradient="from-success/15 via-success/5 to-transparent">
                     <MultiOptionPicker label="Interesses de viagem" icon={Heart} options={interestOptions} value={profile.interests} field="interests" editing={editing} onChange={updateField} />
                     <OptionPicker label="Transfer preferido" icon={MapPin} options={transferOptions} value={profile.transfer_preference} field="transfer_preference" editing={editing} onChange={updateField} wrap />
                     <OptionPicker label="Seguro viagem" icon={Shield} options={insuranceOptions} value={profile.travel_insurance} field="travel_insurance" editing={editing} onChange={updateField} wrap />
                     <ProfileField label="Necessidades especiais / Acessibilidade" icon={Heart} value={profile.special_assistance} field="special_assistance" editing={editing} onChange={updateField} placeholder="Ex: Cadeira de rodas, alergia grave..." />
-                  </FieldGroup>
+                  </PreferenceCard>
 
-                  {/* 📝 Observações */}
-                  <SectionTitle icon={FileText} label="Observações de Viagem" />
-                  <FieldGroup>
+                  <PreferenceCard icon={FileText} title="Observações" subtitle="Informações extras para sua agência" gradient="from-muted-foreground/10 via-muted/5 to-transparent">
                     {editing ? (
                       <textarea
                         value={profile.travel_notes}
@@ -579,7 +569,7 @@ export default function PortalProfile() {
                         {profile.travel_notes || "Nenhuma observação adicionada"}
                       </p>
                     )}
-                  </FieldGroup>
+                  </PreferenceCard>
                 </div>
               )}
 
@@ -698,6 +688,41 @@ function maskValue(val: string): string {
   return "•".repeat(val.length - 3) + val.slice(-3);
 }
 
+function PreferenceCard({ icon: Icon, title, subtitle, gradient, children }: {
+  icon: typeof User; title: string; subtitle: string; gradient: string; children: React.ReactNode;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35 }}
+      className="relative rounded-2xl border border-border/60 bg-card overflow-hidden shadow-sm"
+    >
+      {/* Gradient accent strip */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${gradient} pointer-events-none`} />
+      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+
+      <div className="relative p-5 sm:p-6 space-y-5">
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+            <Icon className="h-5 w-5 text-accent" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-foreground tracking-tight">{title}</h3>
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="space-y-4">
+          {children}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 interface OptionPickerProps {
   label: string;
   icon?: typeof User;
@@ -712,24 +737,28 @@ interface OptionPickerProps {
 function OptionPicker({ label, icon: Icon, options, value, field, editing, onChange, wrap }: OptionPickerProps) {
   return (
     <div>
-      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+      <label className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
         {Icon && <Icon className="h-3 w-3" />} {label}
       </label>
-      <div className={`flex gap-2 ${wrap ? "flex-wrap" : ""}`}>
-        {options.map(opt => (
-          <button
-            key={opt}
-            disabled={!editing}
-            onClick={() => onChange(field, opt)}
-            className={`py-2 px-3 rounded-full text-xs font-medium transition-all ${
-              value === opt
-                ? "bg-accent text-accent-foreground shadow-md"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-            } ${!editing ? "cursor-default" : "cursor-pointer"}`}
-          >
-            {opt}
-          </button>
-        ))}
+      <div className={`flex gap-2 ${wrap ? "flex-wrap" : "overflow-x-auto no-scrollbar"}`}>
+        {options.map(opt => {
+          const isActive = value === opt;
+          return (
+            <motion.button
+              key={opt}
+              disabled={!editing}
+              onClick={() => onChange(field, opt)}
+              whileTap={editing ? { scale: 0.95 } : undefined}
+              className={`py-2 px-3.5 rounded-xl text-xs font-medium transition-all border whitespace-nowrap ${
+                isActive
+                  ? "bg-accent text-accent-foreground border-accent shadow-md shadow-accent/20"
+                  : "bg-card border-border/60 text-muted-foreground hover:border-accent/40 hover:text-foreground"
+              } ${!editing ? "cursor-default opacity-80" : "cursor-pointer"}`}
+            >
+              {opt}
+            </motion.button>
+          );
+        })}
       </div>
     </div>
   );
@@ -757,25 +786,29 @@ function MultiOptionPicker({ label, icon: Icon, options, value, field, editing, 
 
   return (
     <div>
-      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+      <label className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
         {Icon && <Icon className="h-3 w-3" />} {label}
-        <span className="text-[10px] text-muted-foreground/60">(múltipla escolha)</span>
+        <span className="text-[10px] text-muted-foreground/60 ml-1">(múltipla escolha)</span>
       </label>
       <div className="flex flex-wrap gap-2">
-        {options.map(opt => (
-          <button
-            key={opt}
-            disabled={!editing}
-            onClick={() => toggle(opt)}
-            className={`py-2 px-3 rounded-full text-xs font-medium transition-all ${
-              selected.includes(opt)
-                ? "bg-accent text-accent-foreground shadow-md"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-            } ${!editing ? "cursor-default" : "cursor-pointer"}`}
-          >
-            {opt}
-          </button>
-        ))}
+        {options.map(opt => {
+          const isActive = selected.includes(opt);
+          return (
+            <motion.button
+              key={opt}
+              disabled={!editing}
+              onClick={() => toggle(opt)}
+              whileTap={editing ? { scale: 0.95 } : undefined}
+              className={`py-2 px-3.5 rounded-xl text-xs font-medium transition-all border ${
+                isActive
+                  ? "bg-accent text-accent-foreground border-accent shadow-md shadow-accent/20"
+                  : "bg-card border-border/60 text-muted-foreground hover:border-accent/40 hover:text-foreground"
+              } ${!editing ? "cursor-default opacity-80" : "cursor-pointer"}`}
+            >
+              {opt}
+            </motion.button>
+          );
+        })}
       </div>
     </div>
   );
