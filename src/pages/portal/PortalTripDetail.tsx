@@ -238,7 +238,7 @@ function SectionHeader({ id, icon: Icon, title, subtitle, count, children }: {
 }
 
 /* ═══ PASSENGER CARD ═══ */
-function PassengerCard({ pax, index }: { pax: any; index: number }) {
+function PassengerCard({ pax, index, onInvite }: { pax: any; index: number; onInvite: (pax: any) => void }) {
   const initial = (pax.full_name || "?")[0]?.toUpperCase();
   const colors = [
     "from-accent/30 to-accent/10",
@@ -274,7 +274,153 @@ function PassengerCard({ pax, index }: { pax: any; index: number }) {
           </div>
         )}
       </div>
+      <button
+        onClick={() => onInvite(pax)}
+        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-accent/10 hover:bg-accent/20 text-accent text-xs font-semibold transition-all opacity-0 group-hover:opacity-100 shrink-0"
+        title="Convidar para acessar a viagem"
+      >
+        <UserPlus className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">Convidar</span>
+      </button>
     </motion.div>
+  );
+}
+
+/* ═══ INVITE DIALOG ═══ */
+function InviteCompanionDialog({ open, onOpenChange, passenger, saleId }: {
+  open: boolean; onOpenChange: (v: boolean) => void; passenger: any; saleId: string;
+}) {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; temp_password?: string; message?: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleInvite = async () => {
+    if (!email.trim()) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("invite-trip-companion", {
+        body: {
+          sale_id: saleId,
+          passenger_name: passenger?.full_name || "Convidado",
+          email: email.trim(),
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setResult({ success: true, temp_password: data.temp_password, message: data.message });
+      toast.success("Convite enviado com sucesso!");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao enviar convite");
+      setResult({ success: false, message: err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyCredentials = () => {
+    const text = `Portal NatLeva - Acesse sua viagem!\n\nE-mail: ${email}\nSenha temporária: ${result?.temp_password}\n\nAcesse: ${window.location.origin}/portal/login\n\n⚠️ Troque sua senha no primeiro acesso.`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("Credenciais copiadas!");
+    setTimeout(() => setCopied(false), 3000);
+  };
+
+  const handleClose = () => {
+    setEmail("");
+    setResult(null);
+    setCopied(false);
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5 text-accent" />
+            Convidar para a viagem
+          </DialogTitle>
+          <DialogDescription>
+            Envie um convite para <strong>{passenger?.full_name}</strong> acessar os detalhes desta viagem no portal.
+          </DialogDescription>
+        </DialogHeader>
+
+        {!result?.success ? (
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">E-mail do passageiro</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="email"
+                  placeholder="email@exemplo.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="pl-10"
+                  onKeyDown={e => e.key === "Enter" && handleInvite()}
+                  disabled={loading}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Um acesso será criado automaticamente para esta pessoa visualizar a viagem.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={handleClose} disabled={loading}>
+                Cancelar
+              </Button>
+              <Button className="flex-1 gap-2" onClick={handleInvite} disabled={!email.trim() || loading}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                Enviar Convite
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4 pt-2">
+            <div className="rounded-xl bg-accent/10 border border-accent/20 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Check className="h-5 w-5 text-accent" />
+                <p className="text-sm font-semibold text-foreground">Convite criado com sucesso!</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Envie as credenciais abaixo para <strong>{passenger?.full_name}</strong>:
+              </p>
+              <div className="bg-background rounded-lg p-3 border border-border space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">E-mail:</span>
+                  <span className="text-sm font-mono font-medium text-foreground">{email}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Senha temporária:</span>
+                  <span className="text-sm font-mono font-medium text-foreground">{result.temp_password}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Portal:</span>
+                  <span className="text-xs font-mono text-accent">{window.location.origin}/portal/login</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1 gap-2" onClick={copyCredentials}>
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                {copied ? "Copiado!" : "Copiar Credenciais"}
+              </Button>
+              <Button className="flex-1" onClick={handleClose}>
+                Fechar
+              </Button>
+            </div>
+
+            <p className="text-[10px] text-center text-muted-foreground">
+              ⚠️ A pessoa deverá trocar a senha no primeiro acesso
+            </p>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
