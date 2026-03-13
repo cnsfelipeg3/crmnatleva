@@ -1130,7 +1130,7 @@ export default function OperacaoInbox() {
 
   const loadFlows = useCallback(async () => {
     const { data } = await supabase.from("flows" as any).select("id, name, status").in("status", ["ativo", "publicado", "rascunho"]).order("name");
-    setAvailableFlows(data || []);
+    setAvailableFlows((data as any[] || []) as { id: string; name: string; status: string }[]);
   }, []);
 
   const handleTriggerFlow = useCallback(async (flowId: string, flowName: string) => {
