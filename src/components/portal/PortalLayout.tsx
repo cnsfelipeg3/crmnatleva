@@ -86,6 +86,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   const navItems = [
     { to: "/portal", icon: Home, label: "Início" },
     { to: "/portal/viagens", icon: Map, label: "Minhas Viagens" },
+    { to: "/portal/financeiro", icon: Wallet, label: "Financeiro" },
   ];
 
   return (

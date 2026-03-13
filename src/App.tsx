@@ -232,6 +232,7 @@ function AppRoutes() {
         <Route path="/portal/viagens" element={<PortalDashboard />} />
         <Route path="/portal/viagem/:saleId" element={<PortalTripDetail />} />
         <Route path="/portal/modelo" element={<PortalDemoTrip />} />
+        <Route path="/portal/financeiro" element={<PortalFinance />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
