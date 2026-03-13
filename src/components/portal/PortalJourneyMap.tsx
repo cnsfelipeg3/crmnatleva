@@ -402,30 +402,32 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
         </div>
 
         {/* Filters + View Toggle Row */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 bg-muted/50 rounded-xl p-1">
-            {FILTER_OPTIONS.map(opt => (
-              <button
-                key={opt.key}
-                onClick={() => setFilter(opt.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                  filter === opt.key
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
-              >
-                <opt.icon className="h-3 w-3" />
-                {opt.label}
-              </button>
-            ))}
+        <div className="space-y-2">
+          <div className="bg-muted/50 rounded-2xl p-1.5 border border-border/50">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              {FILTER_OPTIONS.map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setFilter(opt.key)}
+                  className={`h-9 flex items-center justify-center gap-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
+                    filter === opt.key
+                      ? "bg-background text-foreground border border-border shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-background/60"
+                  }`}
+                >
+                  <opt.icon className="h-3.5 w-3.5" />
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <div className="flex items-center bg-muted/50 rounded-xl p-1 gap-0.5">
+          <div className="flex items-center justify-center sm:justify-end gap-1.5">
+            <div className="flex items-center bg-muted/50 rounded-xl p-1 gap-0.5 border border-border/40">
               <Button
                 size="sm"
                 variant={viewMode === "map" ? "default" : "ghost"}
-                className="h-7 px-3 text-xs gap-1.5 rounded-lg"
+                className="h-8 px-3 text-xs gap-1.5 rounded-lg"
                 onClick={() => setViewMode("map")}
               >
                 <MapIcon className="h-3.5 w-3.5" /> Mapa
@@ -433,7 +435,7 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
               <Button
                 size="sm"
                 variant={viewMode === "list" ? "default" : "ghost"}
-                className="h-7 px-3 text-xs gap-1.5 rounded-lg"
+                className="h-8 px-3 text-xs gap-1.5 rounded-lg"
                 onClick={() => setViewMode("list")}
               >
                 <List className="h-3.5 w-3.5" /> Lista
@@ -442,9 +444,9 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
             {viewMode === "map" && routePoints.length >= 2 && (
               <button
                 onClick={handleFitAll}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-muted/50 text-muted-foreground hover:text-foreground transition-all whitespace-nowrap"
+                className="h-8 px-3 flex items-center gap-1.5 rounded-xl text-xs font-medium bg-muted/50 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted transition-all whitespace-nowrap"
               >
-                <Maximize2 className="h-3 w-3" />
+                <Maximize2 className="h-3 w-3" /> Ajustar
               </button>
             )}
           </div>
