@@ -4,17 +4,19 @@
  */
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   Search, Loader2, Star, MapPin, Phone, Globe, Image as ImageIcon,
   X, ChevronLeft, ChevronRight, RotateCcw, Check, Camera, Upload,
   GripVertical, Eye, Crown, CheckSquare, Square, Maximize2,
-  Info, Sparkles,
+  Info, Sparkles, FolderOpen, Save,
 } from "lucide-react";
 
 /* ═══ Types ═══ */
@@ -291,6 +293,80 @@ export default function PlacesSearchCard({
     });
   }, [selectedPlace, curatedPhotos, onEnrich]);
 
+  /* ── Save to Media Library ── */
+  const [saving, setSaving] = useState(false);
+  const { user } = useAuth();
+
+  const saveToLibrary = useCallback(async () => {
+    if (!selectedPlace || !user) return;
+    setSaving(true);
+    try {
+      // Resolve place type from Google types
+      const isHotel = selectedPlace.types.some(t => ["lodging", "hotel"].includes(t));
+      const isRestaurant = selectedPlace.types.some(t => ["restaurant", "cafe", "bar"].includes(t));
+      const placeType = isHotel ? "hotel" : isRestaurant ? "restaurant" : "attraction";
+
+      // Parse city/country from address
+      const addressParts = (selectedPlace.address || "").split(",").map(s => s.trim());
+      const country = addressParts.length >= 2 ? addressParts[addressParts.length - 1] : null;
+      const city = addressParts.length >= 3 ? addressParts[addressParts.length - 2] : addressParts[0] || null;
+
+      const selected = curatedPhotos.filter(p => p.selected);
+      const coverPhoto = selected.find(p => p.isCover) || selected[0];
+
+      // Upsert place
+      const { data: placeData, error: placeErr } = await supabase
+        .from("media_places")
+        .upsert({
+          place_id: selectedPlace.place_id,
+          name: selectedPlace.name,
+          place_type: placeType,
+          city,
+          country,
+          address: selectedPlace.address,
+          rating: selectedPlace.rating,
+          user_ratings_total: selectedPlace.user_ratings_total,
+          website: selectedPlace.website,
+          phone: selectedPlace.phone,
+          location: selectedPlace.location,
+          types: selectedPlace.types,
+          editorial_summary: selectedPlace.editorial_summary,
+          cover_image_url: coverPhoto?.url || null,
+          created_by: user.id,
+          updated_at: new Date().toISOString(),
+        } as any, { onConflict: "place_id" })
+        .select("id")
+        .single();
+
+      if (placeErr) throw placeErr;
+
+      // Insert media items
+      const mediaItems = selected.map((photo, i) => ({
+        place_id: placeData.id,
+        image_url: photo.url,
+        label: photo.label || `Foto ${i + 1}`,
+        image_type: "geral",
+        is_cover: photo.isCover,
+        sort_order: i,
+        source: photo.source,
+        status: photo.isCover ? "capa" : "aprovada",
+        created_by: user.id,
+      }));
+
+      // Delete existing items for this place first
+      await supabase.from("media_items").delete().eq("place_id", placeData.id);
+      const { error: itemsErr } = await supabase.from("media_items").insert(mediaItems as any);
+      if (itemsErr) throw itemsErr;
+
+      toast.success(`"${selectedPlace.name}" salvo na biblioteca de mídias!`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao salvar na biblioteca");
+    } finally {
+      setSaving(false);
+    }
+  }, [selectedPlace, curatedPhotos, user]);
+
   const handleReset = () => {
     setSelectedPlace(null);
     setCuratedPhotos([]);
@@ -556,6 +632,10 @@ export default function PlacesSearchCard({
         <div className="px-5 py-3 flex items-center gap-2">
           <Button onClick={handleConfirm} disabled={selectedCount === 0} className="flex-1 gap-2">
             <Sparkles className="h-4 w-4" /> Usar na proposta · {selectedCount} foto{selectedCount !== 1 ? "s" : ""}
+          </Button>
+          <Button variant="outline" onClick={saveToLibrary} disabled={selectedCount === 0 || saving} className="gap-1.5">
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {saving ? "Salvando..." : "Salvar na biblioteca"}
           </Button>
         </div>
 

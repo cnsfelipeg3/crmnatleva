@@ -2560,6 +2560,131 @@ export type Database = {
           },
         ]
       }
+      media_items: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          height: number | null
+          id: string
+          image_type: string | null
+          image_url: string
+          is_cover: boolean | null
+          label: string | null
+          place_id: string
+          room_name: string | null
+          sort_order: number | null
+          source: string | null
+          status: string | null
+          storage_path: string | null
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          height?: number | null
+          id?: string
+          image_type?: string | null
+          image_url: string
+          is_cover?: boolean | null
+          label?: string | null
+          place_id: string
+          room_name?: string | null
+          sort_order?: number | null
+          source?: string | null
+          status?: string | null
+          storage_path?: string | null
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          height?: number | null
+          id?: string
+          image_type?: string | null
+          image_url?: string
+          is_cover?: boolean | null
+          label?: string | null
+          place_id?: string
+          room_name?: string | null
+          sort_order?: number | null
+          source?: string | null
+          status?: string | null
+          storage_path?: string | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_items_place_id_fkey"
+            columns: ["place_id"]
+            isOneToOne: false
+            referencedRelation: "media_places"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_places: {
+        Row: {
+          address: string | null
+          city: string | null
+          country: string | null
+          cover_image_url: string | null
+          created_at: string
+          created_by: string | null
+          editorial_summary: string | null
+          id: string
+          location: Json | null
+          name: string
+          phone: string | null
+          place_id: string | null
+          place_type: string
+          rating: number | null
+          types: string[] | null
+          updated_at: string
+          user_ratings_total: number | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          editorial_summary?: string | null
+          id?: string
+          location?: Json | null
+          name: string
+          phone?: string | null
+          place_id?: string | null
+          place_type?: string
+          rating?: number | null
+          types?: string[] | null
+          updated_at?: string
+          user_ratings_total?: number | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          country?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          editorial_summary?: string | null
+          id?: string
+          location?: Json | null
+          name?: string
+          phone?: string | null
+          place_id?: string | null
+          place_type?: string
+          rating?: number | null
+          types?: string[] | null
+          updated_at?: string
+          user_ratings_total?: number | null
+          website?: string | null
+        }
+        Relationships: []
+      }
       message_queue: {
         Row: {
           conversation_id: string | null

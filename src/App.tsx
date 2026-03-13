@@ -103,6 +103,7 @@ const QuoteRequests = lazy(() => import("@/pages/QuoteRequests"));
 const Proposals = lazy(() => import("@/pages/Proposals"));
 const ProposalEditor = lazy(() => import("@/pages/ProposalEditor"));
 const ProposalPublicView = lazy(() => import("@/pages/ProposalPublicView"));
+const MediaLibrary = lazy(() => import("@/pages/MediaLibrary"));
 
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
@@ -221,6 +222,9 @@ function AppRoutes() {
           <Route path="/operacao/pipeline" element={<OperacaoTagsPipeline />} />
           <Route path="/operacao/simulador" element={<OperacaoSimulador />} />
           <Route path="/operacao/logs" element={<OperacaoLogs />} />
+
+          {/* Mídias */}
+          <Route path="/midias" element={<MediaLibrary />} />
 
           {/* Apresentação */}
           <Route path="/apresentacao" element={<ApresentacaoGeral />} />

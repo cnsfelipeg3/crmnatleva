@@ -10,7 +10,7 @@ import {
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
   GitBranch, Plug, Zap, BookOpen, FileDown, Presentation, RotateCcw,
   Inbox, Bot, Tag, TestTube, ScrollText, PackageOpen, Upload, Database, Globe,
-  PlaneTakeoff,
+  PlaneTakeoff, Image as ImageIcon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -30,6 +30,7 @@ const navItems = [
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
   { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações Portal" },
   { to: "/propostas", icon: Presentation, label: "Propostas" },
+  { to: "/midias", icon: ImageIcon, label: "Mídias" },
 ];
 
 const financeItems = [
