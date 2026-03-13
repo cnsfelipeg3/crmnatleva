@@ -38,9 +38,9 @@ function FloatingNav({ sections, activeSection }: { sections: { id: string; labe
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.6 }}
-      className="sticky top-16 z-40 bg-card/80 backdrop-blur-xl border-b border-border/30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8"
+      className="sticky top-16 z-40 bg-card/80 backdrop-blur-xl border-b border-border/30 -mx-4 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8"
     >
-      <div className="flex gap-1 overflow-x-auto py-2 scrollbar-hide">
+      <div className="flex gap-0.5 sm:gap-1 overflow-x-auto py-1.5 sm:py-2 scrollbar-hide">
         {sections.map((s) => {
           const Icon = s.icon;
           const isActive = activeSection === s.id;
@@ -48,16 +48,16 @@ function FloatingNav({ sections, activeSection }: { sections: { id: string; labe
             <button
               key={s.id}
               onClick={() => scrollTo(s.id)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
                 isActive
                   ? "bg-accent/10 text-accent shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
             >
-              <Icon className="h-3.5 w-3.5" />
+              <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               {s.label}
               {s.count !== undefined && s.count > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? "bg-accent/20" : "bg-muted"}`}>
+                <span className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full ${isActive ? "bg-accent/20" : "bg-muted"}`}>
                   {s.count}
                 </span>
               )}
