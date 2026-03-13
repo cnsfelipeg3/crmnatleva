@@ -37,18 +37,16 @@ function NodeIcon({ name, color, size = 18 }: { name: string; color: string; siz
 
 function NodeIconBox({ color, children }: { color: string; children: React.ReactNode }) {
   const isDark = useIsDark();
-  const bgAlpha = isDark ? "25" : "15";
-  const bgAlpha2 = isDark ? "40" : "25";
-  const borderAlpha = isDark ? "50" : "40";
-  const shadowAlpha = isDark ? "15" : "08";
 
   return (
     <div
       className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-all group-hover:scale-110 group-hover:shadow-md"
       style={{
-        background: `linear-gradient(135deg, ${color}${bgAlpha}, ${color}${bgAlpha2})`,
-        border: `1.5px solid ${color}${borderAlpha}`,
-        boxShadow: `0 2px 8px ${color}${shadowAlpha}`,
+        background: isDark
+          ? `linear-gradient(135deg, ${color}25, ${color}40)`
+          : `linear-gradient(135deg, ${color}20, ${color}30)`,
+        border: `1.5px solid ${isDark ? `${color}50` : `${color}45`}`,
+        boxShadow: isDark ? `0 2px 8px ${color}15` : `0 2px 8px ${color}10`,
       }}
     >
       {children}
