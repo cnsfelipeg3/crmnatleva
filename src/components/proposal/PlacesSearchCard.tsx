@@ -204,6 +204,33 @@ export default function PlacesSearchCard({
   const selectPlace = useCallback(async (placeId: string) => {
     setLoadingDetails(true);
     setError(null);
+
+    // Resultado de fallback (hotel-search)
+    if (placeId.startsWith("fallback:")) {
+      const fallback = results.find((r) => r.place_id === placeId);
+      if (fallback) {
+        setSelectedPlace({
+          place_id: fallback.place_id,
+          name: fallback.name,
+          address: fallback.address,
+          phone: null,
+          website: null,
+          rating: null,
+          user_ratings_total: 0,
+          price_level: null,
+          types: fallback.types || ["lodging"],
+          location: fallback.location,
+          photos: [],
+          editorial_summary: null,
+          reviews: [],
+        });
+        setCuratedPhotos([]);
+        setResults([]);
+        setLoadingDetails(false);
+        return;
+      }
+    }
+
     try {
       const data = await getPlaceDetails(placeId);
       setSelectedPlace(data as any);
@@ -228,7 +255,7 @@ export default function PlacesSearchCard({
     } finally {
       setLoadingDetails(false);
     }
-  }, []);
+  }, [results]);
 
   /* ── Photo curation actions ── */
   const toggleSelect = (idx: number) => {
