@@ -415,13 +415,13 @@ export default function PortalFinance() {
                 className="absolute inset-y-0 w-1/4 bg-gradient-to-r from-transparent via-accent/[0.04] to-transparent pointer-events-none"
               />
 
-              <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+              <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                 {/* Main balance */}
                 <div className="col-span-2 lg:col-span-1">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent/60 mb-2">
+                  <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] text-accent/60 mb-1.5">
                     Investimento Total
                   </p>
-                  <p className="text-3xl sm:text-4xl font-black tabular-nums text-foreground mb-1">
+                  <p className="text-xl sm:text-3xl font-black tabular-nums text-foreground mb-1">
                     {balanceVisible ? <AnimatedNumber value={agencyTotal} /> : "••••••"}
                   </p>
                   <div className="flex items-center gap-1.5 mt-1">
