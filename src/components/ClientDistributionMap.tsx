@@ -180,6 +180,7 @@ export default function ClientDistributionMap() {
 
   // Update markers
   useEffect(() => {
+    if (fallbackMode) return;
     const map = mapRef.current;
     if (!map || cityData.length === 0) return;
 
