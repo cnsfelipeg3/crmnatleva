@@ -269,9 +269,43 @@ function OperacaoInboxInner() {
     return () => { cancelled = true; };
   }, [selectedId, selected?.db_id]);
 
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    requestAnimationFrame(() => {
+      const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+      if (viewport) {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior });
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior });
+      }
+    });
+  }, []);
+
+  // Auto-scroll when messages change (only if user hasn't scrolled up)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [currentMessages.length]);
+    if (!isUserScrolledUpRef.current) {
+      scrollToBottom();
+    }
+  }, [currentMessages.length, currentMessages[currentMessages.length - 1]?.id, scrollToBottom]);
+
+  // Scroll to bottom when selecting a conversation
+  useEffect(() => {
+    if (selectedId) {
+      isUserScrolledUpRef.current = false;
+      scrollToBottom("instant" as ScrollBehavior);
+    }
+  }, [selectedId, scrollToBottom]);
+
+  // Track user scroll position
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+    if (!viewport) return;
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = viewport;
+      isUserScrolledUpRef.current = scrollHeight - scrollTop - clientHeight > 100;
+    };
+    viewport.addEventListener("scroll", handleScroll);
+    return () => viewport.removeEventListener("scroll", handleScroll);
+  }, [selectedId]);
 
   useEffect(() => {
     if (!inputText && textareaRef.current) textareaRef.current.style.height = "40px";
