@@ -64,6 +64,28 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Block inviting the titular (primary) passenger
+    const { data: salePassengers } = await admin
+      .from("sale_passengers")
+      .select("role, passengers(full_name, email)")
+      .eq("sale_id", sale_id);
+
+    const titularPax = (salePassengers || []).find(
+      (sp: any) => sp.role === "titular" || sp.role === "Titular"
+    );
+    if (titularPax) {
+      const titularEmail = (titularPax as any).passengers?.email;
+      const titularName = (titularPax as any).passengers?.full_name;
+      if (
+        (titularEmail && titularEmail.toLowerCase() === email.toLowerCase()) ||
+        (titularName && titularName.toLowerCase() === passenger_name.toLowerCase() && titularPax.role?.toLowerCase() === "titular")
+      ) {
+        return new Response(JSON.stringify({ error: "O titular da viagem já possui acesso e não pode ser convidado." }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // Verify the sale is published for the caller's client
     const { data: published } = await admin
       .from("portal_published_sales")
