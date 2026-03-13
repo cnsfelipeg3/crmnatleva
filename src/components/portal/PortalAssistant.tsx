@@ -1,10 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Loader2, Sparkles, Plane, Hotel, FileText, DollarSign, User } from "lucide-react";
+import { X, Send, Loader2, Sparkles, Plane, Hotel, DollarSign, User, CloudSun, MapPin, Trash2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
+import { supabase } from "@/integrations/supabase/client";
 
 const ASSISTANT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-assistant`;
 
@@ -18,11 +18,12 @@ interface PortalAssistantProps {
 }
 
 const quickActions = [
-  { icon: Plane, label: "Detalhes do voo", question: "Quais são os detalhes dos meus voos?" },
-  { icon: Hotel, label: "Meu hotel", question: "Qual é o meu hotel e os dados da reserva?" },
-  { icon: FileText, label: "Documentos", question: "Quais documentos estão disponíveis na minha viagem?" },
-  { icon: DollarSign, label: "Pagamentos", question: "Como está a situação financeira da minha viagem?" },
-  { icon: User, label: "Consultor", question: "Quem é meu consultor da NatLeva e como posso entrar em contato?" },
+  { icon: Plane, label: "Meus voos", question: "Quais são os detalhes dos meus voos? Mostre horários, companhias e trechos." },
+  { icon: Hotel, label: "Meu hotel", question: "Qual é o meu hotel? Mostre nome, endereço, check-in, check-out e tipo de quarto." },
+  { icon: DollarSign, label: "Pagamentos", question: "Como está a situação financeira da minha viagem? Mostre parcelas e próximo vencimento." },
+  { icon: CloudSun, label: "Clima no destino", question: "Como está o clima no meu destino de viagem? Dê dicas de o que vestir." },
+  { icon: MapPin, label: "Roteiro", question: "Qual é o roteiro completo da minha viagem? Mostre dia a dia." },
+  { icon: User, label: "Meu consultor", question: "Quem é meu consultor da NatLeva e como posso entrar em contato?" },
 ];
 
 export default function PortalAssistant({ saleId }: PortalAssistantProps) {
@@ -34,12 +35,14 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
     }
   }, [messages, isStreaming]);
 
+  // Auto-focus input
   useEffect(() => {
     if (open && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 300);
@@ -59,8 +62,8 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
     abortRef.current = controller;
 
     try {
-      const { data: { session } } = await (await import("@/integrations/supabase/client")).supabase.auth.getSession();
-      
+      const { data: { session } } = await supabase.auth.getSession();
+
       const resp = await fetch(ASSISTANT_URL, {
         method: "POST",
         headers: {
@@ -70,17 +73,15 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
         body: JSON.stringify({
           question: text.trim(),
           sale_id: saleId || null,
-          conversation_history: newMessages.slice(-10),
+          conversation_history: newMessages.slice(-12),
         }),
         signal: controller.signal,
       });
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({}));
-        setMessages(prev => [...prev, {
-          role: "assistant",
-          content: "Desculpe, não consegui processar sua pergunta no momento. Tente novamente ou entre em contato com nosso suporte. 😊",
-        }]);
+        const errMsg = errData.error || "Desculpe, não consegui processar sua pergunta no momento. Tente novamente em instantes.";
+        setMessages(prev => [...prev, { role: "assistant", content: errMsg }]);
         setIsStreaming(false);
         return;
       }
@@ -142,6 +143,12 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
     }
   };
 
+  const clearChat = () => {
+    if (abortRef.current) abortRef.current.abort();
+    setMessages([]);
+    setIsStreaming(false);
+  };
+
   return (
     <>
       {/* Floating Button */}
@@ -167,7 +174,7 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 40, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-48px)] h-[560px] max-h-[calc(100vh-120px)] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+            className="fixed bottom-6 right-6 z-50 w-[400px] max-w-[calc(100vw-32px)] h-[600px] max-h-[calc(100vh-100px)] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-accent/5 border-b border-border shrink-0">
@@ -176,58 +183,67 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
                   <img src={logoNatleva} alt="NatLeva" className="h-5 dark:brightness-[1.8]" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Assistente NatLeva</p>
+                  <p className="text-sm font-semibold text-foreground">Concierge NatLeva</p>
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" /> Online
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Assistente de Viagem
                   </p>
                 </div>
               </div>
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setOpen(false)}>
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                {messages.length > 0 && (
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={clearChat} title="Limpar conversa">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setOpen(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             {/* Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.length === 0 && (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {/* Welcome */}
-                  <div className="flex gap-2">
-                    <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <Sparkles className="h-3.5 w-3.5 text-accent" />
+                  <div className="flex gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <Sparkles className="h-4 w-4 text-accent" />
                     </div>
                     <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%]">
-                      <p className="text-sm text-foreground leading-relaxed">
-                        Olá! Sou o assistente da <strong>NatLeva</strong> ✨
+                      <p className="text-sm text-foreground leading-relaxed font-medium">
+                        Olá! Sou seu Concierge NatLeva ✨
                       </p>
-                      <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                        Posso ajudar com informações sobre sua viagem, voos, hotéis, documentos e pagamentos.
+                      <p className="text-sm text-muted-foreground mt-1.5 leading-relaxed">
+                        Tenho acesso completo ao seu itinerário — voos, hotéis, roteiro, pagamentos e documentos. Pergunte qualquer coisa sobre sua viagem!
                       </p>
                     </div>
                   </div>
 
-                  {/* Quick Actions */}
-                  <div className="pl-9 space-y-1.5">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2">Perguntas rápidas</p>
-                    {quickActions.map((action, i) => (
-                      <button
-                        key={i}
-                        onClick={() => sendMessage(action.question)}
-                        className="flex items-center gap-2.5 w-full text-left px-3 py-2 rounded-xl border border-border bg-background hover:bg-accent/5 hover:border-accent/20 transition-all group"
-                      >
-                        <action.icon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-accent transition-colors shrink-0" />
-                        <span className="text-xs text-foreground">{action.label}</span>
-                      </button>
-                    ))}
+                  {/* Quick Actions Grid */}
+                  <div className="pl-10">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold mb-2.5">Perguntas rápidas</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {quickActions.map((action, i) => (
+                        <button
+                          key={i}
+                          onClick={() => sendMessage(action.question)}
+                          className="flex items-center gap-2 text-left px-3 py-2.5 rounded-xl border border-border/60 bg-background hover:bg-accent/5 hover:border-accent/30 transition-all group"
+                        >
+                          <action.icon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-accent transition-colors shrink-0" />
+                          <span className="text-[11px] font-medium text-foreground leading-tight">{action.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
 
               {messages.map((msg, i) => (
-                <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : ""}`}>
+                <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : ""}`}>
                   {msg.role === "assistant" && (
-                    <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
-                      <Sparkles className="h-3.5 w-3.5 text-accent" />
+                    <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <Sparkles className="h-4 w-4 text-accent" />
                     </div>
                   )}
                   <div
@@ -238,8 +254,13 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
                     }`}
                   >
                     {msg.role === "assistant" ? (
-                      <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:mb-1.5 [&>p:last-child]:mb-0 [&>ul]:my-1 [&>ol]:my-1">
-                        <ReactMarkdown>{msg.content || "..."}</ReactMarkdown>
+                      <div className="text-sm prose prose-sm dark:prose-invert max-w-none [&>p]:mb-1.5 [&>p:last-child]:mb-0 [&>ul]:my-1 [&>ol]:my-1 [&>table]:text-xs [&>table]:my-2 [&_th]:px-2 [&_th]:py-1 [&_td]:px-2 [&_td]:py-1">
+                        {msg.content ? <ReactMarkdown>{msg.content}</ReactMarkdown> : (
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">Consultando seu itinerário...</span>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <p className="text-sm">{msg.content}</p>
@@ -249,19 +270,24 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
               ))}
 
               {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
-                <div className="flex gap-2">
-                  <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
-                    <Sparkles className="h-3.5 w-3.5 text-accent" />
+                <div className="flex gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="h-4 w-4 text-accent" />
                   </div>
                   <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Consultando seu itinerário...</span>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
+            {/* Scroll to bottom indicator */}
+
             {/* Input */}
-            <div className="border-t border-border p-3 shrink-0">
+            <div className="border-t border-border p-3 shrink-0 bg-card">
               <div className="flex items-end gap-2">
                 <textarea
                   ref={inputRef}
@@ -270,7 +296,7 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
                   onKeyDown={handleKeyDown}
                   placeholder="Pergunte sobre sua viagem..."
                   rows={1}
-                  className="flex-1 resize-none bg-muted rounded-xl px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/30 max-h-[80px] min-h-[40px]"
+                  className="flex-1 resize-none bg-muted rounded-xl px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent/30 max-h-[80px] min-h-[40px]"
                 />
                 <Button
                   size="icon"
@@ -281,8 +307,8 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
                   {isStreaming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
               </div>
-              <p className="text-[9px] text-muted-foreground text-center mt-2">
-                Assistente NatLeva • Respostas baseadas nos dados da sua viagem
+              <p className="text-[9px] text-muted-foreground text-center mt-2 opacity-60">
+                Concierge NatLeva • Respostas baseadas no seu itinerário
               </p>
             </div>
           </motion.div>
