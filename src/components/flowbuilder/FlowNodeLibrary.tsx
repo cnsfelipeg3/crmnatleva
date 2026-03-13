@@ -98,15 +98,9 @@ export function FlowNodeLibrary({ onDragStart }: Props) {
                         }}
                         className="flex items-center gap-3 px-2.5 py-2.5 rounded-xl cursor-grab hover:bg-secondary/70 active:cursor-grabbing active:scale-[0.97] transition-all group border border-transparent hover:border-border/50"
                       >
-                        <div
-                          className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-all group-hover:scale-110 group-hover:shadow-md"
-                          style={{
-                            background: `linear-gradient(135deg, ${node.color}25, ${node.color}40)`,
-                            border: `1.5px solid ${node.color}50`,
-                            boxShadow: `0 2px 8px ${node.color}15`,
-                          }}
-                        >
+                        <NodeIconBox color={node.color}>
                           <NodeIcon name={node.icon} color={node.color} size={18} />
+                        </NodeIconBox>
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="text-[11px] font-semibold text-foreground truncate leading-tight">{node.label}</p>
