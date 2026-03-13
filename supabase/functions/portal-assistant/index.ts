@@ -72,11 +72,32 @@ Deno.serve(async (req) => {
       .eq("client_id", clientId)
       .eq("is_active", true);
 
-    const saleIds = (published || []).map((p: any) => p.sale_id);
+    const publishedSaleIds = (published || []).map((p: any) => p.sale_id);
+
+    // ALSO fetch sales directly linked to this client (fallback when nothing is published)
+    const { data: directSales } = await admin
+      .from("sales")
+      .select("id")
+      .eq("client_id", clientId);
+
+    const directSaleIds = (directSales || []).map((s: any) => s.id);
+
+    // Also check if client name matches any sale name (for clients linked by name)
+    let nameSaleIds: string[] = [];
+    if (client?.display_name && client.display_name.length > 3) {
+      const { data: nameSales } = await admin
+        .from("sales")
+        .select("id")
+        .ilike("name", `%${client.display_name}%`)
+        .limit(20);
+      nameSaleIds = (nameSales || []).map((s: any) => s.id);
+    }
+
+    // Merge all unique sale IDs
+    const saleIds = [...new Set([...publishedSaleIds, ...directSaleIds, ...nameSaleIds])];
     let tripContext = "";
 
     if (saleIds.length > 0) {
-      // If a specific sale_id is given and it's in the list, focus on it but still include others as summary
       const targetIds = saleIds;
 
       const [salesRes, segRes, costRes, recvRes, paxRes, attRes, lodgRes, checkinRes] = await Promise.all([
