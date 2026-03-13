@@ -1,15 +1,12 @@
-import { useEffect, useRef, useState, useMemo } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Search, ZoomIn, ZoomOut, Maximize2, LocateFixed, Layers, Filter, Download } from "lucide-react";
+import { MapPin, Search, ZoomIn, ZoomOut, Maximize2, LocateFixed, Download } from "lucide-react";
+import { loadGoogleMapsCore } from "@/lib/googleMaps";
 
-// Expanded coordinates for Brazilian cities
 const CITY_COORDS: Record<string, [number, number]> = {
   "São Paulo": [-23.5505, -46.6333], "Rio de Janeiro": [-22.9068, -43.1729],
   "Brasília": [-15.7975, -47.8919], "Belo Horizonte": [-19.9167, -43.9345],
@@ -44,7 +41,6 @@ const CITY_COORDS: Record<string, [number, number]> = {
   "Boa Vista": [2.8195, -60.6735],
 };
 
-// State abbreviation mapping
 const STATE_NAMES: Record<string, string> = {
   SP: "São Paulo", RJ: "Rio de Janeiro", MG: "Minas Gerais", BA: "Bahia",
   PR: "Paraná", RS: "Rio Grande do Sul", PE: "Pernambuco", CE: "Ceará",
@@ -61,35 +57,35 @@ interface CityData {
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const TILE_LAYERS = {
-  dark: { url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", name: "Escuro" },
-  light: { url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", name: "Claro" },
-  satellite: { url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", name: "Satélite" },
-};
+const DARK_STYLE: google.maps.MapTypeStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#1d2c4d" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8ec3b9" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#1a3646" }] },
+  { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#4b6878" }] },
+  { featureType: "water", elementType: "geometry.fill", stylers: [{ color: "#0e1626" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#4e6d70" }] },
+  { featureType: "road", stylers: [{ visibility: "off" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+];
 
 export default function ClientDistributionMap() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const tileRef = useRef<L.TileLayer | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const overlaysRef = useRef<(google.maps.Marker | google.maps.Circle | google.maps.InfoWindow)[]>([]);
   const [cityData, setCityData] = useState<CityData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [stateFilter, setStateFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"clients" | "revenue" | "sales">("clients");
-  const [mapStyle, setMapStyle] = useState<keyof typeof TILE_LAYERS>("dark");
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Fetch data
   useEffect(() => {
     async function fetchData() {
-      const { data: passengers } = await supabase
-        .from("passengers")
-        .select("id, address_city, address_state");
-      const { data: salePassengers } = await supabase
-        .from("sale_passengers")
-        .select("passenger_id, sale_id");
-      const { data: sales } = await supabase
-        .from("sales")
-        .select("id, received_value");
+      const { data: passengers } = await supabase.from("passengers").select("id, address_city, address_state");
+      const { data: salePassengers } = await supabase.from("sale_passengers").select("passenger_id, sale_id");
+      const { data: sales } = await supabase.from("sales").select("id, received_value");
 
       if (!passengers || !salePassengers || !sales) { setLoading(false); return; }
 
@@ -119,64 +115,26 @@ export default function ClientDistributionMap() {
     fetchData();
   }, []);
 
-  // Initialize map - delayed to ensure container has dimensions
+  // Init Google Map
   useEffect(() => {
     if (!containerRef.current) return;
-    // Prevent double-init
-    if (mapRef.current) { mapRef.current.invalidateSize(); return; }
+    let cancelled = false;
 
-    const el = containerRef.current;
-    const isDark = document.documentElement.classList.contains("dark");
-    const initialStyle = isDark ? "dark" : "light";
-    setMapStyle(initialStyle);
-
-    // Wait until the container actually has layout dimensions
-    const initMap = () => {
-      if (!el || el.clientWidth === 0 || el.clientHeight === 0) {
-        requestAnimationFrame(initMap);
-        return;
-      }
-
-      const map = L.map(el, {
-        scrollWheelZoom: true,
+    loadGoogleMapsCore().then(({ Map }) => {
+      if (cancelled || !containerRef.current) return;
+      const map = new Map(containerRef.current, {
+        center: { lat: -14, lng: -51 },
+        zoom: 4,
+        disableDefaultUI: true,
         zoomControl: false,
-        dragging: true,
-        doubleClickZoom: true,
-        touchZoom: true,
-        attributionControl: false,
-      }).setView([-14, -51], 4);
-
-      const tile = L.tileLayer(TILE_LAYERS[initialStyle].url, { maxZoom: 18 }).addTo(map);
-      tileRef.current = tile;
+        styles: DARK_STYLE,
+        backgroundColor: "#0e1626",
+      });
       mapRef.current = map;
+    });
 
-      L.control.attribution({ position: 'bottomright', prefix: '' }).addTo(map);
-
-      // Multiple invalidateSize calls to cover various render timings
-      requestAnimationFrame(() => map.invalidateSize());
-      setTimeout(() => map.invalidateSize(), 100);
-      setTimeout(() => map.invalidateSize(), 500);
-      setTimeout(() => map.invalidateSize(), 1500);
-    };
-
-    // Start init on next frame to let layout settle
-    requestAnimationFrame(initMap);
-
-    const ro = new ResizeObserver(() => mapRef.current?.invalidateSize());
-    ro.observe(el);
-
-    return () => {
-      ro.disconnect();
-      if (mapRef.current) { mapRef.current.remove(); mapRef.current = null; }
-    };
+    return () => { cancelled = true; };
   }, []);
-
-  // Switch tile layer
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !tileRef.current) return;
-    tileRef.current.setUrl(TILE_LAYERS[mapStyle].url);
-  }, [mapStyle]);
 
   // Filtered data
   const filtered = useMemo(() => {
@@ -193,101 +151,123 @@ export default function ClientDistributionMap() {
   const totalClients = filtered.reduce((s, c) => s + c.clients, 0);
   const totalRevenue = filtered.reduce((s, c) => s + c.revenue, 0);
 
-  // Update markers when filtered data changes
+  // Update markers
   useEffect(() => {
     const map = mapRef.current;
     if (!map || cityData.length === 0) return;
 
-    // Remove existing markers
-    map.eachLayer(layer => {
-      if (!(layer instanceof L.TileLayer)) map.removeLayer(layer);
+    // Clear
+    overlaysRef.current.forEach(o => {
+      if ("setMap" in o) (o as any).setMap(null);
+      if ("close" in o) (o as any).close();
     });
+    overlaysRef.current = [];
 
     const maxClients = Math.max(...filtered.map(c => c.clients), 1);
     const maxRevenue = Math.max(...filtered.map(c => c.revenue), 1);
+    const bounds = new google.maps.LatLngBounds();
 
     filtered.forEach(c => {
       const coords = CITY_COORDS[c.city];
       if (!coords) return;
+      const pos = { lat: coords[0], lng: coords[1] };
+      bounds.extend(pos);
 
-      const sizeByClients = 8 + (c.clients / maxClients) * 22;
+      const sizeByClients = 8 + (c.clients / maxClients) * 18;
       const intensity = c.revenue / maxRevenue;
+      const hue = 160 + (1 - intensity) * 60;
 
-      // Gradient color based on revenue intensity
-      const hue = 160 + (1 - intensity) * 60; // green to teal
-      const sat = 50 + intensity * 30;
-      const light = 40 + intensity * 15;
-
-      const marker = L.circleMarker(coords, {
-        radius: sizeByClients,
-        fillColor: `hsl(${hue}, ${sat}%, ${light}%)`,
-        fillOpacity: 0.65,
-        color: `hsl(${hue}, ${sat + 10}%, ${light - 10}%)`,
-        weight: 2,
+      const marker = new google.maps.Marker({
+        position: pos,
+        map,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: sizeByClients,
+          fillColor: `hsl(${hue}, 70%, 50%)`,
+          fillOpacity: 0.7,
+          strokeColor: `hsl(${hue}, 80%, 40%)`,
+          strokeWeight: 2,
+        },
+        zIndex: c.clients,
       });
 
-      // Custom popup
-      marker.bindPopup(`
-        <div style="font-family: 'Inter', sans-serif; font-size: 12px; min-width: 180px; line-height: 1.6;">
-          <div style="font-weight: 700; font-size: 14px; margin-bottom: 6px; color: hsl(${hue}, ${sat}%, ${light}%);">
-            📍 ${c.city}
-          </div>
-          <div style="color: #999; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
-            ${STATE_NAMES[c.state] || c.state}
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-            <div style="background: rgba(255,255,255,0.05); padding: 6px 8px; border-radius: 6px;">
-              <div style="font-size: 10px; color: #888;">Clientes</div>
-              <div style="font-weight: 700; font-size: 16px;">${c.clients}</div>
-            </div>
-            <div style="background: rgba(255,255,255,0.05); padding: 6px 8px; border-radius: 6px;">
-              <div style="font-size: 10px; color: #888;">Vendas</div>
-              <div style="font-weight: 700; font-size: 16px;">${c.sales}</div>
-            </div>
-          </div>
-          <div style="margin-top: 8px; padding: 6px 8px; background: rgba(76,175,80,0.1); border-radius: 6px;">
-            <div style="font-size: 10px; color: #888;">Receita Total</div>
-            <div style="font-weight: 700; font-size: 14px; color: hsl(160, 60%, 50%);">${fmt(c.revenue)}</div>
-          </div>
-        </div>
-      `, { className: 'custom-popup', maxWidth: 250 });
-
-      // Pulse animation for top cities
-      if (c.clients === Math.max(...filtered.map(x => x.clients))) {
-        L.circleMarker(coords, {
-          radius: sizeByClients + 6,
-          fillColor: `hsl(${hue}, ${sat}%, ${light}%)`,
-          fillOpacity: 0.15,
-          color: `hsl(${hue}, ${sat}%, ${light}%)`,
-          weight: 1,
-          dashArray: "4 4",
-        }).addTo(map);
+      // Pulse ring for top city
+      if (c.clients === maxClients) {
+        const ring = new google.maps.Circle({
+          center: pos,
+          radius: 80000,
+          strokeColor: `hsl(${hue}, 70%, 50%)`,
+          strokeWeight: 1,
+          strokeOpacity: 0.3,
+          fillColor: `hsl(${hue}, 70%, 50%)`,
+          fillOpacity: 0.08,
+          map,
+        });
+        overlaysRef.current.push(ring as any);
       }
 
-      marker.addTo(map);
+      const infoContent = `
+        <div style="font-family:system-ui;font-size:12px;min-width:180px;line-height:1.6;color:#e5e7eb;">
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px;color:hsl(${hue},70%,55%);">📍 ${c.city}</div>
+          <div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">${STATE_NAMES[c.state] || c.state}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+            <div style="background:rgba(255,255,255,0.05);padding:6px 8px;border-radius:6px;">
+              <div style="font-size:10px;color:#9ca3af;">Clientes</div>
+              <div style="font-weight:700;font-size:16px;">${c.clients}</div>
+            </div>
+            <div style="background:rgba(255,255,255,0.05);padding:6px 8px;border-radius:6px;">
+              <div style="font-size:10px;color:#9ca3af;">Vendas</div>
+              <div style="font-weight:700;font-size:16px;">${c.sales}</div>
+            </div>
+          </div>
+          <div style="margin-top:8px;padding:6px 8px;background:rgba(52,211,153,0.1);border-radius:6px;">
+            <div style="font-size:10px;color:#9ca3af;">Receita Total</div>
+            <div style="font-weight:700;font-size:14px;color:#34d399;">${fmt(c.revenue)}</div>
+          </div>
+        </div>
+      `;
+
+      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+      marker.addListener("click", () => {
+        overlaysRef.current.forEach(o => { if (o instanceof google.maps.InfoWindow) o.close(); });
+        infoWindow.open(map, marker);
+      });
+
+      overlaysRef.current.push(marker, infoWindow);
     });
 
-    // Fit bounds
-    const points = filtered.map(c => CITY_COORDS[c.city]).filter(Boolean) as [number, number][];
-    if (points.length >= 2) {
-      map.fitBounds(points as L.LatLngBoundsExpression, { padding: [40, 40], maxZoom: 8 });
-    } else if (points.length === 1) {
-      map.setView(points[0], 8);
+    if (filtered.length >= 2 && bounds.getNorthEast().lat() !== bounds.getSouthWest().lat()) {
+      map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+    } else if (filtered.length === 1) {
+      const c = CITY_COORDS[filtered[0].city];
+      if (c) map.setCenter({ lat: c[0], lng: c[1] });
+      map.setZoom(8);
     }
   }, [filtered, cityData]);
 
-  const handleZoomIn = () => mapRef.current?.zoomIn();
-  const handleZoomOut = () => mapRef.current?.zoomOut();
-  const handleResetView = () => mapRef.current?.setView([-14, -51], 4);
-  const handleLocate = () => {
-    const points = filtered.map(c => CITY_COORDS[c.city]).filter(Boolean) as [number, number][];
-    if (points.length >= 2) mapRef.current?.fitBounds(points as L.LatLngBoundsExpression, { padding: [40, 40] });
-  };
+  const handleZoomIn = () => { const z = mapRef.current?.getZoom(); if (z != null) mapRef.current?.setZoom(z + 1); };
+  const handleZoomOut = () => { const z = mapRef.current?.getZoom(); if (z != null) mapRef.current?.setZoom(z - 1); };
+  const handleResetView = () => { mapRef.current?.setCenter({ lat: -14, lng: -51 }); mapRef.current?.setZoom(4); };
+  const handleLocate = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const points = filtered.map(c => CITY_COORDS[c.city]).filter(Boolean);
+    if (points.length >= 2) {
+      const bounds = new google.maps.LatLngBounds();
+      points.forEach(p => bounds.extend({ lat: p[0], lng: p[1] }));
+      map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+    }
+  }, [filtered]);
 
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
-    setTimeout(() => mapRef.current?.invalidateSize(), 300);
-  };
+  const handleCityClick = useCallback((city: string) => {
+    const coords = CITY_COORDS[city];
+    if (coords && mapRef.current) {
+      mapRef.current.panTo({ lat: coords[0], lng: coords[1] });
+      mapRef.current.setZoom(10);
+    }
+  }, []);
+
+  const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
 
   const exportCSV = () => {
     const headers = "Cidade,Estado,Clientes,Vendas,Receita\n";
@@ -328,7 +308,7 @@ export default function ClientDistributionMap() {
         </Button>
       </div>
 
-      {/* Summary badges */}
+      {/* Summary */}
       <div className="flex gap-3 text-xs">
         <span className="text-muted-foreground">{filtered.length} cidades</span>
         <span className="text-muted-foreground">•</span>
@@ -337,15 +317,11 @@ export default function ClientDistributionMap() {
         <span className="text-emerald-500 font-semibold">{fmt(totalRevenue)}</span>
       </div>
 
-      {/* Map container */}
+      {/* Map */}
       <div className={`relative rounded-xl overflow-hidden border border-border/50 transition-all duration-300 ${isFullscreen ? 'fixed inset-4 z-50' : ''}`}>
-        <div
-          ref={containerRef}
-          style={{ height: isFullscreen ? "100%" : "420px" }}
-          className="w-full"
-        />
+        <div ref={containerRef} style={{ height: isFullscreen ? "100%" : "420px" }} className="w-full" />
 
-        {/* Map controls overlay */}
+        {/* Controls */}
         <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-[1000]">
           <Button size="sm" variant="secondary" className="w-8 h-8 p-0 shadow-lg backdrop-blur-md bg-card/80" onClick={handleZoomIn}>
             <ZoomIn className="w-4 h-4" />
@@ -364,26 +340,11 @@ export default function ClientDistributionMap() {
           </Button>
         </div>
 
-        {/* Layer switcher */}
-        <div className="absolute bottom-3 right-3 flex gap-1 z-[1000]">
-          {(Object.keys(TILE_LAYERS) as Array<keyof typeof TILE_LAYERS>).map(key => (
-            <Button
-              key={key}
-              size="sm"
-              variant={mapStyle === key ? "default" : "secondary"}
-              className="h-7 px-2 text-[10px] shadow-lg backdrop-blur-md bg-card/80"
-              onClick={() => setMapStyle(key)}
-            >
-              {TILE_LAYERS[key].name}
-            </Button>
-          ))}
-        </div>
-
         {/* Stats overlay */}
-        <div className="absolute top-3 left-3 z-[1000] flex flex-col gap-1.5">
+        <div className="absolute top-3 left-3 z-[1000]">
           <div className="bg-card/90 backdrop-blur-md rounded-lg px-3 py-2 shadow-lg border border-border/30">
             <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-mono">Distribuição</p>
-            <p className="text-lg font-bold text-primary font-display">{totalClients}</p>
+            <p className="text-lg font-bold text-primary">{totalClients}</p>
             <p className="text-[10px] text-muted-foreground">clientes em {filtered.length} cidades</p>
           </div>
         </div>
@@ -413,10 +374,7 @@ export default function ClientDistributionMap() {
               <TableRow
                 key={`${c.city}-${c.state}`}
                 className="cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => {
-                  const coords = CITY_COORDS[c.city];
-                  if (coords && mapRef.current) mapRef.current.setView(coords, 10, { animate: true });
-                }}
+                onClick={() => handleCityClick(c.city)}
               >
                 <TableCell className="text-xs font-mono text-muted-foreground">{i + 1}</TableCell>
                 <TableCell className="text-xs font-medium flex items-center gap-1.5">
