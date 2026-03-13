@@ -152,16 +152,51 @@ export default function PlacesSearchCard({
     setLoading(true);
     setError(null);
 
+    // Primary: use places-search edge function (server-side Google API key)
     try {
-      const data = await searchPlaces(destinationContext ? `${q} ${destinationContext}` : q);
-      setResults(data);
+      const { data, error: fnError } = await supabase.functions.invoke("places-search", {
+        body: {
+          action: "search",
+          query: destinationContext ? `${q} ${destinationContext}` : q,
+        },
+      });
+
+      if (fnError) throw fnError;
+      if (data?.error) throw new Error(data.error);
+
+      const mapped: PlaceResult[] = (data?.results || []).map((item: any) => ({
+        place_id: item.place_id,
+        name: item.name,
+        address: item.address || "",
+        rating: item.rating ?? null,
+        user_ratings_total: item.user_ratings_total || 0,
+        types: item.types || [],
+        photo_reference: item.photo_reference || null,
+        location: item.location || null,
+        price_level: item.price_level ?? null,
+      }));
+
+      setResults(mapped);
+      if (mapped.length === 0) setError("Nenhum local encontrado");
       setLoading(false);
       return;
     } catch (err) {
-      console.error("Places search error:", err);
+      console.error("places-search edge function error:", err);
     }
 
-    // Fallback: hotel-search (texto livre + coordenadas básicas)
+    // Fallback: client-side Google Maps JS SDK
+    try {
+      const data = await searchPlaces(destinationContext ? `${q} ${destinationContext}` : q);
+      if (data.length > 0) {
+        setResults(data);
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.error("Client-side Places search error:", err);
+    }
+
+    // Last resort: hotel-search (Nominatim)
     try {
       const { data, error: fnError } = await supabase.functions.invoke("hotel-search", {
         body: { query: q },
@@ -187,8 +222,7 @@ export default function PlacesSearchCard({
       setError(fallbackResults.length === 0 ? "Nenhum hotel encontrado" : null);
     } catch (fallbackErr) {
       console.error("Fallback hotel-search error:", fallbackErr);
-      const message = fallbackErr instanceof Error ? fallbackErr.message : "Não foi possível buscar locais";
-      setError(message);
+      setError("Não foi possível buscar locais. Tente novamente.");
       setResults([]);
     } finally {
       setLoading(false);
@@ -233,19 +267,52 @@ export default function PlacesSearchCard({
     }
 
     try {
-      const data = await getPlaceDetails(placeId);
+      // Primary: edge function for details
+      let data: any = null;
+      try {
+        const { data: edgeData, error: edgeErr } = await supabase.functions.invoke("places-search", {
+          body: { action: "details", place_id: placeId },
+        });
+        if (edgeErr) throw edgeErr;
+        if (edgeData?.error) throw new Error(edgeData.error);
+        data = edgeData;
+      } catch (edgeError) {
+        console.error("Edge function details error, trying client-side:", edgeError);
+        // Fallback: client-side
+        data = await getPlaceDetails(placeId);
+      }
+
       setSelectedPlace(data as any);
       setResults([]);
 
       if (data?.photos?.length > 0) {
         setLoadingPhotos(true);
-        const photos: CuratedPhoto[] = data.photos.slice(0, 10).map((photo, i) => ({
-          url: getPhotoUrl(photo.photo_reference, 800),
-          label: guessPhotoLabel(i),
-          selected: i < 6,
-          isCover: i === 0,
-          source: "google" as const,
-        }));
+
+        // Resolve photo URLs: edge function returns photo_reference, client-side returns full URLs
+        const photos: CuratedPhoto[] = await Promise.all(
+          data.photos.slice(0, 10).map(async (photo: any, i: number) => {
+            let url = photo.url || "";
+            if (!url && photo.photo_reference) {
+              // Get photo URL from edge function
+              try {
+                const { data: photoData } = await supabase.functions.invoke("places-search", {
+                  body: { action: "photo", photo_reference: photo.photo_reference, max_width: 800 },
+                });
+                url = photoData?.url || getPhotoUrl(photo.photo_reference, 800);
+              } catch {
+                url = getPhotoUrl(photo.photo_reference, 800);
+              }
+            }
+            return {
+              url,
+              label: guessPhotoLabel(i),
+              selected: i < 6,
+              isCover: i === 0,
+              source: "google" as const,
+            };
+          })
+        );
+
         setCuratedPhotos(photos);
         setLoadingPhotos(false);
       }
@@ -831,6 +898,29 @@ export default function PlacesSearchCard({
 
 /* ═══ Thumbnail subcomponent ═══ */
 function PlaceThumbnail({ photoRef, alt }: { photoRef: string; alt: string }) {
-  const url = getPhotoUrl(photoRef, 200);
-  return <img src={url} alt={alt} className="w-full h-full object-cover" />;
+  const [src, setSrc] = useState<string>(() => {
+    // If it's already a full URL, use it directly
+    if (/^https?:\/\//i.test(photoRef)) return photoRef;
+    return "";
+  });
+
+  useEffect(() => {
+    if (src) return; // Already resolved
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.functions.invoke("places-search", {
+          body: { action: "photo", photo_reference: photoRef, max_width: 200 },
+        });
+        if (!cancelled && data?.url) setSrc(data.url);
+      } catch {
+        // Fallback to client-side URL builder
+        if (!cancelled) setSrc(getPhotoUrl(photoRef, 200));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [photoRef, src]);
+
+  if (!src) return <div className="w-full h-full bg-muted/30 flex items-center justify-center"><MapPin className="h-4 w-4 text-muted-foreground/30" /></div>;
+  return <img src={src} alt={alt} className="w-full h-full object-cover" />;
 }
