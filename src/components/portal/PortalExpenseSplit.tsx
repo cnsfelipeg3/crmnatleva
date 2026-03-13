@@ -1060,7 +1060,7 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
 
               <Textarea placeholder="Observações (opcional)" value={notes} onChange={e => setNotes(e.target.value)} rows={2} />
 
-              <Button onClick={goToSplit} className="w-full gap-2 rounded-xl">
+              <Button onClick={goToSplit} className="w-full gap-2.5 rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold h-12 text-sm shadow-[0_0_16px_-4px_hsl(var(--accent)/0.35)] hover:shadow-[0_0_24px_-4px_hsl(var(--accent)/0.5)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200">
                 Próximo: Como dividir <ChevronRight className="h-4 w-4" />
               </Button>
             </motion.div>
