@@ -119,6 +119,15 @@ function guessPhotoLabel(index: number): string {
   return `Foto ${index + 1}`;
 }
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+  return await Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+    }),
+  ]);
+}
+
 /* ═══ Component ═══ */
 export default function PlacesSearchCard({
   initialQuery = "",
