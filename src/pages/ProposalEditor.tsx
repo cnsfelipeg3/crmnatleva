@@ -1,0 +1,497 @@
+import { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
+import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin } from "lucide-react";
+
+const itemTypeIcons: Record<string, any> = {
+  destination: MapPin,
+  flight: Plane,
+  hotel: Hotel,
+  experience: Sparkles,
+};
+
+const itemTypeLabels: Record<string, string> = {
+  destination: "Destino",
+  flight: "Voo",
+  hotel: "Hotel",
+  experience: "Experiência",
+};
+
+function generateSlug() {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < 8; i++) result += chars[Math.floor(Math.random() * chars.length)];
+  return result;
+}
+
+export default function ProposalEditor() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user, profile } = useAuth();
+  const isNew = !id || id === "nova";
+
+  const [form, setForm] = useState({
+    title: "",
+    client_name: "",
+    origin: "",
+    destinations: [] as string[],
+    travel_start_date: "",
+    travel_end_date: "",
+    passenger_count: 1,
+    consultant_name: profile?.full_name || "",
+    status: "draft",
+    intro_text: "Preparamos uma experiência exclusiva para sua viagem, combinando destinos icônicos, hospedagens selecionadas e uma logística cuidadosamente planejada.",
+    cover_image_url: "",
+    total_value: "",
+    value_per_person: "",
+    payment_conditions: [] as { method: string; details: string }[],
+  });
+
+  const [items, setItems] = useState<any[]>([]);
+  const [destInput, setDestInput] = useState("");
+
+  const { data: existing } = useQuery({
+    queryKey: ["proposal", id],
+    queryFn: async () => {
+      if (isNew) return null;
+      const { data, error } = await supabase
+        .from("proposals")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !isNew,
+  });
+
+  const { data: existingItems } = useQuery({
+    queryKey: ["proposal-items", id],
+    queryFn: async () => {
+      if (isNew) return [];
+      const { data, error } = await supabase
+        .from("proposal_items")
+        .select("*")
+        .eq("proposal_id", id)
+        .order("position");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !isNew,
+  });
+
+  useEffect(() => {
+    if (existing) {
+      setForm({
+        title: existing.title || "",
+        client_name: existing.client_name || "",
+        origin: existing.origin || "",
+        destinations: existing.destinations || [],
+        travel_start_date: existing.travel_start_date || "",
+        travel_end_date: existing.travel_end_date || "",
+        passenger_count: existing.passenger_count || 1,
+        consultant_name: existing.consultant_name || "",
+        status: existing.status || "draft",
+        intro_text: existing.intro_text || "",
+        cover_image_url: existing.cover_image_url || "",
+        total_value: existing.total_value?.toString() || "",
+        value_per_person: existing.value_per_person?.toString() || "",
+        payment_conditions: (existing.payment_conditions as any[]) || [],
+      });
+    }
+  }, [existing]);
+
+  useEffect(() => {
+    if (existingItems) setItems(existingItems);
+  }, [existingItems]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const slug = existing?.slug || generateSlug();
+      const payload = {
+        title: form.title,
+        client_name: form.client_name,
+        origin: form.origin,
+        destinations: form.destinations,
+        travel_start_date: form.travel_start_date || null,
+        travel_end_date: form.travel_end_date || null,
+        passenger_count: form.passenger_count,
+        consultant_name: form.consultant_name,
+        status: form.status,
+        intro_text: form.intro_text,
+        cover_image_url: form.cover_image_url,
+        total_value: form.total_value ? parseFloat(form.total_value) : null,
+        value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
+        payment_conditions: form.payment_conditions,
+        slug,
+        created_by: user?.id,
+        updated_at: new Date().toISOString(),
+      };
+
+      let proposalId = id;
+      if (isNew) {
+        const { data, error } = await supabase.from("proposals").insert(payload).select("id").single();
+        if (error) throw error;
+        proposalId = data.id;
+      } else {
+        const { error } = await supabase.from("proposals").update(payload).eq("id", id);
+        if (error) throw error;
+      }
+
+      // Save items
+      if (!isNew) {
+        await supabase.from("proposal_items").delete().eq("proposal_id", proposalId!);
+      }
+      if (items.length > 0) {
+        const itemsPayload = items.map((item, idx) => ({
+          proposal_id: proposalId,
+          item_type: item.item_type,
+          position: idx,
+          title: item.title,
+          description: item.description,
+          image_url: item.image_url,
+          data: item.data || {},
+        }));
+        const { error } = await supabase.from("proposal_items").insert(itemsPayload);
+        if (error) throw error;
+      }
+
+      return proposalId;
+    },
+    onSuccess: (proposalId) => {
+      queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      toast.success("Proposta salva com sucesso!");
+      if (isNew) navigate(`/propostas/${proposalId}`, { replace: true });
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const addDest = () => {
+    if (destInput.trim()) {
+      setForm((f) => ({ ...f, destinations: [...f.destinations, destInput.trim()] }));
+      setDestInput("");
+    }
+  };
+
+  const removeDest = (idx: number) => {
+    setForm((f) => ({ ...f, destinations: f.destinations.filter((_, i) => i !== idx) }));
+  };
+
+  const addItem = (type: string) => {
+    setItems((prev) => [...prev, { item_type: type, title: "", description: "", image_url: "", data: {} }]);
+  };
+
+  const updateItem = (idx: number, field: string, value: any) => {
+    setItems((prev) => prev.map((item, i) => (i === idx ? { ...item, [field]: value } : item)));
+  };
+
+  const updateItemData = (idx: number, key: string, value: any) => {
+    setItems((prev) =>
+      prev.map((item, i) => (i === idx ? { ...item, data: { ...item.data, [key]: value } } : item))
+    );
+  };
+
+  const removeItem = (idx: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const addPayment = () => {
+    setForm((f) => ({ ...f, payment_conditions: [...f.payment_conditions, { method: "", details: "" }] }));
+  };
+
+  const updatePayment = (idx: number, field: string, value: string) => {
+    setForm((f) => ({
+      ...f,
+      payment_conditions: f.payment_conditions.map((p, i) => (i === idx ? { ...p, [field]: value } : p)),
+    }));
+  };
+
+  const removePayment = (idx: number) => {
+    setForm((f) => ({ ...f, payment_conditions: f.payment_conditions.filter((_, i) => i !== idx) }));
+  };
+
+  const copyLink = () => {
+    const slug = existing?.slug;
+    if (slug) {
+      navigator.clipboard.writeText(`${window.location.origin}/proposta/${slug}`);
+      toast.success("Link copiado!");
+    }
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-5 animate-fade-in max-w-5xl mx-auto">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/propostas")}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-serif text-foreground">{isNew ? "Nova Proposta" : "Editar Proposta"}</h1>
+            <p className="text-sm text-muted-foreground">Monte uma proposta visual premium</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {!isNew && existing?.slug && (
+            <>
+              <Button variant="outline" size="sm" onClick={copyLink} className="gap-1.5">
+                <Copy className="w-3.5 h-3.5" /> Link
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => window.open(`/proposta/${existing.slug}`, "_blank")} className="gap-1.5">
+                <ExternalLink className="w-3.5 h-3.5" /> Visualizar
+              </Button>
+            </>
+          )}
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !form.title} className="gap-1.5">
+            <Save className="w-4 h-4" /> Salvar
+          </Button>
+        </div>
+      </div>
+
+      <Tabs defaultValue="info" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="info">Informações</TabsTrigger>
+          <TabsTrigger value="items">Itens da Viagem</TabsTrigger>
+          <TabsTrigger value="finance">Valores & Pagamento</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="info" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle className="text-base">Dados da Proposta</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Nome da viagem *</Label>
+                <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Itália Romântica" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Nome do cliente</Label>
+                <Input value={form.client_name} onChange={(e) => setForm((f) => ({ ...f, client_name: e.target.value }))} placeholder="Maria Silva" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Origem</Label>
+                <Input value={form.origin} onChange={(e) => setForm((f) => ({ ...f, origin: e.target.value }))} placeholder="São Paulo" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Passageiros</Label>
+                <Input type="number" min={1} value={form.passenger_count} onChange={(e) => setForm((f) => ({ ...f, passenger_count: parseInt(e.target.value) || 1 }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Data início</Label>
+                <Input type="date" value={form.travel_start_date} onChange={(e) => setForm((f) => ({ ...f, travel_start_date: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Data fim</Label>
+                <Input type="date" value={form.travel_end_date} onChange={(e) => setForm((f) => ({ ...f, travel_end_date: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Consultor responsável</Label>
+                <Input value={form.consultant_name} onChange={(e) => setForm((f) => ({ ...f, consultant_name: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">Em elaboração</SelectItem>
+                    <SelectItem value="sent">Enviada</SelectItem>
+                    <SelectItem value="negotiation">Em negociação</SelectItem>
+                    <SelectItem value="approved">Aprovada</SelectItem>
+                    <SelectItem value="lost">Perdida</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2 space-y-1.5">
+                <Label>URL da imagem de capa</Label>
+                <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="https://images.unsplash.com/..." />
+              </div>
+
+              <div className="md:col-span-2 space-y-1.5">
+                <Label>Destinos</Label>
+                <div className="flex gap-2">
+                  <Input value={destInput} onChange={(e) => setDestInput(e.target.value)} placeholder="Roma" onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addDest())} />
+                  <Button type="button" variant="outline" onClick={addDest}>Adicionar</Button>
+                </div>
+                {form.destinations.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {form.destinations.map((d, i) => (
+                      <span key={i} className="inline-flex items-center gap-1.5 bg-muted px-3 py-1 rounded-full text-sm">
+                        {d}
+                        <button onClick={() => removeDest(i)} className="text-muted-foreground hover:text-destructive">×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="md:col-span-2 space-y-1.5">
+                <Label>Texto de introdução</Label>
+                <Textarea rows={3} value={form.intro_text} onChange={(e) => setForm((f) => ({ ...f, intro_text: e.target.value }))} />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="items" className="space-y-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium text-muted-foreground">Adicionar:</span>
+            {(["destination", "flight", "hotel", "experience"] as const).map((type) => {
+              const Icon = itemTypeIcons[type];
+              return (
+                <Button key={type} variant="outline" size="sm" onClick={() => addItem(type)} className="gap-1.5">
+                  <Icon className="w-4 h-4" /> {itemTypeLabels[type]}
+                </Button>
+              );
+            })}
+          </div>
+
+          {items.length === 0 ? (
+            <Card className="p-8 text-center">
+              <p className="text-muted-foreground">Adicione destinos, voos, hotéis e experiências à proposta</p>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {items.map((item, idx) => {
+                const Icon = itemTypeIcons[item.item_type] || MapPin;
+                return (
+                  <Card key={idx} className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="flex items-center gap-2 pt-1">
+                        <GripVertical className="w-4 h-4 text-muted-foreground/30" />
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Icon className="w-4 h-4 text-primary" />
+                        </div>
+                      </div>
+                      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">{itemTypeLabels[item.item_type]} — Título</Label>
+                          <Input value={item.title || ""} onChange={(e) => updateItem(idx, "title", e.target.value)} placeholder={`Nome do ${itemTypeLabels[item.item_type].toLowerCase()}`} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">URL da imagem</Label>
+                          <Input value={item.image_url || ""} onChange={(e) => updateItem(idx, "image_url", e.target.value)} placeholder="https://..." />
+                        </div>
+                        <div className="md:col-span-2 space-y-1">
+                          <Label className="text-xs">Descrição</Label>
+                          <Textarea rows={2} value={item.description || ""} onChange={(e) => updateItem(idx, "description", e.target.value)} />
+                        </div>
+
+                        {/* Type-specific fields */}
+                        {item.item_type === "flight" && (
+                          <>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Companhia aérea</Label>
+                              <Input value={item.data?.airline || ""} onChange={(e) => updateItemData(idx, "airline", e.target.value)} placeholder="LATAM" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Nº do voo</Label>
+                              <Input value={item.data?.flight_number || ""} onChange={(e) => updateItemData(idx, "flight_number", e.target.value)} placeholder="LA8084" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Origem</Label>
+                              <Input value={item.data?.origin || ""} onChange={(e) => updateItemData(idx, "origin", e.target.value)} placeholder="GRU" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Destino</Label>
+                              <Input value={item.data?.destination || ""} onChange={(e) => updateItemData(idx, "destination", e.target.value)} placeholder="FCO" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Partida</Label>
+                              <Input type="datetime-local" value={item.data?.departure || ""} onChange={(e) => updateItemData(idx, "departure", e.target.value)} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Chegada</Label>
+                              <Input type="datetime-local" value={item.data?.arrival || ""} onChange={(e) => updateItemData(idx, "arrival", e.target.value)} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Bagagem</Label>
+                              <Input value={item.data?.baggage || ""} onChange={(e) => updateItemData(idx, "baggage", e.target.value)} placeholder="23kg despachada" />
+                            </div>
+                          </>
+                        )}
+
+                        {item.item_type === "hotel" && (
+                          <>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Categoria (estrelas)</Label>
+                              <Input value={item.data?.stars || ""} onChange={(e) => updateItemData(idx, "stars", e.target.value)} placeholder="5" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Localização</Label>
+                              <Input value={item.data?.location || ""} onChange={(e) => updateItemData(idx, "location", e.target.value)} placeholder="Centro de Roma" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Tipo de quarto</Label>
+                              <Input value={item.data?.room_type || ""} onChange={(e) => updateItemData(idx, "room_type", e.target.value)} placeholder="Deluxe Double" />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Regime</Label>
+                              <Input value={item.data?.meal_plan || ""} onChange={(e) => updateItemData(idx, "meal_plan", e.target.value)} placeholder="Café da manhã incluso" />
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeItem(idx)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="finance" className="space-y-4">
+          <Card>
+            <CardHeader><CardTitle className="text-base">Resumo Financeiro</CardTitle></CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Valor total da viagem (R$)</Label>
+                <Input type="number" value={form.total_value} onChange={(e) => setForm((f) => ({ ...f, total_value: e.target.value }))} placeholder="15000.00" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Valor por pessoa (R$)</Label>
+                <Input type="number" value={form.value_per_person} onChange={(e) => setForm((f) => ({ ...f, value_per_person: e.target.value }))} placeholder="7500.00" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">Condições de Pagamento</CardTitle>
+                <Button variant="outline" size="sm" onClick={addPayment} className="gap-1.5">
+                  <Plus className="w-3.5 h-3.5" /> Adicionar
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {form.payment_conditions.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma condição de pagamento adicionada</p>
+              )}
+              {form.payment_conditions.map((p, idx) => (
+                <div key={idx} className="flex items-center gap-3">
+                  <Input value={p.method} onChange={(e) => updatePayment(idx, "method", e.target.value)} placeholder="Pix à vista" className="flex-1" />
+                  <Input value={p.details} onChange={(e) => updatePayment(idx, "details", e.target.value)} placeholder="10% de desconto" className="flex-1" />
+                  <Button variant="ghost" size="icon" onClick={() => removePayment(idx)} className="shrink-0 text-muted-foreground hover:text-destructive">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
