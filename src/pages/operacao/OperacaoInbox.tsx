@@ -755,9 +755,11 @@ export default function OperacaoInbox() {
 
   const filteredConversations = (() => {
     const filtered = conversations.filter(c => {
+      const contactName = c.contact_name || "";
+      const phone = c.phone || "";
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        if (!c.contact_name.toLowerCase().includes(q) && !c.phone.includes(q)) return false;
+        if (!contactName.toLowerCase().includes(q) && !phone.includes(q)) return false;
       }
       if (activeFilter === "unread") return c.unread_count > 0;
       if (activeFilter === "vip") return c.is_vip;
@@ -772,7 +774,7 @@ export default function OperacaoInbox() {
     });
     const seen = new Set<string>();
     return filtered.filter(c => {
-      const norm = c.phone.replace(/\D/g, "");
+      const norm = (c.phone || "").replace(/\D/g, "");
       if (!norm) return true;
       if (seen.has(norm)) return false;
       seen.add(norm);
