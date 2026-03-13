@@ -100,6 +100,9 @@ const PortalProfile = lazy(() => import("@/pages/portal/PortalProfile"));
 
 // CRM
 const QuoteRequests = lazy(() => import("@/pages/QuoteRequests"));
+const Proposals = lazy(() => import("@/pages/Proposals"));
+const ProposalEditor = lazy(() => import("@/pages/ProposalEditor"));
+const ProposalPublicView = lazy(() => import("@/pages/ProposalPublicView"));
 
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
