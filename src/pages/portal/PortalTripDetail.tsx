@@ -13,6 +13,7 @@ import {
   CreditCard, Plane, FileText, ChevronRight, Users, Hotel, Ticket, CircleDollarSign,
   Clock, Download, Share2, Shield, MapPin, ArrowDown, Star, Mail, UserPlus, Copy, Check, Loader2, CheckCircle2,
   Cloud,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   JourneyHero, getDestinationImage, getTripStatus, getTripDays,
