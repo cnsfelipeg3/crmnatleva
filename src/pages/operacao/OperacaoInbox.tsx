@@ -1227,6 +1227,7 @@ export default function OperacaoInbox() {
                   const isSelected = conv.id === selectedId;
                   const _previewRaw = (conv.last_message_preview || "").replace(/\n/g, " ").trim();
                   const _previewTruncated = _previewRaw.length > 35 ? _previewRaw.slice(0, 35) + "…" : _previewRaw;
+                  const _contactName = conv.contact_name || "Sem nome";
                   return (
                     <motion.div
                       key={conv.id}
@@ -1240,13 +1241,13 @@ export default function OperacaoInbox() {
                             <img src={profilePicsRef.current.get(conv.id)} alt="" className="h-10 w-10 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
                           ) : null}
                           <div className={`h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-sm font-bold text-foreground ${profilePicsRef.current.get(conv.id) ? 'hidden' : ''}`}>
-                            {conv.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                            {_contactName.split(" ").map(w => w[0]).join("").slice(0, 2)}
                           </div>
                         </div>
                         <div className="flex-1 min-w-0 pr-1">
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '4px' }}>
                             <span className={`text-sm truncate ${conv.unread_count > 0 ? "font-bold text-foreground" : "font-medium text-foreground"}`}>
-                              {/^\d{10,}$/.test(conv.contact_name) ? formatPhoneDisplay(conv.contact_name) : conv.contact_name}
+                              {/^\d{10,}$/.test(_contactName) ? formatPhoneDisplay(_contactName) : _contactName}
                             </span>
                             <span className="text-[11px] text-foreground whitespace-nowrap">
                               {formatTimestamp(conv.last_message_at)}
