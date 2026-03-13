@@ -789,7 +789,114 @@ function CardsAndCashSection({ cards, cardSpending, cashItems, cashRemaining, to
 }
 
 /* ═══════════════════════════════════════════════════════
-   ADD EXPENSE DIALOG
+   HISTORY SECTION (Timeline Financeira)
+   ═══════════════════════════════════════════════════════ */
+function HistorySection({ expenses, receivables, categories, cards }: any) {
+  // Merge all financial events into a single sorted list
+  const events = useMemo(() => {
+    const items: { date: string; type: string; description: string; amount: number; icon: any; color: string; meta?: string }[] = [];
+
+    // Agency payments
+    receivables.forEach((r: any) => {
+      const isPaid = r.status === "recebido";
+      items.push({
+        date: isPaid ? (r.received_date || r.due_date || r.created_at?.slice(0, 10)) : (r.due_date || r.created_at?.slice(0, 10)),
+        type: isPaid ? "Pagamento NatLeva" : "Parcela pendente",
+        description: r.description || `Parcela ${r.installment_number || ""}`,
+        amount: r.gross_value || 0,
+        icon: isPaid ? CheckCircle2 : Clock,
+        color: isPaid ? "text-accent" : "text-warning",
+        meta: r.payment_method || undefined,
+      });
+    });
+
+    // Personal expenses
+    expenses.forEach((e: any) => {
+      const cat = categories.find((c: any) => c.id === e.category_id);
+      const card = cards.find((c: any) => c.id === e.card_id);
+      const pm = PAYMENT_METHODS.find(p => p.value === e.payment_method);
+      items.push({
+        date: e.expense_date,
+        type: cat?.name || "Gasto",
+        description: e.description,
+        amount: e.amount,
+        icon: CATEGORY_ICONS[cat?.icon] || Receipt,
+        color: "text-foreground",
+        meta: [pm?.label, card ? `•••${card.last_digits}` : null].filter(Boolean).join(" · "),
+      });
+    });
+
+    // Sort by date descending
+    items.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    return items;
+  }, [expenses, receivables, categories, cards]);
+
+  // Group by date
+  const grouped = useMemo(() => {
+    const map: Record<string, typeof events> = {};
+    events.forEach(e => {
+      const d = e.date || "sem-data";
+      if (!map[d]) map[d] = [];
+      map[d].push(e);
+    });
+    return Object.entries(map);
+  }, [events]);
+
+  return (
+    <div className="rounded-2xl border border-border/30 bg-card/80 backdrop-blur-sm overflow-hidden">
+      <div className="p-5 border-b border-border/20">
+        <span className="text-sm font-bold text-foreground">Histórico Financeiro</span>
+      </div>
+
+      {events.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-12">Nenhuma movimentação registrada</p>
+      ) : (
+        <div className="divide-y divide-border/10">
+          {grouped.map(([date, items]) => (
+            <div key={date}>
+              {/* Date header */}
+              <div className="px-5 py-2.5 bg-muted/20 sticky top-0">
+                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/60">
+                  {date !== "sem-data" ? fmtDate(date) : "Sem data"}
+                </span>
+              </div>
+              {items.map((ev, i) => {
+                const Icon = ev.icon;
+                return (
+                  <motion.div
+                    key={`${date}-${i}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: i * 0.03 }}
+                    className="flex items-center justify-between px-5 py-3.5 hover:bg-muted/20 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`h-8 w-8 flex-shrink-0 rounded-lg flex items-center justify-center bg-muted/40`}>
+                        <Icon className={`h-3.5 w-3.5 ${ev.color}`} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-foreground truncate">{ev.description}</p>
+                        <p className="text-[10px] text-muted-foreground/60">
+                          {ev.type}
+                          {ev.meta && ` · ${ev.meta}`}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-sm font-black tabular-nums text-foreground flex-shrink-0 ml-3">
+                      {fmt(ev.amount)}
+                    </p>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
    ═══════════════════════════════════════════════════════ */
 function AddExpenseDialog({ open, onClose, budgetId, categories, cards, onSaved }: any) {
   const [desc, setDesc] = useState("");
