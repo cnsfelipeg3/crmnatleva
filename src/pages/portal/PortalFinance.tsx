@@ -896,7 +896,8 @@ function HistorySection({ expenses, receivables, categories, cards }: any) {
   );
 }
 
-
+/* ═══════════════════════════════════════════════════════
+   ADD EXPENSE DIALOG
    ═══════════════════════════════════════════════════════ */
 function AddExpenseDialog({ open, onClose, budgetId, categories, cards, onSaved }: any) {
   const [desc, setDesc] = useState("");
