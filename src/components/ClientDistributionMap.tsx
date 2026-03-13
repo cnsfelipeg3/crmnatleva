@@ -459,6 +459,11 @@ export default function ClientDistributionMap() {
       {/* Map */}
       <div className={`relative rounded-xl overflow-hidden border border-border/50 transition-all duration-300 ${isFullscreen ? 'fixed inset-4 z-50' : ''}`}>
         <div ref={containerRef} style={{ height: isFullscreen ? "100%" : "420px" }} className="w-full" />
+        {fallbackMode && (
+          <div className="absolute left-3 bottom-3 z-[1000] rounded-md border border-border bg-background/90 px-2 py-1 text-[10px] text-muted-foreground">
+            Modo compatível ativo
+          </div>
+        )}
 
         {/* Controls */}
         <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-[1000]">
