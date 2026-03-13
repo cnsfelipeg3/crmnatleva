@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Search, ZoomIn, ZoomOut, Maximize2, LocateFixed, Download } from "lucide-react";
-import { loadGoogleMapsCore } from "@/lib/googleMaps";
+import { loadGoogleMapsCore, hasGoogleMapsAuthFailure } from "@/lib/googleMaps";
 
 const CITY_COORDS: Record<string, [number, number]> = {
   "São Paulo": [-23.5505, -46.6333], "Rio de Janeiro": [-22.9068, -43.1729],
@@ -73,12 +75,16 @@ export default function ClientDistributionMap() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const overlaysRef = useRef<(google.maps.Marker | google.maps.Circle | google.maps.InfoWindow)[]>([]);
+  const leafletMapRef = useRef<L.Map | null>(null);
+  const leafletLayerRef = useRef<L.LayerGroup | null>(null);
+
   const [cityData, setCityData] = useState<CityData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [stateFilter, setStateFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"clients" | "revenue" | "sales">("clients");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fallbackMode, setFallbackMode] = useState(false);
 
   // Fetch data
   useEffect(() => {
@@ -117,24 +123,45 @@ export default function ClientDistributionMap() {
 
   // Init Google Map
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (fallbackMode || !containerRef.current) return;
+
     let cancelled = false;
+    let authTimer: number | undefined;
 
-    loadGoogleMapsCore().then(({ Map }) => {
-      if (cancelled || !containerRef.current) return;
-      const map = new Map(containerRef.current, {
-        center: { lat: -14, lng: -51 },
-        zoom: 4,
-        disableDefaultUI: true,
-        zoomControl: false,
-        styles: DARK_STYLE,
-        backgroundColor: "#0e1626",
+    loadGoogleMapsCore()
+      .then(({ Map }) => {
+        if (cancelled || !containerRef.current) return;
+        if (hasGoogleMapsAuthFailure()) throw new Error("Google Maps auth failure");
+
+        const map = new Map(containerRef.current, {
+          center: { lat: -14, lng: -51 },
+          zoom: 4,
+          disableDefaultUI: true,
+          zoomControl: false,
+          styles: DARK_STYLE,
+          backgroundColor: "#0e1626",
+        });
+        mapRef.current = map;
+
+        authTimer = window.setTimeout(() => {
+          const hasDomError = !!containerRef.current?.querySelector(".gm-err-container");
+          if ((hasGoogleMapsAuthFailure() || hasDomError) && !cancelled) {
+            mapRef.current = null;
+            if (containerRef.current) containerRef.current.innerHTML = "";
+            setFallbackMode(true);
+          }
+        }, 1200);
+      })
+      .catch((err) => {
+        console.error("Google map init error:", err);
+        if (!cancelled) setFallbackMode(true);
       });
-      mapRef.current = map;
-    });
 
-    return () => { cancelled = true; };
-  }, []);
+    return () => {
+      cancelled = true;
+      if (authTimer) window.clearTimeout(authTimer);
+    };
+  }, [fallbackMode]);
 
   // Filtered data
   const filtered = useMemo(() => {
@@ -153,6 +180,7 @@ export default function ClientDistributionMap() {
 
   // Update markers
   useEffect(() => {
+    if (fallbackMode) return;
     const map = mapRef.current;
     if (!map || cityData.length === 0) return;
 
@@ -243,29 +271,140 @@ export default function ClientDistributionMap() {
       if (c) map.setCenter({ lat: c[0], lng: c[1] });
       map.setZoom(8);
     }
-  }, [filtered, cityData]);
+  }, [fallbackMode, filtered, cityData]);
 
-  const handleZoomIn = () => { const z = mapRef.current?.getZoom(); if (z != null) mapRef.current?.setZoom(z + 1); };
-  const handleZoomOut = () => { const z = mapRef.current?.getZoom(); if (z != null) mapRef.current?.setZoom(z - 1); };
-  const handleResetView = () => { mapRef.current?.setCenter({ lat: -14, lng: -51 }); mapRef.current?.setZoom(4); };
-  const handleLocate = useCallback(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const points = filtered.map(c => CITY_COORDS[c.city]).filter(Boolean);
-    if (points.length >= 2) {
-      const bounds = new google.maps.LatLngBounds();
-      points.forEach(p => bounds.extend({ lat: p[0], lng: p[1] }));
-      map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+  // Init Leaflet fallback
+  useEffect(() => {
+    if (!fallbackMode || !containerRef.current || leafletMapRef.current) return;
+
+    containerRef.current.innerHTML = "";
+
+    const map = L.map(containerRef.current, {
+      scrollWheelZoom: true,
+      zoomControl: false,
+      dragging: true,
+    }).setView([-14, -51], 4);
+
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; <a href="https://carto.com">CARTO</a>',
+      maxZoom: 18,
+    }).addTo(map);
+
+    leafletMapRef.current = map;
+    leafletLayerRef.current = L.layerGroup().addTo(map);
+
+    return () => {
+      map.remove();
+      leafletMapRef.current = null;
+      leafletLayerRef.current = null;
+    };
+  }, [fallbackMode]);
+
+  // Draw fallback markers
+  useEffect(() => {
+    if (!fallbackMode) return;
+
+    const map = leafletMapRef.current;
+    const layer = leafletLayerRef.current;
+    if (!map || !layer || cityData.length === 0) return;
+
+    layer.clearLayers();
+
+    const maxClients = Math.max(...filtered.map(c => c.clients), 1);
+    const bounds: L.LatLngTuple[] = [];
+
+    filtered.forEach(c => {
+      const coords = CITY_COORDS[c.city];
+      if (!coords) return;
+
+      const radius = 5 + (c.clients / maxClients) * 10;
+      bounds.push(coords);
+
+      const marker = L.circleMarker(coords, {
+        radius,
+        fillColor: "#22c55e",
+        color: "#14532d",
+        weight: 1,
+        fillOpacity: 0.7,
+      }).addTo(layer);
+
+      marker.bindPopup(
+        `<div style="font-family:system-ui;min-width:170px;">` +
+        `<strong>${c.city}</strong><br/>` +
+        `${STATE_NAMES[c.state] || c.state}<br/>` +
+        `Clientes: ${c.clients}<br/>` +
+        `Vendas: ${c.sales}<br/>` +
+        `Receita: ${fmt(c.revenue)}` +
+        `</div>`
+      );
+    });
+
+    if (bounds.length >= 2) {
+      map.fitBounds(bounds, { padding: [30, 30] });
+    } else if (bounds.length === 1) {
+      map.setView(bounds[0], 8);
     }
-  }, [filtered]);
+  }, [fallbackMode, filtered, cityData]);
+
+  const handleZoomIn = () => {
+    if (fallbackMode) {
+      const z = leafletMapRef.current?.getZoom();
+      if (z != null) leafletMapRef.current?.setZoom(z + 1);
+      return;
+    }
+    const z = mapRef.current?.getZoom();
+    if (z != null) mapRef.current?.setZoom(z + 1);
+  };
+  const handleZoomOut = () => {
+    if (fallbackMode) {
+      const z = leafletMapRef.current?.getZoom();
+      if (z != null) leafletMapRef.current?.setZoom(z - 1);
+      return;
+    }
+    const z = mapRef.current?.getZoom();
+    if (z != null) mapRef.current?.setZoom(z - 1);
+  };
+  const handleResetView = () => {
+    if (fallbackMode) {
+      leafletMapRef.current?.setView([-14, -51], 4);
+      return;
+    }
+    mapRef.current?.setCenter({ lat: -14, lng: -51 });
+    mapRef.current?.setZoom(4);
+  };
+  const handleLocate = useCallback(() => {
+    const points = filtered.map(c => CITY_COORDS[c.city]).filter(Boolean);
+
+    if (fallbackMode) {
+      const map = leafletMapRef.current;
+      if (!map || points.length < 2) return;
+      map.fitBounds(points as L.LatLngBoundsExpression, { padding: [30, 30] });
+      return;
+    }
+
+    const map = mapRef.current;
+    if (!map || points.length < 2) return;
+
+    const bounds = new google.maps.LatLngBounds();
+    points.forEach(p => bounds.extend({ lat: p[0], lng: p[1] }));
+    map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
+  }, [fallbackMode, filtered]);
 
   const handleCityClick = useCallback((city: string) => {
     const coords = CITY_COORDS[city];
-    if (coords && mapRef.current) {
+    if (!coords) return;
+
+    if (fallbackMode && leafletMapRef.current) {
+      leafletMapRef.current.panTo(coords);
+      leafletMapRef.current.setZoom(10);
+      return;
+    }
+
+    if (mapRef.current) {
       mapRef.current.panTo({ lat: coords[0], lng: coords[1] });
       mapRef.current.setZoom(10);
     }
-  }, []);
+  }, [fallbackMode]);
 
   const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
 
@@ -320,6 +459,11 @@ export default function ClientDistributionMap() {
       {/* Map */}
       <div className={`relative rounded-xl overflow-hidden border border-border/50 transition-all duration-300 ${isFullscreen ? 'fixed inset-4 z-50' : ''}`}>
         <div ref={containerRef} style={{ height: isFullscreen ? "100%" : "420px" }} className="w-full" />
+        {fallbackMode && (
+          <div className="absolute left-3 bottom-3 z-[1000] rounded-md border border-border bg-background/90 px-2 py-1 text-[10px] text-muted-foreground">
+            Modo compatível ativo
+          </div>
+        )}
 
         {/* Controls */}
         <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-[1000]">
