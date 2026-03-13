@@ -432,6 +432,8 @@ export default function PortalTripDetail() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState("jornada");
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [selectedPassenger, setSelectedPassenger] = useState<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
