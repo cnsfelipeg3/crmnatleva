@@ -4,6 +4,8 @@ import PortalExpenseSplit from "@/components/portal/PortalExpenseSplit";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import PortalLayout from "@/components/portal/PortalLayout";
+import { getMockTripDetail } from "@/lib/portalMockTrips";
+import { getMockFinanceData } from "@/lib/portalMockFinance";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import {
   CircleDollarSign, Wallet, CreditCard, PiggyBank, TrendingUp,
@@ -151,13 +153,32 @@ export default function PortalFinance() {
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
 
+  const isMock = saleId?.startsWith("mock-") || false;
+
   useEffect(() => {
-    if (!saleId || !portalAccess?.client_id) return;
+    if (!saleId) return;
+
+    // Mock data for demo trips
+    if (isMock) {
+      const mock = getMockFinanceData(saleId);
+      if (mock) {
+        setSale(mock.sale);
+        setReceivables(mock.receivables);
+        setBudget(mock.budget);
+        setCategories(mock.categories);
+        setExpenses(mock.expenses);
+        setCashItems(mock.cashItems);
+        setCards(mock.cards);
+      }
+      return;
+    }
+
+    if (!portalAccess?.client_id) return;
     loadAllData();
   }, [saleId, portalAccess?.client_id]);
 
   const loadAllData = async () => {
-    if (!saleId || !portalAccess?.client_id) return;
+    if (!saleId || !portalAccess?.client_id || isMock) return;
     const { data: saleData } = await supabase
       .from("sales").select("id, locator, destination, total_received, total_cost, sale_date")
       .eq("id", saleId).single();
