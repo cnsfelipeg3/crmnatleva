@@ -151,11 +151,44 @@ export default function PlacesSearchCard({
     if (q.length < 2) { setResults([]); return; }
     setLoading(true);
     setError(null);
+
     try {
       const data = await searchPlaces(destinationContext ? `${q} ${destinationContext}` : q);
       setResults(data);
-    } catch {
-      setError("Não foi possível buscar locais");
+      setLoading(false);
+      return;
+    } catch (err) {
+      console.error("Places search error:", err);
+    }
+
+    // Fallback: hotel-search (texto livre + coordenadas básicas)
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("hotel-search", {
+        body: { query: q },
+      });
+
+      if (fnError) throw fnError;
+
+      const fallbackResults: PlaceResult[] = (data?.results || []).map((item: any) => ({
+        place_id: `fallback:${item.place_id || item.name}`,
+        name: item.name || q,
+        address: [item.address, item.city, item.country].filter(Boolean).join(", "),
+        rating: null,
+        user_ratings_total: 0,
+        types: ["lodging"],
+        photo_reference: null,
+        location: Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng))
+          ? { lat: Number(item.lat), lng: Number(item.lng) }
+          : null,
+        price_level: null,
+      }));
+
+      setResults(fallbackResults);
+      setError(fallbackResults.length === 0 ? "Nenhum hotel encontrado" : null);
+    } catch (fallbackErr) {
+      console.error("Fallback hotel-search error:", fallbackErr);
+      const message = fallbackErr instanceof Error ? fallbackErr.message : "Não foi possível buscar locais";
+      setError(message);
       setResults([]);
     } finally {
       setLoading(false);
@@ -172,6 +205,33 @@ export default function PlacesSearchCard({
   const selectPlace = useCallback(async (placeId: string) => {
     setLoadingDetails(true);
     setError(null);
+
+    // Resultado de fallback (hotel-search)
+    if (placeId.startsWith("fallback:")) {
+      const fallback = results.find((r) => r.place_id === placeId);
+      if (fallback) {
+        setSelectedPlace({
+          place_id: fallback.place_id,
+          name: fallback.name,
+          address: fallback.address,
+          phone: null,
+          website: null,
+          rating: null,
+          user_ratings_total: 0,
+          price_level: null,
+          types: fallback.types || ["lodging"],
+          location: fallback.location,
+          photos: [],
+          editorial_summary: null,
+          reviews: [],
+        });
+        setCuratedPhotos([]);
+        setResults([]);
+        setLoadingDetails(false);
+        return;
+      }
+    }
+
     try {
       const data = await getPlaceDetails(placeId);
       setSelectedPlace(data as any);
@@ -189,12 +249,14 @@ export default function PlacesSearchCard({
         setCuratedPhotos(photos);
         setLoadingPhotos(false);
       }
-    } catch {
-      setError("Não foi possível carregar detalhes do local");
+    } catch (err) {
+      console.error("Places details error:", err);
+      const message = err instanceof Error ? err.message : "Não foi possível carregar detalhes do local";
+      setError(message);
     } finally {
       setLoadingDetails(false);
     }
-  }, []);
+  }, [results]);
 
   /* ── Photo curation actions ── */
   const toggleSelect = (idx: number) => {
