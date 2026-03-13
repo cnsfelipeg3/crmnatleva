@@ -1091,8 +1091,10 @@ function OperacaoInboxInner() {
         return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
       });
     });
+    isUserScrolledUpRef.current = false;
+    scrollToBottom();
     setIsSending(false);
-  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending]);
+  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, scrollToBottom]);
 
   const handleStartEdit = useCallback((msg: Message) => {
     if (msg.sender_type !== "atendente" || msg.message_type !== "text") return;
