@@ -218,8 +218,7 @@ function PortalFinanceTripSelector({ onSelect }: { onSelect: (saleId: string) =>
   );
 }
 
-   MAIN PAGE
-   ═══════════════════════════════════════════════════════ */
+/* MAIN PAGE */
 export default function PortalFinance() {
   const { portalAccess } = usePortalAuth();
   const navigate = useNavigate();
