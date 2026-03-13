@@ -217,6 +217,12 @@ function OperacaoInboxInner() {
   const selected = conversations.find(c => c.id === selectedId);
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
 
+  const getZapiPhoneCandidates = useCallback((conversationId: string) => {
+    const phone = conversationId.replace("wa_", "").trim();
+    if (!phone) return [] as string[];
+    return Array.from(new Set([phone, `${phone}-group`, `${phone}@g.us`]));
+  }, []);
+
   // Load active flow name for selected conversation
   useEffect(() => {
     if (!selectedId) { setActiveFlowName(null); return; }
@@ -448,8 +454,9 @@ function OperacaoInboxInner() {
   useEffect(() => {
     if (!selectedId) return;
     if (selectedId.startsWith("wa_")) {
-      const phone = selectedId.replace("wa_", "");
-      supabase.from("zapi_messages" as any).select("*").eq("phone", phone).order("timestamp", { ascending: true }).limit(200).then(({ data: zapiData, error: zapiErr }) => {
+      const phoneCandidates = getZapiPhoneCandidates(selectedId);
+      if (phoneCandidates.length === 0) return;
+      supabase.from("zapi_messages" as any).select("*").in("phone", phoneCandidates).order("timestamp", { ascending: true }).limit(200).then(({ data: zapiData, error: zapiErr }) => {
         if (zapiErr) { console.error("Error fetching zapi_messages:", zapiErr); return; }
         const rawMsgs = zapiData || [];
         const parsed: Message[] = rawMsgs.map((m: any) => {
@@ -490,7 +497,7 @@ function OperacaoInboxInner() {
         }
       });
     }
-  }, [selectedId, extractMediaFromRawData]);
+  }, [selectedId, extractMediaFromRawData, getZapiPhoneCandidates]);
 
   // Realtime subscription
   useEffect(() => {
@@ -699,8 +706,9 @@ function OperacaoInboxInner() {
     async function pollWhatsAppMessages() {
       if (!selectedId?.startsWith("wa_")) return;
       try {
-        const phone = selectedId.replace("wa_", "");
-        const { data: zapiData } = await supabase.from("zapi_messages" as any).select("*").eq("phone", phone).order("timestamp", { ascending: true }).limit(200);
+        const phoneCandidates = getZapiPhoneCandidates(selectedId);
+        if (phoneCandidates.length === 0) return;
+        const { data: zapiData } = await supabase.from("zapi_messages" as any).select("*").in("phone", phoneCandidates).order("timestamp", { ascending: true }).limit(200);
         const rawMsgs = zapiData || [];
         const newMsgs: Message[] = [];
         for (const m of rawMsgs) {
@@ -752,7 +760,7 @@ function OperacaoInboxInner() {
 
     checkAndStartPolling();
     return () => { if (whatsappPollRef.current) clearInterval(whatsappPollRef.current); };
-  }, [selectedId, extractMediaFromRawData]);
+  }, [selectedId, extractMediaFromRawData, getZapiPhoneCandidates]);
 
   const filteredConversations = (() => {
     const filtered = conversations.filter(c => {
