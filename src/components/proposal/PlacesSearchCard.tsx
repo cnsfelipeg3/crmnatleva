@@ -151,12 +151,42 @@ export default function PlacesSearchCard({
     if (q.length < 2) { setResults([]); return; }
     setLoading(true);
     setError(null);
+
     try {
       const data = await searchPlaces(destinationContext ? `${q} ${destinationContext}` : q);
       setResults(data);
+      return;
     } catch (err) {
       console.error("Places search error:", err);
-      const message = err instanceof Error ? err.message : "Não foi possível buscar locais";
+    }
+
+    // Fallback: hotel-search (texto livre + coordenadas básicas)
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("hotel-search", {
+        body: { query: q },
+      });
+
+      if (fnError) throw fnError;
+
+      const fallbackResults: PlaceResult[] = (data?.results || []).map((item: any) => ({
+        place_id: `fallback:${item.place_id || item.name}`,
+        name: item.name || q,
+        address: [item.address, item.city, item.country].filter(Boolean).join(", "),
+        rating: null,
+        user_ratings_total: 0,
+        types: ["lodging"],
+        photo_reference: null,
+        location: Number.isFinite(item.lat) && Number.isFinite(item.lng)
+          ? { lat: Number(item.lat), lng: Number(item.lng) }
+          : null,
+        price_level: null,
+      }));
+
+      setResults(fallbackResults);
+      setError(fallbackResults.length === 0 ? "Nenhum hotel encontrado" : null);
+    } catch (fallbackErr) {
+      console.error("Fallback hotel-search error:", fallbackErr);
+      const message = fallbackErr instanceof Error ? fallbackErr.message : "Não foi possível buscar locais";
       setError(message);
       setResults([]);
     } finally {
