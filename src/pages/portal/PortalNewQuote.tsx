@@ -79,7 +79,7 @@ export default function PortalNewQuote() {
     try {
       const { error } = await (supabase as any).from("portal_quote_requests").insert({
         portal_user_id: user.id,
-        client_id: portalAccess?.client_id || null,
+        client_id: portalAccess?.client_id && portalAccess.client_id !== "admin" ? portalAccess.client_id : null,
         origin_city: originCity,
         destination_city: destinationCity,
         trip_type: tripType,
