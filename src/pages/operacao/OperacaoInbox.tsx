@@ -1287,7 +1287,7 @@ function OperacaoInboxInner() {
       <div className="flex-1 overflow-hidden min-h-0">
         <div className="flex h-full min-h-0">
           {/* ─── Column 1: Conversations List ─── */}
-          <div className={`md:w-[340px] w-full border-r border-border flex flex-col bg-card/30 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
+          <div className={`md:w-[340px] w-full border-r border-border flex flex-col min-h-0 bg-card/30 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
             <div className="p-3 space-y-2 shrink-0">
               {/* ChatLive title row */}
               <div className="flex items-center gap-2 pb-1">
