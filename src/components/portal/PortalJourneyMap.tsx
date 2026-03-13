@@ -9,9 +9,12 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   Plane, Hotel, Car, Ticket, Shield, MapPin, Calendar, Clock,
-  ChevronRight, ExternalLink, Map as MapIcon, List, Filter,
-  Navigation, Maximize2, Eye,
+  ChevronRight, ChevronDown, ExternalLink, Map as MapIcon, List, Filter,
+  Navigation, Maximize2, Eye, LocateFixed, Copy, Info, X,
+  Sunrise, Sunset, Luggage, Compass,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 /* ───────── Airport Coordinates ───────── */
 const AIRPORT_COORDS: Record<string, [number, number]> = {
@@ -61,6 +64,7 @@ interface JourneyItem {
   title: string;
   subtitle?: string;
   date?: string;
+  endDate?: string;
   time?: string;
   iata?: string;
   originIata?: string;
@@ -68,52 +72,120 @@ interface JourneyItem {
   coords?: [number, number];
   direction?: string;
   details: Record<string, string>;
+  isPast: boolean;
+  isCurrent: boolean;
 }
 
-const FILTER_OPTIONS: { key: FilterType; label: string; icon: typeof Plane }[] = [
-  { key: "all", label: "Tudo", icon: Navigation },
-  { key: "flights", label: "Voos", icon: Plane },
-  { key: "hotels", label: "Hotéis", icon: Hotel },
-  { key: "services", label: "Serviços", icon: Ticket },
-];
-
-const TYPE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  flight: { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20" },
-  hotel: { bg: "bg-accent/10", text: "text-accent", border: "border-accent/20" },
-  service: { bg: "bg-muted", text: "text-muted-foreground", border: "border-border" },
-  transfer: { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20" },
-  experience: { bg: "bg-accent/10", text: "text-accent", border: "border-accent/20" },
-};
-
+/* ───────── Constants ───────── */
 const TYPE_ICONS: Record<string, typeof Plane> = {
-  flight: Plane, hotel: Hotel, service: Ticket, transfer: Car, experience: Ticket,
+  flight: Plane, hotel: Hotel, service: Ticket, transfer: Car, experience: Compass,
 };
 
-/* ───────── Leaflet Icon helpers ───────── */
-function createDivIcon(emoji: string, color: string, size: number = 36): L.DivIcon {
+/* ───────── Custom Leaflet Icons ───────── */
+function createPulsingIcon(color: string, size: number = 14): L.DivIcon {
   return L.divIcon({
     className: "",
-    iconSize: [size, size + 8],
-    iconAnchor: [size / 2, size + 8],
-    popupAnchor: [0, -(size + 8)],
-    html: `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size + 8}" viewBox="0 0 ${size} ${size + 8}">
-      <filter id="s"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-opacity="0.25"/></filter>
-      <circle cx="${size / 2}" cy="${size / 2}" r="${size / 2 - 2}" fill="${color}" stroke="white" stroke-width="2.5" filter="url(#s)"/>
-      <text x="${size / 2}" y="${size / 2 + 1}" text-anchor="middle" dominant-baseline="central" font-size="${size * 0.4}" font-family="system-ui">${emoji}</text>
-      <polygon points="${size / 2 - 4},${size - 2} ${size / 2},${size + 6} ${size / 2 + 4},${size - 2}" fill="${color}"/>
-    </svg>`,
+    iconSize: [size * 3, size * 3],
+    iconAnchor: [size * 1.5, size * 1.5],
+    html: `<div style="position:relative;width:${size * 3}px;height:${size * 3}px;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;width:${size * 3}px;height:${size * 3}px;border-radius:50%;background:${color};opacity:0.15;animation:pulse-ring 2s ease-out infinite;"></div>
+      <div style="position:absolute;width:${size * 1.5}px;height:${size * 1.5}px;border-radius:50%;background:${color};opacity:0.3;animation:pulse-ring 2s ease-out infinite 0.3s;"></div>
+      <div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);position:relative;z-index:2;"></div>
+    </div>`,
   });
 }
 
-function createLabelIcon(text: string): L.DivIcon {
+function createCityMarker(emoji: string, name: string, isOrigin: boolean, isCurrentCity: boolean): L.DivIcon {
+  const accent = isCurrentCity ? "#10b981" : isOrigin ? "#34d399" : "#60a5fa";
+  const glow = isCurrentCity ? "0 0 20px rgba(16,185,129,0.4)" : "none";
   return L.divIcon({
     className: "",
-    iconSize: [120, 28],
-    iconAnchor: [60, 36],
-    html: `<div style="background:rgba(255,255,255,0.92);border:1px solid #e2e2e2;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;font-family:system-ui;color:#333;text-align:center;white-space:nowrap;">${text}</div>`,
+    iconSize: [48, 56],
+    iconAnchor: [24, 56],
+    popupAnchor: [0, -56],
+    html: `<div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.2));">
+      <div style="width:48px;height:48px;border-radius:16px;background:white;border:3px solid ${accent};display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:${glow};position:relative;">
+        ${emoji}
+        ${isCurrentCity ? `<div style="position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;background:#10b981;border:2px solid white;"></div>` : ""}
+      </div>
+      <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid ${accent};margin-top:-1px;"></div>
+      <div style="margin-top:2px;background:white;border:1px solid #e5e7eb;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:#1f2937;white-space:nowrap;font-family:system-ui;">${name}</div>
+    </div>`,
   });
 }
 
+function createAirplaneIcon(angle: number): L.DivIcon {
+  return L.divIcon({
+    className: "",
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;transform:rotate(${angle}deg);filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L8 8H3L5 12L3 16H8L12 22L16 16H21L19 12L21 8H16L12 2Z" fill="#10b981" stroke="white" stroke-width="1.5"/></svg>
+    </div>`,
+  });
+}
+
+/* Curved polyline helper */
+function getCurvedPoints(from: L.LatLng, to: L.LatLng, segments = 50): L.LatLng[] {
+  const points: L.LatLng[] = [];
+  const midLat = (from.lat + to.lat) / 2;
+  const midLng = (from.lng + to.lng) / 2;
+  const dist = from.distanceTo(to);
+  const curvature = Math.min(dist / 4000000, 0.3) * 15;
+  const dx = to.lng - from.lng;
+  const dy = to.lat - from.lat;
+  const perpLat = midLat + curvature * (-dx / Math.sqrt(dx * dx + dy * dy + 0.001));
+  const perpLng = midLng + curvature * (dy / Math.sqrt(dx * dx + dy * dy + 0.001));
+
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const lat = (1 - t) * (1 - t) * from.lat + 2 * (1 - t) * t * perpLat + t * t * to.lat;
+    const lng = (1 - t) * (1 - t) * from.lng + 2 * (1 - t) * t * perpLng + t * t * to.lng;
+    points.push(L.latLng(lat, lng));
+  }
+  return points;
+}
+
+/* ───────── Determine traveler's current location ───────── */
+function inferCurrentLocation(segments: any[]): { iata: string; coords: [number, number] } | null {
+  if (!segments || segments.length === 0) return null;
+  const now = new Date();
+
+  // Sort segments by departure
+  const sorted = [...segments]
+    .filter((s: any) => s.departure_date)
+    .sort((a: any, b: any) => {
+      const da = `${a.departure_date}T${a.departure_time || "00:00"}`;
+      const db = `${b.departure_date}T${b.departure_time || "00:00"}`;
+      return da.localeCompare(db);
+    });
+
+  if (sorted.length === 0) return null;
+
+  // Check if trip hasn't started yet
+  const firstDeparture = new Date(`${sorted[0].departure_date}T${sorted[0].departure_time || "00:00"}`);
+  if (now < firstDeparture) return null;
+
+  // Check if trip is over
+  const lastSeg = sorted[sorted.length - 1];
+  const lastArrival = new Date(`${lastSeg.departure_date}T${lastSeg.arrival_time || "23:59"}`);
+  if (now > new Date(lastArrival.getTime() + 24 * 60 * 60 * 1000)) return null;
+
+  // Find current segment — traveler is at the destination of the last departed flight
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const dep = new Date(`${sorted[i].departure_date}T${sorted[i].departure_time || "00:00"}`);
+    if (now >= dep) {
+      const destIata = sorted[i].destination_iata;
+      if (destIata && AIRPORT_COORDS[destIata]) {
+        return { iata: destIata, coords: AIRPORT_COORDS[destIata] };
+      }
+    }
+  }
+
+  return null;
+}
+
+/* ───────── Props ───────── */
 interface PortalJourneyMapProps {
   segments: any[];
   hotels: any[];
@@ -123,20 +195,31 @@ interface PortalJourneyMapProps {
 }
 
 /* ═══════════════════════════════════════════════════════════ */
-
 export default function PortalJourneyMap({ segments, hotels, lodging, services, sale }: PortalJourneyMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
   const [filter, setFilter] = useState<FilterType>("all");
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"map" | "list">("map");
+  const [expandedItem, setExpandedItem] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mapStyle, setMapStyle] = useState<"light" | "dark" | "satellite">("dark");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const now = useMemo(() => new Date(), []);
+
+  const currentLocation = useMemo(() => inferCurrentLocation(segments), [segments]);
+  const isTraveling = currentLocation !== null;
 
   // ───── Build journey items ─────
   const journeyItems = useMemo(() => {
     const items: JourneyItem[] = [];
 
     (segments || []).forEach((seg: any, i: number) => {
+      const depDate = seg.departure_date ? new Date(`${seg.departure_date}T${seg.departure_time || "23:59"}`) : null;
+      const isPast = depDate ? depDate < now : false;
+      const isCurrent = depDate ? (Math.abs(depDate.getTime() - now.getTime()) < 12 * 60 * 60 * 1000) : false;
+
       items.push({
         id: `flight-${i}`,
         type: "flight",
@@ -149,28 +232,46 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
         destIata: seg.destination_iata,
         coords: AIRPORT_COORDS[seg.origin_iata],
         direction: seg.direction,
+        isPast,
+        isCurrent,
         details: {
-          ...(seg.departure_time ? { Embarque: seg.departure_time } : {}),
-          ...(seg.arrival_time ? { Chegada: seg.arrival_time } : {}),
-          ...(seg.terminal ? { Terminal: seg.terminal } : {}),
-          ...(seg.flight_class ? { Classe: seg.flight_class } : {}),
+          ...(seg.departure_time ? { "Embarque": seg.departure_time } : {}),
+          ...(seg.arrival_time ? { "Chegada": seg.arrival_time } : {}),
+          ...(seg.terminal ? { "Terminal": seg.terminal } : {}),
+          ...(seg.flight_class ? { "Classe": seg.flight_class } : {}),
+          ...(seg.airline ? { "Cia Aérea": seg.airline } : {}),
+          ...(seg.flight_number ? { "Voo": seg.flight_number } : {}),
+          ...(seg.locator ? { "Localizador": seg.locator } : {}),
+          ...(seg.seat ? { "Assento": seg.seat } : {}),
+          ...(seg.baggage ? { "Bagagem": seg.baggage } : {}),
         },
       });
     });
 
     (lodging || []).forEach((h: any, i: number) => {
+      const checkinDate = h.checkin_date ? new Date(h.checkin_date) : null;
+      const checkoutDate = h.checkout_date ? new Date(h.checkout_date) : null;
+      const isPast = checkoutDate ? checkoutDate < now : false;
+      const isCurrent = checkinDate && checkoutDate ? (now >= checkinDate && now <= checkoutDate) : false;
+
       items.push({
         id: `hotel-${i}`,
         type: "hotel",
         title: h.hotel_name || "Hotel",
         subtitle: [h.city, h.room_type].filter(Boolean).join(" · "),
         date: h.checkin_date,
+        endDate: h.checkout_date,
         time: "14:00",
+        isPast,
+        isCurrent,
         details: {
           ...(h.checkin_date ? { "Check-in": formatDateBR(h.checkin_date) } : {}),
           ...(h.checkout_date ? { "Check-out": formatDateBR(h.checkout_date) } : {}),
-          ...(h.room_type ? { Quarto: h.room_type } : {}),
-          ...(h.confirmation_number ? { Reserva: h.confirmation_number } : {}),
+          ...(h.room_type ? { "Quarto": h.room_type } : {}),
+          ...(h.confirmation_number ? { "Reserva": h.confirmation_number } : {}),
+          ...(h.meal_plan ? { "Regime": h.meal_plan } : {}),
+          ...(h.address ? { "Endereço": h.address } : {}),
+          ...(h.phone ? { "Telefone": h.phone } : {}),
         },
       });
     });
@@ -182,8 +283,10 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
         type: "hotel",
         title: h.description || "Hotel",
         subtitle: h.reservation_code ? `Reserva: ${h.reservation_code}` : undefined,
+        isPast: false,
+        isCurrent: false,
         details: {
-          ...(h.reservation_code ? { Reserva: h.reservation_code } : {}),
+          ...(h.reservation_code ? { "Reserva": h.reservation_code } : {}),
         },
       });
     });
@@ -196,9 +299,11 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
         type: isTransfer ? "transfer" : "service",
         title: s.description || s.category || "Serviço",
         subtitle: s.reservation_code ? `Código: ${s.reservation_code}` : undefined,
+        isPast: false,
+        isCurrent: false,
         details: {
-          ...(s.product_type ? { Tipo: s.product_type } : {}),
-          ...(s.reservation_code ? { Código: s.reservation_code } : {}),
+          ...(s.product_type ? { "Tipo": s.product_type } : {}),
+          ...(s.reservation_code ? { "Código": s.reservation_code } : {}),
         },
       });
     });
@@ -213,7 +318,7 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
     });
 
     return items;
-  }, [segments, hotels, lodging, services]);
+  }, [segments, hotels, lodging, services, now]);
 
   const filteredItems = useMemo(() => {
     if (filter === "all") return journeyItems;
@@ -221,15 +326,6 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
     if (filter === "hotels") return journeyItems.filter(i => i.type === "hotel");
     return journeyItems.filter(i => i.type === "service" || i.type === "transfer" || i.type === "experience");
   }, [journeyItems, filter]);
-
-  const uniqueCities = useMemo(() => {
-    const cities = new Set<string>();
-    segments?.forEach((s: any) => {
-      if (s.origin_iata) cities.add(s.origin_iata);
-      if (s.destination_iata) cities.add(s.destination_iata);
-    });
-    return cities.size;
-  }, [segments]);
 
   const routePoints = useMemo(() => {
     const points: { iata: string; coords: [number, number]; order: number }[] = [];
@@ -247,20 +343,35 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
     return points;
   }, [segments]);
 
+  /* ── Tile URLs ── */
+  const tileUrl = useMemo(() => {
+    switch (mapStyle) {
+      case "dark": return "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+      case "satellite": return "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+      default: return "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+    }
+  }, [mapStyle]);
+
   // ───── Initialize Leaflet Map ─────
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
+    if (!mapContainerRef.current) return;
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+      layerGroupRef.current = null;
+    }
 
     const map = L.map(mapContainerRef.current, {
       center: [-15, -50],
       zoom: 3,
-      zoomControl: true,
+      zoomControl: false,
       attributionControl: false,
     });
 
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-      maxZoom: 19,
-    }).addTo(map);
+    // Custom zoom control position
+    L.control.zoom({ position: "topright" }).addTo(map);
+
+    L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(map);
 
     layerGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -270,7 +381,7 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
       mapRef.current = null;
       layerGroupRef.current = null;
     };
-  }, []);
+  }, [tileUrl]);
 
   // ───── Update markers & polylines ─────
   useEffect(() => {
@@ -281,7 +392,7 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
     lg.clearLayers();
     const bounds = L.latLngBounds([]);
 
-    // ── Draw flight routes ──
+    // ── Draw curved flight routes ──
     if (filter === "all" || filter === "flights") {
       (segments || []).forEach((seg: any) => {
         const o = seg.origin_iata && AIRPORT_COORDS[seg.origin_iata];
@@ -289,17 +400,25 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
         if (!o || !d) return;
 
         const isReturn = seg.direction === "volta";
+        const from = L.latLng(o[0], o[1]);
+        const to = L.latLng(d[0], d[1]);
+        const curvedPts = getCurvedPoints(from, to);
 
-        const polyline = L.polyline(
-          [L.latLng(o[0], o[1]), L.latLng(d[0], d[1])],
-          {
-            color: isReturn ? "#f59e0b" : "#34d399",
-            weight: 3,
-            opacity: 0.8,
-            dashArray: isReturn ? "8 6" : undefined,
-          }
-        );
+        const polyline = L.polyline(curvedPts, {
+          color: isReturn ? "#f59e0b" : "#34d399",
+          weight: 3,
+          opacity: 0.7,
+          dashArray: isReturn ? "12 8" : undefined,
+          smoothFactor: 1,
+        });
         lg.addLayer(polyline);
+
+        // Airplane on midpoint
+        const midPt = curvedPts[Math.floor(curvedPts.length / 2)];
+        const nextPt = curvedPts[Math.floor(curvedPts.length / 2) + 1] || midPt;
+        const angle = Math.atan2(nextPt.lng - midPt.lng, nextPt.lat - midPt.lat) * (180 / Math.PI);
+        const airplane = L.marker(midPt, { icon: createAirplaneIcon(90 - angle), interactive: false, zIndexOffset: 600 });
+        lg.addLayer(airplane);
       });
     }
 
@@ -309,59 +428,69 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
       routePoints.forEach((pt, idx) => {
         const isFirst = idx === 0;
         const isLast = idx === routePoints.length - 1;
-        const emoji = isFirst ? "🛫" : isLast ? "🛬" : "📍";
-        const color = isFirst ? "#34d399" : isLast ? "#f59e0b" : "#60a5fa";
+        const isCurrent = currentLocation?.iata === pt.iata;
+        const emoji = isFirst ? "🛫" : isLast ? "🏁" : isCurrent ? "📍" : "✈️";
 
         const marker = L.marker([pt.coords[0], pt.coords[1]], {
-          icon: createDivIcon(emoji, color, isFirst || isLast ? 40 : 32),
-          zIndexOffset: isFirst || isLast ? 1000 : 500,
+          icon: createCityMarker(emoji, iataToCityName(pt.iata), isFirst, isCurrent),
+          zIndexOffset: isCurrent ? 2000 : isFirst || isLast ? 1000 : 500,
         });
 
-        marker.bindPopup(`
-          <div style="font-family:system-ui;padding:6px 2px;min-width:120px;">
-            <p style="font-size:15px;font-weight:700;margin:0 0 2px;">${emoji} ${iataToCityName(pt.iata)}</p>
-            <p style="font-size:12px;color:#666;margin:0;">Parada ${idx + 1} de ${routePoints.length}</p>
-          </div>
-        `);
+        marker.on("click", () => {
+          // Find first flight related to this city
+          const item = journeyItems.find(
+            i => i.type === "flight" && (i.originIata === pt.iata || i.destIata === pt.iata)
+          );
+          if (item) {
+            setSelectedItem(item.id);
+            setExpandedItem(item.id);
+          }
+        });
 
         lg.addLayer(marker);
         bounds.extend([pt.coords[0], pt.coords[1]]);
-
-        // City label
-        const label = L.marker([pt.coords[0], pt.coords[1]], {
-          icon: createLabelIcon(iataToCityName(pt.iata)),
-          interactive: false,
-          zIndexOffset: 300,
-        });
-        lg.addLayer(label);
       });
     }
 
+    // ── Current location pulsing marker ──
+    if (currentLocation) {
+      const pulsingMarker = L.marker(
+        [currentLocation.coords[0], currentLocation.coords[1]],
+        { icon: createPulsingIcon("#10b981"), zIndexOffset: 3000, interactive: false }
+      );
+      lg.addLayer(pulsingMarker);
+      bounds.extend([currentLocation.coords[0], currentLocation.coords[1]]);
+    }
+
     // ── Fit bounds ──
-    if (routePoints.length >= 2 && showFlights && bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [60, 60] });
+    if (bounds.isValid() && routePoints.length >= 2) {
+      map.fitBounds(bounds, { padding: [80, 80], maxZoom: 8 });
     } else if (routePoints.length === 1) {
       map.setView([routePoints[0].coords[0], routePoints[0].coords[1]], 6);
     }
-  }, [segments, routePoints, filter, filteredItems]);
+  }, [segments, routePoints, filter, currentLocation, journeyItems]);
 
   // ───── Sidebar item click → fly to ─────
   const handleItemClick = useCallback((item: JourneyItem) => {
-    setSelectedItem(item.id === selectedItem ? null : item.id);
-    const map = mapRef.current;
-    if (!map) return;
+    const newSelected = item.id === selectedItem ? null : item.id;
+    setSelectedItem(newSelected);
 
-    let target: [number, number] | undefined;
-    let zoom = 6;
-    if (item.originIata && AIRPORT_COORDS[item.originIata]) {
-      target = AIRPORT_COORDS[item.originIata];
-    } else if (item.iata && AIRPORT_COORDS[item.iata]) {
-      target = AIRPORT_COORDS[item.iata];
-      zoom = 8;
-    }
+    if (newSelected) {
+      setExpandedItem(item.id);
+      const map = mapRef.current;
+      if (!map) return;
 
-    if (target) {
-      map.flyTo([target[0], target[1]], zoom, { duration: 1 });
+      let target: [number, number] | undefined;
+      if (item.destIata && AIRPORT_COORDS[item.destIata]) {
+        target = AIRPORT_COORDS[item.destIata];
+      } else if (item.originIata && AIRPORT_COORDS[item.originIata]) {
+        target = AIRPORT_COORDS[item.originIata];
+      }
+      if (target) {
+        map.flyTo([target[0], target[1]], 7, { duration: 1.2 });
+      }
+    } else {
+      setExpandedItem(null);
     }
   }, [selectedItem]);
 
@@ -369,15 +498,41 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
     const map = mapRef.current;
     if (!map || routePoints.length < 2) return;
     const bounds = L.latLngBounds(routePoints.map(p => L.latLng(p.coords[0], p.coords[1])));
-    map.fitBounds(bounds, { padding: [60, 60] });
+    map.fitBounds(bounds, { padding: [80, 80] });
   }, [routePoints]);
 
-  const handleOpenExternal = useCallback((item: JourneyItem) => {
-    const coords = item.originIata ? AIRPORT_COORDS[item.originIata] : item.coords;
-    if (coords) {
-      window.open(`https://www.google.com/maps?q=${coords[0]},${coords[1]}`, "_blank");
+  const handleLocateMe = useCallback(() => {
+    if (currentLocation) {
+      mapRef.current?.flyTo([currentLocation.coords[0], currentLocation.coords[1]], 10, { duration: 1.5 });
+    }
+  }, [currentLocation]);
+
+  const handleCopyDetail = useCallback((value: string) => {
+    navigator.clipboard.writeText(value);
+    toast.success("Copiado!");
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
     }
   }, []);
+
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  // Invalidate map size on fullscreen change
+  useEffect(() => {
+    setTimeout(() => mapRef.current?.invalidateSize(), 300);
+  }, [isFullscreen]);
 
   // Group by date
   const groupedByDate = useMemo(() => {
@@ -387,11 +542,7 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
       const d = item.date || "sem-data";
       if (d !== current) {
         current = d;
-        groups.push({
-          date: d,
-          label: d !== "sem-data" ? formatDateBR(d) : "Sem data",
-          items: [item],
-        });
+        groups.push({ date: d, label: d !== "sem-data" ? formatDateBR(d) : "Sem data", items: [item] });
       } else {
         groups[groups.length - 1].items.push(item);
       }
@@ -399,235 +550,339 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
     return groups;
   }, [filteredItems]);
 
-  const summaryStats = useMemo(() => ({
-    cities: uniqueCities,
-    flights: (segments || []).length,
-    hotels: [...(hotels || []), ...(lodging || [])].length,
-    services: (services || []).length,
-  }), [uniqueCities, segments, hotels, lodging, services]);
+  const stats = useMemo(() => {
+    const cities = new Set<string>();
+    segments?.forEach((s: any) => {
+      if (s.origin_iata) cities.add(s.origin_iata);
+      if (s.destination_iata) cities.add(s.destination_iata);
+    });
+    return {
+      cities: cities.size,
+      flights: (segments || []).length,
+      hotels: [...(hotels || []), ...(lodging || [])].length,
+    };
+  }, [segments, hotels, lodging]);
 
+  /* ═══ Render ═══ */
   return (
-    <div className="space-y-4">
-      {/* Unified Stats + Filters Bar */}
-      <div className="bg-card border border-border rounded-2xl p-3 space-y-3">
-        {/* Stats Row */}
-        <div className="grid grid-cols-4 gap-2">
-          {[
-            { icon: MapPin, label: "cidades", value: summaryStats.cities, accent: true },
-            { icon: Plane, label: "voos", value: summaryStats.flights, accent: false },
-            { icon: Hotel, label: "hotéis", value: summaryStats.hotels, accent: false },
-            { icon: Ticket, label: "serviços", value: summaryStats.services, accent: false },
-          ].map(stat => (
-            <div
-              key={stat.label}
-              className={`flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium transition-colors ${
-                stat.accent
-                  ? "bg-primary/10 text-primary border border-primary/20"
-                  : "bg-muted/60 text-muted-foreground"
-              }`}
-            >
-              <stat.icon className="h-3.5 w-3.5" />
-              <span className="font-semibold">{stat.value}</span>
-              <span className="hidden sm:inline">{stat.label}</span>
+    <div ref={containerRef} className={cn("relative", isFullscreen && "bg-background")}>
+      {/* ── Current Location Banner ── */}
+      <AnimatePresence>
+        {isTraveling && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-3 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 rounded-2xl px-4 py-3 flex items-center gap-3"
+          >
+            <div className="relative">
+              <div className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse" />
+              <div className="absolute inset-0 w-3 h-3 rounded-full bg-emerald-500/40 animate-ping" />
             </div>
-          ))}
-        </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-foreground">
+                Você está em <span className="text-emerald-600">{iataToCityName(currentLocation!.iata)}</span>
+              </p>
+              <p className="text-[10px] text-muted-foreground">Baseado no cronograma da sua viagem</p>
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleLocateMe} className="h-8 gap-1.5 text-xs shrink-0">
+              <LocateFixed className="h-3.5 w-3.5" /> Ver no mapa
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* Filters + View Toggle Row */}
-        <div className="space-y-2">
-          <div className="bg-muted/50 rounded-2xl p-1.5 border border-border/50">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              {FILTER_OPTIONS.map(opt => (
+      {/* ── Main Map + Panel ── */}
+      <div className={cn(
+        "flex flex-col lg:flex-row rounded-2xl overflow-hidden border border-border shadow-xl",
+        isFullscreen ? "h-screen" : "h-[560px]"
+      )}>
+        {/* Map Container */}
+        <div className="flex-1 relative bg-muted/30 min-h-0">
+          <div ref={mapContainerRef} className="absolute inset-0 z-0" />
+
+          {/* Floating map controls */}
+          <div className="absolute top-3 left-3 z-[1000] flex flex-col gap-1.5">
+            {/* Map Style Switcher */}
+            <div className="bg-card/90 backdrop-blur-md rounded-xl border border-border shadow-lg p-1 flex gap-0.5">
+              {(["light", "dark", "satellite"] as const).map(style => (
                 <button
-                  key={opt.key}
-                  onClick={() => setFilter(opt.key)}
-                  className={`h-9 flex items-center justify-center gap-2 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
-                    filter === opt.key
-                      ? "bg-background text-foreground border border-border shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-background/60"
-                  }`}
+                  key={style}
+                  onClick={() => setMapStyle(style)}
+                  className={cn(
+                    "px-2.5 py-1.5 rounded-lg text-[10px] font-semibold transition-all",
+                    mapStyle === style
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                  )}
                 >
-                  <opt.icon className="h-3.5 w-3.5" />
-                  {opt.label}
+                  {style === "light" ? "Claro" : style === "dark" ? "Escuro" : "Satélite"}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-center sm:justify-end gap-1.5">
-            <div className="flex items-center bg-muted/50 rounded-xl p-1 gap-0.5 border border-border/40">
-              <Button
-                size="sm"
-                variant={viewMode === "map" ? "default" : "ghost"}
-                className="h-8 px-3 text-xs gap-1.5 rounded-lg"
-                onClick={() => setViewMode("map")}
-              >
-                <MapIcon className="h-3.5 w-3.5" /> Mapa
-              </Button>
-              <Button
-                size="sm"
-                variant={viewMode === "list" ? "default" : "ghost"}
-                className="h-8 px-3 text-xs gap-1.5 rounded-lg"
-                onClick={() => setViewMode("list")}
-              >
-                <List className="h-3.5 w-3.5" /> Lista
-              </Button>
-            </div>
-            {viewMode === "map" && routePoints.length >= 2 && (
+          {/* Floating action buttons */}
+          <div className="absolute bottom-3 left-3 z-[1000] flex items-center gap-1.5">
+            <button
+              onClick={handleFitAll}
+              className="h-9 px-3.5 flex items-center gap-2 rounded-xl text-xs font-semibold bg-card/90 backdrop-blur-md border border-border shadow-lg text-foreground hover:bg-card transition-all"
+            >
+              <Maximize2 className="h-3.5 w-3.5" /> Ver tudo
+            </button>
+            <button
+              onClick={toggleFullscreen}
+              className="h-9 w-9 flex items-center justify-center rounded-xl bg-card/90 backdrop-blur-md border border-border shadow-lg text-foreground hover:bg-card transition-all"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+            </button>
+            {isTraveling && (
               <button
-                onClick={handleFitAll}
-                className="h-8 px-3 flex items-center gap-1.5 rounded-xl text-xs font-medium bg-muted/50 border border-border/40 text-muted-foreground hover:text-foreground hover:bg-muted transition-all whitespace-nowrap"
+                onClick={handleLocateMe}
+                className="h-9 px-3.5 flex items-center gap-2 rounded-xl text-xs font-semibold bg-emerald-500 text-white shadow-lg hover:bg-emerald-600 transition-all"
               >
-                <Maximize2 className="h-3 w-3" /> Ajustar
+                <LocateFixed className="h-3.5 w-3.5" /> Onde estou
               </button>
             )}
           </div>
-        </div>
-      </div>
 
-      {/* Map + Sidebar Layout */}
-      {viewMode === "map" ? (
-        <div className="flex flex-col lg:flex-row gap-0 rounded-2xl overflow-hidden border border-border bg-card shadow-lg">
-          {/* Map Container */}
-          <div className="flex-1 min-h-[300px] lg:min-h-[480px] relative">
-            <div ref={mapContainerRef} className="absolute inset-0" />
-            {/* Legend */}
-            <div className="absolute bottom-3 left-3 z-[1000] bg-card/90 backdrop-blur-md rounded-xl px-3.5 py-2 border border-border shadow-md flex items-center gap-4">
-              <span className="flex items-center gap-2 text-[11px] text-foreground/80 font-medium">
-                <span className="w-5 h-0.5 bg-accent inline-block rounded-full" /> Ida
+          {/* Legend */}
+          <div className="absolute bottom-3 right-3 z-[1000] bg-card/90 backdrop-blur-md rounded-xl px-3.5 py-2 border border-border shadow-lg flex items-center gap-4">
+            <span className="flex items-center gap-2 text-[10px] text-foreground/70 font-medium">
+              <span className="w-5 h-0.5 bg-emerald-400 inline-block rounded-full" /> Ida
+            </span>
+            <span className="flex items-center gap-2 text-[10px] text-foreground/70 font-medium">
+              <span className="w-5 h-0.5 border-t-2 border-dashed border-amber-400 inline-block" /> Volta
+            </span>
+            {isTraveling && (
+              <span className="flex items-center gap-2 text-[10px] text-emerald-500 font-semibold">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse inline-block" /> Agora
               </span>
-              <span className="flex items-center gap-2 text-[11px] text-foreground/80 font-medium">
-                <span className="w-5 h-0.5 border-t-2 border-dashed border-warning inline-block" /> Volta
-              </span>
+            )}
+          </div>
+
+          {/* Stats overlay */}
+          <div className="absolute top-3 right-14 z-[1000] flex items-center gap-1.5">
+            {[
+              { icon: MapPin, value: stats.cities, label: "cidades" },
+              { icon: Plane, value: stats.flights, label: "voos" },
+              { icon: Hotel, value: stats.hotels, label: "hotéis" },
+            ].map(s => (
+              <div key={s.label} className="bg-card/90 backdrop-blur-md rounded-xl border border-border shadow-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                <s.icon className="h-3 w-3 text-primary" />
+                <span className="text-xs font-bold text-foreground">{s.value}</span>
+                <span className="text-[9px] text-muted-foreground hidden sm:inline">{s.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Sidebar Panel ── */}
+        <div className="lg:w-[380px] w-full border-t lg:border-t-0 lg:border-l border-border bg-card flex flex-col min-h-0">
+          {/* Panel Header */}
+          <div className="px-4 py-3 border-b border-border flex items-center gap-2 shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+              <Compass className="h-4 w-4 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold text-foreground">Roteiro da Viagem</h3>
+              <p className="text-[10px] text-muted-foreground">{filteredItems.length} itens · Toque para navegar</p>
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:w-[340px] w-full border-t lg:border-t-0 lg:border-l border-border bg-card flex flex-col max-h-[320px] lg:max-h-[480px]">
-            <div className="px-4 py-3 border-b border-border flex items-center gap-2">
-              <Navigation className="h-4 w-4 text-accent" />
-              <span className="text-sm font-semibold text-foreground">Roteiro</span>
-              <Badge variant="secondary" className="ml-auto text-[10px]">{filteredItems.length}</Badge>
+          {/* Filters */}
+          <div className="px-3 py-2 border-b border-border/50 shrink-0">
+            <div className="flex gap-1">
+              {([
+                { key: "all" as FilterType, label: "Tudo", icon: Navigation },
+                { key: "flights" as FilterType, label: "Voos", icon: Plane },
+                { key: "hotels" as FilterType, label: "Hotéis", icon: Hotel },
+                { key: "services" as FilterType, label: "Serviços", icon: Ticket },
+              ]).map(opt => (
+                <button
+                  key={opt.key}
+                  onClick={() => setFilter(opt.key)}
+                  className={cn(
+                    "flex-1 h-8 flex items-center justify-center gap-1.5 rounded-lg text-[10px] font-semibold transition-all",
+                    filter === opt.key
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                  )}
+                >
+                  <opt.icon className="h-3 w-3" />
+                  <span className="hidden sm:inline">{opt.label}</span>
+                </button>
+              ))}
             </div>
-            <ScrollArea className="flex-1">
-              <div className="p-3 space-y-1">
-                {groupedByDate.map((group, gi) => (
-                  <div key={gi}>
-                    {group.date !== "sem-data" && (
-                      <div className="flex items-center gap-2 px-2 pt-3 pb-1.5 first:pt-0">
-                        <Calendar className="w-3 h-3 text-accent/60" />
-                        <span className="text-[11px] font-bold text-foreground/70 tracking-wide">{group.label}</span>
-                        <div className="flex-1 h-px bg-border/30 ml-1" />
+          </div>
+
+          {/* Items List */}
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-2 space-y-0.5">
+              {groupedByDate.map((group, gi) => (
+                <div key={gi}>
+                  {group.date !== "sem-data" && (
+                    <div className="flex items-center gap-2 px-2 pt-3 pb-1.5 first:pt-1">
+                      <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Calendar className="w-3 h-3 text-primary" />
                       </div>
-                    )}
-                    {group.items.map((item) => {
-                      const Icon = TYPE_ICONS[item.type] || Ticket;
-                      const colors = TYPE_COLORS[item.type] || TYPE_COLORS.service;
-                      const isSelected = selectedItem === item.id;
-                      return (
+                      <span className="text-[11px] font-bold text-foreground tracking-wide">{group.label}</span>
+                      <div className="flex-1 h-px bg-border/40 ml-1" />
+                    </div>
+                  )}
+                  {group.items.map((item) => {
+                    const Icon = TYPE_ICONS[item.type] || Ticket;
+                    const isSelected = selectedItem === item.id;
+                    const isExpanded = expandedItem === item.id;
+                    const hasDetails = Object.keys(item.details).length > 0;
+
+                    return (
+                      <div key={item.id}>
                         <button
-                          key={item.id}
                           onClick={() => handleItemClick(item)}
-                          className={`w-full text-left flex items-start gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                            isSelected ? `${colors.bg} ${colors.border} border` : "hover:bg-muted/50 border border-transparent"
-                          }`}
+                          className={cn(
+                            "w-full text-left flex items-start gap-2.5 px-3 py-2.5 rounded-xl transition-all group",
+                            isSelected
+                              ? "bg-primary/10 border border-primary/20 shadow-sm"
+                              : "hover:bg-muted/50 border border-transparent",
+                            item.isPast && !item.isCurrent && "opacity-50"
+                          )}
                         >
-                          <div className={`w-7 h-7 rounded-lg ${colors.bg} flex items-center justify-center shrink-0 mt-0.5`}>
-                            <Icon className={`h-3.5 w-3.5 ${colors.text}`} />
+                          {/* Type Icon */}
+                          <div className={cn(
+                            "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors",
+                            item.isCurrent
+                              ? "bg-emerald-500/10 text-emerald-600"
+                              : item.type === "flight"
+                                ? "bg-primary/10 text-primary"
+                                : item.type === "hotel"
+                                  ? "bg-accent/10 text-accent"
+                                  : "bg-muted text-muted-foreground"
+                          )}>
+                            <Icon className="h-4 w-4" />
+                            {item.isCurrent && (
+                              <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white" />
+                            )}
                           </div>
+
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-semibold text-foreground truncate">{item.title}</p>
-                            {item.subtitle && <p className="text-[10px] text-muted-foreground truncate">{item.subtitle}</p>}
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-semibold text-foreground truncate">{item.title}</p>
+                              {item.isCurrent && (
+                                <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[8px] h-4 px-1.5">
+                                  AGORA
+                                </Badge>
+                              )}
+                            </div>
+                            {item.subtitle && (
+                              <p className="text-[10px] text-muted-foreground truncate mt-0.5">{item.subtitle}</p>
+                            )}
                             {item.time && (
-                              <span className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <span className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-0.5">
                                 <Clock className="h-2.5 w-2.5" /> {item.time}
                               </span>
                             )}
                           </div>
-                          {item.originIata && AIRPORT_COORDS[item.originIata] && (
-                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0 mt-1" />
-                          )}
+
+                          <div className="shrink-0 mt-1 flex items-center gap-1">
+                            {item.direction === "volta" && (
+                              <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-amber-400/40 text-amber-600">
+                                Volta
+                              </Badge>
+                            )}
+                            {hasDetails && (
+                              <ChevronDown className={cn(
+                                "h-3.5 w-3.5 text-muted-foreground/40 transition-transform",
+                                isExpanded && "rotate-180"
+                              )} />
+                            )}
+                          </div>
                         </button>
-                      );
-                    })}
-                  </div>
-                ))}
-                {filteredItems.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-8">Nenhum item nesta categoria</p>
-                )}
-              </div>
-            </ScrollArea>
-          </div>
-        </div>
-      ) : (
-        /* List View */
-        <div className="space-y-2">
-          {groupedByDate.map((group, gi) => (
-            <div key={gi}>
-              {group.date !== "sem-data" && (
-                <div className="flex items-center gap-2 px-1 pt-4 pb-2">
-                  <Calendar className="w-4 h-4 text-accent" />
-                  <span className="text-sm font-bold text-foreground">{group.label}</span>
-                  <div className="flex-1 h-px bg-border/40 ml-2" />
+
+                        {/* Expanded Details */}
+                        <AnimatePresence>
+                          {isExpanded && hasDetails && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mx-3 mb-2 p-3 rounded-xl bg-muted/30 border border-border/50 space-y-2">
+                                {Object.entries(item.details).map(([key, value]) => value && (
+                                  <div key={key} className="flex items-center justify-between gap-2">
+                                    <span className="text-[10px] text-muted-foreground font-medium">{key}</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[11px] font-semibold text-foreground">{value}</span>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleCopyDetail(value); }}
+                                        className="w-5 h-5 rounded-md flex items-center justify-center text-muted-foreground/40 hover:text-foreground hover:bg-muted transition-all"
+                                      >
+                                        <Copy className="h-2.5 w-2.5" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+
+                                {/* Quick Actions */}
+                                <div className="flex items-center gap-1.5 pt-1.5 border-t border-border/30">
+                                  {item.originIata && AIRPORT_COORDS[item.originIata] && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-7 text-[10px] gap-1 flex-1"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const coords = AIRPORT_COORDS[item.originIata!];
+                                        window.open(`https://www.google.com/maps?q=${coords[0]},${coords[1]}`, "_blank");
+                                      }}
+                                    >
+                                      <ExternalLink className="h-2.5 w-2.5" /> Google Maps
+                                    </Button>
+                                  )}
+                                  {item.destIata && AIRPORT_COORDS[item.destIata] && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-7 text-[10px] gap-1 flex-1"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const coords = AIRPORT_COORDS[item.destIata!];
+                                        window.open(`https://www.google.com/maps?q=${coords[0]},${coords[1]}`, "_blank");
+                                      }}
+                                    >
+                                      <MapPin className="h-2.5 w-2.5" /> Destino
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {filteredItems.length === 0 && (
+                <div className="text-center py-12">
+                  <Navigation className="h-10 w-10 text-muted-foreground/20 mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">Nenhum item nesta categoria</p>
                 </div>
               )}
-              {group.items.map((item) => {
-                const Icon = TYPE_ICONS[item.type] || Ticket;
-                const colors = TYPE_COLORS[item.type] || TYPE_COLORS.service;
-                return (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`flex items-start gap-4 p-4 rounded-xl border border-border/50 bg-card hover:shadow-md transition-all`}
-                  >
-                    <div className={`w-10 h-10 rounded-xl ${colors.bg} flex items-center justify-center shrink-0`}>
-                      <Icon className={`h-5 w-5 ${colors.text}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                      {item.subtitle && <p className="text-xs text-muted-foreground mt-0.5">{item.subtitle}</p>}
-                      {Object.keys(item.details).length > 0 && (
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">
-                          {Object.entries(item.details).map(([k, v]) => v && (
-                            <div key={k} className="flex items-baseline gap-1">
-                              <span className="text-[10px] text-muted-foreground/60 font-medium">{k}</span>
-                              <span className="text-[11px] font-medium text-foreground/80">{v}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-1 shrink-0">
-                      {item.time && (
-                        <Badge variant="secondary" className="text-[10px]">
-                          <Clock className="h-2.5 w-2.5 mr-1" /> {item.time}
-                        </Badge>
-                      )}
-                      {item.originIata && AIRPORT_COORDS[item.originIata] && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 px-2 text-[10px] gap-1"
-                          onClick={() => handleOpenExternal(item)}
-                        >
-                          <ExternalLink className="h-2.5 w-2.5" /> Maps
-                        </Button>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
             </div>
-          ))}
-          {filteredItems.length === 0 && (
-            <div className="text-center py-12">
-              <MapIcon className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Nenhum item nesta categoria</p>
-            </div>
-          )}
+          </ScrollArea>
         </div>
-      )}
+      </div>
+
+      {/* CSS for pulsing animation */}
+      <style>{`
+        @keyframes pulse-ring {
+          0% { transform: scale(0.5); opacity: 0.4; }
+          100% { transform: scale(1.5); opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }
