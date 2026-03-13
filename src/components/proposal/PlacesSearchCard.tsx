@@ -182,114 +182,137 @@ export default function PlacesSearchCard({
 
     const normalizedQuery = destinationContext ? `${q} ${destinationContext}` : q;
 
-    const runHotelFallback = async () => {
-      try {
-        const { data, error: fnError } = await withTimeout(
-          supabase.functions.invoke("hotel-search", { body: { query: q } }),
-          5000,
-          "Timeout no fallback de hotéis"
-        );
+    const mapFallbackResults = (items: any[]): PlaceResult[] =>
+      items.map((item: any, idx: number) => ({
+        place_id: `fallback:${item.place_id || item.name || q}-${idx}`,
+        name: item.name || q,
+        address: [item.address, item.city, item.country].filter(Boolean).join(", "),
+        rating: null,
+        user_ratings_total: 0,
+        types: ["lodging"],
+        photo_reference: null,
+        location: Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng))
+          ? { lat: Number(item.lat), lng: Number(item.lng) }
+          : null,
+        price_level: null,
+      }));
 
-        if (isStale()) return;
-        if (fnError) throw fnError;
+    const providers: Array<{ source: "client" | "edge" | "hotel"; run: () => Promise<PlaceResult[]> }> = [];
 
-        const fallbackResults: PlaceResult[] = (data?.results || []).map((item: any) => ({
-          place_id: `fallback:${item.place_id || item.name}`,
-          name: item.name || q,
-          address: [item.address, item.city, item.country].filter(Boolean).join(", "),
-          rating: null,
-          user_ratings_total: 0,
-          types: ["lodging"],
-          photo_reference: null,
-          location: Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng))
-            ? { lat: Number(item.lat), lng: Number(item.lng) }
-            : null,
-          price_level: null,
-        }));
-
-        safeSet(() => {
-          setResults(fallbackResults);
-          setError(fallbackResults.length === 0 ? "Nenhum hotel encontrado" : null);
-          setLoading(false);
-        });
-      } catch (fallbackErr) {
-        console.error("Fallback hotel-search error:", fallbackErr);
-        safeSet(() => {
-          setError("Não foi possível buscar locais. Tente novamente.");
-          setResults([]);
-          setLoading(false);
-        });
-      }
-    };
-
-    // Primary: Google Places no cliente (mais rápido com key de referer)
     if (!disableClientGoogleRef.current) {
-      try {
-        const data = await withTimeout(searchPlaces(normalizedQuery), 7000, "Timeout na busca Google Places");
-        if (isStale()) return;
-
-        if (data.length > 0) {
-          safeSet(() => {
-            setResults(data);
-            setError(null);
-            setLoading(false);
-          });
-          return;
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "";
-        console.error("Client-side Places search error:", err);
-        if (/auth|api|google|timeout|indisponível|configurad/i.test(message.toLowerCase())) {
-          disableClientGoogleRef.current = true;
-        }
-      }
+      providers.push({
+        source: "client",
+        run: async () => {
+          const data = await withTimeout(searchPlaces(normalizedQuery), 3500, "Timeout na busca Google Places");
+          return data;
+        },
+      });
     }
 
-    // Secondary: Edge Function (caso cliente falhe)
     if (!disableEdgeSearchRef.current) {
-      try {
+      providers.push({
+        source: "edge",
+        run: async () => {
+          const { data, error: fnError } = await withTimeout(
+            supabase.functions.invoke("places-search", {
+              body: { action: "search", query: normalizedQuery },
+            }),
+            3500,
+            "Timeout na busca server-side",
+          );
+
+          if (fnError) {
+            let detailedMessage = fnError.message;
+            const errorContext = (fnError as any)?.context;
+            if (errorContext?.json) {
+              try {
+                const jsonBody = await errorContext.json();
+                if (jsonBody?.error) detailedMessage = String(jsonBody.error);
+              } catch {
+                // no-op
+              }
+            }
+            throw new Error(detailedMessage || "Erro na busca server-side");
+          }
+
+          if (data?.error) throw new Error(data.error);
+
+          return (data?.results || []).map((item: any) => ({
+            place_id: item.place_id,
+            name: item.name,
+            address: item.address || "",
+            rating: item.rating ?? null,
+            user_ratings_total: item.user_ratings_total || 0,
+            types: item.types || [],
+            photo_reference: item.photo_reference || null,
+            location: item.location || null,
+            price_level: item.price_level ?? null,
+          }));
+        },
+      });
+    }
+
+    providers.push({
+      source: "hotel",
+      run: async () => {
         const { data, error: fnError } = await withTimeout(
-          supabase.functions.invoke("places-search", {
-            body: { action: "search", query: normalizedQuery },
+          supabase.functions.invoke("hotel-search", {
+            body: { query: normalizedQuery },
           }),
-          5000,
-          "Timeout na busca server-side"
+          4000,
+          "Timeout no fallback de hotéis",
         );
 
-        if (isStale()) return;
         if (fnError) throw fnError;
-        if (data?.error) throw new Error(data.error);
+        return mapFallbackResults(data?.results || []);
+      },
+    });
 
-        const mapped: PlaceResult[] = (data?.results || []).map((item: any) => ({
-          place_id: item.place_id,
-          name: item.name,
-          address: item.address || "",
-          rating: item.rating ?? null,
-          user_ratings_total: item.user_ratings_total || 0,
-          types: item.types || [],
-          photo_reference: item.photo_reference || null,
-          location: item.location || null,
-          price_level: item.price_level ?? null,
-        }));
+    const settled = await Promise.allSettled(
+      providers.map(async (provider) => ({
+        source: provider.source,
+        results: await provider.run(),
+      })),
+    );
 
-        if (mapped.length > 0) {
-          safeSet(() => {
-            setResults(mapped);
-            setError(null);
-            setLoading(false);
-          });
-          return;
+    if (isStale()) return;
+
+    const bySource = new Map<"client" | "edge" | "hotel", PlaceResult[]>();
+    let hasError = false;
+    let hasEmpty = false;
+
+    settled.forEach((entry, idx) => {
+      const source = providers[idx].source;
+
+      if (entry.status === "fulfilled") {
+        if (entry.value.results.length > 0) {
+          bySource.set(source, entry.value.results);
+        } else {
+          hasEmpty = true;
         }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "";
-        console.error("places-search edge function error:", err);
-        if (/referer restrictions|request_denied|api keys|denied|permission/i.test(message.toLowerCase())) {
-          disableEdgeSearchRef.current = true;
-        }
+        return;
       }
-    }
 
-    await runHotelFallback();
+      hasError = true;
+      const message = entry.reason instanceof Error ? entry.reason.message : String(entry.reason || "");
+      console.error(`Search provider ${source} failed:`, entry.reason);
+
+      if (source === "client" && /auth|api|google|request_denied|denied|indisponível|configurad/i.test(message.toLowerCase())) {
+        disableClientGoogleRef.current = true;
+      }
+
+      if (source === "edge") {
+        disableEdgeSearchRef.current = true;
+      }
+    });
+
+    const chosenResults = bySource.get("client") || bySource.get("edge") || bySource.get("hotel") || [];
+
+    safeSet(() => {
+      setResults(chosenResults);
+      setError(chosenResults.length === 0 && hasError && !hasEmpty ? "Não foi possível buscar locais. Tente novamente." : null);
+      setLoading(false);
+    });
   }, [destinationContext]);
 
   const handleInput = (val: string) => {
