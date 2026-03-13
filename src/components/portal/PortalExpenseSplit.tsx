@@ -502,6 +502,7 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
         group={selectedGroup}
         members={members}
         onSaved={() => { setAddExpenseOpen(false); loadGroupData(selectedGroup!.id); }}
+        recentExpenses={expenses}
       />
       <AddMemberDialog
         open={addMemberOpen}
