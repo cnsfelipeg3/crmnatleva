@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import PortalExpenseSplit from "@/components/portal/PortalExpenseSplit";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import PortalLayout from "@/components/portal/PortalLayout";
@@ -13,7 +14,7 @@ import {
   X, Save, Trash2, Edit2, Zap, Eye, EyeOff, ArrowRight,
   Flame, TrendingDown, Activity, Gauge, DollarSign,
   Plane, Coffee, Heart, Globe, Shield, Star,
-  Camera, ImageIcon,
+  Camera, ImageIcon, Users,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -421,6 +422,7 @@ export default function PortalFinance() {
                 { v: "agency", icon: Shield, l: "Agência" },
                 { v: "expenses", icon: Receipt, l: "Gastos" },
                 { v: "cards", icon: CreditCard, l: "Cartões & Cash" },
+                { v: "split", icon: Users, l: "Rateio" },
                 { v: "history", icon: Calendar, l: "Histórico" },
               ].map(t => (
                 <TabsTrigger
@@ -463,6 +465,10 @@ export default function PortalFinance() {
                 onAddCard={async () => { await ensureBudget(); setCardDialogOpen(true); }}
                 onAddCash={async () => { await ensureBudget(); setCashDialogOpen(true); }}
               />
+            </TabsContent>
+
+            <TabsContent value="split" className="space-y-6">
+              <PortalExpenseSplit saleId={saleId!} />
             </TabsContent>
 
             <TabsContent value="history" className="space-y-6">

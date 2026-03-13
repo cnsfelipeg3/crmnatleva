@@ -3081,6 +3081,183 @@ export type Database = {
           },
         ]
       }
+      portal_expense_group_members: {
+        Row: {
+          avatar_color: string | null
+          created_at: string
+          group_id: string
+          id: string
+          name: string
+          passenger_id: string | null
+        }
+        Insert: {
+          avatar_color?: string | null
+          created_at?: string
+          group_id: string
+          id?: string
+          name: string
+          passenger_id?: string | null
+        }
+        Update: {
+          avatar_color?: string | null
+          created_at?: string
+          group_id?: string
+          id?: string
+          name?: string
+          passenger_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_expense_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "portal_expense_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_expense_group_members_passenger_id_fkey"
+            columns: ["passenger_id"]
+            isOneToOne: false
+            referencedRelation: "passengers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_expense_groups: {
+        Row: {
+          client_id: string
+          created_at: string
+          currency: string
+          id: string
+          name: string
+          sale_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          name: string
+          sale_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          name?: string
+          sale_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_expense_groups_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_expense_settlements: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          from_member_id: string
+          group_id: string
+          id: string
+          is_paid: boolean
+          paid_at: string | null
+          to_member_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          from_member_id: string
+          group_id: string
+          id?: string
+          is_paid?: boolean
+          paid_at?: string | null
+          to_member_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          from_member_id?: string
+          group_id?: string
+          id?: string
+          is_paid?: boolean
+          paid_at?: string | null
+          to_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_expense_settlements_from_member_id_fkey"
+            columns: ["from_member_id"]
+            isOneToOne: false
+            referencedRelation: "portal_expense_group_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_expense_settlements_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "portal_expense_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_expense_settlements_to_member_id_fkey"
+            columns: ["to_member_id"]
+            isOneToOne: false
+            referencedRelation: "portal_expense_group_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_expense_splits: {
+        Row: {
+          amount: number
+          created_at: string
+          expense_id: string
+          id: string
+          member_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          expense_id: string
+          id?: string
+          member_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          expense_id?: string
+          id?: string
+          member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_expense_splits_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "portal_group_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_expense_splits_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "portal_expense_group_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portal_expenses: {
         Row: {
           amount: number
@@ -3144,6 +3321,66 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "portal_budget_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_group_expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          currency: string
+          description: string
+          expense_date: string
+          group_id: string
+          id: string
+          notes: string | null
+          paid_by_member_id: string
+          receipt_url: string | null
+          split_type: string
+        }
+        Insert: {
+          amount?: number
+          category?: string
+          created_at?: string
+          currency?: string
+          description: string
+          expense_date?: string
+          group_id: string
+          id?: string
+          notes?: string | null
+          paid_by_member_id: string
+          receipt_url?: string | null
+          split_type?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          currency?: string
+          description?: string
+          expense_date?: string
+          group_id?: string
+          id?: string
+          notes?: string | null
+          paid_by_member_id?: string
+          receipt_url?: string | null
+          split_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_group_expenses_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "portal_expense_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_group_expenses_paid_by_member_id_fkey"
+            columns: ["paid_by_member_id"]
+            isOneToOne: false
+            referencedRelation: "portal_expense_group_members"
             referencedColumns: ["id"]
           },
         ]
