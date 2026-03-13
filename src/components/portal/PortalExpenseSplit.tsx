@@ -79,12 +79,14 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
 
   const loadGroups = async () => {
     setLoading(true);
-    const { data } = await supabase
+    const isMock = saleId?.startsWith("mock-");
+    let query = supabase
       .from("portal_expense_groups" as any)
       .select("*")
-      .eq("sale_id", saleId)
       .eq("client_id", clientId!)
       .order("created_at", { ascending: false });
+    if (!isMock && saleId) query = query.eq("sale_id", saleId);
+    const { data } = await query;
     const g = (data as any[] || []) as Group[];
     setGroups(g);
     if (g.length > 0 && !selectedGroup) setSelectedGroup(g[0]);
@@ -588,9 +590,13 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
     if (allNames.length < 2) { toast.error("Adicione pelo menos 2 participantes"); return; }
     setLoading(true);
 
+    const isMock = saleId?.startsWith("mock-");
+    const insertPayload: Record<string, any> = { client_id: clientId, name: name.trim(), currency };
+    if (!isMock && saleId) insertPayload.sale_id = saleId;
+
     const { data: group, error } = await supabase
       .from("portal_expense_groups" as any)
-      .insert({ sale_id: saleId, client_id: clientId, name: name.trim(), currency } as any)
+      .insert(insertPayload as any)
       .select().single();
     if (error || !group) { toast.error("Erro ao criar grupo"); setLoading(false); return; }
 
