@@ -248,6 +248,9 @@ function AppRoutes() {
         <Route path="/portal/nova-cotacao" element={<PortalNewQuote />} />
         <Route path="/portal/perfil" element={<PortalProfile />} />
 
+        {/* Proposta pública */}
+        <Route path="/proposta/:slug" element={<ProposalPublicView />} />
+
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

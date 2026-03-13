@@ -29,7 +29,7 @@ const navItems = [
   { to: "/birthdays", icon: Cake, label: "Aniversariantes" },
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
   { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações Portal" },
-];
+  { to: "/propostas", icon: Presentation, label: "Propostas" },
 
 const financeItems = [
   { to: "/financeiro", icon: BarChart3, label: "Visão Geral" },
