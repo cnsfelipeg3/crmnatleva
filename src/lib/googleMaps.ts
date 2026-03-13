@@ -3,6 +3,13 @@ import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 let initialized = false;
+let authFailed = false;
+
+declare global {
+  interface Window {
+    gm_authFailure?: () => void;
+  }
+}
 
 function ensureInit() {
   if (!API_KEY || API_KEY.trim().length === 0) {
@@ -10,9 +17,19 @@ function ensureInit() {
   }
 
   if (!initialized) {
+    if (typeof window !== "undefined") {
+      window.gm_authFailure = () => {
+        authFailed = true;
+      };
+    }
+
     setOptions({ key: API_KEY });
     initialized = true;
   }
+}
+
+export function hasGoogleMapsAuthFailure() {
+  return authFailed;
 }
 
 export async function loadGoogleMapsCore() {

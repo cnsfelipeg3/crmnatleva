@@ -1,7 +1,8 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { iataToLabel } from "@/lib/iataUtils";
-import { formatDateBR } from "@/lib/dateFormat";
-import { loadGoogleMapsCore } from "@/lib/googleMaps";
+import { loadGoogleMapsCore, hasGoogleMapsAuthFailure } from "@/lib/googleMaps";
 
 const AIRPORT_COORDS: Record<string, [number, number]> = {
   GRU: [-23.4356, -46.4731], CGH: [-23.6261, -46.6564], GIG: [-22.8090, -43.2506],
@@ -68,7 +69,6 @@ interface RoutesMapProps {
   onSaleClick?: (saleId: string) => void;
 }
 
-/* Dark map style */
 const DARK_STYLE: google.maps.MapTypeStyle[] = [
   { elementType: "geometry", stylers: [{ color: "#1d2c4d" }] },
   { elementType: "labels.text.fill", stylers: [{ color: "#8ec3b9" }] },
@@ -98,60 +98,86 @@ function getCurvedPath(from: google.maps.LatLngLiteral, to: google.maps.LatLngLi
     const lng = (1 - t) * (1 - t) * from.lng + 2 * (1 - t) * t * perpLng + t * t * to.lng;
     points.push({ lat, lng });
   }
+
   return points;
 }
 
 export default function RoutesMap({ routes, height = "400px", sales = [], onSaleClick }: RoutesMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const overlaysRef = useRef<(google.maps.Polyline | google.maps.Marker | google.maps.InfoWindow)[]>([]);
-  const onSaleClickRef = useRef(onSaleClick);
-  onSaleClickRef.current = onSaleClick;
 
-  const validRoutes = routes.filter(
-    r => AIRPORT_COORDS[r.origin] && AIRPORT_COORDS[r.destination]
-  );
+  const googleMapRef = useRef<google.maps.Map | null>(null);
+  const googleOverlaysRef = useRef<(google.maps.Polyline | google.maps.Marker | google.maps.InfoWindow)[]>([]);
 
-  // Init map
+  const leafletMapRef = useRef<L.Map | null>(null);
+  const leafletLayerRef = useRef<L.LayerGroup | null>(null);
+
+  const [fallbackMode, setFallbackMode] = useState(false);
+
+  const validRoutes = routes.filter((r) => AIRPORT_COORDS[r.origin] && AIRPORT_COORDS[r.destination]);
+
+  // Init Google map (primary)
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (fallbackMode || !containerRef.current) return;
+
     let cancelled = false;
+    let authTimer: number | undefined;
 
-    loadGoogleMapsCore().then(({ Map }) => {
-      if (cancelled || !containerRef.current) return;
+    loadGoogleMapsCore()
+      .then(({ Map }) => {
+        if (cancelled || !containerRef.current) return;
+        if (hasGoogleMapsAuthFailure()) throw new Error("Google Maps auth failure");
 
-      const map = new Map(containerRef.current, {
-        center: { lat: -5, lng: -30 },
-        zoom: 3,
-        disableDefaultUI: true,
-        zoomControl: true,
-        styles: DARK_STYLE,
-        backgroundColor: "#0e1626",
+        const map = new Map(containerRef.current, {
+          center: { lat: -5, lng: -30 },
+          zoom: 3,
+          disableDefaultUI: true,
+          zoomControl: true,
+          styles: DARK_STYLE,
+          backgroundColor: "#0e1626",
+        });
+
+        googleMapRef.current = map;
+
+        // Detect delayed auth failures and auto-fallback
+        authTimer = window.setTimeout(() => {
+          const hasDomError = !!containerRef.current?.querySelector(".gm-err-container");
+          if ((hasGoogleMapsAuthFailure() || hasDomError) && !cancelled) {
+            googleMapRef.current = null;
+            if (containerRef.current) containerRef.current.innerHTML = "";
+            setFallbackMode(true);
+          }
+        }, 1200);
+      })
+      .catch((err) => {
+        console.error("Google Maps init error:", err);
+        if (!cancelled) setFallbackMode(true);
       });
-      mapRef.current = map;
-    });
 
-    return () => { cancelled = true; };
-  }, []);
+    return () => {
+      cancelled = true;
+      if (authTimer) window.clearTimeout(authTimer);
+    };
+  }, [fallbackMode]);
 
-  // Draw routes & markers
+  // Draw on Google map
   useEffect(() => {
-    const map = mapRef.current;
+    if (fallbackMode) return;
+
+    const map = googleMapRef.current;
     if (!map) return;
 
-    // Clear old overlays
-    overlaysRef.current.forEach(o => {
+    googleOverlaysRef.current.forEach((o) => {
       if ("setMap" in o) (o as any).setMap(null);
       if ("close" in o) (o as any).close();
     });
-    overlaysRef.current = [];
+    googleOverlaysRef.current = [];
 
-    const maxCount = Math.max(...validRoutes.map(r => r.count), 1);
+    const maxCount = Math.max(...validRoutes.map((r) => r.count), 1);
     const bounds = new google.maps.LatLngBounds();
 
-    // Airport data
     const airportData: Record<string, { count: number; revenue: number; salesList: RouteSale[] }> = {};
-    validRoutes.forEach(r => {
+
+    validRoutes.forEach((r) => {
       if (!airportData[r.origin]) airportData[r.origin] = { count: 0, revenue: 0, salesList: [] };
       if (!airportData[r.destination]) airportData[r.destination] = { count: 0, revenue: 0, salesList: [] };
       airportData[r.origin].count += r.count;
@@ -159,129 +185,200 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
       airportData[r.destination].revenue += r.revenue;
     });
 
-    sales.forEach(sale => {
+    sales.forEach((sale) => {
       if (sale.origin_iata && airportData[sale.origin_iata]) {
         const list = airportData[sale.origin_iata].salesList;
-        if (!list.find(s => s.id === sale.id)) list.push(sale);
+        if (!list.find((s) => s.id === sale.id)) list.push(sale);
       }
       if (sale.destination_iata && airportData[sale.destination_iata]) {
         const list = airportData[sale.destination_iata].salesList;
-        if (!list.find(s => s.id === sale.id)) list.push(sale);
+        if (!list.find((s) => s.id === sale.id)) list.push(sale);
       }
     });
 
-    // Draw curved routes
-    validRoutes.forEach(r => {
+    validRoutes.forEach((r) => {
       const o = AIRPORT_COORDS[r.origin];
       const d = AIRPORT_COORDS[r.destination];
       const opacity = 0.3 + (r.count / maxCount) * 0.6;
       const weight = 1.5 + (r.count / maxCount) * 3.5;
 
-      const path = getCurvedPath(
-        { lat: o[0], lng: o[1] },
-        { lat: d[0], lng: d[1] }
-      );
-
       const polyline = new google.maps.Polyline({
-        path,
+        path: getCurvedPath({ lat: o[0], lng: o[1] }, { lat: d[0], lng: d[1] }),
         strokeColor: "#34d399",
         strokeWeight: weight,
         strokeOpacity: opacity,
         geodesic: false,
         map,
       });
-      overlaysRef.current.push(polyline);
+
+      googleOverlaysRef.current.push(polyline);
     });
 
-    // Airport markers
-    const maxAirport = Math.max(...Object.values(airportData).map(a => a.count), 1);
+    const maxAirport = Math.max(...Object.values(airportData).map((a) => a.count), 1);
 
     Object.entries(airportData).forEach(([iata, data]) => {
       const coords = AIRPORT_COORDS[iata];
       if (!coords) return;
+
       const pos = { lat: coords[0], lng: coords[1] };
       bounds.extend(pos);
-
-      const size = 10 + (data.count / maxAirport) * 20;
 
       const marker = new google.maps.Marker({
         position: pos,
         map,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: size,
+          scale: 10 + (data.count / maxAirport) * 20,
           fillColor: "#f59e0b",
           fillOpacity: 0.85,
           strokeColor: "#34d399",
           strokeWeight: 2,
         },
-        zIndex: data.count,
       });
 
-      // InfoWindow
-      const hasSales = data.salesList.length > 0;
-      const salesRows = data.salesList.slice(0, 10).map(sale => {
-        const route = [sale.origin_iata, sale.destination_iata].filter(Boolean).join(" → ");
-        return `<tr data-sale-id="${sale.id}" style="cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(52,211,153,0.1)'" onmouseout="this.style.background=''">
-          <td style="padding:4px 6px;font-size:11px;color:#60a5fa;text-decoration:underline;">${sale.display_id || sale.id.slice(0, 8)}</td>
-          <td style="padding:4px 6px;font-size:11px;color:#e5e7eb;">${sale.name || "—"}</td>
-          <td style="padding:4px 6px;font-size:11px;color:#e5e7eb;">${route}</td>
-          <td style="padding:4px 6px;font-size:11px;text-align:right;color:#34d399;">${fmt(sale.received_value || 0)}</td>
-        </tr>`;
-      }).join("");
-
-      const infoContent = `
-        <div style="font-family:system-ui;min-width:${hasSales ? '340px' : '160px'};color:#e5e7eb;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:4px;color:#f59e0b;">${iataToLabel(iata)}</div>
-          <div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">${data.count} voo(s) · Receita: ${fmt(data.revenue)}</div>
-          ${hasSales ? `
-            <table style="width:100%;border-collapse:collapse;border-top:1px solid #374151;">
-              <thead><tr style="background:rgba(0,0,0,0.2);">
-                <th style="padding:4px 6px;font-size:10px;text-align:left;color:#6b7280;">ID</th>
-                <th style="padding:4px 6px;font-size:10px;text-align:left;color:#6b7280;">Cliente</th>
-                <th style="padding:4px 6px;font-size:10px;text-align:left;color:#6b7280;">Rota</th>
-                <th style="padding:4px 6px;font-size:10px;text-align:right;color:#6b7280;">Valor</th>
-              </tr></thead>
-              <tbody>${salesRows}</tbody>
-            </table>
-          ` : ""}
-        </div>
-      `;
-
-      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
-      overlaysRef.current.push(infoWindow);
+      const infoWindow = new google.maps.InfoWindow({
+        content: `<div style="font-family:system-ui;min-width:180px;"><strong>${iataToLabel(iata)}</strong><br/>${data.count} rota(s) · ${fmt(data.revenue)}</div>`,
+      });
 
       marker.addListener("click", () => {
-        overlaysRef.current.forEach(o => { if (o instanceof google.maps.InfoWindow) o.close(); });
-        infoWindow.open(map, marker);
-
-        // Attach sale click handlers after DOM render
-        google.maps.event.addListenerOnce(infoWindow, "domready", () => {
-          const container = document.querySelector(".gm-style-iw");
-          if (!container) return;
-          container.querySelectorAll("tr[data-sale-id]").forEach(row => {
-            row.addEventListener("click", () => {
-              const saleId = (row as HTMLElement).dataset.saleId;
-              if (saleId && onSaleClickRef.current) onSaleClickRef.current(saleId);
-            });
-          });
+        googleOverlaysRef.current.forEach((o) => {
+          if (o instanceof google.maps.InfoWindow) o.close();
         });
+        infoWindow.open(map, marker);
       });
 
-      overlaysRef.current.push(marker);
+      googleOverlaysRef.current.push(marker, infoWindow);
     });
 
-    // Fit bounds
     if (Object.keys(airportData).length >= 2) {
       map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
     }
-  }, [validRoutes, sales]);
+  }, [fallbackMode, validRoutes, sales]);
+
+  // Init Leaflet fallback
+  useEffect(() => {
+    if (!fallbackMode || !containerRef.current || leafletMapRef.current) return;
+    containerRef.current.innerHTML = "";
+
+    const map = L.map(containerRef.current, {
+      scrollWheelZoom: true,
+      zoomControl: true,
+      dragging: true,
+    }).setView([-5, -30], 3);
+
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; <a href="https://carto.com">CARTO</a>',
+      maxZoom: 18,
+    }).addTo(map);
+
+    leafletMapRef.current = map;
+    leafletLayerRef.current = L.layerGroup().addTo(map);
+
+    return () => {
+      map.remove();
+      leafletMapRef.current = null;
+      leafletLayerRef.current = null;
+    };
+  }, [fallbackMode]);
+
+  // Draw on Leaflet fallback
+  useEffect(() => {
+    if (!fallbackMode) return;
+
+    const map = leafletMapRef.current;
+    const layer = leafletLayerRef.current;
+    if (!map || !layer) return;
+
+    layer.clearLayers();
+
+    const maxCount = Math.max(...validRoutes.map((r) => r.count), 1);
+    const bounds: L.LatLngTuple[] = [];
+
+    const airportData: Record<string, { count: number; revenue: number; salesList: RouteSale[] }> = {};
+
+    validRoutes.forEach((r) => {
+      if (!airportData[r.origin]) airportData[r.origin] = { count: 0, revenue: 0, salesList: [] };
+      if (!airportData[r.destination]) airportData[r.destination] = { count: 0, revenue: 0, salesList: [] };
+      airportData[r.origin].count += r.count;
+      airportData[r.destination].count += r.count;
+      airportData[r.destination].revenue += r.revenue;
+
+      const o = AIRPORT_COORDS[r.origin];
+      const d = AIRPORT_COORDS[r.destination];
+
+      L.polyline([o, d], {
+        color: "#34d399",
+        weight: 2 + (r.count / maxCount) * 3,
+        opacity: 0.7,
+      }).addTo(layer);
+
+      bounds.push(o, d);
+    });
+
+    sales.forEach((sale) => {
+      if (sale.origin_iata && airportData[sale.origin_iata]) {
+        const list = airportData[sale.origin_iata].salesList;
+        if (!list.find((s) => s.id === sale.id)) list.push(sale);
+      }
+      if (sale.destination_iata && airportData[sale.destination_iata]) {
+        const list = airportData[sale.destination_iata].salesList;
+        if (!list.find((s) => s.id === sale.id)) list.push(sale);
+      }
+    });
+
+    const maxAirport = Math.max(...Object.values(airportData).map((a) => a.count), 1);
+
+    Object.entries(airportData).forEach(([iata, data]) => {
+      const coords = AIRPORT_COORDS[iata];
+      if (!coords) return;
+
+      const radius = 7 + (data.count / maxAirport) * 8;
+      const salesHtml = data.salesList
+        .slice(0, 6)
+        .map((s) => `<div data-sale-id="${s.id}" style="cursor:pointer;color:#60a5fa;text-decoration:underline;margin-top:4px;">${s.display_id || s.id.slice(0, 8)} · ${fmt(s.received_value || 0)}</div>`)
+        .join("");
+
+      const marker = L.circleMarker(coords, {
+        radius,
+        fillColor: "#f59e0b",
+        fillOpacity: 0.85,
+        color: "#34d399",
+        weight: 2,
+      }).addTo(layer);
+
+      marker.bindPopup(`<div style="font-family:system-ui;min-width:180px;"><strong>${iataToLabel(iata)}</strong><br/>${data.count} rota(s) · ${fmt(data.revenue)}${salesHtml ? `<div style=\"margin-top:8px\">${salesHtml}</div>` : ""}</div>`);
+
+      marker.on("popupopen", (event) => {
+        if (!onSaleClick) return;
+        const popupEl = event.popup.getElement();
+        if (!popupEl) return;
+
+        popupEl.querySelectorAll("[data-sale-id]").forEach((el) => {
+          el.addEventListener("click", () => {
+            const saleId = (el as HTMLElement).dataset.saleId;
+            if (saleId) onSaleClick(saleId);
+          });
+        });
+      });
+    });
+
+    if (bounds.length >= 2) {
+      map.fitBounds(bounds, { padding: [40, 40] });
+    }
+  }, [fallbackMode, validRoutes, sales, onSaleClick]);
 
   return (
-    <div
-      ref={containerRef}
-      style={{ height }}
-      className="rounded-lg overflow-hidden border border-border"
-    />
+    <div className="relative">
+      <div
+        ref={containerRef}
+        style={{ height }}
+        className="rounded-lg overflow-hidden border border-border"
+      />
+      {fallbackMode && (
+        <div className="absolute left-3 top-3 text-[10px] rounded-md border border-border bg-background/90 px-2 py-1 text-muted-foreground">
+          Modo compatível ativo
+        </div>
+      )}
+    </div>
   );
 }
