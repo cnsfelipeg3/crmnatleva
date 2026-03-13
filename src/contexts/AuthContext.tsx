@@ -31,10 +31,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole>(DEFAULT_ROLE);
   const [isLoading, setIsLoading] = useState(true);
 
-  const loadUserContext = useCallback(async (userId: string | null) => {
+  // Cache auth data to avoid re-fetching on every navigation
+  const cachedUserIdRef = useRef<string | null>(null);
+
+  const loadUserContext = useCallback(async (userId: string | null, forceRefresh = false) => {
     if (!userId) {
       setProfile(null);
       setRole(DEFAULT_ROLE);
+      cachedUserIdRef.current = null;
+      return;
+    }
+
+    // Skip re-fetch if already loaded for this user
+    if (!forceRefresh && cachedUserIdRef.current === userId && profile) {
       return;
     }
 
@@ -65,12 +74,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const bestRole = roles
         .sort((a, b) => (ROLE_PRIORITY[a.role] ?? 99) - (ROLE_PRIORITY[b.role] ?? 99))[0]?.role;
       setRole((bestRole as UserRole) ?? DEFAULT_ROLE);
+      cachedUserIdRef.current = userId;
     } catch (error) {
       console.error("Auth context load error:", error);
       setProfile(null);
       setRole(DEFAULT_ROLE);
     }
-  }, []);
+  }, [profile]);
 
   useEffect(() => {
     let isMounted = true;
