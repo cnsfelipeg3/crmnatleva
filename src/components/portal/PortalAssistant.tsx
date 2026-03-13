@@ -173,7 +173,7 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
             <div className="flex items-center justify-between px-4 py-3 bg-accent/5 border-b border-border shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-accent/10 flex items-center justify-center">
-                  <img src={logoNatleva} alt="NatLeva" className="h-5" />
+                  <img src={logoNatleva} alt="NatLeva" className="h-5 dark:brightness-[1.8]" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">Assistente NatLeva</p>
