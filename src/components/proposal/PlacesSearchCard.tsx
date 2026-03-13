@@ -5,6 +5,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { searchPlaces, getPlaceDetails, getPhotoUrl, type PlaceSearchResult, type PlaceDetailsResult } from "@/lib/placesApi";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -151,11 +152,8 @@ export default function PlacesSearchCard({
     setLoading(true);
     setError(null);
     try {
-      const body: any = { action: "search", query: q };
-      if (destinationContext) body.query = `${q} ${destinationContext}`;
-      const { data, error: fnErr } = await supabase.functions.invoke("places-search", { body });
-      if (fnErr) throw fnErr;
-      setResults(data?.results || []);
+      const data = await searchPlaces(destinationContext ? `${q} ${destinationContext}` : q);
+      setResults(data);
     } catch {
       setError("Não foi possível buscar locais");
       setResults([]);
@@ -175,32 +173,19 @@ export default function PlacesSearchCard({
     setLoadingDetails(true);
     setError(null);
     try {
-      const { data, error: fnErr } = await supabase.functions.invoke("places-search", {
-        body: { action: "details", place_id: placeId },
-      });
-      if (fnErr) throw fnErr;
-      setSelectedPlace(data);
+      const data = await getPlaceDetails(placeId);
+      setSelectedPlace(data as any);
       setResults([]);
 
       if (data?.photos?.length > 0) {
         setLoadingPhotos(true);
-        const photos: CuratedPhoto[] = [];
-        for (const [i, photo] of data.photos.slice(0, 10).entries()) {
-          try {
-            const { data: photoData } = await supabase.functions.invoke("places-search", {
-              body: { action: "photo", photo_reference: photo.photo_reference, max_width: 800 },
-            });
-            if (photoData?.url) {
-              photos.push({
-                url: photoData.url,
-                label: guessPhotoLabel(i),
-                selected: i < 6, // Auto-select first 6
-                isCover: i === 0,
-                source: "google",
-              });
-            }
-          } catch { /* skip */ }
-        }
+        const photos: CuratedPhoto[] = data.photos.slice(0, 10).map((photo, i) => ({
+          url: getPhotoUrl(photo.photo_reference, 800),
+          label: guessPhotoLabel(i),
+          selected: i < 6,
+          isCover: i === 0,
+          source: "google" as const,
+        }));
         setCuratedPhotos(photos);
         setLoadingPhotos(false);
       }
@@ -784,16 +769,6 @@ export default function PlacesSearchCard({
 
 /* ═══ Thumbnail subcomponent ═══ */
 function PlaceThumbnail({ photoRef, alt }: { photoRef: string; alt: string }) {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    supabase.functions.invoke("places-search", {
-      body: { action: "photo", photo_reference: photoRef, max_width: 200 },
-    }).then(({ data }) => {
-      if (!cancelled && data?.url) setUrl(data.url);
-    });
-    return () => { cancelled = true; };
-  }, [photoRef]);
-  if (!url) return <div className="w-full h-full bg-muted/30 animate-pulse" />;
+  const url = getPhotoUrl(photoRef, 200);
   return <img src={url} alt={alt} className="w-full h-full object-cover" />;
 }
