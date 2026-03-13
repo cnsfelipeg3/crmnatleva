@@ -38,9 +38,9 @@ function FloatingNav({ sections, activeSection }: { sections: { id: string; labe
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: 0.6 }}
-      className="sticky top-16 z-40 bg-card/80 backdrop-blur-xl border-b border-border/30 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8"
+      className="sticky top-16 z-40 bg-card/80 backdrop-blur-xl border-b border-border/30 -mx-4 sm:-mx-6 lg:-mx-8 px-3 sm:px-6 lg:px-8"
     >
-      <div className="flex gap-1 overflow-x-auto py-2 scrollbar-hide">
+      <div className="flex gap-0.5 sm:gap-1 overflow-x-auto py-1.5 sm:py-2 scrollbar-hide">
         {sections.map((s) => {
           const Icon = s.icon;
           const isActive = activeSection === s.id;
@@ -48,16 +48,16 @@ function FloatingNav({ sections, activeSection }: { sections: { id: string; labe
             <button
               key={s.id}
               onClick={() => scrollTo(s.id)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[11px] sm:text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
                 isActive
                   ? "bg-accent/10 text-accent shadow-sm"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               }`}
             >
-              <Icon className="h-3.5 w-3.5" />
+              <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               {s.label}
               {s.count !== undefined && s.count > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isActive ? "bg-accent/20" : "bg-muted"}`}>
+                <span className={`text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full ${isActive ? "bg-accent/20" : "bg-muted"}`}>
                   {s.count}
                 </span>
               )}
@@ -86,7 +86,7 @@ function TripStatsBar({ segments, hotels, services, passengers, days }: {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.15 }}
-      className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 py-4"
+      className="grid grid-cols-3 sm:grid-cols-5 gap-1.5 sm:gap-3 py-3 sm:py-4"
     >
       {stats.map((s, i) => (
         <motion.div
@@ -94,12 +94,12 @@ function TripStatsBar({ segments, hotels, services, passengers, days }: {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.2 + i * 0.05 }}
-          className="relative flex flex-col items-center gap-1.5 py-4 rounded-2xl bg-card/60 border border-border/30 backdrop-blur-sm overflow-hidden group hover:border-accent/20 transition-all"
+          className="relative flex flex-col items-center gap-1 sm:gap-1.5 py-2.5 sm:py-4 rounded-xl sm:rounded-2xl bg-card/60 border border-border/30 backdrop-blur-sm overflow-hidden group hover:border-accent/20 transition-all"
         >
           <div className="absolute inset-0 bg-gradient-to-b from-accent/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <s.icon className="h-5 w-5 text-accent/70" />
-          <p className="text-2xl font-black text-foreground tabular-nums">{s.value}</p>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em] font-medium">{s.label}</p>
+          <s.icon className="h-4 w-4 sm:h-5 sm:w-5 text-accent/70" />
+          <p className="text-lg sm:text-2xl font-black text-foreground tabular-nums">{s.value}</p>
+          <p className="text-[8px] sm:text-[10px] text-muted-foreground uppercase tracking-[0.1em] sm:tracking-[0.15em] font-medium">{s.label}</p>
         </motion.div>
       ))}
     </motion.div>
@@ -222,10 +222,10 @@ function SectionHeader({ id, icon: Icon, title, subtitle, count, children }: {
             <Icon className="h-5 w-5 text-accent" />
           </div>
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+          <h2 className="text-base sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
               {title}
               {count !== undefined && (
-                <span className="text-sm font-normal text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">{count}</span>
+                <span className="text-[11px] sm:text-sm font-normal text-muted-foreground bg-muted/50 px-1.5 sm:px-2 py-0.5 rounded-full">{count}</span>
               )}
             </h2>
             {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}

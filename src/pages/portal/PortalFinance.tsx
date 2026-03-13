@@ -379,13 +379,13 @@ export default function PortalFinance() {
             </motion.div>
 
             {/* Title + Hide balance */}
-            <div className="flex items-start justify-between mb-8">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-                <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-foreground mb-2">
+            <div className="flex items-start justify-between gap-3 mb-6">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="min-w-0">
+                <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-foreground mb-1">
                   Meu Financeiro
                 </h1>
-                <p className="text-sm text-muted-foreground/70 max-w-md">
-                  Controle total sobre investimento, gastos e orçamento da sua viagem
+                <p className="text-xs sm:text-sm text-muted-foreground/70 max-w-md">
+                  Controle total sobre investimento, gastos e orçamento
                 </p>
               </motion.div>
               <motion.button
@@ -393,10 +393,10 @@ export default function PortalFinance() {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3 }}
                 onClick={() => setBalanceVisible(!balanceVisible)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-muted/30 text-xs font-medium text-muted-foreground hover:bg-muted/50 transition-all mt-2"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-muted/30 text-[11px] font-medium text-muted-foreground hover:bg-muted/50 transition-all shrink-0 mt-1"
               >
-                {balanceVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                {balanceVisible ? "Ocultar" : "Mostrar"}
+                {balanceVisible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
+                <span className="hidden sm:inline">{balanceVisible ? "Ocultar" : "Mostrar"}</span>
               </motion.button>
             </div>
 
@@ -415,13 +415,13 @@ export default function PortalFinance() {
                 className="absolute inset-y-0 w-1/4 bg-gradient-to-r from-transparent via-accent/[0.04] to-transparent pointer-events-none"
               />
 
-              <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+              <div className="relative grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                 {/* Main balance */}
                 <div className="col-span-2 lg:col-span-1">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent/60 mb-2">
+                  <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] text-accent/60 mb-1.5">
                     Investimento Total
                   </p>
-                  <p className="text-3xl sm:text-4xl font-black tabular-nums text-foreground mb-1">
+                  <p className="text-xl sm:text-3xl font-black tabular-nums text-foreground mb-1">
                     {balanceVisible ? <AnimatedNumber value={agencyTotal} /> : "••••••"}
                   </p>
                   <div className="flex items-center gap-1.5 mt-1">
@@ -507,21 +507,21 @@ export default function PortalFinance() {
 
           {/* ═══ TABS ═══ */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="bg-card/80 backdrop-blur-sm border border-border/30 p-1.5 rounded-2xl w-full justify-start overflow-x-auto h-auto gap-1">
+            <TabsList className="bg-card/80 backdrop-blur-sm border border-border/30 p-1 sm:p-1.5 rounded-xl sm:rounded-2xl w-full justify-start overflow-x-auto h-auto gap-0.5 sm:gap-1 scrollbar-hide flex-nowrap">
               {[
                 { v: "overview", icon: PieChart, l: "Visão Geral" },
                 { v: "agency", icon: Shield, l: "Agência" },
                 { v: "expenses", icon: Receipt, l: "Gastos" },
-                { v: "cards", icon: CreditCard, l: "Cartões & Cash" },
+                { v: "cards", icon: CreditCard, l: "Cartões" },
                 { v: "split", icon: Users, l: "Rateio" },
                 { v: "history", icon: Calendar, l: "Histórico" },
               ].map(t => (
                 <TabsTrigger
                   key={t.v}
                   value={t.v}
-                  className="rounded-xl text-xs sm:text-sm gap-1.5 py-2.5 px-4 data-[state=active]:bg-accent/10 data-[state=active]:text-accent data-[state=active]:shadow-none transition-all"
+                  className="rounded-lg sm:rounded-xl text-[11px] sm:text-sm gap-1 sm:gap-1.5 py-2 sm:py-2.5 px-2.5 sm:px-4 data-[state=active]:bg-accent/10 data-[state=active]:text-accent data-[state=active]:shadow-none transition-all whitespace-nowrap shrink-0"
                 >
-                  <t.icon className="h-3.5 w-3.5" /> {t.l}
+                  <t.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> {t.l}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -583,12 +583,12 @@ export default function PortalFinance() {
    ═══════════════════════════════════════════════════════ */
 function MiniMetric({ icon: Icon, label, value, color, visible }: any) {
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-1.5">
-        <Icon className={`h-3.5 w-3.5 text-${color}`} />
-        <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50">{label}</span>
+    <div className="space-y-1">
+      <div className="flex items-center gap-1">
+        <Icon className={`h-3 w-3 sm:h-3.5 sm:w-3.5 text-${color}`} />
+        <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground/50">{label}</span>
       </div>
-      <p className={`text-xl sm:text-2xl font-black tabular-nums text-${color}`}>
+      <p className={`text-base sm:text-xl font-black tabular-nums text-${color} truncate`}>
         {visible ? fmt(value) : "••••"}
       </p>
     </div>
@@ -626,25 +626,25 @@ function GaugeCard({ label, percentage, value, sub, color, noGauge, icon: Icon }
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm p-5 flex flex-col items-center text-center overflow-hidden group hover:border-accent/10 transition-all"
+      className="relative rounded-xl sm:rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm p-3 sm:p-5 flex flex-col items-center text-center overflow-hidden group hover:border-accent/10 transition-all"
     >
       <div className="absolute inset-0 bg-gradient-to-b from-transparent to-muted/[0.03] opacity-0 group-hover:opacity-100 transition-opacity" />
 
       {noGauge && Icon ? (
-        <div className={`h-16 w-16 rounded-2xl bg-${color}/10 flex items-center justify-center mb-3`}>
-          <Icon className={`h-7 w-7 text-${color}`} />
+        <div className={`h-10 w-10 sm:h-16 sm:w-16 rounded-xl sm:rounded-2xl bg-${color}/10 flex items-center justify-center mb-2 sm:mb-3`}>
+          <Icon className={`h-5 w-5 sm:h-7 sm:w-7 text-${color}`} />
         </div>
       ) : (
-        <div className="mb-3">
-          <CircularGauge percentage={percentage} size={88} strokeWidth={6} color={color}>
-            <span className="text-lg font-black tabular-nums text-foreground">{percentage}%</span>
+        <div className="mb-2 sm:mb-3">
+          <CircularGauge percentage={percentage} size={68} strokeWidth={5} color={color}>
+            <span className="text-sm sm:text-lg font-black tabular-nums text-foreground">{percentage}%</span>
           </CircularGauge>
         </div>
       )}
 
-      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50 mb-1">{label}</p>
-      <p className="text-base font-black tabular-nums text-foreground">{value}</p>
-      <p className="text-[10px] text-muted-foreground/40 mt-0.5">{sub}</p>
+      <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground/50 mb-0.5 sm:mb-1">{label}</p>
+      <p className="text-xs sm:text-base font-black tabular-nums text-foreground truncate w-full">{value}</p>
+      <p className="text-[9px] sm:text-[10px] text-muted-foreground/40 mt-0.5 truncate w-full">{sub}</p>
     </motion.div>
   );
 }
@@ -663,30 +663,30 @@ function OverviewSection({ categories, categorySpending, totalBudget, totalSpent
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative rounded-3xl border border-border/20 bg-gradient-to-br from-card/90 to-muted/10 backdrop-blur-sm p-6 sm:p-8 overflow-hidden"
+          className="relative rounded-2xl sm:rounded-3xl border border-border/20 bg-gradient-to-br from-card/90 to-muted/10 backdrop-blur-sm p-4 sm:p-8 overflow-hidden"
         >
           <div className="absolute -top-20 -right-20 w-56 h-56 rounded-full opacity-[0.04]"
             style={{ background: "radial-gradient(circle, hsl(var(--accent)) 0%, transparent 70%)" }}
           />
 
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2.5">
-              <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                <Target className="h-5 w-5 text-accent" />
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl bg-accent/10 flex items-center justify-center">
+                <Target className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
               </div>
               <div>
-                <p className="text-sm font-bold text-foreground">Budget da Viagem</p>
-                <p className="text-[10px] text-muted-foreground/60">Planejamento vs. realizado</p>
+                <p className="text-xs sm:text-sm font-bold text-foreground">Budget da Viagem</p>
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground/60">Planejamento vs. realizado</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-black tabular-nums text-foreground">{usedPct}%</p>
-              <p className="text-[10px] text-muted-foreground/50">utilizado</p>
+              <p className="text-xl sm:text-3xl font-black tabular-nums text-foreground">{usedPct}%</p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground/50">utilizado</p>
             </div>
           </div>
 
           {/* Animated bar */}
-          <div className="relative h-4 w-full overflow-hidden rounded-full bg-muted/20 mb-4">
+          <div className="relative h-3 sm:h-4 w-full overflow-hidden rounded-full bg-muted/20 mb-3 sm:mb-4">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(usedPct, 100)}%` }}
@@ -696,7 +696,6 @@ function OverviewSection({ categories, categorySpending, totalBudget, totalSpent
               }`}
               style={{ boxShadow: `0 0 20px hsl(var(--${usedPct > 90 ? "destructive" : usedPct > 70 ? "warning" : "accent"}) / 0.3)` }}
             >
-              {/* Shimmer */}
               <motion.div
                 animate={{ x: ["-100%", "200%"] }}
                 transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
@@ -705,18 +704,18 @@ function OverviewSection({ categories, categorySpending, totalBudget, totalSpent
             </motion.div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Planejado</p>
-              <p className="text-lg font-black tabular-nums">{balanceVisible ? fmt(totalBudget) : "••••"}</p>
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Planejado</p>
+              <p className="text-sm sm:text-lg font-black tabular-nums truncate">{balanceVisible ? fmt(totalBudget) : "••••"}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-accent/50">Gasto</p>
-              <p className="text-lg font-black tabular-nums text-accent">{balanceVisible ? fmt(totalSpent) : "••••"}</p>
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-accent/50">Gasto</p>
+              <p className="text-sm sm:text-lg font-black tabular-nums text-accent truncate">{balanceVisible ? fmt(totalSpent) : "••••"}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Restante</p>
-              <p className={`text-lg font-black tabular-nums ${(totalBudget - totalSpent) < 0 ? "text-destructive" : ""}`}>
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Restante</p>
+              <p className={`text-sm sm:text-lg font-black tabular-nums truncate ${(totalBudget - totalSpent) < 0 ? "text-destructive" : ""}`}>
                 {balanceVisible ? fmt(totalBudget - totalSpent) : "••••"}
               </p>
             </div>
@@ -890,29 +889,29 @@ function AgencySection({ receivables, agencyTotal, agencyPaid, balanceVisible }:
   return (
     <>
       {/* Progress ring */}
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-3xl border border-border/20 bg-card/60 backdrop-blur-sm p-6 sm:p-8">
-        <div className="flex flex-col sm:flex-row items-center gap-6">
-          <CircularGauge percentage={progressPct} size={140} strokeWidth={10} color="accent">
-            <p className="text-2xl font-black tabular-nums text-foreground">{progressPct}%</p>
-            <p className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/40">quitado</p>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-2xl sm:rounded-3xl border border-border/20 bg-card/60 backdrop-blur-sm p-5 sm:p-8">
+        <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+          <CircularGauge percentage={progressPct} size={100} strokeWidth={8} color="accent">
+            <p className="text-xl font-black tabular-nums text-foreground">{progressPct}%</p>
+            <p className="text-[7px] font-bold uppercase tracking-widest text-muted-foreground/40">quitado</p>
           </CircularGauge>
-          <div className="flex-1 space-y-3 text-center sm:text-left">
-            <h3 className="text-lg font-black text-foreground">Investimento com a NatLeva</h3>
-            <div className="grid grid-cols-3 gap-4">
+          <div className="flex-1 space-y-3 text-center sm:text-left w-full">
+            <h3 className="text-sm sm:text-lg font-black text-foreground">Investimento com a NatLeva</h3>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Total</p>
-                <p className="text-xl font-black tabular-nums">{balanceVisible ? fmt(agencyTotal) : "••••"}</p>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Total</p>
+                <p className="text-sm sm:text-xl font-black tabular-nums truncate">{balanceVisible ? fmt(agencyTotal) : "••••"}</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-accent/50">Pago</p>
-                <p className="text-xl font-black tabular-nums text-accent">{balanceVisible ? fmt(agencyPaid) : "••••"}</p>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-accent/50">Pago</p>
+                <p className="text-sm sm:text-xl font-black tabular-nums text-accent truncate">{balanceVisible ? fmt(agencyPaid) : "••••"}</p>
               </div>
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-warning/50">Pendente</p>
-                <p className="text-xl font-black tabular-nums text-warning">{balanceVisible ? fmt(agencyTotal - agencyPaid) : "••••"}</p>
+                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-warning/50">Pendente</p>
+                <p className="text-sm sm:text-xl font-black tabular-nums text-warning truncate">{balanceVisible ? fmt(agencyTotal - agencyPaid) : "••••"}</p>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground/50">{paidCount} de {receivables.length} parcelas pagas</p>
+            <p className="text-[11px] text-muted-foreground/50">{paidCount} de {receivables.length} parcelas pagas</p>
           </div>
         </div>
       </motion.div>
@@ -936,35 +935,34 @@ function AgencySection({ receivables, agencyTotal, agencyPaid, balanceVisible }:
                   initial={{ opacity: 0, x: -16 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.06 }}
-                  className={`relative flex items-center gap-4 px-4 py-4 rounded-xl transition-all hover:scale-[1.005] ${
+                  className={`relative flex items-center gap-3 sm:gap-4 px-3 sm:px-4 py-3 sm:py-4 rounded-xl transition-all hover:scale-[1.005] ${
                     isPaid ? "bg-accent/[0.03] border border-accent/[0.08]" : isOverdue ? "bg-destructive/[0.03] border border-destructive/[0.08]" : "bg-warning/[0.02] border border-warning/[0.06]"
                   }`}
                 >
                   {/* Timeline dot */}
-                  <div className={`relative flex-shrink-0 h-10 w-10 rounded-xl flex items-center justify-center text-xs font-black ${
+                  <div className={`relative flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl flex items-center justify-center text-[10px] sm:text-xs font-black ${
                     isPaid ? "bg-accent/10 text-accent" : isOverdue ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
                   }`}>
-                    {isPaid ? <CheckCircle2 className="h-5 w-5" /> : r.installment_number || i + 1}
+                    {isPaid ? <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" /> : r.installment_number || i + 1}
                     {!isPaid && isOverdue && (
-                      <div className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full bg-destructive animate-pulse" />
+                      <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
                     )}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-foreground truncate">
+                    <p className="text-xs sm:text-sm font-bold text-foreground truncate">
                       {r.description || `Parcela ${r.installment_number || i + 1}`}
                       {(r.installment_total || 0) > 1 && <span className="text-muted-foreground/40 font-normal"> / {r.installment_total}</span>}
                     </p>
-                    <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground/50 mt-0.5 truncate">
                       {r.due_date ? fmtDateFull(r.due_date) : "Sem vencimento"}
-                      {r.payment_method && ` · ${r.payment_method}`}
                       {isOverdue && " · Vencida"}
                     </p>
                   </div>
 
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <p className="text-sm font-black tabular-nums">{fmt(r.gross_value)}</p>
-                    <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                    <p className="text-xs sm:text-sm font-black tabular-nums whitespace-nowrap">{fmt(r.gross_value)}</p>
+                    <span className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full ${
                       isPaid ? "bg-accent/10 text-accent" : isOverdue ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
                     }`}>
                       {isPaid ? "✓ Pago" : isOverdue ? "Vencida" : "Pendente"}
