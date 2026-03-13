@@ -97,22 +97,17 @@ const TYPE_ICONS: Record<string, typeof Plane> = {
 };
 
 /* ───────── Google Maps Loader Singleton ───────── */
-let loaderPromise: Promise<typeof google> | null = null;
+let googleMapsReady: Promise<void> | null = null;
 
-function loadGoogleMaps(): Promise<typeof google> {
-  if (loaderPromise) return loaderPromise;
+function ensureGoogleMaps(): Promise<void> {
+  if (googleMapsReady) return googleMapsReady;
   const apiKey = getGoogleMapsApiKey();
   if (!apiKey) return Promise.reject(new Error("Google Maps API key missing"));
 
-  const loader = new Loader({
-    apiKey,
-    version: "weekly",
-    libraries: ["marker"],
-    language: "pt-BR",
-    region: "BR",
-  });
-  loaderPromise = loader.load();
-  return loaderPromise;
+  const { setOptions, importLibrary } = require("@googlemaps/js-api-loader") as typeof import("@googlemaps/js-api-loader");
+  setOptions({ apiKey, version: "weekly", language: "pt-BR", region: "BR" });
+  googleMapsReady = importLibrary("maps").then(() => undefined);
+  return googleMapsReady;
 }
 
 /* ───────── Pin SVG Generators ───────── */
