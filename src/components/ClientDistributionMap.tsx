@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MapPin, Search, ZoomIn, ZoomOut, Maximize2, LocateFixed, Download } from "lucide-react";
-import { loadGoogleMapsCore } from "@/lib/googleMaps";
+import { loadGoogleMapsCore, hasGoogleMapsAuthFailure } from "@/lib/googleMaps";
 
 const CITY_COORDS: Record<string, [number, number]> = {
   "São Paulo": [-23.5505, -46.6333], "Rio de Janeiro": [-22.9068, -43.1729],
