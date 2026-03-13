@@ -663,30 +663,30 @@ function OverviewSection({ categories, categorySpending, totalBudget, totalSpent
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative rounded-3xl border border-border/20 bg-gradient-to-br from-card/90 to-muted/10 backdrop-blur-sm p-6 sm:p-8 overflow-hidden"
+          className="relative rounded-2xl sm:rounded-3xl border border-border/20 bg-gradient-to-br from-card/90 to-muted/10 backdrop-blur-sm p-4 sm:p-8 overflow-hidden"
         >
           <div className="absolute -top-20 -right-20 w-56 h-56 rounded-full opacity-[0.04]"
             style={{ background: "radial-gradient(circle, hsl(var(--accent)) 0%, transparent 70%)" }}
           />
 
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2.5">
-              <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                <Target className="h-5 w-5 text-accent" />
+          <div className="flex items-center justify-between mb-4 sm:mb-6">
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl bg-accent/10 flex items-center justify-center">
+                <Target className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
               </div>
               <div>
-                <p className="text-sm font-bold text-foreground">Budget da Viagem</p>
-                <p className="text-[10px] text-muted-foreground/60">Planejamento vs. realizado</p>
+                <p className="text-xs sm:text-sm font-bold text-foreground">Budget da Viagem</p>
+                <p className="text-[9px] sm:text-[10px] text-muted-foreground/60">Planejamento vs. realizado</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-black tabular-nums text-foreground">{usedPct}%</p>
-              <p className="text-[10px] text-muted-foreground/50">utilizado</p>
+              <p className="text-xl sm:text-3xl font-black tabular-nums text-foreground">{usedPct}%</p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground/50">utilizado</p>
             </div>
           </div>
 
           {/* Animated bar */}
-          <div className="relative h-4 w-full overflow-hidden rounded-full bg-muted/20 mb-4">
+          <div className="relative h-3 sm:h-4 w-full overflow-hidden rounded-full bg-muted/20 mb-3 sm:mb-4">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${Math.min(usedPct, 100)}%` }}
@@ -696,7 +696,6 @@ function OverviewSection({ categories, categorySpending, totalBudget, totalSpent
               }`}
               style={{ boxShadow: `0 0 20px hsl(var(--${usedPct > 90 ? "destructive" : usedPct > 70 ? "warning" : "accent"}) / 0.3)` }}
             >
-              {/* Shimmer */}
               <motion.div
                 animate={{ x: ["-100%", "200%"] }}
                 transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
@@ -705,18 +704,18 @@ function OverviewSection({ categories, categorySpending, totalBudget, totalSpent
             </motion.div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Planejado</p>
-              <p className="text-lg font-black tabular-nums">{balanceVisible ? fmt(totalBudget) : "••••"}</p>
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Planejado</p>
+              <p className="text-sm sm:text-lg font-black tabular-nums truncate">{balanceVisible ? fmt(totalBudget) : "••••"}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-accent/50">Gasto</p>
-              <p className="text-lg font-black tabular-nums text-accent">{balanceVisible ? fmt(totalSpent) : "••••"}</p>
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-accent/50">Gasto</p>
+              <p className="text-sm sm:text-lg font-black tabular-nums text-accent truncate">{balanceVisible ? fmt(totalSpent) : "••••"}</p>
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Restante</p>
-              <p className={`text-lg font-black tabular-nums ${(totalBudget - totalSpent) < 0 ? "text-destructive" : ""}`}>
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Restante</p>
+              <p className={`text-sm sm:text-lg font-black tabular-nums truncate ${(totalBudget - totalSpent) < 0 ? "text-destructive" : ""}`}>
                 {balanceVisible ? fmt(totalBudget - totalSpent) : "••••"}
               </p>
             </div>
