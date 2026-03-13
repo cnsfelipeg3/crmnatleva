@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { Cloud, CloudRain, CloudSnow, Sun, CloudSun, CloudLightning, Wind, Droplets, Thermometer, Eye, RefreshCw, MapPin, CloudFog } from "lucide-react";
+import { Cloud, CloudRain, CloudSnow, Sun, CloudSun, CloudLightning, Wind, Droplets, Thermometer, RefreshCw, CloudFog, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -33,52 +33,45 @@ interface WeatherData {
 
 /* ═══ WMO WEATHER CODES ═══ */
 const weatherDescriptions: Record<number, string> = {
-  0: "Céu limpo", 1: "Predominantemente limpo", 2: "Parcialmente nublado", 3: "Nublado",
-  45: "Nevoeiro", 48: "Nevoeiro com geada", 51: "Garoa leve", 53: "Garoa moderada",
-  55: "Garoa intensa", 56: "Garoa congelante", 57: "Garoa congelante intensa",
-  61: "Chuva leve", 63: "Chuva moderada", 65: "Chuva forte",
-  66: "Chuva congelante leve", 67: "Chuva congelante forte",
-  71: "Neve leve", 73: "Neve moderada", 75: "Neve forte", 77: "Granizo",
-  80: "Pancadas leves", 81: "Pancadas moderadas", 82: "Pancadas fortes",
-  85: "Neve leve", 86: "Neve forte",
-  95: "Trovoada", 96: "Trovoada com granizo leve", 99: "Trovoada com granizo forte",
+  0: "Céu Limpo", 1: "Predominantemente Limpo", 2: "Parcialmente Nublado", 3: "Nublado",
+  45: "Nevoeiro", 48: "Nevoeiro com Geada", 51: "Garoa Leve", 53: "Garoa Moderada",
+  55: "Garoa Intensa", 56: "Garoa Congelante", 57: "Garoa Congelante Intensa",
+  61: "Chuva Leve", 63: "Chuva Moderada", 65: "Chuva Forte",
+  66: "Chuva Congelante", 67: "Chuva Congelante Forte",
+  71: "Neve Leve", 73: "Neve Moderada", 75: "Neve Forte", 77: "Granizo",
+  80: "Pancadas Leves", 81: "Pancadas Moderadas", 82: "Pancadas Fortes",
+  85: "Neve Leve", 86: "Neve Forte",
+  95: "Trovoada", 96: "Trovoada com Granizo", 99: "Trovoada com Granizo Forte",
 };
 
-function getWeatherIcon(code: number, size: string = "h-5 w-5") {
-  if (code === 0 || code === 1) return <Sun className={cn(size, "text-amber-400")} />;
-  if (code === 2) return <CloudSun className={cn(size, "text-amber-300")} />;
-  if (code === 3) return <Cloud className={cn(size, "text-muted-foreground")} />;
-  if (code >= 45 && code <= 48) return <CloudFog className={cn(size, "text-muted-foreground")} />;
-  if (code >= 51 && code <= 57) return <CloudRain className={cn(size, "text-info")} />;
-  if (code >= 61 && code <= 67) return <CloudRain className={cn(size, "text-info")} />;
-  if (code >= 71 && code <= 77) return <CloudSnow className={cn(size, "text-info/70")} />;
-  if (code >= 80 && code <= 82) return <CloudRain className={cn(size, "text-info")} />;
-  if (code >= 85 && code <= 86) return <CloudSnow className={cn(size, "text-info/70")} />;
-  if (code >= 95) return <CloudLightning className={cn(size, "text-warning")} />;
-  return <Cloud className={cn(size, "text-muted-foreground")} />;
-}
-
 function getWeatherEmoji(code: number): string {
-  if (code === 0 || code === 1) return "☀️";
-  if (code === 2) return "🌤️";
+  if (code === 0) return "☀️";
+  if (code === 1) return "🌤️";
+  if (code === 2) return "⛅";
   if (code === 3) return "☁️";
   if (code >= 45 && code <= 48) return "🌫️";
-  if (code >= 51 && code <= 67) return "🌧️";
-  if (code >= 71 && code <= 86) return "❄️";
+  if (code >= 51 && code <= 57) return "🌦️";
+  if (code >= 61 && code <= 67) return "🌧️";
+  if (code >= 71 && code <= 77) return "🌨️";
+  if (code >= 80 && code <= 82) return "🌧️";
+  if (code >= 85 && code <= 86) return "❄️";
   if (code >= 95) return "⛈️";
   return "☁️";
 }
 
-function getWeatherGradient(code: number, isDay: boolean): string {
+function getWeatherBg(code: number, isDay: boolean): string {
   if (code === 0 || code === 1) return isDay
-    ? "from-amber-400/10 via-orange-300/5 to-transparent"
-    : "from-indigo-500/10 via-blue-400/5 to-transparent";
-  if (code === 2) return "from-amber-300/8 via-sky-200/5 to-transparent";
-  if (code === 3) return "from-slate-300/10 via-gray-200/5 to-transparent";
-  if (code >= 51 && code <= 82) return "from-blue-400/10 via-sky-300/5 to-transparent";
-  if (code >= 71 && code <= 86) return "from-blue-200/10 via-indigo-100/5 to-transparent";
-  if (code >= 95) return "from-yellow-400/8 via-gray-300/5 to-transparent";
-  return "from-muted/10 to-transparent";
+    ? "from-sky-400 via-blue-400 to-blue-500"
+    : "from-indigo-900 via-blue-900 to-slate-900";
+  if (code === 2) return isDay
+    ? "from-sky-400 via-blue-300 to-slate-400"
+    : "from-indigo-800 via-slate-800 to-slate-900";
+  if (code === 3) return "from-slate-400 via-slate-500 to-gray-500";
+  if (code >= 45 && code <= 48) return "from-gray-400 via-slate-400 to-gray-500";
+  if (code >= 51 && code <= 82) return "from-slate-500 via-blue-500 to-slate-600";
+  if (code >= 85 && code <= 86) return "from-blue-200 via-slate-300 to-blue-300";
+  if (code >= 95) return "from-slate-700 via-gray-700 to-slate-800";
+  return "from-slate-400 via-slate-500 to-gray-500";
 }
 
 const DAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -104,13 +97,8 @@ const iataCityMap: Record<string, string> = {
 };
 
 function getDestinationCity(sale: any, segments: any[]): string | null {
-  // Try sale destination IATA
-  if (sale?.destination_iata && iataCityMap[sale.destination_iata]) {
-    return iataCityMap[sale.destination_iata];
-  }
-  // Try sale name for city clues
+  if (sale?.destination_iata && iataCityMap[sale.destination_iata]) return iataCityMap[sale.destination_iata];
   if (sale?.destination_iata) return sale.destination_iata;
-  // Try last segment arrival
   if (segments?.length > 0) {
     const lastSeg = segments[segments.length - 1];
     const arrIata = lastSeg?.arrival_iata || lastSeg?.destination_iata;
@@ -122,7 +110,7 @@ function getDestinationCity(sale: any, segments: any[]): string | null {
 
 /* ═══ CACHE ═══ */
 const CACHE_KEY = "natleva_weather_cache";
-const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+const CACHE_TTL = 30 * 60 * 1000;
 
 function getCachedWeather(city: string): WeatherData | null {
   try {
@@ -130,8 +118,7 @@ function getCachedWeather(city: string): WeatherData | null {
     if (!raw) return null;
     const cache = JSON.parse(raw);
     const entry = cache[city.toLowerCase()];
-    if (!entry) return null;
-    if (Date.now() - entry.timestamp > CACHE_TTL) return null;
+    if (!entry || Date.now() - entry.timestamp > CACHE_TTL) return null;
     return entry.data;
   } catch { return null; }
 }
@@ -145,18 +132,13 @@ function setCachedWeather(city: string, data: WeatherData) {
   } catch { /* ignore */ }
 }
 
-/* ═══ API FETCH ═══ */
+/* ═══ API ═══ */
 async function fetchWeather(cityName: string): Promise<WeatherData> {
-  // Geocode city
-  const geoRes = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=pt`
-  );
+  const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=pt`);
   const geoData = await geoRes.json();
   if (!geoData.results?.length) throw new Error("Cidade não encontrada");
-
   const { latitude, longitude, name, country } = geoData.results[0];
 
-  // Fetch weather
   const weatherRes = await fetch(
     `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
     `&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code,is_day` +
@@ -193,34 +175,44 @@ async function fetchWeather(cityName: string): Promise<WeatherData> {
   };
 }
 
-/* ═══ LOADING SKELETON ═══ */
+/* ═══ TEMP BAR ═══ */
+function TempBar({ min, max, globalMin, globalMax }: { min: number; max: number; globalMin: number; globalMax: number }) {
+  const range = globalMax - globalMin || 1;
+  const left = ((min - globalMin) / range) * 100;
+  const width = ((max - min) / range) * 100;
+  return (
+    <div className="relative h-1 w-full rounded-full bg-white/20 overflow-hidden">
+      <div
+        className="absolute h-full rounded-full"
+        style={{
+          left: `${left}%`,
+          width: `${Math.max(width, 4)}%`,
+          background: "linear-gradient(90deg, #60a5fa, #fbbf24, #f97316)",
+        }}
+      />
+    </div>
+  );
+}
+
+/* ═══ SKELETON ═══ */
 function WeatherSkeleton() {
   return (
-    <div className="rounded-2xl border border-border/40 bg-card overflow-hidden p-5 sm:p-6 space-y-5">
-      <div className="flex items-center gap-3">
-        <Skeleton className="w-10 h-10 rounded-xl" />
-        <div className="space-y-2">
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-3 w-24" />
-        </div>
+    <div className="rounded-3xl overflow-hidden bg-gradient-to-b from-sky-400 to-blue-500 p-6 space-y-6">
+      <div className="flex flex-col items-center gap-2">
+        <Skeleton className="h-5 w-28 bg-white/20 rounded-full" />
+        <Skeleton className="h-20 w-32 bg-white/20 rounded-full" />
+        <Skeleton className="h-4 w-36 bg-white/20 rounded-full" />
       </div>
-      <div className="flex items-center gap-6">
-        <Skeleton className="h-16 w-24 rounded-xl" />
-        <div className="space-y-2 flex-1">
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-3 w-48" />
-        </div>
-      </div>
-      <div className="flex gap-2 overflow-hidden">
-        {Array.from({ length: 7 }).map((_, i) => (
-          <Skeleton key={i} className="h-24 w-16 rounded-xl flex-shrink-0" />
+      <div className="rounded-2xl bg-white/15 backdrop-blur-md p-4 space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-8 w-full bg-white/10 rounded-lg" />
         ))}
       </div>
     </div>
   );
 }
 
-/* ═══ MAIN COMPONENT ═══ */
+/* ═══ MAIN ═══ */
 interface WeatherForecastProps {
   sale: any;
   segments: any[];
@@ -235,48 +227,32 @@ export default function WeatherForecast({ sale, segments }: WeatherForecastProps
   const loadWeather = useCallback(async (city: string) => {
     setLoading(true);
     setError(null);
-
-    // Check cache first
     const cached = getCachedWeather(city);
-    if (cached) {
-      setWeather(cached);
-      setLoading(false);
-      return;
-    }
-
+    if (cached) { setWeather(cached); setLoading(false); return; }
     try {
       const data = await fetchWeather(city);
       setWeather(data);
       setCachedWeather(city, data);
-    } catch {
-      setError("Não foi possível carregar a previsão do tempo.");
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError("Não foi possível carregar a previsão."); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => {
     const city = getDestinationCity(sale, segments);
     setCityName(city);
     if (city) loadWeather(city);
-    else {
-      setLoading(false);
-      setError("Destino da viagem ainda não definido.");
-    }
+    else { setLoading(false); setError("Destino ainda não definido."); }
   }, [sale, segments, loadWeather]);
 
   if (loading) return <WeatherSkeleton />;
 
   if (error || !weather) {
     return (
-      <div className="rounded-2xl border border-border/40 bg-card p-6 text-center">
-        <Cloud className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-        <p className="text-sm text-muted-foreground">{error || "Previsão indisponível"}</p>
+      <div className="rounded-3xl bg-gradient-to-b from-slate-400 to-slate-500 p-8 text-center text-white">
+        <Cloud className="h-12 w-12 mx-auto mb-3 opacity-50" />
+        <p className="text-sm opacity-80">{error || "Previsão indisponível"}</p>
         {cityName && (
-          <button
-            onClick={() => loadWeather(cityName)}
-            className="mt-3 text-xs text-accent font-semibold hover:underline flex items-center gap-1.5 mx-auto"
-          >
+          <button onClick={() => loadWeather(cityName)} className="mt-4 text-xs font-medium opacity-70 hover:opacity-100 transition-opacity flex items-center gap-1.5 mx-auto">
             <RefreshCw className="h-3 w-3" /> Tentar novamente
           </button>
         )}
@@ -285,104 +261,115 @@ export default function WeatherForecast({ sale, segments }: WeatherForecastProps
   }
 
   const { current, daily } = weather;
-  const gradient = getWeatherGradient(current.weatherCode, current.isDay);
-  const description = weatherDescriptions[current.weatherCode] || "Clima variável";
+  const bg = getWeatherBg(current.weatherCode, current.isDay);
+  const description = weatherDescriptions[current.weatherCode] || "Clima Variável";
+  const globalMin = Math.min(...daily.map(d => d.tempMin));
+  const globalMax = Math.max(...daily.map(d => d.tempMax));
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 }}
-      className="rounded-2xl border border-border/40 bg-card overflow-hidden"
+      transition={{ duration: 0.5 }}
+      className={cn("rounded-3xl overflow-hidden bg-gradient-to-b text-white shadow-2xl", bg)}
     >
-      {/* ── Current Weather ── */}
-      <div className={cn("relative p-5 sm:p-6 overflow-hidden")}>
-        <div className={cn("absolute inset-0 bg-gradient-to-br", gradient)} />
+      {/* ── Hero: Current Weather ── */}
+      <div className="relative px-6 pt-6 pb-4 text-center">
+        {/* Refresh button */}
+        <button
+          onClick={() => cityName && loadWeather(cityName)}
+          className="absolute top-4 right-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+          title="Atualizar"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+        </button>
 
-        <div className="relative">
-          {/* Location */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-accent" />
-              <div>
-                <p className="text-sm font-bold text-foreground">{weather.locationName}</p>
-                <p className="text-[10px] text-muted-foreground">{weather.country}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => cityName && loadWeather(cityName)}
-              className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-              title="Atualizar previsão"
-            >
-              <RefreshCw className="h-3 w-3" />
-              {weather.updatedAt}
-            </button>
-          </div>
+        <p className="text-sm font-semibold tracking-wide opacity-90">
+          {weather.locationName}
+        </p>
+        <p className="text-[10px] uppercase tracking-widest opacity-50 mb-1">{weather.country}</p>
 
-          {/* Main temp + description */}
-          <div className="flex items-center gap-5 sm:gap-8">
-            <div className="flex items-start gap-1">
-              {getWeatherIcon(current.weatherCode, "h-10 w-10 sm:h-12 sm:w-12")}
-              <span className="text-5xl sm:text-6xl font-black text-foreground tracking-tighter leading-none">
-                {current.temperature}°
-              </span>
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-sm sm:text-base font-semibold text-foreground">{description}</p>
-              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Thermometer className="h-3 w-3" /> Sensação {current.apparentTemperature}°C
-                </span>
-                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Droplets className="h-3 w-3" /> {current.humidity}%
-                </span>
-                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Wind className="h-3 w-3" /> {current.windSpeed} km/h
-                </span>
-              </div>
-            </div>
-          </div>
+        <div className="text-7xl sm:text-8xl font-extralight leading-none tracking-tighter my-1">
+          {current.temperature}°
+        </div>
+
+        <p className="text-sm font-medium opacity-90">{description}</p>
+
+        <div className="flex items-center justify-center gap-1 mt-1 text-xs opacity-60">
+          <span>Máx.: {daily[0]?.tempMax}°</span>
+          <span>·</span>
+          <span>Mín.: {daily[0]?.tempMin}°</span>
         </div>
       </div>
 
-      {/* ── Daily Forecast ── */}
-      <div className="border-t border-border/30 p-4 sm:p-5">
-        <p className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.3em] font-medium mb-3">
-          Próximos {daily.length} dias
-        </p>
-        <div className="flex gap-1.5 sm:gap-2 overflow-x-auto scrollbar-hide pb-1">
+      {/* ── Details Row ── */}
+      <div className="mx-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10">
+        <div className="grid grid-cols-4 divide-x divide-white/10 py-3">
+          {[
+            { icon: <Thermometer className="h-3.5 w-3.5" />, label: "Sensação", value: `${current.apparentTemperature}°` },
+            { icon: <Droplets className="h-3.5 w-3.5" />, label: "Umidade", value: `${current.humidity}%` },
+            { icon: <Wind className="h-3.5 w-3.5" />, label: "Vento", value: `${current.windSpeed} km/h` },
+            { icon: <Eye className="h-3.5 w-3.5" />, label: "Atualizado", value: weather.updatedAt },
+          ].map((item, i) => (
+            <div key={i} className="flex flex-col items-center gap-1 px-2">
+              <span className="opacity-50">{item.icon}</span>
+              <span className="text-[10px] opacity-50 uppercase tracking-wider">{item.label}</span>
+              <span className="text-xs font-semibold">{item.value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── 10-Day Forecast ── */}
+      <div className="mx-4 mt-3 mb-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 overflow-hidden">
+        <div className="px-4 pt-3 pb-1.5">
+          <p className="text-[10px] uppercase tracking-[0.2em] opacity-40 font-medium flex items-center gap-1.5">
+            📅 Previsão {daily.length} dias
+          </p>
+        </div>
+
+        <div className="divide-y divide-white/[0.06]">
           {daily.map((day, i) => {
             const isToday = i === 0;
             return (
               <motion.div
                 key={day.date}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 * i }}
-                className={cn(
-                  "flex flex-col items-center gap-1.5 py-2.5 px-2.5 sm:px-3 rounded-xl min-w-[56px] sm:min-w-[64px] transition-all flex-shrink-0",
-                  isToday
-                    ? "bg-accent/10 border border-accent/20"
-                    : "bg-muted/30 hover:bg-muted/50 border border-transparent"
-                )}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.03 * i }}
+                className="flex items-center gap-3 px-4 py-2.5"
               >
+                {/* Day name */}
                 <span className={cn(
-                  "text-[10px] sm:text-[11px] font-bold uppercase tracking-wider",
-                  isToday ? "text-accent" : "text-muted-foreground"
+                  "text-xs font-semibold w-10 shrink-0",
+                  isToday ? "opacity-100" : "opacity-70"
                 )}>
                   {isToday ? "Hoje" : day.dayOfWeek}
                 </span>
-                <span className="text-lg sm:text-xl">{getWeatherEmoji(day.weatherCode)}</span>
-                <div className="text-center">
-                  <p className="text-xs sm:text-sm font-bold text-foreground">{day.tempMax}°</p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">{day.tempMin}°</p>
+
+                {/* Rain probability */}
+                <span className="flex items-center gap-0.5 text-[10px] text-sky-200 w-10 shrink-0">
+                  {day.precipitationProbability > 0 ? (
+                    <>
+                      <Droplets className="h-2.5 w-2.5" />
+                      {day.precipitationProbability}%
+                    </>
+                  ) : <span className="opacity-0">—</span>}
+                </span>
+
+                {/* Weather emoji */}
+                <span className="text-base shrink-0">{getWeatherEmoji(day.weatherCode)}</span>
+
+                {/* Min temp */}
+                <span className="text-xs opacity-50 w-7 text-right shrink-0">{day.tempMin}°</span>
+
+                {/* Temperature bar */}
+                <div className="flex-1 min-w-0 px-1">
+                  <TempBar min={day.tempMin} max={day.tempMax} globalMin={globalMin} globalMax={globalMax} />
                 </div>
-                {day.precipitationProbability > 0 && (
-                  <span className="flex items-center gap-0.5 text-[9px] text-info font-medium">
-                    <Droplets className="h-2.5 w-2.5" />
-                    {day.precipitationProbability}%
-                  </span>
-                )}
+
+                {/* Max temp */}
+                <span className="text-xs font-semibold w-7 shrink-0">{day.tempMax}°</span>
               </motion.div>
             );
           })}
