@@ -234,32 +234,31 @@ function OperacaoInboxInner() {
     let cancelled = false;
     (async () => {
       let logs: any[] | null = null;
-      const { data: directLogs } = await supabase
-        .from("flow_execution_logs" as any)
-        .select("flow_id, flows!flow_execution_logs_flow_id_fkey(name)")
-        .eq("conversation_id", selectedId)
-        .order("started_at", { ascending: false })
-        .limit(1);
-      logs = directLogs;
+      let conversationUuid: string | null = null;
 
-      if ((!logs || logs.length === 0) && selectedId.startsWith("wa_")) {
+      if (selectedId.startsWith("wa_")) {
         const phone = selectedId.replace("wa_", "");
-        const { data: conv } = await supabase
+        const { data: convCandidates } = await supabase
           .from("conversations")
-          .select("id")
+          .select("id, updated_at")
           .or(`phone.eq.${phone},external_conversation_id.eq.${selectedId}`)
-          .maybeSingle();
-        if (conv?.id) {
-          const { data: uuidLogs } = await supabase
-            .from("flow_execution_logs" as any)
-            .select("flow_id, flows!flow_execution_logs_flow_id_fkey(name)")
-            .eq("conversation_id", conv.id)
-            .order("started_at", { ascending: false })
-            .limit(1);
-          logs = uuidLogs;
-        }
+          .order("updated_at", { ascending: false })
+          .limit(5);
+        conversationUuid = convCandidates?.[0]?.id || selected?.db_id || null;
+      } else {
+        conversationUuid = selectedId;
       }
 
+      if (conversationUuid) {
+        const { data: directLogs } = await supabase
+          .from("flow_execution_logs" as any)
+          .select("flow_id, flows!flow_execution_logs_flow_id_fkey(name)")
+          .eq("conversation_id", conversationUuid)
+          .order("started_at", { ascending: false })
+          .limit(1);
+        logs = directLogs;
+      }
+    
       if (cancelled) return;
       const name = (logs && logs.length > 0) ? ((logs[0] as any).flows?.name || null) : null;
       flowNameCacheRef.current[selectedId] = name;
