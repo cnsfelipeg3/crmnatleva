@@ -239,7 +239,10 @@ export default function PortalFinance() {
   const [cardDialogOpen, setCardDialogOpen] = useState(false);
   const [cashDialogOpen, setCashDialogOpen] = useState(false);
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("tab") || "overview";
+  });
 
   const isMock = saleId?.startsWith("mock-") || false;
 
