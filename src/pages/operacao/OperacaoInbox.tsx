@@ -395,7 +395,7 @@ function OperacaoInboxInner() {
         const previewMap = new Map<string, { text: string; message_type: string; created_at: string }>();
         if (convIdsNeedingPreview.length > 0) {
           for (const convId of convIdsNeedingPreview) {
-            const { data: lastMsg } = await supabase.from("messages").select("text, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).single();
+            const { data: lastMsg } = await supabase.from("chat_messages").select("content, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).maybeSingle();
             if (lastMsg) {
               previewMap.set(convId, lastMsg);
               supabase.from("conversations").update({ last_message_preview: lastMsg.text || `📎 ${lastMsg.message_type}`, last_message_at: lastMsg.created_at }).eq("id", convId).then(() => {});
