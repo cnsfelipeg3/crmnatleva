@@ -239,7 +239,6 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
           onClose={() => setCreateGroupOpen(false)}
           saleId={saleId}
           clientId={effectiveClientId}
-          isAdmin={isAdmin}
           passengers={passengers}
           onCreated={(g) => { setGroups([g]); setSelectedGroup(g); setCreateGroupOpen(false); }}
         />
