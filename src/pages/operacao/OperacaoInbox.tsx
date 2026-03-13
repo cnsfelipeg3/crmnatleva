@@ -497,7 +497,7 @@ function OperacaoInboxInner() {
         }
       });
     }
-  }, [selectedId, extractMediaFromRawData]);
+  }, [selectedId, extractMediaFromRawData, getZapiPhoneCandidates]);
 
   // Realtime subscription
   useEffect(() => {
