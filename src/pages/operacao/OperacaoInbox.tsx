@@ -1714,8 +1714,12 @@ function OperacaoInboxInner() {
                       </Fragment>
                     ))}
                     {currentMessages.length === 0 && !flowRunning && (
-                      <div className="flex justify-center py-14">
-                        <p className="text-sm text-muted-foreground">Sem mensagens nesta conversa.</p>
+                      <div className="flex flex-col items-center justify-center py-14 gap-2">
+                        {loadingMessages ? (
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40" />
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Sem mensagens nesta conversa.</p>
+                        )}
                       </div>
                     )}
                     {flowRunning && (
