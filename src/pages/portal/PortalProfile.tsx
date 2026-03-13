@@ -164,9 +164,9 @@ export default function PortalProfile() {
     try {
       const ext = file.name.split(".").pop();
       const path = `portal-avatars/${portalAccess.client_id}.${ext}`;
-      const { error } = await supabase.storage.from("attachments").upload(path, file, { upsert: true });
+      const { error } = await supabase.storage.from("media").upload(path, file, { upsert: true });
       if (error) throw error;
-      const { data: urlData } = supabase.storage.from("attachments").getPublicUrl(path);
+      const { data: urlData } = supabase.storage.from("media").getPublicUrl(path);
       setProfile(prev => ({ ...prev, avatar_url: urlData.publicUrl + "?t=" + Date.now() }));
       toast.success("Foto atualizada!");
     } catch {
