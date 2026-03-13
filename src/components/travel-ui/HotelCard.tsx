@@ -74,6 +74,7 @@ export default function HotelCard({ hotel: h, index = 0 }: HotelCardProps) {
           <img
             src={hotelImages[index % hotelImages.length]}
             alt={h.hotel_name || "Hotel"}
+            loading="lazy"
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
           />
           {h.stars && (

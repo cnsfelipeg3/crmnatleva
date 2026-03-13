@@ -9,7 +9,7 @@ export interface ExchangeRatesData {
 }
 
 const LOCAL_CACHE_KEY = "natleva_exchange_rates";
-const REFRESH_INTERVAL_MS = 10 * 60 * 1000; // 10 min
+const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 60 min — rates change 1-2x/day
 
 function getLocalCache(): ExchangeRatesData | null {
   try {
