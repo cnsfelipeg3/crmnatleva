@@ -14,6 +14,7 @@ import {
   getDestinationImage, getTripStatus, TripStatusBadge,
   Countdown, TripShelf,
 } from "@/components/travel-ui";
+import { CurrencySummary } from "@/components/portal/CurrencyPanel";
 
 const GlobeScene = lazy(() => import("@/components/portal/GlobeScene"));
 const TravelGlobe = lazy(() => import("@/components/globe/TravelGlobe"));
@@ -396,6 +397,9 @@ export default function PortalDashboard() {
 
           {/* Travel Stats */}
           <TravelStats trips={trips} />
+
+          {/* Currency Summary */}
+          <CurrencySummary onExpand={() => navigate("/portal/financeiro?tab=cambio")} />
 
           {/* ═══ Journey Globe — Photorealistic 3D ═══ */}
           <motion.section

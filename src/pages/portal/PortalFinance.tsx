@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import PortalExpenseSplit from "@/components/portal/PortalExpenseSplit";
+import CurrencyPanel from "@/components/portal/CurrencyPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import PortalLayout from "@/components/portal/PortalLayout";
@@ -238,7 +239,10 @@ export default function PortalFinance() {
   const [cardDialogOpen, setCardDialogOpen] = useState(false);
   const [cashDialogOpen, setCashDialogOpen] = useState(false);
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("tab") || "overview";
+  });
 
   const isMock = saleId?.startsWith("mock-") || false;
 
@@ -514,6 +518,7 @@ export default function PortalFinance() {
                 { v: "expenses", icon: Receipt, l: "Gastos" },
                 { v: "cards", icon: CreditCard, l: "Cartões" },
                 { v: "split", icon: Users, l: "Rateio" },
+                { v: "cambio", icon: Globe, l: "Câmbio" },
                 { v: "history", icon: Calendar, l: "Histórico" },
               ].map(t => (
                 <TabsTrigger
@@ -560,6 +565,10 @@ export default function PortalFinance() {
 
             <TabsContent value="split" className="space-y-6">
               <PortalExpenseSplit saleId={saleId!} />
+            </TabsContent>
+
+            <TabsContent value="cambio" className="space-y-6">
+              <CurrencyPanel />
             </TabsContent>
 
             <TabsContent value="history" className="space-y-6">
