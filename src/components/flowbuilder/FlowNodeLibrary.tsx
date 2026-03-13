@@ -31,7 +31,7 @@ function NodeIcon({ name, color, size = 18 }: { name: string; color: string; siz
   const Icon = (icons as any)[name];
   const isDark = useIsDark();
   // In light mode, darken colors significantly so they're visible against light backgrounds
-  const displayColor = isDark ? color : darkenHex(color, 0.55);
+  const displayColor = isDark ? color : darkenHex(color, 0.10);
   const iconStyle = { color: displayColor, filter: isDark ? "none" : "saturate(1.3)" };
   if (!Icon) return <Zap size={size} style={iconStyle} />;
   return <Icon size={size} style={iconStyle} />;
