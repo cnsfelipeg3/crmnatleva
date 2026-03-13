@@ -103,6 +103,7 @@ const QuoteRequests = lazy(() => import("@/pages/QuoteRequests"));
 const Proposals = lazy(() => import("@/pages/Proposals"));
 const ProposalEditor = lazy(() => import("@/pages/ProposalEditor"));
 const ProposalPublicView = lazy(() => import("@/pages/ProposalPublicView"));
+const MediaLibrary = lazy(() => import("@/pages/MediaLibrary"));
 
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
