@@ -155,6 +155,7 @@ export default function PlacesSearchCard({
     try {
       const data = await searchPlaces(destinationContext ? `${q} ${destinationContext}` : q);
       setResults(data);
+      setLoading(false);
       return;
     } catch (err) {
       console.error("Places search error:", err);
