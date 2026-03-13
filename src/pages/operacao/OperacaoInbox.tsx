@@ -213,7 +213,9 @@ function OperacaoInboxInner() {
   const flowNameCacheRef = useRef<Record<string, string | null>>({});
   const [waConnected, setWaConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isUserScrolledUpRef = useRef(false);
 
   const selected = conversations.find(c => c.id === selectedId);
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
@@ -267,9 +269,43 @@ function OperacaoInboxInner() {
     return () => { cancelled = true; };
   }, [selectedId, selected?.db_id]);
 
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    requestAnimationFrame(() => {
+      const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+      if (viewport) {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior });
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior });
+      }
+    });
+  }, []);
+
+  // Auto-scroll when messages change (only if user hasn't scrolled up)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [currentMessages.length]);
+    if (!isUserScrolledUpRef.current) {
+      scrollToBottom();
+    }
+  }, [currentMessages.length, currentMessages[currentMessages.length - 1]?.id, scrollToBottom]);
+
+  // Scroll to bottom when selecting a conversation
+  useEffect(() => {
+    if (selectedId) {
+      isUserScrolledUpRef.current = false;
+      scrollToBottom("instant" as ScrollBehavior);
+    }
+  }, [selectedId, scrollToBottom]);
+
+  // Track user scroll position
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+    if (!viewport) return;
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = viewport;
+      isUserScrolledUpRef.current = scrollHeight - scrollTop - clientHeight > 100;
+    };
+    viewport.addEventListener("scroll", handleScroll);
+    return () => viewport.removeEventListener("scroll", handleScroll);
+  }, [selectedId]);
 
   useEffect(() => {
     if (!inputText && textareaRef.current) textareaRef.current.style.height = "40px";
@@ -889,6 +925,7 @@ function OperacaoInboxInner() {
             updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
             return { ...prev, [selectedId]: updated };
           });
+          scrollToBottom();
         }
       } catch (err) { console.error("WhatsApp polling error:", err); }
     }
@@ -1009,6 +1046,8 @@ function OperacaoInboxInner() {
       };
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), newMsg] }));
       lastMsgIdsRef.current.add(tempId);
+      isUserScrolledUpRef.current = false;
+      scrollToBottom();
       try {
         const sendPayload: any = { phone, message: text };
         if (replyRef?.id && !replyRef.id.startsWith("temp_")) sendPayload.messageId = replyRef.id;
@@ -1040,6 +1079,8 @@ function OperacaoInboxInner() {
           message_type: m.message_type as MsgType,
           text: m.content || "", status: (m.read_status || "sent") as MsgStatus, created_at: m.created_at,
         })) }));
+        isUserScrolledUpRef.current = false;
+        scrollToBottom();
       }
     }
 
@@ -1051,8 +1092,10 @@ function OperacaoInboxInner() {
         return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
       });
     });
+    isUserScrolledUpRef.current = false;
+    scrollToBottom();
     setIsSending(false);
-  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending]);
+  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, scrollToBottom]);
 
   const handleStartEdit = useCallback((msg: Message) => {
     if (msg.sender_type !== "atendente" || msg.message_type !== "text") return;
@@ -1513,7 +1556,7 @@ function OperacaoInboxInner() {
                 </div>
 
                 {/* Messages */}
-                <ScrollArea className="flex-1 min-h-0 px-4">
+                <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0 px-4">
                   <div className="py-4 space-y-3">
                     {currentMessages.map((msg, idx) => (
                       <Fragment key={msg.id}>

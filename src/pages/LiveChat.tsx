@@ -295,7 +295,9 @@ export default function LiveChat() {
   const flowNameCacheRef = useRef<Record<string, string | null>>({});
   const [waConnected, setWaConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isUserScrolledUpRef = useRef(false);
 
   const selected = conversations.find(c => c.id === selectedId);
   const selectedDisplayName = selected ? getSafeContactName(selected.contact_name, selected.phone) : "Contato sem nome";
@@ -348,9 +350,40 @@ export default function LiveChat() {
     return () => { cancelled = true; };
   }, [selectedId]);
 
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+    requestAnimationFrame(() => {
+      const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+      if (viewport) {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior });
+      } else {
+        messagesEndRef.current?.scrollIntoView({ behavior });
+      }
+    });
+  }, []);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [currentMessages.length]);
+    if (!isUserScrolledUpRef.current) {
+      scrollToBottom();
+    }
+  }, [currentMessages.length, currentMessages[currentMessages.length - 1]?.id, scrollToBottom]);
+
+  useEffect(() => {
+    if (selectedId) {
+      isUserScrolledUpRef.current = false;
+      scrollToBottom("instant" as ScrollBehavior);
+    }
+  }, [selectedId, scrollToBottom]);
+
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+    if (!viewport) return;
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = viewport;
+      isUserScrolledUpRef.current = scrollHeight - scrollTop - clientHeight > 100;
+    };
+    viewport.addEventListener("scroll", handleScroll);
+    return () => viewport.removeEventListener("scroll", handleScroll);
+  }, [selectedId]);
 
   // Reset textarea height when input is cleared
   useEffect(() => {
@@ -1332,7 +1365,9 @@ export default function LiveChat() {
       });
     });
     setIsSending(false);
-  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending]);
+    isUserScrolledUpRef.current = false;
+    scrollToBottom();
+  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, scrollToBottom]);
 
   const handleStartEdit = useCallback((msg: Message) => {
     if (msg.sender_type !== "atendente" || msg.message_type !== "text") return;
@@ -2045,7 +2080,7 @@ export default function LiveChat() {
                   </div>
 
                   {/* Messages */}
-                  <ScrollArea className="flex-1 px-4">
+                  <ScrollArea ref={scrollAreaRef} className="flex-1 px-4">
                     <div className="py-4 space-y-3">
                       {currentMessages.map((msg, idx) => (
                         <Fragment key={msg.id}>
