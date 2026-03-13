@@ -755,9 +755,11 @@ export default function OperacaoInbox() {
 
   const filteredConversations = (() => {
     const filtered = conversations.filter(c => {
+      const contactName = c.contact_name || "";
+      const phone = c.phone || "";
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        if (!c.contact_name.toLowerCase().includes(q) && !c.phone.includes(q)) return false;
+        if (!contactName.toLowerCase().includes(q) && !phone.includes(q)) return false;
       }
       if (activeFilter === "unread") return c.unread_count > 0;
       if (activeFilter === "vip") return c.is_vip;
@@ -772,7 +774,7 @@ export default function OperacaoInbox() {
     });
     const seen = new Set<string>();
     return filtered.filter(c => {
-      const norm = c.phone.replace(/\D/g, "");
+      const norm = (c.phone || "").replace(/\D/g, "");
       if (!norm) return true;
       if (seen.has(norm)) return false;
       seen.add(norm);
@@ -1097,7 +1099,7 @@ export default function OperacaoInbox() {
     if (!conv) return;
     const newPinned = !conv.is_pinned;
     setConversations(prev => prev.map(c => c.id === convId ? { ...c, is_pinned: newPinned } : c));
-    const cleanPhone = conv.phone.replace(/\D/g, "");
+    const cleanPhone = (conv.phone || "").replace(/\D/g, "");
     if (cleanPhone) await supabase.from("conversations").update({ is_pinned: newPinned } as any).eq("phone", cleanPhone);
   }, [conversations]);
 
@@ -1225,6 +1227,7 @@ export default function OperacaoInbox() {
                   const isSelected = conv.id === selectedId;
                   const _previewRaw = (conv.last_message_preview || "").replace(/\n/g, " ").trim();
                   const _previewTruncated = _previewRaw.length > 35 ? _previewRaw.slice(0, 35) + "…" : _previewRaw;
+                  const _contactName = conv.contact_name || "Sem nome";
                   return (
                     <motion.div
                       key={conv.id}
@@ -1238,13 +1241,13 @@ export default function OperacaoInbox() {
                             <img src={profilePicsRef.current.get(conv.id)} alt="" className="h-10 w-10 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
                           ) : null}
                           <div className={`h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-sm font-bold text-foreground ${profilePicsRef.current.get(conv.id) ? 'hidden' : ''}`}>
-                            {conv.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                            {_contactName.split(" ").map(w => w[0]).join("").slice(0, 2)}
                           </div>
                         </div>
                         <div className="flex-1 min-w-0 pr-1">
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '4px' }}>
                             <span className={`text-sm truncate ${conv.unread_count > 0 ? "font-bold text-foreground" : "font-medium text-foreground"}`}>
-                              {/^\d{10,}$/.test(conv.contact_name) ? formatPhoneDisplay(conv.contact_name) : conv.contact_name}
+                              {/^\d{10,}$/.test(_contactName) ? formatPhoneDisplay(_contactName) : _contactName}
                             </span>
                             <span className="text-[11px] text-foreground whitespace-nowrap">
                               {formatTimestamp(conv.last_message_at)}
@@ -1311,14 +1314,14 @@ export default function OperacaoInbox() {
                         <img src={profilePicsRef.current.get(selected.id)} alt="" className="h-8 w-8 md:h-9 md:w-9 rounded-full object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
                       ) : null}
                       <div className={`h-8 w-8 md:h-9 md:w-9 rounded-full bg-secondary flex items-center justify-center text-xs md:text-sm font-bold shrink-0 ${profilePicsRef.current.get(selected.id) ? 'hidden' : ''}`}>
-                        {selected.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                        {(selected.contact_name || "Sem nome").split(" ").map(w => w[0]).join("").slice(0, 2)}
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-bold truncate">{/^\d{10,}$/.test(selected.contact_name) ? formatPhoneDisplay(selected.contact_name) : selected.contact_name}</span>
+                          <span className="text-sm font-bold truncate">{/^\d{10,}$/.test(selected.contact_name || "") ? formatPhoneDisplay(selected.contact_name || "") : (selected.contact_name || "Sem nome")}</span>
                           {selected.is_vip && <Badge className="bg-amber-500/10 text-amber-500 text-[8px] px-1.5 py-0 shrink-0">VIP</Badge>}
                         </div>
-                        <p className="text-[10px] text-muted-foreground truncate">{formatPhoneDisplay(selected.phone)}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{formatPhoneDisplay(selected.phone || "")}</p>
                       </div>
                     </div>
                   </div>
