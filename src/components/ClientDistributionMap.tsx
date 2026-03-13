@@ -271,7 +271,7 @@ export default function ClientDistributionMap() {
       if (c) map.setCenter({ lat: c[0], lng: c[1] });
       map.setZoom(8);
     }
-  }, [filtered, cityData]);
+  }, [fallbackMode, filtered, cityData]);
 
   const handleZoomIn = () => { const z = mapRef.current?.getZoom(); if (z != null) mapRef.current?.setZoom(z + 1); };
   const handleZoomOut = () => { const z = mapRef.current?.getZoom(); if (z != null) mapRef.current?.setZoom(z - 1); };
