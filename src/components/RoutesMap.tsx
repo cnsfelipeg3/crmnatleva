@@ -140,8 +140,10 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
 
         // Detect delayed auth failures and auto-fallback
         authTimer = window.setTimeout(() => {
-          if (hasGoogleMapsAuthFailure() && !cancelled) {
+          const hasDomError = !!containerRef.current?.querySelector(".gm-err-container");
+          if ((hasGoogleMapsAuthFailure() || hasDomError) && !cancelled) {
             googleMapRef.current = null;
+            if (containerRef.current) containerRef.current.innerHTML = "";
             setFallbackMode(true);
           }
         }, 1200);
