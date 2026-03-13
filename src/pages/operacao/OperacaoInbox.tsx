@@ -856,6 +856,23 @@ function OperacaoInboxInner() {
             profilePicsRef.current.set(convId, chatPhoto);
           }
         }
+        // Backfill empty previews from zapi_messages
+        for (const conv of newConvs) {
+          if (!conv.last_message_preview && conv.phone) {
+            try {
+              const { data: lastZapi } = await supabase.from("zapi_messages" as any)
+                .select("text, type, timestamp")
+                .in("phone", [conv.phone, `${conv.phone}@c.us`])
+                .order("timestamp", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              if (lastZapi) {
+                conv.last_message_preview = (lastZapi as any).text || `📎 ${(lastZapi as any).type || "mensagem"}`;
+                if ((lastZapi as any).timestamp) conv.last_message_at = (lastZapi as any).timestamp;
+              }
+            } catch {}
+          }
+        }
         if (newConvs.length > 0) {
           const deduped = new Map<string, Conversation>();
           for (const conv of newConvs) {
