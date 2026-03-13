@@ -525,64 +525,85 @@ export default function ClientDetail() {
 
         {/* Travel Preferences Tab */}
         <TabsContent value="preferences">
-          <Card className="p-6 glass-card">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-primary" />
-                <h3 className="text-base font-semibold text-foreground">Preferências de Viagem</h3>
+          <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-accent/15 to-accent/5 flex items-center justify-center">
+                  <Heart className="w-5 h-5 text-accent" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-foreground tracking-tight">Preferências de Viagem</h3>
+                  <p className="text-[11px] text-muted-foreground">Personalize a experiência do cliente</p>
+                </div>
               </div>
               {!editingPrefs ? (
-                <Button size="sm" variant="outline" onClick={() => setEditingPrefs(true)}>
-                  <Compass className="w-3.5 h-3.5 mr-1.5" /> Editar
+                <Button size="sm" variant="outline" onClick={() => setEditingPrefs(true)}
+                  className="gap-1.5 rounded-xl border-accent/20 text-accent font-bold hover:bg-accent/5 hover:border-accent/35 transition-all duration-200">
+                  <Compass className="w-3.5 h-3.5" /> Editar
                 </Button>
               ) : (
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSavePrefs} disabled={savingPrefs}>
-                    {savingPrefs ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Save className="w-3.5 h-3.5 mr-1" />}
+                  <Button size="sm" onClick={handleSavePrefs} disabled={savingPrefs}
+                    className="gap-1.5 rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold shadow-[0_0_12px_-3px_hsl(var(--accent)/0.35)] hover:shadow-[0_0_18px_-3px_hsl(var(--accent)/0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200">
+                    {savingPrefs ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                     Salvar
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setEditingPrefs(false)}>Cancelar</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditingPrefs(false)} className="rounded-xl text-muted-foreground">Cancelar</Button>
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Voo */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border pb-2">
-                  <Plane className="w-4 h-4 text-primary" /> Voo
-                </h4>
-                <PrefSelect label="Assento" value={prefs.seat_preference} options={SEAT_OPTIONS} editing={editingPrefs}
-                  onChange={v => setPrefs(p => ({ ...p, seat_preference: v }))} icon={Armchair} />
-                <PrefSelect label="Classe" value={prefs.cabin_class} options={CABIN_OPTIONS} editing={editingPrefs}
-                  onChange={v => setPrefs(p => ({ ...p, cabin_class: v }))} icon={Star} />
-                <PrefSelect label="Refeição" value={prefs.meal_preference} options={MEAL_OPTIONS} editing={editingPrefs}
-                  onChange={v => setPrefs(p => ({ ...p, meal_preference: v }))} icon={Utensils} />
+            {/* Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* ✈️ Voo */}
+              <div className="rounded-2xl border border-border/30 bg-card overflow-hidden">
+                <div className="px-5 py-3.5 bg-gradient-to-r from-accent/[0.06] to-transparent border-b border-border/20">
+                  <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Plane className="w-4 h-4 text-accent" /> Voo
+                  </h4>
+                </div>
+                <div className="p-5 space-y-4">
+                  <PrefSelect label="Assento" value={prefs.seat_preference} options={SEAT_OPTIONS} editing={editingPrefs}
+                    onChange={v => setPrefs(p => ({ ...p, seat_preference: v }))} icon={Armchair} />
+                  <PrefSelect label="Classe" value={prefs.cabin_class} options={CABIN_OPTIONS} editing={editingPrefs}
+                    onChange={v => setPrefs(p => ({ ...p, cabin_class: v }))} icon={Star} />
+                  <PrefSelect label="Refeição" value={prefs.meal_preference} options={MEAL_OPTIONS} editing={editingPrefs}
+                    onChange={v => setPrefs(p => ({ ...p, meal_preference: v }))} icon={Utensils} />
+                </div>
               </div>
 
-              {/* Hospedagem */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border pb-2">
-                  <Hotel className="w-4 h-4 text-primary" /> Hospedagem
-                </h4>
-                <PrefSelect label="Categoria" value={prefs.hotel_category} options={HOTEL_OPTIONS} editing={editingPrefs}
-                  onChange={v => setPrefs(p => ({ ...p, hotel_category: v }))} icon={Star} />
+              {/* 🏨 Hospedagem */}
+              <div className="rounded-2xl border border-border/30 bg-card overflow-hidden">
+                <div className="px-5 py-3.5 bg-gradient-to-r from-chart-2/[0.06] to-transparent border-b border-border/20">
+                  <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Hotel className="w-4 h-4 text-chart-2" /> Hospedagem
+                  </h4>
+                </div>
+                <div className="p-5 space-y-4">
+                  <PrefSelect label="Categoria" value={prefs.hotel_category} options={HOTEL_OPTIONS} editing={editingPrefs}
+                    onChange={v => setPrefs(p => ({ ...p, hotel_category: v }))} icon={Star} />
+                </div>
               </div>
 
-              {/* Estilo */}
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border pb-2">
-                  <Compass className="w-4 h-4 text-primary" /> Estilo de Viagem
-                </h4>
-                <PrefSelect label="Tipo" value={prefs.trip_style} options={STYLE_OPTIONS} editing={editingPrefs}
-                  onChange={v => setPrefs(p => ({ ...p, trip_style: v }))} icon={Heart} />
-                <PrefSelect label="Ritmo" value={prefs.travel_pace} options={PACE_OPTIONS} editing={editingPrefs}
-                  onChange={v => setPrefs(p => ({ ...p, travel_pace: v }))} icon={Clock} />
+              {/* 🧭 Estilo */}
+              <div className="rounded-2xl border border-border/30 bg-card overflow-hidden">
+                <div className="px-5 py-3.5 bg-gradient-to-r from-chart-4/[0.06] to-transparent border-b border-border/20">
+                  <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Compass className="w-4 h-4 text-chart-4" /> Estilo de Viagem
+                  </h4>
+                </div>
+                <div className="p-5 space-y-4">
+                  <PrefSelect label="Tipo" value={prefs.trip_style} options={STYLE_OPTIONS} editing={editingPrefs}
+                    onChange={v => setPrefs(p => ({ ...p, trip_style: v }))} icon={Heart} />
+                  <PrefSelect label="Ritmo" value={prefs.travel_pace} options={PACE_OPTIONS} editing={editingPrefs}
+                    onChange={v => setPrefs(p => ({ ...p, travel_pace: v }))} icon={Clock} />
+                </div>
               </div>
             </div>
 
-            {/* Lists */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6 pt-6 border-t border-border">
+            {/* Loyalty & Preferences Chips */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <ChipList
                 label="Programas de Fidelidade"
                 items={prefs.loyalty_programs}
@@ -592,6 +613,8 @@ export default function ClientDetail() {
                 onAdd={() => addToList("loyalty_programs", newLoyalty, setNewLoyalty)}
                 onRemove={i => removeFromList("loyalty_programs", i)}
                 placeholder="Ex: LATAM Pass"
+                icon={Star}
+                color="accent"
               />
               <ChipList
                 label="Cias Aéreas Preferidas"
@@ -602,6 +625,8 @@ export default function ClientDetail() {
                 onAdd={() => addToList("preferred_airlines", newAirline, setNewAirline)}
                 onRemove={i => removeFromList("preferred_airlines", i)}
                 placeholder="Ex: LATAM"
+                icon={Plane}
+                color="chart-3"
               />
               <ChipList
                 label="Redes Hoteleiras"
@@ -612,31 +637,37 @@ export default function ClientDetail() {
                 onAdd={() => addToList("preferred_hotel_chains", newHotelChain, setNewHotelChain)}
                 onRemove={i => removeFromList("preferred_hotel_chains", i)}
                 placeholder="Ex: Marriott"
+                icon={Hotel}
+                color="chart-2"
               />
             </div>
 
             {/* Special needs & notes */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 pt-6 border-t border-border">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Necessidades Especiais</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="rounded-2xl border border-border/30 bg-card p-5">
+                <label className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-warning" /> Necessidades Especiais
+                </label>
                 {editingPrefs ? (
                   <Textarea value={prefs.special_needs} onChange={e => setPrefs(p => ({ ...p, special_needs: e.target.value }))}
-                    placeholder="Ex: Cadeira de rodas, alergia..." rows={3} className="text-xs" />
+                    placeholder="Ex: Cadeira de rodas, alergia..." rows={3} className="text-xs mt-1 border-border/30 focus:border-accent/40" />
                 ) : (
-                  <p className="text-sm text-foreground">{prefs.special_needs || <span className="text-muted-foreground italic">Nenhuma</span>}</p>
+                  <p className="text-sm text-foreground mt-1">{prefs.special_needs || <span className="text-muted-foreground/50 italic text-xs">Nenhuma informada</span>}</p>
                 )}
               </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Observações de Viagem</label>
+              <div className="rounded-2xl border border-border/30 bg-card p-5">
+                <label className="text-xs font-bold text-foreground mb-2 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-chart-3" /> Observações de Viagem
+                </label>
                 {editingPrefs ? (
                   <Textarea value={prefs.notes} onChange={e => setPrefs(p => ({ ...p, notes: e.target.value }))}
-                    placeholder="Notas adicionais sobre preferências..." rows={3} className="text-xs" />
+                    placeholder="Notas adicionais sobre preferências..." rows={3} className="text-xs mt-1 border-border/30 focus:border-accent/40" />
                 ) : (
-                  <p className="text-sm text-foreground">{prefs.notes || <span className="text-muted-foreground italic">Nenhuma</span>}</p>
+                  <p className="text-sm text-foreground mt-1">{prefs.notes || <span className="text-muted-foreground/50 italic text-xs">Nenhuma informada</span>}</p>
                 )}
               </div>
             </div>
-          </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
@@ -651,12 +682,12 @@ function PrefSelect({ label, value, options, editing, onChange, icon: Icon }: {
 }) {
   return (
     <div>
-      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
-        {Icon && <Icon className="w-3 h-3" />} {label}
+      <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+        {Icon && <Icon className="w-3 h-3 text-accent/60" />} {label}
       </label>
       {editing ? (
         <Select value={value} onValueChange={onChange}>
-          <SelectTrigger className="h-9 text-xs">
+          <SelectTrigger className="h-9 text-xs rounded-xl border-border/30 focus:border-accent/40">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -664,43 +695,50 @@ function PrefSelect({ label, value, options, editing, onChange, icon: Icon }: {
           </SelectContent>
         </Select>
       ) : (
-        <Badge variant="secondary" className="text-xs">{value}</Badge>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/30 border border-border/15">
+          <span className="text-sm font-semibold text-foreground">{value}</span>
+        </div>
       )}
     </div>
   );
 }
 
-function ChipList({ label, items, editing, inputValue, onInputChange, onAdd, onRemove, placeholder }: {
+function ChipList({ label, items, editing, inputValue, onInputChange, onAdd, onRemove, placeholder, icon: Icon, color = "accent" }: {
   label: string; items: string[]; editing: boolean;
   inputValue: string; onInputChange: (v: string) => void;
   onAdd: () => void; onRemove: (i: number) => void; placeholder: string;
+  icon?: typeof Plane; color?: string;
 }) {
   return (
-    <div>
-      <label className="text-xs font-medium text-muted-foreground mb-2 block">{label}</label>
-      <div className="flex flex-wrap gap-1.5 mb-2">
+    <div className="rounded-2xl border border-border/30 bg-card p-5">
+      <label className="text-xs font-bold text-foreground mb-3 flex items-center gap-2">
+        {Icon && <Icon className={`w-3.5 h-3.5 text-${color}`} />} {label}
+      </label>
+      <div className="flex flex-wrap gap-1.5 mb-2 min-h-[28px]">
         {items.length === 0 && !editing && (
-          <span className="text-xs text-muted-foreground italic">Nenhum</span>
+          <span className="text-xs text-muted-foreground/50 italic">Nenhum cadastrado</span>
         )}
         {items.map((item, i) => (
-          <Badge key={i} variant="secondary" className="text-[11px] gap-1">
+          <span key={i} className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-${color}/10 text-${color} border border-${color}/15`}>
             {item}
             {editing && (
-              <button onClick={() => onRemove(i)} className="ml-0.5 hover:text-destructive">×</button>
+              <button onClick={() => onRemove(i)} className="hover:text-destructive transition-colors">
+                <Plus className="w-3 h-3 rotate-45" />
+              </button>
             )}
-          </Badge>
+          </span>
         ))}
       </div>
       {editing && (
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 mt-2">
           <Input
             value={inputValue}
             onChange={e => onInputChange(e.target.value)}
             placeholder={placeholder}
-            className="h-8 text-xs"
+            className="h-8 text-xs rounded-lg border-border/30 focus:border-accent/40"
             onKeyDown={e => e.key === "Enter" && (e.preventDefault(), onAdd())}
           />
-          <Button size="sm" variant="outline" className="h-8 px-2.5" onClick={onAdd}>
+          <Button size="sm" variant="outline" className="h-8 px-2.5 rounded-lg border-accent/25 text-accent hover:bg-accent/5 hover:border-accent/40 transition-all" onClick={onAdd}>
             <Plus className="w-3.5 h-3.5" />
           </Button>
         </div>
