@@ -531,7 +531,7 @@ function EmptyState({ onCreateGroup }: { onCreateGroup: () => void }) {
           Organize e divida despesas da viagem com seus companheiros. Simples como o Splitwise, integrado à sua viagem.
         </p>
       </div>
-      <Button onClick={onCreateGroup} size="lg" className="gap-2 rounded-xl">
+      <Button onClick={onCreateGroup} size="lg" className="gap-2.5 rounded-2xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold text-base px-8 h-14 shadow-[0_0_24px_-4px_hsl(var(--accent)/0.4)] hover:shadow-[0_0_36px_-4px_hsl(var(--accent)/0.55)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-200">
         <Plus className="h-5 w-5" /> Criar Grupo de Despesas
       </Button>
     </motion.div>
