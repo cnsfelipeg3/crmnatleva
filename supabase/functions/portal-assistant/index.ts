@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
 
     const publishedSaleIds = (published || []).map((p: any) => p.sale_id);
 
-    // ALSO fetch sales directly linked to this client (fallback when nothing is published)
+    // Also fetch sales directly linked to this client
     const { data: directSales } = await admin
       .from("sales")
       .select("id")
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
 
     const directSaleIds = (directSales || []).map((s: any) => s.id);
 
-    // Also check if client name matches any sale name (for clients linked by name)
+    // Also check if client name matches any sale name
     let nameSaleIds: string[] = [];
     if (client?.display_name && client.display_name.length > 3) {
       const { data: nameSales } = await admin
@@ -95,7 +95,8 @@ Deno.serve(async (req) => {
 
     // Merge all unique sale IDs
     const saleIds = [...new Set([...publishedSaleIds, ...directSaleIds, ...nameSaleIds])];
-    console.log(`Portal Assistant: client=${clientId}, name=${client?.display_name}, published=${publishedSaleIds.length}, direct=${directSaleIds.length}, byName=${nameSaleIds.length}, total=${saleIds.length}`);
+    console.log(`Portal Assistant: client=${clientId}, name=${client?.display_name}, total_sales=${saleIds.length}`);
+
     let tripContext = "";
 
     if (saleIds.length > 0) {
@@ -133,7 +134,6 @@ Deno.serve(async (req) => {
         const checkins = (checkinRes.data || []).filter((c: any) => c.sale_id === sale.id);
 
         const hotels = costs.filter((c: any) => c.category === "hotel" || c.product_type === "hotel");
-        const flights = costs.filter((c: any) => c.category === "aereo" || c.product_type === "aereo");
         const services = costs.filter((c: any) => c.category !== "aereo" && c.category !== "hotel" && c.product_type !== "hotel" && c.product_type !== "aereo");
 
         const sellerName = sale.seller_id ? (sellerMap[sale.seller_id] || "Equipe NatLeva") : "Equipe NatLeva";
@@ -155,8 +155,9 @@ Deno.serve(async (req) => {
         tripContext += `Consultor responsável: ${sellerName}\n`;
         tripContext += `Localizador geral: ${sale.locator || "N/A"}\n`;
         tripContext += `Companhia aérea principal: ${sale.airline || "N/A"}\n`;
+        if (sale.observations) tripContext += `Observações: ${sale.observations}\n`;
 
-        // Flight segments with full detail
+        // Flight segments
         if (segs.length > 0) {
           tripContext += `\n── VOOS (${segs.length} segmentos) ──\n`;
           for (const seg of segs) {
@@ -165,25 +166,28 @@ Deno.serve(async (req) => {
             tripContext += `    Data: ${seg.departure_date || "N/A"}\n`;
             tripContext += `    Horário: ${seg.departure_time || "N/A"} → ${seg.arrival_time || "N/A"}\n`;
             tripContext += `    Classe: ${seg.flight_class || seg.cabin_type || "N/A"}\n`;
-            tripContext += `    Direção: ${seg.direction === "outbound" ? "IDA" : seg.direction === "return" ? "VOLTA" : seg.direction}\n`;
+            tripContext += `    Direção: ${seg.direction === "outbound" ? "IDA" : seg.direction === "return" ? "VOLTA" : seg.direction || "N/A"}\n`;
             if (seg.terminal) tripContext += `    Terminal: ${seg.terminal}\n`;
             if (seg.operated_by) tripContext += `    Operado por: ${seg.operated_by}\n`;
             if (seg.duration_minutes) tripContext += `    Duração: ${Math.floor(seg.duration_minutes / 60)}h${seg.duration_minutes % 60}min\n`;
             if (seg.connection_time_minutes) tripContext += `    Conexão após este voo: ${seg.connection_time_minutes}min\n`;
+            if (seg.baggage_info) tripContext += `    Bagagem: ${seg.baggage_info}\n`;
           }
         } else {
-          tripContext += `\n── VOOS ──\nNenhum segmento de voo cadastrado ainda.\n`;
+          tripContext += `\n── VOOS ──\nNenhum segmento de voo cadastrado.\n`;
         }
 
-        // Hotels
+        // Hotels from lodging tasks
         if (lodg.length > 0) {
           tripContext += `\n── HOSPEDAGEM (${lodg.length} reservas) ──\n`;
           for (const l of lodg) {
             tripContext += `  🏨 ${l.hotel_name || "Hotel"}\n`;
             tripContext += `    Cidade: ${l.city || "N/A"}\n`;
+            if (l.address) tripContext += `    Endereço: ${l.address}\n`;
             tripContext += `    Check-in: ${l.checkin_date || "N/A"}\n`;
             tripContext += `    Check-out: ${l.checkout_date || "N/A"}\n`;
             tripContext += `    Tipo de quarto: ${l.room_type || "N/A"}\n`;
+            if (l.meal_plan) tripContext += `    Regime: ${l.meal_plan}\n`;
             tripContext += `    Confirmação: ${l.confirmation_number || "N/A"}\n`;
             tripContext += `    Status: ${l.status || "N/A"}\n`;
             if (l.notes) tripContext += `    Observações: ${l.notes}\n`;
@@ -202,11 +206,11 @@ Deno.serve(async (req) => {
           for (const s of services) {
             tripContext += `  • ${s.description || s.category}\n`;
             tripContext += `    Tipo: ${s.product_type || s.category}\n`;
-            if (s.reservation_code) tripContext += `    Reserva/Localizador: ${s.reservation_code}\n`;
+            if (s.reservation_code) tripContext += `    Reserva: ${s.reservation_code}\n`;
           }
         }
 
-        // Passengers with full detail
+        // Passengers
         if (paxs.length > 0) {
           tripContext += `\n── PASSAGEIROS (${paxs.length}) ──\n`;
           for (const p of paxs) {
@@ -260,36 +264,38 @@ Deno.serve(async (req) => {
     }
 
     const today = new Date().toISOString().split("T")[0];
+    const clientName = client?.display_name?.split(" ")[0] || "Cliente";
 
-    const systemPrompt = `Você é o Assistente NatLeva, um concierge digital de viagens PREMIUM e extremamente inteligente. Você é o gênio das viagens. Você tem acesso COMPLETO a todos os dados das viagens do cliente e deve responder com precisão cirúrgica.
+    const systemPrompt = `Você é o **Concierge NatLeva**, o assistente pessoal de viagens do portal NatLeva Viagens. Você é um especialista premium em viagens com acesso completo aos dados das viagens do cliente.
 
-PERSONALIDADE:
-- Tom premium, acessível e acolhedor
-- Demonstre autoridade e conhecimento profundo sobre viagens
-- Use micro-validações ("Ótima pergunta!", "Vamos lá!")
-- No máximo 1 emoji por mensagem
-- Respostas organizadas com ** negrito ** para destaques
-- Use tabelas Markdown quando fizer sentido (ex: comparar voos, listar parcelas)
+IDENTIDADE:
+- Você é um concierge digital de luxo — acolhedor, preciso e sofisticado
+- Trate o cliente pelo primeiro nome: "${clientName}"
+- Use no máximo 1 emoji por mensagem
+- Respostas concisas (4-6 linhas), mas completas
+- Use **negrito** para destaques importantes
+- Use tabelas Markdown para comparações, listas de voos, parcelas financeiras
+- Micro-validações naturais: "Ótima pergunta!", "Vamos lá!", "Com certeza!"
 
 REGRAS ABSOLUTAS:
 - Responda SEMPRE em português brasileiro
-- Use APENAS os dados fornecidos no contexto — NUNCA invente informações
-- Se um dado específico não estiver disponível, diga claramente e sugira contatar o consultor
-- Se o cliente tiver múltiplas viagens e não especificar qual, liste todas brevemente e pergunte qual deseja explorar
-- Para questões completamente fora do escopo de viagem, redirecione educadamente
-- Formate datas no padrão brasileiro (dd/mm/aaaa)
-- Valores monetários sempre com R$ e duas casas decimais
+- Use EXCLUSIVAMENTE dados do contexto abaixo — NUNCA invente informações
+- Datas no formato DD/MM/AAAA
+- Valores monetários com R$ e duas casas decimais
+- Se a informação NÃO estiver nos dados, diga: "Não encontrei essa informação no seu itinerário. Posso te ajudar a entrar em contato com seu consultor NatLeva para esclarecer!"
+- Se o cliente tiver múltiplas viagens e não especificar qual, liste brevemente e pergunte qual deseja explorar
+- Para questões fora do escopo de viagem, redirecione educadamente
 
 CAPACIDADES:
-- Responder sobre voos (horários, companhias, escalas, classes, terminais, duração)
-- Responder sobre hotéis (nome, cidade, check-in/out, tipo de quarto, confirmação)
-- Responder sobre passageiros (nomes, documentos, passaportes e validades)
-- Responder sobre financeiro (valor total, parcelas pagas e pendentes, próximo vencimento, métodos de pagamento)
-- Responder sobre documentos disponíveis
-- Responder sobre serviços e experiências contratadas
-- Responder sobre status de check-in
-- Informar quem é o consultor responsável
-- Dar dicas contextuais sobre o destino (clima, fuso horário, cultura) baseado no destino IATA
+- Voos: horários, companhias, escalas, classes, terminais, duração, bagagem
+- Hotéis: nome, endereço, cidade, check-in/out, tipo de quarto, regime de hospedagem, confirmação
+- Passageiros: nomes, documentos, passaportes e validades
+- Financeiro: valor total, parcelas, status de pagamento, próximo vencimento
+- Documentos: listar documentos disponíveis
+- Serviços: transfers, passeios, ingressos, atividades contratadas
+- Check-in: status e janelas de abertura
+- Consultor: identificar o responsável pela viagem
+- Dicas contextuais: clima, fuso horário, cultura do destino baseado nos dados IATA
 
 DATA DE HOJE: ${today}
 
@@ -297,20 +303,15 @@ DADOS DO CLIENTE:
 Nome: ${client?.display_name || "Cliente"}
 Email: ${client?.email || "N/A"}
 Telefone: ${client?.phone || "N/A"}
-Cidade: ${client?.city || "N/A"}
-Estado: ${client?.state || "N/A"}
+Cidade: ${client?.city || "N/A"}, ${client?.state || "N/A"}
 
-${saleIds.length > 0 ? `TOTAL DE VIAGENS: ${saleIds.length}` : "NENHUMA VIAGEM ENCONTRADA"}
-${tripContext || "\nNenhuma viagem publicada no portal."}
-
-CONTATO NATLEVA:
-Consultor da viagem: Ver dados acima em cada viagem
-WhatsApp NatLeva: (informar o consultor específico da viagem)`;
+${saleIds.length > 0 ? `TOTAL DE VIAGENS ENCONTRADAS: ${saleIds.length}` : "NENHUMA VIAGEM ENCONTRADA — informe que o itinerário ainda não foi publicado no portal."}
+${tripContext || "\nNenhum dado de viagem disponível no momento."}`;
 
     const aiMessages: any[] = [{ role: "system", content: systemPrompt }];
 
     if (conversation_history?.length) {
-      for (const msg of conversation_history.slice(-10)) {
+      for (const msg of conversation_history.slice(-12)) {
         aiMessages.push({ role: msg.role, content: msg.content });
       }
     }
@@ -336,12 +337,12 @@ WhatsApp NatLeva: (informar o consultor específico da viagem)`;
       console.error("AI gateway error:", aiResp.status, errText);
       
       if (aiResp.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns segundos." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (aiResp.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required" }), {
+        return new Response(JSON.stringify({ error: "Serviço de IA temporariamente indisponível." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -387,7 +388,7 @@ WhatsApp NatLeva: (informar o consultor específico da viagem)`;
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
 
-          // Log interaction
+          // Log interaction (non-critical)
           if (fullAnswer) {
             try {
               await admin.from("portal_assistant_logs").insert({
