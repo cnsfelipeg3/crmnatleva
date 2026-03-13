@@ -898,6 +898,29 @@ export default function PlacesSearchCard({
 
 /* ═══ Thumbnail subcomponent ═══ */
 function PlaceThumbnail({ photoRef, alt }: { photoRef: string; alt: string }) {
-  const url = getPhotoUrl(photoRef, 200);
-  return <img src={url} alt={alt} className="w-full h-full object-cover" />;
+  const [src, setSrc] = useState<string>(() => {
+    // If it's already a full URL, use it directly
+    if (/^https?:\/\//i.test(photoRef)) return photoRef;
+    return "";
+  });
+
+  useEffect(() => {
+    if (src) return; // Already resolved
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.functions.invoke("places-search", {
+          body: { action: "photo", photo_reference: photoRef, max_width: 200 },
+        });
+        if (!cancelled && data?.url) setSrc(data.url);
+      } catch {
+        // Fallback to client-side URL builder
+        if (!cancelled) setSrc(getPhotoUrl(photoRef, 200));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [photoRef, src]);
+
+  if (!src) return <div className="w-full h-full bg-muted/30 flex items-center justify-center"><MapPin className="h-4 w-4 text-muted-foreground/30" /></div>;
+  return <img src={src} alt={alt} className="w-full h-full object-cover" />;
 }
