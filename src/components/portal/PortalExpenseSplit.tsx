@@ -1187,8 +1187,8 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
               )}
 
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep("form")} className="rounded-xl">Voltar</Button>
-                <Button onClick={goToPreview} className="flex-1 gap-2 rounded-xl">
+                <Button variant="outline" onClick={() => setStep("form")} className="rounded-xl border-accent/20 text-accent font-bold hover:bg-accent/5 hover:border-accent/35 transition-all duration-200">Voltar</Button>
+                <Button onClick={goToPreview} className="flex-1 gap-2.5 rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold shadow-[0_0_16px_-4px_hsl(var(--accent)/0.35)] hover:shadow-[0_0_24px_-4px_hsl(var(--accent)/0.5)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200">
                   Ver Resultado <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
