@@ -7,7 +7,9 @@ import { toast } from "sonner";
 import {
   Camera, User, Mail, Phone, MapPin, Calendar, Globe, Shield,
   Edit3, Check, X, Plane, Heart, Star, ChevronRight, Sparkles,
-  CreditCard, FileText, Lock, Eye, EyeOff, Save
+  CreditCard, FileText, Lock, Eye, EyeOff, Save, Hotel, Compass,
+  Utensils, Armchair, Baby, Luggage, Clock, Mountain, Palmtree,
+  Wifi, CircleDollarSign, PlaneTakeoff
 } from "lucide-react";
 
 interface ProfileData {
@@ -27,35 +29,46 @@ interface ProfileData {
   zip_code: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
-  dietary_preferences: string;
+  // Travel preferences (expanded)
   seat_preference: string;
+  dietary_preferences: string;
   frequent_flyer: string;
+  cabin_class: string;
+  hotel_category: string;
+  trip_style: string;
+  travel_pace: string;
+  room_type: string;
+  bed_preference: string;
+  smoking_preference: string;
+  special_assistance: string;
+  preferred_airlines: string;
+  preferred_hotel_chains: string;
+  loyalty_hotel: string;
+  travel_insurance: string;
+  luggage_preference: string;
+  transfer_preference: string;
+  interests: string;
+  travel_companion: string;
+  budget_range: string;
+  travel_notes: string;
   avatar_url: string;
   bio: string;
 }
 
 const defaultProfile: ProfileData = {
-  full_name: "",
-  email: "",
-  phone: "",
-  birth_date: "",
-  cpf: "",
-  rg: "",
-  passport_number: "",
-  passport_expiry: "",
-  nationality: "Brasileira",
-  city: "",
-  state: "",
-  country: "Brasil",
-  address: "",
-  zip_code: "",
-  emergency_contact_name: "",
-  emergency_contact_phone: "",
-  dietary_preferences: "",
-  seat_preference: "",
-  frequent_flyer: "",
-  avatar_url: "",
-  bio: "",
+  full_name: "", email: "", phone: "", birth_date: "",
+  cpf: "", rg: "", passport_number: "", passport_expiry: "",
+  nationality: "Brasileira", city: "", state: "", country: "Brasil",
+  address: "", zip_code: "",
+  emergency_contact_name: "", emergency_contact_phone: "",
+  seat_preference: "", dietary_preferences: "", frequent_flyer: "",
+  cabin_class: "", hotel_category: "", trip_style: "", travel_pace: "",
+  room_type: "", bed_preference: "", smoking_preference: "Não fumante",
+  special_assistance: "", preferred_airlines: "", preferred_hotel_chains: "",
+  loyalty_hotel: "", travel_insurance: "", luggage_preference: "",
+  transfer_preference: "", interests: "", travel_companion: "",
+  budget_range: "", travel_notes: "",
+  avatar_url: "", bio: "",
 };
 
 type TabKey = "pessoal" | "documentos" | "viagem" | "seguranca";
@@ -69,6 +82,19 @@ const tabs: { key: TabKey; label: string; icon: typeof User }[] = [
 
 const seatOptions = ["Janela", "Corredor", "Indiferente"];
 const dietOptions = ["Sem restrição", "Vegetariano", "Vegano", "Sem glúten", "Sem lactose", "Kosher", "Halal"];
+const cabinOptions = ["Econômica", "Premium Economy", "Executiva", "Primeira Classe"];
+const hotelCategoryOptions = ["Econômico", "Conforto", "Superior", "Luxo", "Resort All-Inclusive"];
+const tripStyleOptions = ["Lazer", "Aventura", "Cultural", "Romântico", "Família", "Corporativo", "Lua de mel", "Ecoturismo", "Gastronômico"];
+const travelPaceOptions = ["Relaxado", "Moderado", "Intenso"];
+const roomTypeOptions = ["Standard", "Superior", "Suíte", "Suíte Premium", "Villa/Bangalô"];
+const bedOptions = ["Casal", "Solteiro", "Twin (2 camas)", "Indiferente"];
+const smokingOptions = ["Não fumante", "Fumante"];
+const luggageOptions = ["Somente mão", "1 mala despachada", "2+ malas despachadas", "Flexível"];
+const transferOptions = ["Shuttle/Compartilhado", "Transfer privativo", "Aluguel de carro", "Táxi/Uber", "Indiferente"];
+const companionOptions = ["Solo", "Casal", "Família com crianças", "Família sem crianças", "Grupo de amigos", "Corporativo"];
+const budgetOptions = ["Econômico (até R$3.000)", "Moderado (R$3.000-8.000)", "Conforto (R$8.000-15.000)", "Premium (R$15.000-30.000)", "Luxo (R$30.000+)"];
+const insuranceOptions = ["Sempre contrato", "Apenas internacional", "Apenas quando exigido", "Não costumo contratar"];
+const interestOptions = ["Praias", "Montanhas", "Cidades históricas", "Gastronomia", "Compras", "Vida noturna", "Natureza/Trilhas", "Esportes", "Spa/Bem-estar", "Parques temáticos", "Mergulho/Snorkel", "Fotografia", "Vinícolas", "Arte/Museus"];
 
 export default function PortalProfile() {
   const { user, portalAccess } = usePortalAuth();
@@ -497,57 +523,67 @@ export default function PortalProfile() {
 
               {activeTab === "viagem" && (
                 <div className="space-y-4">
-                  <SectionTitle icon={Plane} label="Preferências de Viagem" />
+                  {/* ✈️ Voo */}
+                  <SectionTitle icon={PlaneTakeoff} label="Preferências de Voo" />
                   <FieldGroup>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Assento preferido</label>
-                      <div className="flex gap-2">
-                        {seatOptions.map(opt => (
-                          <button
-                            key={opt}
-                            disabled={!editing}
-                            onClick={() => updateField("seat_preference", opt)}
-                            className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-medium transition-all ${
-                              profile.seat_preference === opt
-                                ? "bg-accent text-accent-foreground shadow-md"
-                                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                            } ${!editing ? "cursor-default" : "cursor-pointer"}`}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                    <OptionPicker label="Assento preferido" icon={Armchair} options={seatOptions} value={profile.seat_preference} field="seat_preference" editing={editing} onChange={updateField} />
+                    <OptionPicker label="Classe preferida" icon={Star} options={cabinOptions} value={profile.cabin_class} field="cabin_class" editing={editing} onChange={updateField} />
+                    <OptionPicker label="Restrição alimentar" icon={Utensils} options={dietOptions} value={profile.dietary_preferences} field="dietary_preferences" editing={editing} onChange={updateField} wrap />
+                    <ProfileField label="Cias aéreas preferidas" icon={Plane} value={profile.preferred_airlines} field="preferred_airlines" editing={editing} onChange={updateField} placeholder="Ex: LATAM, Azul, GOL" />
+                    <ProfileField label="Programa de fidelidade aéreo" icon={Star} value={profile.frequent_flyer} field="frequent_flyer" editing={editing} onChange={updateField} placeholder="Ex: Smiles Gold - 123456789" />
+                    <OptionPicker label="Bagagem" icon={Luggage} options={luggageOptions} value={profile.luggage_preference} field="luggage_preference" editing={editing} onChange={updateField} wrap />
+                  </FieldGroup>
 
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Restrição alimentar</label>
-                      <div className="flex flex-wrap gap-2">
-                        {dietOptions.map(opt => (
-                          <button
-                            key={opt}
-                            disabled={!editing}
-                            onClick={() => updateField("dietary_preferences", opt)}
-                            className={`py-2 px-3 rounded-full text-xs font-medium transition-all ${
-                              profile.dietary_preferences === opt
-                                ? "bg-accent text-accent-foreground shadow-md"
-                                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-                            } ${!editing ? "cursor-default" : "cursor-pointer"}`}
-                          >
-                            {opt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                  {/* 🏨 Hospedagem */}
+                  <SectionTitle icon={Hotel} label="Preferências de Hospedagem" />
+                  <FieldGroup>
+                    <OptionPicker label="Categoria do hotel" icon={Star} options={hotelCategoryOptions} value={profile.hotel_category} field="hotel_category" editing={editing} onChange={updateField} wrap />
+                    <OptionPicker label="Tipo de quarto" icon={Hotel} options={roomTypeOptions} value={profile.room_type} field="room_type" editing={editing} onChange={updateField} wrap />
+                    <OptionPicker label="Tipo de cama" icon={Hotel} options={bedOptions} value={profile.bed_preference} field="bed_preference" editing={editing} onChange={updateField} />
+                    <OptionPicker label="Fumante" icon={X} options={smokingOptions} value={profile.smoking_preference} field="smoking_preference" editing={editing} onChange={updateField} />
+                    <ProfileField label="Redes hoteleiras preferidas" icon={Hotel} value={profile.preferred_hotel_chains} field="preferred_hotel_chains" editing={editing} onChange={updateField} placeholder="Ex: Marriott, Accor, Hilton" />
+                    <ProfileField label="Programa de fidelidade hotel" icon={Star} value={profile.loyalty_hotel} field="loyalty_hotel" editing={editing} onChange={updateField} placeholder="Ex: Marriott Bonvoy - 123456" />
+                  </FieldGroup>
 
-                    <ProfileField
-                      label="Programa de fidelidade" icon={Star}
-                      value={profile.frequent_flyer} field="frequent_flyer"
-                      editing={editing} onChange={updateField}
-                      placeholder="Ex: Smiles Gold - 123456789"
-                    />
+                  {/* 🧭 Estilo de Viagem */}
+                  <SectionTitle icon={Compass} label="Estilo de Viagem" />
+                  <FieldGroup>
+                    <OptionPicker label="Tipo de viagem" icon={Heart} options={tripStyleOptions} value={profile.trip_style} field="trip_style" editing={editing} onChange={updateField} wrap />
+                    <OptionPicker label="Ritmo de viagem" icon={Clock} options={travelPaceOptions} value={profile.travel_pace} field="travel_pace" editing={editing} onChange={updateField} />
+                    <OptionPicker label="Com quem viaja" icon={User} options={companionOptions} value={profile.travel_companion} field="travel_companion" editing={editing} onChange={updateField} wrap />
+                    <OptionPicker label="Faixa de orçamento" icon={CircleDollarSign} options={budgetOptions} value={profile.budget_range} field="budget_range" editing={editing} onChange={updateField} wrap />
+                  </FieldGroup>
+
+                  {/* 🎯 Interesses & Extras */}
+                  <SectionTitle icon={Mountain} label="Interesses & Extras" />
+                  <FieldGroup>
+                    <MultiOptionPicker label="Interesses de viagem" icon={Heart} options={interestOptions} value={profile.interests} field="interests" editing={editing} onChange={updateField} />
+                    <OptionPicker label="Transfer preferido" icon={MapPin} options={transferOptions} value={profile.transfer_preference} field="transfer_preference" editing={editing} onChange={updateField} wrap />
+                    <OptionPicker label="Seguro viagem" icon={Shield} options={insuranceOptions} value={profile.travel_insurance} field="travel_insurance" editing={editing} onChange={updateField} wrap />
+                    <ProfileField label="Necessidades especiais / Acessibilidade" icon={Heart} value={profile.special_assistance} field="special_assistance" editing={editing} onChange={updateField} placeholder="Ex: Cadeira de rodas, alergia grave..." />
+                  </FieldGroup>
+
+                  {/* 📝 Observações */}
+                  <SectionTitle icon={FileText} label="Observações de Viagem" />
+                  <FieldGroup>
+                    {editing ? (
+                      <textarea
+                        value={profile.travel_notes}
+                        onChange={e => updateField("travel_notes", e.target.value)}
+                        placeholder="Outras preferências, informações importantes para a agência..."
+                        className="w-full p-3 rounded-xl bg-muted/50 border border-border text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-2 focus:ring-accent/30"
+                        rows={4}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        {profile.travel_notes || "Nenhuma observação adicionada"}
+                      </p>
+                    )}
                   </FieldGroup>
                 </div>
               )}
+
+
 
               {activeTab === "seguranca" && (
                 <div className="space-y-4">
@@ -587,7 +623,7 @@ export default function PortalProfile() {
                         <p className="text-sm font-medium text-foreground">E-mail da conta</p>
                         <p className="text-xs text-muted-foreground">{user?.email}</p>
                       </div>
-                      <Check className="h-4 w-4 text-green-500" />
+                      <Check className="h-4 w-4 text-accent" />
                     </div>
                   </FieldGroup>
                 </div>
@@ -660,4 +696,87 @@ function ProfileField({ label, icon: Icon, value, field, editing, onChange, type
 function maskValue(val: string): string {
   if (!val || val.length < 4) return val ? "•".repeat(val.length) : "";
   return "•".repeat(val.length - 3) + val.slice(-3);
+}
+
+interface OptionPickerProps {
+  label: string;
+  icon?: typeof User;
+  options: string[];
+  value: string;
+  field: keyof ProfileData;
+  editing: boolean;
+  onChange: (field: keyof ProfileData, value: string) => void;
+  wrap?: boolean;
+}
+
+function OptionPicker({ label, icon: Icon, options, value, field, editing, onChange, wrap }: OptionPickerProps) {
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+        {Icon && <Icon className="h-3 w-3" />} {label}
+      </label>
+      <div className={`flex gap-2 ${wrap ? "flex-wrap" : ""}`}>
+        {options.map(opt => (
+          <button
+            key={opt}
+            disabled={!editing}
+            onClick={() => onChange(field, opt)}
+            className={`py-2 px-3 rounded-full text-xs font-medium transition-all ${
+              value === opt
+                ? "bg-accent text-accent-foreground shadow-md"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+            } ${!editing ? "cursor-default" : "cursor-pointer"}`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface MultiOptionPickerProps {
+  label: string;
+  icon?: typeof User;
+  options: string[];
+  value: string; // comma-separated
+  field: keyof ProfileData;
+  editing: boolean;
+  onChange: (field: keyof ProfileData, value: string) => void;
+}
+
+function MultiOptionPicker({ label, icon: Icon, options, value, field, editing, onChange }: MultiOptionPickerProps) {
+  const selected = value ? value.split(",").map(s => s.trim()).filter(Boolean) : [];
+
+  const toggle = (opt: string) => {
+    const next = selected.includes(opt)
+      ? selected.filter(s => s !== opt)
+      : [...selected, opt];
+    onChange(field, next.join(", "));
+  };
+
+  return (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+        {Icon && <Icon className="h-3 w-3" />} {label}
+        <span className="text-[10px] text-muted-foreground/60">(múltipla escolha)</span>
+      </label>
+      <div className="flex flex-wrap gap-2">
+        {options.map(opt => (
+          <button
+            key={opt}
+            disabled={!editing}
+            onClick={() => toggle(opt)}
+            className={`py-2 px-3 rounded-full text-xs font-medium transition-all ${
+              selected.includes(opt)
+                ? "bg-accent text-accent-foreground shadow-md"
+                : "bg-muted/50 text-muted-foreground hover:bg-muted"
+            } ${!editing ? "cursor-default" : "cursor-pointer"}`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
