@@ -788,7 +788,7 @@ function OperacaoInboxInner() {
                 const isOpen = c.id === selectedIdRef.current;
                 const existingTime = new Date(existing.last_message_at).getTime();
                 const freshTime = new Date(c.last_message_at).getTime();
-                return { ...c, contact_name: existing.contact_name || c.contact_name, last_message_at: freshTime > existingTime ? c.last_message_at : existing.last_message_at, last_message_preview: (freshTime > existingTime && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : existing.unread_count, stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned };
+                return { ...c, db_id: existing.db_id || c.db_id, contact_name: existing.contact_name || c.contact_name, last_message_at: freshTime > existingTime ? c.last_message_at : existing.last_message_at, last_message_preview: (freshTime > existingTime && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : existing.unread_count, stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned };
               }
               return c;
             });
