@@ -679,7 +679,7 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
             </Button>
           </div>
 
-          <Button onClick={handleCreate} disabled={loading} className="w-full gap-2 rounded-xl">
+          <Button onClick={handleCreate} disabled={loading} className="w-full gap-2 rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold h-12 text-sm shadow-[0_0_16px_-4px_hsl(var(--accent)/0.35)] hover:shadow-[0_0_24px_-4px_hsl(var(--accent)/0.5)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Criar Grupo
           </Button>
