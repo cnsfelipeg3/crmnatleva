@@ -30,9 +30,11 @@ function useIsDark() {
 function NodeIcon({ name, color, size = 18 }: { name: string; color: string; size?: number }) {
   const Icon = (icons as any)[name];
   const isDark = useIsDark();
-  const displayColor = isDark ? color : darkenHex(color, 0.65);
-  if (!Icon) return <Zap size={size} style={{ color: displayColor }} />;
-  return <Icon size={size} style={{ color: displayColor }} />;
+  // In light mode, darken colors significantly so they're visible against light backgrounds
+  const displayColor = isDark ? color : darkenHex(color, 0.55);
+  const iconStyle = { color: displayColor, filter: isDark ? "none" : "saturate(1.3)" };
+  if (!Icon) return <Zap size={size} style={iconStyle} />;
+  return <Icon size={size} style={iconStyle} />;
 }
 
 function NodeIconBox({ color, children }: { color: string; children: React.ReactNode }) {
