@@ -951,20 +951,19 @@ function AgencySection({ receivables, agencyTotal, agencyPaid, balanceVisible }:
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-foreground truncate">
+                    <p className="text-xs sm:text-sm font-bold text-foreground truncate">
                       {r.description || `Parcela ${r.installment_number || i + 1}`}
                       {(r.installment_total || 0) > 1 && <span className="text-muted-foreground/40 font-normal"> / {r.installment_total}</span>}
                     </p>
-                    <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+                    <p className="text-[10px] sm:text-[11px] text-muted-foreground/50 mt-0.5 truncate">
                       {r.due_date ? fmtDateFull(r.due_date) : "Sem vencimento"}
-                      {r.payment_method && ` · ${r.payment_method}`}
                       {isOverdue && " · Vencida"}
                     </p>
                   </div>
 
                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    <p className="text-sm font-black tabular-nums">{fmt(r.gross_value)}</p>
-                    <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                    <p className="text-xs sm:text-sm font-black tabular-nums whitespace-nowrap">{fmt(r.gross_value)}</p>
+                    <span className={`text-[8px] sm:text-[9px] font-bold uppercase tracking-wider px-1.5 sm:px-2 py-0.5 rounded-full ${
                       isPaid ? "bg-accent/10 text-accent" : isOverdue ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
                     }`}>
                       {isPaid ? "✓ Pago" : isOverdue ? "Vencida" : "Pendente"}
