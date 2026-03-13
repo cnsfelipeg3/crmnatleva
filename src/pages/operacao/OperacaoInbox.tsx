@@ -925,6 +925,7 @@ function OperacaoInboxInner() {
             updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
             return { ...prev, [selectedId]: updated };
           });
+          scrollToBottom();
         }
       } catch (err) { console.error("WhatsApp polling error:", err); }
     }
