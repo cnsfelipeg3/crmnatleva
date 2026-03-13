@@ -6,7 +6,7 @@ import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Compass, MessageCircle, Map as MapIcon, ListOrdered, CalendarDays, Sparkles,
-  CreditCard, Plane, FileText, ChevronRight, Users, Hotel, Ticket,
+  CreditCard, Plane, FileText, ChevronRight, Users, Hotel, Ticket, CircleDollarSign,
   Clock, Download, Share2, Shield, MapPin, ArrowDown, Star,
 } from "lucide-react";
 import {
