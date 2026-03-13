@@ -649,60 +649,178 @@ export default function LiveChat() {
   // Load messages for selected conversation
   useEffect(() => {
     if (!selectedId) return;
-    if (selectedId.startsWith("wa_")) {
-      // Fetch messages from DB (zapi_messages) since Z-API get-chat-messages doesn't work with multi-device
-      const phone = selectedId.replace("wa_", "");
-      console.log("=== CHAT OPEN ===");
-      console.log("Phone:", phone);
-      supabase.from("zapi_messages").select("*").eq("phone", phone).order("timestamp", { ascending: true }).limit(200).then(({ data: zapiData, error: zapiErr }) => {
-        if (zapiErr) { console.error("Error fetching zapi_messages:", zapiErr); return; }
-        const rawMsgs = zapiData || [];
-        console.log("Mensagens do DB:", rawMsgs.length);
-        const parsed: Message[] = rawMsgs.map(m => {
-          const mediaInfo = extractMediaFromRawData(m.raw_data, m.type || "text");
-          return {
-          id: m.message_id || m.id,
-          conversation_id: selectedId,
-          sender_type: (m.from_me ? "atendente" : "cliente") as "cliente" | "atendente",
-          message_type: (m.type || "text") as MsgType,
-          text: m.text || mediaInfo.caption || "",
-          media_url: mediaInfo.mediaUrl,
-          status: mapZapiStatus(m.status, m.from_me),
-          created_at: String(m.timestamp || m.created_at),
-          };
-        });
+    let cancelled = false;
 
-        for (const p of parsed) lastMsgIdsRef.current.add(p.id);
-        if (parsed.length > 0) {
-          setMessages(prev => {
-            const existing = prev[selectedId] || [];
-            const existingMediaMap = new Map<string, string>();
-            for (const m of existing) {
-              if (m.media_url) existingMediaMap.set(m.id, m.media_url);
+    const normalizeDbMessageType = (value: string | null | undefined): MsgType => {
+      const raw = (value || "text").toLowerCase();
+      if (raw === "ptt") return "audio";
+      if (raw === "image" || raw === "audio" || raw === "video" || raw === "document") return raw;
+      return "text";
+    };
+
+    const normalizeDbStatus = (value: string | null | undefined): MsgStatus => {
+      const raw = (value || "sent").toLowerCase();
+      if (["read", "lido", "seen", "played"].includes(raw)) return "read";
+      if (["delivered", "entregue", "received", "delivery_ack"].includes(raw)) return "delivered";
+      return "sent";
+    };
+
+    const mapDbMessages = (rows: any[], conversationKey: string): Message[] => (
+      (rows || []).map((m: any) => ({
+        id: m.id,
+        conversation_id: conversationKey,
+        sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
+        message_type: normalizeDbMessageType(m.message_type),
+        text: m.text ?? m.content ?? "",
+        media_url: m.media_url || undefined,
+        status: normalizeDbStatus(m.status ?? m.read_status),
+        created_at: String(m.created_at),
+      }))
+    );
+
+    const loadMessages = async () => {
+      try {
+        if (selectedId.startsWith("wa_")) {
+          const phone = selectedId.replace("wa_", "").trim();
+          const phoneCandidates = Array.from(new Set([phone, `${phone}-group`, `${phone}@g.us`]));
+          const dbPhoneCandidates = Array.from(new Set([phone, `+${phone}`, `${phone}@c.us`, `${phone}@g.us`, `${phone}-group`]));
+
+          const [zapiResp, byPhoneResp, byExternalResp] = await Promise.all([
+            supabase
+              .from("zapi_messages" as any)
+              .select("*")
+              .in("phone", phoneCandidates)
+              .order("timestamp", { ascending: false })
+              .limit(1000),
+            supabase.from("conversations").select("id, updated_at").in("phone", dbPhoneCandidates).order("updated_at", { ascending: false }),
+            supabase.from("conversations").select("id, updated_at").eq("external_conversation_id", selectedId).order("updated_at", { ascending: false }),
+          ]);
+
+          if (cancelled) return;
+
+          const zapiMsgs: Message[] = (zapiResp.data || [])
+            .map((m: any) => {
+              const mediaInfo = extractMediaFromRawData(m.raw_data, m.type || "text");
+              return {
+                id: m.message_id || m.id,
+                conversation_id: selectedId,
+                sender_type: (m.from_me ? "atendente" : "cliente") as "cliente" | "atendente",
+                message_type: (m.type || "text") as MsgType,
+                text: m.text || mediaInfo.caption || "",
+                media_url: mediaInfo.mediaUrl,
+                status: mapZapiStatus(m.status, m.from_me),
+                created_at: String(m.timestamp || m.created_at),
+              };
+            })
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+          const candidateConversations = [...(byPhoneResp.data || []), ...(byExternalResp.data || [])]
+            .filter(c => !!c.id)
+            .sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
+
+          const candidateIds = Array.from(new Set(candidateConversations.map(c => c.id)));
+          let fallbackConversationId: string | null = candidateIds[0] || null;
+
+          if (candidateIds.length > 0) {
+            const [{ data: latestLegacyMsg }, { data: latestModernMsg }] = await Promise.all([
+              supabase
+                .from("messages")
+                .select("conversation_id, created_at")
+                .in("conversation_id", candidateIds)
+                .order("created_at", { ascending: false })
+                .limit(1),
+              supabase
+                .from("chat_messages")
+                .select("conversation_id, created_at")
+                .in("conversation_id", candidateIds)
+                .order("created_at", { ascending: false })
+                .limit(1),
+            ]);
+
+            fallbackConversationId = latestLegacyMsg?.[0]?.conversation_id || latestModernMsg?.[0]?.conversation_id || fallbackConversationId;
+          }
+
+          let dbMsgs: Message[] = [];
+          if (fallbackConversationId) {
+            const [legacyResp, modernResp] = await Promise.all([
+              supabase
+                .from("messages")
+                .select("*")
+                .eq("conversation_id", fallbackConversationId)
+                .order("created_at", { ascending: true })
+                .limit(1000),
+              supabase
+                .from("chat_messages")
+                .select("*")
+                .eq("conversation_id", fallbackConversationId)
+                .order("created_at", { ascending: true })
+                .limit(1000),
+            ]);
+
+            const mergedRows = [...(legacyResp.data || []), ...(modernResp.data || [])];
+            const dedupedRows = Array.from(
+              new Map(
+                mergedRows.map((row: any) => [row.id || `${row.created_at}_${row.sender_type}_${row.text || row.content || ""}`, row]),
+              ).values(),
+            ).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+            dbMsgs = mapDbMessages(dedupedRows, selectedId);
+          }
+
+          const mergedMap = new Map<string, Message>();
+          for (const msg of [...dbMsgs, ...zapiMsgs]) {
+            const key = msg.id || `${msg.created_at}_${msg.sender_type}_${msg.message_type}_${msg.text || ""}`;
+            const existing = mergedMap.get(key);
+            if (!existing) {
+              mergedMap.set(key, msg);
+              continue;
             }
-            const merged = parsed.map(m => ({
-              ...m,
-              media_url: m.media_url || existingMediaMap.get(m.id),
-            }));
-            return { ...prev, [selectedId]: merged };
-          });
+            mergedMap.set(key, {
+              ...existing,
+              ...msg,
+              text: msg.text || existing.text,
+              media_url: msg.media_url || existing.media_url,
+            });
+          }
+
+          const mergedMsgs = Array.from(mergedMap.values()).sort(
+            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+          );
+
+          for (const m of mergedMsgs) {
+            if (m.id) lastMsgIdsRef.current.add(m.id);
+          }
+
+          if (!cancelled) {
+            setMessages(prev => ({ ...prev, [selectedId]: mergedMsgs }));
+          }
+          return;
         }
-      });
-    } else if (selectedId.length > 10) {
-      supabase.from("messages").select("*").eq("conversation_id", selectedId).order("created_at").then(({ data }) => {
-        if (data && data.length > 0) {
-          const dbMsgs: Message[] = data.map(m => ({
-            id: m.id, conversation_id: m.conversation_id,
-            sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
-            message_type: m.message_type as MsgType,
-            text: m.text || "", media_url: m.media_url || undefined,
-            status: m.status as MsgStatus, created_at: m.created_at,
-          }));
-          setMessages(prev => ({ ...prev, [selectedId]: dbMsgs }));
+
+        if (selectedId.length > 10) {
+          const [legacyResp, modernResp] = await Promise.all([
+            supabase.from("messages").select("*").eq("conversation_id", selectedId).order("created_at", { ascending: true }),
+            supabase.from("chat_messages").select("*").eq("conversation_id", selectedId).order("created_at", { ascending: true }),
+          ]);
+
+          if (!cancelled) {
+            const mergedRows = [...(legacyResp.data || []), ...(modernResp.data || [])];
+            const dedupedRows = Array.from(
+              new Map(mergedRows.map((row: any) => [row.id || `${row.created_at}_${row.sender_type}_${row.text || row.content || ""}`, row])).values(),
+            ).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            setMessages(prev => ({ ...prev, [selectedId]: mapDbMessages(dedupedRows, selectedId) }));
+          }
         }
-      });
-    }
-  }, [selectedId, parseZapiMessage]);
+      } catch (error) {
+        console.error("Erro ao carregar histórico da conversa:", error);
+      }
+    };
+
+    void loadMessages();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, extractMediaFromRawData]);
 
   // Realtime subscription for new messages and conversations
   useEffect(() => {
