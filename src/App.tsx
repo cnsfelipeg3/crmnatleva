@@ -240,6 +240,7 @@ function AppRoutes() {
         <Route path="/portal/modelo" element={<PortalDemoTrip />} />
         <Route path="/portal/financeiro" element={<PortalFinance />} />
         <Route path="/portal/nova-cotacao" element={<PortalNewQuote />} />
+        <Route path="/portal/perfil" element={<PortalProfile />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
