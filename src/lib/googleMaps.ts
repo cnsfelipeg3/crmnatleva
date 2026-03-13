@@ -6,7 +6,7 @@ let initialized = false;
 
 function ensureInit() {
   if (!initialized) {
-    setOptions({ key: API_KEY, version: "weekly" });
+    setOptions({ key: API_KEY });
     initialized = true;
   }
 }
