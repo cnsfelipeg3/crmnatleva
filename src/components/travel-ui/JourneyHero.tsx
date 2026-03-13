@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Calendar, Clock, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import patagoniaImg from "@/assets/destination-patagonia.jpg";
 
 /* ── Helpers ── */
 const fmtShort = (d: string | null) => {
@@ -17,7 +18,7 @@ const destImages: Record<string, string> = {
   CUN: "https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=2560&h=1440&fit=crop&q=95&auto=format",
   EZE: "https://images.unsplash.com/photo-1589909202802-8f4aadce1849?w=2560&h=1440&fit=crop&q=95&auto=format",
   MLE: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=2560&h=1440&fit=crop&q=95&auto=format",
-  FTE: "https://images.unsplash.com/photo-1531761535209-180857e67b1e?w=2560&h=1440&fit=crop&q=95&auto=format",
+  FTE: patagoniaImg,
   DXB: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=2560&h=1440&fit=crop&q=95&auto=format",
   JFK: "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=2560&h=1440&fit=crop&q=95&auto=format",
   LAX: "https://images.unsplash.com/photo-1534190760961-74e8c1c5c3da?w=2560&h=1440&fit=crop&q=95&auto=format",
