@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NODE_CATEGORIES, type NodeDefinition } from "./nodeTypes";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,10 +10,50 @@ const CAT_ICONS: Record<string, React.ElementType> = {
   UserCog: icons.UserCog, Wrench: icons.Wrench, Network: icons.Network,
 };
 
+function darkenHex(hex: string, factor: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgb(${Math.round(r * factor)}, ${Math.round(g * factor)}, ${Math.round(b * factor)})`;
+}
+
+function useIsDark() {
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+  useEffect(() => {
+    const obs = new MutationObserver(() => setDark(document.documentElement.classList.contains("dark")));
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+  return dark;
+}
+
 function NodeIcon({ name, color, size = 18 }: { name: string; color: string; size?: number }) {
   const Icon = (icons as any)[name];
-  if (!Icon) return <Zap size={size} style={{ color }} />;
-  return <Icon size={size} style={{ color }} />;
+  const isDark = useIsDark();
+  const displayColor = isDark ? color : darkenHex(color, 0.65);
+  if (!Icon) return <Zap size={size} style={{ color: displayColor }} />;
+  return <Icon size={size} style={{ color: displayColor }} />;
+}
+
+function NodeIconBox({ color, children }: { color: string; children: React.ReactNode }) {
+  const isDark = useIsDark();
+  const bgAlpha = isDark ? "25" : "15";
+  const bgAlpha2 = isDark ? "40" : "25";
+  const borderAlpha = isDark ? "50" : "40";
+  const shadowAlpha = isDark ? "15" : "08";
+
+  return (
+    <div
+      className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-all group-hover:scale-110 group-hover:shadow-md"
+      style={{
+        background: `linear-gradient(135deg, ${color}${bgAlpha}, ${color}${bgAlpha2})`,
+        border: `1.5px solid ${color}${borderAlpha}`,
+        boxShadow: `0 2px 8px ${color}${shadowAlpha}`,
+      }}
+    >
+      {children}
+    </div>
+  );
 }
 
 interface Props {
@@ -79,16 +119,9 @@ export function FlowNodeLibrary({ onDragStart }: Props) {
                         }}
                         className="flex items-center gap-3 px-2.5 py-2.5 rounded-xl cursor-grab hover:bg-secondary/70 active:cursor-grabbing active:scale-[0.97] transition-all group border border-transparent hover:border-border/50"
                       >
-                        <div
-                          className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-all group-hover:scale-110 group-hover:shadow-md"
-                          style={{
-                            background: `linear-gradient(135deg, ${node.color}25, ${node.color}40)`,
-                            border: `1.5px solid ${node.color}50`,
-                            boxShadow: `0 2px 8px ${node.color}15`,
-                          }}
-                        >
+                        <NodeIconBox color={node.color}>
                           <NodeIcon name={node.icon} color={node.color} size={18} />
-                        </div>
+                        </NodeIconBox>
                         <div className="min-w-0 flex-1">
                           <p className="text-[11px] font-semibold text-foreground truncate leading-tight">{node.label}</p>
                           <p className="text-[10px] text-muted-foreground truncate leading-tight mt-0.5">{node.description}</p>
