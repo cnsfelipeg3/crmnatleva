@@ -760,7 +760,7 @@ function OperacaoInboxInner() {
 
     checkAndStartPolling();
     return () => { if (whatsappPollRef.current) clearInterval(whatsappPollRef.current); };
-  }, [selectedId, extractMediaFromRawData]);
+  }, [selectedId, extractMediaFromRawData, getZapiPhoneCandidates]);
 
   const filteredConversations = (() => {
     const filtered = conversations.filter(c => {
