@@ -98,3 +98,6 @@ verify_jwt = false
 
 [functions.invite-trip-companion]
 verify_jwt = false
+
+[functions.places-search]
+verify_jwt = false
