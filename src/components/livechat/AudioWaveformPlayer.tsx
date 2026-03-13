@@ -181,4 +181,4 @@ export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlaye
       </div>
     </div>
   );
-}
+});
