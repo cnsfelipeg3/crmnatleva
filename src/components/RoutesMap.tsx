@@ -1,8 +1,7 @@
-import { useEffect, useRef } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { useEffect, useRef, useCallback } from "react";
 import { iataToLabel } from "@/lib/iataUtils";
 import { formatDateBR } from "@/lib/dateFormat";
+import { loadGoogleMapsCore } from "@/lib/googleMaps";
 
 const AIRPORT_COORDS: Record<string, [number, number]> = {
   GRU: [-23.4356, -46.4731], CGH: [-23.6261, -46.6564], GIG: [-22.8090, -43.2506],
@@ -38,6 +37,9 @@ const AIRPORT_COORDS: Record<string, [number, number]> = {
   ATH: [37.9364, 23.9445], WAW: [52.1672, 20.9679], ARN: [59.6519, 17.9186],
   GVA: [46.2381, 6.1089], BRU: [50.9014, 4.4844], EDI: [55.9500, -3.3725],
   JNB: [-26.1392, 28.2460], CPT: [-33.9649, 18.6017], NBO: [-1.3192, 36.9278],
+  FTE: [-51.6092, -69.3125], AEP: [-34.5592, -58.4156],
+  FLR: [43.8100, 11.2050], SPU: [43.5389, 16.2980], DBV: [42.5614, 18.2682],
+  PMI: [39.5517, 2.7388],
 };
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -62,62 +64,93 @@ interface Route {
 interface RoutesMapProps {
   routes: Route[];
   height?: string;
-  /** Sales data for drill-down popups */
   sales?: RouteSale[];
-  /** Called when user clicks a sale in a popup */
   onSaleClick?: (saleId: string) => void;
+}
+
+/* Dark map style */
+const DARK_STYLE: google.maps.MapTypeStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#1d2c4d" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8ec3b9" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#1a3646" }] },
+  { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#4b6878" }] },
+  { featureType: "water", elementType: "geometry.fill", stylers: [{ color: "#0e1626" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#4e6d70" }] },
+  { featureType: "road", stylers: [{ visibility: "off" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+];
+
+function getCurvedPath(from: google.maps.LatLngLiteral, to: google.maps.LatLngLiteral, segments = 40): google.maps.LatLngLiteral[] {
+  const points: google.maps.LatLngLiteral[] = [];
+  const midLat = (from.lat + to.lat) / 2;
+  const midLng = (from.lng + to.lng) / 2;
+  const dx = to.lng - from.lng;
+  const dy = to.lat - from.lat;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const curvature = Math.min(dist * 0.2, 8);
+  const perpLat = midLat + curvature * (-dx / (dist + 0.001));
+  const perpLng = midLng + curvature * (dy / (dist + 0.001));
+
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const lat = (1 - t) * (1 - t) * from.lat + 2 * (1 - t) * t * perpLat + t * t * to.lat;
+    const lng = (1 - t) * (1 - t) * from.lng + 2 * (1 - t) * t * perpLng + t * t * to.lng;
+    points.push({ lat, lng });
+  }
+  return points;
 }
 
 export default function RoutesMap({ routes, height = "400px", sales = [], onSaleClick }: RoutesMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const overlaysRef = useRef<(google.maps.Polyline | google.maps.Marker | google.maps.InfoWindow)[]>([]);
+  const onSaleClickRef = useRef(onSaleClick);
+  onSaleClickRef.current = onSaleClick;
 
   const validRoutes = routes.filter(
     r => AIRPORT_COORDS[r.origin] && AIRPORT_COORDS[r.destination]
   );
 
+  // Init map
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    if (!containerRef.current) return;
+    let cancelled = false;
 
-    const map = L.map(containerRef.current, {
-      scrollWheelZoom: true,
-      zoomControl: true,
-      dragging: true,
-      doubleClickZoom: true,
-      touchZoom: true,
-      boxZoom: true,
-    }).setView([-5, -30], 3);
+    loadGoogleMapsCore().then(({ Map }) => {
+      if (cancelled || !containerRef.current) return;
 
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; <a href="https://carto.com">CARTO</a>',
-      maxZoom: 18,
-    }).addTo(map);
+      const map = new Map(containerRef.current, {
+        center: { lat: -5, lng: -30 },
+        zoom: 3,
+        disableDefaultUI: true,
+        zoomControl: true,
+        styles: DARK_STYLE,
+        backgroundColor: "#0e1626",
+      });
+      mapRef.current = map;
+    });
 
-    mapRef.current = map;
-
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
+    return () => { cancelled = true; };
   }, []);
 
-  // Store onSaleClick in ref so popup event handlers always get latest
-  const onSaleClickRef = useRef(onSaleClick);
-  onSaleClickRef.current = onSaleClick;
-
+  // Draw routes & markers
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    map.eachLayer(layer => {
-      if (!(layer instanceof L.TileLayer)) map.removeLayer(layer);
+    // Clear old overlays
+    overlaysRef.current.forEach(o => {
+      if ("setMap" in o) (o as any).setMap(null);
+      if ("close" in o) (o as any).close();
     });
+    overlaysRef.current = [];
 
-    // Build airport data with associated sales
-    const airportData: Record<string, { count: number; revenue: number; salesList: RouteSale[] }> = {};
     const maxCount = Math.max(...validRoutes.map(r => r.count), 1);
+    const bounds = new google.maps.LatLngBounds();
 
-    // Initialize airports from routes
+    // Airport data
+    const airportData: Record<string, { count: number; revenue: number; salesList: RouteSale[] }> = {};
     validRoutes.forEach(r => {
       if (!airportData[r.origin]) airportData[r.origin] = { count: 0, revenue: 0, salesList: [] };
       if (!airportData[r.destination]) airportData[r.destination] = { count: 0, revenue: 0, salesList: [] };
@@ -126,7 +159,6 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
       airportData[r.destination].revenue += r.revenue;
     });
 
-    // Associate sales to airports
     sales.forEach(sale => {
       if (sale.origin_iata && airportData[sale.origin_iata]) {
         const list = airportData[sale.origin_iata].salesList;
@@ -138,124 +170,110 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
       }
     });
 
-    // Draw route lines
+    // Draw curved routes
     validRoutes.forEach(r => {
       const o = AIRPORT_COORDS[r.origin];
       const d = AIRPORT_COORDS[r.destination];
-      const opacity = 0.3 + (r.count / maxCount) * 0.7;
-      const weight = 1 + (r.count / maxCount) * 4;
+      const opacity = 0.3 + (r.count / maxCount) * 0.6;
+      const weight = 1.5 + (r.count / maxCount) * 3.5;
 
-      const midLat = (o[0] + d[0]) / 2;
-      const midLng = (o[1] + d[1]) / 2;
-      const dx = d[1] - o[1];
-      const dy = d[0] - o[0];
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const curvature = dist * 0.15;
-      const curvedMid: [number, number] = [midLat + curvature * 0.3, midLng];
+      const path = getCurvedPath(
+        { lat: o[0], lng: o[1] },
+        { lat: d[0], lng: d[1] }
+      );
 
-      L.polyline([o, curvedMid, d], {
-        color: "hsl(160, 60%, 50%)",
-        weight,
-        opacity,
-        smoothFactor: 3,
-      }).bindPopup(
-        `<div style="font-family: sans-serif; font-size: 12px;">
-          <strong>${iataToLabel(r.origin)} → ${iataToLabel(r.destination)}</strong><br/>
-          <span>${r.count} venda(s)</span><br/>
-          <span>Receita: ${fmt(r.revenue)}</span>
-        </div>`
-      ).addTo(map);
+      const polyline = new google.maps.Polyline({
+        path,
+        strokeColor: "#34d399",
+        strokeWeight: weight,
+        strokeOpacity: opacity,
+        geodesic: false,
+        map,
+      });
+      overlaysRef.current.push(polyline);
     });
 
-    // Draw airport markers with drill-down popups
+    // Airport markers
     const maxAirport = Math.max(...Object.values(airportData).map(a => a.count), 1);
 
     Object.entries(airportData).forEach(([iata, data]) => {
       const coords = AIRPORT_COORDS[iata];
       if (!coords) return;
-      const radius = 4 + (data.count / maxAirport) * 12;
+      const pos = { lat: coords[0], lng: coords[1] };
+      bounds.extend(pos);
 
-      const marker = L.circleMarker(coords, {
-        radius,
-        fillColor: "hsl(38, 92%, 50%)",
-        fillOpacity: 0.85,
-        color: "hsl(160, 60%, 30%)",
-        weight: 1.5,
+      const size = 10 + (data.count / maxAirport) * 20;
+
+      const marker = new google.maps.Marker({
+        position: pos,
+        map,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: size,
+          fillColor: "#f59e0b",
+          fillOpacity: 0.85,
+          strokeColor: "#34d399",
+          strokeWeight: 2,
+        },
+        zIndex: data.count,
       });
 
-      // Build popup content
+      // InfoWindow
       const hasSales = data.salesList.length > 0;
-      const salesRows = data.salesList.slice(0, 15).map(sale => {
+      const salesRows = data.salesList.slice(0, 10).map(sale => {
         const route = [sale.origin_iata, sale.destination_iata].filter(Boolean).join(" → ");
-        return `<tr class="map-sale-row" data-sale-id="${sale.id}" style="cursor:pointer;">
-          <td style="padding:3px 6px;font-size:11px;color:#60a5fa;text-decoration:underline;">${sale.display_id || sale.id.slice(0, 8)}</td>
-          <td style="padding:3px 6px;font-size:11px;">${sale.name || "—"}</td>
-          <td style="padding:3px 6px;font-size:11px;">${route}</td>
-          <td style="padding:3px 6px;font-size:11px;">${sale.departure_date ? formatDateBR(sale.departure_date) : "—"}</td>
-          <td style="padding:3px 6px;font-size:11px;text-align:right;">${fmt(sale.received_value || 0)}</td>
+        return `<tr data-sale-id="${sale.id}" style="cursor:pointer;transition:background 0.15s;" onmouseover="this.style.background='rgba(52,211,153,0.1)'" onmouseout="this.style.background=''">
+          <td style="padding:4px 6px;font-size:11px;color:#60a5fa;text-decoration:underline;">${sale.display_id || sale.id.slice(0, 8)}</td>
+          <td style="padding:4px 6px;font-size:11px;color:#e5e7eb;">${sale.name || "—"}</td>
+          <td style="padding:4px 6px;font-size:11px;color:#e5e7eb;">${route}</td>
+          <td style="padding:4px 6px;font-size:11px;text-align:right;color:#34d399;">${fmt(sale.received_value || 0)}</td>
         </tr>`;
       }).join("");
 
-      const moreText = data.salesList.length > 15 ? `<p style="font-size:10px;color:#888;margin-top:4px;">+ ${data.salesList.length - 15} mais...</p>` : "";
-
-      const popupContent = `
-        <div style="font-family:sans-serif;min-width:${hasSales ? '380px' : '140px'};max-width:480px;">
-          <div style="font-size:13px;font-weight:700;margin-bottom:6px;">${iataToLabel(iata)}</div>
-          <div style="font-size:11px;color:#aaa;margin-bottom:8px;">${data.count} voo(s) · Receita: ${fmt(data.revenue)}</div>
+      const infoContent = `
+        <div style="font-family:system-ui;min-width:${hasSales ? '340px' : '160px'};color:#e5e7eb;">
+          <div style="font-size:14px;font-weight:700;margin-bottom:4px;color:#f59e0b;">${iataToLabel(iata)}</div>
+          <div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">${data.count} voo(s) · Receita: ${fmt(data.revenue)}</div>
           ${hasSales ? `
-            <table style="width:100%;border-collapse:collapse;border-top:1px solid #333;">
-              <thead>
-                <tr style="background:#1a1a2e;">
-                  <th style="padding:4px 6px;font-size:10px;text-align:left;color:#888;font-weight:600;">ID</th>
-                  <th style="padding:4px 6px;font-size:10px;text-align:left;color:#888;font-weight:600;">Cliente</th>
-                  <th style="padding:4px 6px;font-size:10px;text-align:left;color:#888;font-weight:600;">Rota</th>
-                  <th style="padding:4px 6px;font-size:10px;text-align:left;color:#888;font-weight:600;">Data</th>
-                  <th style="padding:4px 6px;font-size:10px;text-align:right;color:#888;font-weight:600;">Valor</th>
-                </tr>
-              </thead>
+            <table style="width:100%;border-collapse:collapse;border-top:1px solid #374151;">
+              <thead><tr style="background:rgba(0,0,0,0.2);">
+                <th style="padding:4px 6px;font-size:10px;text-align:left;color:#6b7280;">ID</th>
+                <th style="padding:4px 6px;font-size:10px;text-align:left;color:#6b7280;">Cliente</th>
+                <th style="padding:4px 6px;font-size:10px;text-align:left;color:#6b7280;">Rota</th>
+                <th style="padding:4px 6px;font-size:10px;text-align:right;color:#6b7280;">Valor</th>
+              </tr></thead>
               <tbody>${salesRows}</tbody>
             </table>
-            ${moreText}
           ` : ""}
         </div>
       `;
 
-      const popup = L.popup({ maxWidth: 500, className: "map-drilldown-popup" }).setContent(popupContent);
-      marker.bindPopup(popup);
+      const infoWindow = new google.maps.InfoWindow({ content: infoContent });
+      overlaysRef.current.push(infoWindow);
 
-      // Add click handler for sale rows after popup opens
-      marker.on("popupopen", () => {
-        const container = popup.getElement();
-        if (!container) return;
-        const rows = container.querySelectorAll(".map-sale-row");
-        rows.forEach(row => {
-          row.addEventListener("click", () => {
-            const saleId = (row as HTMLElement).dataset.saleId;
-            if (saleId && onSaleClickRef.current) {
-              onSaleClickRef.current(saleId);
-            }
-          });
-          // Hover effect
-          (row as HTMLElement).addEventListener("mouseenter", () => {
-            (row as HTMLElement).style.background = "rgba(96,165,250,0.1)";
-          });
-          (row as HTMLElement).addEventListener("mouseleave", () => {
-            (row as HTMLElement).style.background = "";
+      marker.addListener("click", () => {
+        overlaysRef.current.forEach(o => { if (o instanceof google.maps.InfoWindow) o.close(); });
+        infoWindow.open(map, marker);
+
+        // Attach sale click handlers after DOM render
+        google.maps.event.addListenerOnce(infoWindow, "domready", () => {
+          const container = document.querySelector(".gm-style-iw");
+          if (!container) return;
+          container.querySelectorAll("tr[data-sale-id]").forEach(row => {
+            row.addEventListener("click", () => {
+              const saleId = (row as HTMLElement).dataset.saleId;
+              if (saleId && onSaleClickRef.current) onSaleClickRef.current(saleId);
+            });
           });
         });
       });
 
-      marker.addTo(map);
+      overlaysRef.current.push(marker);
     });
 
     // Fit bounds
-    const points: [number, number][] = [];
-    validRoutes.forEach(r => {
-      points.push(AIRPORT_COORDS[r.origin]);
-      points.push(AIRPORT_COORDS[r.destination]);
-    });
-    if (points.length >= 2) {
-      map.fitBounds(points as L.LatLngBoundsExpression, { padding: [40, 40] });
+    if (Object.keys(airportData).length >= 2) {
+      map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
     }
   }, [validRoutes, sales]);
 
