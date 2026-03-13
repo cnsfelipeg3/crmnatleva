@@ -177,7 +177,7 @@ export default function PlacesSearchCard({
         user_ratings_total: 0,
         types: ["lodging"],
         photo_reference: null,
-        location: Number.isFinite(item.lat) && Number.isFinite(item.lng)
+        location: Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng))
           ? { lat: Number(item.lat), lng: Number(item.lng) }
           : null,
         price_level: null,
