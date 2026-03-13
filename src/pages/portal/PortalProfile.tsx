@@ -786,25 +786,29 @@ function MultiOptionPicker({ label, icon: Icon, options, value, field, editing, 
 
   return (
     <div>
-      <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+      <label className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
         {Icon && <Icon className="h-3 w-3" />} {label}
-        <span className="text-[10px] text-muted-foreground/60">(múltipla escolha)</span>
+        <span className="text-[10px] text-muted-foreground/60 ml-1">(múltipla escolha)</span>
       </label>
       <div className="flex flex-wrap gap-2">
-        {options.map(opt => (
-          <button
-            key={opt}
-            disabled={!editing}
-            onClick={() => toggle(opt)}
-            className={`py-2 px-3 rounded-full text-xs font-medium transition-all ${
-              selected.includes(opt)
-                ? "bg-accent text-accent-foreground shadow-md"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-            } ${!editing ? "cursor-default" : "cursor-pointer"}`}
-          >
-            {opt}
-          </button>
-        ))}
+        {options.map(opt => {
+          const isActive = selected.includes(opt);
+          return (
+            <motion.button
+              key={opt}
+              disabled={!editing}
+              onClick={() => toggle(opt)}
+              whileTap={editing ? { scale: 0.95 } : undefined}
+              className={`py-2 px-3.5 rounded-xl text-xs font-medium transition-all border ${
+                isActive
+                  ? "bg-accent text-accent-foreground border-accent shadow-md shadow-accent/20"
+                  : "bg-card border-border/60 text-muted-foreground hover:border-accent/40 hover:text-foreground"
+              } ${!editing ? "cursor-default opacity-80" : "cursor-pointer"}`}
+            >
+              {opt}
+            </motion.button>
+          );
+        })}
       </div>
     </div>
   );
