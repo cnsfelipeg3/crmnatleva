@@ -2,9 +2,10 @@
  * PlacesSearchCard — Advanced Google Places search + photo curation for proposals.
  * Three-step flow: Search → Review & Curate Photos → Confirm
  */
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { searchPlaces, getPlaceDetails, getPhotoUrl, type PlaceSearchResult, type PlaceDetailsResult } from "@/lib/placesApi";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
