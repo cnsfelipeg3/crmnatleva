@@ -357,8 +357,8 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
 
           {/* ═══ QUICK ACTIONS ═══ */}
           <div className="flex gap-2">
-            <Button onClick={() => setAddExpenseOpen(true)} className="flex-1 sm:flex-none gap-2 rounded-xl">
-              <Plus className="h-4 w-4" /> Adicionar Despesa
+            <Button onClick={() => setAddExpenseOpen(true)} className="flex-1 sm:flex-none gap-2 rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold shadow-[0_0_16px_-4px_hsl(var(--accent)/0.35)] hover:shadow-[0_0_24px_-4px_hsl(var(--accent)/0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 h-12 text-sm">
+              <Plus className="h-5 w-5" /> Adicionar Despesa
             </Button>
           </div>
 
