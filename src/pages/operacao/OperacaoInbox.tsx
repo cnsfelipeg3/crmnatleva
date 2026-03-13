@@ -41,6 +41,7 @@ type MsgStatus = "sent" | "delivered" | "read";
 
 interface Conversation {
   id: string;
+  db_id?: string;
   phone: string;
   contact_name: string;
   stage: Stage;
