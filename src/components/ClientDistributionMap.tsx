@@ -273,7 +273,88 @@ export default function ClientDistributionMap() {
     }
   }, [fallbackMode, filtered, cityData]);
 
-  const handleZoomIn = () => { const z = mapRef.current?.getZoom(); if (z != null) mapRef.current?.setZoom(z + 1); };
+  // Init Leaflet fallback
+  useEffect(() => {
+    if (!fallbackMode || !containerRef.current || leafletMapRef.current) return;
+
+    containerRef.current.innerHTML = "";
+
+    const map = L.map(containerRef.current, {
+      scrollWheelZoom: true,
+      zoomControl: false,
+      dragging: true,
+    }).setView([-14, -51], 4);
+
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; <a href="https://carto.com">CARTO</a>',
+      maxZoom: 18,
+    }).addTo(map);
+
+    leafletMapRef.current = map;
+    leafletLayerRef.current = L.layerGroup().addTo(map);
+
+    return () => {
+      map.remove();
+      leafletMapRef.current = null;
+      leafletLayerRef.current = null;
+    };
+  }, [fallbackMode]);
+
+  // Draw fallback markers
+  useEffect(() => {
+    if (!fallbackMode) return;
+
+    const map = leafletMapRef.current;
+    const layer = leafletLayerRef.current;
+    if (!map || !layer || cityData.length === 0) return;
+
+    layer.clearLayers();
+
+    const maxClients = Math.max(...filtered.map(c => c.clients), 1);
+    const bounds: L.LatLngTuple[] = [];
+
+    filtered.forEach(c => {
+      const coords = CITY_COORDS[c.city];
+      if (!coords) return;
+
+      const radius = 5 + (c.clients / maxClients) * 10;
+      bounds.push(coords);
+
+      const marker = L.circleMarker(coords, {
+        radius,
+        fillColor: "#22c55e",
+        color: "#14532d",
+        weight: 1,
+        fillOpacity: 0.7,
+      }).addTo(layer);
+
+      marker.bindPopup(
+        `<div style="font-family:system-ui;min-width:170px;">` +
+        `<strong>${c.city}</strong><br/>` +
+        `${STATE_NAMES[c.state] || c.state}<br/>` +
+        `Clientes: ${c.clients}<br/>` +
+        `Vendas: ${c.sales}<br/>` +
+        `Receita: ${fmt(c.revenue)}` +
+        `</div>`
+      );
+    });
+
+    if (bounds.length >= 2) {
+      map.fitBounds(bounds, { padding: [30, 30] });
+    } else if (bounds.length === 1) {
+      map.setView(bounds[0], 8);
+    }
+  }, [fallbackMode, filtered, cityData]);
+
+  const handleZoomIn = () => {
+    if (fallbackMode) {
+      const z = leafletMapRef.current?.getZoom();
+      if (z != null) leafletMapRef.current?.setZoom(z + 1);
+      return;
+    }
+    const z = mapRef.current?.getZoom();
+    if (z != null) mapRef.current?.setZoom(z + 1);
+  };
   const handleZoomOut = () => { const z = mapRef.current?.getZoom(); if (z != null) mapRef.current?.setZoom(z - 1); };
   const handleResetView = () => { mapRef.current?.setCenter({ lat: -14, lng: -51 }); mapRef.current?.setZoom(4); };
   const handleLocate = useCallback(() => {
