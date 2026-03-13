@@ -5,7 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { icons, Search, ChevronDown, ChevronRight, GripVertical, Zap } from "lucide-react";
 
 const CAT_ICONS: Record<string, React.ElementType> = {
-  Zap: icons.Zap, MessageSquare: icons.MessageSquare, HelpCircle: icons.HelpCircle,
+  Zap: icons.Zap, MessageSquare: icons.MessageSquare, HelpCircle: icons.CircleHelp,
   GitBranch: icons.GitBranch, Cog: icons.Cog, Brain: icons.Brain,
   UserCog: icons.UserCog, Wrench: icons.Wrench, Network: icons.Network,
 };
