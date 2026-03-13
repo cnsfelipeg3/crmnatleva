@@ -266,17 +266,17 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
 
     let cancelled = false;
 
-    loadGoogleMaps().then((google) => {
+    loadGoogleMaps().then(() => {
       if (cancelled || !mapContainerRef.current) return;
 
-      const map = new google.maps.Map(mapContainerRef.current, {
+      const map = new window.google.maps.Map(mapContainerRef.current, {
         center: { lat: -15, lng: -50 },
         zoom: 3,
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
         zoomControl: true,
-        zoomControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT },
+        zoomControlOptions: { position: window.google.maps.ControlPosition.TOP_RIGHT },
         gestureHandling: "greedy",
         styles: [
           { featureType: "poi", elementType: "labels", stylers: [{ visibility: "off" }] },
@@ -286,7 +286,7 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
         ],
       });
 
-      infoWindowRef.current = new google.maps.InfoWindow();
+      infoWindowRef.current = new window.google.maps.InfoWindow();
       mapRef.current = map;
       setMapReady(true);
     }).catch((err) => {
