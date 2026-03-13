@@ -1550,10 +1550,19 @@ function OperacaoInboxInner() {
                   );
                 })}
                 {filteredConversations.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-12 text-center px-4">
-                    <MessageSquare className="h-10 w-10 text-muted-foreground/20 mb-3" />
-                    <p className="text-sm text-muted-foreground">{searchQuery ? "Nenhuma conversa encontrada" : "Nenhuma conversa ainda"}</p>
-                    <p className="text-xs text-muted-foreground/60 mt-1">{searchQuery ? "Tente buscar por outro termo" : "As mensagens recebidas aparecerão aqui"}</p>
+                  <div className="flex flex-col items-center justify-center min-h-[300px] h-full text-center px-4">
+                    {!chatsLoadedRef.current ? (
+                      <>
+                        <Loader2 className="h-8 w-8 text-muted-foreground/30 mb-3 animate-spin" />
+                        <p className="text-sm text-muted-foreground">Carregando conversas...</p>
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquare className="h-10 w-10 text-muted-foreground/20 mb-3" />
+                        <p className="text-sm text-muted-foreground">{searchQuery ? "Nenhuma conversa encontrada" : "Nenhuma conversa ainda"}</p>
+                        <p className="text-xs text-muted-foreground/60 mt-1">{searchQuery ? "Tente buscar por outro termo" : "As mensagens recebidas aparecerão aqui"}</p>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
