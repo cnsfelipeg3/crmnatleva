@@ -4,17 +4,19 @@
  */
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   Search, Loader2, Star, MapPin, Phone, Globe, Image as ImageIcon,
   X, ChevronLeft, ChevronRight, RotateCcw, Check, Camera, Upload,
   GripVertical, Eye, Crown, CheckSquare, Square, Maximize2,
-  Info, Sparkles,
+  Info, Sparkles, FolderOpen, Save,
 } from "lucide-react";
 
 /* ═══ Types ═══ */
