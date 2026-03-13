@@ -1324,11 +1324,13 @@ function AddMemberDialog({ open, onClose, groupId, existingMembers, passengers, 
                       key={i}
                       onClick={() => !alreadyIn && addPassenger(pax)}
                       disabled={alreadyIn}
-                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                        alreadyIn ? "opacity-40 cursor-not-allowed border-border/20" : "border-border/30 hover:border-accent/30 hover:text-accent"
+                      className={`px-3.5 py-2.5 rounded-xl text-xs font-bold border-2 transition-all duration-200 ${
+                        alreadyIn
+                          ? "opacity-40 cursor-not-allowed border-border/15 bg-muted/10"
+                          : "border-border/20 bg-card/50 backdrop-blur-sm hover:border-accent/35 hover:text-accent hover:bg-accent/5 hover:shadow-[0_0_10px_-4px_hsl(var(--accent)/0.2)]"
                       }`}
                     >
-                      {n} {alreadyIn && "✓"}
+                      {n} {alreadyIn && <Check className="inline h-3 w-3 text-accent ml-1" />}
                     </button>
                   );
                 })}
