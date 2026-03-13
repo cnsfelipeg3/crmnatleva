@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
       }
 
       for (const sale of salesRes.data || []) {
-        const pub = published?.find((p: any) => p.sale_id === sale.id);
+        const pub = (published || []).find((p: any) => p.sale_id === sale.id);
         const segs = (segRes.data || []).filter((s: any) => s.sale_id === sale.id);
         const costs = (costRes.data || []).filter((c: any) => c.sale_id === sale.id);
         const recvs = (recvRes.data || []).filter((r: any) => r.sale_id === sale.id);
