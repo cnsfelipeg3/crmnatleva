@@ -40,7 +40,7 @@ export default function AppLayout() {
           </SheetContent>
         </Sheet>
 
-        <main className="flex-1 overflow-auto">
+        <main className={cn("flex-1 min-h-0", isImmersive ? "overflow-hidden" : "overflow-auto")}>
           <Outlet />
         </main>
       </div>
