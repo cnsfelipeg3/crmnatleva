@@ -2880,6 +2880,82 @@ export type Database = {
         }
         Relationships: []
       }
+      portal_budget_categories: {
+        Row: {
+          budget_id: string
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          planned_amount: number | null
+          sort_order: number | null
+        }
+        Insert: {
+          budget_id: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          planned_amount?: number | null
+          sort_order?: number | null
+        }
+        Update: {
+          budget_id?: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          planned_amount?: number | null
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_budget_categories_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "portal_travel_budgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_cash_tracking: {
+        Row: {
+          budget_id: string
+          created_at: string
+          currency: string | null
+          description: string | null
+          id: string
+          initial_amount: number | null
+        }
+        Insert: {
+          budget_id: string
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          id?: string
+          initial_amount?: number | null
+        }
+        Update: {
+          budget_id?: string
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          id?: string
+          initial_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_cash_tracking_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "portal_travel_budgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portal_checklist_items: {
         Row: {
           category: string
@@ -2939,6 +3015,73 @@ export type Database = {
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_expenses: {
+        Row: {
+          amount: number
+          budget_id: string
+          card_id: string | null
+          category_id: string | null
+          converted_amount: number | null
+          created_at: string
+          currency: string | null
+          description: string
+          expense_date: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+        }
+        Insert: {
+          amount?: number
+          budget_id: string
+          card_id?: string | null
+          category_id?: string | null
+          converted_amount?: number | null
+          created_at?: string
+          currency?: string | null
+          description: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+        }
+        Update: {
+          amount?: number
+          budget_id?: string
+          card_id?: string | null
+          category_id?: string | null
+          converted_amount?: number | null
+          created_at?: string
+          currency?: string | null
+          description?: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_expenses_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "portal_travel_budgets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_expenses_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "portal_travel_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "portal_budget_categories"
             referencedColumns: ["id"]
           },
         ]
@@ -3062,6 +3205,95 @@ export type Database = {
             columns: ["sale_id"]
             isOneToOne: true
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_travel_budgets: {
+        Row: {
+          client_id: string
+          created_at: string
+          currency: string | null
+          exchange_rate: number | null
+          foreign_currency: string | null
+          id: string
+          sale_id: string
+          total_budget: number | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          currency?: string | null
+          exchange_rate?: number | null
+          foreign_currency?: string | null
+          id?: string
+          sale_id: string
+          total_budget?: number | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          currency?: string | null
+          exchange_rate?: number | null
+          foreign_currency?: string | null
+          id?: string
+          sale_id?: string
+          total_budget?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_travel_budgets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_travel_budgets_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_travel_cards: {
+        Row: {
+          brand: string | null
+          budget_id: string
+          card_type: string | null
+          created_at: string
+          id: string
+          last_digits: string | null
+          nickname: string
+        }
+        Insert: {
+          brand?: string | null
+          budget_id: string
+          card_type?: string | null
+          created_at?: string
+          id?: string
+          last_digits?: string | null
+          nickname: string
+        }
+        Update: {
+          brand?: string | null
+          budget_id?: string
+          card_type?: string | null
+          created_at?: string
+          id?: string
+          last_digits?: string | null
+          nickname?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_travel_cards_budget_id_fkey"
+            columns: ["budget_id"]
+            isOneToOne: false
+            referencedRelation: "portal_travel_budgets"
             referencedColumns: ["id"]
           },
         ]
