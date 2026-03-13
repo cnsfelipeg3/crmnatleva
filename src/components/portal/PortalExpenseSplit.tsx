@@ -962,8 +962,8 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
           {step === "form" && (
             <motion.div key="form" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
               {/* Receipt scanner */}
-              <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-accent/20 bg-accent/[0.03] text-accent text-sm font-semibold cursor-pointer hover:bg-accent/[0.06] transition-all">
-                {scanning ? <><Loader2 className="h-4 w-4 animate-spin" /> Processando recibo...</> : <><Camera className="h-4 w-4" /> Escanear Recibo com IA</>}
+              <label className="flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl border-2 border-dashed border-accent/30 bg-gradient-to-br from-accent/[0.04] to-accent/[0.08] text-accent text-sm font-bold cursor-pointer hover:border-accent/50 hover:from-accent/[0.06] hover:to-accent/[0.12] hover:shadow-[0_0_20px_-5px_hsl(var(--accent)/0.2)] active:scale-[0.99] transition-all duration-200">
+                {scanning ? <><Loader2 className="h-5 w-5 animate-spin" /> Processando recibo...</> : <><Camera className="h-5 w-5" /> Escanear Recibo com IA</>}
                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleReceiptScan} disabled={scanning} />
               </label>
 
