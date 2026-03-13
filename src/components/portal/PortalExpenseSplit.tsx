@@ -1044,12 +1044,15 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
                 <div className="flex flex-wrap gap-2">
                   {members.map(m => (
                     <button key={m.id} onClick={() => setPaidBy(m.id)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                        paidBy === m.id ? "bg-accent/10 border-accent/30 text-accent" : "bg-muted/20 border-border/30 text-muted-foreground hover:border-accent/20"
+                      className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border-2 transition-all duration-200 ${
+                        paidBy === m.id
+                          ? "bg-gradient-to-r from-accent/15 to-accent/5 border-accent/40 text-accent shadow-[0_0_12px_-4px_hsl(var(--accent)/0.3)] scale-[1.02]"
+                          : "bg-card/50 backdrop-blur-sm border-border/20 text-muted-foreground hover:border-accent/25 hover:text-accent hover:bg-accent/5"
                       }`}
                     >
-                      <div className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-black" style={{ backgroundColor: m.avatar_color }}>{m.name[0]?.toUpperCase()}</div>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-black shrink-0 transition-all duration-200 ${paidBy === m.id ? "ring-2 ring-accent/40 ring-offset-1 ring-offset-background" : ""}`} style={{ backgroundColor: m.avatar_color }}>{m.name[0]?.toUpperCase()}</div>
                       {m.name}
+                      {paidBy === m.id && <Check className="h-3 w-3 ml-auto text-accent" />}
                     </button>
                   ))}
                 </div>
