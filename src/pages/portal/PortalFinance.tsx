@@ -14,7 +14,7 @@ import {
   X, Save, Trash2, Edit2, Zap, Eye, EyeOff, ArrowRight,
   Flame, TrendingDown, Activity, Gauge, DollarSign,
   Plane, Coffee, Heart, Globe, Shield, Star,
-  Camera, ImageIcon,
+  Camera, ImageIcon, Users,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
