@@ -215,6 +215,7 @@ function ActionButtons({
 }
 
 export default function PortalAssistant({ saleId }: PortalAssistantProps) {
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
