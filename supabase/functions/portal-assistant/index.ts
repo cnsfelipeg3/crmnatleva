@@ -95,6 +95,7 @@ Deno.serve(async (req) => {
 
     // Merge all unique sale IDs
     const saleIds = [...new Set([...publishedSaleIds, ...directSaleIds, ...nameSaleIds])];
+    console.log(`Portal Assistant: client=${clientId}, name=${client?.display_name}, published=${publishedSaleIds.length}, direct=${directSaleIds.length}, byName=${nameSaleIds.length}, total=${saleIds.length}`);
     let tripContext = "";
 
     if (saleIds.length > 0) {
