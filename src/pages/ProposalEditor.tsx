@@ -61,6 +61,7 @@ export default function ProposalEditor() {
 
   const [items, setItems] = useState<any[]>([]);
   const [destInput, setDestInput] = useState("");
+  const [placesSearchIdx, setPlacesSearchIdx] = useState<number | null>(null);
 
   const { data: existing } = useQuery({
     queryKey: ["proposal", id],
