@@ -173,32 +173,19 @@ export default function PlacesSearchCard({
     setLoadingDetails(true);
     setError(null);
     try {
-      const { data, error: fnErr } = await supabase.functions.invoke("places-search", {
-        body: { action: "details", place_id: placeId },
-      });
-      if (fnErr) throw fnErr;
-      setSelectedPlace(data);
+      const data = await getPlaceDetails(placeId);
+      setSelectedPlace(data as any);
       setResults([]);
 
       if (data?.photos?.length > 0) {
         setLoadingPhotos(true);
-        const photos: CuratedPhoto[] = [];
-        for (const [i, photo] of data.photos.slice(0, 10).entries()) {
-          try {
-            const { data: photoData } = await supabase.functions.invoke("places-search", {
-              body: { action: "photo", photo_reference: photo.photo_reference, max_width: 800 },
-            });
-            if (photoData?.url) {
-              photos.push({
-                url: photoData.url,
-                label: guessPhotoLabel(i),
-                selected: i < 6, // Auto-select first 6
-                isCover: i === 0,
-                source: "google",
-              });
-            }
-          } catch { /* skip */ }
-        }
+        const photos: CuratedPhoto[] = data.photos.slice(0, 10).map((photo, i) => ({
+          url: getPhotoUrl(photo.photo_reference, 800),
+          label: guessPhotoLabel(i),
+          selected: i < 6,
+          isCover: i === 0,
+          source: "google" as const,
+        }));
         setCuratedPhotos(photos);
         setLoadingPhotos(false);
       }
