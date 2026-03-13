@@ -135,7 +135,8 @@ function CircularGauge({ percentage, size = 120, strokeWidth = 8, color = "accen
    ═══════════════════════════════════════════════════════ */
 export default function PortalFinance() {
   const { portalAccess } = usePortalAuth();
-  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const saleId = searchParams.get("sale");
 
   const [receivables, setReceivables] = useState<any[]>([]);
