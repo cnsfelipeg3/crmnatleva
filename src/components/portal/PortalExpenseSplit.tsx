@@ -643,17 +643,17 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
                     <button
                       key={i}
                       onClick={() => togglePassenger(pax)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                      className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold border-2 transition-all duration-200 ${
                         selected
-                          ? "bg-accent/10 border-accent/30 text-accent"
-                          : "bg-muted/20 border-border/30 text-muted-foreground hover:border-accent/20"
+                          ? "bg-gradient-to-r from-accent/12 to-accent/5 border-accent/40 text-accent shadow-[0_0_10px_-4px_hsl(var(--accent)/0.25)] scale-[1.01]"
+                          : "bg-card/50 backdrop-blur-sm border-border/20 text-muted-foreground hover:border-accent/25 hover:text-accent hover:bg-accent/5"
                       }`}
                     >
-                      <div className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center text-accent text-[10px] font-black">
+                      <div className={`w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center text-accent text-[10px] font-black transition-all duration-200 ${selected ? "ring-2 ring-accent/30 ring-offset-1 ring-offset-background" : ""}`}>
                         {n[0]?.toUpperCase()}
                       </div>
                       {n}
-                      {selected && <Check className="h-3 w-3" />}
+                      {selected && <div className="w-4 h-4 rounded-full bg-accent flex items-center justify-center ml-auto"><Check className="h-2.5 w-2.5 text-accent-foreground" /></div>}
                     </button>
                   );
                 })}
