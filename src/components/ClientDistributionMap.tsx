@@ -364,7 +364,14 @@ export default function ClientDistributionMap() {
     const z = mapRef.current?.getZoom();
     if (z != null) mapRef.current?.setZoom(z - 1);
   };
-  const handleResetView = () => { mapRef.current?.setCenter({ lat: -14, lng: -51 }); mapRef.current?.setZoom(4); };
+  const handleResetView = () => {
+    if (fallbackMode) {
+      leafletMapRef.current?.setView([-14, -51], 4);
+      return;
+    }
+    mapRef.current?.setCenter({ lat: -14, lng: -51 });
+    mapRef.current?.setZoom(4);
+  };
   const handleLocate = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
