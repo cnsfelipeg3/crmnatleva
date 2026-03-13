@@ -1156,7 +1156,7 @@ function OperacaoInboxInner() {
   return (
     <div
       ref={livechatContainerRef}
-      className={`flex flex-col overflow-hidden bg-background ${isMobile ? "fixed inset-0 z-50" : "h-[calc(100dvh-3rem)] -m-6"}`}
+      className={`flex flex-col overflow-hidden bg-background ${isMobile ? "fixed inset-0 z-50" : "h-full"}`}
       style={isMobile ? { height: mobileHeight } : undefined}
     >
       {/* Content */}
