@@ -223,6 +223,35 @@ export default function ProposalEditor() {
     setForm((f) => ({ ...f, payment_conditions: f.payment_conditions.filter((_, i) => i !== idx) }));
   };
 
+  const handlePlacesEnrich = (idx: number, data: PlacesEnrichmentData) => {
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== idx) return item;
+        return {
+          ...item,
+          title: data.name,
+          description: data.editorial_summary || item.description || "",
+          image_url: data.photos[data.mainPhotoIndex] || item.image_url || "",
+          data: {
+            ...item.data,
+            place_id: data.place_id,
+            location: data.address,
+            rating: data.rating,
+            user_ratings_total: data.user_ratings_total,
+            website: data.website,
+            phone: data.phone,
+            coords: data.location,
+            types: data.types,
+            photos: data.photos,
+            mainPhotoIndex: data.mainPhotoIndex,
+          },
+        };
+      })
+    );
+    setPlacesSearchIdx(null);
+    toast.success(`"${data.name}" importado com sucesso!`);
+  };
+
   const copyLink = () => {
     const slug = existing?.slug;
     if (slug) {
