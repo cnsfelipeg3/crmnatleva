@@ -9,7 +9,7 @@ import { Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoNatleva from "@/assets/logo-natleva.png";
 
-const IMMERSIVE_ROUTES = ["/operacao/inbox"];
+const IMMERSIVE_ROUTES = ["/operacao/inbox"] as const;
 
 export default function AppLayout() {
   const isMobile = useIsMobile();
