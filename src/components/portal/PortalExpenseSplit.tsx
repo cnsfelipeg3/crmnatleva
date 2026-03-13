@@ -1339,7 +1339,7 @@ function AddMemberDialog({ open, onClose, groupId, existingMembers, passengers, 
             <label className="text-xs font-semibold text-foreground">Ou digite o nome</label>
             <div className="flex gap-2">
               <Input placeholder="Nome" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAdd()} />
-              <Button onClick={handleAdd} disabled={loading || !name.trim()} className="shrink-0 rounded-xl">
+              <Button onClick={handleAdd} disabled={loading || !name.trim()} className="shrink-0 rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground shadow-[0_0_12px_-4px_hsl(var(--accent)/0.3)] hover:shadow-[0_0_18px_-4px_hsl(var(--accent)/0.45)] hover:scale-[1.05] active:scale-[0.95] transition-all duration-200">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               </Button>
             </div>
