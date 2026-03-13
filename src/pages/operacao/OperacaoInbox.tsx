@@ -392,6 +392,7 @@ function OperacaoInboxInner() {
   const [fileInputAccept, setFileInputAccept] = useState("*/*");
   const [fileInputMediaType, setFileInputMediaType] = useState("document");
   const [isSending, setIsSending] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [showContactProfile, setShowContactProfile] = useState(false);
   const [showFlowMenu, setShowFlowMenu] = useState(false);
   const [showMobilePlusMenu, setShowMobilePlusMenu] = useState(false);
