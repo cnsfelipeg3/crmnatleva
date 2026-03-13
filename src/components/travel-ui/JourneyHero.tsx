@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { ArrowRight, Calendar, Clock, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import patagoniaImg from "@/assets/destination-patagonia.jpg";
 
 /* ── Helpers ── */
 const fmtShort = (d: string | null) => {
