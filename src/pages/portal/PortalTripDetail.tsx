@@ -222,10 +222,10 @@ function SectionHeader({ id, icon: Icon, title, subtitle, count, children }: {
             <Icon className="h-5 w-5 text-accent" />
           </div>
           <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+          <h2 className="text-base sm:text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
               {title}
               {count !== undefined && (
-                <span className="text-sm font-normal text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">{count}</span>
+                <span className="text-[11px] sm:text-sm font-normal text-muted-foreground bg-muted/50 px-1.5 sm:px-2 py-0.5 rounded-full">{count}</span>
               )}
             </h2>
             {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}

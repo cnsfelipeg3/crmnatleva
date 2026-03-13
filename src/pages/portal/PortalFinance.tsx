@@ -626,25 +626,25 @@ function GaugeCard({ label, percentage, value, sub, color, noGauge, icon: Icon }
     <motion.div
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      className="relative rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm p-5 flex flex-col items-center text-center overflow-hidden group hover:border-accent/10 transition-all"
+      className="relative rounded-xl sm:rounded-2xl border border-border/20 bg-card/60 backdrop-blur-sm p-3 sm:p-5 flex flex-col items-center text-center overflow-hidden group hover:border-accent/10 transition-all"
     >
       <div className="absolute inset-0 bg-gradient-to-b from-transparent to-muted/[0.03] opacity-0 group-hover:opacity-100 transition-opacity" />
 
       {noGauge && Icon ? (
-        <div className={`h-16 w-16 rounded-2xl bg-${color}/10 flex items-center justify-center mb-3`}>
-          <Icon className={`h-7 w-7 text-${color}`} />
+        <div className={`h-10 w-10 sm:h-16 sm:w-16 rounded-xl sm:rounded-2xl bg-${color}/10 flex items-center justify-center mb-2 sm:mb-3`}>
+          <Icon className={`h-5 w-5 sm:h-7 sm:w-7 text-${color}`} />
         </div>
       ) : (
-        <div className="mb-3">
-          <CircularGauge percentage={percentage} size={88} strokeWidth={6} color={color}>
-            <span className="text-lg font-black tabular-nums text-foreground">{percentage}%</span>
+        <div className="mb-2 sm:mb-3">
+          <CircularGauge percentage={percentage} size={68} strokeWidth={5} color={color}>
+            <span className="text-sm sm:text-lg font-black tabular-nums text-foreground">{percentage}%</span>
           </CircularGauge>
         </div>
       )}
 
-      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50 mb-1">{label}</p>
-      <p className="text-base font-black tabular-nums text-foreground">{value}</p>
-      <p className="text-[10px] text-muted-foreground/40 mt-0.5">{sub}</p>
+      <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground/50 mb-0.5 sm:mb-1">{label}</p>
+      <p className="text-xs sm:text-base font-black tabular-nums text-foreground truncate w-full">{value}</p>
+      <p className="text-[9px] sm:text-[10px] text-muted-foreground/40 mt-0.5 truncate w-full">{sub}</p>
     </motion.div>
   );
 }

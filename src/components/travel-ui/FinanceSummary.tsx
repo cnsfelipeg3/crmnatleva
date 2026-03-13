@@ -50,38 +50,38 @@ export default function FinanceSummary({ receivables }: FinanceSummaryProps) {
       />
 
       {/* ── Hero metric strip ── */}
-      <div className="relative p-6 sm:p-8">
+      <div className="relative p-5 sm:p-8">
         {/* Main value */}
-        <div className="flex items-baseline gap-3 mb-6">
+        <div className="mb-5">
           <motion.p
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-4xl sm:text-5xl font-black tracking-tight text-foreground tabular-nums"
+            className="text-2xl sm:text-4xl font-black tracking-tight text-foreground tabular-nums"
           >
             {fmt(totalReceivable)}
           </motion.p>
-          <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground/60">
+          <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground/60 mt-1 block">
             valor total
           </span>
         </div>
 
         {/* Metric duo */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-2 gap-3 mb-6">
           <motion.div
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.15 }}
-            className="relative flex items-center gap-3 rounded-xl border border-primary/10 bg-primary/[0.04] p-4"
+            className="relative flex items-center gap-2.5 rounded-xl border border-primary/10 bg-primary/[0.04] p-3 sm:p-4"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-              <CheckCircle2 className="h-5 w-5 text-primary" />
+            <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary/10 shrink-0">
+              <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-primary/70">
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.12em] text-primary/70">
                 Recebido
               </p>
-              <p className="text-lg font-black tabular-nums text-foreground">
+              <p className="text-sm sm:text-lg font-black tabular-nums text-foreground truncate">
                 {fmt(totalPaid)}
               </p>
             </div>
@@ -91,16 +91,16 @@ export default function FinanceSummary({ receivables }: FinanceSummaryProps) {
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="relative flex items-center gap-3 rounded-xl border border-warning/10 bg-warning/[0.04] p-4"
+            className="relative flex items-center gap-2.5 rounded-xl border border-warning/10 bg-warning/[0.04] p-3 sm:p-4"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning/10">
-              <Clock className="h-5 w-5 text-warning" />
+            <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-warning/10 shrink-0">
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-warning" />
             </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-warning/70">
+            <div className="min-w-0">
+              <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.12em] text-warning/70">
                 Pendente
               </p>
-              <p className="text-lg font-black tabular-nums text-foreground">
+              <p className="text-sm sm:text-lg font-black tabular-nums text-foreground truncate">
                 {fmt(totalPending)}
               </p>
             </div>
@@ -124,8 +124,7 @@ export default function FinanceSummary({ receivables }: FinanceSummaryProps) {
             </div>
           </div>
 
-          <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-muted/30">
-            {/* Animated shimmer on track */}
+          <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted/30">
             <div className="absolute inset-0 overflow-hidden rounded-full">
               <motion.div
                 initial={{ x: "-100%" }}
@@ -158,7 +157,7 @@ export default function FinanceSummary({ receivables }: FinanceSummaryProps) {
       </div>
 
       {/* ── Installment timeline ── */}
-      <div className="border-t border-border/20 px-6 sm:px-8 py-5">
+      <div className="border-t border-border/20 px-4 sm:px-8 py-4 sm:py-5">
         <div className="space-y-1">
           {receivables.map((r, i) => {
             const isPaid = r.status === "recebido";
@@ -170,19 +169,19 @@ export default function FinanceSummary({ receivables }: FinanceSummaryProps) {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + i * 0.06 }}
-                className="group relative flex items-stretch gap-4"
+                className="group relative flex items-stretch gap-3"
               >
                 {/* Timeline spine */}
-                <div className="relative flex flex-col items-center pt-4">
+                <div className="relative flex flex-col items-center pt-3.5">
                   <div
-                    className={`relative z-10 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all ${
+                    className={`relative z-10 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full border-2 transition-all ${
                       isPaid
                         ? "border-primary bg-primary/10"
                         : "border-warning/50 bg-warning/5"
                     }`}
                   >
                     <div
-                      className={`h-2 w-2 rounded-full ${
+                      className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full ${
                         isPaid ? "bg-primary" : "bg-warning animate-pulse"
                       }`}
                     />
@@ -198,15 +197,15 @@ export default function FinanceSummary({ receivables }: FinanceSummaryProps) {
 
                 {/* Content card */}
                 <div
-                  className={`flex-1 flex items-center justify-between rounded-xl px-4 py-3.5 mb-1 transition-all duration-200 group-hover:scale-[1.005] group-hover:shadow-sm ${
+                  className={`flex-1 flex items-center justify-between rounded-xl px-3 sm:px-4 py-3 mb-1 transition-all duration-200 group-hover:scale-[1.005] group-hover:shadow-sm gap-2 ${
                     isPaid
                       ? "bg-primary/[0.03] border border-primary/[0.06]"
                       : "bg-warning/[0.02] border border-warning/[0.06]"
                   }`}
                 >
-                  <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                     <div
-                      className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-xs font-black ${
+                      className={`flex h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0 items-center justify-center rounded-lg text-[10px] sm:text-xs font-black ${
                         isPaid
                           ? "bg-primary/10 text-primary"
                           : "bg-warning/10 text-warning"
@@ -214,9 +213,9 @@ export default function FinanceSummary({ receivables }: FinanceSummaryProps) {
                     >
                       {r.installment_number || i + 1}
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-foreground truncate">
-                        {r.description || `Parcela ${r.installment_number || i + 1}`}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm font-semibold text-foreground truncate">
+                        {r.description || `${r.installment_number || i + 1}ª parcela`}
                         {(r.installment_total ?? 0) > 1 && (
                           <span className="text-muted-foreground/50 font-normal">
                             {" "}/ {r.installment_total}
@@ -224,19 +223,19 @@ export default function FinanceSummary({ receivables }: FinanceSummaryProps) {
                         )}
                       </p>
                       {r.due_date && (
-                        <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">
                           {fmtDate(r.due_date)}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <p className="text-sm font-black tabular-nums text-foreground">
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <p className="text-xs sm:text-sm font-black tabular-nums text-foreground whitespace-nowrap">
                       {fmt(r.gross_value)}
                     </p>
                     <div
-                      className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                      className={`hidden sm:flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
                         isPaid
                           ? "bg-primary/10 text-primary"
                           : "bg-warning/10 text-warning"
@@ -244,14 +243,26 @@ export default function FinanceSummary({ receivables }: FinanceSummaryProps) {
                     >
                       {isPaid ? (
                         <>
-                          <CheckCircle2 className="h-3 w-3" />
+                          <CheckCircle2 className="h-2.5 w-2.5" />
                           Pago
                         </>
                       ) : (
                         <>
-                          <Clock className="h-3 w-3" />
+                          <Clock className="h-2.5 w-2.5" />
                           Aberto
                         </>
+                      )}
+                    </div>
+                    {/* Mobile-only small badge */}
+                    <div
+                      className={`flex sm:hidden items-center justify-center h-5 w-5 rounded-full ${
+                        isPaid ? "bg-primary/10" : "bg-warning/10"
+                      }`}
+                    >
+                      {isPaid ? (
+                        <CheckCircle2 className="h-3 w-3 text-primary" />
+                      ) : (
+                        <Clock className="h-3 w-3 text-warning" />
                       )}
                     </div>
                   </div>
