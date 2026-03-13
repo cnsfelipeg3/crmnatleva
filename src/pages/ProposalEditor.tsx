@@ -227,11 +227,12 @@ export default function ProposalEditor() {
     setItems((prev) =>
       prev.map((item, i) => {
         if (i !== idx) return item;
+        const coverUrl = data.selectedPhotos[data.mainPhotoIndex] || data.selectedPhotos[0] || item.image_url || "";
         return {
           ...item,
           title: data.name,
           description: data.editorial_summary || item.description || "",
-          image_url: data.photos[data.mainPhotoIndex] || item.image_url || "",
+          image_url: coverUrl,
           data: {
             ...item.data,
             place_id: data.place_id,
@@ -242,14 +243,16 @@ export default function ProposalEditor() {
             phone: data.phone,
             coords: data.location,
             types: data.types,
-            photos: data.photos,
+            photos: data.selectedPhotos,
+            allPhotos: data.photos,
             mainPhotoIndex: data.mainPhotoIndex,
+            photoLabels: data.photoLabels,
           },
         };
       })
     );
     setPlacesSearchIdx(null);
-    toast.success(`"${data.name}" importado com sucesso!`);
+    toast.success(`"${data.name}" importado com ${data.selectedPhotos.length} foto${data.selectedPhotos.length !== 1 ? "s" : ""}!`);
   };
 
   const copyLink = () => {
