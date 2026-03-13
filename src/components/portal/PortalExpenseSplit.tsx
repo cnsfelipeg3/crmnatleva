@@ -239,20 +239,20 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
       {/* Group selector */}
       {groups.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {groups.map(g => (
+      {groups.map(g => (
             <button
               key={g.id}
               onClick={() => setSelectedGroup(g)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+              className={`px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all duration-200 ${
                 selectedGroup?.id === g.id
-                  ? "bg-accent/10 text-accent border border-accent/20"
-                  : "bg-muted/30 text-muted-foreground border border-border/30 hover:bg-muted/50"
+                  ? "bg-gradient-to-r from-accent to-accent/80 text-accent-foreground shadow-[0_0_16px_-4px_hsl(var(--accent)/0.4)] scale-[1.02]"
+                  : "bg-card/60 backdrop-blur-sm text-muted-foreground border border-border/30 hover:border-accent/30 hover:text-accent hover:shadow-sm"
               }`}
             >
               {g.name}
             </button>
           ))}
-          <button onClick={() => setCreateGroupOpen(true)} className="px-3 py-2 rounded-xl border border-dashed border-border/40 text-muted-foreground hover:border-accent/30 hover:text-accent transition-all">
+          <button onClick={() => setCreateGroupOpen(true)} className="px-3 py-2.5 rounded-xl border-2 border-dashed border-accent/25 text-accent/60 hover:border-accent/50 hover:text-accent hover:bg-accent/5 hover:shadow-[0_0_12px_-4px_hsl(var(--accent)/0.2)] transition-all duration-200">
             <Plus className="h-4 w-4" />
           </button>
         </div>
