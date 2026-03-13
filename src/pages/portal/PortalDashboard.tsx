@@ -397,6 +397,9 @@ export default function PortalDashboard() {
           {/* Travel Stats */}
           <TravelStats trips={trips} />
 
+          {/* Currency Summary */}
+          <CurrencySummary onExpand={() => navigate("/portal/financeiro?tab=cambio")} />
+
           {/* ═══ Journey Globe — Photorealistic 3D ═══ */}
           <motion.section
             initial={{ opacity: 0, y: 30 }}
