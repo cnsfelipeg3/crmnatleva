@@ -160,91 +160,142 @@ export default function PlacesSearchCard({
 
   /* ── Search ── */
   const search = useCallback(async (q: string) => {
-    if (q.length < 2) { setResults([]); return; }
-    setLoading(true);
-    setError(null);
+    const requestId = ++requestIdRef.current;
+    const isStale = () => requestId !== requestIdRef.current;
+    const safeSet = (fn: () => void) => {
+      if (!isStale()) fn();
+    };
 
-    // Primary: use places-search edge function (server-side Google API key)
-    try {
-      const { data, error: fnError } = await supabase.functions.invoke("places-search", {
-        body: {
-          action: "search",
-          query: destinationContext ? `${q} ${destinationContext}` : q,
-        },
-      });
-
-      if (fnError) throw fnError;
-      if (data?.error) throw new Error(data.error);
-
-      const mapped: PlaceResult[] = (data?.results || []).map((item: any) => ({
-        place_id: item.place_id,
-        name: item.name,
-        address: item.address || "",
-        rating: item.rating ?? null,
-        user_ratings_total: item.user_ratings_total || 0,
-        types: item.types || [],
-        photo_reference: item.photo_reference || null,
-        location: item.location || null,
-        price_level: item.price_level ?? null,
-      }));
-
-      setResults(mapped);
-      if (mapped.length === 0) setError("Nenhum local encontrado");
-      setLoading(false);
-      return;
-    } catch (err) {
-      console.error("places-search edge function error:", err);
-    }
-
-    // Fallback: client-side Google Maps JS SDK
-    try {
-      const data = await searchPlaces(destinationContext ? `${q} ${destinationContext}` : q);
-      if (data.length > 0) {
-        setResults(data);
+    if (q.length < 2) {
+      safeSet(() => {
+        setResults([]);
+        setError(null);
         setLoading(false);
-        return;
-      }
-    } catch (err) {
-      console.error("Client-side Places search error:", err);
-    }
-
-    // Last resort: hotel-search (Nominatim)
-    try {
-      const { data, error: fnError } = await supabase.functions.invoke("hotel-search", {
-        body: { query: q },
       });
-
-      if (fnError) throw fnError;
-
-      const fallbackResults: PlaceResult[] = (data?.results || []).map((item: any) => ({
-        place_id: `fallback:${item.place_id || item.name}`,
-        name: item.name || q,
-        address: [item.address, item.city, item.country].filter(Boolean).join(", "),
-        rating: null,
-        user_ratings_total: 0,
-        types: ["lodging"],
-        photo_reference: null,
-        location: Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng))
-          ? { lat: Number(item.lat), lng: Number(item.lng) }
-          : null,
-        price_level: null,
-      }));
-
-      setResults(fallbackResults);
-      setError(fallbackResults.length === 0 ? "Nenhum hotel encontrado" : null);
-    } catch (fallbackErr) {
-      console.error("Fallback hotel-search error:", fallbackErr);
-      setError("Não foi possível buscar locais. Tente novamente.");
-      setResults([]);
-    } finally {
-      setLoading(false);
+      return;
     }
+
+    safeSet(() => {
+      setLoading(true);
+      setError(null);
+    });
+
+    const normalizedQuery = destinationContext ? `${q} ${destinationContext}` : q;
+
+    const runHotelFallback = async () => {
+      try {
+        const { data, error: fnError } = await withTimeout(
+          supabase.functions.invoke("hotel-search", { body: { query: q } }),
+          5000,
+          "Timeout no fallback de hotéis"
+        );
+
+        if (isStale()) return;
+        if (fnError) throw fnError;
+
+        const fallbackResults: PlaceResult[] = (data?.results || []).map((item: any) => ({
+          place_id: `fallback:${item.place_id || item.name}`,
+          name: item.name || q,
+          address: [item.address, item.city, item.country].filter(Boolean).join(", "),
+          rating: null,
+          user_ratings_total: 0,
+          types: ["lodging"],
+          photo_reference: null,
+          location: Number.isFinite(Number(item.lat)) && Number.isFinite(Number(item.lng))
+            ? { lat: Number(item.lat), lng: Number(item.lng) }
+            : null,
+          price_level: null,
+        }));
+
+        safeSet(() => {
+          setResults(fallbackResults);
+          setError(fallbackResults.length === 0 ? "Nenhum hotel encontrado" : null);
+          setLoading(false);
+        });
+      } catch (fallbackErr) {
+        console.error("Fallback hotel-search error:", fallbackErr);
+        safeSet(() => {
+          setError("Não foi possível buscar locais. Tente novamente.");
+          setResults([]);
+          setLoading(false);
+        });
+      }
+    };
+
+    // Primary: Google Places no cliente (mais rápido com key de referer)
+    if (!disableClientGoogleRef.current) {
+      try {
+        const data = await withTimeout(searchPlaces(normalizedQuery), 7000, "Timeout na busca Google Places");
+        if (isStale()) return;
+
+        if (data.length > 0) {
+          safeSet(() => {
+            setResults(data);
+            setError(null);
+            setLoading(false);
+          });
+          return;
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "";
+        console.error("Client-side Places search error:", err);
+        if (/auth|api|google|timeout|indisponível|configurad/i.test(message.toLowerCase())) {
+          disableClientGoogleRef.current = true;
+        }
+      }
+    }
+
+    // Secondary: Edge Function (caso cliente falhe)
+    if (!disableEdgeSearchRef.current) {
+      try {
+        const { data, error: fnError } = await withTimeout(
+          supabase.functions.invoke("places-search", {
+            body: { action: "search", query: normalizedQuery },
+          }),
+          5000,
+          "Timeout na busca server-side"
+        );
+
+        if (isStale()) return;
+        if (fnError) throw fnError;
+        if (data?.error) throw new Error(data.error);
+
+        const mapped: PlaceResult[] = (data?.results || []).map((item: any) => ({
+          place_id: item.place_id,
+          name: item.name,
+          address: item.address || "",
+          rating: item.rating ?? null,
+          user_ratings_total: item.user_ratings_total || 0,
+          types: item.types || [],
+          photo_reference: item.photo_reference || null,
+          location: item.location || null,
+          price_level: item.price_level ?? null,
+        }));
+
+        if (mapped.length > 0) {
+          safeSet(() => {
+            setResults(mapped);
+            setError(null);
+            setLoading(false);
+          });
+          return;
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "";
+        console.error("places-search edge function error:", err);
+        if (/referer restrictions|request_denied|api keys|denied|permission/i.test(message.toLowerCase())) {
+          disableEdgeSearchRef.current = true;
+        }
+      }
+    }
+
+    await runHotelFallback();
   }, [destinationContext]);
 
   const handleInput = (val: string) => {
     setQuery(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => search(val), 400);
+    debounceRef.current = setTimeout(() => search(val), 350);
   };
 
   /* ── Select place & load details ── */
