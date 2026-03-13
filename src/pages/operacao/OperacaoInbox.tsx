@@ -441,6 +441,7 @@ function OperacaoInboxInner() {
             if (existing) {
               byId.set(dc.id, {
                 ...existing,
+                db_id: dc.db_id || existing.db_id,
                 stage: dc.stage !== "novo_lead" ? dc.stage : existing.stage,
                 tags: dc.tags.length > 0 ? dc.tags : existing.tags,
                 contact_name: dc.contact_name !== "Novo Contato" ? dc.contact_name : existing.contact_name,
