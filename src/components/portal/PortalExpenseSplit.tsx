@@ -1250,8 +1250,10 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
               )}
 
               <div className="flex gap-2 pt-2">
-                <Button variant="outline" onClick={() => setStep("split")} className="rounded-xl">Editar</Button>
-                <Button onClick={handleSave} disabled={loading} className="flex-1 gap-2 rounded-xl">
+                <Button variant="outline" onClick={() => setStep("split")} className="rounded-xl border-accent/20 text-accent font-bold hover:bg-accent/5 hover:border-accent/35 transition-all duration-200">
+                  <Edit2 className="h-3.5 w-3.5 mr-1.5" /> Editar
+                </Button>
+                <Button onClick={handleSave} disabled={loading} className="flex-1 gap-2.5 rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold h-12 text-sm shadow-[0_0_20px_-4px_hsl(var(--accent)/0.4)] hover:shadow-[0_0_30px_-4px_hsl(var(--accent)/0.55)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200">
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                   Confirmar Despesa
                 </Button>
