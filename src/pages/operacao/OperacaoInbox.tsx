@@ -213,7 +213,9 @@ function OperacaoInboxInner() {
   const flowNameCacheRef = useRef<Record<string, string | null>>({});
   const [waConnected, setWaConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isUserScrolledUpRef = useRef(false);
 
   const selected = conversations.find(c => c.id === selectedId);
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
