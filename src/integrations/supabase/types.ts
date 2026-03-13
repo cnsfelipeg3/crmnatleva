@@ -3716,6 +3716,178 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_items: {
+        Row: {
+          created_at: string
+          data: Json | null
+          description: string | null
+          id: string
+          image_url: string | null
+          item_type: string
+          position: number
+          proposal_id: string
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          item_type: string
+          position?: number
+          proposal_id: string
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          item_type?: string
+          position?: number
+          proposal_id?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_items_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_views: {
+        Row: {
+          device_type: string | null
+          duration_seconds: number | null
+          id: string
+          proposal_id: string
+          user_agent: string | null
+          viewed_at: string
+        }
+        Insert: {
+          device_type?: string | null
+          duration_seconds?: number | null
+          id?: string
+          proposal_id: string
+          user_agent?: string | null
+          viewed_at?: string
+        }
+        Update: {
+          device_type?: string | null
+          duration_seconds?: number | null
+          id?: string
+          proposal_id?: string
+          user_agent?: string | null
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_views_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposals: {
+        Row: {
+          client_id: string | null
+          client_name: string | null
+          consultant_name: string | null
+          cover_image_url: string | null
+          created_at: string
+          created_by: string | null
+          destinations: string[] | null
+          id: string
+          intro_text: string | null
+          last_viewed_at: string | null
+          origin: string | null
+          passenger_count: number | null
+          payment_conditions: Json | null
+          sale_id: string | null
+          slug: string
+          status: string
+          title: string
+          total_value: number | null
+          travel_end_date: string | null
+          travel_start_date: string | null
+          updated_at: string
+          value_per_person: number | null
+          views_count: number | null
+        }
+        Insert: {
+          client_id?: string | null
+          client_name?: string | null
+          consultant_name?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          destinations?: string[] | null
+          id?: string
+          intro_text?: string | null
+          last_viewed_at?: string | null
+          origin?: string | null
+          passenger_count?: number | null
+          payment_conditions?: Json | null
+          sale_id?: string | null
+          slug: string
+          status?: string
+          title: string
+          total_value?: number | null
+          travel_end_date?: string | null
+          travel_start_date?: string | null
+          updated_at?: string
+          value_per_person?: number | null
+          views_count?: number | null
+        }
+        Update: {
+          client_id?: string | null
+          client_name?: string | null
+          consultant_name?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          created_by?: string | null
+          destinations?: string[] | null
+          id?: string
+          intro_text?: string | null
+          last_viewed_at?: string | null
+          origin?: string | null
+          passenger_count?: number | null
+          payment_conditions?: Json | null
+          sale_id?: string | null
+          slug?: string
+          status?: string
+          title?: string
+          total_value?: number | null
+          travel_end_date?: string | null
+          travel_start_date?: string | null
+          updated_at?: string
+          value_per_person?: number | null
+          views_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       receiving_accounts: {
         Row: {
           account_number: string | null

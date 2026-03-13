@@ -1,0 +1,160 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Search, Eye, Copy, ExternalLink, MoreHorizontal, FileText } from "lucide-react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  draft: { label: "Em elaboração", variant: "secondary" },
+  sent: { label: "Enviada", variant: "default" },
+  negotiation: { label: "Em negociação", variant: "outline" },
+  approved: { label: "Aprovada", variant: "default" },
+  lost: { label: "Perdida", variant: "destructive" },
+};
+
+export default function Proposals() {
+  const navigate = useNavigate();
+  const [search, setSearch] = useState("");
+
+  const { data: proposals, isLoading } = useQuery({
+    queryKey: ["proposals"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("proposals")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const filtered = proposals?.filter(
+    (p: any) =>
+      !search ||
+      p.title?.toLowerCase().includes(search.toLowerCase()) ||
+      p.client_name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const copyLink = (slug: string) => {
+    const url = `${window.location.origin}/proposta/${slug}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link copiado!");
+  };
+
+  return (
+    <div className="p-4 md:p-6 space-y-5 animate-fade-in">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-serif text-foreground">Gerador de Propostas</h1>
+          <p className="text-sm text-muted-foreground">Crie propostas visuais premium para seus clientes</p>
+        </div>
+        <Button onClick={() => navigate("/propostas/nova")} className="gap-2">
+          <Plus className="w-4 h-4" /> Nova Proposta
+        </Button>
+      </div>
+
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por título ou cliente..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="p-5 animate-pulse">
+              <div className="h-4 bg-muted rounded w-3/4 mb-3" />
+              <div className="h-3 bg-muted rounded w-1/2 mb-2" />
+              <div className="h-3 bg-muted rounded w-1/3" />
+            </Card>
+          ))}
+        </div>
+      ) : !filtered?.length ? (
+        <Card className="p-12 text-center">
+          <FileText className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-muted-foreground font-medium">Nenhuma proposta encontrada</p>
+          <p className="text-sm text-muted-foreground/60 mt-1">Crie sua primeira proposta para impressionar seus clientes</p>
+          <Button onClick={() => navigate("/propostas/nova")} className="mt-4 gap-2">
+            <Plus className="w-4 h-4" /> Criar proposta
+          </Button>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((p: any) => {
+            const st = statusMap[p.status] || statusMap.draft;
+            return (
+              <Card
+                key={p.id}
+                className="group hover:shadow-md transition-all cursor-pointer hover:border-primary/30 overflow-hidden"
+                onClick={() => navigate(`/propostas/${p.id}`)}
+              >
+                {p.cover_image_url && (
+                  <div className="h-32 overflow-hidden">
+                    <img src={p.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  </div>
+                )}
+                <div className="p-5 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground truncate">{p.title}</p>
+                      {p.client_name && <p className="text-sm text-muted-foreground truncate">{p.client_name}</p>}
+                    </div>
+                    <Badge variant={st.variant} className="shrink-0 text-[10px]">{st.label}</Badge>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    {p.destinations?.length > 0 && (
+                      <span>{p.destinations.slice(0, 2).join(", ")}{p.destinations.length > 2 ? ` +${p.destinations.length - 2}` : ""}</span>
+                    )}
+                    {p.travel_start_date && (
+                      <span>{format(new Date(p.travel_start_date + "T00:00:00"), "dd MMM yyyy", { locale: ptBR })}</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>{p.views_count || 0} visualizações</span>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <MoreHorizontal className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); copyLink(p.slug); }}>
+                          <Copy className="w-4 h-4 mr-2" /> Copiar link
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(`/proposta/${p.slug}`, "_blank"); }}>
+                          <ExternalLink className="w-4 h-4 mr-2" /> Ver proposta
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
