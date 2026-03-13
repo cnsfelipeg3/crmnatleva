@@ -1,7 +1,9 @@
 /**
- * Client-side Google Places API helpers.
- * Uses the VITE_GOOGLE_MAPS_API_KEY which has browser referer restrictions.
+ * Client-side Google Places helpers using Maps JavaScript Places Library.
+ * More reliable for browser-restricted API keys.
  */
+
+import { loadGoogleMapsCore, loadGoogleMapsPlaces } from "@/lib/googleMaps";
 
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
@@ -39,109 +41,144 @@ export interface PlaceDetailsResult {
   reviews: { author: string; rating: number; text: string; time: string }[];
 }
 
-// Use the Places API (New) with field masks - supports API key restrictions
-const BASE = "https://places.googleapis.com/v1/places";
+let placesServicePromise: Promise<google.maps.places.PlacesService> | null = null;
 
-export async function searchPlaces(query: string, locationBias?: { lat: number; lng: number }): Promise<PlaceSearchResult[]> {
+async function getPlacesService(): Promise<google.maps.places.PlacesService> {
+  if (typeof window === "undefined") {
+    throw new Error("Google Places disponível apenas no navegador");
+  }
+
+  if (!placesServicePromise) {
+    placesServicePromise = (async () => {
+      await loadGoogleMapsPlaces();
+      const { Map } = await loadGoogleMapsCore();
+      const container = document.createElement("div");
+      const map = new Map(container);
+      return new google.maps.places.PlacesService(map);
+    })();
+  }
+
+  return placesServicePromise;
+}
+
+function getLocation(
+  geometry?: google.maps.places.PlaceGeometry
+): { lat: number; lng: number } | null {
+  const loc = geometry?.location;
+  if (!loc) return null;
+  return { lat: loc.lat(), lng: loc.lng() };
+}
+
+export async function searchPlaces(
+  query: string,
+  locationBias?: { lat: number; lng: number }
+): Promise<PlaceSearchResult[]> {
   if (!query || query.length < 2) return [];
 
-  const body: any = {
-    textQuery: query,
-    languageCode: "pt-BR",
-    includedType: undefined, // search all types
+  const service = await getPlacesService();
+
+  const request: google.maps.places.TextSearchRequest = {
+    query,
+    language: "pt-BR",
   };
 
   if (locationBias) {
-    body.locationBias = {
-      circle: { center: { latitude: locationBias.lat, longitude: locationBias.lng }, radius: 50000 },
-    };
+    request.location = new google.maps.LatLng(locationBias.lat, locationBias.lng);
+    request.radius = 50000;
   }
 
-  const resp = await fetch(`${BASE}:searchText`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Goog-Api-Key": API_KEY,
-      "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.rating,places.userRatingCount,places.types,places.photos,places.location,places.priceLevel",
-    },
-    body: JSON.stringify(body),
+  const places = await new Promise<google.maps.places.PlaceResult[]>((resolve, reject) => {
+    service.textSearch(request, (results, status) => {
+      if (status === google.maps.places.PlacesServiceStatus.ZERO_RESULTS) {
+        resolve([]);
+        return;
+      }
+
+      if (status !== google.maps.places.PlacesServiceStatus.OK) {
+        reject(new Error(`Places search failed: ${status}`));
+        return;
+      }
+
+      resolve(results || []);
+    });
   });
 
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    console.error("Places searchText error:", err);
-    throw new Error(err?.error?.message || "Places API error");
-  }
-
-  const data = await resp.json();
-  return (data.places || []).slice(0, 8).map((p: any) => ({
-    place_id: p.id || "",
-    name: p.displayName?.text || "",
-    address: p.formattedAddress || "",
+  return places.slice(0, 8).map((p) => ({
+    place_id: p.place_id || "",
+    name: p.name || "",
+    address: p.formatted_address || p.vicinity || "",
     rating: p.rating ?? null,
-    user_ratings_total: p.userRatingCount || 0,
+    user_ratings_total: p.user_ratings_total || 0,
     types: p.types || [],
-    photo_reference: p.photos?.[0]?.name || null,
-    location: p.location ? { lat: p.location.latitude, lng: p.location.longitude } : null,
-    price_level: p.priceLevel != null ? parsePriceLevel(p.priceLevel) : null,
+    photo_reference: p.photos?.[0]?.getUrl({ maxWidth: 800 }) || null,
+    location: getLocation(p.geometry),
+    price_level: p.price_level ?? null,
   }));
-}
-
-function parsePriceLevel(pl: string | number): number | null {
-  if (typeof pl === "number") return pl;
-  const map: Record<string, number> = {
-    PRICE_LEVEL_FREE: 0,
-    PRICE_LEVEL_INEXPENSIVE: 1,
-    PRICE_LEVEL_MODERATE: 2,
-    PRICE_LEVEL_EXPENSIVE: 3,
-    PRICE_LEVEL_VERY_EXPENSIVE: 4,
-  };
-  return map[pl] ?? null;
 }
 
 export async function getPlaceDetails(placeId: string): Promise<PlaceDetailsResult> {
-  const resp = await fetch(`${BASE}/${placeId}`, {
-    headers: {
-      "X-Goog-Api-Key": API_KEY,
-      "X-Goog-FieldMask": "id,displayName,formattedAddress,internationalPhoneNumber,websiteUri,rating,userRatingCount,priceLevel,types,location,photos,editorialSummary,reviews",
-    },
+  const service = await getPlacesService();
+
+  const p = await new Promise<google.maps.places.PlaceResult>((resolve, reject) => {
+    service.getDetails(
+      {
+        placeId,
+        language: "pt-BR",
+        fields: [
+          "place_id",
+          "name",
+          "formatted_address",
+          "formatted_phone_number",
+          "website",
+          "rating",
+          "user_ratings_total",
+          "price_level",
+          "types",
+          "geometry",
+          "photos",
+          "editorial_summary",
+          "reviews",
+        ],
+      },
+      (result, status) => {
+        if (status !== google.maps.places.PlacesServiceStatus.OK || !result) {
+          reject(new Error(`Place details failed: ${status}`));
+          return;
+        }
+        resolve(result);
+      }
+    );
   });
 
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({}));
-    throw new Error(err?.error?.message || "Place details error");
-  }
-
-  const p = await resp.json();
-  const photos: PlacePhoto[] = (p.photos || []).slice(0, 10).map((ph: any) => ({
-    photo_reference: ph.name,
-    width: ph.widthPx || 800,
-    height: ph.heightPx || 600,
+  const photos: PlacePhoto[] = (p.photos || []).slice(0, 10).map((ph) => ({
+    photo_reference: ph.getUrl({ maxWidth: 1600 }),
+    width: ph.width || 800,
+    height: ph.height || 600,
   }));
 
   return {
-    place_id: p.id,
-    name: p.displayName?.text || "",
-    address: p.formattedAddress || "",
-    phone: p.internationalPhoneNumber || null,
-    website: p.websiteUri || null,
+    place_id: p.place_id || placeId,
+    name: p.name || "",
+    address: p.formatted_address || "",
+    phone: p.formatted_phone_number || null,
+    website: p.website || null,
     rating: p.rating ?? null,
-    user_ratings_total: p.userRatingCount || 0,
-    price_level: p.priceLevel != null ? parsePriceLevel(p.priceLevel) : null,
+    user_ratings_total: p.user_ratings_total || 0,
+    price_level: p.price_level ?? null,
     types: p.types || [],
-    location: p.location ? { lat: p.location.latitude, lng: p.location.longitude } : null,
+    location: getLocation(p.geometry),
     photos,
-    editorial_summary: p.editorialSummary?.text || null,
-    reviews: (p.reviews || []).slice(0, 3).map((r: any) => ({
-      author: r.authorAttribution?.displayName || "",
+    editorial_summary: p.editorial_summary?.overview || null,
+    reviews: (p.reviews || []).slice(0, 3).map((r) => ({
+      author: r.author_name || "",
       rating: r.rating || 0,
-      text: r.text?.text || "",
-      time: r.relativePublishTimeDescription || "",
+      text: r.text || "",
+      time: r.relative_time_description || "",
     })),
   };
 }
 
 export function getPhotoUrl(photoReference: string, maxWidth = 800): string {
-  // Places API (New) photo URL format
-  return `${BASE}/${photoReference}/media?maxWidthPx=${maxWidth}&key=${API_KEY}`;
+  if (/^https?:\/\//i.test(photoReference)) return photoReference;
+  return `https://places.googleapis.com/v1/${photoReference}/media?maxWidthPx=${maxWidth}&key=${API_KEY}`;
 }
