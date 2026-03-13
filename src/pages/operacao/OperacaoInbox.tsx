@@ -1099,7 +1099,7 @@ export default function OperacaoInbox() {
     if (!conv) return;
     const newPinned = !conv.is_pinned;
     setConversations(prev => prev.map(c => c.id === convId ? { ...c, is_pinned: newPinned } : c));
-    const cleanPhone = conv.phone.replace(/\D/g, "");
+    const cleanPhone = (conv.phone || "").replace(/\D/g, "");
     if (cleanPhone) await supabase.from("conversations").update({ is_pinned: newPinned } as any).eq("phone", cleanPhone);
   }, [conversations]);
 
