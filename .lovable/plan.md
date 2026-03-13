@@ -1,66 +1,97 @@
 
 
-# Redesign dos Botoes do Rateio de Despesas — Identidade NatLeva Premium
+# Corrigir Dashboard + Extracao IA Completa
 
-## Problema
-Os botoes do modulo de Rateio estao sem cor, sem personalidade visual e sem a elegancia premium da identidade NatLeva. Isso inclui: botoes de acao principal (Criar Grupo, Adicionar Despesa), botoes de selecao de participantes, botoes de sugestao de divisao, e botoes de navegacao do wizard.
+## Problema 1: Dashboard nao abre
+O componente `RoutesMap` usa `react-leaflet` que causa `TypeError: render2 is not a function` com React 18. A solucao e reescrever o mapa usando Leaflet vanilla (sem o wrapper react-leaflet).
 
-## Plano
+## Problema 2: Extracao IA nao preenche todos os campos
+Atualmente, quando voce sobe um print ou PDF, a IA extrai dados mas o sistema so preenche ~13 campos do formulario. Campos como nomes de passageiros, adultos, criancas, CPF, telefone, passaporte, forma de pagamento, quarto de hotel, alimentacao, valor recebido, nome da venda, observacoes e custos sao ignorados mesmo quando a IA os identifica.
 
-### Arquivo: `src/components/portal/PortalExpenseSplit.tsx`
+## Plano de Implementacao
 
-Redesign completo de todos os botoes e elementos interativos para seguir a estetica premium NatLeva (verde institucional, gradientes, glow effects, backdrop-blur):
+### 1. Reescrever RoutesMap com Leaflet vanilla
+- Remover imports de `react-leaflet`
+- Usar `useRef` + `useEffect` para inicializar `L.map()` diretamente
+- Manter a mesma visual (rotas com linhas, circulos nos aeroportos)
+- Arquivo: `src/components/RoutesMap.tsx`
 
-**1. Botoes de Acao Principal** (Criar Grupo, Adicionar Despesa, Confirmar)
-- Gradiente verde NatLeva: `bg-gradient-to-r from-[#0D9668] to-[#0A7B54]`
-- Texto branco, font-bold, sombra com glow verde
-- Hover com brilho intensificado e scale sutil
-- Icone com animacao de pulse no hover
+### 2. Criar ClientDistributionMap com Leaflet vanilla
+- Novo componente que consulta `passengers` + `sale_passengers` + `sales`
+- Mostra circulos proporcionais por cidade no mapa do Brasil
+- Tabela de ranking regional (Estado, Cidade, Clientes, Vendas, Receita)
+- Arquivo: `src/components/ClientDistributionMap.tsx`
 
-**2. EmptyState — CTA "Criar Grupo de Despesas"**
-- Botao grande com gradiente verde, icone animado
-- Borda com glow verde sutil
-- Fundo do card com efeito glassmorphism
+### 3. Expandir prompt da IA para extrair TODOS os campos
+Adicionar ao prompt de extracao os seguintes campos que hoje sao ignorados:
+- `sale_name` (sugestao de nome para a venda)
+- `payment_method` (PIX, cartao, transferencia, boleto)
+- `adults`, `children`, `children_ages`
+- `hotel_room`, `hotel_meal_plan`
+- `received_value` (valor cobrado do cliente)
+- `air_cash`, `air_miles_qty`, `air_miles_price`, `air_taxes`
+- `hotel_cash`, `hotel_miles_qty`, `hotel_miles_price`, `hotel_taxes`
+- `emission_source` (site/app usado para emitir)
+- `observations` (notas relevantes detectadas)
+- Arquivo: `supabase/functions/extract-sale-data/index.ts`
 
-**3. Botoes de Selecao de Participantes** (quem pagou, quem participa)
-- Estado inativo: borda sutil, fundo transparente com backdrop-blur
-- Estado ativo: fundo verde com opacidade, borda verde, badge com check animado
-- Avatar com ring colorido quando selecionado
+### 4. Expandir mapeamento de campos extraidos no formulario
+Atualizar a funcao `handleExtract` em `NewSale.tsx` para mapear TODOS os campos retornados pela IA para os campos correspondentes do formulario:
+- Nomes de passageiros, adultos, criancas
+- Forma de pagamento
+- Hotel (quarto, alimentacao)
+- Todos os valores financeiros (custo aereo, milhas, taxas, valor recebido)
+- Nome sugerido para a venda
+- Fonte de emissao
+- Arquivo: `src/pages/NewSale.tsx` (linhas 129-145)
 
-**4. Botoes de Sugestao Inteligente** (step 2 do wizard)
-- Cards de sugestao com borda gradiente quando ativo
-- Icone de radio/check animado
-- Fundo com glassmorphism sutil
-- Badge "Recomendado" com cor accent no default
+### 5. Integrar mapa de distribuicao no Dashboard
+- Importar `ClientDistributionMap` no Dashboard
+- Adicionar secao entre o mapa de rotas e os graficos
+- Arquivo: `src/pages/Dashboard.tsx`
 
-**5. Botoes de Navegacao do Wizard** (Proximo, Voltar, Editar)
-- "Proximo/Confirmar": gradiente verde, icone com seta animada
-- "Voltar/Editar": outline com borda verde sutil, hover com fundo verde/5%
+## Detalhes Tecnicos
 
-**6. Botao "Marcar como Pago"**
-- Gradiente verde -> verde escuro
-- Icone de check com animacao de success
+### Leaflet Vanilla (RoutesMap + ClientDistributionMap):
+```text
+const mapRef = useRef<HTMLDivElement>(null);
+const mapInstance = useRef<L.Map | null>(null);
 
-**7. Botao de Escanear Recibo**
-- Borda dashed com gradiente verde
-- Icone de camera com pulse
-- Fundo com pattern sutil
+useEffect(() => {
+  if (!mapRef.current) return;
+  const map = L.map(mapRef.current).setView([-14, -51], 4);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png").addTo(map);
+  mapInstance.current = map;
+  return () => { map.remove(); };
+}, []);
+```
 
-**8. Group Selector Tabs**
-- Tab ativa: gradiente verde com texto branco
-- Tab inativa: glassmorphism com hover verde sutil
+### Campos adicionados ao prompt IA:
+```text
+"sale_name": sugestao de nome para a venda
+"payment_method": metodo de pagamento identificado
+"adults": numero de adultos
+"children": numero de criancas  
+"children_ages": idades das criancas
+"hotel_room": tipo de quarto
+"hotel_meal_plan": regime de alimentacao
+"received_value": valor cobrado do cliente
+"air_cash": valor pago em dinheiro (aereo)
+"air_miles_qty": quantidade de milhas usadas
+"air_miles_price": preco do milheiro
+"air_taxes": taxas aereas
+"hotel_cash": valor pago pelo hotel
+"emission_source": onde foi emitido
+"observations": notas relevantes
+```
 
-**9. Botao "+ Adicionar nome" e "+ Adicionar" (membros)**
-- Outline com cor accent, hover com fill accent
+### Mapeamento expandido no handleExtract:
+Todos os campos acima serao mapeados no `setForm()`, fazendo com que ao subir um print com informacoes de hotel, valor, passageiros, etc., tudo seja preenchido automaticamente sem necessidade de digitacao manual.
 
-### Mudancas Especificas
-
-Todos os `<Button>` e `<button>` do componente serao atualizados com classes Tailwind que usam:
-- `bg-gradient-to-r from-emerald-600 to-emerald-700` para CTAs
-- `hover:shadow-[0_0_20px_rgba(16,185,129,0.3)]` para glow
-- `hover:scale-[1.02] active:scale-[0.98]` para feedback tatil
-- `transition-all duration-200` para suavidade
-- Bordas e backgrounds consistentes com as CSS vars `--accent` do tema
-
-Nenhum arquivo adicional sera criado. Apenas `PortalExpenseSplit.tsx` sera editado.
+### Arquivos modificados:
+- `src/components/RoutesMap.tsx` -- reescrito com Leaflet vanilla
+- `src/components/ClientDistributionMap.tsx` -- novo componente
+- `src/pages/Dashboard.tsx` -- integrar mapa de distribuicao
+- `src/pages/NewSale.tsx` -- expandir mapeamento de campos extraidos
+- `supabase/functions/extract-sale-data/index.ts` -- expandir prompt IA
 

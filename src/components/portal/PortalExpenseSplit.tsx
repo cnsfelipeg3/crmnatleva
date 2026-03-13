@@ -239,20 +239,20 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
       {/* Group selector */}
       {groups.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {groups.map(g => (
+      {groups.map(g => (
             <button
               key={g.id}
               onClick={() => setSelectedGroup(g)}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+              className={`px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all duration-200 ${
                 selectedGroup?.id === g.id
-                  ? "bg-accent/10 text-accent border border-accent/20"
-                  : "bg-muted/30 text-muted-foreground border border-border/30 hover:bg-muted/50"
+                  ? "bg-gradient-to-r from-accent to-accent/80 text-accent-foreground shadow-[0_0_16px_-4px_hsl(var(--accent)/0.4)] scale-[1.02]"
+                  : "bg-card/60 backdrop-blur-sm text-muted-foreground border border-border/30 hover:border-accent/30 hover:text-accent hover:shadow-sm"
               }`}
             >
               {g.name}
             </button>
           ))}
-          <button onClick={() => setCreateGroupOpen(true)} className="px-3 py-2 rounded-xl border border-dashed border-border/40 text-muted-foreground hover:border-accent/30 hover:text-accent transition-all">
+          <button onClick={() => setCreateGroupOpen(true)} className="px-3 py-2.5 rounded-xl border-2 border-dashed border-accent/25 text-accent/60 hover:border-accent/50 hover:text-accent hover:bg-accent/5 hover:shadow-[0_0_12px_-4px_hsl(var(--accent)/0.2)] transition-all duration-200">
             <Plus className="h-4 w-4" />
           </button>
         </div>
@@ -272,7 +272,7 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-foreground">Participantes</h3>
-              <button onClick={() => setAddMemberOpen(true)} className="flex items-center gap-1 text-xs text-accent font-semibold hover:underline">
+              <button onClick={() => setAddMemberOpen(true)} className="flex items-center gap-1.5 text-xs text-accent-foreground font-bold bg-gradient-to-r from-accent to-accent/80 px-3 py-1.5 rounded-lg shadow-sm hover:shadow-[0_0_12px_-3px_hsl(var(--accent)/0.4)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-200">
                 <UserPlus className="h-3.5 w-3.5" /> Adicionar
               </button>
             </div>
@@ -343,8 +343,7 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
                       </div>
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="gap-1 text-xs rounded-xl border-accent/20 text-accent hover:bg-accent/10"
+                        className="gap-1.5 text-xs rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold shadow-[0_0_12px_-3px_hsl(var(--accent)/0.35)] hover:shadow-[0_0_20px_-3px_hsl(var(--accent)/0.5)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-200"
                         onClick={() => markSettled(s.from, s.to, s.amount)}
                       >
                         <Check className="h-3 w-3" /> Pago
@@ -358,8 +357,8 @@ export default function PortalExpenseSplit({ saleId, passengers }: { saleId: str
 
           {/* ═══ QUICK ACTIONS ═══ */}
           <div className="flex gap-2">
-            <Button onClick={() => setAddExpenseOpen(true)} className="flex-1 sm:flex-none gap-2 rounded-xl">
-              <Plus className="h-4 w-4" /> Adicionar Despesa
+            <Button onClick={() => setAddExpenseOpen(true)} className="flex-1 sm:flex-none gap-2 rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold shadow-[0_0_16px_-4px_hsl(var(--accent)/0.35)] hover:shadow-[0_0_24px_-4px_hsl(var(--accent)/0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 h-12 text-sm">
+              <Plus className="h-5 w-5" /> Adicionar Despesa
             </Button>
           </div>
 
@@ -532,7 +531,7 @@ function EmptyState({ onCreateGroup }: { onCreateGroup: () => void }) {
           Organize e divida despesas da viagem com seus companheiros. Simples como o Splitwise, integrado à sua viagem.
         </p>
       </div>
-      <Button onClick={onCreateGroup} size="lg" className="gap-2 rounded-xl">
+      <Button onClick={onCreateGroup} size="lg" className="gap-2.5 rounded-2xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold text-base px-8 h-14 shadow-[0_0_24px_-4px_hsl(var(--accent)/0.4)] hover:shadow-[0_0_36px_-4px_hsl(var(--accent)/0.55)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-200">
         <Plus className="h-5 w-5" /> Criar Grupo de Despesas
       </Button>
     </motion.div>
@@ -644,17 +643,17 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
                     <button
                       key={i}
                       onClick={() => togglePassenger(pax)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                      className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold border-2 transition-all duration-200 ${
                         selected
-                          ? "bg-accent/10 border-accent/30 text-accent"
-                          : "bg-muted/20 border-border/30 text-muted-foreground hover:border-accent/20"
+                          ? "bg-gradient-to-r from-accent/12 to-accent/5 border-accent/40 text-accent shadow-[0_0_10px_-4px_hsl(var(--accent)/0.25)] scale-[1.01]"
+                          : "bg-card/50 backdrop-blur-sm border-border/20 text-muted-foreground hover:border-accent/25 hover:text-accent hover:bg-accent/5"
                       }`}
                     >
-                      <div className="w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center text-accent text-[10px] font-black">
+                      <div className={`w-6 h-6 rounded-full bg-accent/20 flex items-center justify-center text-accent text-[10px] font-black transition-all duration-200 ${selected ? "ring-2 ring-accent/30 ring-offset-1 ring-offset-background" : ""}`}>
                         {n[0]?.toUpperCase()}
                       </div>
                       {n}
-                      {selected && <Check className="h-3 w-3" />}
+                      {selected && <div className="w-4 h-4 rounded-full bg-accent flex items-center justify-center ml-auto"><Check className="h-2.5 w-2.5 text-accent-foreground" /></div>}
                     </button>
                   );
                 })}
@@ -675,12 +674,12 @@ function CreateGroupDialog({ open, onClose, saleId, clientId, passengers, onCrea
                 )}
               </div>
             ))}
-            <Button variant="outline" size="sm" className="gap-1 text-xs rounded-xl" onClick={addMemberField}>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs rounded-xl border-accent/30 text-accent font-bold hover:bg-accent/10 hover:border-accent/50 hover:shadow-[0_0_10px_-3px_hsl(var(--accent)/0.2)] transition-all duration-200" onClick={addMemberField}>
               <Plus className="h-3 w-3" /> Adicionar nome
             </Button>
           </div>
 
-          <Button onClick={handleCreate} disabled={loading} className="w-full gap-2 rounded-xl">
+          <Button onClick={handleCreate} disabled={loading} className="w-full gap-2 rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold h-12 text-sm shadow-[0_0_16px_-4px_hsl(var(--accent)/0.35)] hover:shadow-[0_0_24px_-4px_hsl(var(--accent)/0.5)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             Criar Grupo
           </Button>
@@ -963,8 +962,8 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
           {step === "form" && (
             <motion.div key="form" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
               {/* Receipt scanner */}
-              <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-accent/20 bg-accent/[0.03] text-accent text-sm font-semibold cursor-pointer hover:bg-accent/[0.06] transition-all">
-                {scanning ? <><Loader2 className="h-4 w-4 animate-spin" /> Processando recibo...</> : <><Camera className="h-4 w-4" /> Escanear Recibo com IA</>}
+              <label className="flex items-center justify-center gap-2.5 px-4 py-4 rounded-2xl border-2 border-dashed border-accent/30 bg-gradient-to-br from-accent/[0.04] to-accent/[0.08] text-accent text-sm font-bold cursor-pointer hover:border-accent/50 hover:from-accent/[0.06] hover:to-accent/[0.12] hover:shadow-[0_0_20px_-5px_hsl(var(--accent)/0.2)] active:scale-[0.99] transition-all duration-200">
+                {scanning ? <><Loader2 className="h-5 w-5 animate-spin" /> Processando recibo...</> : <><Camera className="h-5 w-5" /> Escanear Recibo com IA</>}
                 <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleReceiptScan} disabled={scanning} />
               </label>
 
@@ -1045,12 +1044,15 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
                 <div className="flex flex-wrap gap-2">
                   {members.map(m => (
                     <button key={m.id} onClick={() => setPaidBy(m.id)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                        paidBy === m.id ? "bg-accent/10 border-accent/30 text-accent" : "bg-muted/20 border-border/30 text-muted-foreground hover:border-accent/20"
+                      className={`flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold border-2 transition-all duration-200 ${
+                        paidBy === m.id
+                          ? "bg-gradient-to-r from-accent/15 to-accent/5 border-accent/40 text-accent shadow-[0_0_12px_-4px_hsl(var(--accent)/0.3)] scale-[1.02]"
+                          : "bg-card/50 backdrop-blur-sm border-border/20 text-muted-foreground hover:border-accent/25 hover:text-accent hover:bg-accent/5"
                       }`}
                     >
-                      <div className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-black" style={{ backgroundColor: m.avatar_color }}>{m.name[0]?.toUpperCase()}</div>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-black shrink-0 transition-all duration-200 ${paidBy === m.id ? "ring-2 ring-accent/40 ring-offset-1 ring-offset-background" : ""}`} style={{ backgroundColor: m.avatar_color }}>{m.name[0]?.toUpperCase()}</div>
                       {m.name}
+                      {paidBy === m.id && <Check className="h-3 w-3 ml-auto text-accent" />}
                     </button>
                   ))}
                 </div>
@@ -1058,7 +1060,7 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
 
               <Textarea placeholder="Observações (opcional)" value={notes} onChange={e => setNotes(e.target.value)} rows={2} />
 
-              <Button onClick={goToSplit} className="w-full gap-2 rounded-xl">
+              <Button onClick={goToSplit} className="w-full gap-2.5 rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold h-12 text-sm shadow-[0_0_16px_-4px_hsl(var(--accent)/0.35)] hover:shadow-[0_0_24px_-4px_hsl(var(--accent)/0.5)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200">
                 Próximo: Como dividir <ChevronRight className="h-4 w-4" />
               </Button>
             </motion.div>
@@ -1122,14 +1124,20 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
                       <button
                         key={opt.type}
                         onClick={handleClick}
-                        className={`w-full text-left px-4 py-3 rounded-xl border transition-all ${
+                        className={`w-full text-left px-4 py-3.5 rounded-xl border-2 transition-all duration-200 ${
                           isActive
-                            ? "bg-accent/10 border-accent/30"
-                            : "bg-card border-border/20 hover:border-accent/20"
+                            ? "bg-gradient-to-r from-accent/12 to-accent/5 border-accent/40 shadow-[0_0_14px_-4px_hsl(var(--accent)/0.25)] scale-[1.01]"
+                            : "bg-card/60 backdrop-blur-sm border-border/15 hover:border-accent/25 hover:bg-accent/[0.03] hover:shadow-sm"
                         }`}
                       >
-                        <p className={`text-xs font-bold ${isActive ? "text-accent" : "text-foreground"}`}>{opt.label}</p>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">{opt.desc}</p>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${isActive ? "border-accent bg-accent" : "border-muted-foreground/30"}`}>
+                            {isActive && <Check className="h-2.5 w-2.5 text-accent-foreground" />}
+                          </div>
+                          <p className={`text-xs font-bold ${isActive ? "text-accent" : "text-foreground"}`}>{opt.label}</p>
+                          {opt.type === suggestion.default && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-accent/15 text-accent ml-auto">Recomendado</span>}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1 ml-6">{opt.desc}</p>
                       </button>
                     );
                   })}
@@ -1144,14 +1152,18 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
                     <div key={m.id} className="flex items-center gap-3">
                       <button
                         onClick={() => toggleSplitMember(m.id)}
-                        className={`flex items-center gap-2 flex-1 px-3 py-2.5 rounded-xl text-xs font-semibold border transition-all ${
-                          splitAmong.has(m.id) ? "bg-accent/10 border-accent/30 text-accent" : "bg-muted/20 border-border/30 text-muted-foreground"
+                        className={`flex items-center gap-2.5 flex-1 px-3.5 py-3 rounded-xl text-xs font-bold border-2 transition-all duration-200 ${
+                          splitAmong.has(m.id)
+                            ? "bg-gradient-to-r from-accent/12 to-accent/5 border-accent/35 text-accent shadow-[0_0_10px_-4px_hsl(var(--accent)/0.2)]"
+                            : "bg-card/50 backdrop-blur-sm border-border/20 text-muted-foreground hover:border-accent/20 hover:bg-accent/[0.03]"
                         }`}
                       >
-                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-black" style={{ backgroundColor: m.avatar_color }}>{m.name[0]?.toUpperCase()}</div>
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-black shrink-0 transition-all duration-200 ${splitAmong.has(m.id) ? "ring-2 ring-accent/30 ring-offset-1 ring-offset-background" : ""}`} style={{ backgroundColor: m.avatar_color }}>{m.name[0]?.toUpperCase()}</div>
                         {m.name}
-                        {m.id === paidBy && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-accent/20 ml-1">pagou</span>}
-                        {splitAmong.has(m.id) && <Check className="h-3 w-3 ml-auto" />}
+                        {m.id === paidBy && <span className="text-[9px] px-2 py-0.5 rounded-full bg-accent/20 text-accent font-bold ml-1">pagou</span>}
+                        <div className={`ml-auto w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all duration-200 ${splitAmong.has(m.id) ? "border-accent bg-accent" : "border-muted-foreground/25"}`}>
+                          {splitAmong.has(m.id) && <Check className="h-3 w-3 text-accent-foreground" />}
+                        </div>
                       </button>
                       {(splitType === "custom" || splitType === "percentage") && splitAmong.has(m.id) && (
                         <Input
@@ -1175,8 +1187,8 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
               )}
 
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep("form")} className="rounded-xl">Voltar</Button>
-                <Button onClick={goToPreview} className="flex-1 gap-2 rounded-xl">
+                <Button variant="outline" onClick={() => setStep("form")} className="rounded-xl border-accent/20 text-accent font-bold hover:bg-accent/5 hover:border-accent/35 transition-all duration-200">Voltar</Button>
+                <Button onClick={goToPreview} className="flex-1 gap-2.5 rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold shadow-[0_0_16px_-4px_hsl(var(--accent)/0.35)] hover:shadow-[0_0_24px_-4px_hsl(var(--accent)/0.5)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200">
                   Ver Resultado <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -1238,8 +1250,10 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
               )}
 
               <div className="flex gap-2 pt-2">
-                <Button variant="outline" onClick={() => setStep("split")} className="rounded-xl">Editar</Button>
-                <Button onClick={handleSave} disabled={loading} className="flex-1 gap-2 rounded-xl">
+                <Button variant="outline" onClick={() => setStep("split")} className="rounded-xl border-accent/20 text-accent font-bold hover:bg-accent/5 hover:border-accent/35 transition-all duration-200">
+                  <Edit2 className="h-3.5 w-3.5 mr-1.5" /> Editar
+                </Button>
+                <Button onClick={handleSave} disabled={loading} className="flex-1 gap-2.5 rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground font-bold h-12 text-sm shadow-[0_0_20px_-4px_hsl(var(--accent)/0.4)] hover:shadow-[0_0_30px_-4px_hsl(var(--accent)/0.55)] hover:scale-[1.01] active:scale-[0.99] transition-all duration-200">
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                   Confirmar Despesa
                 </Button>
@@ -1310,11 +1324,13 @@ function AddMemberDialog({ open, onClose, groupId, existingMembers, passengers, 
                       key={i}
                       onClick={() => !alreadyIn && addPassenger(pax)}
                       disabled={alreadyIn}
-                      className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
-                        alreadyIn ? "opacity-40 cursor-not-allowed border-border/20" : "border-border/30 hover:border-accent/30 hover:text-accent"
+                      className={`px-3.5 py-2.5 rounded-xl text-xs font-bold border-2 transition-all duration-200 ${
+                        alreadyIn
+                          ? "opacity-40 cursor-not-allowed border-border/15 bg-muted/10"
+                          : "border-border/20 bg-card/50 backdrop-blur-sm hover:border-accent/35 hover:text-accent hover:bg-accent/5 hover:shadow-[0_0_10px_-4px_hsl(var(--accent)/0.2)]"
                       }`}
                     >
-                      {n} {alreadyIn && "✓"}
+                      {n} {alreadyIn && <Check className="inline h-3 w-3 text-accent ml-1" />}
                     </button>
                   );
                 })}
@@ -1325,7 +1341,7 @@ function AddMemberDialog({ open, onClose, groupId, existingMembers, passengers, 
             <label className="text-xs font-semibold text-foreground">Ou digite o nome</label>
             <div className="flex gap-2">
               <Input placeholder="Nome" value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === "Enter" && handleAdd()} />
-              <Button onClick={handleAdd} disabled={loading || !name.trim()} className="shrink-0 rounded-xl">
+              <Button onClick={handleAdd} disabled={loading || !name.trim()} className="shrink-0 rounded-xl bg-gradient-to-r from-accent to-accent/80 text-accent-foreground shadow-[0_0_12px_-4px_hsl(var(--accent)/0.3)] hover:shadow-[0_0_18px_-4px_hsl(var(--accent)/0.45)] hover:scale-[1.05] active:scale-[0.95] transition-all duration-200">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               </Button>
             </div>
