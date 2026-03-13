@@ -96,6 +96,7 @@ const PortalTripDetail = lazy(() => import("@/pages/portal/PortalTripDetail"));
 const PortalDemoTrip = lazy(() => import("@/pages/portal/PortalDemoTrip"));
 const PortalFinance = lazy(() => import("@/pages/portal/PortalFinance"));
 const PortalNewQuote = lazy(() => import("@/pages/portal/PortalNewQuote"));
+const PortalProfile = lazy(() => import("@/pages/portal/PortalProfile"));
 
 // CRM
 const QuoteRequests = lazy(() => import("@/pages/QuoteRequests"));
