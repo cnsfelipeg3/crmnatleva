@@ -98,14 +98,26 @@ const TYPE_ICONS: Record<string, typeof Plane> = {
 /* ───────── Google Maps Loader Singleton ───────── */
 let googleMapsReady: Promise<void> | null = null;
 
-function ensureGoogleMaps(): Promise<void> {
+function loadGoogleMaps(): Promise<void> {
   if (googleMapsReady) return googleMapsReady;
+  if (typeof google !== "undefined" && google.maps) {
+    googleMapsReady = Promise.resolve();
+    return googleMapsReady;
+  }
   const apiKey = getGoogleMapsApiKey();
   if (!apiKey) return Promise.reject(new Error("Google Maps API key missing"));
 
-  const { setOptions, importLibrary } = require("@googlemaps/js-api-loader") as typeof import("@googlemaps/js-api-loader");
-  setOptions({ apiKey, version: "weekly", language: "pt-BR", region: "BR" });
-  googleMapsReady = importLibrary("maps").then(() => undefined);
+  googleMapsReady = new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existing) { resolve(); return; }
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&language=pt-BR&region=BR`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Google Maps"));
+    document.head.appendChild(script);
+  });
   return googleMapsReady;
 }
 
