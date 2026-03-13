@@ -385,11 +385,19 @@ export default function ClientDistributionMap() {
 
   const handleCityClick = useCallback((city: string) => {
     const coords = CITY_COORDS[city];
-    if (coords && mapRef.current) {
+    if (!coords) return;
+
+    if (fallbackMode && leafletMapRef.current) {
+      leafletMapRef.current.panTo(coords);
+      leafletMapRef.current.setZoom(10);
+      return;
+    }
+
+    if (mapRef.current) {
       mapRef.current.panTo({ lat: coords[0], lng: coords[1] });
       mapRef.current.setZoom(10);
     }
-  }, []);
+  }, [fallbackMode]);
 
   const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
 
