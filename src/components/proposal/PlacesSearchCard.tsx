@@ -267,19 +267,52 @@ export default function PlacesSearchCard({
     }
 
     try {
-      const data = await getPlaceDetails(placeId);
+      // Primary: edge function for details
+      let data: any = null;
+      try {
+        const { data: edgeData, error: edgeErr } = await supabase.functions.invoke("places-search", {
+          body: { action: "details", place_id: placeId },
+        });
+        if (edgeErr) throw edgeErr;
+        if (edgeData?.error) throw new Error(edgeData.error);
+        data = edgeData;
+      } catch (edgeError) {
+        console.error("Edge function details error, trying client-side:", edgeError);
+        // Fallback: client-side
+        data = await getPlaceDetails(placeId);
+      }
+
       setSelectedPlace(data as any);
       setResults([]);
 
       if (data?.photos?.length > 0) {
         setLoadingPhotos(true);
-        const photos: CuratedPhoto[] = data.photos.slice(0, 10).map((photo, i) => ({
-          url: getPhotoUrl(photo.photo_reference, 800),
-          label: guessPhotoLabel(i),
-          selected: i < 6,
-          isCover: i === 0,
-          source: "google" as const,
-        }));
+
+        // Resolve photo URLs: edge function returns photo_reference, client-side returns full URLs
+        const photos: CuratedPhoto[] = await Promise.all(
+          data.photos.slice(0, 10).map(async (photo: any, i: number) => {
+            let url = photo.url || "";
+            if (!url && photo.photo_reference) {
+              // Get photo URL from edge function
+              try {
+                const { data: photoData } = await supabase.functions.invoke("places-search", {
+                  body: { action: "photo", photo_reference: photo.photo_reference, max_width: 800 },
+                });
+                url = photoData?.url || getPhotoUrl(photo.photo_reference, 800);
+              } catch {
+                url = getPhotoUrl(photo.photo_reference, 800);
+              }
+            }
+            return {
+              url,
+              label: guessPhotoLabel(i),
+              selected: i < 6,
+              isCover: i === 0,
+              source: "google" as const,
+            };
+          })
+        );
+
         setCuratedPhotos(photos);
         setLoadingPhotos(false);
       }
