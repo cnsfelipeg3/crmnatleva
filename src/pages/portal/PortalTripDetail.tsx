@@ -24,6 +24,7 @@ import PortalChecklist from "@/components/portal/PortalChecklist";
 import PortalDocumentsCenter from "@/components/portal/PortalDocumentsCenter";
 import PortalTimeline from "@/components/portal/PortalTimeline";
 import PortalCalendar from "@/components/portal/PortalCalendar";
+import WeatherForecast from "@/components/portal/WeatherForecast";
 import { getMockTripDetail } from "@/lib/portalMockTrips";
 
 const fmt = (v: number) => v?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00";
