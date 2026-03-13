@@ -376,71 +376,79 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
 
   return (
     <div className="space-y-4">
-      {/* Summary Bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 bg-accent/5 border border-accent/20 rounded-xl px-3 py-1.5">
-          <MapPin className="h-3.5 w-3.5 text-accent" />
-          <span className="text-xs font-semibold text-foreground">{summaryStats.cities} cidades</span>
+      {/* Unified Stats + Filters Bar */}
+      <div className="bg-card border border-border rounded-2xl p-3 space-y-3">
+        {/* Stats Row */}
+        <div className="grid grid-cols-4 gap-2">
+          {[
+            { icon: MapPin, label: "cidades", value: summaryStats.cities, accent: true },
+            { icon: Plane, label: "voos", value: summaryStats.flights, accent: false },
+            { icon: Hotel, label: "hotéis", value: summaryStats.hotels, accent: false },
+            { icon: Ticket, label: "serviços", value: summaryStats.services, accent: false },
+          ].map(stat => (
+            <div
+              key={stat.label}
+              className={`flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-medium transition-colors ${
+                stat.accent
+                  ? "bg-primary/10 text-primary border border-primary/20"
+                  : "bg-muted/60 text-muted-foreground"
+              }`}
+            >
+              <stat.icon className="h-3.5 w-3.5" />
+              <span className="font-semibold">{stat.value}</span>
+              <span className="hidden sm:inline">{stat.label}</span>
+            </div>
+          ))}
         </div>
-        <div className="flex items-center gap-2 bg-muted rounded-xl px-3 py-1.5">
-          <Plane className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">{summaryStats.flights} voos</span>
-        </div>
-        <div className="flex items-center gap-2 bg-muted rounded-xl px-3 py-1.5">
-          <Hotel className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-xs text-muted-foreground">{summaryStats.hotels} hotéis</span>
-        </div>
-        {summaryStats.services > 0 && (
-          <div className="flex items-center gap-2 bg-muted rounded-xl px-3 py-1.5">
-            <Ticket className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">{summaryStats.services} serviços</span>
+
+        {/* Filters + View Toggle Row */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 bg-muted/50 rounded-xl p-1">
+            {FILTER_OPTIONS.map(opt => (
+              <button
+                key={opt.key}
+                onClick={() => setFilter(opt.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+                  filter === opt.key
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                <opt.icon className="h-3 w-3" />
+                {opt.label}
+              </button>
+            ))}
           </div>
-        )}
 
-        <div className="ml-auto flex items-center gap-1">
-          <Button
-            size="sm"
-            variant={viewMode === "map" ? "default" : "ghost"}
-            className="h-8 px-3 text-xs gap-1.5 rounded-lg"
-            onClick={() => setViewMode("map")}
-          >
-            <MapIcon className="h-3.5 w-3.5" /> Mapa
-          </Button>
-          <Button
-            size="sm"
-            variant={viewMode === "list" ? "default" : "ghost"}
-            className="h-8 px-3 text-xs gap-1.5 rounded-lg"
-            onClick={() => setViewMode("list")}
-          >
-            <List className="h-3.5 w-3.5" /> Lista
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <div className="flex items-center bg-muted/50 rounded-xl p-1 gap-0.5">
+              <Button
+                size="sm"
+                variant={viewMode === "map" ? "default" : "ghost"}
+                className="h-7 px-3 text-xs gap-1.5 rounded-lg"
+                onClick={() => setViewMode("map")}
+              >
+                <MapIcon className="h-3.5 w-3.5" /> Mapa
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === "list" ? "default" : "ghost"}
+                className="h-7 px-3 text-xs gap-1.5 rounded-lg"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-3.5 w-3.5" /> Lista
+              </Button>
+            </div>
+            {viewMode === "map" && routePoints.length >= 2 && (
+              <button
+                onClick={handleFitAll}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-muted/50 text-muted-foreground hover:text-foreground transition-all whitespace-nowrap"
+              >
+                <Maximize2 className="h-3 w-3" />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        {FILTER_OPTIONS.map(opt => (
-          <button
-            key={opt.key}
-            onClick={() => setFilter(opt.key)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-              filter === opt.key
-                ? "bg-accent text-accent-foreground shadow-sm"
-                : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
-            }`}
-          >
-            <opt.icon className="h-3 w-3" />
-            {opt.label}
-          </button>
-        ))}
-        {viewMode === "map" && routePoints.length >= 2 && (
-          <button
-            onClick={handleFitAll}
-            className="flex items-center gap-1.5 ml-auto px-3 py-1.5 rounded-lg text-xs font-medium bg-muted text-muted-foreground hover:text-foreground transition-all whitespace-nowrap"
-          >
-            <Maximize2 className="h-3 w-3" /> Ver tudo
-          </button>
-        )}
       </div>
 
       {/* Map + Sidebar Layout */}
