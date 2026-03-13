@@ -75,12 +75,16 @@ export default function ClientDistributionMap() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const overlaysRef = useRef<(google.maps.Marker | google.maps.Circle | google.maps.InfoWindow)[]>([]);
+  const leafletMapRef = useRef<L.Map | null>(null);
+  const leafletLayerRef = useRef<L.LayerGroup | null>(null);
+
   const [cityData, setCityData] = useState<CityData[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [stateFilter, setStateFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"clients" | "revenue" | "sales">("clients");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fallbackMode, setFallbackMode] = useState(false);
 
   // Fetch data
   useEffect(() => {
