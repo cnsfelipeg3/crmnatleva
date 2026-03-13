@@ -1723,3 +1723,11 @@ function OperacaoInboxInner() {
     </div>
   );
 }
+
+export default function OperacaoInbox() {
+  return (
+    <SidebarProvider>
+      <OperacaoInboxInner />
+    </SidebarProvider>
+  );
+}
