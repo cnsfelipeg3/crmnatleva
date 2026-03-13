@@ -30,6 +30,7 @@ const navItems = [
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
   { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações Portal" },
   { to: "/propostas", icon: Presentation, label: "Propostas" },
+  { to: "/midias", icon: ImageIcon, label: "Mídias" },
 ];
 
 const financeItems = [

@@ -223,6 +223,9 @@ function AppRoutes() {
           <Route path="/operacao/simulador" element={<OperacaoSimulador />} />
           <Route path="/operacao/logs" element={<OperacaoLogs />} />
 
+          {/* Mídias */}
+          <Route path="/midias" element={<MediaLibrary />} />
+
           {/* Apresentação */}
           <Route path="/apresentacao" element={<ApresentacaoGeral />} />
 
