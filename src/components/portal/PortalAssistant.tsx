@@ -87,7 +87,7 @@ function pickBestTrip(trips: any[]): any | null {
 }
 
 /* ── Action Buttons Component ── */
-function ActionButtons({ actions, saleId }: { actions: ParsedAction[]; saleId?: string | null }) {
+function ActionButtons({ actions, saleId, onNavigate }: { actions: ParsedAction[]; saleId?: string | null; onNavigate?: () => void }) {
   const navigate = useNavigate();
 
   if (!actions.length) return null;
@@ -96,21 +96,29 @@ function ActionButtons({ actions, saleId }: { actions: ParsedAction[]; saleId?: 
     <div className="flex flex-wrap gap-1.5 mt-2.5">
       {actions.map((action, i) => {
         if (action.type === "nav") {
-          const basePath = ROUTE_MAP[action.route] || "/portal";
           const section = ROUTE_SECTION_MAP[action.route];
-          const path = action.route === "itinerario" && saleId
-            ? `/portal/viagem/${saleId}`
-            : basePath;
+          let path: string;
+
+          if (action.route === "itinerario" && saleId) {
+            path = `/portal/viagem/${saleId}`;
+          } else if (action.route === "financeiro") {
+            path = saleId ? `/portal/viagem/${saleId}` : "/portal/financeiro";
+          } else {
+            path = ROUTE_MAP[action.route] || "/portal";
+          }
+
+          const sectionTarget = action.route === "financeiro" ? "financeiro" : section;
 
           return (
             <button
               key={i}
               onClick={() => {
+                onNavigate?.();
                 navigate(path);
-                if (section) {
+                if (sectionTarget) {
                   setTimeout(() => {
-                    document.getElementById(section)?.scrollIntoView({ behavior: "smooth" });
-                  }, 300);
+                    document.getElementById(sectionTarget)?.scrollIntoView({ behavior: "smooth" });
+                  }, 400);
                 }
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20 text-[11px] font-semibold transition-all hover:shadow-sm"
@@ -126,11 +134,12 @@ function ActionButtons({ actions, saleId }: { actions: ParsedAction[]; saleId?: 
             <button
               key={i}
               onClick={() => {
+                onNavigate?.();
                 const path = saleId ? `/portal/viagem/${saleId}` : "/portal";
                 navigate(path);
                 setTimeout(() => {
                   document.getElementById("documentos")?.scrollIntoView({ behavior: "smooth" });
-                }, 300);
+                }, 400);
               }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20 text-[11px] font-semibold transition-all hover:shadow-sm"
             >
@@ -145,7 +154,6 @@ function ActionButtons({ actions, saleId }: { actions: ParsedAction[]; saleId?: 
             <button
               key={i}
               onClick={() => {
-                // Open WhatsApp or navigate to consultant contact
                 const whatsappUrl = "https://wa.me/5511999999999?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20com%20minha%20viagem";
                 window.open(whatsappUrl, "_blank");
               }}
@@ -456,7 +464,7 @@ export default function PortalAssistant({ saleId }: PortalAssistantProps) {
                             )}
                           </div>
                           {!isStreaming && actions.length > 0 && (
-                            <ActionButtons actions={actions} saleId={effectiveSaleId} />
+                            <ActionButtons actions={actions} saleId={effectiveSaleId} onNavigate={() => setOpen(false)} />
                           )}
                         </>
                       ) : (
