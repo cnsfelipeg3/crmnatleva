@@ -314,6 +314,16 @@ export default function PortalFinance() {
               onAddCash={async () => { await ensureBudget(); setCashDialogOpen(true); }}
             />
           </TabsContent>
+
+          {/* ── HISTORY ── */}
+          <TabsContent value="history" className="space-y-6">
+            <HistorySection
+              expenses={expenses}
+              receivables={receivables}
+              categories={categories}
+              cards={cards}
+            />
+          </TabsContent>
         </Tabs>
       </div>
 
