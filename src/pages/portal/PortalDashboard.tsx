@@ -14,6 +14,7 @@ import {
   getDestinationImage, getTripStatus, TripStatusBadge,
   Countdown, TripShelf,
 } from "@/components/travel-ui";
+import { CurrencySummary } from "@/components/portal/CurrencyPanel";
 
 const GlobeScene = lazy(() => import("@/components/portal/GlobeScene"));
 const TravelGlobe = lazy(() => import("@/components/globe/TravelGlobe"));
