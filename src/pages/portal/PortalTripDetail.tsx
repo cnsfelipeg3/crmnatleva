@@ -306,7 +306,7 @@ function PassengerCard({ pax, index, onInvite }: { pax: any; index: number; onIn
         ) : (
           <button
             onClick={() => onInvite(pax)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-accent/10 hover:bg-accent/20 text-accent text-xs font-semibold transition-all opacity-0 group-hover:opacity-100 shrink-0"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-accent/10 hover:bg-accent/20 text-accent text-xs font-semibold transition-all shrink-0"
             title="Convidar para acessar a viagem"
           >
             <UserPlus className="h-3.5 w-3.5" />
