@@ -579,104 +579,154 @@ function OperacaoInboxInner() {
     if (!hasCached) setLoadingMessages(true);
 
     const loadMessages = async () => {
-      if (selectedId.startsWith("wa_")) {
-        const phoneCandidates = getZapiPhoneCandidates(selectedId);
-        if (phoneCandidates.length === 0) {
-          if (!cancelled) { setMessages(prev => ({ ...prev, [selectedId]: [] })); setLoadingMessages(false); }
-          return;
-        }
+      try {
+        if (selectedId.startsWith("wa_")) {
+          const phoneCandidates = getZapiPhoneCandidates(selectedId);
+          if (phoneCandidates.length === 0) {
+            if (!cancelled) setMessages(prev => ({ ...prev, [selectedId]: [] }));
+            return;
+          }
 
-        // Fire zapi_messages + DB conversation lookup in parallel
-        const phone = selectedId.replace("wa_", "").trim();
-        const dbPhoneCandidates = Array.from(new Set([phone, `+${phone}`, `${phone}@c.us`, `${phone}@g.us`, `${phone}-group`]));
+          const phone = selectedId.replace("wa_", "").trim();
+          const dbPhoneCandidates = Array.from(new Set([phone, `+${phone}`, `${phone}@c.us`, `${phone}@g.us`, `${phone}-group`]));
 
-        const [zapiResp, byPhoneResp, byExternalResp] = await Promise.all([
-          supabase.from("zapi_messages" as any).select("*").in("phone", phoneCandidates).order("timestamp", { ascending: true }).limit(200),
-          selected?.db_id ? Promise.resolve({ data: null }) : supabase.from("conversations").select("id, updated_at").in("phone", dbPhoneCandidates).order("updated_at", { ascending: false }),
-          selected?.db_id ? Promise.resolve({ data: null }) : supabase.from("conversations").select("id, updated_at").eq("external_conversation_id", selectedId).order("updated_at", { ascending: false }),
-        ]);
+          const [zapiResp, byPhoneResp, byExternalResp] = await Promise.all([
+            supabase
+              .from("zapi_messages" as any)
+              .select("*")
+              .in("phone", phoneCandidates)
+              .order("timestamp", { ascending: false })
+              .limit(1000),
+            selected?.db_id
+              ? Promise.resolve({ data: null })
+              : supabase.from("conversations").select("id, updated_at").in("phone", dbPhoneCandidates).order("updated_at", { ascending: false }),
+            selected?.db_id
+              ? Promise.resolve({ data: null })
+              : supabase.from("conversations").select("id, updated_at").eq("external_conversation_id", selectedId).order("updated_at", { ascending: false }),
+          ]);
 
-        if (cancelled) return;
+          if (cancelled) return;
 
-        const rawMsgs = zapiResp.data || [];
-        if (rawMsgs.length > 0) {
-          const parsed: Message[] = rawMsgs.map((m: any) => {
-            const mediaInfo = extractMediaFromRawData(m.raw_data, m.type || "text");
-            return {
-              id: m.message_id || m.id,
-              conversation_id: selectedId,
-              sender_type: (m.from_me ? "atendente" : "cliente") as "cliente" | "atendente",
-              message_type: (m.type || "text") as MsgType,
-              text: m.text || mediaInfo.caption || "",
-              media_url: mediaInfo.mediaUrl,
-              status: mapZapiStatus(m.status, m.from_me),
-              created_at: m.timestamp || m.created_at,
-            };
-          });
-          for (const p of parsed) lastMsgIdsRef.current.add(p.id);
-          setMessages(prev => {
-            const existing = prev[selectedId] || [];
-            const existingMediaMap = new Map<string, string>();
-            for (const m of existing) { if (m.media_url) existingMediaMap.set(m.id, m.media_url); }
-            const merged = parsed.map(m => ({ ...m, media_url: m.media_url || existingMediaMap.get(m.id) }));
-            return { ...prev, [selectedId]: merged };
-          });
-          setLoadingMessages(false);
-          return;
-        }
+          const rawMsgs = zapiResp.data || [];
+          const zapiMsgs: Message[] = rawMsgs
+            .map((m: any) => {
+              const mediaInfo = extractMediaFromRawData(m.raw_data, m.type || "text");
+              return {
+                id: m.message_id || m.id,
+                conversation_id: selectedId,
+                sender_type: (m.from_me ? "atendente" : "cliente") as "cliente" | "atendente",
+                message_type: (m.type || "text") as MsgType,
+                text: m.text || mediaInfo.caption || "",
+                media_url: mediaInfo.mediaUrl,
+                status: mapZapiStatus(m.status, m.from_me),
+                created_at: String(m.timestamp || m.created_at),
+              };
+            })
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-        // Fallback: find conversation UUID
-        let fallbackConversationId = selected?.db_id || null;
+          let fallbackConversationId = selected?.db_id || null;
 
-        if (!fallbackConversationId) {
-          const candidateConversations = [...(byPhoneResp.data || []), ...(byExternalResp.data || [])]
-            .filter(c => !!c.id)
-            .sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
-          const candidateIds = Array.from(new Set(candidateConversations.map(c => c.id)));
+          if (!fallbackConversationId) {
+            const candidateConversations = [...(byPhoneResp.data || []), ...(byExternalResp.data || [])]
+              .filter(c => !!c.id)
+              .sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
 
-          if (candidateIds.length > 0) {
-            const [{ data: latestLegacyMsg }, { data: latestModernMsg }] = await Promise.all([
-              supabase.from("messages").select("conversation_id, created_at").in("conversation_id", candidateIds).order("created_at", { ascending: false }).limit(1),
-              supabase.from("chat_messages").select("conversation_id, created_at").in("conversation_id", candidateIds).order("created_at", { ascending: false }).limit(1),
+            const candidateIds = Array.from(new Set(candidateConversations.map(c => c.id)));
+
+            if (candidateIds.length > 0) {
+              const [{ data: latestLegacyMsg }, { data: latestModernMsg }] = await Promise.all([
+                supabase
+                  .from("messages")
+                  .select("conversation_id, created_at")
+                  .in("conversation_id", candidateIds)
+                  .order("created_at", { ascending: false })
+                  .limit(1),
+                supabase
+                  .from("chat_messages")
+                  .select("conversation_id, created_at")
+                  .in("conversation_id", candidateIds)
+                  .order("created_at", { ascending: false })
+                  .limit(1),
+              ]);
+
+              fallbackConversationId = latestLegacyMsg?.[0]?.conversation_id || latestModernMsg?.[0]?.conversation_id || candidateIds[0] || null;
+            }
+          }
+
+          let dbMsgs: Message[] = [];
+          if (fallbackConversationId) {
+            const [legacyResp, modernResp] = await Promise.all([
+              supabase
+                .from("messages")
+                .select("*")
+                .eq("conversation_id", fallbackConversationId)
+                .order("created_at", { ascending: true })
+                .limit(1000),
+              supabase
+                .from("chat_messages")
+                .select("*")
+                .eq("conversation_id", fallbackConversationId)
+                .order("created_at", { ascending: true })
+                .limit(1000),
             ]);
-            fallbackConversationId = latestLegacyMsg?.[0]?.conversation_id || latestModernMsg?.[0]?.conversation_id || candidateIds[0] || null;
+
+            const mergedRows = [...(legacyResp.data || []), ...(modernResp.data || [])];
+            const dedupedRows = Array.from(
+              new Map(
+                mergedRows.map((row: any) => [row.id || `${row.created_at}_${row.sender_type}_${row.text || row.content || ""}`, row]),
+              ).values(),
+            ).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            dbMsgs = mapDbMessages(dedupedRows, selectedId);
+          }
+
+          const mergedMap = new Map<string, Message>();
+          for (const msg of [...dbMsgs, ...zapiMsgs]) {
+            const key = msg.id || `${msg.created_at}_${msg.sender_type}_${msg.message_type}_${msg.text || ""}`;
+            const existing = mergedMap.get(key);
+            if (!existing) {
+              mergedMap.set(key, msg);
+              continue;
+            }
+            mergedMap.set(key, {
+              ...existing,
+              ...msg,
+              text: msg.text || existing.text,
+              media_url: msg.media_url || existing.media_url,
+            });
+          }
+
+          const mergedMsgs = Array.from(mergedMap.values()).sort(
+            (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+          );
+
+          for (const m of mergedMsgs) {
+            if (m.id) lastMsgIdsRef.current.add(m.id);
+          }
+
+          if (!cancelled) {
+            setMessages(prev => ({ ...prev, [selectedId]: mergedMsgs }));
+          }
+          return;
+        }
+
+        if (selectedId.length > 10) {
+          const [legacyResp, modernResp] = await Promise.all([
+            supabase.from("messages").select("*").eq("conversation_id", selectedId).order("created_at", { ascending: true }),
+            supabase.from("chat_messages").select("*").eq("conversation_id", selectedId).order("created_at", { ascending: true }),
+          ]);
+
+          if (!cancelled) {
+            const mergedRows = [...(legacyResp.data || []), ...(modernResp.data || [])];
+            const dedupedRows = Array.from(
+              new Map(mergedRows.map((row: any) => [row.id || `${row.created_at}_${row.sender_type}_${row.text || row.content || ""}`, row])).values(),
+            ).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            setMessages(prev => ({ ...prev, [selectedId]: mapDbMessages(dedupedRows, selectedId) }));
           }
         }
-
-        if (!fallbackConversationId) {
-          if (!cancelled) { setMessages(prev => ({ ...prev, [selectedId]: [] })); setLoadingMessages(false); }
-          return;
-        }
-
-        const [legacyResp, modernResp] = await Promise.all([
-          supabase.from("messages").select("*").eq("conversation_id", fallbackConversationId).order("created_at", { ascending: true }).limit(500),
-          supabase.from("chat_messages").select("*").eq("conversation_id", fallbackConversationId).order("created_at", { ascending: true }).limit(500),
-        ]);
-
-        if (cancelled) return;
-        const mergedRows = [...(legacyResp.data || []), ...(modernResp.data || [])];
-        const dedupedRows = Array.from(new Map(mergedRows.map((row: any) => [row.id || `${row.created_at}_${row.sender_type}_${row.text || row.content || ""}`, row])).values())
-          .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        const dbMsgs = mapDbMessages(dedupedRows, selectedId);
-        for (const m of dbMsgs) lastMsgIdsRef.current.add(m.id);
-        setMessages(prev => ({ ...prev, [selectedId]: dbMsgs }));
-        setLoadingMessages(false);
-        return;
-      }
-
-      if (selectedId.length > 10) {
-        const [legacyResp, modernResp] = await Promise.all([
-          supabase.from("messages").select("*").eq("conversation_id", selectedId).order("created_at", { ascending: true }),
-          supabase.from("chat_messages").select("*").eq("conversation_id", selectedId).order("created_at", { ascending: true }),
-        ]);
-
-        if (!cancelled) {
-          const mergedRows = [...(legacyResp.data || []), ...(modernResp.data || [])];
-          const dedupedRows = Array.from(new Map(mergedRows.map((row: any) => [row.id || `${row.created_at}_${row.sender_type}_${row.text || row.content || ""}`, row])).values())
-            .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-          setMessages(prev => ({ ...prev, [selectedId]: mapDbMessages(dedupedRows, selectedId) }));
-          setLoadingMessages(false);
-        }
+      } catch (error) {
+        console.error("Erro ao carregar histórico da conversa:", error);
+      } finally {
+        if (!cancelled) setLoadingMessages(false);
       }
     };
 
