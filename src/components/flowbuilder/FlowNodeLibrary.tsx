@@ -10,7 +10,7 @@ const CAT_ICONS: Record<string, React.ElementType> = {
   UserCog: icons.UserCog, Wrench: icons.Wrench, Network: icons.Network,
 };
 
-function NodeIcon({ name, color, size = 16 }: { name: string; color: string; size?: number }) {
+function NodeIcon({ name, color, size = 18 }: { name: string; color: string; size?: number }) {
   const Icon = (icons as any)[name];
   if (!Icon) return <Zap size={size} style={{ color }} />;
   return <Icon size={size} style={{ color }} />;
@@ -77,19 +77,23 @@ export function FlowNodeLibrary({ onDragStart }: Props) {
                           e.dataTransfer.effectAllowed = "move";
                           onDragStart(node);
                         }}
-                        className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-grab hover:bg-secondary/70 active:cursor-grabbing active:scale-[0.97] transition-all group border border-transparent hover:border-border/50"
+                        className="flex items-center gap-3 px-2.5 py-2.5 rounded-xl cursor-grab hover:bg-secondary/70 active:cursor-grabbing active:scale-[0.97] transition-all group border border-transparent hover:border-border/50"
                       >
-                        <GripVertical className="h-3 w-3 text-muted-foreground/30 group-hover:text-muted-foreground/60 shrink-0 transition-colors" />
                         <div
-                          className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-transform group-hover:scale-110"
-                          style={{ backgroundColor: `${node.color}18`, border: `1px solid ${node.color}30` }}
+                          className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0 transition-all group-hover:scale-110 group-hover:shadow-md"
+                          style={{
+                            background: `linear-gradient(135deg, ${node.color}25, ${node.color}40)`,
+                            border: `1.5px solid ${node.color}50`,
+                            boxShadow: `0 2px 8px ${node.color}15`,
+                          }}
                         >
-                          <NodeIcon name={node.icon} color={node.color} size={16} />
+                          <NodeIcon name={node.icon} color={node.color} size={18} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-semibold text-foreground truncate leading-tight">{node.label}</p>
-                          <p className="text-[10px] text-muted-foreground truncate leading-tight">{node.description}</p>
+                          <p className="text-[11px] font-semibold text-foreground truncate leading-tight">{node.label}</p>
+                          <p className="text-[10px] text-muted-foreground truncate leading-tight mt-0.5">{node.description}</p>
                         </div>
+                        <GripVertical className="h-3.5 w-3.5 text-muted-foreground/20 group-hover:text-muted-foreground/50 shrink-0 transition-colors" />
                       </div>
                     ))}
                   </div>
