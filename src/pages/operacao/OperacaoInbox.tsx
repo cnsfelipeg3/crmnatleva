@@ -1950,9 +1950,9 @@ function OperacaoInboxInner() {
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center space-y-3">
-                  <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/20" />
+              <div className="flex-1 h-full flex items-center justify-center">
+                <div className="text-center space-y-3 flex flex-col items-center justify-center">
+                  <MessageSquare className="h-12 w-12 text-muted-foreground/20" />
                   <p className="text-sm text-muted-foreground">Selecione uma conversa</p>
                 </div>
               </div>
