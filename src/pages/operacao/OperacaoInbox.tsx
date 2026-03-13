@@ -706,8 +706,9 @@ function OperacaoInboxInner() {
     async function pollWhatsAppMessages() {
       if (!selectedId?.startsWith("wa_")) return;
       try {
-        const phone = selectedId.replace("wa_", "");
-        const { data: zapiData } = await supabase.from("zapi_messages" as any).select("*").eq("phone", phone).order("timestamp", { ascending: true }).limit(200);
+        const phoneCandidates = getZapiPhoneCandidates(selectedId);
+        if (phoneCandidates.length === 0) return;
+        const { data: zapiData } = await supabase.from("zapi_messages" as any).select("*").in("phone", phoneCandidates).order("timestamp", { ascending: true }).limit(200);
         const rawMsgs = zapiData || [];
         const newMsgs: Message[] = [];
         for (const m of rawMsgs) {
