@@ -301,6 +301,7 @@ export default function PlacesSearchCard({
   /* ── Select place & load details ── */
   const selectPlace = useCallback(async (placeId: string) => {
     setLoadingDetails(true);
+    setLoadingPhotos(false);
     setError(null);
 
     // Resultado de fallback (hotel-search)
@@ -329,43 +330,103 @@ export default function PlacesSearchCard({
       }
     }
 
+    const selectedFromList = results.find((r) => r.place_id === placeId);
+
     try {
-      // Primary: edge function for details
-      let data: any = null;
+      let data: PlaceDetailsResult | PlaceDetails | null = null;
+
+      // Primary: client-side Google Places (funciona com key por referer)
       try {
-        const { data: edgeData, error: edgeErr } = await supabase.functions.invoke("places-search", {
-          body: { action: "details", place_id: placeId },
-        });
-        if (edgeErr) throw edgeErr;
-        if (edgeData?.error) throw new Error(edgeData.error);
-        data = edgeData;
-      } catch (edgeError) {
-        console.error("Edge function details error, trying client-side:", edgeError);
-        // Fallback: client-side
-        data = await getPlaceDetails(placeId);
+        data = await withTimeout(getPlaceDetails(placeId), 8000, "Timeout nos detalhes do Google Places");
+      } catch (clientErr) {
+        const message = clientErr instanceof Error ? clientErr.message : "";
+        console.error("Client-side details error:", clientErr);
+        if (/auth|api|google|timeout|indisponível|configurad/i.test(message.toLowerCase())) {
+          disableClientGoogleRef.current = true;
+        }
       }
 
-      setSelectedPlace(data as any);
+      // Secondary: edge function
+      if (!data && !disableEdgeSearchRef.current) {
+        try {
+          const { data: edgeData, error: edgeErr } = await withTimeout(
+            supabase.functions.invoke("places-search", {
+              body: { action: "details", place_id: placeId },
+            }),
+            5000,
+            "Timeout ao carregar detalhes server-side"
+          );
+          if (edgeErr) throw edgeErr;
+          if (edgeData?.error) throw new Error(edgeData.error);
+          data = edgeData;
+        } catch (edgeError) {
+          const message = edgeError instanceof Error ? edgeError.message : "";
+          console.error("Edge function details error:", edgeError);
+          if (/referer restrictions|request_denied|api keys|denied|permission/i.test(message.toLowerCase())) {
+            disableEdgeSearchRef.current = true;
+          }
+        }
+      }
+
+      // Last resort: still allow progression with basic data
+      if (!data && selectedFromList) {
+        data = {
+          place_id: selectedFromList.place_id,
+          name: selectedFromList.name,
+          address: selectedFromList.address,
+          phone: null,
+          website: null,
+          rating: selectedFromList.rating,
+          user_ratings_total: selectedFromList.user_ratings_total,
+          price_level: selectedFromList.price_level,
+          types: selectedFromList.types || ["lodging"],
+          location: selectedFromList.location,
+          photos: [],
+          editorial_summary: null,
+          reviews: [],
+        };
+      }
+
+      if (!data) throw new Error("Não foi possível carregar detalhes deste local no momento.");
+
+      setSelectedPlace(data as PlaceDetails);
       setResults([]);
 
-      if (data?.photos?.length > 0) {
+      if (Array.isArray(data.photos) && data.photos.length > 0) {
         setLoadingPhotos(true);
 
-        // Resolve photo URLs: edge function returns photo_reference, client-side returns full URLs
-        const photos: CuratedPhoto[] = await Promise.all(
+        const photosResolved = await Promise.all(
           data.photos.slice(0, 10).map(async (photo: any, i: number) => {
             let url = photo.url || "";
-            if (!url && photo.photo_reference) {
-              // Get photo URL from edge function
-              try {
-                const { data: photoData } = await supabase.functions.invoke("places-search", {
-                  body: { action: "photo", photo_reference: photo.photo_reference, max_width: 800 },
-                });
-                url = photoData?.url || getPhotoUrl(photo.photo_reference, 800);
-              } catch {
+
+            if (!url && typeof photo.photo_reference === "string") {
+              if (/^https?:\/\//i.test(photo.photo_reference)) {
+                url = photo.photo_reference;
+              } else if (!disableEdgeSearchRef.current) {
+                try {
+                  const { data: photoData, error: photoErr } = await withTimeout(
+                    supabase.functions.invoke("places-search", {
+                      body: { action: "photo", photo_reference: photo.photo_reference, max_width: 800 },
+                    }),
+                    5000,
+                    "Timeout ao carregar foto"
+                  );
+                  if (photoErr) throw photoErr;
+                  if (photoData?.error) throw new Error(photoData.error);
+                  url = photoData?.url || "";
+                } catch (photoError) {
+                  const message = photoError instanceof Error ? photoError.message : "";
+                  if (/referer restrictions|request_denied|api keys|denied|permission/i.test(message.toLowerCase())) {
+                    disableEdgeSearchRef.current = true;
+                  }
+                }
+              }
+
+              if (!url) {
                 url = getPhotoUrl(photo.photo_reference, 800);
               }
             }
+
             return {
               url,
               label: guessPhotoLabel(i),
@@ -376,14 +437,16 @@ export default function PlacesSearchCard({
           })
         );
 
-        setCuratedPhotos(photos);
-        setLoadingPhotos(false);
+        setCuratedPhotos(photosResolved.filter((photo) => Boolean(photo.url)));
+      } else {
+        setCuratedPhotos([]);
       }
     } catch (err) {
       console.error("Places details error:", err);
       const message = err instanceof Error ? err.message : "Não foi possível carregar detalhes do local";
       setError(message);
     } finally {
+      setLoadingPhotos(false);
       setLoadingDetails(false);
     }
   }, [results]);
