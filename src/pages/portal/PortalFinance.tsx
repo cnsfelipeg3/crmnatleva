@@ -130,7 +130,94 @@ function CircularGauge({ percentage, size = 120, strokeWidth = 8, color = "accen
   );
 }
 
-/* ═══════════════════════════════════════════════════════
+/* ═══ TRIP SELECTOR (when no sale is selected) ═══ */
+function PortalFinanceTripSelector({ onSelect }: { onSelect: (saleId: string) => void }) {
+  const [trips, setTrips] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        const { data } = await supabase.functions.invoke("portal-api", { body: { action: "trips" } });
+        const apiTrips = data?.trips || [];
+        const mockTrips = getMockTripDetail("mock-trip-1") ? [
+          { sale_id: "mock-trip-1", sale: { destination: "Itália", destination_iata: "FCO", departure_date: "2026-03-20", return_date: "2026-04-02", name: "Viagem Itália" } },
+          { sale_id: "mock-trip-2", sale: { destination: "Maldivas", destination_iata: "MLE", departure_date: "2026-06-15", return_date: "2026-06-25", name: "Lua de Mel Maldivas" } },
+        ] : [];
+        const existingIds = new Set(apiTrips.map((t: any) => t.sale_id));
+        const newMocks = mockTrips.filter((m) => !existingIds.has(m.sale_id));
+        setTrips([...apiTrips, ...newMocks]);
+      } catch {
+        setTrips([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTrips();
+  }, []);
+
+  return (
+    <PortalLayout>
+      <div className="max-w-2xl mx-auto px-4 py-12 space-y-8">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center space-y-3">
+          <div className="relative mx-auto w-20 h-20">
+            <div className="absolute inset-0 rounded-full bg-accent/10 animate-ping" style={{ animationDuration: "3s" }} />
+            <div className="relative h-20 w-20 rounded-full bg-accent/5 border border-accent/20 flex items-center justify-center">
+              <Wallet className="h-8 w-8 text-accent/60" />
+            </div>
+          </div>
+          <h1 className="text-3xl font-black text-foreground">Meu Financeiro</h1>
+          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+            Selecione uma viagem para acessar seu painel de controle financeiro
+          </p>
+        </motion.div>
+
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="w-10 h-10 border-[3px] border-accent/20 border-t-accent rounded-full animate-spin" />
+          </div>
+        ) : trips.length === 0 ? (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-12">
+            <Plane className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
+            <p className="text-sm text-muted-foreground">Nenhuma viagem encontrada</p>
+          </motion.div>
+        ) : (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-3">
+            {trips.map((trip, i) => {
+              const sale = trip.sale || {};
+              const dest = sale.destination || sale.name || "Viagem";
+              const depDate = sale.departure_date;
+              const retDate = sale.return_date;
+              return (
+                <motion.button
+                  key={trip.sale_id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  onClick={() => onSelect(trip.sale_id)}
+                  className="w-full flex items-center gap-4 p-5 rounded-2xl border border-border/30 bg-card hover:border-accent/30 hover:shadow-lg hover:shadow-accent/5 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 text-left group"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent/15 to-accent/5 flex items-center justify-center shrink-0 group-hover:from-accent/25 group-hover:to-accent/10 transition-all">
+                    <Plane className="h-5 w-5 text-accent" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-foreground truncate">{dest}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {depDate ? new Date(depDate + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : ""}
+                      {retDate ? ` — ${new Date(retDate + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}` : ""}
+                    </p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground/40 group-hover:text-accent transition-colors" />
+                </motion.button>
+              );
+            })}
+          </motion.div>
+        )}
+      </div>
+    </PortalLayout>
+  );
+}
+
    MAIN PAGE
    ═══════════════════════════════════════════════════════ */
 export default function PortalFinance() {
