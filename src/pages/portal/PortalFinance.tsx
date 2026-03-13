@@ -618,7 +618,7 @@ function OverviewSection({ categories, categorySpending, totalBudget, totalSpent
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">Restante</p>
-              <p className={`text-lg font-black tabular-nums ${budgetRemaining < 0 ? "text-destructive" : ""}`}>
+              <p className={`text-lg font-black tabular-nums ${(totalBudget - totalSpent) < 0 ? "text-destructive" : ""}`}>
                 {balanceVisible ? fmt(totalBudget - totalSpent) : "••••"}
               </p>
             </div>
