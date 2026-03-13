@@ -633,6 +633,10 @@ export default function PlacesSearchCard({
           <Button onClick={handleConfirm} disabled={selectedCount === 0} className="flex-1 gap-2">
             <Sparkles className="h-4 w-4" /> Usar na proposta · {selectedCount} foto{selectedCount !== 1 ? "s" : ""}
           </Button>
+          <Button variant="outline" onClick={saveToLibrary} disabled={selectedCount === 0 || saving} className="gap-1.5">
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {saving ? "Salvando..." : "Salvar na biblioteca"}
+          </Button>
         </div>
 
         {/* ── Lightbox ── */}
