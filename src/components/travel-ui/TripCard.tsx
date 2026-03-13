@@ -51,7 +51,7 @@ export default function TripCard({ trip, onOpen, index = 0 }: TripCardProps) {
         className="relative aspect-[16/10] rounded-2xl overflow-hidden shadow-xl group-hover:shadow-2xl group-hover:shadow-accent/15 transition-all duration-500"
       >
         <img
-          src={getDestinationImage(sale?.destination_iata || null, trip.cover_image_url)}
+          src={getDestinationImage(sale?.destination_iata || null, trip.cover_image_url, trip.sale_id)}
           alt=""
           className="w-full h-full object-cover transition-transform duration-[1200ms] group-hover:scale-110"
         />
