@@ -23,6 +23,8 @@ export interface HotelPhoto {
   room_type?: string;
   bed_type?: string;
   description?: string;
+  source?: "official" | "booking" | "google";
+  html_context?: string;
   room_details?: {
     size_sqm?: number;
     max_guests?: number;
