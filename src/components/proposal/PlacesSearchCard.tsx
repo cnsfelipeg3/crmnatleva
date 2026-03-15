@@ -245,8 +245,8 @@ export default function PlacesSearchCard({
 
     const mapFallbackResults = (items: any[]): PlaceResult[] =>
       items.map((item: any, idx: number) => ({
-        place_id: `fallback:${item.place_id || item.name || q}-${idx}`,
-        name: item.name || q,
+        place_id: `fallback:${item.place_id || item.name || trimmedQuery}-${idx}`,
+        name: item.name || trimmedQuery,
         address: [item.address, item.city, item.country].filter(Boolean).join(", "),
         rating: null,
         user_ratings_total: 0,
