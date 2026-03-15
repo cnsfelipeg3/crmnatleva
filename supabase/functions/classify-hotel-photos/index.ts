@@ -1,5 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -7,13 +5,21 @@ const corsHeaders = {
 
 async function fetchImageAsBase64(url: string): Promise<{ dataUrl: string; ok: boolean }> {
   try {
-    const res = await fetch(url, { redirect: "follow" });
+    const res = await fetch(url, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(10000),
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "image/*,*/*;q=0.8",
+      },
+    });
     if (!res.ok) {
       console.warn(`Failed to fetch image (${res.status}): ${url.substring(0, 80)}...`);
       return { dataUrl: "", ok: false };
     }
     const contentType = res.headers.get("content-type") || "image/jpeg";
     const buf = await res.arrayBuffer();
+    if (buf.byteLength < 500) return { dataUrl: "", ok: false };
     const bytes = new Uint8Array(buf);
     let binary = "";
     for (let i = 0; i < bytes.length; i++) {
@@ -27,7 +33,7 @@ async function fetchImageAsBase64(url: string): Promise<{ dataUrl: string; ok: b
   }
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
@@ -41,122 +47,127 @@ serve(async (req) => {
       });
     }
 
-    // Pre-fetch all images and convert to base64 data URLs
-    // This is needed because the AI gateway cannot access Google Places URLs directly
-    console.log(`Converting ${photo_urls.length} images to base64...`);
-    const imageResults = await Promise.all(photo_urls.map((url: string) => fetchImageAsBase64(url)));
-    
-    const validImages: { index: number; dataUrl: string }[] = [];
-    for (let i = 0; i < imageResults.length; i++) {
-      if (imageResults[i].ok) {
-        validImages.push({ index: i, dataUrl: imageResults[i].dataUrl });
+    // Process in batches of 8 to avoid token limits
+    const batchSize = 8;
+    const allClassified: any[] = [];
+
+    for (let batchStart = 0; batchStart < photo_urls.length; batchStart += batchSize) {
+      const batchUrls = photo_urls.slice(batchStart, batchStart + batchSize);
+
+      console.log(`Converting batch ${batchStart / batchSize + 1} (${batchUrls.length} images)...`);
+      const imageResults = await Promise.all(batchUrls.map((url: string) => fetchImageAsBase64(url)));
+
+      const validImages: { originalIndex: number; dataUrl: string }[] = [];
+      for (let i = 0; i < imageResults.length; i++) {
+        if (imageResults[i].ok) {
+          validImages.push({ originalIndex: batchStart + i, dataUrl: imageResults[i].dataUrl });
+        }
       }
-    }
 
-    if (validImages.length === 0) {
-      return new Response(JSON.stringify({ error: "Nenhuma foto pôde ser carregada" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+      if (validImages.length === 0) continue;
 
-    console.log(`Successfully converted ${validImages.length}/${photo_urls.length} images`);
+      console.log(`Batch has ${validImages.length} valid images, classifying...`);
 
-    const systemPrompt = `Você é um especialista em hotelaria e classificação de fotos de hotéis.
+      const systemPrompt = `Você é um curador visual especialista em hotéis de luxo.
 
-Analise CADA foto fornecida e classifique com precisão. Para cada foto retorne:
+Analise CADA foto e classifique usando os NOMES REAIS dos ambientes do hotel "${hotel_name || "não informado"}".
 
-1. "label": Nome descritivo curto da foto (ex: "Quarto Deluxe King", "Piscina Infinity", "Lobby Principal", "Restaurante Buffet", "Suite Master com Varanda")
-2. "category": Uma das categorias: fachada, lobby, quarto, suite, banheiro, piscina, restaurante, bar, spa, academia, area_comum, vista, jardim, praia, estacionamento, sala_reuniao, outro
-3. "room_type": Se for quarto/suíte, identifique o tipo (ex: "Standard Twin", "Deluxe Double", "Suite Junior", "Suite Master", "Quarto King", "Quarto Casal"). null se não for quarto.
-4. "description": Descrição curta (1-2 frases) do que aparece na foto incluindo detalhes visíveis como decoração, tamanho aparente, amenidades visíveis, vista, etc.
-5. "confidence": 0.0 a 1.0
+Para cada foto retorne:
 
-REGRAS:
-- Analise o conteúdo REAL de cada imagem. NÃO assuma baseado na ordem.
-- Se for quarto, tente identificar: tipo de cama (king, queen, twin, casal, solteiro), decoração, amenidades visíveis (TV, ar-condicionado, frigobar, cofre, varanda).
-- Se for área de alimentação, diferencie: restaurante principal, restaurante temático, bar, café, área de café da manhã.
-- Se for área externa: piscina (adulto/infantil/infinity), jardim, praia, deck.
-- Se não conseguir identificar com certeza, use a melhor estimativa com confidence menor.
+1. "environment_name": O nome REAL do ambiente como o hotel o nomeia. Exemplos reais:
+   - Quartos: "Quarto Superior Twin", "Suite Master Ocean View", "Apartamento Deluxe King", "Studio Premium", "Villa com Piscina Privativa"
+   - Gastronomia: "Restaurante Amalfi" (nome real), "Bar da Piscina", "Lobby Bar", "Buffet Café da Manhã"  
+   - Lazer: "Piscina Infinity", "Piscina Infantil", "Spa L'Occitane", "Academia", "Kids Club"
+   - Áreas: "Lobby & Recepção", "Business Center", "Salão de Eventos", "Jardim Tropical"
+   - Exteriores: "Fachada Principal", "Vista Aérea", "Praia Privativa", "Deck Panorâmico"
+   Use os nomes que aparecem no site do hotel. Se não souber o nome exato, descreva: "Quarto com Vista para o Mar", "Área da Piscina"
 
-Hotel: ${hotel_name || "não informado"}
+2. "category": Uma das: fachada, lobby, quarto, suite, banheiro, piscina, restaurante, bar, spa, academia, area_comum, vista, jardim, praia, eventos, outro
 
-Retorne APENAS um JSON válido:
+3. "room_type": Se for quarto/suíte, o tipo exato: "Superior Twin", "Deluxe King", "Suite Junior", "Suite Master", "Standard Double", etc. null se não for quarto.
+
+4. "bed_type": Se for quarto: "King", "Queen", "Twin", "Casal", "Solteiro", "Beliche". null se não for quarto.
+
+5. "description": 1 frase descrevendo o que se vê na foto (decoração, vista, tamanho, detalhes notáveis).
+
+6. "confidence": 0.0 a 1.0
+
+REGRAS IMPORTANTES:
+- Use nomes que o hotel realmente usa nos seus materiais. Se reconhecer a marca/rede (Accor, Hilton, Marriott etc.), use a nomenclatura padrão daquela rede.
+- Agrupe fotos do MESMO ambiente sob o MESMO environment_name.
+- Diferencie claramente: quartos diferentes devem ter nomes diferentes.
+- Para banheiros, associe ao quarto se possível: "Banheiro - Suite Master"
+
+Retorne APENAS JSON válido:
 {
   "photos": [
     {
       "index": 0,
-      "label": "nome descritivo",
+      "environment_name": "nome real do ambiente",
       "category": "categoria",
-      "room_type": "tipo do quarto ou null",
-      "description": "descrição detalhada",
+      "room_type": "tipo ou null",
+      "bed_type": "tipo cama ou null",
+      "description": "descrição curta",
       "confidence": 0.95
     }
   ]
 }`;
 
-    const content: any[] = [{ type: "text", text: systemPrompt }];
-
-    for (const img of validImages) {
-      content.push({ type: "text", text: `\nFoto ${img.index + 1}:` });
-      content.push({ type: "image_url", image_url: { url: img.dataUrl } });
-    }
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content }],
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit. Tente novamente em alguns segundos." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      const content: any[] = [{ type: "text", text: systemPrompt }];
+      for (const img of validImages) {
+        content.push({ type: "text", text: `\nFoto ${img.originalIndex + 1}:` });
+        content.push({ type: "image_url", image_url: { url: img.dataUrl } });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Erro na classificação" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [{ role: "user", content }],
+        }),
       });
-    }
 
-    const data = await response.json();
-    const aiResponse = data.choices?.[0]?.message?.content || "";
-
-    let parsed;
-    try {
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
-      } else {
-        parsed = { photos: [] };
-      }
-    } catch {
-      parsed = { photos: [] };
-    }
-
-    // Re-map indices back to original photo_urls indices
-    if (parsed.photos && Array.isArray(parsed.photos)) {
-      for (const photo of parsed.photos) {
-        const validImg = validImages[photo.index];
-        if (validImg) {
-          photo.index = validImg.index;
+      if (!response.ok) {
+        const t = await response.text();
+        console.error("AI gateway error:", response.status, t);
+        if (response.status === 429) {
+          // Wait and continue with remaining batches
+          await new Promise(r => setTimeout(r, 2000));
+          continue;
         }
+        continue;
+      }
+
+      const data = await response.json();
+      const aiResponse = data.choices?.[0]?.message?.content || "";
+
+      try {
+        const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (parsed.photos && Array.isArray(parsed.photos)) {
+            // Re-map indices
+            for (const photo of parsed.photos) {
+              const validImg = validImages[photo.index];
+              if (validImg) {
+                photo.index = validImg.originalIndex;
+              }
+            }
+            allClassified.push(...parsed.photos);
+          }
+        }
+      } catch {
+        console.warn("Failed to parse AI response for batch");
       }
     }
 
-    return new Response(JSON.stringify(parsed), {
+    console.log(`Classified ${allClassified.length}/${photo_urls.length} photos total`);
+
+    return new Response(JSON.stringify({ photos: allClassified }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
