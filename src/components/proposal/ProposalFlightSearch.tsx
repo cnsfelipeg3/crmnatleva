@@ -380,7 +380,7 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                       {/* Edit mode */}
                       {hasFilled && isEditing && !isManual && (
                         <div className="mx-1 mb-2">
-                          <FlightSegmentForm seg={seg} onUpdate={(field, value) => updateSegment(idx, field, value)} />
+                          <FlightSegmentForm seg={seg} onUpdate={(field, value) => updateSegment(idx, field, value)} onUpdateMulti={(updates) => updateSegmentMulti(idx, updates)} />
                         </div>
                       )}
                     </div>
