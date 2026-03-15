@@ -252,8 +252,16 @@ function categorizePages(urls: string[], mainUrl: string | undefined): {
   const gallery: CategorizedPage[] = [];
   const other: CategorizedPage[] = [];
 
-  const roomKeywords = ["room", "suite", "accommodation", "camera", "chambre", "zimmer", "quarto", "habitacion", "camere"];
-  const galleryKeywords = ["gallery", "galeria", "photo", "foto", "image", "media", "virtual-tour"];
+  const roomKeywords = [
+    "room", "suite", "accommodation", "camera", "chambre", "zimmer", "quarto", "habitacion", "camere",
+    // Japanese
+    "客室", "お部屋", "ルーム", "スイート", "和室", "洋室", "和洋室", "guestroom", "heya",
+  ];
+  const galleryKeywords = [
+    "gallery", "galeria", "photo", "foto", "image", "media", "virtual-tour",
+    // Japanese
+    "ギャラリー", "フォトギャラリー", "写真",
+  ];
   const facilityKeywords = [
     "restaurant", "ristorante", "dining", "bar", "lounge",
     "spa", "wellness", "pool", "piscina",
@@ -261,6 +269,14 @@ function categorizePages(urls: string[], mainUrl: string | undefined): {
     "meeting", "event", "wedding",
     "garden", "terrace", "rooftop",
     "experience", "service", "facility", "amenities",
+    // Japanese
+    "レストラン", "ダイニング", "バー", "ラウンジ",
+    "温泉", "大浴場", "露天風呂", "スパ", "プール",
+    "フィットネス", "ジム",
+    "宴会", "会議", "ウェディング", "結婚",
+    "庭園", "テラス",
+    "施設", "アクティビティ", "館内",
+    "onsen", "rotenburo",
   ];
 
   // Skip these pages entirely
@@ -684,7 +700,7 @@ function findMatchingSection(heading: string, collection: ImageCollection): stri
   
   // If heading looks like a room/facility name, store it anyway
   const lower = heading.toLowerCase();
-  if (/room|suite|quarto|camera|chambre|deluxe|superior|standard|penthouse|presidential|royal|spa|pool|piscina|restaurante|restaurant|bar|lounge|gym|fitness|garden|terrace|rooftop/i.test(lower)) {
+  if (/room|suite|quarto|camera|chambre|deluxe|superior|standard|penthouse|presidential|royal|spa|pool|piscina|restaurante|restaurant|bar|lounge|gym|fitness|garden|terrace|rooftop|客室|和室|洋室|スイート|ルーム|レストラン|温泉|大浴場|スパ|プール|ラウンジ|バー|庭園|施設/i.test(lower)) {
     return heading;
   }
   
@@ -803,21 +819,21 @@ function isGenericAlt(text: string): boolean {
 
 function inferCategory(sectionName: string, alt: string): string {
   const text = `${sectionName} ${alt}`.toLowerCase();
-  if (/fachada|exterior|facade|building|entrada/i.test(text)) return "fachada";
-  if (/lobby|recep[çc]/i.test(text)) return "lobby";
-  if (/suite|suíte|penthouse|presidential|royal/i.test(text)) return "suite";
-  if (/room|quarto|camera|chambre|zimmer|deluxe|superior|standard|classic|double|twin|single|king|queen/i.test(text)) return "quarto";
+  if (/fachada|exterior|facade|building|entrada|外観/i.test(text)) return "fachada";
+  if (/lobby|recep[çc]|ロビー|フロント/i.test(text)) return "lobby";
+  if (/suite|suíte|penthouse|presidential|royal|スイート/i.test(text)) return "suite";
+  if (/room|quarto|camera|chambre|zimmer|deluxe|superior|standard|classic|double|twin|single|king|queen|客室|和室|洋室|和洋室|ルーム|お部屋/i.test(text)) return "quarto";
   if (/banheiro|bathroom|bagno|salle de bain/i.test(text)) return "banheiro";
-  if (/piscina|pool|swimming/i.test(text)) return "piscina";
-  if (/praia|beach|spiaggia/i.test(text)) return "praia";
-  if (/restaurante|restaurant|ristorante|dining/i.test(text)) return "restaurante";
-  if (/bar|lounge|cocktail/i.test(text)) return "bar";
-  if (/spa|wellness|benessere/i.test(text)) return "spa";
-  if (/academia|gym|fitness|palestra/i.test(text)) return "academia";
-  if (/jardim|garden|giardino/i.test(text)) return "jardim";
-  if (/vista|view|panoram/i.test(text)) return "vista";
-  if (/event|meeting|conferenc|sala/i.test(text)) return "eventos";
-  if (/area.?comum|common|terrace|terrazzo|rooftop/i.test(text)) return "area_comum";
+  if (/piscina|pool|swimming|プール/i.test(text)) return "piscina";
+  if (/praia|beach|spiaggia|ビーチ/i.test(text)) return "praia";
+  if (/restaurante|restaurant|ristorante|dining|レストラン|ダイニング|朝食|食事/i.test(text)) return "restaurante";
+  if (/bar|lounge|cocktail|バー|ラウンジ/i.test(text)) return "bar";
+  if (/spa|wellness|benessere|温泉|大浴場|露天風呂|スパ|onsen/i.test(text)) return "spa";
+  if (/academia|gym|fitness|palestra|フィットネス|ジム/i.test(text)) return "academia";
+  if (/jardim|garden|giardino|庭園|庭/i.test(text)) return "jardim";
+  if (/vista|view|panoram|眺望|景色/i.test(text)) return "vista";
+  if (/event|meeting|conferenc|sala|宴会|会議|ウェディング/i.test(text)) return "eventos";
+  if (/area.?comum|common|terrace|terrazzo|rooftop|施設|館内|テラス/i.test(text)) return "area_comum";
   return "outro";
 }
 

@@ -347,6 +347,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       setNav({ level: "categories" });
 
       const photosWithSections = resolvedPhotos.filter(p => p.environment_name && p.environment_name.length > 2).length;
+      const uniqueEnvNames = new Set(resolvedPhotos.map(p => p.environment_name).filter(Boolean)).size;
       const sectionRatio = resolvedPhotos.length > 0 ? photosWithSections / resolvedPhotos.length : 0;
 
       if (resolvedPhotos.length > 0) {
@@ -356,7 +357,8 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
           { duration: 5000 }
         );
         preloadViaProxy(resolvedPhotos, data.source_url || undefined);
-        if (sectionRatio < 0.5) {
+        // Always run classification if sections are weak OR too few unique names
+        if (sectionRatio < 0.7 || uniqueEnvNames < 3) {
           await runClassification(resolvedPhotos, scraperRoomNames);
         }
       } else {
@@ -491,54 +493,160 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     );
   };
 
-  // ── Category folders view ──
+  // ── Category folders view (Decolar-style) ──
   const renderCategories = () => (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+    <div className="space-y-4">
       {sortedCategories.map(cat => {
         const items = categoryGroups[cat];
-        const itemNames = Object.keys(items);
+        const itemNames = Object.keys(items).sort((a, b) => a.localeCompare(b, "pt-BR"));
         const totalPhotos = Object.values(items).reduce((sum, arr) => sum + arr.length, 0);
-        const coverPhoto = Object.values(items).flat()[0];
         const cfg = categoryConfig[cat] || { icon: "📷", label: cat };
+        const isRoomCategory = cat === "quarto" || cat === "suite";
 
+        // For room categories, show individual room cards inline
+        if (isRoomCategory && itemNames.length > 0) {
+          return (
+            <div key={cat} className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{cfg.icon}</span>
+                <h3 className="text-sm font-bold text-foreground">{cfg.label}</h3>
+                <Badge variant="secondary" className="text-[10px]">{totalPhotos} fotos • {itemNames.length} tipos</Badge>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {itemNames.map(name => {
+                  const itemPhotos = items[name];
+                  const coverPhoto = itemPhotos[0];
+                  const secondPhoto = itemPhotos[1];
+                  const detail = sectionDetails[name];
+
+                  return (
+                    <button
+                      key={name}
+                      onClick={() => setNav({ level: "detail", category: cat, itemName: name })}
+                      className="group relative rounded-xl overflow-hidden border border-border/40 hover:border-primary/30 hover:shadow-lg transition-all bg-card text-left"
+                    >
+                      {/* Photo strip */}
+                      <div className="flex h-44 sm:h-48">
+                        <div className="flex-[2] overflow-hidden bg-muted relative">
+                          {coverPhoto && (
+                            <img
+                              src={getDisplayUrl(coverPhoto.url)}
+                              alt={name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                              crossOrigin="anonymous"
+                              onError={() => handleImageError(coverPhoto.url)}
+                            />
+                          )}
+                        </div>
+                        {secondPhoto && (
+                          <div className="flex-[1] overflow-hidden bg-muted border-l border-border/20">
+                            <img
+                              src={getDisplayUrl(secondPhoto.url)}
+                              alt={name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                              crossOrigin="anonymous"
+                              onError={() => handleImageError(secondPhoto.url)}
+                            />
+                          </div>
+                        )}
+                        {/* Photo count badge */}
+                        <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Camera className="w-2.5 h-2.5" />
+                          {itemPhotos.length}
+                        </div>
+                      </div>
+                      {/* Info section */}
+                      <div className="p-3 space-y-1.5">
+                        <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{name}</h4>
+                        {detail?.description && (
+                          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">{detail.description}</p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          {detail?.details?.["Tamanho"] && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 rounded-md px-1.5 py-0.5">
+                              <Maximize2 className="w-2.5 h-2.5" /> {detail.details["Tamanho"]}
+                            </span>
+                          )}
+                          {detail?.details?.["Cama"] && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 rounded-md px-1.5 py-0.5">
+                              <Bed className="w-2.5 h-2.5" /> {detail.details["Cama"]}
+                            </span>
+                          )}
+                          {detail?.details?.["Capacidade"] && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 rounded-md px-1.5 py-0.5">
+                              <Users className="w-2.5 h-2.5" /> {detail.details["Capacidade"]}
+                            </span>
+                          )}
+                          {detail?.details?.["Vista"] && (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 rounded-md px-1.5 py-0.5">
+                              <Eye className="w-2.5 h-2.5" /> {detail.details["Vista"]}
+                            </span>
+                          )}
+                          {detail?.amenities && detail.amenities.length > 0 && (
+                            <span className="text-[10px] text-muted-foreground/60">
+                              +{detail.amenities.length} comodidades
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {/* Arrow indicator */}
+                      <div className="absolute top-1/2 right-2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="bg-primary/90 text-primary-foreground rounded-full w-7 h-7 flex items-center justify-center shadow-md">
+                          <ChevronNav className="w-4 h-4" />
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        }
+
+        // For non-room categories, show compact folder cards
         return (
           <button
             key={cat}
             onClick={() => {
-              // If only one item in category, skip to detail
               if (itemNames.length === 1) {
                 setNav({ level: "detail", category: cat, itemName: itemNames[0] });
               } else {
                 setNav({ level: "items", category: cat });
               }
             }}
-            className="group relative rounded-xl overflow-hidden border border-border/50 hover:border-primary/30 hover:shadow-md transition-all text-left bg-card"
+            className="group w-full flex items-stretch gap-3 rounded-xl overflow-hidden border border-border/40 hover:border-primary/30 hover:shadow-md transition-all bg-card text-left"
           >
-            <div className="aspect-[4/3] overflow-hidden bg-muted">
-              {coverPhoto && (
+            <div className="w-28 sm:w-36 flex-shrink-0 overflow-hidden bg-muted">
+              {Object.values(items).flat()[0] && (
                 <img
-                  src={getDisplayUrl(coverPhoto.url)}
+                  src={getDisplayUrl(Object.values(items).flat()[0].url)}
                   alt={cfg.label}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 aspect-[4/3]"
                   loading="lazy"
                   referrerPolicy="no-referrer"
                   crossOrigin="anonymous"
-                  onError={() => handleImageError(coverPhoto.url)}
+                  onError={() => handleImageError(Object.values(items).flat()[0].url)}
                 />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
             </div>
-            <div className="absolute bottom-0 left-0 right-0 p-3">
+            <div className="flex-1 py-3 pr-3 min-w-0 flex flex-col justify-center">
               <div className="flex items-center gap-1.5">
-                <span className="text-lg">{cfg.icon}</span>
-                <span className="text-sm font-bold text-white drop-shadow-lg">{cfg.label}</span>
+                <span className="text-base">{cfg.icon}</span>
+                <h4 className="text-sm font-bold text-foreground">{cfg.label}</h4>
               </div>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px] text-white/70">{totalPhotos} fotos</span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[10px] text-muted-foreground">{totalPhotos} fotos</span>
                 {itemNames.length > 1 && (
-                  <span className="text-[10px] text-white/70">• {itemNames.length} ambientes</span>
+                  <span className="text-[10px] text-muted-foreground">• {itemNames.length} ambientes</span>
                 )}
               </div>
+            </div>
+            <div className="flex items-center pr-3">
+              <ChevronNav className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
             </div>
           </button>
         );
@@ -546,20 +654,87 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     </div>
   );
 
-  // ── Items list within a category ──
+  // ── Items list within a category (Decolar-style) ──
   const renderItems = () => {
     if (nav.level !== "items") return null;
     const items = categoryGroups[nav.category] || {};
     const itemNames = Object.keys(items).sort((a, b) => a.localeCompare(b, "pt-BR"));
-    const cfg = categoryConfig[nav.category] || { icon: "📷", label: nav.category };
+    const isRoomCategory = nav.category === "quarto" || nav.category === "suite";
 
     return (
-      <div className="space-y-2">
+      <div className={isRoomCategory ? "grid grid-cols-1 sm:grid-cols-2 gap-3" : "space-y-2"}>
         {itemNames.map(name => {
           const itemPhotos = items[name];
           const coverPhoto = itemPhotos[0];
+          const secondPhoto = itemPhotos[1];
           const detail = sectionDetails[name];
 
+          if (isRoomCategory) {
+            return (
+              <button
+                key={name}
+                onClick={() => setNav({ level: "detail", category: nav.category, itemName: name })}
+                className="group relative rounded-xl overflow-hidden border border-border/40 hover:border-primary/30 hover:shadow-lg transition-all bg-card text-left"
+              >
+                <div className="flex h-44 sm:h-48">
+                  <div className="flex-[2] overflow-hidden bg-muted relative">
+                    {coverPhoto && (
+                      <img
+                        src={getDisplayUrl(coverPhoto.url)}
+                        alt={name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        crossOrigin="anonymous"
+                        onError={() => handleImageError(coverPhoto.url)}
+                      />
+                    )}
+                  </div>
+                  {secondPhoto && (
+                    <div className="flex-[1] overflow-hidden bg-muted border-l border-border/20">
+                      <img
+                        src={getDisplayUrl(secondPhoto.url)}
+                        alt={name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                        referrerPolicy="no-referrer"
+                        crossOrigin="anonymous"
+                        onError={() => handleImageError(secondPhoto.url)}
+                      />
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <Camera className="w-2.5 h-2.5" /> {itemPhotos.length}
+                  </div>
+                </div>
+                <div className="p-3 space-y-1.5">
+                  <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{name}</h4>
+                  {detail?.description && (
+                    <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">{detail.description}</p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    {detail?.details?.["Tamanho"] && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 rounded-md px-1.5 py-0.5">
+                        <Maximize2 className="w-2.5 h-2.5" /> {detail.details["Tamanho"]}
+                      </span>
+                    )}
+                    {detail?.details?.["Cama"] && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 rounded-md px-1.5 py-0.5">
+                        <Bed className="w-2.5 h-2.5" /> {detail.details["Cama"]}
+                      </span>
+                    )}
+                    {detail?.details?.["Vista"] && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 rounded-md px-1.5 py-0.5">
+                        <Eye className="w-2.5 h-2.5" /> {detail.details["Vista"]}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          }
+
+          // Non-room items - horizontal card
           return (
             <button
               key={name}
@@ -588,26 +763,6 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                   <Badge variant="outline" className="text-[9px] gap-1">
                     <Camera className="w-2.5 h-2.5" /> {itemPhotos.length}
                   </Badge>
-                  {detail?.details?.["Tamanho"] && (
-                    <Badge variant="outline" className="text-[9px] gap-1">
-                      <Maximize2 className="w-2.5 h-2.5" /> {detail.details["Tamanho"]}
-                    </Badge>
-                  )}
-                  {detail?.details?.["Cama"] && (
-                    <Badge variant="outline" className="text-[9px] gap-1">
-                      <Bed className="w-2.5 h-2.5" /> {detail.details["Cama"]}
-                    </Badge>
-                  )}
-                  {detail?.details?.["Capacidade"] && (
-                    <Badge variant="outline" className="text-[9px] gap-1">
-                      <Users className="w-2.5 h-2.5" /> {detail.details["Capacidade"]}
-                    </Badge>
-                  )}
-                  {detail?.details?.["Vista"] && (
-                    <Badge variant="outline" className="text-[9px] gap-1">
-                      <Eye className="w-2.5 h-2.5" /> {detail.details["Vista"]}
-                    </Badge>
-                  )}
                 </div>
               </div>
               <div className="flex items-center pr-3">
