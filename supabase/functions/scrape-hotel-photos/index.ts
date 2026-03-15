@@ -292,6 +292,43 @@ ${imageListForAI}`
     const rejectedCount = classified.filter(c => !c.belongs_to_target_hotel).length;
     console.log(`Verified: ${photos.length} accepted, ${rejectedCount} rejected`);
 
+    // FALLBACK: If AI rejected everything but we had images from the official domain,
+    // return those images unfiltered (the AI might have been too aggressive)
+    if (photos.length === 0 && candidateImages.length > 0) {
+      console.log("AI rejected all photos — using fallback: returning unfiltered images from scrape");
+      const fallbackPhotos = candidateImages
+        .filter(img => {
+          // Only use images that look like actual photos (not UI elements)
+          const url = img.url.toLowerCase();
+          if (url.includes("icon") || url.includes("logo") || url.includes("sprite")) return false;
+          if (url.includes("1x1") || url.includes("pixel") || url.includes("tracking")) return false;
+          // Prefer images with common photo extensions and reasonable URL length
+          return /\.(jpg|jpeg|png|webp)(\?|$)/i.test(img.url) && img.url.length > 50;
+        })
+        .slice(0, 30)
+        .map(img => ({
+          url: standardizeImageUrl(img.url),
+          alt: img.alt,
+          category: "outro",
+          confidence: 0.5,
+          room_name: null,
+          room_details: null,
+        }));
+
+      if (fallbackPhotos.length > 0) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            photos: fallbackPhotos,
+            source_url: mainUrl || "",
+            classified: false,
+            verification: { accepted: fallbackPhotos.length, rejected: rejectedCount, summary: "Fallback: fotos retornadas sem classificação IA" }
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
