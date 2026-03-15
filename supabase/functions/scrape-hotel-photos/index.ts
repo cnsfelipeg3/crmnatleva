@@ -35,8 +35,7 @@ Deno.serve(async (req) => {
 
     const locationStr = [hotel_city, hotel_country].filter(Boolean).join(", ");
 
-    // Step 1: Use Firecrawl scrape with screenshot format to get the page + extract markdown images
-    // Also try searching for the hotel gallery page directly
+    // Step 1: Search for hotel photos
     const searchQuery = `${hotel_name} ${locationStr} site oficial fotos galeria`;
     console.log("Searching for hotel:", searchQuery);
 
@@ -49,9 +48,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         query: searchQuery,
         limit: 5,
-        scrapeOptions: {
-          formats: ["markdown"],
-        },
+        scrapeOptions: { formats: ["markdown"] },
       }),
     });
 
@@ -72,116 +69,31 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Collect all images from all search results' markdown
-    const images: { url: string; alt: string; source: string }[] = [];
-    const seen = new Set<string>();
+    // Collect images from search results
+    const images = collectImages(results);
 
-    for (const result of results) {
-      const markdown = result.markdown || "";
-      const sourceUrl = result.url || "";
-
-      // Extract markdown images: ![alt](url)
-      const mdImgRegex = /!\[([^\]]*)\]\(([^)]+)\)/gi;
-      let match;
-      while ((match = mdImgRegex.exec(markdown)) !== null) {
-        const alt = match[1] || "";
-        const url = match[2]?.trim();
-        if (url && !seen.has(url) && isRelevantImage(url)) {
-          seen.add(url);
-          images.push({ url: makeAbsolute(url, sourceUrl), alt, source: sourceUrl });
-        }
-      }
-
-      // Also extract raw URLs that look like images from the markdown
-      const urlRegex = /https?:\/\/[^\s\)>"']+\.(?:jpg|jpeg|png|webp)(?:\?[^\s\)>"']*)?/gi;
-      while ((match = urlRegex.exec(markdown)) !== null) {
-        const url = match[0];
-        if (!seen.has(url) && isRelevantImage(url)) {
-          seen.add(url);
-          images.push({ url, alt: "", source: sourceUrl });
-        }
-      }
-    }
-
-    // Also scrape the main hotel URL with full HTML to catch lazy-loaded images
+    // Step 2: Scrape the main hotel URL for more images
     const mainUrl = results[0]?.url;
     if (mainUrl) {
-      console.log("Scraping main URL for more images:", mainUrl);
-      try {
-        const scrapeResp = await fetch("https://api.firecrawl.dev/v1/scrape", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            url: mainUrl,
-            formats: ["html"],
-            onlyMainContent: false,
-            waitFor: 3000,
-          }),
-        });
-
-        if (scrapeResp.ok) {
-          const scrapeData = await scrapeResp.json();
-          const html = scrapeData.data?.html || scrapeData.html || "";
-          
-          // Extract ALL image-like attributes from HTML
-          // This catches src, data-src, data-lazy-src, data-original, content (og:image), etc.
-          const attrPatterns = [
-            /(?:src|data-src|data-lazy-src|data-original|data-bg|data-image|data-photo|content)\s*=\s*["']([^"']+)["']/gi,
-            /srcset\s*=\s*["']([^"']+)["']/gi,
-            /url\(["']?([^"')]+)["']?\)/gi,
-          ];
-
-          for (const regex of attrPatterns) {
-            let m;
-            while ((m = regex.exec(html)) !== null) {
-              const raw = m[1];
-              // Handle srcset (multiple URLs)
-              const urls = raw.includes(",") && regex === attrPatterns[1]
-                ? raw.split(",").map(s => s.trim().split(/\s+/)[0])
-                : [raw];
-              
-              for (const url of urls) {
-                if (url && !seen.has(url) && isRelevantImage(url)) {
-                  seen.add(url);
-                  images.push({ url: makeAbsolute(url, mainUrl), alt: "", source: mainUrl });
-                }
-              }
-            }
-          }
-
-          // Extract alt text for images that have it
-          const imgWithAlt = /<img[^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']+)["']/gi;
-          const imgWithAlt2 = /<img[^>]*alt=["']([^"']+)["'][^>]*src=["']([^"']+)["']/gi;
-          let m;
-          while ((m = imgWithAlt.exec(html)) !== null) {
-            const existing = images.find(i => i.url.includes(m[1]) || m[1].includes(i.url));
-            if (existing && !existing.alt) existing.alt = m[2];
-          }
-          while ((m = imgWithAlt2.exec(html)) !== null) {
-            const existing = images.find(i => i.url.includes(m[2]) || m[2].includes(i.url));
-            if (existing && !existing.alt) existing.alt = m[1];
-          }
-        }
-      } catch (e) {
-        console.error("Secondary scrape failed:", e);
-      }
+      console.log("Scraping main URL:", mainUrl);
+      await scrapeMainUrl(mainUrl, images, FIRECRAWL_API_KEY);
     }
 
-    console.log(`Found ${images.length} potential hotel images`);
+    // Also try to scrape the rooms/accommodation page
+    await scrapeRoomsPage(mainUrl, hotel_name, locationStr, images, FIRECRAWL_API_KEY);
 
-    if (images.length === 0) {
+    console.log(`Found ${images.urls.length} potential hotel images`);
+
+    if (images.urls.length === 0) {
       return new Response(
         JSON.stringify({ success: true, photos: [], source_url: mainUrl || "", message: "Nenhuma foto encontrada" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Step 2: Use AI to classify images
-    const imageList = images.slice(0, 50).map((img, i) => 
-      `${i + 1}. ${img.url.substring(0, 200)} | Alt: "${img.alt}"`
+    // Step 3: Classify with AI - enhanced prompt for room details
+    const imageList = images.urls.slice(0, 50).map((img, i) =>
+      `${i + 1}. ${img.url.substring(0, 250)} | Alt: "${img.alt}" | Context: "${img.context || ""}"`
     ).join("\n");
 
     const classifyResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -195,24 +107,28 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Você é um classificador de fotos de hotéis. Analise as URLs e textos alt das imagens e classifique cada uma relevante em categorias:
-- fachada (exterior do hotel)
-- lobby (recepção, entrada)
-- quarto_standard (quartos simples/standard)
-- quarto_superior (suítes, quartos superiores, deluxe)
-- restaurante (restaurante, bar, área de refeições)
-- piscina (piscina, área de lazer aquática)
-- spa (spa, sauna, área de bem-estar)
-- area_comum (áreas comuns, jardins, lounge)
-- vista (vistas panorâmicas, paisagens do hotel)
-- outro (fotos não classificáveis mas relevantes do hotel)
+            content: `Você é um classificador especialista de fotos de hotéis. Analise URLs, alt text e contexto para classificar imagens E identificar tipos de quartos com precisão.
 
-EXCLUA: banners, ícones, logos, mapas, elementos de UI, imagens muito pequenas, imagens de redes sociais.
-Inclua apenas fotos que pareçam ser FOTOS REAIS do hotel.`
+CATEGORIAS:
+- fachada, lobby, restaurante, piscina, spa, area_comum, vista, bar, praia, outro
+
+CATEGORIAS DE QUARTOS (use o nome REAL do tipo de quarto encontrado na URL/alt/contexto):
+- quarto_standard (quartos básicos/standard)
+- quarto_superior (suítes superiores)
+- quarto_deluxe (quartos deluxe)
+- quarto_family (quartos familiares)
+- quarto_premium (suítes premium/presidenciais/royalty)
+
+IMPORTANTE para quartos:
+1. Identifique o NOME REAL do quarto pela URL e contexto (ex: "Islander Junior Suite", "Rock Family Suite", "Caribbean Sand Suite")
+2. Se possível, extraia detalhes como tipo de cama, metragem, vista
+3. NÃO generalize todos como "quarto_superior" - diferencie entre standard, deluxe, family, premium etc.
+
+EXCLUA: banners, ícones, logos, mapas, elementos UI, imagens sociais, imagens muito pequenas.`
           },
           {
             role: "user",
-            content: `Hotel: ${hotel_name} em ${locationStr}\n\nImagens:\n${imageList}\n\nClassifique as que são fotos reais do hotel.`
+            content: `Hotel: ${hotel_name} em ${locationStr}\n\nImagens:\n${imageList}\n\nClassifique cada foto relevante com categoria correta e, para quartos, identifique o nome real do tipo de quarto.`
           }
         ],
         tools: [
@@ -220,7 +136,7 @@ Inclua apenas fotos que pareçam ser FOTOS REAIS do hotel.`
             type: "function",
             function: {
               name: "classify_hotel_photos",
-              description: "Classifica fotos de hotel por categoria",
+              description: "Classifica fotos de hotel por categoria com detalhes de quartos",
               parameters: {
                 type: "object",
                 properties: {
@@ -232,9 +148,21 @@ Inclua apenas fotos que pareçam ser FOTOS REAIS do hotel.`
                         index: { type: "number", description: "Índice da imagem (1-based)" },
                         category: {
                           type: "string",
-                          enum: ["fachada", "lobby", "quarto_standard", "quarto_superior", "restaurante", "piscina", "spa", "area_comum", "vista", "outro"]
+                          enum: ["fachada", "lobby", "quarto_standard", "quarto_superior", "quarto_deluxe", "quarto_family", "quarto_premium", "restaurante", "piscina", "spa", "area_comum", "vista", "bar", "praia", "outro"]
                         },
-                        confidence: { type: "number", description: "Confiança de 0 a 1" }
+                        confidence: { type: "number", description: "Confiança de 0 a 1" },
+                        room_name: { type: "string", description: "Nome real do tipo de quarto (ex: 'Islander Junior Suite', 'Rock Family Suite'). Null se não for quarto." },
+                        room_details: {
+                          type: "object",
+                          description: "Detalhes do quarto se identificáveis pela URL/contexto. Null se não disponível.",
+                          properties: {
+                            size_sqm: { type: "number", description: "Tamanho em m² se disponível" },
+                            max_guests: { type: "number", description: "Capacidade máxima" },
+                            bed_type: { type: "string", description: "Tipo de cama (ex: 'King', '2 Camas de Casal', 'Queen')" },
+                            amenities: { type: "array", items: { type: "string" }, description: "Amenidades visíveis/inferíveis" },
+                            view: { type: "string", description: "Tipo de vista se identificável" }
+                          }
+                        }
                       },
                       required: ["index", "category", "confidence"]
                     }
@@ -260,8 +188,7 @@ Inclua apenas fotos que pareçam ser FOTOS REAIS do hotel.`
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      // Return unclassified as fallback
-      const photos = images.slice(0, 20).map(img => ({
+      const photos = images.urls.slice(0, 20).map(img => ({
         url: img.url, alt: img.alt, category: "outro", confidence: 0.5,
       }));
       return new Response(
@@ -271,8 +198,8 @@ Inclua apenas fotos que pareçam ser FOTOS REAIS do hotel.`
     }
 
     const classifyData = await classifyResponse.json();
-    
-    let classified: { index: number; category: string; confidence: number }[] = [];
+
+    let classified: any[] = [];
     try {
       const toolCall = classifyData.choices?.[0]?.message?.tool_calls?.[0];
       if (toolCall) {
@@ -284,11 +211,18 @@ Inclua apenas fotos que pareçam ser FOTOS REAIS do hotel.`
     }
 
     const photos = classified
-      .filter(c => c.confidence >= 0.4 && c.index >= 1 && c.index <= images.length)
+      .filter(c => c.confidence >= 0.4 && c.index >= 1 && c.index <= images.urls.length)
       .map(c => {
-        const img = images[c.index - 1];
+        const img = images.urls[c.index - 1];
         if (!img) return null;
-        return { url: img.url, alt: img.alt, category: c.category, confidence: c.confidence };
+        return {
+          url: img.url,
+          alt: img.alt,
+          category: c.category,
+          confidence: c.confidence,
+          room_name: c.room_name || null,
+          room_details: c.room_details || null,
+        };
       })
       .filter(Boolean);
 
@@ -307,11 +241,157 @@ Inclua apenas fotos que pareçam ser FOTOS REAIS do hotel.`
   }
 });
 
+// --- Helper types & functions ---
+
+interface ImageCollection {
+  urls: { url: string; alt: string; source: string; context: string }[];
+  seen: Set<string>;
+}
+
+function collectImages(results: any[]): ImageCollection {
+  const collection: ImageCollection = { urls: [], seen: new Set() };
+
+  for (const result of results) {
+    const markdown = result.markdown || "";
+    const sourceUrl = result.url || "";
+
+    // Extract markdown images
+    const mdImgRegex = /!\[([^\]]*)\]\(([^)]+)\)/gi;
+    let match;
+    while ((match = mdImgRegex.exec(markdown)) !== null) {
+      addImage(collection, match[2]?.trim(), match[1] || "", sourceUrl, "");
+    }
+
+    // Extract raw image URLs
+    const urlRegex = /https?:\/\/[^\s\)>"']+\.(?:jpg|jpeg|png|webp)(?:\?[^\s\)>"']*)?/gi;
+    while ((match = urlRegex.exec(markdown)) !== null) {
+      addImage(collection, match[0], "", sourceUrl, "");
+    }
+  }
+
+  return collection;
+}
+
+function addImage(collection: ImageCollection, rawUrl: string, alt: string, sourceUrl: string, context: string) {
+  if (!rawUrl || collection.seen.has(rawUrl)) return;
+  if (!isRelevantImage(rawUrl)) return;
+  collection.seen.add(rawUrl);
+  collection.urls.push({ url: makeAbsolute(rawUrl, sourceUrl), alt, source: sourceUrl, context });
+}
+
+async function scrapeMainUrl(mainUrl: string, collection: ImageCollection, apiKey: string) {
+  try {
+    const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ url: mainUrl, formats: ["html"], onlyMainContent: false, waitFor: 3000 }),
+    });
+
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const html = data.data?.html || data.html || "";
+    extractImagesFromHtml(html, mainUrl, collection);
+  } catch (e) {
+    console.error("Main URL scrape failed:", e);
+  }
+}
+
+async function scrapeRoomsPage(mainUrl: string | undefined, hotelName: string, locationStr: string, collection: ImageCollection, apiKey: string) {
+  if (!mainUrl) return;
+
+  // Try common room page patterns
+  const roomPaths = ["/rooms", "/quartos", "/habitaciones", "/accommodations", "/suites", "/rooms-suites"];
+  const base = new URL(mainUrl);
+
+  for (const path of roomPaths) {
+    const roomUrl = base.origin + path;
+    try {
+      const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ url: roomUrl, formats: ["html", "markdown"], onlyMainContent: true, waitFor: 3000 }),
+      });
+
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      const html = data.data?.html || data.html || "";
+      const markdown = data.data?.markdown || data.markdown || "";
+
+      if (html.length > 500) {
+        console.log(`Found rooms page at ${roomUrl}`);
+        // Extract images with surrounding text context for room identification
+        extractImagesWithContext(html, roomUrl, collection);
+        extractImagesFromHtml(html, roomUrl, collection);
+        break; // Found a valid rooms page
+      }
+    } catch {
+      continue;
+    }
+  }
+}
+
+function extractImagesFromHtml(html: string, sourceUrl: string, collection: ImageCollection) {
+  const attrPatterns = [
+    /(?:src|data-src|data-lazy-src|data-original|data-bg|data-image|content)\s*=\s*["']([^"']+)["']/gi,
+    /srcset\s*=\s*["']([^"']+)["']/gi,
+  ];
+
+  for (const regex of attrPatterns) {
+    let m;
+    while ((m = regex.exec(html)) !== null) {
+      const raw = m[1];
+      const urls = raw.includes(",") && regex === attrPatterns[1]
+        ? raw.split(",").map(s => s.trim().split(/\s+/)[0])
+        : [raw];
+      for (const url of urls) {
+        addImage(collection, url, "", sourceUrl, "");
+      }
+    }
+  }
+
+  // Extract alt text
+  const imgWithAlt = /<img[^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']+)["']/gi;
+  let m;
+  while ((m = imgWithAlt.exec(html)) !== null) {
+    const existing = collection.urls.find(i => i.url.includes(m[1]) || m[1].includes(i.url));
+    if (existing && !existing.alt) existing.alt = m[2];
+  }
+}
+
+function extractImagesWithContext(html: string, sourceUrl: string, collection: ImageCollection) {
+  // Extract images inside elements that contain room-related text
+  const sectionRegex = /<(?:div|section|article)[^>]*>[\s\S]*?<\/(?:div|section|article)>/gi;
+  const roomKeywords = /suite|room|quarto|habitaci|deluxe|standard|premium|family|familiar|king|queen|double|twin/i;
+
+  let match;
+  while ((match = sectionRegex.exec(html)) !== null) {
+    const section = match[0];
+    if (!roomKeywords.test(section)) continue;
+
+    // Extract text context
+    const textContent = section.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().substring(0, 200);
+
+    // Extract images from this section
+    const imgRegex = /(?:src|data-src)\s*=\s*["']([^"']+)["']/gi;
+    let imgMatch;
+    while ((imgMatch = imgRegex.exec(section)) !== null) {
+      const url = imgMatch[1];
+      if (isRelevantImage(url)) {
+        const existing = collection.urls.find(i => i.url === makeAbsolute(url, sourceUrl));
+        if (existing) {
+          existing.context = textContent;
+        } else {
+          addImage(collection, url, "", sourceUrl, textContent);
+        }
+      }
+    }
+  }
+}
+
 function isRelevantImage(url: string): boolean {
   if (!url || url.length < 10) return false;
   const lower = url.toLowerCase();
-  
-  // Reject
+
   if (lower.startsWith("data:")) return false;
   if (lower.endsWith(".svg") || lower.endsWith(".gif") || lower.endsWith(".ico")) return false;
   if (lower.includes("logo") && lower.includes("svg")) return false;
@@ -319,29 +399,22 @@ function isRelevantImage(url: string): boolean {
   if (lower.includes("sprite") || lower.includes("spacer")) return false;
   if (lower.includes("facebook.com") || lower.includes("twitter.com") || lower.includes("instagram.com")) return false;
   if (lower.includes("google-analytics") || lower.includes("doubleclick")) return false;
-  if (lower.includes("badge") || lower.includes("flag") && lower.includes("16")) return false;
-  
-  // Accept: common image extensions
+  if (lower.includes("badge") || (lower.includes("flag") && lower.includes("16"))) return false;
+
   if (/\.(jpg|jpeg|png|webp|avif)(\?|$|#)/i.test(url)) return true;
-  
-  // Accept: CDN patterns (Hilton, Marriott, Booking, etc.)
   if (lower.includes("ctfassets") || lower.includes("cloudinary")) return true;
   if (lower.includes("imgix") || lower.includes("akamai")) return true;
   if (lower.includes("cloudfront") || lower.includes("amazonaws")) return true;
   if (lower.includes("hilton.com") && lower.includes("image")) return true;
   if (lower.includes("marriott.com") && lower.includes("image")) return true;
   if (lower.includes("/photo") || lower.includes("/gallery") || lower.includes("/image")) return true;
-  if (lower.includes("bstatic.com")) return true; // Booking.com CDN
+  if (lower.includes("bstatic.com")) return true;
   if (lower.includes("trvl-media") || lower.includes("expedia")) return true;
-  
-  // Accept: URLs with image-related query params
   if (lower.includes("w=") && lower.includes("h=")) return true;
   if (lower.includes("width=") || lower.includes("height=")) return true;
   if (lower.includes("resize") || lower.includes("crop")) return true;
-  
-  // Accept: Any URL that looks like it serves images
   if (/\/\w+[-_]\d{3,4}x\d{3,4}/i.test(url)) return true;
-  
+
   return false;
 }
 
