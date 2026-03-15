@@ -519,6 +519,8 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                       alt=""
                       className="w-full h-full object-cover"
                       loading="lazy"
+                      referrerPolicy="no-referrer"
+                      crossOrigin="anonymous"
                       onError={() => handleImageError(p.url)}
                     />
                   </button>
