@@ -16,7 +16,7 @@ interface FlightSegmentFormProps {
   onUpdateMulti?: (updates: Partial<FlightSegmentData>) => void;
 }
 
-export default function FlightSegmentForm({ seg, onUpdate }: FlightSegmentFormProps) {
+export default function FlightSegmentForm({ seg, onUpdate, onUpdateMulti }: FlightSegmentFormProps) {
   const [searching, setSearching] = useState(false);
 
   const canSearch = !!(seg.airline && seg.flight_number && seg.departure_date);
