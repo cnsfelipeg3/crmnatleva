@@ -159,6 +159,10 @@ serve(async (req) => {
             if (durationMinutes < 0) durationMinutes += 24 * 60; // next day arrival
           }
 
+          // Extract aircraft type from legs
+          const aircraftCode = flight.legs?.[0]?.aircraftEquipment?.aircraftType || 
+                               departure?.departure?.aircraftEquipment?.aircraftType || "";
+
           const segments = [{
             direction: "ida",
             segment_order: 1,
@@ -173,6 +177,7 @@ serve(async (req) => {
             duration_minutes: durationMinutes,
             terminal: depTerminal,
             arrival_terminal: arrTerminal,
+            aircraft_type: aircraftCode,
             operated_by: "",
             connection_time_minutes: 0,
             cabin_type: "",
