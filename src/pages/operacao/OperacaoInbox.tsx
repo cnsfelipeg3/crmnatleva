@@ -582,7 +582,7 @@ function OperacaoInboxInner() {
         cacheMs: 0,
         bypassCache: true,
           });
-          const canonicalId = cleanPhone ? `wa_${cleanPhone}` : c.id;
+          if (data && data.length > 0) {
           return {
             id: canonicalId,
             db_id: c.id,
