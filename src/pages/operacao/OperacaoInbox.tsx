@@ -2188,6 +2188,14 @@ function OperacaoInboxInner() {
                 {/* Messages */}
                 <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 md:px-4">
                   <div className="py-4 space-y-3">
+                    {/* Load older messages button */}
+                    {hasOlderMessages[selectedId!] && (
+                      <div className="flex justify-center mb-4">
+                        <Button variant="ghost" size="sm" className="text-xs text-muted-foreground gap-1.5" onClick={loadOlderMessages}>
+                          <Clock className="h-3 w-3" /> Carregar mensagens anteriores
+                        </Button>
+                      </div>
+                    )}
                     {currentMessages.map((msg, idx) => (
                       <Fragment key={msg.id}>
                         {shouldShowDateSeparator(currentMessages, idx) && (
