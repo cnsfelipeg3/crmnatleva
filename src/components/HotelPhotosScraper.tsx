@@ -105,7 +105,7 @@ async function resolveHotelPhotosUrls(inputPhotos: HotelPhoto[]): Promise<HotelP
   );
 }
 
-async function fetchProxiedImageBlob(imageUrl: string, refererUrl?: string): Promise<Blob> {
+async function fetchProxiedImageUrl(imageUrl: string, refererUrl?: string): Promise<string> {
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -132,7 +132,16 @@ async function fetchProxiedImageBlob(imageUrl: string, refererUrl?: string): Pro
     throw new Error(errorText || `Falha no proxy (${response.status})`);
   }
 
-  return await response.blob();
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    const data = await response.json();
+    if (data.publicUrl) return data.publicUrl;
+    throw new Error("Resposta inesperada do proxy");
+  }
+
+  // Fallback: binary response (legacy)
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
 }
 
 export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry, onSelectPhotos }: Props) {
