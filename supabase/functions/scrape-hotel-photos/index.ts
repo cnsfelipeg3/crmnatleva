@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
 
     // ── Step 1: Find the OFFICIAL hotel website ──
     const searchQuery = `${cleanHotelName} ${locationStr} site oficial`;
-    console.log("Searching for hotel:", searchQuery);
+    console.log("🔍 Searching for hotel:", searchQuery);
 
     const searchResponse = await fetch("https://api.firecrawl.dev/v1/search", {
       method: "POST",
@@ -74,27 +74,56 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Step 2: Identify which result is the OFFICIAL site ──
+    // ── Step 2: Identify the OFFICIAL site ──
     const officialResult = findOfficialSite(results, hotel_name);
-    const officialDomain = officialResult ? new URL(officialResult.url).hostname : null;
-    console.log(`Official domain identified: ${officialDomain || "none"}`);
-
     const mainUrl = officialResult?.url || results[0]?.url;
+    const officialDomain = mainUrl ? new URL(mainUrl).hostname : null;
+    console.log(`🏨 Official domain: ${officialDomain || "none"} → ${mainUrl}`);
+
     const collection: ImageCollection = { photos: [], seen: new Set() };
 
-    // ── Step 3: Scrape rooms/accommodation pages with SECTION CONTEXT ──
-    // This is the KEY part: we parse the HTML to associate each image with its section heading
-    await scrapeRoomsPagesWithContext(mainUrl, collection, FIRECRAWL_API_KEY, hotel_name);
+    // ── Step 3: MAP the entire site to discover ALL pages ──
+    console.log("🗺️ Mapping entire hotel website...");
+    const allSiteUrls = await mapEntireSite(mainUrl, FIRECRAWL_API_KEY);
+    console.log(`📄 Found ${allSiteUrls.length} pages on the site`);
 
-    // ── Step 4: If rooms pages didn't yield much, scrape the main page too ──
-    if (collection.photos.length < 5 && mainUrl) {
-      console.log("Few photos from rooms pages, scraping main URL...");
-      await scrapePageWithContext(mainUrl, collection, FIRECRAWL_API_KEY, hotel_name);
+    // ── Step 4: Categorize pages by relevance ──
+    const categorizedPages = categorizePages(allSiteUrls, mainUrl);
+    console.log(`  Priority pages: ${categorizedPages.priority.length}`);
+    console.log(`  Gallery pages: ${categorizedPages.gallery.length}`);
+    console.log(`  Other pages: ${categorizedPages.other.length}`);
+
+    // ── Step 5: Scrape ALL relevant pages (priority first, then gallery, then others) ──
+    // Priority = rooms, suites, accommodation pages
+    // Gallery = gallery, photos, media pages  
+    // Other = restaurant, spa, facilities, etc.
+
+    const pagesToScrape = [
+      ...categorizedPages.priority,
+      ...categorizedPages.gallery,
+      ...categorizedPages.other,
+    ].slice(0, 30); // Max 30 pages to stay within limits
+
+    console.log(`🕷️ Scraping ${pagesToScrape.length} pages for high-res photos...`);
+
+    // Scrape pages in parallel batches of 3
+    const batchSize = 3;
+    for (let i = 0; i < pagesToScrape.length; i += batchSize) {
+      const batch = pagesToScrape.slice(i, i + batchSize);
+      await Promise.allSettled(
+        batch.map(page => scrapePageForPhotos(page.url, page.inferredSection, collection, FIRECRAWL_API_KEY, hotel_name))
+      );
+      console.log(`  Scraped ${Math.min(i + batchSize, pagesToScrape.length)}/${pagesToScrape.length} pages, ${collection.photos.length} photos so far`);
     }
 
-    // If still few images, collect from search results markdown
+    // Also scrape the main/home page if we haven't
+    if (mainUrl && !pagesToScrape.some(p => p.url === mainUrl)) {
+      await scrapePageForPhotos(mainUrl, "", collection, FIRECRAWL_API_KEY, hotel_name);
+    }
+
+    // Fallback: if still few images, use search results markdown
     if (collection.photos.length < 10) {
-      console.log(`Only ${collection.photos.length} photos, collecting from search results...`);
+      console.log(`⚠️ Only ${collection.photos.length} photos, extracting from search results...`);
       if (officialResult) {
         collectImagesFromMarkdown(officialResult.markdown || "", officialResult.url || "", collection, officialDomain);
       }
@@ -104,9 +133,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Found ${collection.photos.length} candidate images`);
+    console.log(`📸 Total candidate images: ${collection.photos.length}`);
 
-    // ── Step 5: Filter, deduplicate, maximize quality, and return ──
+    // ── Step 6: Filter, deduplicate, maximize quality, and return ──
     const photos = collection.photos
       .filter(img => {
         const url = img.url.toLowerCase();
@@ -115,13 +144,13 @@ Deno.serve(async (req) => {
         if (isLikelyThumbnail(img.url)) return false;
         return /\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(img.url) && img.url.length > 50;
       })
-      // Prioritize photos WITH section names (they're more valuable)
+      // Prioritize photos WITH section names
       .sort((a, b) => {
         if (a.section_name && !b.section_name) return -1;
         if (!a.section_name && b.section_name) return 1;
-        return 0;
+        return (b.confidence || 0) - (a.confidence || 0);
       })
-      .slice(0, 60)
+      .slice(0, 80)
       .map(img => ({
         url: standardizeImageUrl(img.url),
         alt: img.alt || `${hotel_name} foto`,
@@ -130,12 +159,18 @@ Deno.serve(async (req) => {
         confidence: img.section_name ? 0.95 : 0.5,
       }));
 
-    // Extract unique room/section names found
     const roomNames = [...new Set(photos.map(p => p.section_name).filter(Boolean))];
-    console.log(`Returning ${photos.length} photos with ${roomNames.length} sections:`, roomNames);
+    console.log(`✅ Returning ${photos.length} HD photos with ${roomNames.length} sections:`, roomNames);
 
     return new Response(
-      JSON.stringify({ success: true, photos, source_url: mainUrl || "", room_names: roomNames }),
+      JSON.stringify({
+        success: true,
+        photos,
+        source_url: mainUrl || "",
+        room_names: roomNames,
+        pages_scraped: pagesToScrape.length,
+        total_site_pages: allSiteUrls.length,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
