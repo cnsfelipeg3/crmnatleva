@@ -186,7 +186,15 @@ export default function HotelEntriesEditor({
                       {hotel.hotel_city && (
                         <p className="text-xs text-muted-foreground">📍 {[hotel.hotel_city, hotel.hotel_country].filter(Boolean).join(", ")}</p>
                       )}
-                    </div>
+                      {hotel.hotel_name && (
+                        <div className="mt-2">
+                          <HotelPhotosScraper
+                            hotelName={hotel.hotel_name}
+                            hotelCity={hotel.hotel_city}
+                            hotelCountry={hotel.hotel_country}
+                          />
+                        </div>
+                      )}
                     <div className="space-y-1.5"><Label className="text-xs">Destino</Label><Input className="h-9 text-sm" value={hotel.hotel_city} onChange={e => updateHotel(hotel.id, "hotel_city", e.target.value)} /></div>
                     <div className="space-y-1.5"><Label className="text-xs">Check-in</Label><Input type="date" className="h-9 text-sm" value={hotel.hotel_checkin_date} onChange={e => updateHotel(hotel.id, "hotel_checkin_date", e.target.value)} /></div>
                     <div className="space-y-1.5"><Label className="text-xs">Check-out</Label><Input type="date" className="h-9 text-sm" value={hotel.hotel_checkout_date} onChange={e => updateHotel(hotel.id, "hotel_checkout_date", e.target.value)} /></div>
