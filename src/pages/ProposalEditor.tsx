@@ -124,7 +124,28 @@ export default function ProposalEditor() {
     if (existingItems) setItems(existingItems);
   }, [existingItems]);
 
-  const saveMutation = useMutation({
+  const toggleCollapse = (idx: number) => {
+    setCollapsedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  const saveItemBlock = async (idx: number) => {
+    setSavingItemIdx(idx);
+    try {
+      await saveMutation.mutateAsync();
+      toast.success(`Bloco "${items[idx]?.title || itemTypeLabels[items[idx]?.item_type]}" salvo!`);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar bloco");
+    } finally {
+      setSavingItemIdx(null);
+    }
+  };
+
+
     mutationFn: async () => {
       const slug = existing?.slug || generateSlug();
       const payload = {
