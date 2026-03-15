@@ -123,13 +123,17 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       });
       if (error) throw error;
       if (!data.success) throw new Error(data.error);
-      setPhotos(data.photos || []);
+
+      const rawPhotos: HotelPhoto[] = data.photos || [];
+      const resolvedPhotos = await resolveHotelPhotosUrls(rawPhotos);
+
+      setPhotos(resolvedPhotos);
       setSourceUrl(data.source_url || "");
       setScraped(true);
       const verification = data.verification;
-      if (data.photos?.length > 0) {
+      if (resolvedPhotos.length > 0) {
         const rejectedMsg = verification?.rejected > 0 ? ` (${verification.rejected} fotos de outros hotéis removidas)` : "";
-        toast.success(`${data.photos.length} fotos verificadas e classificadas por IA${rejectedMsg}`);
+        toast.success(`${resolvedPhotos.length} fotos verificadas e classificadas por IA${rejectedMsg}`);
       } else {
         toast.info("Nenhuma foto relevante encontrada no site do hotel");
       }
