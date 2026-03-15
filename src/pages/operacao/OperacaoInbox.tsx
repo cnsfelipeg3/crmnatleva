@@ -1070,7 +1070,7 @@ function OperacaoInboxInner() {
                 .maybeSingle();
               if (lastZapi) {
                 conv.last_message_preview = (lastZapi as any).text || `📎 ${(lastZapi as any).type || "mensagem"}`;
-                if ((lastZapi as any).timestamp) conv.last_message_at = (lastZapi as any).timestamp;
+                if ((lastZapi as any).timestamp) conv.last_message_at = toIsoTimestamp((lastZapi as any).timestamp);
               }
             } catch {}
           }
