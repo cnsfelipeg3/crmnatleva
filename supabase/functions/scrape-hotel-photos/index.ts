@@ -316,15 +316,19 @@ async function scrapePageForPhotos(
     const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ url, formats: ["html"], onlyMainContent: false, waitFor: 3000 }),
+      body: JSON.stringify({ url, formats: ["html", "markdown"], onlyMainContent: false, waitFor: 3000 }),
     });
     if (!resp.ok) return;
     const data = await resp.json();
     const html = data.data?.html || data.html || "";
+    const markdown = data.data?.markdown || data.markdown || "";
     if (html.length < 300) return;
 
-    // First try structured extraction (headings → images)
+    // First try structured extraction (headings → images + text descriptions)
     extractImagesWithSectionContext(html, url, collection, hotelName);
+    
+    // Extract section descriptions from markdown (cleaner text)
+    extractSectionDescriptions(markdown, collection);
 
     // Also extract any images that might not be under headings
     // Use the inferred section name from URL if no heading context was found
