@@ -325,7 +325,7 @@ Deno.serve(async (req) => {
         media_url: mediaUrl,
         status: fromMe ? "sent" : "delivered",
         external_message_id: messageId,
-        created_at: timestamp,
+        created_at: timestampIso,
       });
 
       if (msgError) {
