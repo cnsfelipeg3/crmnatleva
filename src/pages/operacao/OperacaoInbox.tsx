@@ -1254,27 +1254,19 @@ function OperacaoInboxInner() {
         if (replyRef?.id && !replyRef.id.startsWith("temp_")) sendPayload.messageId = replyRef.id;
         const sendResult = await callZapiProxy("send-text", sendPayload);
         const realId = sendResult?.messageId || sendResult?.id;
+        const persistedExternalId = realId || tempId;
         if (realId) {
           lastMsgIdsRef.current.add(realId);
           setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m => m.id === tempId ? { ...m, id: realId } : m) }));
         }
-        // Persist sent message to chat_messages so it survives page reload
-        const dbConvId = selected?.db_id;
-        if (dbConvId) {
-          await supabase.from("chat_messages").insert({
-            conversation_id: dbConvId,
-            sender_type: "atendente",
-            message_type: "text",
-            content: text,
-            read_status: "sent",
-            external_message_id: realId || tempId,
-          }).then(() => {});
-          await supabase.from("conversations").update({
-            last_message_preview: text,
-            last_message_at: new Date().toISOString(),
-            unread_count: 0,
-          }).eq("id", dbConvId).then(() => {});
-        }
+
+        await persistOutgoingMessage({
+          conversationId: selectedId,
+          messageType: "text",
+          text,
+          externalMessageId: persistedExternalId,
+          createdAt: new Date().toISOString(),
+        });
       } catch (err) { toast({ title: "Erro ao enviar", description: "Falha na comunicação com WhatsApp", variant: "destructive" }); }
     } else if (selectedId.length > 10) {
       await supabase.from("chat_messages").insert({ conversation_id: selectedId, sender_type: "atendente", message_type: "text", content: text, read_status: "sent" });
