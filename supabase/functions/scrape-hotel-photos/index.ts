@@ -217,7 +217,7 @@ async function scrapeRoomsPagesWithContext(mainUrl: string | undefined, collecti
   }
 }
 
-async function scrapeIndividualRoomPage(url: string, roomName: string, collection: ImageCollection, apiKey: string, hotelName: string) {
+async function scrapeIndividualRoomPage(url: string, roomName: string, collection: ImageCollection, apiKey: string, _hotelName: string) {
   try {
     console.log(`  Scraping room detail: "${roomName}" → ${url}`);
     const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
@@ -230,29 +230,8 @@ async function scrapeIndividualRoomPage(url: string, roomName: string, collectio
     const html = data.data?.html || data.html || "";
     if (html.length < 300) return;
 
-    // All images on a specific room page belong to that room
-    const imgRegex = /(?:src|data-src|data-lazy-src|data-original)\s*=\s*["']([^"']+)["']/gi;
-    let match;
-    while ((match = imgRegex.exec(html)) !== null) {
-      const imgUrl = match[1].trim();
-      if (!isRelevantImage(imgUrl)) continue;
-      const absUrl = makeAbsolute(imgUrl, url);
-      if (collection.seen.has(absUrl)) continue;
-      collection.seen.add(absUrl);
-
-      // Extract alt text for this image
-      const altMatch = new RegExp(`(?:alt|title)\\s*=\\s*["']([^"']{3,80})["']`, "i");
-      const nearbyHtml = html.substring(Math.max(0, match.index - 200), match.index + 300);
-      const altText = altMatch.exec(nearbyHtml)?.[1] || "";
-
-      collection.photos.push({
-        url: absUrl,
-        alt: altText || roomName,
-        section_name: roomName,
-        category: inferCategory(roomName, altText),
-        confidence: 0.95,
-      });
-    }
+    // Extract all images including srcset high-res variants
+    extractHighResImages(html, url, collection, roomName);
   } catch (e) {
     console.warn(`Failed scraping room page ${url}:`, e);
   }
