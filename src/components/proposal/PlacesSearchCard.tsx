@@ -221,7 +221,9 @@ export default function PlacesSearchCard({
       if (!isStale()) fn();
     };
 
-    if (q.length < 2) {
+    const trimmedQuery = q.trim();
+
+    if (trimmedQuery.length < minQueryLength) {
       safeSet(() => {
         setResults([]);
         setError(null);
@@ -235,7 +237,9 @@ export default function PlacesSearchCard({
       setError(null);
     });
 
-    const normalizedQuery = destinationContext ? `${q} ${destinationContext}` : q;
+    const normalizedQuery = destinationContext ? `${trimmedQuery} ${destinationContext}` : trimmedQuery;
+    const queryTokens = tokenize(trimmedQuery);
+    const destinationTokens = tokenize(destinationContext || "");
 
     // Google Places search (primary provider)
 
