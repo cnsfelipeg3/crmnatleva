@@ -84,9 +84,12 @@ export interface PlacesEnrichmentData {
   photoLabels: string[];
 }
 
+type PlaceEntityType = "hotel" | "destination" | "experience";
+
 interface PlacesSearchCardProps {
   initialQuery?: string;
   destinationContext?: string;
+  entityType?: PlaceEntityType;
   onEnrich: (data: PlacesEnrichmentData) => void;
   onCancel: () => void;
   className?: string;
@@ -103,9 +106,37 @@ const TYPE_LABELS: Record<string, string> = {
   aquarium: "Aquário", casino: "Cassino", stadium: "Estádio",
 };
 
+const HOTEL_TYPE_HINTS = ["lodging", "hotel", "resort", "hostel", "motel", "guest_house"];
+const HOTEL_TEXT_HINTS = ["hotel", "resort", "pousada", "inn", "hostel", "suite"];
+
+const normalizeText = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+const tokenize = (value: string) => normalizeText(value).split(/\s+/).filter((token) => token.length >= 2);
+
 function resolveType(types: string[]): string {
   for (const t of types) if (TYPE_LABELS[t]) return TYPE_LABELS[t];
   return "Local";
+}
+
+function isHotelLikeResult(place: PlaceResult): boolean {
+  const types = (place.types || []).map((t) => normalizeText(t));
+  if (types.some((type) => HOTEL_TYPE_HINTS.includes(type))) return true;
+
+  const haystack = normalizeText(`${place.name} ${place.address}`);
+  return HOTEL_TEXT_HINTS.some((hint) => haystack.includes(hint));
+}
+
+function parseCityCountry(address: string): { city: string; country: string } {
+  const parts = (address || "").split(",").map((p) => p.trim()).filter(Boolean);
+  return {
+    city: parts.length >= 2 ? parts[parts.length - 2] : "",
+    country: parts.length >= 1 ? parts[parts.length - 1] : "",
+  };
 }
 
 const PHOTO_LABELS = [
