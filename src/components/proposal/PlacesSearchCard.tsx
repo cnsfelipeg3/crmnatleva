@@ -907,7 +907,7 @@ export default function PlacesSearchCard({
                   </div>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
           ) : (
             <div className="text-center py-8">
               <ImageIcon className="h-10 w-10 text-muted-foreground/20 mx-auto mb-2" />
