@@ -211,6 +211,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       const rawPhotos: HotelPhoto[] = data.photos || [];
       const resolvedPhotos = await resolveHotelPhotosUrls(rawPhotos);
 
+      clearProxiedImages();
       setPhotos(resolvedPhotos);
       setSourceUrl(data.source_url || "");
       setScraped(true);
