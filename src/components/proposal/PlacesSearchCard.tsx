@@ -803,7 +803,7 @@ export default function PlacesSearchCard({
               <span className="text-sm text-muted-foreground">Carregando fotos do Google...</span>
             </div>
           ) : curatedPhotos.length > 0 ? (
-            <ScrollArea className="max-h-[520px]">
+            <div className="max-h-[520px] overflow-y-auto pr-1">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {curatedPhotos.map((photo, i) => (
                   <div
