@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Search, Loader2, Plus, Trash2, Edit2, Check, PlaneTakeoff, PlaneLanding, Clock, Terminal } from "lucide-react";
-import AirlineLogo from "@/components/AirlineLogo";
+import { Search, Loader2, Plus, Trash2, Edit2, Check, Pen, ArrowDownUp, Plane } from "lucide-react";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
+import FlightSegmentCard from "./FlightSegmentCard";
+import FlightSegmentForm from "./FlightSegmentForm";
+import ConnectionLayoverBadge from "./ConnectionLayoverBadge";
 
 export interface FlightSegmentData {
   airline: string;
@@ -25,6 +27,7 @@ export interface FlightSegmentData {
   arrival_terminal: string;
   aircraft_type: string;
   notes: string;
+  is_connection?: boolean;
 }
 
 interface ProposalFlightSearchProps {
@@ -39,21 +42,6 @@ function getCacheKey(airline: string, flightNumber: string, date: string) {
   return `${airline}-${flightNumber}-${date}`.toUpperCase();
 }
 
-function formatDuration(min: number): string {
-  if (!min || min <= 0) return "—";
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return h > 0 ? `${h}h${m > 0 ? ` ${m}min` : ""}` : `${m}min`;
-}
-
-function getNextDayIndicator(depTime: string, arrTime: string): string {
-  if (!depTime || !arrTime) return "";
-  const [dh] = depTime.split(":").map(Number);
-  const [ah] = arrTime.split(":").map(Number);
-  if (ah < dh || (ah === dh && arrTime < depTime)) return " (+1)";
-  return "";
-}
-
 interface SearchFormData {
   airline: string;
   airlineName: string;
@@ -63,19 +51,58 @@ interface SearchFormData {
   destination: string;
 }
 
-const emptySegment = (): FlightSegmentData => ({
+const emptySegment = (isConnection = false): FlightSegmentData => ({
   airline: "", airline_name: "", flight_number: "", origin_iata: "", destination_iata: "",
   departure_date: "", departure_time: "", arrival_time: "", duration_minutes: 0,
-  terminal: "", arrival_terminal: "", aircraft_type: "", notes: "",
+  terminal: "", arrival_terminal: "", aircraft_type: "", notes: "", is_connection: isConnection,
 });
 
 export default function ProposalFlightSearch({ segments, onSegmentsChange }: ProposalFlightSearchProps) {
   const [searchForms, setSearchForms] = useState<Record<number, SearchFormData>>({});
   const [loadingIdx, setLoadingIdx] = useState<number | null>(null);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [manualIdx, setManualIdx] = useState<Set<number>>(new Set());
 
-  const addSegment = () => onSegmentsChange([...segments, emptySegment()]);
-  const removeSegment = (idx: number) => onSegmentsChange(segments.filter((_, i) => i !== idx));
+  const addSegment = (isConnection = false) => {
+    const newSeg = emptySegment(isConnection);
+    // If connection, pre-fill date/origin from previous segment
+    if (isConnection && segments.length > 0) {
+      const prev = segments[segments.length - 1];
+      newSeg.departure_date = prev.departure_date;
+      newSeg.origin_iata = prev.destination_iata;
+    }
+    onSegmentsChange([...segments, newSeg]);
+    // Auto-open manual mode for new segments
+    setManualIdx((prev) => new Set(prev).add(segments.length));
+  };
+
+  const addConnectionAfter = (idx: number) => {
+    const newSeg = emptySegment(true);
+    const prev = segments[idx];
+    if (prev) {
+      newSeg.departure_date = prev.departure_date;
+      newSeg.origin_iata = prev.destination_iata;
+    }
+    const updated = [...segments];
+    updated.splice(idx + 1, 0, newSeg);
+    onSegmentsChange(updated);
+    setManualIdx((prev) => new Set(prev).add(idx + 1));
+  };
+
+  const removeSegment = (idx: number) => {
+    const updated = segments.filter((_, i) => i !== idx);
+    // If removing a non-connection segment, unmark the next one as connection
+    if (!segments[idx]?.is_connection && updated[idx]?.is_connection) {
+      updated[idx] = { ...updated[idx], is_connection: false };
+    }
+    onSegmentsChange(updated);
+    setManualIdx((prev) => {
+      const n = new Set<number>();
+      prev.forEach((v) => { if (v < idx) n.add(v); else if (v > idx) n.add(v - 1); });
+      return n;
+    });
+  };
+
   const updateSegment = (idx: number, field: keyof FlightSegmentData, value: any) => {
     onSegmentsChange(segments.map((s, i) => (i === idx ? { ...s, [field]: value } : s)));
   };
@@ -86,6 +113,14 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
 
   const setForm = (idx: number, form: SearchFormData) => {
     setSearchForms((prev) => ({ ...prev, [idx]: form }));
+  };
+
+  const toggleManual = (idx: number) => {
+    setManualIdx((prev) => {
+      const n = new Set(prev);
+      if (n.has(idx)) n.delete(idx); else n.add(idx);
+      return n;
+    });
   };
 
   const searchFlight = async (idx: number) => {
@@ -105,20 +140,18 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
 
     setLoadingIdx(idx);
     try {
-      // Strategy 1: flight_by_number (Schedule API)
       let seg = await tryFlightByNumber(form);
-
-      // Strategy 2: flight_schedule (Flight Offers) as fallback
       if (!seg && form.origin && form.destination) {
         seg = await tryFlightSchedule(form);
       }
-
       if (seg) {
         flightCache[cacheKey] = { data: seg, ts: Date.now() };
         applyFlightData(idx, seg, form);
         toast.success("Informações do voo preenchidas automaticamente!");
+        setManualIdx((prev) => { const n = new Set(prev); n.delete(idx); return n; });
       } else {
-        toast.warning("Voo não encontrado na API Amadeus. Preencha os dados manualmente.");
+        toast.warning("Voo não encontrado. Use o preenchimento manual.");
+        setManualIdx((prev) => new Set(prev).add(idx));
       }
     } catch (err: any) {
       console.error("Flight search error:", err);
@@ -131,18 +164,11 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
   const tryFlightByNumber = async (form: SearchFormData) => {
     try {
       const { data: res, error } = await supabase.functions.invoke("amadeus-search", {
-        body: {
-          action: "flight_by_number",
-          airline: form.airline.toUpperCase(),
-          flightNumber: form.flightNumber,
-          departureDate: form.date,
-        },
+        body: { action: "flight_by_number", airline: form.airline.toUpperCase(), flightNumber: form.flightNumber, departureDate: form.date },
       });
       if (error || res?.error) return null;
       const flights = res?.data || [];
-      if (flights.length > 0 && flights[0].itineraries?.[0]?.segments?.length > 0) {
-        return flights[0].itineraries[0].segments[0];
-      }
+      if (flights.length > 0 && flights[0].itineraries?.[0]?.segments?.length > 0) return flights[0].itineraries[0].segments[0];
     } catch { /* fall through */ }
     return null;
   };
@@ -150,20 +176,11 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
   const tryFlightSchedule = async (form: SearchFormData) => {
     try {
       const { data: res, error } = await supabase.functions.invoke("amadeus-search", {
-        body: {
-          action: "flight_schedule",
-          origin: form.origin.toUpperCase(),
-          destination: form.destination.toUpperCase(),
-          departureDate: form.date,
-          airline: form.airline.toUpperCase(),
-          flightNumber: form.airline.toUpperCase() + form.flightNumber,
-        },
+        body: { action: "flight_schedule", origin: form.origin.toUpperCase(), destination: form.destination.toUpperCase(), departureDate: form.date, airline: form.airline.toUpperCase(), flightNumber: form.airline.toUpperCase() + form.flightNumber },
       });
       if (error || res?.error) return null;
       const offers = res?.data || [];
-      if (offers.length > 0 && offers[0].itineraries?.[0]?.segments?.length > 0) {
-        return offers[0].itineraries[0].segments[0];
-      }
+      if (offers.length > 0 && offers[0].itineraries?.[0]?.segments?.length > 0) return offers[0].itineraries[0].segments[0];
     } catch { /* fall through */ }
     return null;
   };
@@ -183,15 +200,26 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
       arrival_terminal: seg.arrival_terminal || "",
       aircraft_type: seg.aircraft_type || "",
       notes: segments[idx]?.notes || "",
+      is_connection: segments[idx]?.is_connection || false,
     };
     onSegmentsChange(segments.map((s, i) => (i === idx ? updated : s)));
   };
+
+  // Group segments into legs (a leg = first segment + its connections)
+  const legs: { startIdx: number; segments: { seg: FlightSegmentData; idx: number }[] }[] = [];
+  segments.forEach((seg, idx) => {
+    if (!seg.is_connection || legs.length === 0) {
+      legs.push({ startIdx: idx, segments: [{ seg, idx }] });
+    } else {
+      legs[legs.length - 1].segments.push({ seg, idx });
+    }
+  });
 
   if (segments.length === 0) {
     return (
       <div className="text-center py-6">
         <p className="text-sm text-muted-foreground mb-3">Adicione trechos de voo à proposta</p>
-        <Button variant="outline" onClick={addSegment} className="gap-1.5">
+        <Button variant="outline" onClick={() => addSegment(false)} className="gap-1.5">
           <Plus className="w-4 h-4" /> Adicionar trecho de voo
         </Button>
       </div>
@@ -199,225 +227,180 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
   }
 
   return (
-    <div className="space-y-4">
-      {segments.map((seg, idx) => {
-        const isLoading = loadingIdx === idx;
-        const isEditing = editingIdx === idx;
-        const hasFilled = !!seg.origin_iata && !!seg.destination_iata && !!seg.departure_time;
-        const form = getForm(idx);
+    <div className="space-y-5">
+      {legs.map((leg, legIdx) => {
+        const isMultiSeg = leg.segments.length > 1;
+        const firstSeg = leg.segments[0].seg;
+        const lastSeg = leg.segments[leg.segments.length - 1].seg;
 
         return (
-          <div key={idx} className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Trecho {idx + 1}
-              </span>
-              <div className="flex items-center gap-1">
-                {hasFilled && (
-                  <Button variant="ghost" size="sm" onClick={() => setEditingIdx(isEditing ? null : idx)} className="gap-1 text-xs h-7">
-                    {isEditing ? <Check className="w-3 h-3" /> : <Edit2 className="w-3 h-3" />}
-                    {isEditing ? "Fechar" : "Editar"}
-                  </Button>
+          <div key={leg.startIdx} className="space-y-0">
+            {/* Leg header */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Trecho {legIdx + 1}
+                </span>
+                {isMultiSeg ? (
+                  <Badge variant="outline" className="text-[10px] gap-1 h-5 border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:bg-amber-950/30">
+                    <ArrowDownUp className="w-2.5 h-2.5" />
+                    {leg.segments.length - 1} conexão{leg.segments.length > 2 ? "ões" : ""}
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-[10px] gap-1 h-5 border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:bg-emerald-950/30">
+                    <Plane className="w-2.5 h-2.5" />
+                    Voo direto
+                  </Badge>
                 )}
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeSegment(idx)}>
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
               </div>
             </div>
 
-            {/* Search form */}
-            {(!hasFilled || isEditing) && (
-              <Card className="p-4 border-dashed border-primary/30 bg-primary/5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs">Companhia aérea</Label>
-                    <AirlineAutocomplete
-                      value={form.airline}
-                      onChange={(iata, name) => setForm(idx, { ...form, airline: iata, airlineName: name || "" })}
-                      placeholder="Digite ou selecione..."
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Nº do voo</Label>
-                    <Input
-                      value={form.flightNumber}
-                      onChange={(e) => setForm(idx, { ...form, flightNumber: e.target.value.replace(/\D/g, "") })}
-                      placeholder="8084"
-                      className="font-mono"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Data do voo</Label>
-                    <Input
-                      type="date"
-                      value={form.date}
-                      onChange={(e) => setForm(idx, { ...form, date: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Origem</Label>
-                    <AirportAutocomplete
-                      value={form.origin}
-                      onChange={(iata) => setForm(idx, { ...form, origin: iata })}
-                      placeholder="GRU, São Paulo..."
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Destino</Label>
-                    <AirportAutocomplete
-                      value={form.destination}
-                      onChange={(iata) => setForm(idx, { ...form, destination: iata })}
-                      placeholder="FCO, Roma..."
-                    />
-                  </div>
-                </div>
-                <Button
-                  onClick={() => searchFlight(idx)}
-                  disabled={isLoading || !form.airline || !form.flightNumber || !form.date}
-                  className="mt-3 gap-2 w-full sm:w-auto"
-                >
-                  {isLoading ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Buscando informações do voo...</>
-                  ) : (
-                    <><Search className="w-4 h-4" /> Buscar informações do voo</>
-                  )}
-                </Button>
-              </Card>
-            )}
+            {/* Segments within leg */}
+            <div className={isMultiSeg ? "border border-border/60 rounded-lg overflow-hidden" : ""}>
+              {leg.segments.map(({ seg, idx }, segInLeg) => {
+                const isLoading = loadingIdx === idx;
+                const isEditing = editingIdx === idx;
+                const isManual = manualIdx.has(idx);
+                const hasFilled = !!seg.origin_iata && !!seg.destination_iata && (!!seg.departure_time || isManual);
+                const form = getForm(idx);
+                const prevInLeg = segInLeg > 0 ? leg.segments[segInLeg - 1].seg : null;
 
-            {/* Visual Flight Card */}
-            {hasFilled && !isEditing && (
-              <Card className="overflow-hidden border-border/60">
-                <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-4 sm:p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="shrink-0 w-14 h-14 rounded-xl bg-background/80 backdrop-blur border border-border/50 flex items-center justify-center shadow-sm">
-                      <AirlineLogo iata={seg.airline} size={40} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="font-semibold text-sm text-foreground">{seg.airline_name || seg.airline}</span>
-                        <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-mono font-medium">
-                          {seg.airline}{seg.flight_number}
-                        </span>
-                        {seg.departure_date && (
-                          <span className="text-xs text-muted-foreground ml-auto">
-                            {new Date(seg.departure_date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                return (
+                  <div key={idx}>
+                    {/* Connection layover badge */}
+                    {prevInLeg && seg.is_connection && (
+                      <ConnectionLayoverBadge prevSegment={prevInLeg} nextSegment={seg} />
+                    )}
+
+                    <div className="relative">
+                      {/* Segment actions */}
+                      <div className="flex items-center justify-end gap-1 px-2 pt-1">
+                        {seg.is_connection && (
+                          <span className="text-[10px] text-muted-foreground mr-auto pl-1">
+                            Segmento {segInLeg + 1}
                           </span>
                         )}
+                        {hasFilled && !isManual && (
+                          <Button variant="ghost" size="sm" onClick={() => setEditingIdx(isEditing ? null : idx)} className="gap-1 text-xs h-6">
+                            {isEditing ? <Check className="w-3 h-3" /> : <Edit2 className="w-3 h-3" />}
+                            {isEditing ? "Fechar" : "Editar"}
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => removeSegment(idx)}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
                       </div>
-                      <div className="flex items-center gap-3 sm:gap-6">
-                        <div className="text-center min-w-[60px]">
-                          <p className="text-xl sm:text-2xl font-bold text-foreground leading-none">{seg.departure_time || "—"}</p>
-                          <p className="text-lg font-bold text-primary mt-1">{seg.origin_iata}</p>
-                          {seg.terminal && (
-                            <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5 mt-0.5">
-                              <Terminal className="w-2.5 h-2.5" /> T{seg.terminal}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex-1 flex flex-col items-center gap-1 px-2">
-                          <div className="flex items-center w-full gap-1">
-                            <PlaneTakeoff className="w-3.5 h-3.5 text-primary shrink-0" />
-                            <div className="flex-1 h-px bg-gradient-to-r from-primary/60 via-primary/30 to-primary/60 relative">
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                              </div>
+
+                      {/* Search form - shown when empty and not manual */}
+                      {(!hasFilled && !isManual) && (
+                        <Card className="p-4 border-dashed border-primary/30 bg-primary/5 mx-1 mb-2">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Companhia aérea</Label>
+                              <AirlineAutocomplete
+                                value={form.airline}
+                                onChange={(iata, name) => setForm(idx, { ...form, airline: iata, airlineName: name || "" })}
+                                placeholder="Digite ou selecione..."
+                              />
                             </div>
-                            <PlaneLanding className="w-3.5 h-3.5 text-primary shrink-0" />
+                            <div className="space-y-1">
+                              <Label className="text-xs">Nº do voo</Label>
+                              <Input
+                                value={form.flightNumber}
+                                onChange={(e) => setForm(idx, { ...form, flightNumber: e.target.value.replace(/\D/g, "") })}
+                                placeholder="8084"
+                                className="font-mono"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Data do voo</Label>
+                              <Input type="date" value={form.date} onChange={(e) => setForm(idx, { ...form, date: e.target.value })} />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Origem</Label>
+                              <AirportAutocomplete
+                                value={form.origin || seg.origin_iata}
+                                onChange={(iata) => setForm(idx, { ...form, origin: iata })}
+                                placeholder="GRU, São Paulo..."
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Destino</Label>
+                              <AirportAutocomplete
+                                value={form.destination}
+                                onChange={(iata) => setForm(idx, { ...form, destination: iata })}
+                                placeholder="FCO, Roma..."
+                              />
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                            <Clock className="w-2.5 h-2.5" /> {formatDuration(seg.duration_minutes)}
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            <Button
+                              onClick={() => searchFlight(idx)}
+                              disabled={isLoading || !form.airline || !form.flightNumber || !form.date}
+                              className="gap-2"
+                            >
+                              {isLoading ? (
+                                <><Loader2 className="w-4 h-4 animate-spin" /> Buscando...</>
+                              ) : (
+                                <><Search className="w-4 h-4" /> Buscar voo</>
+                              )}
+                            </Button>
+                            <Button variant="outline" onClick={() => toggleManual(idx)} className="gap-1.5">
+                              <Pen className="w-3.5 h-3.5" /> Preencher manualmente
+                            </Button>
                           </div>
-                        </div>
-                        <div className="text-center min-w-[60px]">
-                          <p className="text-xl sm:text-2xl font-bold text-foreground leading-none">
-                            {seg.arrival_time || "—"}
-                            <span className="text-xs font-normal text-muted-foreground">
-                              {getNextDayIndicator(seg.departure_time, seg.arrival_time)}
-                            </span>
-                          </p>
-                          <p className="text-lg font-bold text-primary mt-1">{seg.destination_iata}</p>
-                          {seg.arrival_terminal && (
-                            <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5 mt-0.5">
-                              <Terminal className="w-2.5 h-2.5" /> T{seg.arrival_terminal}
-                            </p>
+                        </Card>
+                      )}
+
+                      {/* Manual fill form */}
+                      {isManual && (
+                        <div className="mx-1 mb-2">
+                          <FlightSegmentForm seg={seg} onUpdate={(field, value) => updateSegment(idx, field, value)} />
+                          {seg.origin_iata && seg.destination_iata && (
+                            <div className="flex justify-end mt-2">
+                              <Button size="sm" onClick={() => toggleManual(idx)} className="gap-1 text-xs">
+                                <Check className="w-3 h-3" /> Concluir
+                              </Button>
+                            </div>
                           )}
                         </div>
-                      </div>
-                      {(seg.aircraft_type || seg.notes) && (
-                        <div className="mt-3 pt-2.5 border-t border-border/40 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                          {seg.aircraft_type && <span className="flex items-center gap-1">✈ {seg.aircraft_type}</span>}
-                          {seg.notes && <span className="italic">{seg.notes}</span>}
+                      )}
+
+                      {/* Visual flight card */}
+                      {hasFilled && !isEditing && !isManual && (
+                        <div className="px-1 pb-1">
+                          <FlightSegmentCard seg={seg} compact={isMultiSeg} />
+                        </div>
+                      )}
+
+                      {/* Edit mode */}
+                      {hasFilled && isEditing && !isManual && (
+                        <div className="mx-1 mb-2">
+                          <FlightSegmentForm seg={seg} onUpdate={(field, value) => updateSegment(idx, field, value)} />
                         </div>
                       )}
                     </div>
                   </div>
-                </div>
-              </Card>
-            )}
+                );
+              })}
+            </div>
 
-            {/* Editable fields */}
-            {hasFilled && isEditing && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-3 bg-muted/30 rounded-lg border border-border/40">
-                <div className="space-y-1">
-                  <Label className="text-xs">Companhia (IATA)</Label>
-                  <Input value={seg.airline} onChange={(e) => updateSegment(idx, "airline", e.target.value.toUpperCase())} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Nome da companhia</Label>
-                  <Input value={seg.airline_name} onChange={(e) => updateSegment(idx, "airline_name", e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Nº do voo</Label>
-                  <Input value={seg.flight_number} onChange={(e) => updateSegment(idx, "flight_number", e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Origem (IATA)</Label>
-                  <Input value={seg.origin_iata} onChange={(e) => updateSegment(idx, "origin_iata", e.target.value.toUpperCase())} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Destino (IATA)</Label>
-                  <Input value={seg.destination_iata} onChange={(e) => updateSegment(idx, "destination_iata", e.target.value.toUpperCase())} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Data</Label>
-                  <Input type="date" value={seg.departure_date} onChange={(e) => updateSegment(idx, "departure_date", e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Horário saída</Label>
-                  <Input type="time" value={seg.departure_time} onChange={(e) => updateSegment(idx, "departure_time", e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Horário chegada</Label>
-                  <Input type="time" value={seg.arrival_time} onChange={(e) => updateSegment(idx, "arrival_time", e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Duração (min)</Label>
-                  <Input type="number" value={seg.duration_minutes} onChange={(e) => updateSegment(idx, "duration_minutes", parseInt(e.target.value) || 0)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Terminal saída</Label>
-                  <Input value={seg.terminal} onChange={(e) => updateSegment(idx, "terminal", e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Terminal chegada</Label>
-                  <Input value={seg.arrival_terminal} onChange={(e) => updateSegment(idx, "arrival_terminal", e.target.value)} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Aeronave</Label>
-                  <Input value={seg.aircraft_type} onChange={(e) => updateSegment(idx, "aircraft_type", e.target.value)} placeholder="Boeing 777-300ER" />
-                </div>
-                <div className="col-span-2 md:col-span-3 space-y-1">
-                  <Label className="text-xs">Observações</Label>
-                  <Textarea rows={2} value={seg.notes} onChange={(e) => updateSegment(idx, "notes", e.target.value)} placeholder="Observações sobre este trecho..." />
-                </div>
-              </div>
-            )}
+            {/* Add connection button */}
+            <div className="flex items-center gap-2 mt-2 ml-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => addConnectionAfter(leg.segments[leg.segments.length - 1].idx)}
+                className="gap-1 text-xs h-7 text-muted-foreground hover:text-primary"
+              >
+                <ArrowDownUp className="w-3 h-3" /> Adicionar conexão
+              </Button>
+            </div>
           </div>
         );
       })}
 
-      <Button variant="outline" size="sm" onClick={addSegment} className="gap-1.5">
+      <Button variant="outline" size="sm" onClick={() => addSegment(false)} className="gap-1.5">
         <Plus className="w-3.5 h-3.5" /> Adicionar trecho
       </Button>
     </div>
