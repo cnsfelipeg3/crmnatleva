@@ -383,10 +383,13 @@ function PhotoGrid({
   toggleSelect: (url: string) => void;
   openLightbox: (photo: HotelPhoto) => void;
 }) {
+  const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
+
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
       {photos.map((photo, i) => {
         const isSelected = selectedPhotos.has(photo.url);
+        const isFailed = failedUrls.has(photo.url);
         return (
           <div
             key={photo.url + i}
@@ -398,16 +401,22 @@ function PhotoGrid({
             )}
             onClick={() => openLightbox(photo)}
           >
-            <img
-              src={photo.url}
-              alt={photo.room_name || photo.alt || photo.category}
-              className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
-              loading="lazy"
-              onError={(e) => {
-                const el = (e.target as HTMLImageElement).closest("div");
-                if (el) el.style.display = "none";
-              }}
-            />
+            {isFailed ? (
+              <div className="w-full h-full bg-muted/50 flex flex-col items-center justify-center gap-1 p-2">
+                <Camera className="w-5 h-5 text-muted-foreground/40" />
+                <span className="text-[9px] text-muted-foreground/60 text-center line-clamp-2">
+                  {photo.room_name || photo.alt || "Foto indisponível"}
+                </span>
+              </div>
+            ) : (
+              <img
+                src={photo.url}
+                alt={photo.room_name || photo.alt || photo.category}
+                className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
+                loading="lazy"
+                onError={() => setFailedUrls(prev => new Set(prev).add(photo.url))}
+              />
+            )}
 
             {/* Hover overlay */}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
@@ -426,9 +435,11 @@ function PhotoGrid({
             </button>
 
             {/* Expand icon */}
-            <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <ZoomIn className="w-3.5 h-3.5 text-white drop-shadow-lg" />
-            </div>
+            {!isFailed && (
+              <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <ZoomIn className="w-3.5 h-3.5 text-white drop-shadow-lg" />
+              </div>
+            )}
           </div>
         );
       })}
