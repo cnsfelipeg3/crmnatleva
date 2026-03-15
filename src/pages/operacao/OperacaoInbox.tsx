@@ -1481,11 +1481,6 @@ function OperacaoInboxInner() {
             <div className="p-3 space-y-2 shrink-0">
               {/* ChatLive title row */}
               <div className="flex items-center gap-2 pb-1">
-                {isMobile && (
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={toggleSidebar}>
-                    <Menu className="h-4 w-4" />
-                  </Button>
-                )}
                 <MessageSquare className="h-3.5 w-3.5 text-primary" />
                 <span className="text-xs font-bold tracking-tight text-foreground">ChatLive</span>
                 {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0 h-4">{totalUnread}</Badge>}
