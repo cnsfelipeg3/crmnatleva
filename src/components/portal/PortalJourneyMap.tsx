@@ -445,10 +445,10 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
         const isFirst = idx === 0;
         const isLast = idx === routePoints.length - 1;
         const isCurrent = currentLocation?.iata === pt.iata;
-        const emoji = isFirst ? "🛫" : isLast ? "🏁" : isCurrent ? "📍" : "✈️";
+        const markerType = isCurrent ? "current" : isFirst ? "origin" : isLast ? "finish" : "connection";
 
         const marker = L.marker([pt.coords[0], pt.coords[1]], {
-          icon: createCityMarker(emoji, iataToCityName(pt.iata), isFirst, isCurrent),
+          icon: createCityMarker(markerType, iataToCityName(pt.iata), isCurrent),
           zIndexOffset: isCurrent ? 2000 : isFirst || isLast ? 1000 : 500,
         });
 
