@@ -32,6 +32,7 @@ import { fetchAllRows } from "@/lib/fetchAll";
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ClientContextPanel } from "@/components/livechat/ClientContextPanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
+import { LinkClientDialog } from "@/components/livechat/LinkClientDialog";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 
