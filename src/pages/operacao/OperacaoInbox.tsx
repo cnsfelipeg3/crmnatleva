@@ -937,7 +937,20 @@ function OperacaoInboxInner() {
             const dedupedRows = Array.from(
               new Map(mergedRows.map((row: any) => [row.id || `${row.created_at}_${row.sender_type}_${row.text || row.content || ""}`, row])).values(),
             ).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-            setMessages(prev => ({ ...prev, [selectedId]: mapDbMessages(dedupedRows, selectedId) }));
+            const mapped = mapDbMessages(dedupedRows, selectedId);
+            setMessages(prev => ({ ...prev, [selectedId]: mapped }));
+            // Sync sidebar preview
+            if (mapped.length > 0) {
+              const lastMsg = mapped[mapped.length - 1];
+              const lastPreview = lastMsg.text || `📎 ${lastMsg.message_type}`;
+              setConversations(prev => prev.map(c => {
+                if (c.id !== selectedId) return c;
+                if (!c.last_message_preview || new Date(lastMsg.created_at).getTime() >= new Date(c.last_message_at || 0).getTime()) {
+                  return { ...c, last_message_preview: lastPreview, last_message_at: lastMsg.created_at };
+                }
+                return c;
+              }));
+            }
           }
         }
       } catch (error) {
