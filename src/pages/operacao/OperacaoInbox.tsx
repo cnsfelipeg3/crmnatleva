@@ -657,18 +657,19 @@ function OperacaoInboxInner() {
           }
 
           let dbMsgs: Message[] = [];
-          if (fallbackConversationId) {
+          if (allConversationIds.length > 0) {
+            // Query messages from ALL matching conversation IDs
             const [legacyResp, modernResp] = await Promise.all([
               supabase
                 .from("messages")
                 .select("*")
-                .eq("conversation_id", fallbackConversationId)
+                .in("conversation_id", allConversationIds)
                 .order("created_at", { ascending: true })
                 .limit(1000),
               supabase
                 .from("chat_messages")
                 .select("*")
-                .eq("conversation_id", fallbackConversationId)
+                .in("conversation_id", allConversationIds)
                 .order("created_at", { ascending: true })
                 .limit(1000),
             ]);
