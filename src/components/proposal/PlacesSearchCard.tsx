@@ -778,6 +778,11 @@ export default function PlacesSearchCard({
               <Badge variant="secondary" className="text-[9px] h-4">
                 {selectedCount} selecionada{selectedCount !== 1 ? "s" : ""}
               </Badge>
+              {classifyingPhotos && (
+                <Badge variant="outline" className="text-[9px] h-4 gap-1 animate-pulse">
+                  <Sparkles className="h-2.5 w-2.5" /> Classificando...
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-1.5">
               {selectedCount < 5 && (
