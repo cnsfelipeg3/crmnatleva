@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
 
     // ── Step 1: Find the OFFICIAL hotel website ──
     const searchQuery = `${cleanHotelName} ${locationStr} site oficial`;
-    console.log("Searching for hotel:", searchQuery);
+    console.log("🔍 Searching for hotel:", searchQuery);
 
     const searchResponse = await fetch("https://api.firecrawl.dev/v1/search", {
       method: "POST",
@@ -74,27 +74,56 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Step 2: Identify which result is the OFFICIAL site ──
+    // ── Step 2: Identify the OFFICIAL site ──
     const officialResult = findOfficialSite(results, hotel_name);
-    const officialDomain = officialResult ? new URL(officialResult.url).hostname : null;
-    console.log(`Official domain identified: ${officialDomain || "none"}`);
-
     const mainUrl = officialResult?.url || results[0]?.url;
+    const officialDomain = mainUrl ? new URL(mainUrl).hostname : null;
+    console.log(`🏨 Official domain: ${officialDomain || "none"} → ${mainUrl}`);
+
     const collection: ImageCollection = { photos: [], seen: new Set() };
 
-    // ── Step 3: Scrape rooms/accommodation pages with SECTION CONTEXT ──
-    // This is the KEY part: we parse the HTML to associate each image with its section heading
-    await scrapeRoomsPagesWithContext(mainUrl, collection, FIRECRAWL_API_KEY, hotel_name);
+    // ── Step 3: MAP the entire site to discover ALL pages ──
+    console.log("🗺️ Mapping entire hotel website...");
+    const allSiteUrls = await mapEntireSite(mainUrl, FIRECRAWL_API_KEY);
+    console.log(`📄 Found ${allSiteUrls.length} pages on the site`);
 
-    // ── Step 4: If rooms pages didn't yield much, scrape the main page too ──
-    if (collection.photos.length < 5 && mainUrl) {
-      console.log("Few photos from rooms pages, scraping main URL...");
-      await scrapePageWithContext(mainUrl, collection, FIRECRAWL_API_KEY, hotel_name);
+    // ── Step 4: Categorize pages by relevance ──
+    const categorizedPages = categorizePages(allSiteUrls, mainUrl);
+    console.log(`  Priority pages: ${categorizedPages.priority.length}`);
+    console.log(`  Gallery pages: ${categorizedPages.gallery.length}`);
+    console.log(`  Other pages: ${categorizedPages.other.length}`);
+
+    // ── Step 5: Scrape ALL relevant pages (priority first, then gallery, then others) ──
+    // Priority = rooms, suites, accommodation pages
+    // Gallery = gallery, photos, media pages  
+    // Other = restaurant, spa, facilities, etc.
+
+    const pagesToScrape = [
+      ...categorizedPages.priority,
+      ...categorizedPages.gallery,
+      ...categorizedPages.other,
+    ].slice(0, 30); // Max 30 pages to stay within limits
+
+    console.log(`🕷️ Scraping ${pagesToScrape.length} pages for high-res photos...`);
+
+    // Scrape pages in parallel batches of 3
+    const batchSize = 3;
+    for (let i = 0; i < pagesToScrape.length; i += batchSize) {
+      const batch = pagesToScrape.slice(i, i + batchSize);
+      await Promise.allSettled(
+        batch.map(page => scrapePageForPhotos(page.url, page.inferredSection, collection, FIRECRAWL_API_KEY, hotel_name))
+      );
+      console.log(`  Scraped ${Math.min(i + batchSize, pagesToScrape.length)}/${pagesToScrape.length} pages, ${collection.photos.length} photos so far`);
     }
 
-    // If still few images, collect from search results markdown
+    // Also scrape the main/home page if we haven't
+    if (mainUrl && !pagesToScrape.some(p => p.url === mainUrl)) {
+      await scrapePageForPhotos(mainUrl, "", collection, FIRECRAWL_API_KEY, hotel_name);
+    }
+
+    // Fallback: if still few images, use search results markdown
     if (collection.photos.length < 10) {
-      console.log(`Only ${collection.photos.length} photos, collecting from search results...`);
+      console.log(`⚠️ Only ${collection.photos.length} photos, extracting from search results...`);
       if (officialResult) {
         collectImagesFromMarkdown(officialResult.markdown || "", officialResult.url || "", collection, officialDomain);
       }
@@ -104,9 +133,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Found ${collection.photos.length} candidate images`);
+    console.log(`📸 Total candidate images: ${collection.photos.length}`);
 
-    // ── Step 5: Filter, deduplicate, maximize quality, and return ──
+    // ── Step 6: Filter, deduplicate, maximize quality, and return ──
     const photos = collection.photos
       .filter(img => {
         const url = img.url.toLowerCase();
@@ -115,13 +144,13 @@ Deno.serve(async (req) => {
         if (isLikelyThumbnail(img.url)) return false;
         return /\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(img.url) && img.url.length > 50;
       })
-      // Prioritize photos WITH section names (they're more valuable)
+      // Prioritize photos WITH section names
       .sort((a, b) => {
         if (a.section_name && !b.section_name) return -1;
         if (!a.section_name && b.section_name) return 1;
-        return 0;
+        return (b.confidence || 0) - (a.confidence || 0);
       })
-      .slice(0, 60)
+      .slice(0, 80)
       .map(img => ({
         url: standardizeImageUrl(img.url),
         alt: img.alt || `${hotel_name} foto`,
@@ -130,12 +159,18 @@ Deno.serve(async (req) => {
         confidence: img.section_name ? 0.95 : 0.5,
       }));
 
-    // Extract unique room/section names found
     const roomNames = [...new Set(photos.map(p => p.section_name).filter(Boolean))];
-    console.log(`Returning ${photos.length} photos with ${roomNames.length} sections:`, roomNames);
+    console.log(`✅ Returning ${photos.length} HD photos with ${roomNames.length} sections:`, roomNames);
 
     return new Response(
-      JSON.stringify({ success: true, photos, source_url: mainUrl || "", room_names: roomNames }),
+      JSON.stringify({
+        success: true,
+        photos,
+        source_url: mainUrl || "",
+        room_names: roomNames,
+        pages_scraped: pagesToScrape.length,
+        total_site_pages: allSiteUrls.length,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
@@ -148,12 +183,119 @@ Deno.serve(async (req) => {
 });
 
 // ═══════════════════════════════════════════════
-// Core: Scrape pages and associate images with their section headings
+// Full-site navigation: Map → Categorize → Scrape all pages
 // ═══════════════════════════════════════════════
 
-async function scrapePageWithContext(url: string, collection: ImageCollection, apiKey: string, hotelName: string) {
+interface CategorizedPage {
+  url: string;
+  inferredSection: string; // pre-inferred section name from URL/path
+}
+
+/**
+ * Use Firecrawl Map to discover ALL pages on the hotel website.
+ */
+async function mapEntireSite(mainUrl: string | undefined, apiKey: string): Promise<string[]> {
+  if (!mainUrl) return [];
   try {
-    console.log("Scraping page with context:", url);
+    const resp = await fetch("https://api.firecrawl.dev/v1/map", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ url: mainUrl, limit: 200, includeSubdomains: false }),
+    });
+    if (!resp.ok) {
+      console.warn("Map failed, falling back to manual discovery");
+      return [mainUrl];
+    }
+    const data = await resp.json();
+    const urls: string[] = data.links || [];
+    // Filter to same domain
+    const baseDomain = new URL(mainUrl).hostname;
+    return urls.filter(u => {
+      try { return new URL(u).hostname === baseDomain; } catch { return false; }
+    });
+  } catch (e) {
+    console.warn("Map error:", e);
+    return [mainUrl];
+  }
+}
+
+/**
+ * Categorize discovered pages by relevance for hotel photos.
+ * Priority: rooms/suites > gallery > restaurant/spa/facilities > other
+ */
+function categorizePages(urls: string[], mainUrl: string | undefined): {
+  priority: CategorizedPage[];
+  gallery: CategorizedPage[];
+  other: CategorizedPage[];
+} {
+  const priority: CategorizedPage[] = [];
+  const gallery: CategorizedPage[] = [];
+  const other: CategorizedPage[] = [];
+
+  const roomKeywords = ["room", "suite", "accommodation", "camera", "chambre", "zimmer", "quarto", "habitacion", "camere"];
+  const galleryKeywords = ["gallery", "galeria", "photo", "foto", "image", "media", "virtual-tour"];
+  const facilityKeywords = [
+    "restaurant", "ristorante", "dining", "bar", "lounge",
+    "spa", "wellness", "pool", "piscina",
+    "fitness", "gym", "academia",
+    "meeting", "event", "wedding",
+    "garden", "terrace", "rooftop",
+    "experience", "service", "facility", "amenities",
+  ];
+
+  // Skip these pages entirely
+  const skipKeywords = [
+    "book", "reserv", "checkout", "cart", "login", "account", "profile",
+    "privacy", "cookie", "legal", "terms", "conditions", "sitemap",
+    "career", "job", "press", "news", "blog", "faq", "contact",
+    "xml", "json", "api", "feed", "rss", ".pdf", ".doc",
+  ];
+
+  for (const url of urls) {
+    const lower = url.toLowerCase();
+    if (url === mainUrl) continue; // handled separately
+    if (skipKeywords.some(k => lower.includes(k))) continue;
+
+    const path = new URL(url).pathname.toLowerCase();
+    const pathSegments = path.split("/").filter(Boolean);
+    const lastSegment = pathSegments[pathSegments.length - 1] || "";
+
+    // Infer a section name from the URL path
+    let inferredSection = "";
+    if (pathSegments.length > 0) {
+      // Use last meaningful segment as section context hint
+      inferredSection = lastSegment
+        .replace(/[-_]/g, " ")
+        .replace(/\.\w+$/, "")
+        .split(" ")
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(" ");
+    }
+
+    if (roomKeywords.some(k => lower.includes(k))) {
+      priority.push({ url, inferredSection });
+    } else if (galleryKeywords.some(k => lower.includes(k))) {
+      gallery.push({ url, inferredSection });
+    } else if (facilityKeywords.some(k => lower.includes(k))) {
+      other.push({ url, inferredSection });
+    }
+    // Pages that don't match any keyword are skipped (about, history, etc.)
+  }
+
+  return { priority, gallery, other };
+}
+
+/**
+ * Scrape a single page and extract high-res images with section context.
+ */
+async function scrapePageForPhotos(
+  url: string,
+  inferredSection: string,
+  collection: ImageCollection,
+  apiKey: string,
+  hotelName: string
+) {
+  try {
     const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -162,85 +304,27 @@ async function scrapePageWithContext(url: string, collection: ImageCollection, a
     if (!resp.ok) return;
     const data = await resp.json();
     const html = data.data?.html || data.html || "";
-    if (html.length < 200) return;
-
-    extractImagesWithSectionContext(html, url, collection, hotelName);
-  } catch (e) {
-    console.error("Scrape failed:", e);
-  }
-}
-
-async function scrapeRoomsPagesWithContext(mainUrl: string | undefined, collection: ImageCollection, apiKey: string, hotelName: string) {
-  if (!mainUrl) return;
-
-  const roomPaths = [
-    "/rooms", "/quartos", "/habitaciones", "/accommodations", "/suites",
-    "/rooms-suites", "/rooms-and-suites", "/accommodation", "/acomodacoes",
-    "/rooms-and-rates", "/our-rooms", "/guest-rooms",
-    "/camere", "/camere-e-suite", "/zimmer",
-  ];
-
-  let base: URL;
-  try { base = new URL(mainUrl); } catch { return; }
-
-  // Also try to discover rooms page URL via map
-  const discoveredPaths = await discoverRoomsPaths(mainUrl, apiKey);
-  const allPaths = [...new Set([...roomPaths, ...discoveredPaths])];
-
-  let foundRoomsPage = false;
-
-  for (const path of allPaths) {
-    const roomUrl = path.startsWith("http") ? path : base.origin + path;
-    try {
-      const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ url: roomUrl, formats: ["html"], onlyMainContent: true, waitFor: 3000 }),
-      });
-      if (!resp.ok) continue;
-      const data = await resp.json();
-      const html = data.data?.html || data.html || "";
-
-      if (html.length > 500) {
-        console.log(`✅ Found rooms page at ${roomUrl}`);
-        extractImagesWithSectionContext(html, roomUrl, collection, hotelName);
-        foundRoomsPage = true;
-
-        // Also try to find individual room detail pages linked from this page
-        const roomDetailLinks = extractRoomDetailLinks(html, roomUrl);
-        console.log(`Found ${roomDetailLinks.length} room detail page links`);
-
-        // Scrape up to 8 individual room pages for more photos
-        for (const link of roomDetailLinks.slice(0, 8)) {
-          await scrapeIndividualRoomPage(link.url, link.roomName, collection, apiKey, hotelName);
-        }
-        break;
-      }
-    } catch { continue; }
-  }
-
-  if (!foundRoomsPage) {
-    console.log("No rooms page found via paths, trying main page sections");
-  }
-}
-
-async function scrapeIndividualRoomPage(url: string, roomName: string, collection: ImageCollection, apiKey: string, _hotelName: string) {
-  try {
-    console.log(`  Scraping room detail: "${roomName}" → ${url}`);
-    const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ url, formats: ["html"], onlyMainContent: true, waitFor: 2000 }),
-    });
-    if (!resp.ok) return;
-    const data = await resp.json();
-    const html = data.data?.html || data.html || "";
     if (html.length < 300) return;
 
-    // Extract all images including srcset high-res variants
-    extractHighResImages(html, url, collection, roomName);
+    // First try structured extraction (headings → images)
+    extractImagesWithSectionContext(html, url, collection, hotelName);
+
+    // Also extract any images that might not be under headings
+    // Use the inferred section name from URL if no heading context was found
+    const photosBeforeOrphan = collection.photos.length;
+    extractHighResImages(html, url, collection, "");
+
+    // For orphan images (added without section), apply the inferred section
+    if (inferredSection) {
+      for (let i = photosBeforeOrphan; i < collection.photos.length; i++) {
+        if (!collection.photos[i].section_name) {
+          collection.photos[i].section_name = inferredSection;
+          collection.photos[i].confidence = 0.7;
+        }
+      }
+    }
   } catch (e) {
-    console.warn(`Failed scraping room page ${url}:`, e);
+    console.warn(`Failed scraping ${url}:`, e);
   }
 }
 
@@ -442,63 +526,6 @@ function extractFromStructuredContainers(html: string, sourceUrl: string, collec
 }
 
 
-
-
-function extractRoomDetailLinks(html: string, baseUrl: string): Array<{ url: string; roomName: string }> {
-  const links: Array<{ url: string; roomName: string }> = [];
-  const seen = new Set<string>();
-
-  // Pattern: <a href="/rooms/deluxe">Deluxe Room</a>
-  const linkRegex = /<a[^>]*href=["']([^"']+(?:room|suite|camera|chambre|zimmer|quarto|accommodation)[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  let match;
-  while ((match = linkRegex.exec(html)) !== null) {
-    const href = match[1].trim();
-    const linkText = match[2].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").trim();
-    if (linkText.length < 3 || linkText.length > 80) continue;
-    if (isGenericHeading(linkText.toLowerCase())) continue;
-
-    const absUrl = makeAbsolute(href, baseUrl);
-    if (seen.has(absUrl)) continue;
-    seen.add(absUrl);
-    links.push({ url: absUrl, roomName: linkText });
-  }
-
-  // Also look for links in room containers that use different patterns
-  const altLinkRegex = /<a[^>]*href=["']([^"']{10,200})["'][^>]*>[^<]*<(?:h[1-6]|span|strong)[^>]*>([^<]{3,80})<\//gi;
-  while ((match = altLinkRegex.exec(html)) !== null) {
-    const href = match[1].trim();
-    const text = match[2].replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").trim();
-    if (text.length < 3 || isGenericHeading(text.toLowerCase())) continue;
-    const absUrl = makeAbsolute(href, baseUrl);
-    if (seen.has(absUrl)) continue;
-    // Only include if the URL looks like a room page
-    const lowerHref = absUrl.toLowerCase();
-    if (lowerHref.includes("room") || lowerHref.includes("suite") || lowerHref.includes("camera") ||
-        lowerHref.includes("accommodation") || lowerHref.includes("quarto") || lowerHref.includes("chambre")) {
-      seen.add(absUrl);
-      links.push({ url: absUrl, roomName: text });
-    }
-  }
-
-  return links;
-}
-
-async function discoverRoomsPaths(mainUrl: string, apiKey: string): Promise<string[]> {
-  try {
-    const resp = await fetch("https://api.firecrawl.dev/v1/map", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ url: mainUrl, search: "rooms suites accommodation", limit: 20 }),
-    });
-    if (!resp.ok) return [];
-    const data = await resp.json();
-    const urls: string[] = data.links || [];
-    const roomKeywords = ["room", "suite", "accommodation", "camera", "chambre", "quarto", "zimmer"];
-    return urls.filter(u => roomKeywords.some(kw => u.toLowerCase().includes(kw))).slice(0, 5);
-  } catch {
-    return [];
-  }
-}
 
 // ═══════════════════════════════════════════════
 // Helpers

@@ -314,6 +314,8 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     setLoading(true);
     setLoadingSource("official");
     try {
+      toast.info("🕷️ Navegando pelo site completo do hotel...", { duration: 5000 });
+
       const { data, error } = await supabase.functions.invoke("scrape-hotel-photos", {
         body: { hotel_name: hotelName, hotel_city: hotelCity, hotel_country: hotelCountry },
       });
@@ -326,6 +328,8 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
         room_name: p.section_name || p.room_name || "",
       }));
       const scraperRoomNames: string[] = data.room_names || [];
+      const pagesScraped: number = data.pages_scraped || 0;
+      const totalSitePages: number = data.total_site_pages || 0;
       const resolvedPhotos = await resolveHotelPhotosUrls(rawPhotos);
 
       clearProxiedImages();
@@ -335,21 +339,23 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       setActiveSource("official");
       setKnownRoomNames(scraperRoomNames);
 
-      // Count how many photos already have section names from the scraper
       const photosWithSections = resolvedPhotos.filter(p => p.environment_name && p.environment_name.length > 2).length;
       const sectionRatio = resolvedPhotos.length > 0 ? photosWithSections / resolvedPhotos.length : 0;
 
       if (scraperRoomNames.length > 0) {
-        console.log("Room names extracted from hotel website:", scraperRoomNames);
-        console.log(`${photosWithSections}/${resolvedPhotos.length} photos already have section context (${Math.round(sectionRatio * 100)}%)`);
+        console.log("Room names from website:", scraperRoomNames);
+        console.log(`${photosWithSections}/${resolvedPhotos.length} photos with section context (${Math.round(sectionRatio * 100)}%)`);
       }
+      console.log(`Scraped ${pagesScraped} pages out of ${totalSitePages} found on site`);
 
       if (resolvedPhotos.length > 0) {
         const sectionCount = new Set(resolvedPhotos.map(p => p.environment_name).filter(Boolean)).size;
-        toast.success(`${resolvedPhotos.length} fotos encontradas — ${sectionCount} ambientes identificados no site`);
+        toast.success(
+          `📸 ${resolvedPhotos.length} fotos HD encontradas em ${pagesScraped} páginas — ${sectionCount} ambientes identificados`,
+          { duration: 5000 }
+        );
         preloadViaProxy(resolvedPhotos, data.source_url || undefined);
 
-        // Only run AI classification if less than 50% of photos have section context
         if (sectionRatio < 0.5) {
           console.log("Many photos without section context, running AI classification...");
           await runClassification(resolvedPhotos, scraperRoomNames);
@@ -440,7 +446,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={scrapePhotos} disabled={loading || !hotelName} className="gap-2 text-xs">
           {loadingSource === "official" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
-          {loadingSource === "official" ? "Buscando..." : "Site Oficial"}
+          {loadingSource === "official" ? "Navegando site completo..." : "Site Oficial (HD)"}
         </Button>
       </div>
     );
