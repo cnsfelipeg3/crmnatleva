@@ -159,6 +159,10 @@ serve(async (req) => {
             if (durationMinutes < 0) durationMinutes += 24 * 60; // next day arrival
           }
 
+          // Extract aircraft type from legs
+          const aircraftCode = flight.legs?.[0]?.aircraftEquipment?.aircraftType || 
+                               departure?.departure?.aircraftEquipment?.aircraftType || "";
+
           const segments = [{
             direction: "ida",
             segment_order: 1,
@@ -173,6 +177,7 @@ serve(async (req) => {
             duration_minutes: durationMinutes,
             terminal: depTerminal,
             arrival_terminal: arrTerminal,
+            aircraft_type: aircraftCode,
             operated_by: "",
             connection_time_minutes: 0,
             cabin_type: "",
@@ -204,6 +209,8 @@ serve(async (req) => {
                   if (connTime < 0) connTime += 24 * 60;
                 }
               }
+              const legAircraft = flight.legs?.[i]?.aircraftEquipment?.aircraftType || 
+                                  dep?.departure?.aircraftEquipment?.aircraftType || aircraftCode;
               segments.push({
                 direction: "ida",
                 segment_order: i + 1,
@@ -218,6 +225,7 @@ serve(async (req) => {
                 duration_minutes: dur,
                 terminal: dep?.departure?.terminal?.code || "",
                 arrival_terminal: arr?.arrival?.terminal?.code || "",
+                aircraft_type: legAircraft,
                 operated_by: "",
                 connection_time_minutes: connTime,
                 cabin_type: "",
@@ -452,6 +460,10 @@ serve(async (req) => {
               ? (dictionaries?.carriers?.[operatingCode] || operatingCode)
               : "";
 
+            // Aircraft type from segment + dictionaries lookup
+            const aircraftCode = seg.aircraft?.code || "";
+            const aircraftName = aircraftCode ? (dictionaries?.aircraft?.[aircraftCode] || aircraftCode) : "";
+
             return {
               direction,
               segment_order: segIdx + 1,
@@ -466,6 +478,7 @@ serve(async (req) => {
               duration_minutes: durationMinutes,
               terminal: seg.departure?.terminal || "",
               arrival_terminal: seg.arrival?.terminal || "",
+              aircraft_type: aircraftName || aircraftCode,
               operated_by: operatingName,
               connection_time_minutes: connectionTimeMinutes,
               cabin_type: "",
