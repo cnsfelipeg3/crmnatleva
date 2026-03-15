@@ -102,11 +102,15 @@ export function WhatsAppQRCard() {
     }
     toast.success("WhatsApp conectado com sucesso!");
 
-    // Configure webhook automatically
+    // Configure webhook automatically (including sent-by-me events)
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     if (supabaseUrl) {
-      callZapiProxy("set-webhook", { webhookUrl: `${supabaseUrl}/functions/v1/zapi-webhook` }).catch(() => {});
-      callZapiProxy("set-webhook-sent", { webhookUrl: `${supabaseUrl}/functions/v1/zapi-webhook` }).catch(() => {});
+      const webhookUrl = `${supabaseUrl}/functions/v1/zapi-webhook`;
+      Promise.allSettled([
+        callZapiProxy("set-webhook", { webhookUrl }),
+        callZapiProxy("set-webhook-sent", { webhookUrl }),
+        callZapiProxy("set-notify-sent-by-me"),
+      ]).catch(() => {});
     }
   }
 

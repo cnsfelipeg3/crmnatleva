@@ -1199,6 +1199,15 @@ function OperacaoInboxInner() {
       if (selectedId.startsWith("wa_")) {
         const status = await callZapiProxy("check-status");
         if (status?.connected) {
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          if (supabaseUrl) {
+            const webhookUrl = `${supabaseUrl}/functions/v1/zapi-webhook`;
+            await Promise.allSettled([
+              callZapiProxy("set-webhook", { webhookUrl }),
+              callZapiProxy("set-webhook-sent", { webhookUrl }),
+              callZapiProxy("set-notify-sent-by-me"),
+            ]);
+          }
           await callZapiProxy("get-chats");
         }
       }

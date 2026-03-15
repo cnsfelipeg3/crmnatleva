@@ -24,7 +24,14 @@ Deno.serve(async (req) => {
     const textContent = body.text?.message || (typeof body.text === "string" ? body.text : "") || body.caption || "";
     const msgType = body.image ? "image" : body.audio ? "audio" : body.video ? "video" : body.document ? "document" : "text";
     const contactName = body.senderName || body.chatName || rawPhone || "Desconhecido";
-    const timestamp = body.momment ? new Date(Number(body.momment)).toISOString() : new Date().toISOString();
+
+    const momentRaw = Number(body.momment);
+    const eventTsMs = Number.isFinite(momentRaw)
+      ? (momentRaw > 1_000_000_000_000 ? momentRaw : momentRaw * 1000)
+      : Date.now();
+    const timestampIso = new Date(eventTsMs).toISOString();
+    const timestampEpoch = Math.floor(eventTsMs / 1000);
+
     const messageId = body.messageId || null;
     const msgStatus = body.status || (fromMe ? "SENT" : "RECEIVED");
 
@@ -229,7 +236,7 @@ Deno.serve(async (req) => {
         sender_name: contactName,
         sender_photo: body.senderPhoto || null,
         status: msgStatus,
-        timestamp,
+        timestamp: timestampEpoch,
         raw_data: body,
       });
 
@@ -248,9 +255,9 @@ Deno.serve(async (req) => {
       if (existingConv) {
         conversationId = existingConv.id;
         const updateData: Record<string, unknown> = {
-          last_message_at: timestamp,
+          last_message_at: timestampIso,
           last_message_preview: preview,
-          updated_at: timestamp,
+          updated_at: timestampIso,
         };
         if (!fromMe && existingConv.contact_name) {
           const existing = existingConv.contact_name.trim();
@@ -275,7 +282,7 @@ Deno.serve(async (req) => {
             source: "whatsapp_api",
             stage: "novo_lead",
             tags: [],
-            last_message_at: timestamp,
+            last_message_at: timestampIso,
             last_message_preview: preview,
             unread_count: fromMe ? 0 : 1,
             is_vip: false,
@@ -318,7 +325,7 @@ Deno.serve(async (req) => {
         media_url: mediaUrl,
         status: fromMe ? "sent" : "delivered",
         external_message_id: messageId,
-        created_at: timestamp,
+        created_at: timestampIso,
       });
 
       if (msgError) {
