@@ -534,19 +534,28 @@ function PhotoGrid({
   selectedPhotos,
   toggleSelect,
   openLightbox,
+  failedUrls,
+  resolvingUrls,
+  getDisplayUrl,
+  onImageError,
 }: {
   photos: HotelPhoto[];
   selectedPhotos: Set<string>;
   toggleSelect: (url: string) => void;
   openLightbox: (photo: HotelPhoto) => void;
+  failedUrls: Set<string>;
+  resolvingUrls: Set<string>;
+  getDisplayUrl: (url: string) => string;
+  onImageError: (url: string) => void;
 }) {
-  const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
-
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
       {photos.map((photo, i) => {
         const isSelected = selectedPhotos.has(photo.url);
         const isFailed = failedUrls.has(photo.url);
+        const isResolving = resolvingUrls.has(photo.url);
+        const displayUrl = getDisplayUrl(photo.url);
+
         return (
           <div
             key={photo.url + i}
@@ -567,12 +576,18 @@ function PhotoGrid({
               </div>
             ) : (
               <img
-                src={photo.url}
+                src={displayUrl}
                 alt={photo.room_name || photo.alt || photo.category}
                 className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                 loading="lazy"
-                onError={() => setFailedUrls(prev => new Set(prev).add(photo.url))}
+                onError={() => onImageError(photo.url)}
               />
+            )}
+
+            {isResolving && !isFailed && (
+              <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+              </div>
             )}
 
             {/* Hover overlay */}
@@ -592,7 +607,7 @@ function PhotoGrid({
             </button>
 
             {/* Expand icon */}
-            {!isFailed && (
+            {!isFailed && !isResolving && (
               <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <ZoomIn className="w-3.5 h-3.5 text-white drop-shadow-lg" />
               </div>
