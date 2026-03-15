@@ -30,6 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { initPersistence, persistConversation, persistMessages, loadPersistedMessages } from "@/hooks/useChatPersistence";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
+import { ClientContextPanel } from "@/components/livechat/ClientContextPanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
@@ -535,6 +536,7 @@ function OperacaoInboxInner() {
   const [isSending, setIsSending] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [showContactProfile, setShowContactProfile] = useState(false);
+  const [showClientContext, setShowClientContext] = useState(true);
   const [showFlowMenu, setShowFlowMenu] = useState(false);
   const [showMobilePlusMenu, setShowMobilePlusMenu] = useState(false);
   const [availableFlows, setAvailableFlows] = useState<{ id: string; name: string; status: string }[]>([]);
@@ -2032,7 +2034,7 @@ function OperacaoInboxInner() {
                         <ArrowLeft className="h-5 w-5" />
                       </Button>
                     )}
-                    <div className="flex items-center gap-2 md:gap-3 cursor-pointer hover:opacity-80 transition-opacity min-w-0 flex-1" onClick={() => setShowContactProfile(prev => !prev)}>
+                    <div className="flex items-center gap-2 md:gap-3 cursor-pointer hover:opacity-80 transition-opacity min-w-0 flex-1" onClick={() => { if (!isMobile) setShowClientContext(prev => !prev); else setShowContactProfile(prev => !prev); }}>
                       {profilePicsRef.current.get(selected.id) ? (
                         <img src={profilePicsRef.current.get(selected.id)} alt="" className="h-8 w-8 md:h-9 md:w-9 rounded-full object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
                       ) : null}
@@ -2106,6 +2108,16 @@ function OperacaoInboxInner() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {!isMobile && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className={`h-8 w-8 ${showClientContext ? 'bg-primary/10' : ''}`} onClick={() => setShowClientContext(prev => !prev)}>
+                            <User className="h-4 w-4 text-primary" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">Painel do cliente</p></TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 </div>
 
@@ -2463,9 +2475,9 @@ function OperacaoInboxInner() {
               </div>
             )}
 
-            {/* Contact Profile Panel */}
+            {/* Contact Profile Panel (mobile) */}
             <AnimatePresence>
-              {showContactProfile && selected && (
+              {showContactProfile && selected && isMobile && (
                 <ContactProfilePanel
                   contact={{ ...selected, created_at: selected.last_message_at }}
                   profilePic={profilePicsRef.current.get(selected.id)}
@@ -2474,6 +2486,16 @@ function OperacaoInboxInner() {
               )}
             </AnimatePresence>
           </div>
+
+          {/* ─── Column 3: Client Context Panel ─── */}
+          {!isMobile && showClientContext && selected && (
+            <ClientContextPanel
+              conversation={selected}
+              profilePic={profilePicsRef.current.get(selected.id)}
+              onClose={() => setShowClientContext(false)}
+              onStageChange={(stage) => handleStageChange(selected.id, stage)}
+            />
+          )}
         </div>
       </div>
 
