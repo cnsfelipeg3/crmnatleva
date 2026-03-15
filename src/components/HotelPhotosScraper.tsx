@@ -446,7 +446,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={scrapePhotos} disabled={loading || !hotelName} className="gap-2 text-xs">
           {loadingSource === "official" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
-          {loadingSource === "official" ? "Buscando..." : "Site Oficial"}
+          {loadingSource === "official" ? "Navegando site completo..." : "Site Oficial (HD)"}
         </Button>
       </div>
     );
