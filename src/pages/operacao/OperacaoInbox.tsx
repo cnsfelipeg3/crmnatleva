@@ -730,7 +730,10 @@ function OperacaoInboxInner() {
       } catch (error) {
         console.error("Erro ao carregar histórico da conversa:", error);
       } finally {
-        if (!cancelled) setLoadingMessages(false);
+        if (!cancelled) {
+          setLoadingMessages(false);
+          setReloadingMessages(false);
+        }
       }
     };
 
