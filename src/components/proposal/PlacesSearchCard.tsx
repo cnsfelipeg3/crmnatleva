@@ -1111,7 +1111,7 @@ export default function PlacesSearchCard({
       {/* Search source label */}
       <div className="px-4 pt-3 pb-1 flex gap-2">
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground border border-primary shadow-sm">
-          <Map className="h-3.5 w-3.5" />
+          <MapIcon className="h-3.5 w-3.5" />
           Google Places + Site Oficial
         </div>
       </div>
