@@ -703,6 +703,26 @@ function OperacaoInboxInner() {
     const hasCached = (messages[selectedId] || []).length > 0;
     if (!hasCached) setLoadingMessages(true);
 
+    const fetchPaginated = async <T = any>(builder: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>) => {
+      const pageSize = 1000;
+      let from = 0;
+      const allRows: T[] = [];
+
+      while (true) {
+        const { data, error } = await builder(from, from + pageSize - 1);
+        if (error) throw error;
+
+        const page = data || [];
+        if (page.length === 0) break;
+        allRows.push(...page);
+        if (page.length < pageSize) break;
+
+        from += pageSize;
+      }
+
+      return allRows;
+    };
+
     const loadMessages = async () => {
       try {
         if (selectedId.startsWith("wa_")) {
