@@ -212,6 +212,8 @@ function OperacaoInboxInner() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
+  const [reloadVersion, setReloadVersion] = useState(0);
+  const [reloadingMessages, setReloadingMessages] = useState(false);
   const [flowRunning, setFlowRunning] = useState(false);
   const [botActive, setBotActive] = useState(true);
   const [activeFlowName, setActiveFlowName] = useState<string | null>(null);
@@ -728,13 +730,16 @@ function OperacaoInboxInner() {
       } catch (error) {
         console.error("Erro ao carregar histórico da conversa:", error);
       } finally {
-        if (!cancelled) setLoadingMessages(false);
+        if (!cancelled) {
+          setLoadingMessages(false);
+          setReloadingMessages(false);
+        }
       }
     };
 
     loadMessages();
     return () => { cancelled = true; };
-  }, [selectedId, selected?.db_id, extractMediaFromRawData, getZapiPhoneCandidates]);
+  }, [selectedId, selected?.db_id, extractMediaFromRawData, getZapiPhoneCandidates, reloadVersion]);
 
   // Realtime subscription
   useEffect(() => {
@@ -1661,6 +1666,27 @@ function OperacaoInboxInner() {
                         <Workflow className="h-3 w-3" />{activeFlowName}
                       </Badge>
                     )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1.5 text-[10px] px-2"
+                          disabled={reloadingMessages}
+                          onClick={async () => {
+                            setReloadingMessages(true);
+                            setMessages(prev => ({ ...prev, [selectedId!]: [] }));
+                            setReloadVersion(v => v + 1);
+                            toast({ title: "Recarregando mensagens…", description: "Buscando todas as mensagens da conversa." });
+                            setTimeout(() => setReloadingMessages(false), 3000);
+                          }}
+                        >
+                          <RefreshCw className={`h-3.5 w-3.5 ${reloadingMessages ? "animate-spin" : ""}`} />
+                          {!isMobile && "Recarregar"}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Recarregar todas as mensagens</TooltipContent>
+                    </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowSummaryDialog(true)}>
