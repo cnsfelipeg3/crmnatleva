@@ -94,6 +94,7 @@ const PortalLogin = lazy(() => import("@/pages/portal/PortalLogin"));
 const PortalDashboard = lazy(() => import("@/pages/portal/PortalDashboard"));
 const PortalTripDetail = lazy(() => import("@/pages/portal/PortalTripDetail"));
 const PortalDemoTrip = lazy(() => import("@/pages/portal/PortalDemoTrip"));
+const PortalMyTrips = lazy(() => import("@/pages/portal/PortalMyTrips"));
 const PortalFinance = lazy(() => import("@/pages/portal/PortalFinance"));
 const PortalNewQuote = lazy(() => import("@/pages/portal/PortalNewQuote"));
 const PortalProfile = lazy(() => import("@/pages/portal/PortalProfile"));
@@ -245,7 +246,7 @@ function AppRoutes() {
         {/* Portal do Cliente - rotas separadas fora do CRM */}
         <Route path="/portal/login" element={<PortalLogin />} />
         <Route path="/portal" element={<PortalDashboard />} />
-        <Route path="/portal/viagens" element={<PortalDashboard />} />
+        <Route path="/portal/viagens" element={<PortalMyTrips />} />
         <Route path="/portal/viagem/:saleId" element={<PortalTripDetail />} />
         <Route path="/portal/modelo" element={<PortalDemoTrip />} />
         <Route path="/portal/financeiro" element={<PortalFinance />} />
