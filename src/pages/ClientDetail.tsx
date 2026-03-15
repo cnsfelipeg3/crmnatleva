@@ -95,7 +95,7 @@ export default function ClientDetail() {
   const [loading, setLoading] = useState(true);
   const [newNote, setNewNote] = useState("");
   const [savingNote, setSavingNote] = useState(false);
-  const [timelineTab, setTimelineTab] = useState<"all" | "past" | "future">("all");
+  
 
   // Travel preferences
   const [prefs, setPrefs] = useState<TravelPreferences>({ ...defaultPrefs });
