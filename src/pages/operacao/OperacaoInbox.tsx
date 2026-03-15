@@ -577,7 +577,7 @@ function OperacaoInboxInner() {
   useEffect(() => {
     const loadDbConversations = async () => {
       await initPersistence();
-      const { data } = await supabase.from("conversations").select("*").order("last_message_at", { ascending: false }).limit(50);
+      const data = await fetchAllRows("conversations", "*", {
       if (data && data.length > 0) {
         // Render conversations IMMEDIATELY without waiting for preview backfill
         const mapConv = (c: any, fallbackPreview?: string) => {
