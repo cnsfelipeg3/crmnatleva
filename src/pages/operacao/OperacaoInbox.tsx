@@ -228,11 +228,91 @@ function OperacaoInboxInner() {
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
 
   const getZapiPhoneCandidates = useCallback((conversationId: string) => {
-    const phone = conversationId.replace("wa_", "").trim();
+    const phone = conversationId.replace("wa_", "").replace(/\D/g, "").trim();
     if (!phone) return [] as string[];
-    return Array.from(new Set([phone, `${phone}-group`, `${phone}@g.us`]));
+    return Array.from(new Set([
+      phone,
+      `+${phone}`,
+      `${phone}@c.us`,
+      `${phone}@s.whatsapp.net`,
+      `${phone}-group`,
+      `${phone}@g.us`,
+    ]));
   }, []);
 
+  const resolveDbConversationId = useCallback(async (conversationId: string): Promise<string | null> => {
+    if (!conversationId) return null;
+    if (!conversationId.startsWith("wa_")) return conversationId.length > 10 ? conversationId : null;
+
+    const fromState = conversations.find(c => c.id === conversationId)?.db_id;
+    if (fromState) return fromState;
+
+    const phone = conversationId.replace("wa_", "").replace(/\D/g, "");
+    if (!phone) return null;
+
+    const phoneCandidates = Array.from(new Set([
+      phone,
+      `+${phone}`,
+      `${phone}@c.us`,
+      `${phone}@s.whatsapp.net`,
+      `${phone}-group`,
+      `${phone}@g.us`,
+    ]));
+
+    const [byPhoneResp, byExternalResp] = await Promise.all([
+      supabase.from("conversations").select("id, updated_at").in("phone", phoneCandidates).order("updated_at", { ascending: false }).limit(1),
+      supabase.from("conversations").select("id, updated_at").eq("external_conversation_id", `wa_${phone}`).order("updated_at", { ascending: false }).limit(1),
+    ]);
+
+    const convId = byPhoneResp.data?.[0]?.id || byExternalResp.data?.[0]?.id || null;
+    if (convId) {
+      setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, db_id: c.db_id || convId } : c));
+    }
+    return convId;
+  }, [conversations]);
+
+  const persistOutgoingMessage = useCallback(async (payload: {
+    conversationId: string;
+    messageType: MsgType;
+    text: string;
+    mediaUrl?: string;
+    externalMessageId?: string;
+    createdAt?: string;
+  }) => {
+    const dbConvId = await resolveDbConversationId(payload.conversationId);
+    if (!dbConvId) return;
+
+    const createdAt = payload.createdAt || new Date().toISOString();
+    const externalId = payload.externalMessageId || `local_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+    await Promise.allSettled([
+      supabase.from("chat_messages").insert({
+        conversation_id: dbConvId,
+        sender_type: "atendente",
+        message_type: payload.messageType,
+        content: payload.text,
+        media_url: payload.mediaUrl || null,
+        read_status: "sent",
+        external_message_id: externalId,
+      }),
+      supabase.from("messages").insert({
+        conversation_id: dbConvId,
+        sender_type: "atendente",
+        message_type: payload.messageType,
+        text: payload.text || null,
+        media_url: payload.mediaUrl || null,
+        status: "sent",
+        external_message_id: externalId,
+        created_at: createdAt,
+      }),
+    ]);
+
+    await supabase.from("conversations").update({
+      last_message_preview: payload.text || `📎 ${payload.messageType}`,
+      last_message_at: createdAt,
+      unread_count: 0,
+    }).eq("id", dbConvId);
+  }, [resolveDbConversationId]);
   // Load active flow name for selected conversation
   useEffect(() => {
     if (!selectedId) { setActiveFlowName(null); return; }
@@ -1111,6 +1191,27 @@ function OperacaoInboxInner() {
     textareaRef.current?.focus();
   }, [inputText, isCorrecting, correctMessage]);
 
+  const handleReloadMessages = useCallback(async () => {
+    if (!selectedId || reloadingMessages) return;
+
+    setReloadingMessages(true);
+    try {
+      if (selectedId.startsWith("wa_")) {
+        const status = await callZapiProxy("check-status");
+        if (status?.connected) {
+          await callZapiProxy("get-chats");
+        }
+      }
+
+      setMessages(prev => ({ ...prev, [selectedId]: [] }));
+      setReloadVersion(v => v + 1);
+      toast({ title: "Recarregando mensagens…", description: "Resincronizando histórico completo da conversa." });
+    } catch (err: any) {
+      setReloadingMessages(false);
+      toast({ title: "Falha ao recarregar", description: err?.message || "Não foi possível resincronizar as mensagens.", variant: "destructive" });
+    }
+  }, [selectedId, reloadingMessages]);
+
   // Send message
   const handleSend = useCallback(async () => {
     if (!inputText.trim() || !selectedId || isSending) return;
@@ -1153,27 +1254,19 @@ function OperacaoInboxInner() {
         if (replyRef?.id && !replyRef.id.startsWith("temp_")) sendPayload.messageId = replyRef.id;
         const sendResult = await callZapiProxy("send-text", sendPayload);
         const realId = sendResult?.messageId || sendResult?.id;
+        const persistedExternalId = realId || tempId;
         if (realId) {
           lastMsgIdsRef.current.add(realId);
           setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m => m.id === tempId ? { ...m, id: realId } : m) }));
         }
-        // Persist sent message to chat_messages so it survives page reload
-        const dbConvId = selected?.db_id;
-        if (dbConvId) {
-          await supabase.from("chat_messages").insert({
-            conversation_id: dbConvId,
-            sender_type: "atendente",
-            message_type: "text",
-            content: text,
-            read_status: "sent",
-            external_message_id: realId || tempId,
-          }).then(() => {});
-          await supabase.from("conversations").update({
-            last_message_preview: text,
-            last_message_at: new Date().toISOString(),
-            unread_count: 0,
-          }).eq("id", dbConvId).then(() => {});
-        }
+
+        await persistOutgoingMessage({
+          conversationId: selectedId,
+          messageType: "text",
+          text,
+          externalMessageId: persistedExternalId,
+          createdAt: new Date().toISOString(),
+        });
       } catch (err) { toast({ title: "Erro ao enviar", description: "Falha na comunicação com WhatsApp", variant: "destructive" }); }
     } else if (selectedId.length > 10) {
       await supabase.from("chat_messages").insert({ conversation_id: selectedId, sender_type: "atendente", message_type: "text", content: text, read_status: "sent" });
@@ -1212,7 +1305,7 @@ function OperacaoInboxInner() {
     isUserScrolledUpRef.current = false;
     scrollToBottom();
     setIsSending(false);
-  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, scrollToBottom]);
+  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, scrollToBottom, persistOutgoingMessage]);
 
   const handleStartEdit = useCallback((msg: Message) => {
     if (msg.sender_type !== "atendente" || msg.message_type !== "text") return;
@@ -1309,25 +1402,29 @@ function OperacaoInboxInner() {
           const { data: urlData } = supabase.storage.from('audios').getPublicUrl(fileName);
           const audioUrl = urlData.publicUrl;
           const localUrl = URL.createObjectURL(blob);
-          await callZapiProxy("send-audio", { phone, audio: audioUrl });
-          const tempId = `temp_audio_${Date.now()}`;
-          lastMsgIdsRef.current.add(tempId);
+          const sendResult = await callZapiProxy("send-audio", { phone, audio: audioUrl });
+          const realId = sendResult?.messageId || sendResult?.id || `temp_audio_${Date.now()}`;
+          lastMsgIdsRef.current.add(realId);
           setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
-            id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
+            id: realId, conversation_id: selectedId, sender_type: "atendente" as const,
             message_type: "audio" as MsgType, text: "", status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: localUrl,
           }] }));
-          // Persist audio to DB
-          const convForAudio = conversations.find(c => c.id === selectedId);
-          if (convForAudio?.db_id) {
-            supabase.from("chat_messages").insert({ conversation_id: convForAudio.db_id, sender_type: "atendente", message_type: "audio", content: "", media_url: audioUrl, read_status: "sent", external_message_id: tempId }).then(() => {});
-          }
+
+          await persistOutgoingMessage({
+            conversationId: selectedId,
+            messageType: "audio",
+            text: "",
+            mediaUrl: audioUrl,
+            externalMessageId: realId,
+            createdAt: new Date().toISOString(),
+          });
         } catch (err) { toast({ title: "Erro ao enviar áudio", description: String(err), variant: "destructive" }); }
       };
       mediaRecorder.start();
       setIsRecording(true); setRecordingTime(0);
       recordingTimerRef.current = setInterval(() => { setRecordingTime(t => { if (t >= 119) { stopRecording(); return t; } return t + 1; }); }, 1000);
     } catch { toast({ title: "Erro", description: "Não foi possível acessar o microfone", variant: "destructive" }); }
-  }, [selectedId, uploadToStorage]);
+  }, [selectedId, uploadToStorage, persistOutgoingMessage]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") mediaRecorderRef.current.stop();
@@ -1379,23 +1476,28 @@ function OperacaoInboxInner() {
       const folder = fileInputMediaType === "video" ? "videos" : "documents";
       const fileName = `${fileInputMediaType}_${Date.now()}.${ext}`;
       const publicUrl = await uploadToStorage(file, folder, fileName);
-      if (fileInputMediaType === "video") await callZapiProxy("send-video", { phone, video: publicUrl, caption: "" });
-      else await callZapiProxy("send-document", { phone, document: publicUrl, fileName: file.name, extension: ext });
+      let sendResult: any;
+      if (fileInputMediaType === "video") sendResult = await callZapiProxy("send-video", { phone, video: publicUrl, caption: "" });
+      else sendResult = await callZapiProxy("send-document", { phone, document: publicUrl, fileName: file.name, extension: ext });
+      const realId = sendResult?.messageId || sendResult?.id || `temp_media_${Date.now()}`;
       const label = fileInputMediaType === "video" ? "Vídeo" : `${file.name}`;
-      const tempId = `temp_media_${Date.now()}`;
-      lastMsgIdsRef.current.add(tempId);
+      lastMsgIdsRef.current.add(realId);
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
-        id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
+        id: realId, conversation_id: selectedId, sender_type: "atendente" as const,
         message_type: fileInputMediaType as MsgType, text: label, status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: publicUrl,
       }] }));
-      // Persist media to DB
-      const convForMedia = conversations.find(c => c.id === selectedId);
-      if (convForMedia?.db_id) {
-        supabase.from("chat_messages").insert({ conversation_id: convForMedia.db_id, sender_type: "atendente", message_type: fileInputMediaType, content: label, media_url: publicUrl, read_status: "sent", external_message_id: tempId }).then(() => {});
-      }
+
+      await persistOutgoingMessage({
+        conversationId: selectedId,
+        messageType: fileInputMediaType as MsgType,
+        text: label,
+        mediaUrl: publicUrl,
+        externalMessageId: realId,
+        createdAt: new Date().toISOString(),
+      });
     } catch (err) { toast({ title: "Erro ao enviar mídia", description: String(err), variant: "destructive" }); }
     e.target.value = ""; setShowMediaMenu(false);
-  }, [selectedId, fileInputMediaType, uploadToStorage]);
+  }, [selectedId, fileInputMediaType, uploadToStorage, persistOutgoingMessage]);
 
   // Send pending image with caption
   const handleSendPendingMedia = useCallback(async () => {
@@ -1408,21 +1510,25 @@ function OperacaoInboxInner() {
       const ext = file.name.split('.').pop() || "jpg";
       const fileName = `image_${Date.now()}.${ext}`;
       const publicUrl = await uploadToStorage(file, "images", fileName);
-      await callZapiProxy("send-image", { phone, image: publicUrl, caption });
-      const tempId = `temp_media_${Date.now()}`;
-      lastMsgIdsRef.current.add(tempId);
+      const sendResult = await callZapiProxy("send-image", { phone, image: publicUrl, caption });
+      const realId = sendResult?.messageId || sendResult?.id || `temp_media_${Date.now()}`;
+      lastMsgIdsRef.current.add(realId);
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
-        id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
+        id: realId, conversation_id: selectedId, sender_type: "atendente" as const,
         message_type: "image" as MsgType, text: caption || "📷 Imagem", status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: previewUrl,
       }] }));
-      // Persist image to DB
-      const convForImg = conversations.find(c => c.id === selectedId);
-      if (convForImg?.db_id) {
-        supabase.from("chat_messages").insert({ conversation_id: convForImg.db_id, sender_type: "atendente", message_type: "image", content: caption || "📷 Imagem", media_url: publicUrl, read_status: "sent", external_message_id: tempId }).then(() => {});
-      }
+
+      await persistOutgoingMessage({
+        conversationId: selectedId,
+        messageType: "image",
+        text: caption || "📷 Imagem",
+        mediaUrl: publicUrl,
+        externalMessageId: realId,
+        createdAt: new Date().toISOString(),
+      });
     } catch (err) { toast({ title: "Erro ao enviar mídia", description: String(err), variant: "destructive" }); }
-    setMediaPendingFile(null); setMediaCaption(""); setIsSending(false);
-  }, [mediaPendingFile, mediaCaption, selectedId, uploadToStorage, isSending]);
+    setMediaPendingFile(null); setMediaCaption("" ); setIsSending(false);
+  }, [mediaPendingFile, mediaCaption, selectedId, uploadToStorage, isSending, persistOutgoingMessage]);
 
   const handleTogglePin = useCallback(async (convId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -1673,16 +1779,10 @@ function OperacaoInboxInner() {
                           size="sm"
                           className="h-8 gap-1.5 text-[10px] px-2"
                           disabled={reloadingMessages}
-                          onClick={async () => {
-                            setReloadingMessages(true);
-                            setMessages(prev => ({ ...prev, [selectedId!]: [] }));
-                            setReloadVersion(v => v + 1);
-                            toast({ title: "Recarregando mensagens…", description: "Buscando todas as mensagens da conversa." });
-                            setTimeout(() => setReloadingMessages(false), 3000);
-                          }}
+                          onClick={handleReloadMessages}
                         >
                           <RefreshCw className={`h-3.5 w-3.5 ${reloadingMessages ? "animate-spin" : ""}`} />
-                          {!isMobile && "Recarregar"}
+                          {!isMobile && "Recarregar Mensagens"}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Recarregar todas as mensagens</TooltipContent>
