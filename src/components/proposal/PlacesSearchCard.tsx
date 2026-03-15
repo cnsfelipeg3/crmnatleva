@@ -17,7 +17,7 @@ import {
   Search, Loader2, Star, MapPin, Phone, Globe, Image as ImageIcon,
   X, ChevronLeft, ChevronRight, RotateCcw, Check, Camera, Upload,
   GripVertical, Eye, Crown, CheckSquare, Square, Maximize2,
-  Info, Sparkles, FolderOpen, Save, Building2, Map,
+  Info, Sparkles, FolderOpen, Save, Building2, Map as MapIcon,
 } from "lucide-react";
 
 /* ═══ Types ═══ */
@@ -84,9 +84,12 @@ export interface PlacesEnrichmentData {
   photoLabels: string[];
 }
 
+type PlaceEntityType = "hotel" | "destination" | "experience";
+
 interface PlacesSearchCardProps {
   initialQuery?: string;
   destinationContext?: string;
+  entityType?: PlaceEntityType;
   onEnrich: (data: PlacesEnrichmentData) => void;
   onCancel: () => void;
   className?: string;
@@ -103,9 +106,37 @@ const TYPE_LABELS: Record<string, string> = {
   aquarium: "Aquário", casino: "Cassino", stadium: "Estádio",
 };
 
+const HOTEL_TYPE_HINTS = ["lodging", "hotel", "resort", "hostel", "motel", "guest_house"];
+const HOTEL_TEXT_HINTS = ["hotel", "resort", "pousada", "inn", "hostel", "suite"];
+
+const normalizeText = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+
+const tokenize = (value: string) => normalizeText(value).split(/\s+/).filter((token) => token.length >= 2);
+
 function resolveType(types: string[]): string {
   for (const t of types) if (TYPE_LABELS[t]) return TYPE_LABELS[t];
   return "Local";
+}
+
+function isHotelLikeResult(place: PlaceResult): boolean {
+  const types = (place.types || []).map((t) => normalizeText(t));
+  if (types.some((type) => HOTEL_TYPE_HINTS.includes(type))) return true;
+
+  const haystack = normalizeText(`${place.name} ${place.address}`);
+  return HOTEL_TEXT_HINTS.some((hint) => haystack.includes(hint));
+}
+
+function parseCityCountry(address: string): { city: string; country: string } {
+  const parts = (address || "").split(",").map((p) => p.trim()).filter(Boolean);
+  return {
+    city: parts.length >= 2 ? parts[parts.length - 2] : "",
+    country: parts.length >= 1 ? parts[parts.length - 1] : "",
+  };
 }
 
 const PHOTO_LABELS = [
@@ -146,18 +177,16 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMes
   ]);
 }
 
-type SearchProvider = "google";
-
 /* ═══ Component ═══ */
 export default function PlacesSearchCard({
   initialQuery = "",
   destinationContext,
+  entityType = "destination",
   onEnrich,
   onCancel,
   className,
 }: PlacesSearchCardProps) {
-  // Provider state
-  const [provider, setProvider] = useState<SearchProvider>("google");
+  const minQueryLength = entityType === "hotel" ? 3 : 2;
 
   // Search state
   const [query, setQuery] = useState(initialQuery);
@@ -192,7 +221,9 @@ export default function PlacesSearchCard({
       if (!isStale()) fn();
     };
 
-    if (q.length < 2) {
+    const trimmedQuery = q.trim();
+
+    if (trimmedQuery.length < minQueryLength) {
       safeSet(() => {
         setResults([]);
         setError(null);
@@ -206,14 +237,16 @@ export default function PlacesSearchCard({
       setError(null);
     });
 
-    const normalizedQuery = destinationContext ? `${q} ${destinationContext}` : q;
+    const normalizedQuery = destinationContext ? `${trimmedQuery} ${destinationContext}` : trimmedQuery;
+    const queryTokens = tokenize(trimmedQuery);
+    const destinationTokens = tokenize(destinationContext || "");
 
     // Google Places search (primary provider)
 
     const mapFallbackResults = (items: any[]): PlaceResult[] =>
       items.map((item: any, idx: number) => ({
-        place_id: `fallback:${item.place_id || item.name || q}-${idx}`,
-        name: item.name || q,
+        place_id: `fallback:${item.place_id || item.name || trimmedQuery}-${idx}`,
+        name: item.name || trimmedQuery,
         address: [item.address, item.city, item.country].filter(Boolean).join(", "),
         rating: null,
         user_ratings_total: 0,
@@ -334,14 +367,51 @@ export default function PlacesSearchCard({
       }
     });
 
-    const chosenResults = bySource["client"] || bySource["edge"] || bySource["hotel"] || [];
+    const sourceWeights: Record<string, number> = { edge: 12, client: 8, hotel: 4 };
+
+    const mergedResults = Object.entries(bySource)
+      .flatMap(([source, items]) =>
+        items.map((item) => ({ item, source, isHotelLike: isHotelLikeResult(item) }))
+      )
+      .filter(({ item }) => Boolean(item.place_id) && Boolean(item.name));
+
+    const hotelPreferred = entityType === "hotel"
+      ? mergedResults.filter(({ isHotelLike }) => isHotelLike)
+      : mergedResults;
+
+    const pool = hotelPreferred.length > 0 ? hotelPreferred : mergedResults;
+
+    const dedupedMap = new Map<string, { item: PlaceResult; source: string; isHotelLike: boolean }>();
+    pool.forEach((entry) => {
+      const key = entry.item.place_id || `${normalizeText(entry.item.name)}|${normalizeText(entry.item.address)}`;
+      const existing = dedupedMap.get(key);
+      if (!existing || sourceWeights[entry.source] > sourceWeights[existing.source]) {
+        dedupedMap.set(key, entry);
+      }
+    });
+
+    const rankedResults = Array.from(dedupedMap.values())
+      .sort((a, b) => {
+        const score = (entry: { item: PlaceResult; source: string; isHotelLike: boolean }) => {
+          const haystack = normalizeText(`${entry.item.name} ${entry.item.address}`);
+          const queryMatches = queryTokens.filter((token) => haystack.includes(token)).length;
+          const destinationMatches = destinationTokens.filter((token) => haystack.includes(token)).length;
+          const ratingScore = typeof entry.item.rating === "number" ? Math.min(entry.item.rating, 5) : 0;
+          const hotelScore = entityType === "hotel" ? (entry.isHotelLike ? 18 : -12) : 0;
+          return queryMatches * 10 + destinationMatches * 4 + ratingScore + hotelScore + (sourceWeights[entry.source] || 0);
+        };
+
+        return score(b) - score(a);
+      })
+      .map(({ item }) => item)
+      .slice(0, 8);
 
     safeSet(() => {
-      setResults(chosenResults);
-      setError(chosenResults.length === 0 && hasError && !hasEmpty ? "Não foi possível buscar locais. Tente novamente." : null);
+      setResults(rankedResults);
+      setError(rankedResults.length === 0 && hasError && !hasEmpty ? "Não foi possível buscar locais. Tente novamente." : null);
       setLoading(false);
     });
-  }, [destinationContext]);
+  }, [destinationContext, entityType, minQueryLength]);
 
   const handleInput = (val: string) => {
     setQuery(val);
@@ -1041,7 +1111,7 @@ export default function PlacesSearchCard({
       {/* Search source label */}
       <div className="px-4 pt-3 pb-1 flex gap-2">
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground border border-primary shadow-sm">
-          <Map className="h-3.5 w-3.5" />
+          <MapIcon className="h-3.5 w-3.5" />
           Google Places + Site Oficial
         </div>
       </div>
@@ -1125,7 +1195,7 @@ export default function PlacesSearchCard({
         </ScrollArea>
       )}
 
-      {query.length >= 2 && results.length === 0 && !loading && !loadingDetails && !error && (
+      {query.trim().length >= minQueryLength && results.length === 0 && !loading && !loadingDetails && !error && (
         <div className="px-4 pb-6 text-center py-8">
           <MapPin className="h-10 w-10 text-muted-foreground/15 mx-auto mb-3" />
           <p className="text-xs text-muted-foreground">Nenhum local encontrado</p>

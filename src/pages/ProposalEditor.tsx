@@ -430,6 +430,7 @@ export default function ProposalEditor() {
                           <PlacesSearchCard
                             initialQuery={item.title || ""}
                             destinationContext={form.destinations.length > 0 ? form.destinations.join(", ") : undefined}
+                            entityType={item.item_type === "hotel" ? "hotel" : item.item_type === "experience" ? "experience" : "destination"}
                             onEnrich={(data) => handlePlacesEnrich(idx, data)}
                             onCancel={() => setPlacesSearchIdx(null)}
                           />
