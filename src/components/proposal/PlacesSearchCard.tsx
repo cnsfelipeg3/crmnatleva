@@ -184,11 +184,14 @@ export default function PlacesSearchCard({
 
   /* ── Amadeus hotel search ── */
   const searchAmadeus = useCallback(async (q: string): Promise<PlaceResult[]> => {
+    // Extract first destination city name as a hint for fallback city-code search
+    const cityHint = destinationContext?.split(",")[0]?.trim() || "";
+    
     const { data, error: fnError } = await withTimeout(
       supabase.functions.invoke("amadeus-search", {
-        body: { action: "hotel_search", keyword: q },
+        body: { action: "hotel_search", keyword: q, cityHint },
       }),
-      5000,
+      8000,
       "Timeout na busca Amadeus",
     );
     if (fnError) throw fnError;
@@ -203,7 +206,7 @@ export default function PlacesSearchCard({
       location: h.location || null,
       price_level: null,
     }));
-  }, []);
+  }, [destinationContext]);
 
   /* ── Search ── */
   const search = useCallback(async (q: string) => {

@@ -249,9 +249,40 @@ serve(async (req) => {
     }
 
     if (action === "hotel_search") {
-      const { keyword, cityCode, latitude, longitude } = params;
+      const { keyword, cityCode: rawCityCode, latitude, longitude, cityHint } = params;
       
-      // Strategy 1: Search by keyword (Hotel Name Autocomplete) — requires subType and min 4 chars
+      // Map common city names to IATA codes for fallback
+      const CITY_NAME_TO_IATA: Record<string, string> = {
+        "roma": "ROM", "rome": "ROM", "milão": "MIL", "milano": "MIL", "milan": "MIL",
+        "veneza": "VCE", "venice": "VCE", "venezia": "VCE", "paris": "PAR", "londres": "LON",
+        "london": "LON", "madrid": "MAD", "barcelona": "BCN", "lisboa": "LIS", "lisbon": "LIS",
+        "amsterdam": "AMS", "berlim": "BER", "berlin": "BER", "viena": "VIE", "vienna": "VIE",
+        "praga": "PRG", "prague": "PRG", "dubai": "DXB", "nova york": "NYC", "new york": "NYC",
+        "miami": "MIA", "orlando": "MCO", "cancun": "CUN", "cancún": "CUN",
+        "são paulo": "SAO", "sao paulo": "SAO", "rio de janeiro": "RIO",
+        "buenos aires": "BUE", "santiago": "SCL", "lima": "LIM", "bogotá": "BOG", "bogota": "BOG",
+        "cairo": "CAI", "atenas": "ATH", "athens": "ATH", "istambul": "IST", "istanbul": "IST",
+        "bangkok": "BKK", "tóquio": "TYO", "tokyo": "TYO", "singapura": "SIN", "singapore": "SIN",
+        "florença": "FLR", "florence": "FLR", "firenze": "FLR", "nápoles": "NAP", "napoli": "NAP",
+        "zurique": "ZRH", "zurich": "ZRH", "genebra": "GVA", "geneva": "GVA",
+        "munique": "MUC", "munich": "MUC", "frankfurt": "FRA", "copenhague": "CPH", "copenhagen": "CPH",
+        "dublin": "DUB", "edimburgo": "EDI", "edinburgh": "EDI", "bruxelas": "BRU", "brussels": "BRU",
+        "marrakech": "RAK", "punta cana": "PUJ", "bariloche": "BRC",
+      };
+      
+      // Resolve cityCode from hint if not provided directly
+      let cityCode = rawCityCode || "";
+      if (!cityCode && cityHint) {
+        const hint = (cityHint as string).toLowerCase().trim();
+        cityCode = CITY_NAME_TO_IATA[hint] || "";
+        // Also try the keyword itself as a city
+        if (!cityCode && keyword) {
+          const kw = keyword.toLowerCase().trim();
+          cityCode = CITY_NAME_TO_IATA[kw] || "";
+        }
+      }
+      
+      // Strategy 1: Search by keyword (Hotel Name Autocomplete)
       if (keyword && keyword.length >= 4) {
         const searchParams: Record<string, string> = {
           keyword: keyword.toUpperCase(),
