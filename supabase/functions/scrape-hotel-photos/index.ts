@@ -170,10 +170,13 @@ Deno.serve(async (req) => {
     const roomNames = [...new Set(photos.map(p => p.section_name).filter(Boolean))];
     
     // Build section_details from collected section info
-    const sectionDetails: Record<string, { description: string; details: Record<string, string>; amenities: string[] }> = {};
+    const rawSectionDetails: Record<string, { description: string; details: Record<string, string>; amenities: string[] }> = {};
     for (const [name, info] of collection.sections) {
-      sectionDetails[name] = { description: info.description, details: info.details, amenities: info.amenities };
+      rawSectionDetails[name] = { description: info.description, details: info.details, amenities: info.amenities };
     }
+
+    // ── Step 7: Use AI to translate & clean up descriptions to PT-BR ──
+    const sectionDetails = await translateSectionDetails(rawSectionDetails, hotel_name);
     
     console.log(`✅ Returning ${photos.length} HD photos with ${roomNames.length} sections:`, roomNames);
     console.log(`📝 Section details for ${Object.keys(sectionDetails).length} sections`);
@@ -689,6 +692,90 @@ function findMatchingSection(heading: string, collection: ImageCollection): stri
 }
 
 
+
+/**
+ * Use AI to translate and clean up all section details to PT-BR.
+ */
+async function translateSectionDetails(
+  raw: Record<string, { description: string; details: Record<string, string>; amenities: string[] }>,
+  hotelName: string
+): Promise<Record<string, { description: string; details: Record<string, string>; amenities: string[] }>> {
+  const entries = Object.entries(raw).filter(([_, v]) => v.description || v.amenities.length > 0 || Object.keys(v.details).length > 0);
+  if (entries.length === 0) return raw;
+
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) return raw;
+
+  try {
+    const inputData = Object.fromEntries(entries.map(([name, info]) => [name, {
+      description: info.description || "",
+      details: info.details,
+      amenities: info.amenities,
+    }]));
+
+    const prompt = `Você é um curador de conteúdo hoteleiro premium. Recebeu dados brutos extraídos do site do hotel "${hotelName}".
+
+Sua tarefa:
+1. TRADUZIR todas as descrições, detalhes e comodidades para português brasileiro fluente e elegante.
+2. LIMPAR textos bagunçados: remover lixo de HTML, links, códigos, textos duplicados ou sem sentido.
+3. REESCREVER as descrições de forma profissional, concisa e atraente (máx 2 frases por ambiente).
+4. PADRONIZAR as chaves de detalhes: usar "Tamanho", "Cama", "Capacidade", "Vista", "Andar", "Banheiro".
+5. TRADUZIR todas as comodidades para PT-BR. Ex: "Free Wi-Fi" → "Wi-Fi gratuito", "Air conditioning" → "Ar-condicionado".
+6. NÃO traduzir os nomes dos quartos/ambientes (as chaves do objeto). Mantê-los exatamente como estão.
+7. Se uma descrição for muito curta ou genérica, melhore-a com base no contexto do hotel.
+
+Dados brutos:
+${JSON.stringify(inputData, null, 2)}
+
+Retorne APENAS um JSON válido com a MESMA estrutura:
+{
+  "Nome Original do Quarto": {
+    "description": "Descrição traduzida e elegante em PT-BR",
+    "details": { "Tamanho": "45 m²", "Cama": "King Size" },
+    "amenities": ["Wi-Fi gratuito", "Ar-condicionado", "Minibar"]
+  }
+}`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn("AI translation failed:", response.status);
+      return raw;
+    }
+
+    const data = await response.json();
+    const aiText = data.choices?.[0]?.message?.content || "";
+    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return raw;
+
+    const translated = JSON.parse(jsonMatch[0]);
+    const result = { ...raw };
+    for (const [name, info] of Object.entries(translated) as [string, any][]) {
+      if (result[name]) {
+        result[name] = {
+          description: info.description || result[name].description,
+          details: info.details || result[name].details,
+          amenities: Array.isArray(info.amenities) ? info.amenities : result[name].amenities,
+        };
+      }
+    }
+    console.log(`Translated ${Object.keys(translated).length} section descriptions to PT-BR`);
+    return result;
+  } catch (e) {
+    console.warn("Translation error:", e);
+    return raw;
+  }
+}
 
 // ═══════════════════════════════════════════════
 // Helpers
