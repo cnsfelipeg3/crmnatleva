@@ -257,6 +257,7 @@ function OperacaoInboxInner() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
+  const [showLinkClient, setShowLinkClient] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [chatSyncVersion, setChatSyncVersion] = useState(0);
   const [reloadingMessages, setReloadingMessages] = useState(false);
