@@ -226,9 +226,88 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     }
   }, []);
 
+  const fetchGooglePlacesPhotos = async () => {
+    if (!hotelName) { toast.error("Selecione um hotel primeiro"); return; }
+    setLoading(true);
+    setLoadingSource("google");
+    try {
+      // Step 1: Search for the hotel on Google Places
+      const searchQuery = `${hotelName} ${hotelCity || ""} ${hotelCountry || ""} hotel`.trim();
+      const { data: searchData, error: searchError } = await supabase.functions.invoke("places-search", {
+        body: { action: "search", query: searchQuery },
+      });
+      if (searchError) throw searchError;
+      
+      const results = searchData?.results || [];
+      if (results.length === 0) {
+        toast.info("Hotel não encontrado no Google Places");
+        return;
+      }
+
+      // Step 2: Get details with photos
+      const placeId = results[0].place_id;
+      if (!placeId || placeId.startsWith("fallback:")) {
+        toast.info("Fotos não disponíveis para este local no Google Places");
+        return;
+      }
+
+      const { data: detailsData, error: detailsError } = await supabase.functions.invoke("places-search", {
+        body: { action: "details", place_id: placeId },
+      });
+      if (detailsError) throw detailsError;
+
+      const placePhotos = detailsData?.photos || [];
+      if (placePhotos.length === 0) {
+        toast.info("Nenhuma foto encontrada no Google Places para este hotel");
+        return;
+      }
+
+      // Step 3: Resolve photo URLs
+      const resolvedPhotos: HotelPhoto[] = await Promise.all(
+        placePhotos.map(async (ph: any, idx: number) => {
+          let url = "";
+          try {
+            const { data: photoData } = await supabase.functions.invoke("places-search", {
+              body: { action: "photo", photo_reference: ph.photo_reference, max_width: 1200 },
+            });
+            url = photoData?.url || "";
+          } catch { /* skip */ }
+
+          return {
+            url,
+            alt: `${hotelName} - Google Places foto ${idx + 1}`,
+            category: "outro",
+            confidence: 0.5,
+          } as HotelPhoto;
+        })
+      );
+
+      const validPhotos = resolvedPhotos.filter(p => p.url);
+
+      clearProxiedImages();
+      setPhotos(validPhotos);
+      setSourceUrl("");
+      setScraped(true);
+      setActiveSource("google");
+
+      if (validPhotos.length > 0) {
+        toast.success(`${validPhotos.length} fotos encontradas via Google Places`);
+        preloadViaProxy(validPhotos);
+      } else {
+        toast.info("Não foi possível carregar as fotos do Google Places");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao buscar fotos no Google Places");
+    } finally {
+      setLoading(false);
+      setLoadingSource(null);
+    }
+  };
+
   const scrapePhotos = async () => {
     if (!hotelName) { toast.error("Selecione um hotel primeiro"); return; }
     setLoading(true);
+    setLoadingSource("official");
     try {
       const { data, error } = await supabase.functions.invoke("scrape-hotel-photos", {
         body: { hotel_name: hotelName, hotel_city: hotelCity, hotel_country: hotelCountry },
@@ -243,11 +322,11 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       setPhotos(resolvedPhotos);
       setSourceUrl(data.source_url || "");
       setScraped(true);
+      setActiveSource("official");
       const verification = data.verification;
       if (resolvedPhotos.length > 0) {
         const rejectedMsg = verification?.rejected > 0 ? ` (${verification.rejected} fotos de outros hotéis removidas)` : "";
         toast.success(`${resolvedPhotos.length} fotos verificadas e classificadas por IA${rejectedMsg}`);
-        // Start pre-loading images via proxy in background
         preloadViaProxy(resolvedPhotos);
       } else {
         toast.info("Nenhuma foto relevante encontrada no site do hotel");
@@ -256,6 +335,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       toast.error(err.message || "Erro ao buscar fotos do hotel");
     } finally {
       setLoading(false);
+      setLoadingSource(null);
     }
   };
 
