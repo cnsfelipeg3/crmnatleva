@@ -137,19 +137,20 @@ function PortalFinanceTripSelector({ onSelect }: { onSelect: (saleId: string) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const mockTrips = [
+      { sale_id: "mock-trip-1", sale: { destination: "Itália", destination_iata: "FCO", departure_date: "2026-03-20", return_date: "2026-04-02", name: "Viagem Itália" } },
+      { sale_id: "mock-trip-2", sale: { destination: "Maldivas", destination_iata: "MLE", departure_date: "2026-06-15", return_date: "2026-06-25", name: "Lua de Mel Maldivas" } },
+    ];
+
     const fetchTrips = async () => {
       try {
-        const { data } = await supabase.functions.invoke("portal-api", { body: { action: "trips" } });
+        const { data, error } = await supabase.functions.invoke("portal-api", { body: { action: "trips" } });
         const apiTrips = data?.trips || [];
-        const mockTrips = getMockTripDetail("mock-trip-1") ? [
-          { sale_id: "mock-trip-1", sale: { destination: "Itália", destination_iata: "FCO", departure_date: "2026-03-20", return_date: "2026-04-02", name: "Viagem Itália" } },
-          { sale_id: "mock-trip-2", sale: { destination: "Maldivas", destination_iata: "MLE", departure_date: "2026-06-15", return_date: "2026-06-25", name: "Lua de Mel Maldivas" } },
-        ] : [];
         const existingIds = new Set(apiTrips.map((t: any) => t.sale_id));
         const newMocks = mockTrips.filter((m) => !existingIds.has(m.sale_id));
         setTrips([...apiTrips, ...newMocks]);
       } catch {
-        setTrips([]);
+        setTrips(mockTrips);
       } finally {
         setLoading(false);
       }
