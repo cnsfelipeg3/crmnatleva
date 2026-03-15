@@ -162,25 +162,32 @@ function StatusBar({ status }: { status: string }) {
 }
 
 /* ── Single checklist row ── */
-function ChecklistRow({ item }: { item: ChecklistItem }) {
+function ChecklistRow({ item, isChecked, onToggle }: { item: ChecklistItem; isChecked: boolean; onToggle: () => void }) {
   const meta = STATUS_META[item.status];
   const Icon = meta.icon;
+  const showDone = isChecked || item.status === "concluido";
 
   return (
     <motion.div
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      className="group flex items-start gap-3 py-3 px-1 transition-colors hover:bg-muted/30 rounded-lg"
+      className="group flex items-start gap-3 py-3 px-1 transition-colors hover:bg-muted/30 rounded-lg cursor-pointer"
+      onClick={onToggle}
     >
-      <StatusBar status={item.status} />
-      <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${meta.accent}`} />
-      <div className="flex-1 min-w-0">
+      <StatusBar status={isChecked ? "concluido" : item.status} />
+      <Checkbox
+        checked={showDone}
+        onCheckedChange={() => onToggle()}
+        onClick={(e) => e.stopPropagation()}
+        className="mt-0.5 flex-shrink-0"
+      />
+      <div className={`flex-1 min-w-0 transition-opacity ${isChecked && item.status !== "concluido" ? "opacity-50 line-through" : ""}`}>
         <p className="text-sm font-medium text-foreground leading-tight">{item.title}</p>
         {item.description && (
           <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.description}</p>
         )}
       </div>
-      {!item.isMandatory && item.status === "informativo" && (
+      {!item.isMandatory && item.status === "informativo" && !isChecked && (
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium flex-shrink-0 mt-0.5">
           dica
         </span>
