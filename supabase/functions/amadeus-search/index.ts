@@ -209,6 +209,8 @@ serve(async (req) => {
                   if (connTime < 0) connTime += 24 * 60;
                 }
               }
+              const legAircraft = flight.legs?.[i]?.aircraftEquipment?.aircraftType || 
+                                  dep?.departure?.aircraftEquipment?.aircraftType || aircraftCode;
               segments.push({
                 direction: "ida",
                 segment_order: i + 1,
@@ -223,6 +225,7 @@ serve(async (req) => {
                 duration_minutes: dur,
                 terminal: dep?.departure?.terminal?.code || "",
                 arrival_terminal: arr?.arrival?.terminal?.code || "",
+                aircraft_type: legAircraft,
                 operated_by: "",
                 connection_time_minutes: connTime,
                 cabin_type: "",
