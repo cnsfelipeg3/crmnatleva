@@ -266,7 +266,7 @@ function CategoryBlock({ category, items, isOpen, onToggle }: {
               <div className="border-t border-border/30 mx-5" />
               <div className="px-4 py-3 space-y-0.5">
                 {items.map((item) => (
-                  <ChecklistRow key={item.id} item={item} />
+                  <ChecklistRow key={item.id} item={item} isChecked={checkedIds.has(item.id)} onToggle={() => toggleCheck(item.id)} />
                 ))}
               </div>
             </motion.div>
