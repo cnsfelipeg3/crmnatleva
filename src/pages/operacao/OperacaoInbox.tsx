@@ -1476,23 +1476,28 @@ function OperacaoInboxInner() {
       const folder = fileInputMediaType === "video" ? "videos" : "documents";
       const fileName = `${fileInputMediaType}_${Date.now()}.${ext}`;
       const publicUrl = await uploadToStorage(file, folder, fileName);
-      if (fileInputMediaType === "video") await callZapiProxy("send-video", { phone, video: publicUrl, caption: "" });
-      else await callZapiProxy("send-document", { phone, document: publicUrl, fileName: file.name, extension: ext });
+      let sendResult: any;
+      if (fileInputMediaType === "video") sendResult = await callZapiProxy("send-video", { phone, video: publicUrl, caption: "" });
+      else sendResult = await callZapiProxy("send-document", { phone, document: publicUrl, fileName: file.name, extension: ext });
+      const realId = sendResult?.messageId || sendResult?.id || `temp_media_${Date.now()}`;
       const label = fileInputMediaType === "video" ? "Vídeo" : `${file.name}`;
-      const tempId = `temp_media_${Date.now()}`;
-      lastMsgIdsRef.current.add(tempId);
+      lastMsgIdsRef.current.add(realId);
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
-        id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
+        id: realId, conversation_id: selectedId, sender_type: "atendente" as const,
         message_type: fileInputMediaType as MsgType, text: label, status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: publicUrl,
       }] }));
-      // Persist media to DB
-      const convForMedia = conversations.find(c => c.id === selectedId);
-      if (convForMedia?.db_id) {
-        supabase.from("chat_messages").insert({ conversation_id: convForMedia.db_id, sender_type: "atendente", message_type: fileInputMediaType, content: label, media_url: publicUrl, read_status: "sent", external_message_id: tempId }).then(() => {});
-      }
+
+      await persistOutgoingMessage({
+        conversationId: selectedId,
+        messageType: fileInputMediaType as MsgType,
+        text: label,
+        mediaUrl: publicUrl,
+        externalMessageId: realId,
+        createdAt: new Date().toISOString(),
+      });
     } catch (err) { toast({ title: "Erro ao enviar mídia", description: String(err), variant: "destructive" }); }
     e.target.value = ""; setShowMediaMenu(false);
-  }, [selectedId, fileInputMediaType, uploadToStorage]);
+  }, [selectedId, fileInputMediaType, uploadToStorage, persistOutgoingMessage]);
 
   // Send pending image with caption
   const handleSendPendingMedia = useCallback(async () => {
