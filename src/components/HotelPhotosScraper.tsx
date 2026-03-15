@@ -347,6 +347,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       setNav({ level: "categories" });
 
       const photosWithSections = resolvedPhotos.filter(p => p.environment_name && p.environment_name.length > 2).length;
+      const uniqueEnvNames = new Set(resolvedPhotos.map(p => p.environment_name).filter(Boolean)).size;
       const sectionRatio = resolvedPhotos.length > 0 ? photosWithSections / resolvedPhotos.length : 0;
 
       if (resolvedPhotos.length > 0) {
@@ -356,7 +357,8 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
           { duration: 5000 }
         );
         preloadViaProxy(resolvedPhotos, data.source_url || undefined);
-        if (sectionRatio < 0.5) {
+        // Always run classification if sections are weak OR too few unique names
+        if (sectionRatio < 0.7 || uniqueEnvNames < 3) {
           await runClassification(resolvedPhotos, scraperRoomNames);
         }
       } else {
