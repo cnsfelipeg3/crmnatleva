@@ -578,11 +578,16 @@ function OperacaoInboxInner() {
     const loadDbConversations = async () => {
       await initPersistence();
       const data = await fetchAllRows("conversations", "*", {
-      order: { column: "last_message_at", ascending: false },
+        order: { column: "last_message_at", ascending: false },
         cacheMs: 0,
         bypassCache: true,
-          });
-          if (data && data.length > 0) {
+      });
+
+      if (data && data.length > 0) {
+        // Render conversations IMMEDIATELY without waiting for preview backfill
+        const mapConv = (c: any, fallbackPreview?: string) => {
+          const cleanPhone = (c.phone || "").replace(/\D/g, "");
+          const canonicalId = cleanPhone ? `wa_${cleanPhone}` : c.id;
           return {
             id: canonicalId,
             db_id: c.id,
@@ -642,7 +647,7 @@ function OperacaoInboxInner() {
                 const phone = (convRecord?.phone || "").replace(/\D/g, "");
                 if (phone) {
                   const { data: zapiMsg } = await supabase.from("zapi_messages" as any).select("text, type, timestamp").in("phone", [phone, `${phone}@c.us`]).order("timestamp", { ascending: false }).limit(1).maybeSingle();
-                  if (zapiMsg) lastMsg = { content: (zapiMsg as any).text || `📎 ${(zapiMsg as any).type}`, message_type: (zapiMsg as any).type || "text", created_at: (zapiMsg as any).timestamp };
+                  if (zapiMsg) lastMsg = { content: (zapiMsg as any).text || `📎 ${(zapiMsg as any).type}`, message_type: (zapiMsg as any).type || "text", created_at: toIsoTimestamp((zapiMsg as any).timestamp) };
                 }
               }
               if (lastMsg) {
