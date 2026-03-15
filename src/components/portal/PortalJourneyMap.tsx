@@ -82,15 +82,15 @@ const TYPE_ICONS: Record<string, typeof Plane> = {
 };
 
 /* ───────── Custom Leaflet Icons ───────── */
-function createPulsingIcon(color: string, size: number = 14): L.DivIcon {
+function createPulsingIcon(color: string, size: number = 10): L.DivIcon {
   return L.divIcon({
     className: "",
     iconSize: [size * 3, size * 3],
     iconAnchor: [size * 1.5, size * 1.5],
     html: `<div style="position:relative;width:${size * 3}px;height:${size * 3}px;display:flex;align-items:center;justify-content:center;">
-      <div style="position:absolute;width:${size * 3}px;height:${size * 3}px;border-radius:50%;background:${color};opacity:0.15;animation:pulse-ring 2s ease-out infinite;"></div>
-      <div style="position:absolute;width:${size * 1.5}px;height:${size * 1.5}px;border-radius:50%;background:${color};opacity:0.3;animation:pulse-ring 2s ease-out infinite 0.3s;"></div>
-      <div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);position:relative;z-index:2;"></div>
+      <div style="position:absolute;width:${size * 3}px;height:${size * 3}px;border-radius:50%;background:${color};opacity:0.12;animation:pulse-ring 2s ease-out infinite;"></div>
+      <div style="position:absolute;width:${size * 1.5}px;height:${size * 1.5}px;border-radius:50%;background:${color};opacity:0.25;animation:pulse-ring 2s ease-out infinite 0.3s;"></div>
+      <div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);position:relative;z-index:2;"></div>
     </div>`,
   });
 }
@@ -112,20 +112,17 @@ function createCityMarker(type: string, name: string, isCurrent: boolean): L.Div
     finish: "#f59e0b",
   };
   const color = isCurrent ? "#10b981" : (colors[type] || "#94a3b8");
-  const svg = CITY_SVGS[type] || CITY_SVGS.connection;
-  const size = isCurrent ? 40 : 36;
+  const dotSize = isCurrent ? 12 : 9;
+  const outerGlow = isCurrent ? `box-shadow:0 0 0 4px ${color}33, 0 1px 4px rgba(0,0,0,0.3);` : `box-shadow:0 1px 4px rgba(0,0,0,0.3);`;
 
   return L.divIcon({
     className: "",
-    iconSize: [size, size + 24],
-    iconAnchor: [size / 2, size + 16],
-    popupAnchor: [0, -(size + 16)],
-    html: `<div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.25));">
-      <div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:3px solid rgba(255,255,255,0.9);box-shadow:0 0 0 ${isCurrent ? '4' : '0'}px ${color}44;transition:all 0.3s;">
-        ${svg}
-      </div>
-      <div style="width:2px;height:8px;background:${color};opacity:0.6;"></div>
-      <div style="background:rgba(15,23,42,0.85);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:3px 10px;font-size:11px;font-weight:600;color:white;white-space:nowrap;font-family:'Inter',system-ui,sans-serif;letter-spacing:0.02em;">${name}</div>
+    iconSize: [80, 30],
+    iconAnchor: [dotSize / 2 + 4, 15],
+    popupAnchor: [36, -10],
+    html: `<div style="display:flex;align-items:center;gap:6px;pointer-events:auto;">
+      <div style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.9);${outerGlow}flex-shrink:0;"></div>
+      <div style="background:rgba(15,23,42,0.82);backdrop-filter:blur(6px);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:600;color:white;white-space:nowrap;font-family:'Inter',system-ui,sans-serif;letter-spacing:0.01em;line-height:1.4;border:1px solid rgba(255,255,255,0.1);">${name}</div>
     </div>`,
   });
 }
@@ -133,10 +130,10 @@ function createCityMarker(type: string, name: string, isCurrent: boolean): L.Div
 function createAirplaneIcon(angle: number): L.DivIcon {
   return L.divIcon({
     className: "",
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    html: `<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;transform:rotate(${angle}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,0.4));">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="#10b981" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    html: `<div style="width:20px;height:20px;display:flex;align-items:center;justify-content:center;transform:rotate(${angle}deg);filter:drop-shadow(0 1px 2px rgba(0,0,0,0.3));">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="#34d399" stroke="white" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
     </div>`,
   });
 }
@@ -433,11 +430,11 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
         const to = L.latLng(d[0], d[1]);
         const curvedPts = getCurvedPoints(from, to);
 
-        // Shadow line for depth
+        // Subtle shadow
         const shadowLine = L.polyline(curvedPts, {
           color: isReturn ? "#f59e0b" : "#10b981",
-          weight: 6,
-          opacity: 0.12,
+          weight: 4,
+          opacity: 0.08,
           smoothFactor: 2,
           lineCap: "round",
           lineJoin: "round",
@@ -446,9 +443,9 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
 
         const polyline = L.polyline(curvedPts, {
           color: isReturn ? "#f59e0b" : "#34d399",
-          weight: 2.5,
-          opacity: isReturn ? 0.65 : 0.85,
-          dashArray: isReturn ? "8 6" : undefined,
+          weight: 2,
+          opacity: isReturn ? 0.55 : 0.7,
+          dashArray: isReturn ? "6 5" : undefined,
           smoothFactor: 2,
           lineCap: "round",
           lineJoin: "round",

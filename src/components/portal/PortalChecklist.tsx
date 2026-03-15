@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   CheckCircle2, Circle, AlertTriangle, Info, FileText, CreditCard, Plane,
-  Luggage, Shield, MapPin, ChevronDown, ChevronRight,
+  Luggage, Shield, MapPin, ChevronDown, ChevronRight, Check,
 } from "lucide-react";
 
 /* ── Types ── */
@@ -161,25 +162,32 @@ function StatusBar({ status }: { status: string }) {
 }
 
 /* ── Single checklist row ── */
-function ChecklistRow({ item }: { item: ChecklistItem }) {
+function ChecklistRow({ item, isChecked, onToggle }: { item: ChecklistItem; isChecked: boolean; onToggle: () => void }) {
   const meta = STATUS_META[item.status];
   const Icon = meta.icon;
+  const showDone = isChecked || item.status === "concluido";
 
   return (
     <motion.div
       initial={{ opacity: 0, x: -8 }}
       animate={{ opacity: 1, x: 0 }}
-      className="group flex items-start gap-3 py-3 px-1 transition-colors hover:bg-muted/30 rounded-lg"
+      className="group flex items-start gap-3 py-3 px-1 transition-colors hover:bg-muted/30 rounded-lg cursor-pointer"
+      onClick={onToggle}
     >
-      <StatusBar status={item.status} />
-      <Icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${meta.accent}`} />
-      <div className="flex-1 min-w-0">
+      <StatusBar status={isChecked ? "concluido" : item.status} />
+      <Checkbox
+        checked={showDone}
+        onCheckedChange={() => onToggle()}
+        onClick={(e) => e.stopPropagation()}
+        className="mt-0.5 flex-shrink-0"
+      />
+      <div className={`flex-1 min-w-0 transition-opacity ${isChecked && item.status !== "concluido" ? "opacity-50 line-through" : ""}`}>
         <p className="text-sm font-medium text-foreground leading-tight">{item.title}</p>
         {item.description && (
           <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{item.description}</p>
         )}
       </div>
-      {!item.isMandatory && item.status === "informativo" && (
+      {!item.isMandatory && item.status === "informativo" && !isChecked && (
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground/60 font-medium flex-shrink-0 mt-0.5">
           dica
         </span>
@@ -189,15 +197,16 @@ function ChecklistRow({ item }: { item: ChecklistItem }) {
 }
 
 /* ── Category block ── */
-function CategoryBlock({ category, items, isOpen, onToggle }: {
+function CategoryBlock({ category, items, isOpen, onToggle, checkedIds, onCheckToggle }: {
   category: string; items: ChecklistItem[]; isOpen: boolean; onToggle: () => void;
+  checkedIds: Set<string>; onCheckToggle: (id: string) => void;
 }) {
   const config = CATEGORY_CONFIG[category] || { label: category, icon: Info };
   const Icon = config.icon;
-  const done = items.filter(i => i.status === "concluido").length;
+  const done = items.filter(i => i.status === "concluido" || checkedIds.has(i.id)).length;
   const total = items.length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const hasAttention = items.some(i => i.status === "atencao");
+  const hasAttention = items.some(i => i.status === "atencao" && !checkedIds.has(i.id));
 
   return (
     <motion.div
@@ -258,7 +267,7 @@ function CategoryBlock({ category, items, isOpen, onToggle }: {
               <div className="border-t border-border/30 mx-5" />
               <div className="px-4 py-3 space-y-0.5">
                 {items.map((item) => (
-                  <ChecklistRow key={item.id} item={item} />
+                  <ChecklistRow key={item.id} item={item} isChecked={checkedIds.has(item.id)} onToggle={() => onCheckToggle(item.id)} />
                 ))}
               </div>
             </motion.div>
@@ -278,6 +287,27 @@ export default function PortalChecklist(props: PortalChecklistProps) {
     return cats;
   }, [items]);
 
+  const storageKey = `checklist-ticked-${props.sale?.id || "default"}`;
+
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify([...checkedIds]));
+  }, [checkedIds, storageKey]);
+
+  const toggleCheck = useCallback((id: string) => {
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
   const [openCats, setOpenCats] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
     categories.forEach(c => { map[c] = true; });
@@ -285,10 +315,10 @@ export default function PortalChecklist(props: PortalChecklistProps) {
   });
 
   const total = items.filter(i => i.status !== "informativo").length;
-  const done = items.filter(i => i.status === "concluido").length;
+  const done = items.filter(i => i.status === "concluido" || checkedIds.has(i.id)).length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const attentionCount = items.filter(i => i.status === "atencao").length;
-  const pendingCount = items.filter(i => i.status === "pendente").length;
+  const attentionCount = items.filter(i => i.status === "atencao" && !checkedIds.has(i.id)).length;
+  const pendingCount = items.filter(i => i.status === "pendente" && !checkedIds.has(i.id)).length;
 
   const summaryMessage = attentionCount > 0
     ? `${attentionCount} ponto${attentionCount > 1 ? "s" : ""} exige${attentionCount > 1 ? "m" : ""} atenção`
@@ -364,6 +394,8 @@ export default function PortalChecklist(props: PortalChecklistProps) {
               items={items.filter(i => i.category === cat)}
               isOpen={openCats[cat] ?? true}
               onToggle={() => setOpenCats(prev => ({ ...prev, [cat]: !prev[cat] }))}
+              checkedIds={checkedIds}
+              onCheckToggle={toggleCheck}
             />
           </motion.div>
         ))}
