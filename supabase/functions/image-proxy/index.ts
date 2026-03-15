@@ -63,6 +63,93 @@ function getValidatedUrl(raw: string): URL {
   return parsed;
 }
 
+function parseOptionalReferer(raw: string): URL | undefined {
+  const value = raw.trim();
+  if (!value) return undefined;
+
+  try {
+    const parsed = new URL(value);
+    if (!["https:", "http:"].includes(parsed.protocol)) return undefined;
+    if (isBlockedHost(parsed.hostname)) return undefined;
+    return parsed;
+  } catch {
+    return undefined;
+  }
+}
+
+function buildCandidateUrls(targetUrl: URL, refererUrl?: URL): URL[] {
+  const candidates = new Set<string>([targetUrl.toString()]);
+
+  if (targetUrl.hostname === "s3.amazonaws.com") {
+    const parts = targetUrl.pathname.split("/").filter(Boolean);
+    if (parts.length > 1) {
+      const inferredHost = parts[0];
+      const restPath = `/${parts.slice(1).join("/")}`;
+
+      candidates.add(`https://${inferredHost}${restPath}${targetUrl.search}`);
+
+      if (refererUrl) {
+        const refHost = refererUrl.hostname;
+        candidates.add(`https://${refHost}${restPath}${targetUrl.search}`);
+
+        if (refHost.startsWith("www.")) {
+          candidates.add(`https://${refHost.replace(/^www\./, "")}${restPath}${targetUrl.search}`);
+        } else {
+          candidates.add(`https://www.${refHost}${restPath}${targetUrl.search}`);
+        }
+      }
+    }
+  }
+
+  return Array.from(candidates)
+    .map((url) => {
+      try {
+        return getValidatedUrl(url);
+      } catch {
+        return null;
+      }
+    })
+    .filter((url): url is URL => Boolean(url));
+}
+
+async function fetchImageCandidate(candidate: URL, refererUrl?: URL): Promise<Response | null> {
+  const referers = Array.from(
+    new Set(
+      [
+        refererUrl?.toString(),
+        `${candidate.protocol}//${candidate.hostname}/`,
+        undefined,
+      ].filter((v) => typeof v === "string" || v === undefined),
+    ),
+  ) as Array<string | undefined>;
+
+  for (const referer of referers) {
+    try {
+      const response = await fetch(candidate.toString(), {
+        method: "GET",
+        redirect: "follow",
+        signal: AbortSignal.timeout(12000),
+        headers: {
+          "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+          "User-Agent": "Mozilla/5.0 (compatible; LovableImageProxy/1.1)",
+          ...(referer ? { "Referer": referer } : {}),
+        },
+      });
+
+      if (!response.ok || !response.body) continue;
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.toLowerCase().startsWith("image/")) continue;
+
+      return response;
+    } catch {
+      // try next strategy/candidate
+    }
+  }
+
+  return null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -78,6 +165,7 @@ Deno.serve(async (req) => {
   try {
     const payload = await req.json().catch(() => ({}));
     const imageUrl = String(payload?.imageUrl || "").trim();
+    const refererUrl = parseOptionalReferer(String(payload?.refererUrl || ""));
 
     if (!imageUrl) {
       return new Response(JSON.stringify({ error: "imageUrl é obrigatório" }), {
@@ -87,47 +175,34 @@ Deno.serve(async (req) => {
     }
 
     const targetUrl = getValidatedUrl(imageUrl);
+    const candidates = buildCandidateUrls(targetUrl, refererUrl);
 
-    const upstreamResponse = await fetch(targetUrl.toString(), {
-      method: "GET",
-      redirect: "follow",
-      headers: {
-        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-        "User-Agent": "Mozilla/5.0 (compatible; LovableImageProxy/1.0)",
-        "Referer": `${targetUrl.protocol}//${targetUrl.hostname}/`,
-      },
-    });
+    for (const candidate of candidates) {
+      const upstreamResponse = await fetchImageCandidate(candidate, refererUrl);
+      if (!upstreamResponse) continue;
 
-    if (!upstreamResponse.ok || !upstreamResponse.body) {
-      return new Response(JSON.stringify({ error: "Não foi possível carregar a imagem" }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const contentType = upstreamResponse.headers.get("content-type") || "image/jpeg";
+      const contentLength = Number(upstreamResponse.headers.get("content-length") || "0");
+      if (Number.isFinite(contentLength) && contentLength > 12 * 1024 * 1024) {
+        return new Response(JSON.stringify({ error: "Imagem muito grande para proxy" }), {
+          status: 413,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(upstreamResponse.body, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": contentType,
+          "Cache-Control": "public, max-age=3600, s-maxage=86400",
+        },
       });
     }
 
-    const contentType = upstreamResponse.headers.get("content-type") || "image/jpeg";
-    if (!contentType.toLowerCase().startsWith("image/")) {
-      return new Response(JSON.stringify({ error: "Resposta não é uma imagem válida" }), {
-        status: 415,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const contentLength = Number(upstreamResponse.headers.get("content-length") || "0");
-    if (Number.isFinite(contentLength) && contentLength > 12 * 1024 * 1024) {
-      return new Response(JSON.stringify({ error: "Imagem muito grande para proxy" }), {
-        status: 413,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    return new Response(upstreamResponse.body, {
-      status: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": contentType,
-        "Cache-Control": "public, max-age=3600, s-maxage=86400",
-      },
+    return new Response(JSON.stringify({ error: "Não foi possível carregar a imagem" }), {
+      status: 502,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("image-proxy error:", error);
