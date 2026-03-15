@@ -246,7 +246,7 @@ function AppRoutes() {
         {/* Portal do Cliente - rotas separadas fora do CRM */}
         <Route path="/portal/login" element={<PortalLogin />} />
         <Route path="/portal" element={<PortalDashboard />} />
-        <Route path="/portal/viagens" element={<PortalDashboard />} />
+        <Route path="/portal/viagens" element={<PortalMyTrips />} />
         <Route path="/portal/viagem/:saleId" element={<PortalTripDetail />} />
         <Route path="/portal/modelo" element={<PortalDemoTrip />} />
         <Route path="/portal/financeiro" element={<PortalFinance />} />
