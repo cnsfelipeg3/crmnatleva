@@ -107,6 +107,10 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
     onSegmentsChange(segments.map((s, i) => (i === idx ? { ...s, [field]: value } : s)));
   };
 
+  const updateSegmentMulti = (idx: number, updates: Partial<FlightSegmentData>) => {
+    onSegmentsChange(segments.map((s, i) => (i === idx ? { ...s, ...updates } : s)));
+  };
+
   const getForm = (idx: number): SearchFormData => {
     return searchForms[idx] || { airline: "", airlineName: "", flightNumber: "", date: "", origin: "", destination: "" };
   };
@@ -355,7 +359,7 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                       {/* Manual fill form */}
                       {isManual && (
                         <div className="mx-1 mb-2">
-                          <FlightSegmentForm seg={seg} onUpdate={(field, value) => updateSegment(idx, field, value)} />
+                          <FlightSegmentForm seg={seg} onUpdate={(field, value) => updateSegment(idx, field, value)} onUpdateMulti={(updates) => updateSegmentMulti(idx, updates)} />
                           {seg.origin_iata && seg.destination_iata && (
                             <div className="flex justify-end mt-2">
                               <Button size="sm" onClick={() => toggleManual(idx)} className="gap-1 text-xs">
@@ -376,7 +380,7 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                       {/* Edit mode */}
                       {hasFilled && isEditing && !isManual && (
                         <div className="mx-1 mb-2">
-                          <FlightSegmentForm seg={seg} onUpdate={(field, value) => updateSegment(idx, field, value)} />
+                          <FlightSegmentForm seg={seg} onUpdate={(field, value) => updateSegment(idx, field, value)} onUpdateMulti={(updates) => updateSegmentMulti(idx, updates)} />
                         </div>
                       )}
                     </div>

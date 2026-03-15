@@ -13,9 +13,10 @@ import type { FlightSegmentData } from "./ProposalFlightSearch";
 interface FlightSegmentFormProps {
   seg: FlightSegmentData;
   onUpdate: (field: keyof FlightSegmentData, value: any) => void;
+  onUpdateMulti?: (updates: Partial<FlightSegmentData>) => void;
 }
 
-export default function FlightSegmentForm({ seg, onUpdate }: FlightSegmentFormProps) {
+export default function FlightSegmentForm({ seg, onUpdate, onUpdateMulti }: FlightSegmentFormProps) {
   const [searching, setSearching] = useState(false);
 
   const canSearch = !!(seg.airline && seg.flight_number && seg.departure_date);
@@ -101,8 +102,14 @@ export default function FlightSegmentForm({ seg, onUpdate }: FlightSegmentFormPr
           <AirlineAutocomplete
             value={seg.airline}
             onChange={(iata, name) => {
-              onUpdate("airline", iata);
-              if (name) onUpdate("airline_name", name);
+              if (onUpdateMulti) {
+                const updates: Partial<FlightSegmentData> = { airline: iata };
+                if (name) updates.airline_name = name;
+                onUpdateMulti(updates);
+              } else {
+                onUpdate("airline", iata);
+                if (name) onUpdate("airline_name", name);
+              }
             }}
             placeholder="Digite ou selecione..."
           />
