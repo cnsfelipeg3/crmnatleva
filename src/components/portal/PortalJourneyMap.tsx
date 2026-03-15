@@ -403,9 +403,10 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
       map.removeLayer(tileLayerRef.current);
     }
     tileLayerRef.current = L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(map);
-    // Re-add the overlay layer group on top
+    // Ensure overlay stays on top by re-adding
     if (layerGroupRef.current) {
-      layerGroupRef.current.bringToFront();
+      layerGroupRef.current.removeFrom(map);
+      layerGroupRef.current.addTo(map);
     }
   }, [tileUrl]);
 
