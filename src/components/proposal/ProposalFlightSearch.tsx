@@ -107,6 +107,10 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
     onSegmentsChange(segments.map((s, i) => (i === idx ? { ...s, [field]: value } : s)));
   };
 
+  const updateSegmentMulti = (idx: number, updates: Partial<FlightSegmentData>) => {
+    onSegmentsChange(segments.map((s, i) => (i === idx ? { ...s, ...updates } : s)));
+  };
+
   const getForm = (idx: number): SearchFormData => {
     return searchForms[idx] || { airline: "", airlineName: "", flightNumber: "", date: "", origin: "", destination: "" };
   };
