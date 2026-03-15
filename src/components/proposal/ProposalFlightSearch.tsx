@@ -359,7 +359,7 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                       {/* Manual fill form */}
                       {isManual && (
                         <div className="mx-1 mb-2">
-                          <FlightSegmentForm seg={seg} onUpdate={(field, value) => updateSegment(idx, field, value)} />
+                          <FlightSegmentForm seg={seg} onUpdate={(field, value) => updateSegment(idx, field, value)} onUpdateMulti={(updates) => updateSegmentMulti(idx, updates)} />
                           {seg.origin_iata && seg.destination_iata && (
                             <div className="flex justify-end mt-2">
                               <Button size="sm" onClick={() => toggleManual(idx)} className="gap-1 text-xs">
