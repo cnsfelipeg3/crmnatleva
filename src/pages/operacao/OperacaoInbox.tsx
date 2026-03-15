@@ -581,7 +581,7 @@ function OperacaoInboxInner() {
       order: { column: "last_message_at", ascending: false },
         cacheMs: 0,
         bypassCache: true,
-          const cleanPhone = (c.phone || "").replace(/\D/g, "");
+          });
           const canonicalId = cleanPhone ? `wa_${cleanPhone}` : c.id;
           return {
             id: canonicalId,
