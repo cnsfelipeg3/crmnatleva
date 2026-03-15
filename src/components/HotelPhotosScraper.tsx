@@ -203,6 +203,27 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
 
   const getDisplayUrl = useCallback((url: string) => proxiedImageUrls[url] || url, [proxiedImageUrls]);
 
+  const preloadViaProxy = useCallback(async (photosToLoad: HotelPhoto[]) => {
+    // Eagerly proxy all photos to avoid hotlink blocking
+    const batchSize = 5;
+    for (let i = 0; i < photosToLoad.length; i += batchSize) {
+      const batch = photosToLoad.slice(i, i + batchSize);
+      await Promise.allSettled(
+        batch.map(async (photo) => {
+          if (!photo.url) return;
+          try {
+            const blob = await fetchProxiedImageBlob(photo.url);
+            const objectUrl = URL.createObjectURL(blob);
+            proxiedObjectUrlsRef.current.push(objectUrl);
+            setProxiedImageUrls((prev) => ({ ...prev, [photo.url]: objectUrl }));
+          } catch {
+            // Will fall back to direct URL with referrerPolicy="no-referrer"
+          }
+        })
+      );
+    }
+  }, []);
+
   const scrapePhotos = async () => {
     if (!hotelName) { toast.error("Selecione um hotel primeiro"); return; }
     setLoading(true);
@@ -224,6 +245,8 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       if (resolvedPhotos.length > 0) {
         const rejectedMsg = verification?.rejected > 0 ? ` (${verification.rejected} fotos de outros hotéis removidas)` : "";
         toast.success(`${resolvedPhotos.length} fotos verificadas e classificadas por IA${rejectedMsg}`);
+        // Start pre-loading images via proxy in background
+        preloadViaProxy(resolvedPhotos);
       } else {
         toast.info("Nenhuma foto relevante encontrada no site do hotel");
       }
