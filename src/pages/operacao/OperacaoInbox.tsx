@@ -1872,7 +1872,10 @@ function OperacaoInboxInner() {
                 )}
 
                 {/* Input area */}
-                <div className="border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card/50 shrink-0">
+                <div
+                  className="sticky bottom-0 z-20 border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card/95 backdrop-blur-sm shrink-0"
+                  style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" } : undefined}
+                >
                   {isRecording ? (
                     <div className="flex items-center gap-3">
                       <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-destructive hover:text-destructive" onClick={cancelRecording}>
