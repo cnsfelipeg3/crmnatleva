@@ -73,6 +73,7 @@ export default function FlightSegmentForm({ seg, onUpdate, onUpdateMulti }: Flig
           const segs2 = extractSegments(res2);
           if (segs2?.length) {
             applySegmentData(segs2[0]);
+            toast.success("Dados do voo preenchidos via Amadeus!");
             return;
           }
         }
