@@ -237,6 +237,8 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
       const isPast = depDate ? depDate < now : false;
       const isCurrent = depDate ? (Math.abs(depDate.getTime() - now.getTime()) < 12 * 60 * 60 * 1000) : false;
 
+      const locatorInfo = seg.locator || seg.reservation_code || "";
+
       items.push({
         id: `flight-${i}`,
         type: "flight",
@@ -258,7 +260,7 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
           ...(seg.flight_class ? { "Classe": seg.flight_class } : {}),
           ...(seg.airline ? { "Cia Aérea": seg.airline } : {}),
           ...(seg.flight_number ? { "Voo": seg.flight_number } : {}),
-          ...(seg.locator ? { "Localizador": seg.locator } : {}),
+          ...(locatorInfo ? { "Localizador": locatorInfo } : {}),
           ...(seg.seat ? { "Assento": seg.seat } : {}),
           ...(seg.baggage ? { "Bagagem": seg.baggage } : {}),
         },
