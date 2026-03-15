@@ -1825,7 +1825,7 @@ function OperacaoInboxInner() {
                   <div className="px-4 py-2 border-t border-border bg-card/50 flex items-center gap-3">
                     <div className="flex-1 border-l-2 border-primary pl-3">
                       <p className="text-[10px] font-bold text-primary">{replyingTo.sender_type === "atendente" ? "Você" : selected?.contact_name || "Lead"}</p>
-                      <p className="text-xs text-muted-foreground truncate">{replyingTo.text || "📎 Mídia"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{stripQuotes(replyingTo.text) || "📎 Mídia"}</p>
                     </div>
                     <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setReplyingTo(null)}><X className="h-3 w-3" /></Button>
                   </div>
