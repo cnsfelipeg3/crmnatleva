@@ -156,41 +156,162 @@ function normalizeFlightData(data: any) {
   };
 }
 
-/* ═══ Flight Segment Detail ═══ */
-function FlightSegmentDetail({ seg, idx }: { seg: any; idx: number }) {
-  const dur = seg.duration_minutes ? `${Math.floor(seg.duration_minutes / 60)}h${seg.duration_minutes % 60 > 0 ? ` ${seg.duration_minutes % 60}min` : ""}` : "";
+/* ═══ Airline Logo (inline, no tooltip dependency) ═══ */
+function InlineAirlineLogo({ iata, size = 36 }: { iata: string; size?: number }) {
+  const [error, setError] = useState(false);
+  if (!iata) return null;
+  const code = iata.toUpperCase().trim();
+  const url = `https://pics.avs.io/${size * 2}/${size * 2}/${code}.png`;
+  if (error) return (
+    <span className="flex items-center justify-center bg-muted rounded-lg" style={{ width: size, height: size }}>
+      <Plane className="text-muted-foreground" style={{ width: size * 0.5, height: size * 0.5 }} />
+    </span>
+  );
+  return <img src={url} alt={code} width={size} height={size} className="object-contain rounded-lg" onError={() => setError(true)} loading="lazy" />;
+}
+
+/* ═══ Flight Duration Formatter ═══ */
+function fmtDuration(minutes: number): string {
+  if (!minutes || minutes <= 0) return "";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h > 0 ? `${h}h ${m > 0 ? `${m}min` : ""}`.trim() : `${m}min`;
+}
+
+/* ═══ Boarding Pass Segment ═══ */
+function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: boolean }) {
+  const airlineCode = seg.airline || seg.airline_iata || "";
+  const airlineName = seg.airline_name || seg.airline || "";
+  const flightNum = `${airlineCode}${seg.flight_number || ""}`;
+  const dur = seg.duration_minutes ? fmtDuration(seg.duration_minutes) : "";
+  const depDate = seg.departure_date;
+
   return (
-    <div className={`flex items-center gap-4 py-3 ${idx > 0 ? "border-t border-dashed border-accent/15" : ""}`}>
-      <div className="text-center min-w-[60px]">
-        <p className="text-lg font-bold text-foreground">{seg.departure_time || "—"}</p>
-        <p className="text-sm font-semibold text-accent">{seg.origin_iata || "—"}</p>
-        {seg.terminal && <p className="text-[10px] text-muted-foreground">T{seg.terminal}</p>}
-      </div>
-      <div className="flex-1 flex flex-col items-center gap-0.5">
-        <div className="w-full flex items-center gap-1">
-          <div className="h-px bg-gradient-to-r from-accent/30 to-accent/10 flex-1" />
-          <Plane className="w-3.5 h-3.5 text-accent" />
-          <div className="h-px bg-gradient-to-l from-accent/30 to-accent/10 flex-1" />
+    <div className="rounded-2xl bg-card border border-border/40 p-5 sm:p-6 shadow-sm">
+      {/* Top row: airline + flight number + date */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <InlineAirlineLogo iata={airlineCode} size={36} />
+          <span className="font-bold text-foreground text-sm sm:text-base uppercase tracking-wide" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {airlineName}
+          </span>
+          {flightNum && (
+            <span className="text-[11px] bg-muted text-muted-foreground font-mono px-2 py-0.5 rounded-md border border-border/50">
+              {flightNum}
+            </span>
+          )}
         </div>
-        <span className="text-[10px] text-muted-foreground/60">{seg.airline || ""}{seg.flight_number ? ` ${seg.flight_number}` : ""}</span>
-        {dur && <span className="text-[10px] text-muted-foreground/60 flex items-center gap-0.5"><Clock className="w-2.5 h-2.5" /> {dur}</span>}
-        {seg.aircraft_type && <span className="text-[10px] text-muted-foreground/40">✈ {seg.aircraft_type}</span>}
+        {showDate && depDate && (
+          <span className="text-sm text-muted-foreground">
+            {(() => { try { return format(new Date(depDate.length <= 10 ? depDate + "T00:00:00" : depDate), "dd 'de' MMM. 'de' yyyy", { locale: ptBR }); } catch { return depDate; } })()}
+          </span>
+        )}
       </div>
-      <div className="text-center min-w-[60px]">
-        <p className="text-lg font-bold text-foreground">{seg.arrival_time || "—"}</p>
-        <p className="text-sm font-semibold text-accent">{seg.destination_iata || "—"}</p>
-        {seg.arrival_terminal && <p className="text-[10px] text-muted-foreground">T{seg.arrival_terminal}</p>}
+
+      {/* Main route row */}
+      <div className="flex items-center gap-4">
+        {/* Departure */}
+        <div className="text-left min-w-[70px]">
+          <p className="text-2xl sm:text-3xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {seg.departure_time || "—"}
+          </p>
+          <p className="text-lg sm:text-xl font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {seg.origin_iata || "—"}
+          </p>
+          {seg.terminal && (
+            <p className="text-[11px] text-muted-foreground/60 flex items-center gap-0.5 mt-0.5">
+              <span className="font-mono">›_</span> T{seg.terminal}
+            </p>
+          )}
+        </div>
+
+        {/* Route line */}
+        <div className="flex-1 flex flex-col items-center gap-1 py-2">
+          <div className="w-full flex items-center">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 text-muted-foreground/40 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M2 17h20M6 12l3-7 2 3h4l3 4H6z" />
+            </svg>
+            <div className="flex-1 relative mx-1">
+              <div className="h-px bg-muted-foreground/25 w-full" />
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-muted-foreground/30" />
+            </div>
+            <svg viewBox="0 0 24 24" className="w-4 h-4 text-muted-foreground/40 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M2 17h20M18 12l-3-7-2 3H9L6 12h12z" />
+            </svg>
+          </div>
+          {dur && (
+            <span className="text-[11px] text-muted-foreground/50 flex items-center gap-1">
+              <Clock className="w-3 h-3" /> {dur}
+            </span>
+          )}
+        </div>
+
+        {/* Arrival */}
+        <div className="text-right min-w-[70px]">
+          <p className="text-2xl sm:text-3xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {seg.arrival_time || "—"}
+          </p>
+          <p className="text-lg sm:text-xl font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {seg.destination_iata || "—"}
+          </p>
+          {seg.arrival_terminal && (
+            <p className="text-[11px] text-muted-foreground/60 flex items-center justify-end gap-0.5 mt-0.5">
+              <span className="font-mono">›_</span> T{seg.arrival_terminal}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-/* ═══ Flight Card ═══ */
+/* ═══ Connection Badge ═══ */
+function ConnectionBadge({ fromIata, layoverMinutes }: { fromIata: string; layoverMinutes?: number }) {
+  const dur = layoverMinutes ? fmtDuration(layoverMinutes) : "";
+  return (
+    <div className="flex justify-center -my-1.5 relative z-10">
+      <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/50 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/40 px-4 py-1.5 text-sm">
+        <MapPin className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+        <span className="text-amber-700 dark:text-amber-300 font-medium">Conexão em {fromIata}</span>
+        {dur && (
+          <>
+            <span className="text-amber-400">·</span>
+            <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <Clock className="w-3 h-3" /> {dur}
+            </span>
+          </>
+        )}
+      </span>
+    </div>
+  );
+}
+
+/* ═══ Flight Card (Boarding Pass Style) ═══ */
 function FlightCard({ flight, idx }: { flight: any; idx: number }) {
   const d = normalizeFlightData(flight.data);
-  const hasSegments = d.segments.length > 0;
+  const hasSegments = d.segments.length > 1;
 
-  // Extract baggage info from segments
+  const displaySegments = d.segments.length > 0 ? d.segments : [{
+    airline: d.airline, airline_name: d.airline_name, airline_iata: d.airline?.substring(0, 2),
+    flight_number: d.flight_number?.replace(/^[A-Z]{2}/, ""),
+    origin_iata: d.origin, destination_iata: d.destination,
+    departure_time: d.departure_time, arrival_time: d.arrival_time,
+    departure_date: d.departure,
+    terminal: d.terminal, arrival_terminal: d.arrival_terminal,
+    duration_minutes: null,
+  }];
+
+  function getLayoverMinutes(segA: any, segB: any): number | undefined {
+    if (!segA.arrival_time || !segB.departure_time) return undefined;
+    try {
+      const [hA, mA] = segA.arrival_time.split(":").map(Number);
+      const [hB, mB] = segB.departure_time.split(":").map(Number);
+      let diff = (hB * 60 + mB) - (hA * 60 + mA);
+      if (diff < 0) diff += 24 * 60;
+      return diff;
+    } catch { return undefined; }
+  }
+
   const getBaggageInfo = () => {
     const segs = d.segments.length > 0 ? d.segments : [flight.data];
     const seg = segs[0];
@@ -203,75 +324,61 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
   const baggageBadges = getBaggageInfo();
 
   return (
-    <motion.div initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.08 }}>
-      <ExpandableCard
-        expandedContent={
-          <div className="px-6 pb-4 space-y-4">
-            <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
-            {hasSegments ? (
-              <div className="space-y-0">
-                {d.segments.map((seg: any, i: number) => (
-                  <FlightSegmentDetail key={i} seg={seg} idx={i} />
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center gap-4 py-4">
-                <div className="text-center flex-1">
-                  <p className="text-2xl font-bold text-foreground">{d.origin || "—"}</p>
-                  {d.departure_time && <p className="text-sm text-muted-foreground mt-1">{d.departure_time}</p>}
-                  {d.terminal && <p className="text-xs text-muted-foreground/60">Terminal {d.terminal}</p>}
-                </div>
-                <div className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full flex items-center gap-1">
-                    <div className="h-px bg-gradient-to-r from-accent/30 to-accent/10 flex-1" />
-                    <Plane className="w-4 h-4 text-accent" />
-                    <div className="h-px bg-gradient-to-l from-accent/30 to-accent/10 flex-1" />
-                  </div>
-                  {d.duration && <span className="text-[10px] text-muted-foreground/60 flex items-center gap-1"><Clock className="w-3 h-3" /> {d.duration}</span>}
-                  <span className="text-[10px] text-muted-foreground/60">{d.stops === 0 ? "Voo direto" : `${d.stops} parada${d.stops > 1 ? "s" : ""}`}</span>
-                </div>
-                <div className="text-center flex-1">
-                  <p className="text-2xl font-bold text-foreground">{d.destination || "—"}</p>
-                  {d.arrival_time && <p className="text-sm text-muted-foreground mt-1">{d.arrival_time}</p>}
-                  {d.arrival_terminal && <p className="text-xs text-muted-foreground/60">Terminal {d.arrival_terminal}</p>}
-                </div>
-              </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: idx * 0.1 }}
+    >
+      {/* Title label */}
+      <div className="flex items-center gap-3 mb-3">
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 font-medium" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          {flight.title || (idx === 0 ? "Ida" : "Volta")}
+        </p>
+        {hasSegments && (
+          <span className="text-[10px] bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">
+            {d.stops} conexão{d.stops > 1 ? "ões" : ""}
+          </span>
+        )}
+      </div>
+
+      {/* Segments */}
+      <div className="space-y-0">
+        {displaySegments.map((seg: any, i: number) => (
+          <div key={i}>
+            {i > 0 && (
+              <ConnectionBadge
+                fromIata={displaySegments[i - 1]?.destination_iata || ""}
+                layoverMinutes={getLayoverMinutes(displaySegments[i - 1], seg)}
+              />
             )}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {d.airline && <DetailPill icon={<Plane className="w-3.5 h-3.5" />} label="Companhia" value={d.airline} />}
-              {d.flight_number && <DetailPill icon={<span className="text-[10px] font-bold">#</span>} label="Voo" value={d.flight_number} />}
-              {d.cabin && <DetailPill icon={<BedDouble className="w-3.5 h-3.5" />} label="Classe" value={d.cabin} />}
-              {baggageBadges.length > 0 && <DetailPill icon={<Luggage className="w-3.5 h-3.5" />} label="Bagagem" value={baggageBadges.join(" · ")} />}
-              {d.seat && <DetailPill icon={<Users className="w-3.5 h-3.5" />} label="Assento" value={d.seat} />}
-              {d.departure && (() => { try { return <DetailPill icon={<Calendar className="w-3.5 h-3.5" />} label="Data" value={format(new Date(d.departure.length <= 10 ? d.departure + "T00:00:00" : d.departure), "dd/MM/yyyy", { locale: ptBR })} />; } catch { return null; } })()}
-              {d.stops > 0 && <DetailPill icon={<Globe className="w-3.5 h-3.5" />} label="Paradas" value={`${d.stops} conexão${d.stops > 1 ? "ões" : ""}`} />}
-            </div>
-            {d.notes && <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-accent/30 pl-3">{d.notes}</p>}
-            {flight.description && <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-accent/30 pl-3">{flight.description}</p>}
+            <BoardingPassSegment seg={seg} showDate={true} />
           </div>
-        }
-      >
-        <div className="p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center shrink-0 border border-accent/10">
-            <Plane className="w-5 h-5 text-accent" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-foreground">{flight.title || "Voo"}</p>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted-foreground">
-              {d.origin && d.destination && <span className="font-medium text-foreground">{d.origin} · {d.destination}</span>}
-              {d.airline && <span className="text-muted-foreground/70">{d.airline}</span>}
-              {d.departure && (() => { try { return <span className="text-muted-foreground/70">{format(new Date(d.departure.length <= 10 ? d.departure + "T00:00:00" : d.departure), "dd MMM", { locale: ptBR })}</span>; } catch { return null; } })()}
-              {d.stops > 0 && <span className="text-[10px] bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded">{d.stops} conexão{d.stops > 1 ? "ões" : ""}</span>}
-              {baggageBadges.length > 0 && (
-                <span className="text-[10px] bg-accent/10 text-accent px-1.5 py-0.5 rounded flex items-center gap-1">
-                  <Briefcase className="w-2.5 h-2.5" /> {baggageBadges.join(" · ")}
-                </span>
-              )}
-            </div>
-          </div>
-          <span className="text-xs text-accent flex items-center gap-1 shrink-0 font-medium">Ver detalhes <ChevronRight className="w-3 h-3" /></span>
+        ))}
+      </div>
+
+      {/* Bottom badges */}
+      {(d.cabin || baggageBadges.length > 0) && (
+        <div className="flex flex-wrap gap-2 mt-3 pl-1">
+          {d.cabin && (
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full">
+              <BedDouble className="w-3 h-3 text-accent" /> {d.cabin}
+            </span>
+          )}
+          {baggageBadges.map((b, i) => (
+            <span key={i} className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full">
+              <Luggage className="w-3 h-3 text-accent" /> {b}
+            </span>
+          ))}
         </div>
-      </ExpandableCard>
+      )}
+
+      {/* Notes */}
+      {(d.notes || flight.description) && (
+        <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-accent/30 pl-3 mt-3">
+          {d.notes || flight.description}
+        </p>
+      )}
     </motion.div>
   );
 }
@@ -525,8 +632,8 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       {/* ──── FLIGHTS ──── */}
       {flights.length > 0 && (
         <section className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
-          <SectionTitle subtitle="Clique para ver os detalhes do voo">Voos</SectionTitle>
-          <div className="max-w-4xl mx-auto space-y-4">
+          <SectionTitle subtitle="Seus voos com todos os detalhes">Voos</SectionTitle>
+          <div className="max-w-3xl mx-auto space-y-8">
             {flights.map((f, idx) => <FlightCard key={f.id || idx} flight={f} idx={idx} />)}
           </div>
         </section>
