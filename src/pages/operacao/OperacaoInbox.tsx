@@ -178,6 +178,24 @@ function stripQuotes(text: string): string {
   return trimmed;
 }
 
+const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+function Linkify({ text }: { text: string }) {
+  if (!text) return null;
+  const parts = text.split(URL_REGEX);
+  return (
+    <>
+      {parts.map((part, i) =>
+        URL_REGEX.test(part) ? (
+          <a key={i} href={part.startsWith("http") ? part : `https://${part}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline hover:text-blue-600 break-all">{part}</a>
+        ) : (
+          <Fragment key={i}>{part}</Fragment>
+        )
+      )}
+    </>
+  );
+}
+
+
 function getStageInfo(stage: Stage) {
   return STAGES.find(s => s.key === stage) || STAGES[0];
 }
@@ -1973,7 +1991,7 @@ function OperacaoInboxInner() {
                                 <Bot className="h-3 w-3 text-primary" />
                                 <span className="text-[9px] font-bold text-primary uppercase tracking-wider">Sistema / Bot</span>
                               </div>
-                              <p className="text-sm leading-relaxed text-foreground">{stripQuotes(msg.text)}</p>
+                              <p className="text-sm leading-relaxed text-foreground"><Linkify text={stripQuotes(msg.text)} /></p>
                               <span className="text-[9px] text-muted-foreground">{formatMsgTime(msg.created_at)}</span>
                             </div>
                           ) : (
@@ -2029,7 +2047,7 @@ function OperacaoInboxInner() {
                                     ) : (
                                       <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2"><Image className="h-4 w-4" /><span>📷 Imagem indisponível</span></div>
                                     )}
-                                    {msg.text && <p className="text-sm leading-relaxed mt-1">{stripQuotes(msg.text)}</p>}
+                                    {msg.text && <p className="text-sm leading-relaxed mt-1"><Linkify text={stripQuotes(msg.text)} /></p>}
                                   </div>
                                 )}
                                 {/* Video */}
@@ -2040,7 +2058,7 @@ function OperacaoInboxInner() {
                                     ) : (
                                       <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2"><Video className="h-4 w-4" /><span>🎬 Vídeo indisponível</span></div>
                                     )}
-                                    {msg.text && <p className="text-sm leading-relaxed mt-1">{stripQuotes(msg.text)}</p>}
+                                    {msg.text && <p className="text-sm leading-relaxed mt-1"><Linkify text={stripQuotes(msg.text)} /></p>}
                                   </div>
                                 )}
                                 {/* Document */}
@@ -2055,7 +2073,7 @@ function OperacaoInboxInner() {
                                   </div>
                                 )}
                                 {/* Text */}
-                                {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap">{stripQuotes(msg.text)}</p>}
+                                {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(msg.text)} /></p>}
                                 <div className="flex items-center justify-end gap-1 mt-1">
                                   {msg.edited && <span className="text-[8px] opacity-50 italic">editada</span>}
                                   <span className="text-[9px] opacity-60">{formatMsgTime(msg.created_at)}</span>
