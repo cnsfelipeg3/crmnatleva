@@ -736,7 +736,7 @@ function OperacaoInboxInner() {
 
     loadMessages();
     return () => { cancelled = true; };
-  }, [selectedId, selected?.db_id, extractMediaFromRawData, getZapiPhoneCandidates]);
+  }, [selectedId, selected?.db_id, extractMediaFromRawData, getZapiPhoneCandidates, reloadVersion]);
 
   // Realtime subscription
   useEffect(() => {
