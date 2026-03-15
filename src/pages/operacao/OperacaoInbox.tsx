@@ -584,6 +584,7 @@ function OperacaoInboxInner() {
         media_url: m.media_url || undefined,
         status: normalizeDbStatus(m.status ?? m.read_status),
         created_at: m.created_at,
+        external_message_id: m.external_message_id || undefined,
       }))
     );
 
