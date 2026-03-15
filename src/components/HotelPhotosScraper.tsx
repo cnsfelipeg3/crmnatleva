@@ -342,7 +342,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     setLoading(true);
     setLoadingSource("official");
     try {
-      toast.info("🕷️ Navegando pelo site completo do hotel...", { duration: 5000 });
+      toast.info("🕷️ Buscando fotos: Site Oficial + Booking.com em paralelo...", { duration: 5000 });
       const { data, error } = await supabase.functions.invoke("scrape-hotel-photos", {
         body: { hotel_name: hotelName, hotel_city: hotelCity, hotel_country: hotelCountry },
       });
@@ -353,10 +353,13 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
         ...p,
         environment_name: p.section_name || p.environment_name || "",
         room_name: p.section_name || p.room_name || "",
+        source: p.source || "official",
+        html_context: p.html_context || "",
       }));
       const scraperRoomNames: string[] = data.room_names || [];
       const scrapedSectionDetails: Record<string, SectionDetail> = data.section_details || {};
       const pagesScraped: number = data.pages_scraped || 0;
+      const bookingRoomsFound: number = data.booking_rooms_found || 0;
       const resolvedPhotos = await resolveHotelPhotosUrls(rawPhotos);
 
       clearProxiedImages();
@@ -372,17 +375,17 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       const uniqueEnvNames = new Set(resolvedPhotos.map(p => p.environment_name).filter(Boolean)).size;
       const sectionRatio = resolvedPhotos.length > 0 ? photosWithSections / resolvedPhotos.length : 0;
 
+      const officialCount = resolvedPhotos.filter(p => p.source === "official").length;
+      const bookingCount = resolvedPhotos.filter(p => p.source === "booking").length;
+
       if (resolvedPhotos.length > 0) {
-        const sectionCount = new Set(resolvedPhotos.map(p => p.environment_name).filter(Boolean)).size;
-        toast.success(
-          `📸 ${resolvedPhotos.length} fotos HD em ${pagesScraped} páginas — ${sectionCount} ambientes`,
-          { duration: 5000 }
-        );
+        const parts = [`📸 ${resolvedPhotos.length} fotos HD em ${pagesScraped} páginas`];
+        if (bookingCount > 0) parts.push(`${bookingCount} do Booking.com`);
+        if (bookingRoomsFound > 0) parts.push(`${bookingRoomsFound} tipos de quarto validados`);
+        parts.push(`${uniqueEnvNames} ambientes`);
+        toast.success(parts.join(" — "), { duration: 5000 });
+
         preloadViaProxy(resolvedPhotos, data.source_url || undefined);
-        // ALWAYS run classification if:
-        // - Less than 70% of photos have section names, OR
-        // - Fewer than 3 unique environments, OR
-        // - All photos have the same environment_name (no diversity)
         const needsClassification = sectionRatio < 0.7 || uniqueEnvNames < 3 || (uniqueEnvNames === 1 && resolvedPhotos.length > 5);
         if (needsClassification) {
           await runClassification(resolvedPhotos, scraperRoomNames);
