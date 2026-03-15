@@ -16,6 +16,13 @@ interface ScrapedPhoto {
   confidence: number;
 }
 
+interface SectionInfo {
+  name: string;
+  description: string;
+  details: Record<string, string>; // e.g. { "Tamanho": "45 m²", "Cama": "King" }
+  amenities: string[];
+}
+
 interface ImageCollection {
   photos: ScrapedPhoto[];
   seen: Set<string>;
