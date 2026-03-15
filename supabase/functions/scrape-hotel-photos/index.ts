@@ -252,8 +252,16 @@ function categorizePages(urls: string[], mainUrl: string | undefined): {
   const gallery: CategorizedPage[] = [];
   const other: CategorizedPage[] = [];
 
-  const roomKeywords = ["room", "suite", "accommodation", "camera", "chambre", "zimmer", "quarto", "habitacion", "camere"];
-  const galleryKeywords = ["gallery", "galeria", "photo", "foto", "image", "media", "virtual-tour"];
+  const roomKeywords = [
+    "room", "suite", "accommodation", "camera", "chambre", "zimmer", "quarto", "habitacion", "camere",
+    // Japanese
+    "客室", "お部屋", "ルーム", "スイート", "和室", "洋室", "和洋室", "guestroom", "heya",
+  ];
+  const galleryKeywords = [
+    "gallery", "galeria", "photo", "foto", "image", "media", "virtual-tour",
+    // Japanese
+    "ギャラリー", "フォトギャラリー", "写真",
+  ];
   const facilityKeywords = [
     "restaurant", "ristorante", "dining", "bar", "lounge",
     "spa", "wellness", "pool", "piscina",
@@ -261,6 +269,14 @@ function categorizePages(urls: string[], mainUrl: string | undefined): {
     "meeting", "event", "wedding",
     "garden", "terrace", "rooftop",
     "experience", "service", "facility", "amenities",
+    // Japanese
+    "レストラン", "ダイニング", "バー", "ラウンジ",
+    "温泉", "大浴場", "露天風呂", "スパ", "プール",
+    "フィットネス", "ジム",
+    "宴会", "会議", "ウェディング", "結婚",
+    "庭園", "テラス",
+    "施設", "アクティビティ", "館内",
+    "onsen", "rotenburo",
   ];
 
   // Skip these pages entirely
