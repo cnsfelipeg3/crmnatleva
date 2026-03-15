@@ -5,7 +5,7 @@ import CurrencyPanel from "@/components/portal/CurrencyPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import PortalLayout from "@/components/portal/PortalLayout";
-import { getMockTripDetail } from "@/lib/portalMockTrips";
+import { getMockTripDetail, getMockTripsForDashboard } from "@/lib/portalMockTrips";
 import { getMockFinanceData } from "@/lib/portalMockFinance";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import {
@@ -137,12 +137,14 @@ function PortalFinanceTripSelector({ onSelect }: { onSelect: (saleId: string) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const mockTrips = [
-      { sale_id: "mock-trip-1", sale: { destination: "Itália", destination_iata: "FCO", departure_date: "2026-03-20", return_date: "2026-04-02", name: "Viagem Itália" } },
-      { sale_id: "mock-trip-2", sale: { destination: "Maldivas", destination_iata: "MLE", departure_date: "2026-06-15", return_date: "2026-06-25", name: "Lua de Mel Maldivas" } },
-    ];
-
     const fetchTrips = async () => {
+      // Get all mock trips for the selector
+      const allMocks = getMockTripsForDashboard();
+      const mockTrips = allMocks.map(m => ({
+        sale_id: m.sale_id,
+        sale: m.sale,
+      }));
+
       try {
         const { data, error } = await supabase.functions.invoke("portal-api", { body: { action: "trips" } });
         const apiTrips = data?.trips || [];

@@ -254,6 +254,166 @@ export const mockTrips: MockTrip[] = [
     ],
     sellerName: "Amanda NatLeva",
   },
+
+  // ===== TRIP 5: Japão Cultural =====
+  {
+    id: "mock-japao",
+    sale_id: "mock-japao",
+    custom_title: "Japão Imperial",
+    subtitle: "Tóquio, Kyoto & Osaka",
+    cover_image_url: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1200&h=600&fit=crop",
+    notes_for_client: "Tiago, prepare-se para uma imersão cultural incrível no Japão! 🇯🇵🌸\n\nDe templos milenares em Kyoto à energia vibrante de Tóquio, cada dia será uma nova descoberta.\n\nYoi ryokō o! (Boa viagem!)\nEquipe NatLeva",
+    sale: {
+      id: "mock-japao",
+      name: "Japão Imperial",
+      status: "confirmada",
+      origin_iata: "GRU",
+      destination_iata: "NRT",
+      departure_date: future(90),
+      return_date: future(106),
+      total_sale_value: 52000,
+      seller_id: null,
+    },
+    segments: [
+      { id: "seg-j1", sale_id: "mock-japao", airline: "NH", airline_name: "ANA - All Nippon Airways", flight_number: "NH6920", origin_iata: "GRU", destination_iata: "NRT", departure_date: future(90), arrival_date: future(91), departure_time: "23:55", arrival_time: "06:35", direction: "ida", flight_class: "Executiva", segment_order: 1, terminal: "3", arrival_terminal: "1", duration_minutes: 1480, aircraft_type: "Boeing 787-9 Dreamliner", baggage_allowance: "2x 32kg", meal_info: "Jantar kaiseki e café da manhã japonês", booking_ref: "JPNTYO", locator: "JPNTYO" },
+      { id: "seg-j2", sale_id: "mock-japao", airline: "NH", airline_name: "ANA", flight_number: "NH21", origin_iata: "NRT", destination_iata: "HND", departure_date: future(91), departure_time: "10:00", arrival_time: "10:45", direction: "ida", flight_class: "Executiva", segment_order: 2, duration_minutes: 45, booking_ref: "JPNTYO", locator: "JPNTYO" },
+      { id: "seg-j3", sale_id: "mock-japao", airline: "NH", airline_name: "ANA", flight_number: "NH990", origin_iata: "HND", destination_iata: "NRT", departure_date: future(106), departure_time: "14:00", arrival_time: "14:50", direction: "volta", flight_class: "Executiva", segment_order: 3, booking_ref: "JPNRET", locator: "JPNRET" },
+      { id: "seg-j4", sale_id: "mock-japao", airline: "NH", airline_name: "ANA", flight_number: "NH6921", origin_iata: "NRT", destination_iata: "GRU", departure_date: future(106), arrival_date: future(107), departure_time: "17:30", arrival_time: "05:10", direction: "volta", flight_class: "Executiva", segment_order: 4, duration_minutes: 1480, booking_ref: "JPNRET", locator: "JPNRET" },
+    ],
+    hotels: [
+      { id: "h-j1", hotel_name: "Park Hyatt Tokyo", description: "Park Hyatt Tokyo", category: "hotel", product_type: "hotel", reservation_code: "PHT-3301", status: "CONFIRMADO", hotel_checkin_datetime_utc: future(91), hotel_checkout_datetime_utc: future(97), checkin_time: "15:00", checkout_time: "12:00", room_type: "Park Suite King · Vista Monte Fuji", city: "Shinjuku, Tóquio", address: "3-7-1-2 Nishi Shinjuku, Shinjuku, Tokyo 163-1055", phone: "+81 3-5322-1234", meal_plan: "Café da manhã buffet incluso", amenities: ["Piscina no 47º andar", "Spa", "New York Bar (Lost in Translation)", "Concierge 24h", "Wi-Fi grátis"], stars: 5 },
+      { id: "h-j2", hotel_name: "Suiran Luxury Collection, Kyoto", description: "Suiran, Arashiyama, Kyoto", category: "hotel", product_type: "hotel", reservation_code: "SUI-7782", status: "CONFIRMADO", hotel_checkin_datetime_utc: future(97), hotel_checkout_datetime_utc: future(102), checkin_time: "15:00", checkout_time: "11:00", room_type: "Riverview Suite · Onsen privativo", city: "Arashiyama, Kyoto", address: "12 Saga Tenryuji Susukinobaba, Ukyo Ward, Kyoto", phone: "+81 75-872-0101", meal_plan: "Café da manhã kaiseki", amenities: ["Onsen privativo", "Jardim japonês", "Cerimônia do chá", "Bicicletas cortesia"], stars: 5 },
+      { id: "h-j3", hotel_name: "The Ritz-Carlton Osaka", description: "Ritz-Carlton, Osaka", category: "hotel", product_type: "hotel", reservation_code: "RCO-5501", status: "CONFIRMADO", hotel_checkin_datetime_utc: future(102), hotel_checkout_datetime_utc: future(106), checkin_time: "15:00", checkout_time: "12:00", room_type: "Deluxe Room · Vista cidade", city: "Osaka", address: "2-5-25 Umeda, Kita-ku, Osaka", phone: "+81 6-6343-7000", meal_plan: "Café da manhã incluso", amenities: ["Spa", "Fitness center", "Concierge", "Restaurante La Baie"], stars: 5 },
+    ],
+    services: [
+      { id: "s-j1", description: "Tour privado Meiji Shrine + Harajuku + Shibuya", category: "passeio", product_type: "passeio", reservation_code: "TYO-101", date: future(92), time: "09:00", duration: "6 horas", provider: "Japan Wonder Travel", included: "Guia em português, transporte público incluso", participants: "1 pessoa" },
+      { id: "s-j2", description: "Experiência TeamLab Borderless", category: "experiencia", product_type: "passeio", reservation_code: "TYO-102", date: future(93), time: "11:00", duration: "3 horas", location: "Azabudai Hills, Tóquio" },
+      { id: "s-j3", description: "Shinkansen Tóquio → Kyoto (Japan Rail Pass)", category: "transfer", product_type: "transfer", reservation_code: "JRP-2024-881", date: future(97), time: "08:30", duration: "2h15", provider: "JR Central", included: "Green Car (1ª classe), assento reservado" },
+      { id: "s-j4", description: "Tour templos Fushimi Inari + Kinkaku-ji + Arashiyama", category: "passeio", product_type: "passeio", date: future(98), time: "08:00", duration: "8 horas", location: "Kyoto", provider: "Kyoto Private Tours", included: "Guia particular, almoço kaiseki, transporte privativo" },
+      { id: "s-j5", description: "Cerimônia do chá tradicional em Gion", category: "experiencia", product_type: "passeio", date: future(99), time: "14:00", duration: "1h30", location: "Gion, Kyoto", provider: "Tea Ceremony Gion" },
+      { id: "s-j6", description: "Shinkansen Kyoto → Osaka", category: "transfer", product_type: "transfer", date: future(102), time: "10:00", duration: "15 min" },
+      { id: "s-j7", description: "Street food tour Dotonbori, Osaka", category: "gastronomia", product_type: "passeio", date: future(103), time: "18:00", duration: "3 horas", location: "Dotonbori, Osaka", included: "10+ degustações: takoyaki, okonomiyaki, gyoza, matcha" },
+      { id: "s-j8", description: "Seguro Viagem Tokio Marine · Premium Ásia", category: "seguro", product_type: "seguro", reservation_code: "TM-2024-667", provider: "Tokio Marine", included: "Cobertura médica US$300.000, bagagem, cancelamento" },
+    ],
+    lodging: [],
+    attachments: [],
+    financial: {
+      receivables: [
+        { id: "r-j1", gross_value: 17333, status: "recebido", due_date: past(60), payment_method: "PIX", description: "1ª parcela · Sinal", installment_number: 1, installment_total: 3 },
+        { id: "r-j2", gross_value: 17333, status: "recebido", due_date: past(30), payment_method: "Cartão de crédito", description: "2ª parcela", installment_number: 2, installment_total: 3 },
+        { id: "r-j3", gross_value: 17334, status: "pendente", due_date: future(10), payment_method: "PIX", description: "3ª parcela · Final", installment_number: 3, installment_total: 3 },
+      ],
+    },
+    passengers: [
+      { id: "p-j1", full_name: "Tiago Silva", document_number: "AB123456", passport_number: "FX887421", passport_expiry: "2030-11-15", birth_date: "1988-05-15", role: "titular" },
+    ],
+    sellerName: "Amanda NatLeva",
+  },
+
+  // ===== TRIP 6: Caribe All-Inclusive =====
+  {
+    id: "mock-caribe",
+    sale_id: "mock-caribe",
+    custom_title: "Caribe All-Inclusive",
+    subtitle: "Punta Cana · Casal",
+    cover_image_url: "https://images.unsplash.com/photo-1590523741831-ab7e8b8f9c7f?w=1200&h=600&fit=crop",
+    notes_for_client: "Tiago e Marina, que tal uns dias de descanso total no Caribe? 🌴🍹\n\nAll-inclusive de verdade: comida, bebida, praia, spa, tudo incluso!\n\nAproveitem!\nEquipe NatLeva",
+    sale: {
+      id: "mock-caribe",
+      name: "Caribe All-Inclusive",
+      status: "confirmada",
+      origin_iata: "GRU",
+      destination_iata: "PUJ",
+      departure_date: future(45),
+      return_date: future(52),
+      total_sale_value: 22000,
+      seller_id: null,
+    },
+    segments: [
+      { id: "seg-c1", sale_id: "mock-caribe", airline: "CM", airline_name: "Copa Airlines", flight_number: "CM773", origin_iata: "GRU", destination_iata: "PTY", departure_date: future(45), departure_time: "10:15", arrival_time: "16:30", direction: "ida", flight_class: "Executiva", segment_order: 1, terminal: "3", duration_minutes: 435, aircraft_type: "Boeing 737 MAX 9", baggage_allowance: "2x 23kg", booking_ref: "CARIBP", locator: "CARIBP" },
+      { id: "seg-c2", sale_id: "mock-caribe", airline: "CM", airline_name: "Copa Airlines", flight_number: "CM300", origin_iata: "PTY", destination_iata: "PUJ", departure_date: future(45), departure_time: "19:45", arrival_time: "23:30", direction: "ida", flight_class: "Executiva", segment_order: 2, duration_minutes: 225, connection_time_minutes: 195, booking_ref: "CARIBP", locator: "CARIBP" },
+      { id: "seg-c3", sale_id: "mock-caribe", airline: "CM", airline_name: "Copa Airlines", flight_number: "CM301", origin_iata: "PUJ", destination_iata: "PTY", departure_date: future(52), departure_time: "11:00", arrival_time: "14:15", direction: "volta", flight_class: "Executiva", segment_order: 3, duration_minutes: 255, booking_ref: "CARIBR", locator: "CARIBR" },
+      { id: "seg-c4", sale_id: "mock-caribe", airline: "CM", airline_name: "Copa Airlines", flight_number: "CM772", origin_iata: "PTY", destination_iata: "GRU", departure_date: future(52), departure_time: "17:30", arrival_time: "01:45", direction: "volta", flight_class: "Executiva", segment_order: 4, duration_minutes: 435, connection_time_minutes: 195, booking_ref: "CARIBR", locator: "CARIBR" },
+    ],
+    hotels: [
+      { id: "h-c1", hotel_name: "Secrets Royal Beach Punta Cana", description: "Secrets Royal Beach, Adults-Only", category: "hotel", product_type: "hotel", reservation_code: "SRB-9921", status: "CONFIRMADO", hotel_checkin_datetime_utc: future(46), hotel_checkout_datetime_utc: future(52), checkin_time: "15:00", checkout_time: "12:00", room_type: "Preferred Club Junior Suite Swim-Out · Frente Mar", city: "Punta Cana, República Dominicana", phone: "+1 809-221-0101", meal_plan: "All-Inclusive Unlimited Luxury", amenities: ["Piscina swim-out privativa", "8 restaurantes", "Spa by Pevonia", "Wi-Fi grátis", "Mini bar reabastecido diariamente", "Room service 24h"], notes: "Resort adults-only · All-inclusive premium · 7 noites", stars: 5 },
+    ],
+    services: [
+      { id: "s-c1", description: "Catamaran Cruise · Isla Saona", category: "passeio", product_type: "passeio", reservation_code: "PC-201", date: future(48), time: "08:00", duration: "Full day", location: "Isla Saona, Punta Cana", included: "Catamarã, almoço na praia, open bar, snorkeling" },
+      { id: "s-c2", description: "Spa Day Couple Package", category: "experiencia", product_type: "passeio", date: future(49), time: "10:00", duration: "3 horas", location: "Secrets Spa by Pevonia", included: "Massagem casal, facial, acesso à hidroterapia" },
+      { id: "s-c3", description: "Transfer privativo aeroporto ↔ hotel", category: "transfer", product_type: "transfer", reservation_code: "TRF-PC-01", provider: "Amstar DMC", included: "Transfers ida e volta PUJ ↔ hotel, veículo privativo com ar" },
+      { id: "s-c4", description: "Seguro Viagem Assist Card · Casal", category: "seguro", product_type: "seguro", reservation_code: "AC-2024-PC-331", provider: "Assist Card", included: "Cobertura médica US$150.000" },
+    ],
+    lodging: [],
+    attachments: [],
+    financial: {
+      receivables: [
+        { id: "r-c1", gross_value: 11000, status: "recebido", due_date: past(20), payment_method: "PIX", description: "1ª parcela · Sinal", installment_number: 1, installment_total: 2 },
+        { id: "r-c2", gross_value: 11000, status: "pendente", due_date: future(20), payment_method: "Cartão de crédito", description: "2ª parcela · Final", installment_number: 2, installment_total: 2 },
+      ],
+    },
+    passengers: [
+      { id: "p-c1", full_name: "Tiago Silva", document_number: "AB123456", birth_date: "1988-05-15", role: "titular" },
+      { id: "p-c2", full_name: "Marina Silva", document_number: "CD789012", birth_date: "1990-08-22", role: "acompanhante" },
+    ],
+    sellerName: "Amanda NatLeva",
+  },
+
+  // ===== TRIP 7: Safari África =====
+  {
+    id: "mock-africa",
+    sale_id: "mock-africa",
+    custom_title: "Safari na África do Sul",
+    subtitle: "Cape Town & Kruger",
+    cover_image_url: "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=1200&h=600&fit=crop",
+    notes_for_client: "Tiago e Marina, a aventura de uma vida os espera! 🦁🌍\n\nSafari no Kruger, vinícolas em Stellenbosch e o visual espetacular da Table Mountain.\n\nUma experiência transformadora!\nEquipe NatLeva",
+    sale: {
+      id: "mock-africa",
+      name: "Safari na África do Sul",
+      status: "confirmada",
+      origin_iata: "GRU",
+      destination_iata: "CPT",
+      departure_date: future(120),
+      return_date: future(134),
+      total_sale_value: 72000,
+      seller_id: null,
+    },
+    segments: [
+      { id: "seg-a1", sale_id: "mock-africa", airline: "EK", airline_name: "Emirates", flight_number: "EK262", origin_iata: "GRU", destination_iata: "DXB", departure_date: future(120), arrival_date: future(121), departure_time: "03:15", arrival_time: "22:30", direction: "ida", flight_class: "Executiva", segment_order: 1, terminal: "3", duration_minutes: 855, aircraft_type: "Airbus A380", baggage_allowance: "2x 32kg", meal_info: "Jantar gourmet e café", booking_ref: "SAFCPT", locator: "SAFCPT" },
+      { id: "seg-a2", sale_id: "mock-africa", airline: "EK", airline_name: "Emirates", flight_number: "EK772", origin_iata: "DXB", destination_iata: "CPT", departure_date: future(122), departure_time: "03:00", arrival_time: "10:30", direction: "ida", flight_class: "Executiva", segment_order: 2, duration_minutes: 570, connection_time_minutes: 270, booking_ref: "SAFCPT", locator: "SAFCPT" },
+      { id: "seg-a3", sale_id: "mock-africa", airline: "SA", airline_name: "South African Airways", flight_number: "SA572", origin_iata: "CPT", destination_iata: "JNB", departure_date: future(127), departure_time: "10:00", arrival_time: "12:00", direction: "ida", flight_class: "Executiva", segment_order: 3, duration_minutes: 120, booking_ref: "SAFKRG", locator: "SAFKRG" },
+      { id: "seg-a4", sale_id: "mock-africa", airline: "SA", airline_name: "South African Airways", flight_number: "SA573", origin_iata: "JNB", destination_iata: "CPT", departure_date: future(132), departure_time: "14:00", arrival_time: "16:00", direction: "volta", flight_class: "Executiva", segment_order: 4, duration_minutes: 120, booking_ref: "SAFRET", locator: "SAFRET" },
+      { id: "seg-a5", sale_id: "mock-africa", airline: "EK", airline_name: "Emirates", flight_number: "EK773", origin_iata: "CPT", destination_iata: "DXB", departure_date: future(134), departure_time: "14:00", arrival_time: "01:30", direction: "volta", flight_class: "Executiva", segment_order: 5, duration_minutes: 570, booking_ref: "SAFRET", locator: "SAFRET" },
+      { id: "seg-a6", sale_id: "mock-africa", airline: "EK", airline_name: "Emirates", flight_number: "EK261", origin_iata: "DXB", destination_iata: "GRU", departure_date: future(134), departure_time: "08:30", arrival_time: "16:00", direction: "volta", flight_class: "Executiva", segment_order: 6, duration_minutes: 855, connection_time_minutes: 420, booking_ref: "SAFRET", locator: "SAFRET" },
+    ],
+    hotels: [
+      { id: "h-a1", hotel_name: "Belmond Mount Nelson Hotel", description: "Mount Nelson, Cape Town", category: "hotel", product_type: "hotel", reservation_code: "MNH-4401", status: "CONFIRMADO", hotel_checkin_datetime_utc: future(122), hotel_checkout_datetime_utc: future(127), checkin_time: "14:00", checkout_time: "11:00", room_type: "Deluxe Garden Suite", city: "Cape Town", address: "76 Orange St, Gardens, Cape Town", phone: "+27 21-483-1000", meal_plan: "Café da manhã incluso", amenities: ["Spa", "2 piscinas", "Jardins históricos", "High Tea tradicional", "Concierge"], notes: "Ícone histórico de Cape Town · Vista para Table Mountain", stars: 5 },
+      { id: "h-a2", hotel_name: "Lion Sands River Lodge, Kruger", description: "Lion Sands, Sabi Sand Game Reserve", category: "hotel", product_type: "hotel", reservation_code: "LSRL-8812", status: "CONFIRMADO", hotel_checkin_datetime_utc: future(127), hotel_checkout_datetime_utc: future(132), checkin_time: "14:00", checkout_time: "10:00", room_type: "Luxury River Suite", city: "Sabi Sand, Kruger", phone: "+27 13-735-5000", meal_plan: "All-inclusive (refeições + bebidas + safaris)", amenities: ["Game drives 2x/dia", "Bush walks", "Spa ao ar livre", "Deck sobre o rio", "Piscina infinita"], notes: "Big 5 garantido · 2 safaris diários (dawn & dusk) com ranger privativo", stars: 5, special_requests: "Treehouse sleep-out em uma noite" },
+      { id: "h-a3", hotel_name: "Cape Grace Hotel, V&A Waterfront", description: "Cape Grace, Waterfront", category: "hotel", product_type: "hotel", reservation_code: "CGH-2209", status: "CONFIRMADO", hotel_checkin_datetime_utc: future(132), hotel_checkout_datetime_utc: future(134), checkin_time: "14:00", checkout_time: "12:00", room_type: "Harbour View Room", city: "Cape Town", address: "West Quay Rd, V&A Waterfront, Cape Town", meal_plan: "Café da manhã incluso", amenities: ["Vista porto", "Spa", "Whisky bar", "Concierge"], stars: 5 },
+    ],
+    services: [
+      { id: "s-a1", description: "Table Mountain Aerial Cableway · VIP Fast Track", category: "passeio", product_type: "passeio", reservation_code: "TM-501", date: future(123), time: "09:00", location: "Table Mountain, Cape Town", included: "Acesso VIP sem fila, guia particular" },
+      { id: "s-a2", description: "Wine Tasting Tour Stellenbosch & Franschhoek", category: "gastronomia", product_type: "passeio", reservation_code: "WT-502", date: future(124), time: "09:30", duration: "Full day", location: "Stellenbosch/Franschhoek", included: "3 vinícolas premium, almoço harmonizado, transporte privativo" },
+      { id: "s-a3", description: "Cape Peninsula Tour (Cape Point + Penguins)", category: "passeio", product_type: "passeio", date: future(125), time: "08:00", duration: "Full day", included: "Chapman's Peak Drive, Boulders Beach, Cape of Good Hope, almoço" },
+      { id: "s-a4", description: "5 Game Drives no Kruger (inclusos no lodge)", category: "passeio", product_type: "passeio", date: future(128), included: "Safaris em veículo aberto com ranger e tracker" },
+      { id: "s-a5", description: "Transfers privativos em todos os destinos", category: "transfer", product_type: "transfer", reservation_code: "TRF-SA-01", provider: "Rhino Africa Transfers", included: "CPT Airport↔Hotel, CPT↔JNB, JNB↔Kruger Lodge" },
+      { id: "s-a6", description: "Seguro Viagem April · Premium África", category: "seguro", product_type: "seguro", reservation_code: "APR-2024-AF", provider: "April International", included: "Cobertura médica €300.000, evacuação médica, repatriação" },
+    ],
+    lodging: [],
+    attachments: [],
+    financial: {
+      receivables: [
+        { id: "r-a1", gross_value: 24000, status: "recebido", due_date: past(60), payment_method: "PIX", description: "1ª parcela · Sinal", installment_number: 1, installment_total: 3 },
+        { id: "r-a2", gross_value: 24000, status: "recebido", due_date: past(30), payment_method: "Cartão de crédito", description: "2ª parcela", installment_number: 2, installment_total: 3 },
+        { id: "r-a3", gross_value: 24000, status: "pendente", due_date: future(15), payment_method: "PIX", description: "3ª parcela · Final", installment_number: 3, installment_total: 3 },
+      ],
+    },
+    passengers: [
+      { id: "p-a1", full_name: "Tiago Silva", document_number: "AB123456", passport_number: "FX887421", passport_expiry: "2030-11-15", birth_date: "1988-05-15", role: "titular" },
+      { id: "p-a2", full_name: "Marina Silva", document_number: "CD789012", passport_number: "GY554332", passport_expiry: "2031-02-20", birth_date: "1990-08-22", role: "acompanhante" },
+    ],
+    sellerName: "Amanda NatLeva",
+  },
 ];
 
 export function getMockTripsForDashboard() {
