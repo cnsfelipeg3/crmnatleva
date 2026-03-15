@@ -426,14 +426,12 @@ export default function PortalDashboard() {
             </Suspense>
           </motion.section>
 
+          {/* Recent trips preview — just top 3 upcoming */}
+          {categorized.upcoming.length > 0 && (
+            <TripShelf emoji="✈️" title="Próximas jornadas" trips={categorized.upcoming.slice(0, 3)} onOpen={(id) => navigate(`/portal/viagem/${id}`)} />
+          )}
           {categorized.active.length > 0 && (
             <TripShelf emoji="🔥" title="Em viagem agora" trips={categorized.active} onOpen={(id) => navigate(`/portal/viagem/${id}`)} />
-          )}
-          {categorized.upcoming.length > 0 && (
-            <TripShelf emoji="✈️" title="Próximas jornadas" trips={categorized.upcoming} onOpen={(id) => navigate(`/portal/viagem/${id}`)} />
-          )}
-          {categorized.past.length > 0 && (
-            <TripShelf emoji="🌍" title="Memórias de viagem" trips={categorized.past} onOpen={(id) => navigate(`/portal/viagem/${id}`)} />
           )}
         </div>
       </div>
