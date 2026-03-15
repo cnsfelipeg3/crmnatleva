@@ -197,15 +197,16 @@ function ChecklistRow({ item, isChecked, onToggle }: { item: ChecklistItem; isCh
 }
 
 /* ── Category block ── */
-function CategoryBlock({ category, items, isOpen, onToggle }: {
+function CategoryBlock({ category, items, isOpen, onToggle, checkedIds, onCheckToggle }: {
   category: string; items: ChecklistItem[]; isOpen: boolean; onToggle: () => void;
+  checkedIds: Set<string>; onCheckToggle: (id: string) => void;
 }) {
   const config = CATEGORY_CONFIG[category] || { label: category, icon: Info };
   const Icon = config.icon;
-  const done = items.filter(i => i.status === "concluido").length;
+  const done = items.filter(i => i.status === "concluido" || checkedIds.has(i.id)).length;
   const total = items.length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const hasAttention = items.some(i => i.status === "atencao");
+  const hasAttention = items.some(i => i.status === "atencao" && !checkedIds.has(i.id));
 
   return (
     <motion.div
