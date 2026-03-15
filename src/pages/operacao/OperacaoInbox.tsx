@@ -1882,7 +1882,7 @@ function OperacaoInboxInner() {
 
                 {/* Input area */}
                 <div
-                  className="sticky bottom-0 z-20 border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card/95 backdrop-blur-sm shrink-0"
+                  className="border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card shrink-0 z-20"
                   style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" } : undefined}
                 >
                   {isRecording ? (
