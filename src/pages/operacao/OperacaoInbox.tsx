@@ -1305,7 +1305,7 @@ function OperacaoInboxInner() {
     isUserScrolledUpRef.current = false;
     scrollToBottom();
     setIsSending(false);
-  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, scrollToBottom]);
+  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, scrollToBottom, persistOutgoingMessage]);
 
   const handleStartEdit = useCallback((msg: Message) => {
     if (msg.sender_type !== "atendente" || msg.message_type !== "text") return;
