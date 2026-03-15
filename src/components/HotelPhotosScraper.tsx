@@ -320,7 +320,11 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       if (error) throw error;
       if (!data.success) throw new Error(data.error);
 
-      const rawPhotos: HotelPhoto[] = data.photos || [];
+      const rawPhotos: HotelPhoto[] = (data.photos || []).map((p: any) => ({
+        ...p,
+        environment_name: p.section_name || p.environment_name || "",
+        room_name: p.section_name || p.room_name || "",
+      }));
       const scraperRoomNames: string[] = data.room_names || [];
       const resolvedPhotos = await resolveHotelPhotosUrls(rawPhotos);
 
@@ -331,14 +335,27 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       setActiveSource("official");
       setKnownRoomNames(scraperRoomNames);
 
+      // Count how many photos already have section names from the scraper
+      const photosWithSections = resolvedPhotos.filter(p => p.environment_name && p.environment_name.length > 2).length;
+      const sectionRatio = resolvedPhotos.length > 0 ? photosWithSections / resolvedPhotos.length : 0;
+
       if (scraperRoomNames.length > 0) {
         console.log("Room names extracted from hotel website:", scraperRoomNames);
+        console.log(`${photosWithSections}/${resolvedPhotos.length} photos already have section context (${Math.round(sectionRatio * 100)}%)`);
       }
 
       if (resolvedPhotos.length > 0) {
-        toast.success(`${resolvedPhotos.length} fotos encontradas no site oficial`);
+        const sectionCount = new Set(resolvedPhotos.map(p => p.environment_name).filter(Boolean)).size;
+        toast.success(`${resolvedPhotos.length} fotos encontradas — ${sectionCount} ambientes identificados no site`);
         preloadViaProxy(resolvedPhotos, data.source_url || undefined);
-        await runClassification(resolvedPhotos, scraperRoomNames);
+
+        // Only run AI classification if less than 50% of photos have section context
+        if (sectionRatio < 0.5) {
+          console.log("Many photos without section context, running AI classification...");
+          await runClassification(resolvedPhotos, scraperRoomNames);
+        } else {
+          console.log("Most photos already have section names from scraper, skipping AI classification");
+        }
       } else {
         toast.info("Nenhuma foto encontrada. Tente Google Places.");
       }
