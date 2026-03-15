@@ -183,10 +183,9 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     setResolvingImageUrls((prev) => new Set(prev).add(url));
 
     try {
-      const blob = await fetchProxiedImageBlob(url, sourceUrl || undefined);
-      const objectUrl = URL.createObjectURL(blob);
-      proxiedObjectUrlsRef.current.push(objectUrl);
-      setProxiedImageUrls((prev) => ({ ...prev, [url]: objectUrl }));
+      const resolvedUrl = await fetchProxiedImageUrl(url, sourceUrl || undefined);
+      proxiedObjectUrlsRef.current.push(resolvedUrl);
+      setProxiedImageUrls((prev) => ({ ...prev, [url]: resolvedUrl }));
       setFailedImageUrls((prev) => {
         const next = new Set(prev);
         next.delete(url);
