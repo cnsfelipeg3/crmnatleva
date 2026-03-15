@@ -369,14 +369,9 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
     }
   }, [mapStyle]);
 
-  // ───── Initialize Leaflet Map ─────
+  // ───── Initialize Leaflet Map (once) ─────
   useEffect(() => {
-    if (!mapContainerRef.current) return;
-    if (mapRef.current) {
-      mapRef.current.remove();
-      mapRef.current = null;
-      layerGroupRef.current = null;
-    }
+    if (!mapContainerRef.current || mapRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
       center: [-15, -50],
@@ -385,11 +380,9 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
       attributionControl: false,
     });
 
-    // Custom zoom control position
     L.control.zoom({ position: "topright" }).addTo(map);
 
-    L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(map);
-
+    tileLayerRef.current = L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(map);
     layerGroupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
@@ -397,7 +390,23 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
       map.remove();
       mapRef.current = null;
       layerGroupRef.current = null;
+      tileLayerRef.current = null;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ───── Swap tile layer on style change ─────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+    tileLayerRef.current = L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(map);
+    // Re-add the overlay layer group on top
+    if (layerGroupRef.current) {
+      layerGroupRef.current.bringToFront();
+    }
   }, [tileUrl]);
 
   // ───── Update markers & polylines ─────
