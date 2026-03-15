@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,11 +11,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye } from "lucide-react";
+import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check } from "lucide-react";
 import ProposalPreviewRenderer from "@/components/proposal/ProposalPreviewRenderer";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import HotelPhotosScraper from "@/components/HotelPhotosScraper";
 import ProposalFlightSearch, { type FlightSegmentData } from "@/components/proposal/ProposalFlightSearch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const itemTypeIcons: Record<string, any> = {
   destination: MapPin,
@@ -65,6 +66,8 @@ export default function ProposalEditor() {
   const [items, setItems] = useState<any[]>([]);
   const [destInput, setDestInput] = useState("");
   const [placesSearchIdx, setPlacesSearchIdx] = useState<number | null>(null);
+  const [collapsedItems, setCollapsedItems] = useState<Set<number>>(new Set());
+  const [savingItemIdx, setSavingItemIdx] = useState<number | null>(null);
 
   const { data: existing } = useQuery({
     queryKey: ["proposal", id],
@@ -120,6 +123,27 @@ export default function ProposalEditor() {
   useEffect(() => {
     if (existingItems) setItems(existingItems);
   }, [existingItems]);
+
+  const toggleCollapse = (idx: number) => {
+    setCollapsedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  const saveItemBlock = async (idx: number) => {
+    setSavingItemIdx(idx);
+    try {
+      await saveMutation.mutateAsync();
+      toast.success(`Bloco "${items[idx]?.title || itemTypeLabels[items[idx]?.item_type]}" salvo!`);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar bloco");
+    } finally {
+      setSavingItemIdx(null);
+    }
+  };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -405,17 +429,63 @@ export default function ProposalEditor() {
                 const supportsPlaces = ["hotel", "destination", "experience"].includes(item.item_type);
                 const hasPlaceData = !!item.data?.place_id;
                 const isSearchOpen = placesSearchIdx === idx;
+                const isCollapsed = collapsedItems.has(idx);
+                const isSaving = savingItemIdx === idx;
+
+                // Summary line for collapsed state
+                const summaryParts: string[] = [];
+                if (item.title) summaryParts.push(item.title);
+                if (item.data?.location) summaryParts.push(item.data.location);
+                if (item.data?.stars) summaryParts.push(`${item.data.stars}★`);
+                if (item.data?.flight_segments?.length) summaryParts.push(`${item.data.flight_segments.length} trecho(s)`);
+                const summaryText = summaryParts.length > 0 ? summaryParts.join(" · ") : `${itemTypeLabels[item.item_type]} sem título`;
 
                 return (
-                  <Card key={idx} className="p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex items-center gap-2 pt-1">
-                        <GripVertical className="w-4 h-4 text-muted-foreground/30" />
-                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                          <Icon className="w-4 h-4 text-primary" />
-                        </div>
+                  <Card key={idx} className="overflow-hidden">
+                    {/* Header - always visible */}
+                    <div
+                      className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                      onClick={() => toggleCollapse(idx)}
+                    >
+                      <GripVertical className="w-4 h-4 text-muted-foreground/30 shrink-0" onClick={(e) => e.stopPropagation()} />
+                      <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                        <Icon className="w-3.5 h-3.5 text-primary" />
                       </div>
-                      <div className="flex-1 space-y-3">
+                      {isCollapsed ? (
+                        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{summaryText}</p>
+                        {isCollapsed && item.image_url && (
+                          <p className="text-[10px] text-muted-foreground truncate">📷 Imagem definida</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 text-xs h-7"
+                          disabled={isSaving}
+                          onClick={() => saveItemBlock(idx)}
+                        >
+                          {isSaving ? (
+                            <span className="animate-spin w-3 h-3 border-2 border-primary border-t-transparent rounded-full" />
+                          ) : (
+                            <Save className="w-3 h-3" />
+                          )}
+                          Salvar
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => removeItem(idx)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Collapsible content */}
+                    {!isCollapsed && (
+                      <div className="px-4 pb-4 pt-1 border-t border-border/50 space-y-3">
                         {/* Google Places search button */}
                         {supportsPlaces && !isSearchOpen && (
                           <Button
@@ -440,7 +510,7 @@ export default function ProposalEditor() {
                           />
                         )}
 
-                        {/* Enrichment preview (imported photo + rating) */}
+                        {/* Enrichment preview */}
                         {hasPlaceData && item.image_url && !isSearchOpen && (
                           <div className="flex items-start gap-3 p-2.5 bg-muted/30 rounded-xl border border-border/50">
                             <div className="w-20 h-14 rounded-lg overflow-hidden shrink-0 bg-muted">
@@ -524,18 +594,15 @@ export default function ProposalEditor() {
                                   if (photos.length > 0 && !item.image_url) {
                                     updateItem(idx, "image_url", photos[0].url);
                                   }
-                                  const existing = item.data?.official_photos || [];
-                                  updateItemData(idx, "official_photos", [...existing, ...photos]);
+                                  const existingPhotos = item.data?.official_photos || [];
+                                  updateItemData(idx, "official_photos", [...existingPhotos, ...photos]);
                                 }}
                               />
                             </div>
                           )}
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeItem(idx)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
+                    )}
                   </Card>
                 );
               })}
