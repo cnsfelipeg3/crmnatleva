@@ -13,6 +13,7 @@ import type { FlightSegmentData } from "./ProposalFlightSearch";
 interface FlightSegmentFormProps {
   seg: FlightSegmentData;
   onUpdate: (field: keyof FlightSegmentData, value: any) => void;
+  onUpdateMulti?: (updates: Partial<FlightSegmentData>) => void;
 }
 
 export default function FlightSegmentForm({ seg, onUpdate }: FlightSegmentFormProps) {
