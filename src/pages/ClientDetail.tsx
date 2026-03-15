@@ -287,6 +287,9 @@ export default function ClientDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowLinkConv(true)} className="gap-1.5">
+            <MessageSquare className="w-4 h-4" /> Vincular WhatsApp
+          </Button>
           <Button size="sm" onClick={() => navigate("/sales/new")}><Plus className="w-4 h-4 mr-1" /> Nova Venda</Button>
         </div>
       </div>
