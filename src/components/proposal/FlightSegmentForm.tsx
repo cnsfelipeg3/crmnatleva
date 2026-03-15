@@ -38,7 +38,24 @@ export default function FlightSegmentForm({ seg, onUpdate, onUpdateMulti }: Flig
 
       if (error) throw error;
 
-      const segments = res?.segments || res?.data?.segments;
+      // Extract segments from various response structures
+      const extractSegments = (response: any) => {
+        if (!response) return [];
+        // Direct segments array
+        if (response.segments?.length) return response.segments;
+        if (response.data?.segments?.length) return response.data.segments;
+        // Amadeus itineraries structure: data[].itineraries[].segments[]
+        const offers = response.data || response;
+        if (Array.isArray(offers)) {
+          for (const offer of offers) {
+            const itin = offer?.itineraries?.[0];
+            if (itin?.segments?.length) return itin.segments;
+          }
+        }
+        return [];
+      };
+
+      const segments = extractSegments(res);
       if (!segments?.length) {
         // Fallback: try flight_schedule if origin/destination available
         if (seg.origin_iata && seg.destination_iata) {
@@ -53,7 +70,7 @@ export default function FlightSegmentForm({ seg, onUpdate, onUpdateMulti }: Flig
             },
           });
           if (err2) throw err2;
-          const segs2 = res2?.segments || res2?.data?.segments;
+          const segs2 = extractSegments(res2);
           if (segs2?.length) {
             applySegmentData(segs2[0]);
             return;
