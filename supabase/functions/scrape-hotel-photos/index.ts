@@ -35,8 +35,8 @@ Deno.serve(async (req) => {
 
     const locationStr = [hotel_city, hotel_country].filter(Boolean).join(", ");
 
-    // Step 1: Search for hotel photos
-    const searchQuery = `${hotel_name} ${locationStr} site oficial fotos galeria`;
+    // Step 1: Search for official hotel site
+    const searchQuery = `${hotel_name} ${locationStr} site oficial`;
     console.log("Searching for hotel:", searchQuery);
 
     const searchResponse = await fetch("https://api.firecrawl.dev/v1/search", {
@@ -79,8 +79,9 @@ Deno.serve(async (req) => {
       await scrapeMainUrl(mainUrl, images, FIRECRAWL_API_KEY);
     }
 
-    // Also try to scrape the rooms/accommodation page
-    await scrapeRoomsPage(mainUrl, hotel_name, locationStr, images, FIRECRAWL_API_KEY);
+    // Step 3: Scrape rooms/accommodation pages for detailed room info
+    const roomDetails = await scrapeRoomsPages(mainUrl, hotel_name, locationStr, images, FIRECRAWL_API_KEY);
+    console.log(`Extracted room details for ${Object.keys(roomDetails).length} room types`);
 
     console.log(`Found ${images.urls.length} potential hotel images`);
 
@@ -91,9 +92,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Step 3: Classify with AI - enhanced prompt for room details
-    const imageList = images.urls.slice(0, 50).map((img, i) =>
-      `${i + 1}. ${img.url.substring(0, 250)} | Alt: "${img.alt}" | Context: "${img.context || ""}"`
+    // Step 4: Classify with AI - enhanced prompt for room details
+    const roomDetailsContext = Object.keys(roomDetails).length > 0
+      ? `\n\nINFORMAÇÕES DETALHADAS DOS QUARTOS EXTRAÍDAS DO SITE OFICIAL:\n${JSON.stringify(roomDetails, null, 2)}`
+      : "";
+
+    const imageList = images.urls.slice(0, 60).map((img, i) =>
+      `${i + 1}. ${img.url.substring(0, 300)} | Alt: "${img.alt}" | Context: "${(img.context || "").substring(0, 150)}"`
     ).join("\n");
 
     const classifyResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -112,43 +117,53 @@ Deno.serve(async (req) => {
 CATEGORIAS DE ÁREAS:
 - fachada (exterior, vista aérea, entrada principal)
 - lobby (recepção, hall de entrada)
-- restaurante (cada restaurante deve ter seu NOME REAL se visível na URL — ex: "Restaurante Zen", "Ciao Ristorante", "Toro Steakhouse")
-- bar (bares, lounges — usar nome real: "Center Bar", "Moon Lounge", "Swim-up Bar")
+- restaurante (cada restaurante deve ter seu NOME REAL — ex: "Restaurante Zen", "Ciao Ristorante")
+- bar (bares, lounges — usar nome real: "Center Bar", "Moon Lounge")
 - piscina (piscinas — diferenciar: "Piscina Principal", "Piscina Familiar", "Parque Aquático")
 - praia (área de praia)
-- spa (spa, sauna, jacuzzi — usar nome real se disponível: "Rock Spa")
-- area_comum (casino, nightclub, loja, campo de golfe, boliche, salão de eventos)
+- spa (spa, sauna, jacuzzi — usar nome real se disponível)
+- area_comum (casino, nightclub, loja, campo de golfe, salão de eventos, academia, kids club)
 - vista (vistas panorâmicas)
 - outro (não classificável mas relevante)
 
-CATEGORIAS DE QUARTOS — CRÍTICO: Identifique o NOME EXATO do tipo de quarto pela URL!
+CATEGORIAS DE QUARTOS — CRÍTICO: Identifique o NOME EXATO do tipo de quarto!
 - quarto_standard (quartos básicos, junior suites)
-- quarto_superior (suítes superiores/intermediárias)  
+- quarto_superior (suítes superiores/intermediárias)
 - quarto_deluxe (quartos deluxe, suítes de luxo)
 - quarto_family (quartos familiares, family suites)
 - quarto_premium (suítes presidenciais, royalty, penthouse)
 
 REGRAS:
-1. Para QUARTOS: o campo room_name DEVE conter o nome REAL extraído da URL/contexto. Exemplos: "Islander Junior Suite", "Caribbean Sand Suite", "Rock Royalty Suite", "Rock Family Suite", "Caribbean Pure Wellness Suite". NUNCA use nomes genéricos.
-2. Para RESTAURANTES e BARES: use o nome real no room_name (ex: "Zen Restaurant", "Toro Steakhouse").
-3. Se a URL contém palavras como "suite", "room", "habitacion", SEMPRE é um quarto.
-4. Fotos de banheiro pertencem ao quarto associado (identifique pelo nome na URL).
+1. Para QUARTOS: room_name DEVE conter o nome REAL (ex: "Islander Junior Suite", "Rock Family Suite"). NUNCA genérico.
+2. Para RESTAURANTES e BARES: use o nome real no room_name.
+3. Se a URL contém "suite", "room", "habitacion" → SEMPRE é quarto.
+4. Fotos de banheiro = categoria do quarto associado.
 5. Varanda/balcão de quarto = categoria do quarto correspondente.
-6. Extraia room_details: tipo de cama (king, twin/dobles, queen), vista, amenidades visíveis.
 
+ROOM DETAILS — CRÍTICO: Use as informações extraídas do site oficial para preencher room_details com DADOS REAIS:
+- size_sqm: metragem REAL do quarto em m² (converta de ft² se necessário: 1 ft² = 0.0929 m²)
+- max_guests: capacidade máxima de hóspedes
+- bed_type: tipo REAL de cama (ex: "1 King Size", "2 Camas Queen", "1 King + 1 Sofá-cama")
+- view: tipo de vista (ex: "Vista Mar", "Vista Jardim", "Vista Piscina")
+- amenities: lista COMPLETA de amenidades do quarto extraídas do site:
+  - Itens de conforto: ar-condicionado, aquecedor, ventilador de teto
+  - Banheiro: secador de cabelo, roupão, chinelos, amenities premium, banheira, ducha
+  - Tecnologia: TV tela plana, Smart TV, WiFi, dock station, tomadas USB
+  - Segurança: cofre digital, fechadura eletrônica
+  - Cozinha/bar: minibar, frigobar, máquina de café/Nespresso, chaleira
+  - Extras: varanda/terraço, sala de estar, closet, ferro de passar, room service 24h
+  
 EXCLUA: banners, ícones, logos, mapas, UI, redes sociais, imagens < 100px.`
           },
           {
             role: "user",
             content: `Hotel: ${hotel_name} em ${locationStr}
+${roomDetailsContext}
 
 Imagens encontradas:
 ${imageList}
 
-Classifique CADA imagem com:
-- Categoria correta
-- Nome REAL do ambiente/quarto (não genérico!)
-- Detalhes do quarto quando aplicável (cama, metragem, amenidades)`
+Classifique CADA imagem. Para quartos, USE AS INFORMAÇÕES REAIS DO SITE OFICIAL para preencher room_details completos (metragem, cama, amenidades, etc).`
           }
         ],
         tools: [
@@ -156,7 +171,7 @@ Classifique CADA imagem com:
             type: "function",
             function: {
               name: "classify_hotel_photos",
-              description: "Classifica fotos de hotel por categoria com detalhes de quartos",
+              description: "Classifica fotos de hotel por categoria com detalhes completos de quartos",
               parameters: {
                 type: "object",
                 properties: {
@@ -171,16 +186,20 @@ Classifique CADA imagem com:
                           enum: ["fachada", "lobby", "quarto_standard", "quarto_superior", "quarto_deluxe", "quarto_family", "quarto_premium", "restaurante", "piscina", "spa", "area_comum", "vista", "bar", "praia", "outro"]
                         },
                         confidence: { type: "number", description: "Confiança de 0 a 1" },
-                        room_name: { type: "string", description: "Nome real do tipo de quarto (ex: 'Islander Junior Suite', 'Rock Family Suite'). Null se não for quarto." },
+                        room_name: { type: "string", description: "Nome real do tipo de quarto ou ambiente" },
                         room_details: {
                           type: "object",
-                          description: "Detalhes do quarto se identificáveis pela URL/contexto. Null se não disponível.",
+                          description: "Detalhes REAIS do quarto extraídos do site oficial",
                           properties: {
-                            size_sqm: { type: "number", description: "Tamanho em m² se disponível" },
+                            size_sqm: { type: "number", description: "Tamanho em m²" },
                             max_guests: { type: "number", description: "Capacidade máxima" },
-                            bed_type: { type: "string", description: "Tipo de cama (ex: 'King', '2 Camas de Casal', 'Queen')" },
-                            amenities: { type: "array", items: { type: "string" }, description: "Amenidades visíveis/inferíveis" },
-                            view: { type: "string", description: "Tipo de vista se identificável" }
+                            bed_type: { type: "string", description: "Tipo de cama real" },
+                            amenities: {
+                              type: "array",
+                              items: { type: "string" },
+                              description: "Lista COMPLETA de amenidades: secador, cofre, minibar, TV, WiFi, roupão, etc"
+                            },
+                            view: { type: "string", description: "Tipo de vista" }
                           }
                         }
                       },
@@ -230,18 +249,34 @@ Classifique CADA imagem com:
       console.error("Failed to parse classification:", e);
     }
 
+    // Merge room details from scraping into AI classification
     const photos = classified
       .filter(c => c.confidence >= 0.4 && c.index >= 1 && c.index <= images.urls.length)
       .map(c => {
         const img = images.urls[c.index - 1];
         if (!img) return null;
+
+        // Enrich with scraped room details if available
+        let finalRoomDetails = c.room_details || null;
+        if (c.room_name && roomDetails[c.room_name]) {
+          const scraped = roomDetails[c.room_name];
+          finalRoomDetails = {
+            ...(finalRoomDetails || {}),
+            size_sqm: finalRoomDetails?.size_sqm || scraped.size_sqm || null,
+            max_guests: finalRoomDetails?.max_guests || scraped.max_guests || null,
+            bed_type: finalRoomDetails?.bed_type || scraped.bed_type || null,
+            view: finalRoomDetails?.view || scraped.view || null,
+            amenities: mergeAmenities(finalRoomDetails?.amenities, scraped.amenities),
+          };
+        }
+
         return {
           url: img.url,
           alt: img.alt,
           category: c.category,
           confidence: c.confidence,
           room_name: c.room_name || null,
-          room_details: c.room_details || null,
+          room_details: finalRoomDetails,
         };
       })
       .filter(Boolean);
@@ -268,6 +303,21 @@ interface ImageCollection {
   seen: Set<string>;
 }
 
+interface RoomDetail {
+  size_sqm?: number | null;
+  max_guests?: number | null;
+  bed_type?: string | null;
+  amenities?: string[];
+  view?: string | null;
+}
+
+function mergeAmenities(a?: string[] | null, b?: string[] | null): string[] {
+  const set = new Set<string>();
+  (a || []).forEach(x => set.add(x.toLowerCase().trim()));
+  (b || []).forEach(x => set.add(x.toLowerCase().trim()));
+  return Array.from(set).map(s => s.charAt(0).toUpperCase() + s.slice(1));
+}
+
 function collectImages(results: any[]): ImageCollection {
   const collection: ImageCollection = { urls: [], seen: new Set() };
 
@@ -275,14 +325,12 @@ function collectImages(results: any[]): ImageCollection {
     const markdown = result.markdown || "";
     const sourceUrl = result.url || "";
 
-    // Extract markdown images
     const mdImgRegex = /!\[([^\]]*)\]\(([^)]+)\)/gi;
     let match;
     while ((match = mdImgRegex.exec(markdown)) !== null) {
       addImage(collection, match[2]?.trim(), match[1] || "", sourceUrl, "");
     }
 
-    // Extract raw image URLs
     const urlRegex = /https?:\/\/[^\s\)>"']+\.(?:jpg|jpeg|png|webp)(?:\?[^\s\)>"']*)?/gi;
     while ((match = urlRegex.exec(markdown)) !== null) {
       addImage(collection, match[0], "", sourceUrl, "");
@@ -316,20 +364,38 @@ async function scrapeMainUrl(mainUrl: string, collection: ImageCollection, apiKe
   }
 }
 
-async function scrapeRoomsPage(mainUrl: string | undefined, hotelName: string, locationStr: string, collection: ImageCollection, apiKey: string) {
-  if (!mainUrl) return;
+async function scrapeRoomsPages(
+  mainUrl: string | undefined,
+  hotelName: string,
+  locationStr: string,
+  collection: ImageCollection,
+  apiKey: string
+): Promise<Record<string, RoomDetail>> {
+  const roomDetails: Record<string, RoomDetail> = {};
+  if (!mainUrl) return roomDetails;
 
-  // Try common room page patterns
-  const roomPaths = ["/rooms", "/quartos", "/habitaciones", "/accommodations", "/suites", "/rooms-suites"];
+  const roomPaths = [
+    "/rooms", "/quartos", "/habitaciones", "/accommodations", "/suites",
+    "/rooms-suites", "/rooms-and-suites", "/accommodation", "/acomodacoes",
+    "/guest-rooms", "/habitaciones-y-suites",
+  ];
   const base = new URL(mainUrl);
 
+  let foundRoomsPage = false;
+
   for (const path of roomPaths) {
+    if (foundRoomsPage) break;
     const roomUrl = base.origin + path;
     try {
       const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ url: roomUrl, formats: ["html", "markdown"], onlyMainContent: true, waitFor: 3000 }),
+        body: JSON.stringify({
+          url: roomUrl,
+          formats: ["html", "markdown"],
+          onlyMainContent: true,
+          waitFor: 3000,
+        }),
       });
 
       if (!resp.ok) continue;
@@ -337,17 +403,219 @@ async function scrapeRoomsPage(mainUrl: string | undefined, hotelName: string, l
       const html = data.data?.html || data.html || "";
       const markdown = data.data?.markdown || data.markdown || "";
 
-      if (html.length > 500) {
+      if (html.length > 500 || markdown.length > 300) {
         console.log(`Found rooms page at ${roomUrl}`);
-        // Extract images with surrounding text context for room identification
+        foundRoomsPage = true;
+
+        // Extract images with context
         extractImagesWithContext(html, roomUrl, collection);
         extractImagesFromHtml(html, roomUrl, collection);
-        break; // Found a valid rooms page
+
+        // Extract room details from the markdown/html content
+        extractRoomDetailsFromContent(markdown, html, roomDetails);
+
+        // Try to find and scrape individual room type pages
+        const roomLinks = extractRoomLinks(html, base.origin);
+        console.log(`Found ${roomLinks.length} individual room pages to scrape`);
+
+        // Scrape up to 8 individual room pages for detailed amenities
+        const individualPages = roomLinks.slice(0, 8);
+        await Promise.all(individualPages.map(async (link) => {
+          try {
+            const roomResp = await fetch("https://api.firecrawl.dev/v1/scrape", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                url: link.url,
+                formats: ["html", "markdown"],
+                onlyMainContent: true,
+                waitFor: 2000,
+              }),
+            });
+
+            if (!roomResp.ok) return;
+            const roomData = await roomResp.json();
+            const roomHtml = roomData.data?.html || roomData.html || "";
+            const roomMarkdown = roomData.data?.markdown || roomData.markdown || "";
+
+            // Extract images
+            extractImagesWithContext(roomHtml, link.url, collection);
+            extractImagesFromHtml(roomHtml, link.url, collection);
+
+            // Extract detailed room info
+            const detail = extractSingleRoomDetails(roomMarkdown, roomHtml, link.name);
+            if (detail && link.name) {
+              roomDetails[link.name] = {
+                ...(roomDetails[link.name] || {}),
+                ...detail,
+                amenities: mergeAmenities(roomDetails[link.name]?.amenities, detail.amenities),
+              };
+            }
+          } catch {
+            // Skip failed individual room pages
+          }
+        }));
       }
     } catch {
       continue;
     }
   }
+
+  return roomDetails;
+}
+
+function extractRoomLinks(html: string, origin: string): { url: string; name: string }[] {
+  const links: { url: string; name: string }[] = [];
+  const seen = new Set<string>();
+
+  // Match links that look like room/suite detail pages
+  const linkRegex = /<a[^>]*href=["']([^"']*(?:room|suite|quarto|habitaci|accommodation)[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+  while ((match = linkRegex.exec(html)) !== null) {
+    const href = match[1];
+    const linkText = match[2].replace(/<[^>]+>/g, "").trim();
+    if (!href || href === "#" || href.includes("javascript:")) continue;
+
+    const fullUrl = makeAbsolute(href, origin);
+    if (seen.has(fullUrl)) continue;
+    seen.add(fullUrl);
+
+    const name = linkText.length > 2 && linkText.length < 100 ? linkText : extractNameFromUrl(href);
+    if (name) {
+      links.push({ url: fullUrl, name });
+    }
+  }
+
+  return links;
+}
+
+function extractNameFromUrl(url: string): string {
+  const parts = url.split("/").filter(Boolean);
+  const last = parts[parts.length - 1] || "";
+  return last
+    .replace(/[-_]/g, " ")
+    .replace(/\.(html?|php|aspx?)$/i, "")
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .trim();
+}
+
+function extractRoomDetailsFromContent(markdown: string, html: string, details: Record<string, RoomDetail>) {
+  // Extract room sections from markdown
+  const sections = markdown.split(/(?=^#{1,3}\s)/m);
+
+  for (const section of sections) {
+    const headerMatch = section.match(/^#{1,3}\s+(.+)/m);
+    if (!headerMatch) continue;
+
+    const name = headerMatch[1].trim();
+    const roomKeywords = /suite|room|quarto|habitaci|deluxe|standard|premium|family|familiar|king|queen|double|twin|villa|bungalow|cottage|cabana/i;
+    if (!roomKeywords.test(name) && !roomKeywords.test(section)) continue;
+
+    const detail = extractSingleRoomDetails(section, "", name);
+    if (detail) {
+      details[name] = detail;
+    }
+  }
+}
+
+function extractSingleRoomDetails(markdown: string, html: string, name: string): RoomDetail | null {
+  const content = markdown + " " + html.replace(/<[^>]+>/g, " ");
+  const detail: RoomDetail = {};
+
+  // Size in m²
+  const sqmMatch = content.match(/(\d+)\s*(?:m²|m2|metros?\s*quadrados?|sq\.?\s*m)/i);
+  if (sqmMatch) detail.size_sqm = parseInt(sqmMatch[1]);
+
+  // Size in ft² → convert
+  if (!detail.size_sqm) {
+    const ftMatch = content.match(/(\d+)\s*(?:sq\.?\s*ft|square\s*feet|ft²)/i);
+    if (ftMatch) detail.size_sqm = Math.round(parseInt(ftMatch[1]) * 0.0929);
+  }
+
+  // Max guests
+  const guestMatch = content.match(/(?:até|up\s*to|max|máximo|capacity|capacidade)\s*(\d+)\s*(?:hóspedes?|guests?|pessoas?|pax)/i);
+  if (guestMatch) detail.max_guests = parseInt(guestMatch[1]);
+
+  // Bed type
+  const bedPatterns = [
+    /(\d+\s*(?:cama|bed)s?\s*(?:de\s*)?(?:king|queen|casal|solteiro|twin|double|single)(?:\s*size)?)/i,
+    /(king\s*(?:size)?\s*bed|queen\s*(?:size)?\s*bed|twin\s*beds?|double\s*bed|cama\s*(?:de\s*)?(?:casal|solteiro|king|queen))/i,
+    /(\d+\s*King\s*(?:Size)?|\d+\s*Queen|\d+\s*Twin|\d+\s*Double)/i,
+  ];
+  for (const pattern of bedPatterns) {
+    const bedMatch = content.match(pattern);
+    if (bedMatch) {
+      detail.bed_type = bedMatch[1].trim();
+      break;
+    }
+  }
+
+  // View
+  const viewMatch = content.match(/(?:vista|view)\s*(?:para\s*(?:o\s*)?|of\s*(?:the\s*)?|:?\s*)(mar|ocean|sea|garden|jardim|pool|piscina|city|cidade|mountain|montanha|lagoon|lagoa|beach|praia|resort|park|parque|river|rio|lake|lago)/i);
+  if (viewMatch) {
+    const viewMap: Record<string, string> = {
+      mar: "Vista Mar", ocean: "Vista Mar", sea: "Vista Mar",
+      garden: "Vista Jardim", jardim: "Vista Jardim",
+      pool: "Vista Piscina", piscina: "Vista Piscina",
+      city: "Vista Cidade", cidade: "Vista Cidade",
+      mountain: "Vista Montanha", montanha: "Vista Montanha",
+      beach: "Vista Praia", praia: "Vista Praia",
+      lagoon: "Vista Lagoa", lagoa: "Vista Lagoa",
+      resort: "Vista Resort", park: "Vista Parque", parque: "Vista Parque",
+      river: "Vista Rio", rio: "Vista Rio", lake: "Vista Lago", lago: "Vista Lago",
+    };
+    detail.view = viewMap[viewMatch[1].toLowerCase()] || `Vista ${viewMatch[1]}`;
+  }
+
+  // Amenities extraction — comprehensive list
+  const amenityPatterns: [RegExp, string][] = [
+    [/secador\s*(?:de\s*cabelo)?|hair\s*dryer|blow\s*dryer/i, "Secador de cabelo"],
+    [/cofre\s*(?:digital|eletr[oô]nico)?|(?:digital\s*)?safe(?:\s*box)?|in-room\s*safe/i, "Cofre digital"],
+    [/minibar|mini[\s-]?bar|frigobar/i, "Minibar"],
+    [/ar[\s-]?condicionado|air[\s-]?condition/i, "Ar-condicionado"],
+    [/tv\s*(?:tela\s*plana|flat[\s-]?screen|lcd|led|smart)|smart\s*tv|flat[\s-]?screen\s*tv|television/i, "TV tela plana"],
+    [/wi[\s-]?fi|wifi|internet\s*(?:sem\s*fio|wireless)/i, "Wi-Fi"],
+    [/roup[aã]o|bathrobe/i, "Roupão"],
+    [/chinelo|slipper/i, "Chinelos"],
+    [/nespresso|m[aá]quina\s*(?:de\s*)?caf[eé]|coffee\s*(?:maker|machine)|espresso/i, "Máquina de café"],
+    [/chaleira|kettle|electric\s*kettle/i, "Chaleira elétrica"],
+    [/banheira|bathtub|soaking\s*tub|jacuzzi|whirlpool/i, "Banheira"],
+    [/ducha|rain\s*shower|chuveiro/i, "Ducha"],
+    [/varanda|balc[aã]o|terraço|balcony|terrace|patio/i, "Varanda/Terraço"],
+    [/sala\s*(?:de\s*)?estar|living\s*(?:room|area)|sitting\s*area/i, "Sala de estar"],
+    [/closet|walk[\s-]?in\s*closet|armário/i, "Closet"],
+    [/ferro\s*(?:de\s*)?passar|iron(?:ing)?(?:\s*board)?/i, "Ferro de passar"],
+    [/room\s*service\s*24|servi[cç]o\s*(?:de\s*)?quarto\s*24/i, "Room service 24h"],
+    [/tomada\s*usb|usb\s*(?:port|charging|outlet)/i, "Tomadas USB"],
+    [/dock\s*(?:station)?|bluetooth\s*speaker/i, "Dock station"],
+    [/amenities\s*(?:premium|luxo|l'occitane|bvlgari|hermès|molton\s*brown)/i, "Amenities premium"],
+    [/fechadura\s*eletr[oô]nica|electronic\s*(?:key|lock)|key\s*card/i, "Fechadura eletrônica"],
+    [/cozinha|kitchenette|kitchen/i, "Cozinha/Kitchenette"],
+    [/mesa\s*(?:de\s*)?trabalho|work\s*desk|escritório|desk/i, "Mesa de trabalho"],
+    [/ventilador\s*(?:de\s*)?teto|ceiling\s*fan/i, "Ventilador de teto"],
+    [/piso\s*(?:aquecido|radiante)|heated\s*floor|underfloor\s*heating/i, "Piso aquecido"],
+    [/black[\s-]?out|cortina\s*(?:black[\s-]?out)/i, "Cortinas blackout"],
+    [/espelho\s*(?:de\s*)?maquiagem|vanity\s*mirror|magnifying\s*mirror/i, "Espelho de maquiagem"],
+    [/travesseiro|pillow\s*menu/i, "Menu de travesseiros"],
+    [/turn[\s-]?down\s*service/i, "Turndown service"],
+    [/bidet/i, "Bidê"],
+    [/sofá[\s-]?cama|sofa[\s-]?bed|pull[\s-]?out\s*(?:sofa|couch)/i, "Sofá-cama"],
+  ];
+
+  const amenities: string[] = [];
+  for (const [pattern, label] of amenityPatterns) {
+    if (pattern.test(content)) {
+      amenities.push(label);
+    }
+  }
+  if (amenities.length > 0) detail.amenities = amenities;
+
+  // Only return if we found something useful
+  if (detail.size_sqm || detail.bed_type || (detail.amenities && detail.amenities.length > 0) || detail.view || detail.max_guests) {
+    return detail;
+  }
+
+  return null;
 }
 
 function extractImagesFromHtml(html: string, sourceUrl: string, collection: ImageCollection) {
@@ -369,7 +637,6 @@ function extractImagesFromHtml(html: string, sourceUrl: string, collection: Imag
     }
   }
 
-  // Extract alt text
   const imgWithAlt = /<img[^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']+)["']/gi;
   let m;
   while ((m = imgWithAlt.exec(html)) !== null) {
@@ -379,19 +646,16 @@ function extractImagesFromHtml(html: string, sourceUrl: string, collection: Imag
 }
 
 function extractImagesWithContext(html: string, sourceUrl: string, collection: ImageCollection) {
-  // Extract images inside elements that contain room-related text
   const sectionRegex = /<(?:div|section|article)[^>]*>[\s\S]*?<\/(?:div|section|article)>/gi;
-  const roomKeywords = /suite|room|quarto|habitaci|deluxe|standard|premium|family|familiar|king|queen|double|twin/i;
+  const roomKeywords = /suite|room|quarto|habitaci|deluxe|standard|premium|family|familiar|king|queen|double|twin|restaurant|restaurante|bar|lounge|pool|piscina|spa|lobby|beach|praia/i;
 
   let match;
   while ((match = sectionRegex.exec(html)) !== null) {
     const section = match[0];
     if (!roomKeywords.test(section)) continue;
 
-    // Extract text context
     const textContent = section.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().substring(0, 200);
 
-    // Extract images from this section
     const imgRegex = /(?:src|data-src)\s*=\s*["']([^"']+)["']/gi;
     let imgMatch;
     while ((imgMatch = imgRegex.exec(section)) !== null) {

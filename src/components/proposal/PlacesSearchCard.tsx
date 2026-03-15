@@ -146,7 +146,7 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMes
   ]);
 }
 
-type SearchProvider = "google" | "amadeus";
+type SearchProvider = "google";
 
 /* ═══ Component ═══ */
 export default function PlacesSearchCard({
@@ -182,31 +182,7 @@ export default function PlacesSearchCard({
   const disableEdgeSearchRef = useRef(false);
   const disableClientGoogleRef = useRef(false);
 
-  /* ── Amadeus hotel search ── */
-  const searchAmadeus = useCallback(async (q: string): Promise<PlaceResult[]> => {
-    // Extract first destination city name as a hint for fallback city-code search
-    const cityHint = destinationContext?.split(",")[0]?.trim() || "";
-    
-    const { data, error: fnError } = await withTimeout(
-      supabase.functions.invoke("amadeus-search", {
-        body: { action: "hotel_search", keyword: q, cityHint },
-      }),
-      8000,
-      "Timeout na busca Amadeus",
-    );
-    if (fnError) throw fnError;
-    return (data?.data || []).map((h: any, idx: number) => ({
-      place_id: `amadeus:${h.hotelId || idx}`,
-      name: h.name || q,
-      address: h.address || h.iataCode || "",
-      rating: null,
-      user_ratings_total: 0,
-      types: ["lodging"],
-      photo_reference: null,
-      location: h.location || null,
-      price_level: null,
-    }));
-  }, [destinationContext]);
+  /* ── (Amadeus removed — using Google Places + official site photos only) ── */
 
   /* ── Search ── */
   const search = useCallback(async (q: string) => {
@@ -232,25 +208,7 @@ export default function PlacesSearchCard({
 
     const normalizedQuery = destinationContext ? `${q} ${destinationContext}` : q;
 
-    // If Amadeus provider is selected, use Amadeus-only search (don't append destinationContext)
-    if (provider === "amadeus") {
-      try {
-        const amadeusResults = await searchAmadeus(q);
-        safeSet(() => {
-          setResults(amadeusResults);
-          setError(amadeusResults.length === 0 ? "Nenhum hotel encontrado no Amadeus." : null);
-          setLoading(false);
-        });
-      } catch (err) {
-        console.error("Amadeus search error:", err);
-        safeSet(() => {
-          setResults([]);
-          setError("Erro ao buscar hotéis no Amadeus. Verifique a configuração.");
-          setLoading(false);
-        });
-      }
-      return;
-    }
+    // Google Places search (primary provider)
 
     const mapFallbackResults = (items: any[]): PlaceResult[] =>
       items.map((item: any, idx: number) => ({
@@ -383,7 +341,7 @@ export default function PlacesSearchCard({
       setError(chosenResults.length === 0 && hasError && !hasEmpty ? "Não foi possível buscar locais. Tente novamente." : null);
       setLoading(false);
     });
-  }, [destinationContext, provider, searchAmadeus]);
+  }, [destinationContext]);
 
   const handleInput = (val: string) => {
     setQuery(val);
@@ -397,127 +355,7 @@ export default function PlacesSearchCard({
     setLoadingPhotos(false);
     setError(null);
 
-    // Resultado de Amadeus — buscar fotos via Google Places
-    if (placeId.startsWith("amadeus:")) {
-      const amadeusPlace = results.find((r) => r.place_id === placeId);
-      if (amadeusPlace) {
-        // Set basic place info immediately
-        setSelectedPlace({
-          place_id: amadeusPlace.place_id,
-          name: amadeusPlace.name,
-          address: amadeusPlace.address,
-          phone: null,
-          website: null,
-          rating: null,
-          user_ratings_total: 0,
-          price_level: null,
-          types: ["lodging"],
-          location: amadeusPlace.location,
-          photos: [],
-          editorial_summary: null,
-          reviews: [],
-        });
-        setResults([]);
-        setLoadingPhotos(true);
-
-        // Try to get photos from Google Places using hotel name + location
-        try {
-          const searchQuery = amadeusPlace.location
-            ? `${amadeusPlace.name}`
-            : amadeusPlace.name;
-          const locationBias = amadeusPlace.location || undefined;
-
-          const { data: searchData } = await supabase.functions.invoke("places-search", {
-            body: { action: "search", query: searchQuery, location_bias: locationBias },
-          });
-
-          const googleResults = searchData?.results || [];
-          if (googleResults.length > 0) {
-            const googlePlaceId = googleResults[0].place_id;
-
-            // Get full details + photos from Google
-            const { data: detailsData } = await supabase.functions.invoke("places-search", {
-              body: { action: "details", place_id: googlePlaceId },
-            });
-
-            if (detailsData && !detailsData.error) {
-              // Merge Google details with Amadeus base info
-              setSelectedPlace((prev) =>
-                prev ? {
-                  ...prev,
-                  rating: detailsData.rating || prev.rating,
-                  user_ratings_total: detailsData.user_ratings_total || prev.user_ratings_total,
-                  website: detailsData.website || prev.website,
-                  phone: detailsData.phone || prev.phone,
-                  editorial_summary: detailsData.editorial_summary || prev.editorial_summary,
-                  address: detailsData.address || prev.address,
-                } : prev,
-              );
-
-              // Resolve photos
-              if (Array.isArray(detailsData.photos) && detailsData.photos.length > 0) {
-                const photosResolved = await Promise.all(
-                  detailsData.photos.slice(0, 10).map(async (photo: any, i: number) => {
-                    let url = photo.url || "";
-                    if (!url && typeof photo.photo_reference === "string") {
-                      if (/^https?:\/\//i.test(photo.photo_reference)) {
-                        url = photo.photo_reference;
-                      } else {
-                        try {
-                          const { data: photoData } = await supabase.functions.invoke("places-search", {
-                            body: { action: "photo", photo_reference: photo.photo_reference, max_width: 800 },
-                          });
-                          url = photoData?.url || "";
-                        } catch {
-                          url = getPhotoUrl(photo.photo_reference, 800);
-                        }
-                      }
-                    }
-                    return {
-                      url,
-                      label: guessPhotoLabel(i),
-                      selected: i < 6,
-                      isCover: i === 0,
-                      source: "google" as const,
-                      description: "",
-                      room_type: null,
-                      category: "outro",
-                    };
-                  }),
-                );
-                const validPhotos = photosResolved.filter((p) => Boolean(p.url));
-                setCuratedPhotos(validPhotos);
-
-                // AI classification
-                if (validPhotos.length > 0) {
-                  setClassifyingPhotos(true);
-                  classifyPhotosWithAI(validPhotos.map((p) => p.url), amadeusPlace.name)
-                    .then((cls) => {
-                      if (cls.length > 0) {
-                        setCuratedPhotos((prev) =>
-                          prev.map((photo, i) => {
-                            const c = cls[i];
-                            return c ? { ...photo, label: c.label || photo.label, description: c.description, room_type: c.room_type, category: c.category } : photo;
-                          }),
-                        );
-                        toast.success("Fotos classificadas por IA");
-                      }
-                    })
-                    .catch(() => {})
-                    .finally(() => setClassifyingPhotos(false));
-                }
-              }
-            }
-          }
-        } catch (err) {
-          console.error("Error fetching Google photos for Amadeus hotel:", err);
-        } finally {
-          setLoadingPhotos(false);
-          setLoadingDetails(false);
-        }
-        return;
-      }
-    }
+    // Fallback result (hotel-search)
 
     // Resultado de fallback (hotel-search)
     if (placeId.startsWith("fallback:")) {
@@ -882,7 +720,7 @@ export default function PlacesSearchCard({
             </div>
             <div className="min-w-0">
               <span className="text-sm font-bold text-foreground block truncate">Curadoria de Conteúdo</span>
-              <span className="text-[10px] text-muted-foreground">{provider === "amadeus" ? "Amadeus + Google Photos" : "Google Places"}</span>
+              <span className="text-[10px] text-muted-foreground">Google Places + Site Oficial</span>
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -1188,10 +1026,10 @@ export default function PlacesSearchCard({
           </div>
           <div>
             <span className="text-sm font-bold text-foreground block">
-              {provider === "google" ? "Buscar no Google Places" : "Buscar no Amadeus"}
+              Buscar no Google Places
             </span>
             <span className="text-[10px] text-muted-foreground">
-              {provider === "google" ? "Hotéis, atrações, restaurantes" : "Base global de hotéis Amadeus"}
+              Hotéis, atrações, restaurantes
             </span>
           </div>
         </div>
@@ -1200,32 +1038,12 @@ export default function PlacesSearchCard({
         </Button>
       </div>
 
-      {/* Provider Toggle */}
+      {/* Search source label */}
       <div className="px-4 pt-3 pb-1 flex gap-2">
-        <button
-          onClick={() => { setProvider("google"); setResults([]); setError(null); }}
-          className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
-            provider === "google"
-              ? "bg-primary text-primary-foreground border-primary shadow-sm"
-              : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/60"
-          )}
-        >
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground border border-primary shadow-sm">
           <Map className="h-3.5 w-3.5" />
-          Google Places
-        </button>
-        <button
-          onClick={() => { setProvider("amadeus"); setResults([]); setError(null); }}
-          className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
-            provider === "amadeus"
-              ? "bg-primary text-primary-foreground border-primary shadow-sm"
-              : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/60"
-          )}
-        >
-          <Building2 className="h-3.5 w-3.5" />
-          Amadeus
-        </button>
+          Google Places + Site Oficial
+        </div>
       </div>
 
       {/* Search Input */}
@@ -1234,7 +1052,7 @@ export default function PlacesSearchCard({
           <Input
             value={query}
             onChange={(e) => handleInput(e.target.value)}
-            placeholder={provider === "google" ? "Buscar hotel, lugar ou atração..." : "Buscar hotel pelo nome..."}
+            placeholder="Buscar hotel, lugar ou atração..."
             className="pr-8 h-11 text-sm"
             autoFocus
           />
