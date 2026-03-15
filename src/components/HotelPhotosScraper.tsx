@@ -257,27 +257,27 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
 
       {/* Lightbox */}
       <Dialog open={lightboxIndex !== null} onOpenChange={() => { setLightboxIndex(null); setShowInfo(false); }}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 gap-0 bg-black/95 border-none overflow-hidden [&>button]:hidden">
+        <DialogContent className="fixed inset-0 max-w-none w-screen h-screen translate-x-0 translate-y-0 top-0 left-0 p-0 gap-0 bg-black border-none rounded-none overflow-hidden [&>button]:hidden data-[state=open]:slide-in-from-bottom-0">
           <DialogHeader className="sr-only">
             <DialogTitle>Galeria de fotos</DialogTitle>
           </DialogHeader>
 
           {lightboxPhoto && (
-            <div className="relative flex flex-col h-[90vh]">
+            <div className="flex flex-col w-full h-full">
               {/* Top bar */}
-              <div className="flex items-center justify-between px-4 py-2 bg-black/60 z-10 shrink-0">
+              <div className="flex items-center justify-between px-4 py-2.5 bg-black/80 backdrop-blur-sm z-10 shrink-0 border-b border-white/10">
                 <div className="flex items-center gap-3">
                   <span className="text-white/60 text-xs font-mono">
                     {(lightboxIndex ?? 0) + 1} / {allPhotos.length}
                   </span>
-                  <span className="text-white/90 text-xs font-medium">
+                  <span className="text-white/90 text-sm font-medium">
                     {lightboxPhoto.room_name || categoryLabels[lightboxPhoto.category] || lightboxPhoto.category}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   {lightboxPhoto.room_details && (
                     <Button type="button" variant="ghost" size="sm" onClick={() => setShowInfo(!showInfo)}
-                      className="text-white/70 hover:text-white h-7 px-2 text-xs gap-1">
+                      className="text-white/70 hover:text-white hover:bg-white/10 h-7 px-2 text-xs gap-1">
                       <Info className="w-3.5 h-3.5" /> Detalhes
                     </Button>
                   )}
@@ -293,29 +293,29 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                   </Button>
                   <Button type="button" variant="ghost" size="icon"
                     onClick={() => { setLightboxIndex(null); setShowInfo(false); }}
-                    className="text-white/70 hover:text-white h-7 w-7">
+                    className="text-white/70 hover:text-white hover:bg-white/10 h-8 w-8">
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
 
               {/* Image area */}
-              <div className="flex-1 relative flex items-center justify-center min-h-0">
+              <div className="flex-1 relative flex items-center justify-center min-h-0 overflow-hidden">
                 <button onClick={goPrev}
-                  className="absolute left-3 z-10 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors">
-                  <ChevronLeft className="w-6 h-6" />
+                  className="absolute left-4 z-10 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors">
+                  <ChevronLeft className="w-5 h-5" />
                 </button>
 
                 <img
                   src={lightboxPhoto.url}
                   alt={lightboxPhoto.room_name || lightboxPhoto.alt || ""}
-                  className="max-w-[calc(100%-6rem)] max-h-full object-contain select-none"
+                  className="max-w-[85%] max-h-[calc(100%-1rem)] object-contain select-none"
                   draggable={false}
                 />
 
                 <button onClick={goNext}
-                  className="absolute right-3 z-10 w-10 h-10 rounded-full bg-black/50 text-white flex items-center justify-center hover:bg-black/70 transition-colors">
-                  <ChevronRight className="w-6 h-6" />
+                  className="absolute right-4 z-10 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors">
+                  <ChevronRight className="w-5 h-5" />
                 </button>
 
                 {/* Room details overlay */}
@@ -340,9 +340,9 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
               </div>
 
               {/* Thumbnail strip */}
-              <div className="px-4 py-2 bg-black/60 shrink-0">
+              <div className="px-4 py-2 bg-black/80 backdrop-blur-sm shrink-0 border-t border-white/10">
                 <ScrollArea className="w-full">
-                  <div className="flex gap-1.5">
+                  <div className="flex gap-1.5 justify-center">
                     {allPhotos.map((p, i) => (
                       <button
                         key={p.url + i}
