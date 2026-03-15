@@ -417,13 +417,15 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Camera className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold text-foreground">Galeria Oficial — {hotelName}</span>
+          <span className="text-sm font-semibold text-foreground">
+            {activeSource === "google" ? "Google Places" : "Site Oficial"} — {hotelName}
+          </span>
           <Badge variant="secondary" className="text-[10px]">{photos.length} fotos</Badge>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {sourceUrl && (
             <a href={sourceUrl} target="_blank" rel="noreferrer" className="text-[10px] text-muted-foreground hover:text-primary flex items-center gap-1">
               <ExternalLink className="w-3 h-3" /> Site
@@ -432,8 +434,28 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
           <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedPhotos(new Set(photos.map(p => p.url)))} className="text-[10px] h-6 px-2">
             Selecionar todas
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={scrapePhotos} disabled={loading} className="text-[10px] h-6 px-2">
-            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "↻ Rebuscar"}
+          {/* Switch source buttons */}
+          <Button
+            type="button"
+            variant={activeSource === "google" ? "default" : "outline"}
+            size="sm"
+            onClick={fetchGooglePlacesPhotos}
+            disabled={loading}
+            className="text-[10px] h-6 px-2 gap-1"
+          >
+            {loadingSource === "google" ? <Loader2 className="w-3 h-3 animate-spin" /> : <MapPin className="w-3 h-3" />}
+            Google Places
+          </Button>
+          <Button
+            type="button"
+            variant={activeSource === "official" ? "default" : "outline"}
+            size="sm"
+            onClick={scrapePhotos}
+            disabled={loading}
+            className="text-[10px] h-6 px-2 gap-1"
+          >
+            {loadingSource === "official" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Globe className="w-3 h-3" />}
+            Site Oficial
           </Button>
         </div>
       </div>
