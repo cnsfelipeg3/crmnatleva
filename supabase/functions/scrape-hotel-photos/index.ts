@@ -92,8 +92,44 @@ Deno.serve(async (req) => {
 
     // ── Step 3: MAP the entire site to discover ALL pages ──
     console.log("🗺️ Mapping entire hotel website...");
-    const allSiteUrls = await mapEntireSite(mainUrl, FIRECRAWL_API_KEY);
+    let allSiteUrls = await mapEntireSite(mainUrl, FIRECRAWL_API_KEY);
     console.log(`📄 Found ${allSiteUrls.length} pages on the site`);
+
+    // ── Step 3b: If map returned 0 pages, generate common hotel page URLs manually ──
+    if (allSiteUrls.length === 0 && mainUrl) {
+      console.log("⚠️ Map returned 0 pages — generating common hotel page paths...");
+      const commonPaths = [
+        "/rooms", "/suites", "/accommodation", "/accommodations",
+        "/dining", "/restaurant", "/restaurants",
+        "/spa", "/wellness",
+        "/gallery", "/photos", "/photo-gallery", "/media",
+        "/facilities", "/amenities", "/experiences",
+        "/pool", "/fitness", "/meetings", "/events",
+        // Japanese
+        "/guest-rooms", "/guestrooms",
+        // Multi-lang
+        "/en/rooms", "/en/dining", "/en/spa", "/en/gallery",
+        "/en/accommodation", "/en/facilities", "/en/experiences",
+      ];
+      const base = new URL(mainUrl);
+      const generatedUrls = commonPaths.map(p => base.origin + p);
+      // Test which URLs exist by trying to fetch HEAD
+      const validUrls: string[] = [mainUrl];
+      const headChecks = await Promise.allSettled(
+        generatedUrls.map(async (url) => {
+          try {
+            const resp = await fetch(url, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(5000) });
+            if (resp.ok || resp.status === 301 || resp.status === 302) return url;
+          } catch { /* skip */ }
+          return null;
+        })
+      );
+      for (const result of headChecks) {
+        if (result.status === "fulfilled" && result.value) validUrls.push(result.value);
+      }
+      allSiteUrls = validUrls;
+      console.log(`📄 Generated ${allSiteUrls.length} reachable URLs from common paths`);
+    }
 
     // ── Step 4: Categorize pages by relevance ──
     const categorizedPages = categorizePages(allSiteUrls, mainUrl);
@@ -102,19 +138,19 @@ Deno.serve(async (req) => {
     console.log(`  Other pages: ${categorizedPages.other.length}`);
 
     // ── Step 5: Scrape ALL relevant pages (priority first, then gallery, then others) ──
-    // Priority = rooms, suites, accommodation pages
-    // Gallery = gallery, photos, media pages  
-    // Other = restaurant, spa, facilities, etc.
-
     const pagesToScrape = [
       ...categorizedPages.priority,
       ...categorizedPages.gallery,
       ...categorizedPages.other,
-    ].slice(0, 30); // Max 30 pages to stay within limits
+    ].slice(0, 30);
+
+    // If no categorized pages found, at least scrape the main URL
+    if (pagesToScrape.length === 0 && mainUrl) {
+      pagesToScrape.push({ url: mainUrl, inferredSection: "" });
+    }
 
     console.log(`🕷️ Scraping ${pagesToScrape.length} pages for high-res photos...`);
 
-    // Scrape pages in parallel batches of 3
     const batchSize = 3;
     for (let i = 0; i < pagesToScrape.length; i += batchSize) {
       const batch = pagesToScrape.slice(i, i + batchSize);
@@ -975,7 +1011,57 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
     "hoteis.com", "hotel.com.br", "zarpo.com", "omnibees.com",
     "skyscanner.com", "momondo.com", "orbitz.com",
     "travelocity.com", "wotif.com", "lastminute.com",
+    // Fake aggregator patterns
+    "hoteltour.com", "hotelguide", "hotelscanner", "hotelplanner",
+    "hotel-review", "hotelopia", "hoteltravel", "hotel-info",
+    "hotel-mix", "hotel.info", "ctrip.com", "trip.com",
+    "traveloka.com", "klook.com", "viator.com", "getyourguide.com",
+    "hostelworld.com", "hometogo.com", "vrbo.com", "airbnb.com",
+    "lonelyplanet.com", "timeout.com", "travelandleisure.com",
+    "cntraveler.com", "frommers.com", "fodors.com",
+    "jalan.net", "ikyu.com", "rakuten.co.jp",
+    "yelp.com", "trustpilot.com",
   ];
+
+  // Known luxury hotel chains and their domains
+  const chainDomains: Record<string, string[]> = {
+    "aman": ["aman.com"],
+    "four seasons": ["fourseasons.com"],
+    "ritz carlton": ["ritzcarlton.com"],
+    "st regis": ["stregis.com", "marriott.com"],
+    "park hyatt": ["hyatt.com"],
+    "mandarin oriental": ["mandarinoriental.com"],
+    "peninsula": ["peninsula.com"],
+    "rosewood": ["rosewoodhotels.com"],
+    "bulgari": ["bulgarihotels.com"],
+    "one and only": ["oneandonlyresorts.com"],
+    "six senses": ["sixsenses.com"],
+    "banyan tree": ["banyantree.com"],
+    "como": ["comohotels.com"],
+    "belmond": ["belmond.com"],
+    "raffles": ["raffles.com"],
+    "fairmont": ["fairmont.com"],
+    "sofitel": ["sofitel.com", "all.accor.com"],
+    "pullman": ["pullman-hotels.com", "all.accor.com"],
+    "novotel": ["novotel.com", "all.accor.com"],
+    "hilton": ["hilton.com"],
+    "marriott": ["marriott.com"],
+    "hyatt": ["hyatt.com"],
+    "sheraton": ["marriott.com"],
+    "westin": ["marriott.com"],
+    "intercontinental": ["ihg.com"],
+    "radisson": ["radissonhotels.com"],
+    "accor": ["all.accor.com", "accor.com"],
+    "hassler": ["hotelhasslerroma.com"],
+    "waldorf astoria": ["hilton.com"],
+    "conrad": ["hilton.com"],
+    "w hotel": ["marriott.com"],
+    "edition": ["marriott.com"],
+    "oberoi": ["oberoihotels.com"],
+    "taj": ["tajhotels.com"],
+    "hoshinoya": ["hoshinoresorts.com"],
+    "星のや": ["hoshinoresorts.com"],
+  };
 
   let bestScore = -1;
   let bestResult: any = null;
@@ -985,25 +1071,44 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
     const domain = extractDomain(result.url);
     const domainNorm = normalizeStr(domain);
 
+    // Hard-skip aggregators
     if (aggregators.some(a => domain.includes(a))) continue;
+    // Also skip domains that look like aggregators (contain "hotel" + "tour/guide/review")
+    if (/hotel.*(tour|guide|review|scanner|planner|info|mix|compare)/i.test(domain)) continue;
 
     let score = 0;
+
+    // Check if this is a known chain domain for this hotel
+    for (const [brand, domains] of Object.entries(chainDomains)) {
+      if (nameNorm.includes(brand)) {
+        if (domains.some(d => domain.includes(d))) {
+          score += 15; // Very strong signal
+        }
+      }
+    }
+
     const domainMatchCount = nameWords.filter(w => domainNorm.includes(w)).length;
     score += domainMatchCount * 3;
 
     const title = normalizeStr(result.title || "");
     if (title.includes(nameNorm)) score += 5;
 
-    const chainDomains = [
+    // Generic chain domain bonus
+    const genericChains = [
       "accor.com", "all.accor.com", "hilton.com", "marriott.com", "ihg.com", "hyatt.com",
       "pullman-hotels.com", "sofitel.com", "novotel.com", "ibis.com",
-      "wyndham.com", "radisson.com", "ahstatic.com",
+      "wyndham.com", "radissonhotels.com", "ahstatic.com",
+      "fourseasons.com", "ritzcarlton.com", "mandarinoriental.com",
+      "peninsula.com", "rosewoodhotels.com", "aman.com",
+      "belmond.com", "oneandonlyresorts.com", "sixsenses.com",
+      "banyantree.com", "comohotels.com", "oberoihotels.com",
+      "tajhotels.com", "hoshinoresorts.com",
     ];
-    if (chainDomains.some(c => domain.includes(c))) score += 4;
+    if (genericChains.some(c => domain.includes(c))) score += 4;
 
-    const brandWords = ["pullman", "sofitel", "novotel", "hilton", "marriott", "hyatt", "sheraton", "westin", "fairmont", "hassler"];
-    for (const brand of brandWords) {
-      if (nameNorm.includes(brand) && domainNorm.includes(brand)) score += 6;
+    // Brand name directly in domain
+    for (const brand of nameWords) {
+      if (brand.length > 3 && domainNorm.includes(brand)) score += 3;
     }
 
     if (score > bestScore) {

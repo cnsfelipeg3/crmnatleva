@@ -81,40 +81,54 @@ Para ambientes que NÃO são quartos (lobby, piscina, restaurante etc.), use o n
 
       const systemPrompt = `Você é um curador visual especialista em hotéis de luxo.
 
-Analise CADA foto e classifique usando os NOMES REAIS dos ambientes do hotel "${hotel_name || "não informado"}".
+Analise CADA foto INDIVIDUALMENTE e classifique usando NOMES ESPECÍFICOS E DISTINTOS para cada ambiente do hotel "${hotel_name || "não informado"}".
 ${roomNamesSection}
+
+REGRA CRÍTICA: Você DEVE criar MÚLTIPLOS grupos distintos. NÃO coloque todas as fotos no mesmo environment_name.
+Cada ambiente diferente DEVE ter um nome diferente. Se você vê um lobby, um quarto, uma piscina e um restaurante, cada um recebe um nome ÚNICO.
+
 Para cada foto retorne:
 
-1. "environment_name": O nome REAL do ambiente. 
-   ${knownRoomNames.length > 0 ? "Para quartos/suítes, USE OBRIGATORIAMENTE um dos nomes da lista acima." : "Use os nomes que aparecem no site do hotel."}
-   Para outros ambientes: "Lobby & Recepção", "Restaurante [Nome]", "Piscina", "Spa", "Fachada", etc.
-   Para banheiros, associe ao quarto: "Banheiro - [Nome do Quarto]"
+1. "environment_name": O nome REAL e ESPECÍFICO do ambiente mostrado na foto.
+   ${knownRoomNames.length > 0 ? "Para quartos/suítes, USE OBRIGATORIAMENTE um dos nomes da lista acima." : "Para quartos, crie nomes descritivos baseados no que você vê: 'Deluxe Room', 'Suite Panorâmica', 'Corner Suite', etc."}
+   Para outros ambientes, use nomes específicos como:
+   - "Lobby & Recepção" (não apenas "Hotel")
+   - "Restaurante Principal" ou "Restaurante [Nome]"
+   - "Piscina Infinita" ou "Piscina Exterior"
+   - "Spa & Wellness Center"
+   - "Fachada Principal"
+   - "Bar do Lobby"
+   - "Terraço Panorâmico"
+   - "Banheiro - [Nome do Quarto]"
+   NUNCA use o nome do hotel como environment_name. Use o nome do AMBIENTE ESPECÍFICO.
 
 2. "category": Uma das: fachada, lobby, quarto, suite, banheiro, piscina, restaurante, bar, spa, academia, area_comum, vista, jardim, praia, eventos, outro
 
-3. "room_type": Se for quarto/suíte, o tipo exato da lista. null se não for quarto.
+3. "room_type": Se for quarto/suíte, o tipo exato. null se não for quarto.
 
 4. "bed_type": Se for quarto: "King", "Queen", "Twin", "Casal", "Solteiro". null se não for quarto.
 
-5. "description": 1 frase descrevendo o que se vê na foto.
+5. "description": 1 frase descrevendo o que se vê na foto (em português).
 
 6. "confidence": 0.0 a 1.0
 
 REGRAS:
 - Agrupe fotos do MESMO ambiente sob o MESMO environment_name (escrito de forma idêntica).
-- Diferencie quartos diferentes com nomes diferentes.
-${knownRoomNames.length > 0 ? "- NUNCA invente nomes de quartos. Use SOMENTE os nomes da lista fornecida." : ""}
+- Diferencie ambientes diferentes com nomes diferentes.
+- Você DEVE ter no mínimo 3-5 environment_names DISTINTOS para um conjunto de fotos de hotel.
+${knownRoomNames.length > 0 ? "- NUNCA invente nomes de quartos. Use SOMENTE os nomes da lista fornecida." : "- Se não conhece o nome real, descreva o tipo de ambiente."}
+- NUNCA use o nome do hotel (ex: "${hotel_name}") como environment_name.
 
 Retorne APENAS JSON válido:
 {
   "photos": [
     {
       "index": 0,
-      "environment_name": "nome real do ambiente",
+      "environment_name": "nome específico do ambiente",
       "category": "categoria",
       "room_type": "tipo ou null",
       "bed_type": "tipo cama ou null",
-      "description": "descrição curta",
+      "description": "descrição curta em português",
       "confidence": 0.95
     }
   ]
@@ -157,11 +171,14 @@ Retorne APENAS JSON válido:
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
           if (parsed.photos && Array.isArray(parsed.photos)) {
-            // Re-map indices
+            // Re-map indices: the AI returns local batch indices (0-based per batch)
             for (const photo of parsed.photos) {
-              const validImg = validImages[photo.index];
-              if (validImg) {
-                photo.index = validImg.originalIndex;
+              // If the AI returned indices 0..N within the batch, map them back
+              if (typeof photo.index === 'number' && photo.index < validImages.length) {
+                const validImg = validImages[photo.index];
+                if (validImg) {
+                  photo.index = validImg.originalIndex;
+                }
               }
             }
             allClassified.push(...parsed.photos);
