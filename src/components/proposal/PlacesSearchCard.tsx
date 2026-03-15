@@ -875,8 +875,8 @@ export default function PlacesSearchCard({
                 {selectedCount > 1 && (
                   <div className="flex gap-1 mt-2 overflow-x-auto">
                     {curatedPhotos.filter(p => p.selected && !p.isCover).slice(0, 4).map((p, i) => (
-                      <div key={i} className="w-12 h-9 rounded-md overflow-hidden shrink-0">
-                        <img src={p.url} alt="" className="w-full h-full object-cover" />
+                      <div key={i} className="w-14 h-10 rounded-md overflow-hidden shrink-0 bg-muted/10 flex items-center justify-center">
+                        <img src={p.url} alt="" className="max-w-full max-h-full object-contain" />
                       </div>
                     ))}
                     {selectedCount > 5 && (
