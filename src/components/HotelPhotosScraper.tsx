@@ -763,7 +763,6 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 aspect-[4/3]"
                     loading="lazy"
                     referrerPolicy="no-referrer"
-                    crossOrigin="anonymous"
                     onError={() => handleImageError(coverPhoto.url)}
                   />
                 )}
