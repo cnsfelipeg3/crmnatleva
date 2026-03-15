@@ -338,7 +338,7 @@ function OperacaoInboxInner() {
     const externalId = payload.externalMessageId || `local_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
     // MANDATORY persistence - single source of truth
-    const { data: inserted, error } = await supabase
+    const { data: inserted, error } = await (supabase
       .from("conversation_messages" as any)
       .upsert({
         conversation_id: dbConvId,
@@ -353,7 +353,7 @@ function OperacaoInboxInner() {
         created_at: createdAt,
       }, { onConflict: "conversation_id,external_message_id" })
       .select("id")
-      .single();
+      .single() as any);
 
     if (error) {
       console.error("CRITICAL: Failed to persist outgoing message:", error);
