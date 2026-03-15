@@ -2108,6 +2108,16 @@ function OperacaoInboxInner() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {!isMobile && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className={`h-8 w-8 ${showClientContext ? 'bg-primary/10' : ''}`} onClick={() => setShowClientContext(prev => !prev)}>
+                            <User className="h-4 w-4 text-primary" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">Painel do cliente</p></TooltipContent>
+                      </Tooltip>
+                    )}
                   </div>
                 </div>
 
