@@ -234,8 +234,9 @@ function OperacaoInboxInner() {
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
+  const [chatSyncVersion, setChatSyncVersion] = useState(0);
   const [reloadingMessages, setReloadingMessages] = useState(false);
-  const [flowRunning, setFlowRunning] = useState(false);
+  const [rebuildingHistoryAll, setRebuildingHistoryAll] = useState(false);
   const [botActive, setBotActive] = useState(true);
   const [activeFlowName, setActiveFlowName] = useState<string | null>(null);
   const flowNameCacheRef = useRef<Record<string, string | null>>({});
