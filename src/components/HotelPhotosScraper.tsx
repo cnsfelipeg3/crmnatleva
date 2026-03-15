@@ -831,7 +831,6 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
               alt={nav.itemName}
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
-              crossOrigin="anonymous"
               onError={() => handleImageError(itemPhotos[0].url)}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
