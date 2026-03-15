@@ -160,6 +160,99 @@ const mockBudgetsByTrip: Record<string, Omit<MockFinanceData, "sale" | "receivab
       { id: "card-m1", budget_id: "mock-budget-maldivas", nickname: "Amex Platinum", last_digits: "9001", card_type: "credito", brand: "Amex", credit_limit: 50000, color: "#B0BEC5" },
     ],
   },
+
+  "mock-japao": {
+    budget: { id: "mock-budget-japao", sale_id: "mock-japao", client_id: "mock-client", total_budget: 10000, currency: "JPY" },
+    categories: [
+      { id: "cat-j1", budget_id: "mock-budget-japao", name: "Alimentação", icon: "alimentacao", color: CATEGORY_COLORS.alimentacao, planned_amount: 3500, sort_order: 0 },
+      { id: "cat-j2", budget_id: "mock-budget-japao", name: "Transporte", icon: "transporte", color: CATEGORY_COLORS.transporte, planned_amount: 1500, sort_order: 1 },
+      { id: "cat-j3", budget_id: "mock-budget-japao", name: "Compras", icon: "compras", color: CATEGORY_COLORS.compras, planned_amount: 2500, sort_order: 2 },
+      { id: "cat-j4", budget_id: "mock-budget-japao", name: "Passeios", icon: "passeios", color: CATEGORY_COLORS.passeios, planned_amount: 1500, sort_order: 3 },
+      { id: "cat-j5", budget_id: "mock-budget-japao", name: "Hospedagem Extra", icon: "hospedagem", color: CATEGORY_COLORS.hospedagem, planned_amount: 0, sort_order: 4 },
+      { id: "cat-j6", budget_id: "mock-budget-japao", name: "Emergências", icon: "emergencias", color: CATEGORY_COLORS.emergencias, planned_amount: 1000, sort_order: 5 },
+      { id: "cat-j7", budget_id: "mock-budget-japao", name: "Outros", icon: "outros", color: CATEGORY_COLORS.outros, planned_amount: 0, sort_order: 6 },
+    ],
+    expenses: [
+      { id: "exp-j1", budget_id: "mock-budget-japao", category_id: "cat-j1", description: "Sushi Dai, Tsukiji Outer Market", amount: 120, expense_date: past(8), payment_method: "dinheiro" },
+      { id: "exp-j2", budget_id: "mock-budget-japao", category_id: "cat-j3", description: "Don Quijote — Eletrônicos", amount: 450, expense_date: past(8), payment_method: "cartao_credito", card_id: "card-j1" },
+      { id: "exp-j3", budget_id: "mock-budget-japao", category_id: "cat-j1", description: "Ramen Ichiran, Shibuya", amount: 35, expense_date: past(7), payment_method: "dinheiro" },
+      { id: "exp-j4", budget_id: "mock-budget-japao", category_id: "cat-j2", description: "Suica Card recarga", amount: 80, expense_date: past(7), payment_method: "dinheiro" },
+      { id: "exp-j5", budget_id: "mock-budget-japao", category_id: "cat-j4", description: "TeamLab Borderless (extra)", amount: 65, expense_date: past(6), payment_method: "cartao_credito", card_id: "card-j1" },
+      { id: "exp-j6", budget_id: "mock-budget-japao", category_id: "cat-j1", description: "Kaiseki dinner Kyoto", amount: 280, expense_date: past(4), payment_method: "cartao_credito", card_id: "card-j1" },
+      { id: "exp-j7", budget_id: "mock-budget-japao", category_id: "cat-j3", description: "Cerâmicas artesanais, Kyoto", amount: 190, expense_date: past(4), payment_method: "dinheiro" },
+      { id: "exp-j8", budget_id: "mock-budget-japao", category_id: "cat-j1", description: "Takoyaki & Okonomiyaki, Dotonbori", amount: 45, expense_date: past(2), payment_method: "dinheiro" },
+      { id: "exp-j9", budget_id: "mock-budget-japao", category_id: "cat-j3", description: "Uniqlo Osaka — roupas", amount: 210, expense_date: past(2), payment_method: "cartao_credito", card_id: "card-j1" },
+      { id: "exp-j10", budget_id: "mock-budget-japao", category_id: "cat-j1", description: "Kobe beef dinner", amount: 350, expense_date: past(1), payment_method: "cartao_credito", card_id: "card-j1" },
+      { id: "exp-j11", budget_id: "mock-budget-japao", category_id: "cat-j4", description: "Kimono experience, Gion", amount: 95, expense_date: past(3), payment_method: "dinheiro" },
+    ],
+    cashItems: [
+      { id: "cash-j1", budget_id: "mock-budget-japao", description: "Ienes (Confidence Câmbio)", initial_amount: 2000, currency: "JPY", exchange_rate: 0.034, created_at: past(15) },
+      { id: "cash-j2", budget_id: "mock-budget-japao", description: "Saque ATM 7-Eleven", initial_amount: 800, currency: "JPY", exchange_rate: 0.035, created_at: past(5) },
+    ],
+    cards: [
+      { id: "card-j1", budget_id: "mock-budget-japao", nickname: "Bradesco Aeternum", last_digits: "5567", card_type: "credito", brand: "Visa", credit_limit: 40000, color: "#C62828" },
+    ],
+  },
+
+  "mock-caribe": {
+    budget: { id: "mock-budget-caribe", sale_id: "mock-caribe", client_id: "mock-client", total_budget: 4000, currency: "USD" },
+    categories: [
+      { id: "cat-cb1", budget_id: "mock-budget-caribe", name: "Alimentação", icon: "alimentacao", color: CATEGORY_COLORS.alimentacao, planned_amount: 500, sort_order: 0 },
+      { id: "cat-cb2", budget_id: "mock-budget-caribe", name: "Transporte", icon: "transporte", color: CATEGORY_COLORS.transporte, planned_amount: 300, sort_order: 1 },
+      { id: "cat-cb3", budget_id: "mock-budget-caribe", name: "Compras", icon: "compras", color: CATEGORY_COLORS.compras, planned_amount: 1500, sort_order: 2 },
+      { id: "cat-cb4", budget_id: "mock-budget-caribe", name: "Passeios", icon: "passeios", color: CATEGORY_COLORS.passeios, planned_amount: 1200, sort_order: 3 },
+      { id: "cat-cb5", budget_id: "mock-budget-caribe", name: "Hospedagem Extra", icon: "hospedagem", color: CATEGORY_COLORS.hospedagem, planned_amount: 0, sort_order: 4 },
+      { id: "cat-cb6", budget_id: "mock-budget-caribe", name: "Emergências", icon: "emergencias", color: CATEGORY_COLORS.emergencias, planned_amount: 500, sort_order: 5 },
+      { id: "cat-cb7", budget_id: "mock-budget-caribe", name: "Outros", icon: "outros", color: CATEGORY_COLORS.outros, planned_amount: 0, sort_order: 6 },
+    ],
+    expenses: [
+      { id: "exp-cb1", budget_id: "mock-budget-caribe", category_id: "cat-cb4", description: "Excursão Isla Saona (extra)", amount: 95, expense_date: past(3), payment_method: "cartao_credito", card_id: "card-cb1" },
+      { id: "exp-cb2", budget_id: "mock-budget-caribe", category_id: "cat-cb1", description: "Jantar romântico fora do resort", amount: 120, expense_date: past(2), payment_method: "cartao_credito", card_id: "card-cb1" },
+      { id: "exp-cb3", budget_id: "mock-budget-caribe", category_id: "cat-cb3", description: "Larimar e âmbar — joias", amount: 280, expense_date: past(2), payment_method: "cartao_credito", card_id: "card-cb1" },
+      { id: "exp-cb4", budget_id: "mock-budget-caribe", category_id: "cat-cb4", description: "Parasailing", amount: 150, expense_date: past(1), payment_method: "dinheiro" },
+      { id: "exp-cb5", budget_id: "mock-budget-caribe", category_id: "cat-cb3", description: "Charutos e rum dominicano", amount: 90, expense_date: past(1), payment_method: "dinheiro" },
+      { id: "exp-cb6", budget_id: "mock-budget-caribe", category_id: "cat-cb2", description: "Táxi para cidade de Higüey", amount: 45, expense_date: past(1), payment_method: "dinheiro" },
+    ],
+    cashItems: [
+      { id: "cash-cb1", budget_id: "mock-budget-caribe", description: "Dólares (gorjetas/extras)", initial_amount: 600, currency: "USD", exchange_rate: 5.18, created_at: past(8) },
+    ],
+    cards: [
+      { id: "card-cb1", budget_id: "mock-budget-caribe", nickname: "Inter Black", last_digits: "3344", card_type: "credito", brand: "Mastercard", credit_limit: 20000, color: "#FF6F00" },
+    ],
+  },
+
+  "mock-africa": {
+    budget: { id: "mock-budget-africa", sale_id: "mock-africa", client_id: "mock-client", total_budget: 15000, currency: "ZAR" },
+    categories: [
+      { id: "cat-af1", budget_id: "mock-budget-africa", name: "Alimentação", icon: "alimentacao", color: CATEGORY_COLORS.alimentacao, planned_amount: 3000, sort_order: 0 },
+      { id: "cat-af2", budget_id: "mock-budget-africa", name: "Transporte", icon: "transporte", color: CATEGORY_COLORS.transporte, planned_amount: 2000, sort_order: 1 },
+      { id: "cat-af3", budget_id: "mock-budget-africa", name: "Compras", icon: "compras", color: CATEGORY_COLORS.compras, planned_amount: 4000, sort_order: 2 },
+      { id: "cat-af4", budget_id: "mock-budget-africa", name: "Passeios", icon: "passeios", color: CATEGORY_COLORS.passeios, planned_amount: 3000, sort_order: 3 },
+      { id: "cat-af5", budget_id: "mock-budget-africa", name: "Hospedagem Extra", icon: "hospedagem", color: CATEGORY_COLORS.hospedagem, planned_amount: 0, sort_order: 4 },
+      { id: "cat-af6", budget_id: "mock-budget-africa", name: "Emergências", icon: "emergencias", color: CATEGORY_COLORS.emergencias, planned_amount: 3000, sort_order: 5 },
+      { id: "cat-af7", budget_id: "mock-budget-africa", name: "Outros", icon: "outros", color: CATEGORY_COLORS.outros, planned_amount: 0, sort_order: 6 },
+    ],
+    expenses: [
+      { id: "exp-af1", budget_id: "mock-budget-africa", category_id: "cat-af1", description: "High Tea at Mount Nelson", amount: 180, expense_date: past(5), payment_method: "cartao_credito", card_id: "card-af1" },
+      { id: "exp-af2", budget_id: "mock-budget-africa", category_id: "cat-af4", description: "Table Mountain cableway extras", amount: 65, expense_date: past(5), payment_method: "dinheiro" },
+      { id: "exp-af3", budget_id: "mock-budget-africa", category_id: "cat-af1", description: "Wine tasting Franschhoek (5 vinícolas)", amount: 320, expense_date: past(4), payment_method: "cartao_credito", card_id: "card-af1" },
+      { id: "exp-af4", budget_id: "mock-budget-africa", category_id: "cat-af3", description: "Artesanato local Waterfront", amount: 240, expense_date: past(4), payment_method: "cartao_credito", card_id: "card-af1" },
+      { id: "exp-af5", budget_id: "mock-budget-africa", category_id: "cat-af1", description: "Jantar Test Kitchen (top 50 mundo)", amount: 450, expense_date: past(3), payment_method: "cartao_credito", card_id: "card-af1" },
+      { id: "exp-af6", budget_id: "mock-budget-africa", category_id: "cat-af4", description: "Shark cage diving", amount: 280, expense_date: past(3), payment_method: "cartao_credito", card_id: "card-af1" },
+      { id: "exp-af7", budget_id: "mock-budget-africa", category_id: "cat-af2", description: "Uber Cape Town (5 corridas)", amount: 55, expense_date: past(3), payment_method: "cartao_debito", card_id: "card-af2" },
+      { id: "exp-af8", budget_id: "mock-budget-africa", category_id: "cat-af3", description: "Tanzanite Gallery — anel", amount: 890, expense_date: past(2), payment_method: "cartao_credito", card_id: "card-af1" },
+      { id: "exp-af9", budget_id: "mock-budget-africa", category_id: "cat-af1", description: "Biltong & drinks no lodge", amount: 160, expense_date: past(1), payment_method: "cartao_credito", card_id: "card-af1" },
+      { id: "exp-af10", budget_id: "mock-budget-africa", category_id: "cat-af4", description: "Tip para ranger (safari)", amount: 200, expense_date: past(1), payment_method: "dinheiro" },
+    ],
+    cashItems: [
+      { id: "cash-af1", budget_id: "mock-budget-africa", description: "Rands sul-africanos", initial_amount: 1500, currency: "ZAR", exchange_rate: 0.28, created_at: past(10) },
+      { id: "cash-af2", budget_id: "mock-budget-africa", description: "Dólares (emergência)", initial_amount: 800, currency: "USD", exchange_rate: 5.15, created_at: past(10) },
+    ],
+    cards: [
+      { id: "card-af1", budget_id: "mock-budget-africa", nickname: "BTG Black", last_digits: "6677", card_type: "credito", brand: "Mastercard", credit_limit: 60000, color: "#1B5E20" },
+      { id: "card-af2", budget_id: "mock-budget-africa", nickname: "C6 Débito", last_digits: "1133", card_type: "debito", brand: "Visa", credit_limit: 0, color: "#212121" },
+    ],
+  },
 };
 
 export function getMockFinanceData(saleId: string): MockFinanceData | null {
