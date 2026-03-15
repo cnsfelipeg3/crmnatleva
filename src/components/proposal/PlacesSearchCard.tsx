@@ -111,12 +111,27 @@ const PHOTO_LABELS = [
 ];
 
 function guessPhotoLabel(index: number): string {
-  if (index === 0) return "Fachada";
-  if (index === 1) return "Lobby";
-  if (index <= 4) return `Quarto ${index}`;
-  if (index === 5) return "Piscina";
-  if (index === 6) return "Restaurante";
   return `Foto ${index + 1}`;
+}
+
+async function classifyPhotosWithAI(
+  photoUrls: string[],
+  hotelName: string,
+): Promise<{ label: string; description: string; room_type: string | null; category: string }[]> {
+  try {
+    const { data, error } = await supabase.functions.invoke("classify-hotel-photos", {
+      body: { photo_urls: photoUrls, hotel_name: hotelName },
+    });
+    if (error || !data?.photos) return [];
+    return (data.photos as any[]).map((p: any) => ({
+      label: p.label || "Foto",
+      description: p.description || "",
+      room_type: p.room_type || null,
+      category: p.category || "outro",
+    }));
+  } catch {
+    return [];
+  }
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
