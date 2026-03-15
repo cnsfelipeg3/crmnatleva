@@ -1837,7 +1837,7 @@ function OperacaoInboxInner() {
                     <Pencil className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                     <div className="flex-1 border-l-2 border-amber-500 pl-3">
                       <p className="text-[10px] font-bold text-amber-500">Editando mensagem</p>
-                      <p className="text-xs text-muted-foreground truncate">{editingMsg.text}</p>
+                      <p className="text-xs text-muted-foreground truncate">{stripQuotes(editingMsg.text)}</p>
                     </div>
                     <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setEditingMsg(null); setInputText(""); }}><X className="h-3 w-3" /></Button>
                   </div>
