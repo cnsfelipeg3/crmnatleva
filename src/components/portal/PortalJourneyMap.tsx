@@ -95,21 +95,37 @@ function createPulsingIcon(color: string, size: number = 14): L.DivIcon {
   });
 }
 
-function createCityMarker(emoji: string, name: string, isOrigin: boolean, isCurrentCity: boolean): L.DivIcon {
-  const accent = isCurrentCity ? "#10b981" : isOrigin ? "#34d399" : "#60a5fa";
-  const glow = isCurrentCity ? "0 0 20px rgba(16,185,129,0.4)" : "none";
+const CITY_SVGS: Record<string, string> = {
+  origin: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>`,
+  connection: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></svg>`,
+  destination: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`,
+  current: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2"/></svg>`,
+  finish: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>`,
+};
+
+function createCityMarker(type: string, name: string, isCurrent: boolean): L.DivIcon {
+  const colors: Record<string, string> = {
+    origin: "#10b981",
+    connection: "#60a5fa",
+    destination: "#f59e0b",
+    current: "#10b981",
+    finish: "#f59e0b",
+  };
+  const color = isCurrent ? "#10b981" : (colors[type] || "#94a3b8");
+  const svg = CITY_SVGS[type] || CITY_SVGS.connection;
+  const size = isCurrent ? 40 : 36;
+
   return L.divIcon({
     className: "",
-    iconSize: [48, 56],
-    iconAnchor: [24, 56],
-    popupAnchor: [0, -56],
-    html: `<div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 3px 6px rgba(0,0,0,0.2));">
-      <div style="width:48px;height:48px;border-radius:16px;background:white;border:3px solid ${accent};display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:${glow};position:relative;">
-        ${emoji}
-        ${isCurrentCity ? `<div style="position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;background:#10b981;border:2px solid white;"></div>` : ""}
+    iconSize: [size, size + 24],
+    iconAnchor: [size / 2, size + 16],
+    popupAnchor: [0, -(size + 16)],
+    html: `<div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.25));">
+      <div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:3px solid rgba(255,255,255,0.9);box-shadow:0 0 0 ${isCurrent ? '4' : '0'}px ${color}44;transition:all 0.3s;">
+        ${svg}
       </div>
-      <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid ${accent};margin-top:-1px;"></div>
-      <div style="margin-top:2px;background:white;border:1px solid #e5e7eb;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;color:#1f2937;white-space:nowrap;font-family:system-ui;">${name}</div>
+      <div style="width:2px;height:8px;background:${color};opacity:0.6;"></div>
+      <div style="background:rgba(15,23,42,0.85);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:3px 10px;font-size:11px;font-weight:600;color:white;white-space:nowrap;font-family:'Inter',system-ui,sans-serif;letter-spacing:0.02em;">${name}</div>
     </div>`,
   });
 }
@@ -117,10 +133,10 @@ function createCityMarker(emoji: string, name: string, isOrigin: boolean, isCurr
 function createAirplaneIcon(angle: number): L.DivIcon {
   return L.divIcon({
     className: "",
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;transform:rotate(${angle}deg);filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2L8 8H3L5 12L3 16H8L12 22L16 16H21L19 12L21 8H16L12 2Z" fill="#10b981" stroke="white" stroke-width="1.5"/></svg>
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+    html: `<div style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;transform:rotate(${angle}deg);filter:drop-shadow(0 1px 3px rgba(0,0,0,0.4));">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#10b981" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>
     </div>`,
   });
 }
