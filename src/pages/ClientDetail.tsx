@@ -17,8 +17,9 @@ import {
   ArrowLeft, Users, Phone, Mail, MapPin, Plus, Tag, DollarSign,
   TrendingUp, Target, Plane, Hotel, Calendar, Eye, Clock,
   AlertTriangle, CheckCircle2, Send, FileText, Loader2,
-  Heart, Compass, Utensils, Armchair, Star, Save, Globe,
+  Heart, Compass, Utensils, Armchair, Star, Save, Globe, Activity,
 } from "lucide-react";
+import ClientTimeline from "@/components/ClientTimeline";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
