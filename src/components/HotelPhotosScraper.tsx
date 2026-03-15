@@ -137,12 +137,14 @@ async function fetchProxiedImageBlob(imageUrl: string): Promise<Blob> {
 
 export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry, onSelectPhotos }: Props) {
   const [loading, setLoading] = useState(false);
+  const [loadingSource, setLoadingSource] = useState<"google" | "official" | null>(null);
   const [photos, setPhotos] = useState<HotelPhoto[]>([]);
   const [sourceUrl, setSourceUrl] = useState("");
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [scraped, setScraped] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [activeSource, setActiveSource] = useState<"google" | "official" | null>(null);
   const [proxiedImageUrls, setProxiedImageUrls] = useState<Record<string, string>>({});
   const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set());
   const [resolvingImageUrls, setResolvingImageUrls] = useState<Set<string>>(new Set());
