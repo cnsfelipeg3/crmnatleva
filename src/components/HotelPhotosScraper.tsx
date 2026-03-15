@@ -372,8 +372,12 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
           { duration: 5000 }
         );
         preloadViaProxy(resolvedPhotos, data.source_url || undefined);
-        // Always run classification if sections are weak OR too few unique names
-        if (sectionRatio < 0.7 || uniqueEnvNames < 3) {
+        // ALWAYS run classification if:
+        // - Less than 70% of photos have section names, OR
+        // - Fewer than 3 unique environments, OR
+        // - All photos have the same environment_name (no diversity)
+        const needsClassification = sectionRatio < 0.7 || uniqueEnvNames < 3 || (uniqueEnvNames === 1 && resolvedPhotos.length > 5);
+        if (needsClassification) {
           await runClassification(resolvedPhotos, scraperRoomNames);
         }
       } else {
