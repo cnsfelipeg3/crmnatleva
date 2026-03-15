@@ -1817,7 +1817,7 @@ function OperacaoInboxInner() {
 
                 {/* Media pending preview */}
                 {mediaPendingFile && (
-                  <div className="px-4 py-3 border-t border-border bg-card/50 space-y-2">
+                  <div className="px-4 py-3 border-t border-border bg-card/50 space-y-2 shrink-0">
                     <div className="flex items-center gap-3">
                       <img src={mediaPendingFile.previewUrl} alt="Preview" className="h-16 w-16 rounded-lg object-cover" />
                       <div className="flex-1"><Input placeholder="Legenda (opcional)..." value={mediaCaption} onChange={e => setMediaCaption(e.target.value)} className="h-8 text-xs" /></div>
