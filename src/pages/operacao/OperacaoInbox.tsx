@@ -96,17 +96,37 @@ const FILTERS = [
 ];
 
 // ─── Helpers ───
-function normalizeTimestamp(dateStr: string): Date {
-  if (!dateStr) return new Date(0);
+function normalizeTimestamp(dateStr: string | number): Date {
+  if (!dateStr && dateStr !== 0) return new Date(0);
   try {
-    const direct = new Date(dateStr);
+    // Handle epoch numbers (seconds or milliseconds)
+    const num = typeof dateStr === "number" ? dateStr : Number(dateStr);
+    if (Number.isFinite(num) && num > 1_000_000_000) {
+      const ms = num > 1_000_000_000_000 ? num : num * 1000;
+      const d = new Date(ms);
+      if (!isNaN(d.getTime()) && d.getTime() > 0) return d;
+    }
+    const str = String(dateStr);
+    const direct = new Date(str);
     if (!isNaN(direct.getTime()) && direct.getTime() > 0) return direct;
-    let normalized = dateStr;
+    let normalized = str;
     if (normalized.includes(" ") && !normalized.includes("T")) normalized = normalized.replace(" ", "T");
     if (/[+-]\d{2}$/.test(normalized)) normalized += ":00";
     const date = new Date(normalized);
     return isNaN(date.getTime()) ? new Date(0) : date;
   } catch { return new Date(0); }
+}
+
+/** Convert any timestamp value (epoch int, epoch string, ISO string) to a valid ISO string */
+function toIsoTimestamp(value: any): string {
+  if (!value && value !== 0) return new Date().toISOString();
+  const num = Number(value);
+  if (Number.isFinite(num) && num > 1_000_000_000) {
+    const ms = num > 1_000_000_000_000 ? num : num * 1000;
+    return new Date(ms).toISOString();
+  }
+  const d = new Date(String(value));
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
 }
 
 function formatTimestamp(dateStr: string): string {
@@ -665,7 +685,7 @@ function OperacaoInboxInner() {
         text: stripQuotes(m.text ?? m.content ?? ""),
         media_url: m.media_url || undefined,
         status: normalizeDbStatus(m.status ?? m.read_status),
-        created_at: m.created_at,
+        created_at: toIsoTimestamp(m.created_at),
         external_message_id: m.external_message_id || undefined,
       }))
     );
@@ -712,7 +732,7 @@ function OperacaoInboxInner() {
                 text: stripQuotes(m.text || mediaInfo.caption || ""),
                 media_url: mediaInfo.mediaUrl,
                 status: mapZapiStatus(m.status, m.from_me),
-                created_at: String(m.timestamp || m.created_at),
+                created_at: toIsoTimestamp(m.timestamp || m.created_at),
               };
             })
             .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
@@ -763,20 +783,51 @@ function OperacaoInboxInner() {
             dbMsgs = mapDbMessages(dedupedRows, selectedId);
           }
 
+          // Build cross-reference index: external_message_id → db message
+          const extIdIndex = new Map<string, Message>();
+          for (const msg of dbMsgs) {
+            const extId = (msg as any).external_message_id;
+            if (extId) extIdIndex.set(extId, msg);
+          }
+
           const mergedMap = new Map<string, Message>();
-          for (const msg of [...dbMsgs, ...zapiMsgs]) {
+          // Add all DB messages first
+          for (const msg of dbMsgs) {
             const key = msg.id || `${msg.created_at}_${msg.sender_type}_${msg.message_type}_${msg.text || ""}`;
-            const existing = mergedMap.get(key);
-            if (!existing) {
-              mergedMap.set(key, msg);
+            mergedMap.set(key, msg);
+          }
+          // Add zapi messages, merging with DB messages that share the same external_message_id
+          for (const msg of zapiMsgs) {
+            // Check if this zapi message matches a DB message by external_message_id
+            const dbMatch = extIdIndex.get(msg.id);
+            if (dbMatch) {
+              // Merge: prefer zapi status/media, keep best text
+              const dbKey = dbMatch.id || `${dbMatch.created_at}_${dbMatch.sender_type}_${dbMatch.message_type}_${dbMatch.text || ""}`;
+              mergedMap.set(dbKey, {
+                ...dbMatch,
+                status: msg.status !== "sent" ? msg.status : dbMatch.status,
+                media_url: msg.media_url || dbMatch.media_url,
+                text: msg.text || dbMatch.text,
+                created_at: msg.created_at || dbMatch.created_at,
+              });
               continue;
             }
-            mergedMap.set(key, {
-              ...existing,
-              ...msg,
-              text: msg.text || existing.text,
-              media_url: msg.media_url || existing.media_url,
-            });
+            // Check for content-based duplicates (same timestamp + sender + text)
+            const contentKey = `${msg.created_at}_${msg.sender_type}_${msg.message_type}_${msg.text || ""}`;
+            const existingByContent = mergedMap.get(contentKey);
+            if (existingByContent) {
+              mergedMap.set(contentKey, {
+                ...existingByContent,
+                status: msg.status !== "sent" ? msg.status : existingByContent.status,
+                media_url: msg.media_url || existingByContent.media_url,
+              });
+              continue;
+            }
+            // No match found - add as new message
+            const key = msg.id || contentKey;
+            if (!mergedMap.has(key)) {
+              mergedMap.set(key, msg);
+            }
           }
 
           const mergedMsgs = Array.from(mergedMap.values()).sort(
@@ -841,7 +892,7 @@ function OperacaoInboxInner() {
           text: stripQuotes(n.text || mediaInfo2.caption || ""),
           media_url: mediaInfo2.mediaUrl,
           status: mapZapiStatus(n.status, n.from_me),
-          created_at: n.timestamp || n.created_at,
+          created_at: toIsoTimestamp(n.timestamp || n.created_at),
         };
         setMessages(prev => {
           const existing = prev[waKey] || [];
@@ -860,7 +911,7 @@ function OperacaoInboxInner() {
           setConversations(prev => prev.map(c => {
             if (c.id !== waKey) return c;
             const isOpen = waKey === selectedIdRef.current;
-            return { ...c, last_message_preview: n.text || `📎 ${n.type || "media"}`, last_message_at: n.timestamp || n.created_at || new Date().toISOString(), unread_count: isOpen ? 0 : c.unread_count + 1 };
+            return { ...c, last_message_preview: n.text || `📎 ${n.type || "media"}`, last_message_at: toIsoTimestamp(n.timestamp || n.created_at), unread_count: isOpen ? 0 : c.unread_count + 1 };
           }));
         }
       })
