@@ -142,7 +142,12 @@ async function classifyPhotosWithAI(photos: HotelPhoto[], hotelName: string, roo
   if (photos.length === 0) return photos;
   try {
     const { data, error } = await supabase.functions.invoke("classify-hotel-photos", {
-      body: { photo_urls: photos.map(p => p.url), hotel_name: hotelName, room_names: roomNames || [] },
+      body: {
+        photo_urls: photos.map(p => p.url),
+        hotel_name: hotelName,
+        room_names: roomNames || [],
+        photo_contexts: photos.map(p => p.html_context || ""),
+      },
     });
     if (error || !data?.photos) return photos;
 
