@@ -26,6 +26,7 @@ interface SectionInfo {
 interface ImageCollection {
   photos: ScrapedPhoto[];
   seen: Set<string>;
+  sections: Map<string, SectionInfo>;
 }
 
 // ═══════════════════════════════════════════════
