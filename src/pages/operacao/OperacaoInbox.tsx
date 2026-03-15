@@ -692,8 +692,9 @@ function OperacaoInboxInner() {
             // Dedup by external_message_id first, then by id, then by content signature
             const dedupMap = new Map<string, any>();
             for (const row of mergedRows) {
-              const extId = row.external_message_id;
-              const key = extId || row.id || `${row.created_at}_${row.sender_type}_${row.text || row.content || ""}`;
+              const r = row as any;
+              const extId = r.external_message_id;
+              const key = extId || r.id || `${r.created_at}_${r.sender_type}_${r.text || r.content || ""}`;
               if (!dedupMap.has(key)) dedupMap.set(key, row);
             }
             const dedupedRows = Array.from(dedupMap.values())
