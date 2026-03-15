@@ -13,6 +13,7 @@ import {
 import { Plus, Trash2, ChevronDown, Hotel, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import HotelAutocomplete from "@/components/HotelAutocomplete";
+import HotelPhotosScraper from "@/components/HotelPhotosScraper";
 
 /* ─── Types ─────────────────────────────────── */
 
@@ -184,6 +185,15 @@ export default function HotelEntriesEditor({
                       />
                       {hotel.hotel_city && (
                         <p className="text-xs text-muted-foreground">📍 {[hotel.hotel_city, hotel.hotel_country].filter(Boolean).join(", ")}</p>
+                      )}
+                      {hotel.hotel_name && (
+                        <div className="mt-2">
+                          <HotelPhotosScraper
+                            hotelName={hotel.hotel_name}
+                            hotelCity={hotel.hotel_city}
+                            hotelCountry={hotel.hotel_country}
+                          />
+                        </div>
                       )}
                     </div>
                     <div className="space-y-1.5"><Label className="text-xs">Destino</Label><Input className="h-9 text-sm" value={hotel.hotel_city} onChange={e => updateHotel(hotel.id, "hotel_city", e.target.value)} /></div>
