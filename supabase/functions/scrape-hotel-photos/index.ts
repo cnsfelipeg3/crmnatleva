@@ -33,9 +33,11 @@ Deno.serve(async (req) => {
     const locationStr = [hotel_city, hotel_country].filter(Boolean).join(", ");
     const hotelNameNorm = normalizeStr(hotel_name);
 
+    // Extract just the hotel brand name for better search (remove address details)
+    const cleanHotelName = hotel_name.replace(/\s*[-–—]\s*(Rod\.|Acesso|Av\.|Rua|R\.).*$/i, "").trim();
+
     // ── Step 1: Find the OFFICIAL hotel website ──
-    // Use a very specific search to find the hotel's own domain
-    const searchQuery = `"${hotel_name}" ${locationStr} site oficial hotel`;
+    const searchQuery = `${cleanHotelName} ${locationStr} site oficial`;
     console.log("Searching for hotel:", searchQuery);
 
     const searchResponse = await fetch("https://api.firecrawl.dev/v1/search", {
@@ -290,6 +292,43 @@ ${imageListForAI}`
     const rejectedCount = classified.filter(c => !c.belongs_to_target_hotel).length;
     console.log(`Verified: ${photos.length} accepted, ${rejectedCount} rejected`);
 
+    // FALLBACK: If AI rejected everything but we had images from the official domain,
+    // return those images unfiltered (the AI might have been too aggressive)
+    if (photos.length === 0 && candidateImages.length > 0) {
+      console.log("AI rejected all photos — using fallback: returning unfiltered images from scrape");
+      const fallbackPhotos = candidateImages
+        .filter(img => {
+          // Only use images that look like actual photos (not UI elements)
+          const url = img.url.toLowerCase();
+          if (url.includes("icon") || url.includes("logo") || url.includes("sprite")) return false;
+          if (url.includes("1x1") || url.includes("pixel") || url.includes("tracking")) return false;
+          // Prefer images with common photo extensions and reasonable URL length
+          return /\.(jpg|jpeg|png|webp)(\?|$)/i.test(img.url) && img.url.length > 50;
+        })
+        .slice(0, 30)
+        .map(img => ({
+          url: standardizeImageUrl(img.url),
+          alt: img.alt,
+          category: "outro",
+          confidence: 0.5,
+          room_name: null,
+          room_details: null,
+        }));
+
+      if (fallbackPhotos.length > 0) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            photos: fallbackPhotos,
+            source_url: mainUrl || "",
+            classified: false,
+            verification: { accepted: fallbackPhotos.length, rejected: rejectedCount, summary: "Fallback: fotos retornadas sem classificação IA" }
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -399,6 +438,12 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
     "melhoreshoteis.com", "hotelurbano.com", "zarpo.com", "omnibees.com",
     "hotelsdotcom.com", "oyster.com", "hotel.info", "hrs.com",
     "laterooms.com", "hostelworld.com", "bestday.com",
+    // Travel content aggregators
+    "wanderlog.com", "theculturetrip.com", "lonelyplanet.com", "fodors.com",
+    "skyscanner.com", "momondo.com", "hostelworld.com", "orbitz.com",
+    "travelocity.com", "wotif.com", "lastminute.com", "destinia.com",
+    "melhordestino.com.br", "passagenspromo.com.br", "maxmilhas.com.br",
+    "123milhas.com", "voeazul.com.br", "latamairlines.com",
   ];
 
   // Detect generic hotel directory patterns
