@@ -150,6 +150,15 @@ function shouldShowDateSeparator(msgs: Message[], index: number): boolean {
   return prev.getDate() !== curr.getDate() || prev.getMonth() !== curr.getMonth() || prev.getFullYear() !== curr.getFullYear();
 }
 
+function stripQuotes(text: string): string {
+  if (!text) return text;
+  const trimmed = text.trim();
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
 function getStageInfo(stage: Stage) {
   return STAGES.find(s => s.key === stage) || STAGES[0];
 }
