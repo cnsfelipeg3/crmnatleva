@@ -145,7 +145,7 @@ export default function ProposalEditor() {
     }
   };
 
-
+  const saveMutation = useMutation({
     mutationFn: async () => {
       const slug = existing?.slug || generateSlug();
       const payload = {
