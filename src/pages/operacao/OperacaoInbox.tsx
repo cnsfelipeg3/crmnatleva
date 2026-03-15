@@ -2073,7 +2073,7 @@ function OperacaoInboxInner() {
                                   </div>
                                 )}
                                 {/* Text */}
-                                {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap">{stripQuotes(msg.text)}</p>}
+                                {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(msg.text)} /></p>}
                                 <div className="flex items-center justify-end gap-1 mt-1">
                                   {msg.edited && <span className="text-[8px] opacity-50 italic">editada</span>}
                                   <span className="text-[9px] opacity-60">{formatMsgTime(msg.created_at)}</span>
