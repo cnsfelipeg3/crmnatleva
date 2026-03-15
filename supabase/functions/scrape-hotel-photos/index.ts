@@ -571,32 +571,122 @@ function extractDomain(url: string): string {
   try { return new URL(url).hostname; } catch { return ""; }
 }
 
+/**
+ * Maximize image quality by requesting the largest version from known CDN patterns.
+ */
 function standardizeImageUrl(url: string): string {
   try {
     const u = new URL(url);
+    const lower = url.toLowerCase();
+
+    // Cloudinary: request w_2000 quality auto
     if (u.hostname.includes("cloudinary.com") && u.pathname.includes("/upload/")) {
-      const newPath = u.pathname.replace(/\/upload\/[^/]*\//, "/upload/w_1200,q_auto,f_auto/");
-      if (newPath !== u.pathname) return u.origin + newPath + u.search;
+      const newPath = u.pathname.replace(/\/upload\/[^/]*\//, "/upload/w_2000,q_auto,f_auto/");
+      if (newPath !== u.pathname) return u.origin + newPath;
     }
-    if (u.hostname.includes("imgix") || u.searchParams.has("w") || u.searchParams.has("fit")) {
-      u.searchParams.set("w", "1200");
-      u.searchParams.set("q", "80");
+
+    // Imgix: request high-quality
+    if (u.hostname.includes("imgix") || (u.searchParams.has("w") && u.searchParams.has("fit"))) {
+      u.searchParams.set("w", "2000");
+      u.searchParams.set("q", "85");
       u.searchParams.set("fit", "max");
-      u.searchParams.set("auto", "format");
+      u.searchParams.set("auto", "format,compress");
       return u.toString();
     }
+
+    // Akamai / generic CDN with wid/width params
     if (u.search.includes("wid=") || u.search.includes("width=")) {
-      u.searchParams.set("wid", "1200");
+      u.searchParams.set("wid", "2000");
       u.searchParams.delete("width");
       if (u.searchParams.has("hei")) u.searchParams.delete("hei");
       if (u.searchParams.has("height")) u.searchParams.delete("height");
-      u.searchParams.set("qlt", "80");
+      u.searchParams.set("qlt", "85");
       return u.toString();
     }
+
+    // Contentful
+    if (u.hostname.includes("ctfassets.net") || u.hostname.includes("contentful")) {
+      u.searchParams.set("w", "2000");
+      u.searchParams.set("q", "85");
+      u.searchParams.set("fm", "jpg");
+      u.searchParams.set("fl", "progressive");
+      return u.toString();
+    }
+
+    // Fastly / generic resize params
+    if (u.searchParams.has("width") || u.searchParams.has("w")) {
+      u.searchParams.set("width", "2000");
+      u.searchParams.delete("w");
+      if (u.searchParams.has("height")) u.searchParams.delete("height");
+      u.searchParams.set("quality", "85");
+      return u.toString();
+    }
+
+    // WordPress / WP thumbnails — remove dimension suffix like -300x200
+    if (/\-\d{2,4}x\d{2,4}\.(jpg|jpeg|png|webp)/i.test(u.pathname)) {
+      const cleanPath = u.pathname.replace(/\-\d{2,4}x\d{2,4}\./, ".");
+      return u.origin + cleanPath;
+    }
+
+    // Hilton images
+    if (lower.includes("hilton.com") && lower.includes("/im/")) {
+      u.searchParams.set("wid", "2000");
+      u.searchParams.set("resMode", "sharp2");
+      u.searchParams.set("op_usm", "1.75,0.3,2,0");
+      return u.toString();
+    }
+
+    // Marriott
+    if (lower.includes("marriott.com") && (u.searchParams.has("downsize") || u.searchParams.has("output-quality"))) {
+      u.searchParams.set("downsize", "2000px:*");
+      u.searchParams.set("output-quality", "85");
+      return u.toString();
+    }
+
+    // Accor / ahstatic
+    if (lower.includes("ahstatic.com") || lower.includes("accor")) {
+      if (u.searchParams.has("width")) u.searchParams.set("width", "2000");
+      if (u.searchParams.has("w")) u.searchParams.set("w", "2000");
+      return u.toString();
+    }
+
+    // Generic: if URL has resize/crop params, try to increase them
+    if (u.searchParams.has("resize")) {
+      u.searchParams.set("resize", "2000");
+      return u.toString();
+    }
+
     return url;
   } catch {
     return url;
   }
+}
+
+/**
+ * Detect likely thumbnails by URL patterns (small dimensions).
+ */
+function isLikelyThumbnail(url: string): boolean {
+  const lower = url.toLowerCase();
+  // Skip tiny thumbnails: -100x100, _thumb, /thumb/, 150x150 etc.
+  if (lower.includes("_thumb") || lower.includes("/thumb/") || lower.includes("/thumbnail/")) return true;
+  if (lower.includes("_small") || lower.includes("/small/")) return true;
+
+  // Check for explicit small dimensions in URL
+  const dimMatch = url.match(/[\-_/](\d{2,4})x(\d{2,4})/);
+  if (dimMatch) {
+    const w = parseInt(dimMatch[1], 10);
+    const h = parseInt(dimMatch[2], 10);
+    if (w < 300 && h < 300) return true;
+  }
+
+  // Check for width params indicating small images
+  try {
+    const u = new URL(url);
+    const wParam = u.searchParams.get("w") || u.searchParams.get("width") || u.searchParams.get("wid");
+    if (wParam && parseInt(wParam, 10) < 300) return true;
+  } catch { /* ignore */ }
+
+  return false;
 }
 
 function findOfficialSite(results: any[], hotelName: string): any | null {
