@@ -736,13 +736,15 @@ function OperacaoInboxInner() {
           const dbPhoneCandidates = Array.from(new Set([phone, `+${phone}`, `${phone}@c.us`, `${phone}@g.us`, `${phone}-group`]));
 
           // Always search by phone to find ALL conversation IDs (there may be duplicates with/without "+")
-          const [zapiResp, byPhoneResp, byExternalResp] = await Promise.all([
-            supabase
-              .from("zapi_messages" as any)
-              .select("*")
-              .in("phone", phoneCandidates)
-              .order("timestamp", { ascending: false })
-              .limit(1000),
+          const [rawMsgs, byPhoneResp, byExternalResp] = await Promise.all([
+            fetchPaginated<any>((from, to) =>
+              supabase
+                .from("zapi_messages" as any)
+                .select("*")
+                .in("phone", phoneCandidates)
+                .order("timestamp", { ascending: false })
+                .range(from, to)
+            ),
             supabase.from("conversations").select("id, updated_at").in("phone", dbPhoneCandidates).order("updated_at", { ascending: false }),
             supabase.from("conversations").select("id, updated_at").eq("external_conversation_id", selectedId).order("updated_at", { ascending: false }),
           ]);
