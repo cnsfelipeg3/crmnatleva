@@ -24,7 +24,14 @@ Deno.serve(async (req) => {
     const textContent = body.text?.message || (typeof body.text === "string" ? body.text : "") || body.caption || "";
     const msgType = body.image ? "image" : body.audio ? "audio" : body.video ? "video" : body.document ? "document" : "text";
     const contactName = body.senderName || body.chatName || rawPhone || "Desconhecido";
-    const timestamp = body.momment ? new Date(Number(body.momment)).toISOString() : new Date().toISOString();
+
+    const momentRaw = Number(body.momment);
+    const eventTsMs = Number.isFinite(momentRaw)
+      ? (momentRaw > 1_000_000_000_000 ? momentRaw : momentRaw * 1000)
+      : Date.now();
+    const timestampIso = new Date(eventTsMs).toISOString();
+    const timestampEpoch = Math.floor(eventTsMs / 1000);
+
     const messageId = body.messageId || null;
     const msgStatus = body.status || (fromMe ? "SENT" : "RECEIVED");
 
