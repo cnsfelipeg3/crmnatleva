@@ -94,6 +94,7 @@ const PortalLogin = lazy(() => import("@/pages/portal/PortalLogin"));
 const PortalDashboard = lazy(() => import("@/pages/portal/PortalDashboard"));
 const PortalTripDetail = lazy(() => import("@/pages/portal/PortalTripDetail"));
 const PortalDemoTrip = lazy(() => import("@/pages/portal/PortalDemoTrip"));
+const PortalMyTrips = lazy(() => import("@/pages/portal/PortalMyTrips"));
 const PortalFinance = lazy(() => import("@/pages/portal/PortalFinance"));
 const PortalNewQuote = lazy(() => import("@/pages/portal/PortalNewQuote"));
 const PortalProfile = lazy(() => import("@/pages/portal/PortalProfile"));
