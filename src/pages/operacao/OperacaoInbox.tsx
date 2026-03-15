@@ -96,17 +96,37 @@ const FILTERS = [
 ];
 
 // ─── Helpers ───
-function normalizeTimestamp(dateStr: string): Date {
-  if (!dateStr) return new Date(0);
+function normalizeTimestamp(dateStr: string | number): Date {
+  if (!dateStr && dateStr !== 0) return new Date(0);
   try {
-    const direct = new Date(dateStr);
+    // Handle epoch numbers (seconds or milliseconds)
+    const num = typeof dateStr === "number" ? dateStr : Number(dateStr);
+    if (Number.isFinite(num) && num > 1_000_000_000) {
+      const ms = num > 1_000_000_000_000 ? num : num * 1000;
+      const d = new Date(ms);
+      if (!isNaN(d.getTime()) && d.getTime() > 0) return d;
+    }
+    const str = String(dateStr);
+    const direct = new Date(str);
     if (!isNaN(direct.getTime()) && direct.getTime() > 0) return direct;
-    let normalized = dateStr;
+    let normalized = str;
     if (normalized.includes(" ") && !normalized.includes("T")) normalized = normalized.replace(" ", "T");
     if (/[+-]\d{2}$/.test(normalized)) normalized += ":00";
     const date = new Date(normalized);
     return isNaN(date.getTime()) ? new Date(0) : date;
   } catch { return new Date(0); }
+}
+
+/** Convert any timestamp value (epoch int, epoch string, ISO string) to a valid ISO string */
+function toIsoTimestamp(value: any): string {
+  if (!value && value !== 0) return new Date().toISOString();
+  const num = Number(value);
+  if (Number.isFinite(num) && num > 1_000_000_000) {
+    const ms = num > 1_000_000_000_000 ? num : num * 1000;
+    return new Date(ms).toISOString();
+  }
+  const d = new Date(String(value));
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
 }
 
 function formatTimestamp(dateStr: string): string {
