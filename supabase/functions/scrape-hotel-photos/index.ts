@@ -526,8 +526,12 @@ function isFromDomain(imageUrl: string, sourceUrl: string, officialDomain: strin
   const imgDomain = extractDomain(imageUrl.startsWith("http") ? imageUrl : `https://${officialDomain}${imageUrl}`);
   if (imgDomain.includes(officialDomain) || officialDomain.includes(imgDomain)) return true;
 
-  // CDNs serving the hotel's images (common patterns)
-  const allowedCDNs = ["cloudinary", "akamai", "cloudfront", "amazonaws", "imgix", "ctfassets", "bstatic", "trvl-media"];
+  // CDNs serving hotel images (common patterns) — always allow
+  const allowedCDNs = [
+    "cloudinary", "akamai", "cloudfront", "amazonaws", "imgix", "ctfassets",
+    "bstatic", "trvl-media", "ahstatic", "fastbooking", "accor",
+    "hilton.com/im/", "marriott.com/content", "wyndham", "ihg.com",
+  ];
   if (allowedCDNs.some(cdn => imageUrl.toLowerCase().includes(cdn))) return true;
 
   return false;
