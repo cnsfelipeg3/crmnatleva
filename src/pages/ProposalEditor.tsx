@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search } from "lucide-react";
+import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye } from "lucide-react";
+import ProposalPreviewRenderer from "@/components/proposal/ProposalPreviewRenderer";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import HotelPhotosScraper from "@/components/HotelPhotosScraper";
 import ProposalFlightSearch, { type FlightSegmentData } from "@/components/proposal/ProposalFlightSearch";
@@ -299,6 +300,9 @@ export default function ProposalEditor() {
           <TabsTrigger value="info">Informações</TabsTrigger>
           <TabsTrigger value="items">Itens da Viagem</TabsTrigger>
           <TabsTrigger value="finance">Valores & Pagamento</TabsTrigger>
+          <TabsTrigger value="preview" className="gap-1.5">
+            <Eye className="w-3.5 h-3.5" /> Preview da Apresentação
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="space-y-4">
@@ -578,6 +582,18 @@ export default function ProposalEditor() {
               ))}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="preview">
+          <ProposalPreviewRenderer
+            proposal={{
+              ...form,
+              total_value: form.total_value ? parseFloat(form.total_value) : null,
+              value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
+            }}
+            items={items}
+            embedded
+          />
         </TabsContent>
       </Tabs>
     </div>
