@@ -66,6 +66,85 @@ export default function ProposalEditor() {
   const [items, setItems] = useState<any[]>([]);
   const [destInput, setDestInput] = useState("");
   const [placesSearchIdx, setPlacesSearchIdx] = useState<number | null>(null);
+  const [collapsedItems, setCollapsedItems] = useState<Set<number>>(new Set());
+  const [savingItemIdx, setSavingItemIdx] = useState<number | null>(null);
+
+  const toggleCollapse = (idx: number) => {
+    setCollapsedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  };
+
+  const saveProposalAndItems = useCallback(async () => {
+    const slug = existing?.slug || generateSlug();
+    const payload = {
+      title: form.title,
+      client_name: form.client_name,
+      origin: form.origin,
+      destinations: form.destinations,
+      travel_start_date: form.travel_start_date || null,
+      travel_end_date: form.travel_end_date || null,
+      passenger_count: form.passenger_count,
+      consultant_name: form.consultant_name,
+      status: form.status,
+      intro_text: form.intro_text,
+      cover_image_url: form.cover_image_url,
+      total_value: form.total_value ? parseFloat(form.total_value) : null,
+      value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
+      payment_conditions: form.payment_conditions,
+      slug,
+      created_by: user?.id,
+      updated_at: new Date().toISOString(),
+    };
+
+    let proposalId = id;
+    if (isNew) {
+      const { data, error } = await supabase.from("proposals").insert(payload).select("id").single();
+      if (error) throw error;
+      proposalId = data.id;
+    } else {
+      const { error } = await supabase.from("proposals").update(payload).eq("id", id);
+      if (error) throw error;
+    }
+
+    // Save all items
+    if (!isNew) {
+      await supabase.from("proposal_items").delete().eq("proposal_id", proposalId!);
+    }
+    if (items.length > 0) {
+      const itemsPayload = items.map((item, idx) => ({
+        proposal_id: proposalId,
+        item_type: item.item_type,
+        position: idx,
+        title: item.title,
+        description: item.description,
+        image_url: item.image_url,
+        data: item.data || {},
+      }));
+      const { error } = await supabase.from("proposal_items").insert(itemsPayload);
+      if (error) throw error;
+    }
+
+    return proposalId;
+  }, [existing, form, items, id, isNew, user]);
+
+  const saveItemBlock = async (idx: number) => {
+    setSavingItemIdx(idx);
+    try {
+      const proposalId = await saveProposalAndItems();
+      queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      queryClient.invalidateQueries({ queryKey: ["proposal-items", id] });
+      toast.success(`Bloco "${items[idx]?.title || itemTypeLabels[items[idx]?.item_type]}" salvo!`);
+      if (isNew && proposalId) navigate(`/propostas/${proposalId}`, { replace: true });
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar bloco");
+    } finally {
+      setSavingItemIdx(null);
+    }
+  };
 
   const { data: existing } = useQuery({
     queryKey: ["proposal", id],
