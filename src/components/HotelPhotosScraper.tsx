@@ -222,10 +222,9 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
         batch.map(async (photo) => {
           if (!photo.url) return;
           try {
-            const blob = await fetchProxiedImageBlob(photo.url, refererUrl);
-            const objectUrl = URL.createObjectURL(blob);
-            proxiedObjectUrlsRef.current.push(objectUrl);
-            setProxiedImageUrls((prev) => ({ ...prev, [photo.url]: objectUrl }));
+            const resolvedUrl = await fetchProxiedImageUrl(photo.url, refererUrl);
+            proxiedObjectUrlsRef.current.push(resolvedUrl);
+            setProxiedImageUrls((prev) => ({ ...prev, [photo.url]: resolvedUrl }));
           } catch {
             // Will fall back to direct URL with referrerPolicy="no-referrer"
           }
