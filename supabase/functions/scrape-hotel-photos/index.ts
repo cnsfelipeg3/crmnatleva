@@ -1013,6 +1013,95 @@ function isGenericHeading(text: string): boolean {
   return generic.some(g => text.includes(g));
 }
 
+/**
+ * Returns true if a heading looks like an actual room/suite/facility name,
+ * not a marketing headline like "2026 travel" or "A profound cultural experience".
+ */
+function isLikelyRoomOrFacilityName(name: string): boolean {
+  if (!name || name.length < 3 || name.length > 80) return false;
+  const lower = name.toLowerCase().trim();
+
+  // Reject obvious non-room headings
+  if (/^\d{4}\b/.test(lower)) return false; // starts with year like "2026"
+  if (/^(notice|gallery|local|what's on|operation|news|blog|press|faq|map|access|contact|about|overview|welcome|discover|explore)/i.test(lower)) return false;
+  if (lower.split(/\s+/).length > 8) return false; // too many words = marketing copy
+  if (/\b(profound|experience|creating|oasis|heart of|secret|role of|boutique at)\b/i.test(lower) && !/room|suite|villa|cottage|bungalow/i.test(lower)) return false;
+
+  // Positive match: contains room/facility keywords
+  const roomFacilityKeywords = /\b(room|suite|studio|deluxe|superior|standard|classic|twin|double|single|king|queen|penthouse|villa|bungalow|apartment|junior|executive|premium|comfort|economy|family|cottage|chalet|loft|residence|presidential|royal|terrace|garden|ocean|sea|mountain|river|lake|pool|view|balcony|club|grand|master|spa|wellness|onsen|hot spring|bath|sauna|fitness|gym|pool|piscina|restaurant|ristorante|dining|breakfast|bar|lounge|lobby|reception|concierge|fachada|exterior|facade|客室|和室|洋室|和洋室|ルーム|スイート|レストラン|ダイニング|温泉|大浴場|露天風呂|スパ|プール|フィットネス|ロビー|庭園|朝食|バー|ラウンジ)\b/i;
+  if (roomFacilityKeywords.test(lower)) return true;
+
+  // Also accept short, capitalized names that look like proper nouns (room names are often proper nouns)
+  // e.g., "Hassler Penthouse", "Amalfi Suite", "Sakura Room"
+  if (/^[A-ZÀ-Ü]/.test(name) && name.split(/\s+/).length <= 4 && !/\b(the|an?|is|are|was|our|your|this|that|and|for|with|from|into)\b/i.test(lower)) {
+    // Short proper noun — could be a room name, allow it through
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Use AI to extract actual room/suite names from scraped photo data.
+ */
+async function extractRoomNamesWithAI(
+  hotelName: string,
+  photos: ScrapedPhoto[],
+  collection: ImageCollection
+): Promise<string[]> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) return [];
+
+  // Gather all section names and HTML contexts
+  const sectionNames = [...new Set(photos.map(p => p.section_name).filter(Boolean))];
+  const contexts = [...new Set(photos.map(p => p.html_context).filter(Boolean))].slice(0, 30);
+  const sectionDescs = [...collection.sections.entries()].map(([k, v]) => `${k}: ${v.description}`).filter(Boolean).slice(0, 20);
+
+  const prompt = `You are a hotel data analyst. Given scraped data from the website of "${hotelName}", extract ONLY the actual room/suite/accommodation names AND facility names (restaurant, spa, pool, bar, etc.).
+
+SECTION HEADINGS found on the website:
+${sectionNames.map(n => `- ${n}`).join("\n")}
+
+SECTION DESCRIPTIONS:
+${sectionDescs.join("\n")}
+
+PHOTO CONTEXTS (sample):
+${contexts.slice(0, 15).join("\n")}
+
+RULES:
+- Return ONLY names of actual rooms, suites, or hotel facilities (restaurant, spa, pool, bar, lobby, etc.)
+- Do NOT include marketing headings like "2026 travel", "A profound cultural experience", "Creating a new landscape"
+- Do NOT include navigation items like "Notice", "Gallery", "Local Attractions"
+- Do NOT include dates, years, or event announcements
+- If you cannot identify any real room names, return an empty array
+- Keep the original language of the room name (don't translate)
+
+Return ONLY a JSON array of strings:
+["Room Name 1", "Room Name 2", "Restaurant Name", ...]`;
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    const aiText = data.choices?.[0]?.message?.content || "";
+    const jsonMatch = aiText.match(/\[[\s\S]*\]/);
+    if (!jsonMatch) return [];
+    const names = JSON.parse(jsonMatch[0]);
+    return Array.isArray(names) ? names.filter((n: any) => typeof n === "string" && n.length >= 3 && n.length <= 80) : [];
+  } catch (e) {
+    console.warn("AI room name extraction failed:", e);
+    return [];
+  }
+}
+
 function inferCategory(sectionName: string, alt: string): string {
   const text = `${sectionName} ${alt}`.toLowerCase();
   if (/fachada|exterior|facade|building|entrada|外観/i.test(text)) return "fachada";
