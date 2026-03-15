@@ -96,10 +96,20 @@ Deno.serve(async (req) => {
 
     // 2. Cross-reference room names from Booking
     const bookingRoomNames = booking?.rooms.map(r => r.name) || [];
-    const officialRoomNames = official ? [...new Set(official.photos.map(p => p.section_name).filter(Boolean))] : [];
+    const officialRoomNames = official ? [...new Set(official.photos.map(p => p.section_name).filter(Boolean).filter(isLikelyRoomOrFacilityName))] : [];
     
     // Merge validated room names
-    const validatedRoomNames = [...new Set([...officialRoomNames, ...bookingRoomNames])];
+    let validatedRoomNames = [...new Set([...officialRoomNames, ...bookingRoomNames])];
+
+    // If we have very few validated names, try AI extraction from scraped content
+    if (validatedRoomNames.length < 3 && official && official.photos.length > 5) {
+      const aiRoomNames = await extractRoomNamesWithAI(cleanHotelName, official.photos, collection);
+      if (aiRoomNames.length > 0) {
+        validatedRoomNames = [...new Set([...validatedRoomNames, ...aiRoomNames])];
+        console.log(`🤖 AI extracted room names: ${aiRoomNames.join(", ")}`);
+      }
+    }
+    
     console.log(`📋 Validated room names: ${validatedRoomNames.join(", ")}`);
 
     // 3. Add Booking photos as FALLBACK (only for room types not well-covered by official)
