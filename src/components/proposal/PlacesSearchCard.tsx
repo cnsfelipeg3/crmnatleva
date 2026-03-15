@@ -146,6 +146,8 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMes
   ]);
 }
 
+type SearchProvider = "google" | "amadeus";
+
 /* ═══ Component ═══ */
 export default function PlacesSearchCard({
   initialQuery = "",
@@ -154,6 +156,9 @@ export default function PlacesSearchCard({
   onCancel,
   className,
 }: PlacesSearchCardProps) {
+  // Provider state
+  const [provider, setProvider] = useState<SearchProvider>("google");
+
   // Search state
   const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<PlaceResult[]>([]);
