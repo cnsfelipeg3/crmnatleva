@@ -417,6 +417,7 @@ export default function PortalFinance() {
                 {balanceVisible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
                 <span className="hidden sm:inline">{balanceVisible ? "Ocultar" : "Mostrar"}</span>
               </motion.button>
+              </div>
             </div>
 
             {/* ═══ HERO BALANCE CARD ═══ */}
