@@ -112,20 +112,17 @@ function createCityMarker(type: string, name: string, isCurrent: boolean): L.Div
     finish: "#f59e0b",
   };
   const color = isCurrent ? "#10b981" : (colors[type] || "#94a3b8");
-  const svg = CITY_SVGS[type] || CITY_SVGS.connection;
-  const size = isCurrent ? 40 : 36;
+  const dotSize = isCurrent ? 12 : 9;
+  const outerGlow = isCurrent ? `box-shadow:0 0 0 4px ${color}33, 0 1px 4px rgba(0,0,0,0.3);` : `box-shadow:0 1px 4px rgba(0,0,0,0.3);`;
 
   return L.divIcon({
     className: "",
-    iconSize: [size, size + 24],
-    iconAnchor: [size / 2, size + 16],
-    popupAnchor: [0, -(size + 16)],
-    html: `<div style="display:flex;flex-direction:column;align-items:center;filter:drop-shadow(0 2px 8px rgba(0,0,0,0.25));">
-      <div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;border:3px solid rgba(255,255,255,0.9);box-shadow:0 0 0 ${isCurrent ? '4' : '0'}px ${color}44;transition:all 0.3s;">
-        ${svg}
-      </div>
-      <div style="width:2px;height:8px;background:${color};opacity:0.6;"></div>
-      <div style="background:rgba(15,23,42,0.85);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:3px 10px;font-size:11px;font-weight:600;color:white;white-space:nowrap;font-family:'Inter',system-ui,sans-serif;letter-spacing:0.02em;">${name}</div>
+    iconSize: [80, 30],
+    iconAnchor: [dotSize / 2 + 4, 15],
+    popupAnchor: [36, -10],
+    html: `<div style="display:flex;align-items:center;gap:6px;pointer-events:auto;">
+      <div style="width:${dotSize}px;height:${dotSize}px;border-radius:50%;background:${color};border:2px solid rgba(255,255,255,0.9);${outerGlow}flex-shrink:0;"></div>
+      <div style="background:rgba(15,23,42,0.82);backdrop-filter:blur(6px);border-radius:6px;padding:2px 8px;font-size:10px;font-weight:600;color:white;white-space:nowrap;font-family:'Inter',system-ui,sans-serif;letter-spacing:0.01em;line-height:1.4;border:1px solid rgba(255,255,255,0.1);">${name}</div>
     </div>`,
   });
 }
