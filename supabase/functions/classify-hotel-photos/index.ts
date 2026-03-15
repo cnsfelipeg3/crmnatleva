@@ -5,6 +5,28 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function fetchImageAsBase64(url: string): Promise<{ dataUrl: string; ok: boolean }> {
+  try {
+    const res = await fetch(url, { redirect: "follow" });
+    if (!res.ok) {
+      console.warn(`Failed to fetch image (${res.status}): ${url.substring(0, 80)}...`);
+      return { dataUrl: "", ok: false };
+    }
+    const contentType = res.headers.get("content-type") || "image/jpeg";
+    const buf = await res.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const b64 = btoa(binary);
+    return { dataUrl: `data:${contentType};base64,${b64}`, ok: true };
+  } catch (e) {
+    console.warn(`Error fetching image: ${e}`);
+    return { dataUrl: "", ok: false };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -18,6 +40,26 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Pre-fetch all images and convert to base64 data URLs
+    // This is needed because the AI gateway cannot access Google Places URLs directly
+    console.log(`Converting ${photo_urls.length} images to base64...`);
+    const imageResults = await Promise.all(photo_urls.map((url: string) => fetchImageAsBase64(url)));
+    
+    const validImages: { index: number; dataUrl: string }[] = [];
+    for (let i = 0; i < imageResults.length; i++) {
+      if (imageResults[i].ok) {
+        validImages.push({ index: i, dataUrl: imageResults[i].dataUrl });
+      }
+    }
+
+    if (validImages.length === 0) {
+      return new Response(JSON.stringify({ error: "Nenhuma foto pôde ser carregada" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`Successfully converted ${validImages.length}/${photo_urls.length} images`);
 
     const systemPrompt = `Você é um especialista em hotelaria e classificação de fotos de hotéis.
 
@@ -54,9 +96,9 @@ Retorne APENAS um JSON válido:
 
     const content: any[] = [{ type: "text", text: systemPrompt }];
 
-    for (let i = 0; i < photo_urls.length; i++) {
-      content.push({ type: "text", text: `\nFoto ${i + 1}:` });
-      content.push({ type: "image_url", image_url: { url: photo_urls[i] } });
+    for (const img of validImages) {
+      content.push({ type: "text", text: `\nFoto ${img.index + 1}:` });
+      content.push({ type: "image_url", image_url: { url: img.dataUrl } });
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -102,6 +144,16 @@ Retorne APENAS um JSON válido:
       }
     } catch {
       parsed = { photos: [] };
+    }
+
+    // Re-map indices back to original photo_urls indices
+    if (parsed.photos && Array.isArray(parsed.photos)) {
+      for (const photo of parsed.photos) {
+        const validImg = validImages[photo.index];
+        if (validImg) {
+          photo.index = validImg.index;
+        }
+      }
     }
 
     return new Response(JSON.stringify(parsed), {
