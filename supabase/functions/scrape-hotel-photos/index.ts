@@ -106,13 +106,20 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${collection.photos.length} candidate images`);
 
-    // ── Step 5: Filter and return ──
+    // ── Step 5: Filter, deduplicate, maximize quality, and return ──
     const photos = collection.photos
       .filter(img => {
         const url = img.url.toLowerCase();
         if (url.includes("icon") || url.includes("logo") || url.includes("sprite")) return false;
         if (url.includes("1x1") || url.includes("pixel") || url.includes("tracking")) return false;
+        if (isLikelyThumbnail(img.url)) return false;
         return /\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(img.url) && img.url.length > 50;
+      })
+      // Prioritize photos WITH section names (they're more valuable)
+      .sort((a, b) => {
+        if (a.section_name && !b.section_name) return -1;
+        if (!a.section_name && b.section_name) return 1;
+        return 0;
       })
       .slice(0, 60)
       .map(img => ({
@@ -217,7 +224,7 @@ async function scrapeRoomsPagesWithContext(mainUrl: string | undefined, collecti
   }
 }
 
-async function scrapeIndividualRoomPage(url: string, roomName: string, collection: ImageCollection, apiKey: string, hotelName: string) {
+async function scrapeIndividualRoomPage(url: string, roomName: string, collection: ImageCollection, apiKey: string, _hotelName: string) {
   try {
     console.log(`  Scraping room detail: "${roomName}" → ${url}`);
     const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
@@ -230,46 +237,137 @@ async function scrapeIndividualRoomPage(url: string, roomName: string, collectio
     const html = data.data?.html || data.html || "";
     if (html.length < 300) return;
 
-    // All images on a specific room page belong to that room
-    const imgRegex = /(?:src|data-src|data-lazy-src|data-original)\s*=\s*["']([^"']+)["']/gi;
-    let match;
-    while ((match = imgRegex.exec(html)) !== null) {
-      const imgUrl = match[1].trim();
-      if (!isRelevantImage(imgUrl)) continue;
-      const absUrl = makeAbsolute(imgUrl, url);
-      if (collection.seen.has(absUrl)) continue;
-      collection.seen.add(absUrl);
-
-      // Extract alt text for this image
-      const altMatch = new RegExp(`(?:alt|title)\\s*=\\s*["']([^"']{3,80})["']`, "i");
-      const nearbyHtml = html.substring(Math.max(0, match.index - 200), match.index + 300);
-      const altText = altMatch.exec(nearbyHtml)?.[1] || "";
-
-      collection.photos.push({
-        url: absUrl,
-        alt: altText || roomName,
-        section_name: roomName,
-        category: inferCategory(roomName, altText),
-        confidence: 0.95,
-      });
-    }
+    // Extract all images including srcset high-res variants
+    extractHighResImages(html, url, collection, roomName);
   } catch (e) {
     console.warn(`Failed scraping room page ${url}:`, e);
   }
 }
 
 /**
+ * Extract images from HTML, preferring srcset high-res versions.
+ * Associates each image with its parent section heading.
+ */
+function extractHighResImages(html: string, sourceUrl: string, collection: ImageCollection, sectionName: string) {
+  // First pass: collect srcset high-res URLs per img tag
+  const imgTagRegex = /<img[^>]+>/gi;
+  let tagMatch;
+  while ((tagMatch = imgTagRegex.exec(html)) !== null) {
+    const tag = tagMatch[0];
+    const bestUrl = getBestImageUrl(tag, sourceUrl);
+    if (!bestUrl || !isRelevantImage(bestUrl)) continue;
+    if (collection.seen.has(bestUrl)) continue;
+
+    // Skip tiny thumbnails by checking URL for small dimensions
+    if (isLikelyThumbnail(bestUrl)) continue;
+
+    collection.seen.add(bestUrl);
+
+    const altMatch = tag.match(/alt\s*=\s*["']([^"']{3,120})["']/i);
+    const altText = altMatch?.[1] || "";
+
+    collection.photos.push({
+      url: bestUrl,
+      alt: altText || sectionName,
+      section_name: sectionName,
+      category: inferCategory(sectionName, altText),
+      confidence: sectionName ? 0.95 : 0.5,
+    });
+  }
+
+  // Second pass: background images and data attributes not in img tags
+  const bgRegex = /(?:data-bg|data-image|style\s*=\s*["'][^"']*url\s*\(\s*["']?)([^"')\s]+\.(?:jpg|jpeg|png|webp|avif)[^"')\s]*)["')\s]*/gi;
+  let bgMatch;
+  while ((bgMatch = bgRegex.exec(html)) !== null) {
+    const imgUrl = bgMatch[1].trim();
+    if (!isRelevantImage(imgUrl)) continue;
+    const absUrl = makeAbsolute(imgUrl, sourceUrl);
+    if (collection.seen.has(absUrl)) continue;
+    if (isLikelyThumbnail(absUrl)) continue;
+    collection.seen.add(absUrl);
+    collection.photos.push({
+      url: absUrl,
+      alt: sectionName,
+      section_name: sectionName,
+      category: inferCategory(sectionName, ""),
+      confidence: sectionName ? 0.9 : 0.4,
+    });
+  }
+}
+
+/**
+ * From an <img> tag, extract the HIGHEST resolution URL available.
+ * Priority: srcset (largest) > data-src > data-lazy-src > data-original > src
+ */
+function getBestImageUrl(imgTag: string, sourceUrl: string): string | null {
+  // Try srcset first — pick the largest variant
+  const srcsetMatch = imgTag.match(/srcset\s*=\s*["']([^"']+)["']/i);
+  if (srcsetMatch) {
+    const srcsetUrl = pickLargestFromSrcset(srcsetMatch[1], sourceUrl);
+    if (srcsetUrl) return srcsetUrl;
+  }
+
+  // Try high-res data attributes
+  const hiResAttrs = ["data-src-lg", "data-src-xl", "data-full-src", "data-zoom-src", "data-highres", "data-original"];
+  for (const attr of hiResAttrs) {
+    const match = imgTag.match(new RegExp(`${attr}\\s*=\\s*["']([^"']+)["']`, "i"));
+    if (match) {
+      const url = makeAbsolute(match[1].trim(), sourceUrl);
+      if (isRelevantImage(url)) return url;
+    }
+  }
+
+  // Fallback data attributes
+  const fallbackAttrs = ["data-src", "data-lazy-src"];
+  for (const attr of fallbackAttrs) {
+    const match = imgTag.match(new RegExp(`${attr}\\s*=\\s*["']([^"']+)["']`, "i"));
+    if (match) {
+      const url = makeAbsolute(match[1].trim(), sourceUrl);
+      if (isRelevantImage(url)) return url;
+    }
+  }
+
+  // Regular src
+  const srcMatch = imgTag.match(/\bsrc\s*=\s*["']([^"']+)["']/i);
+  if (srcMatch) {
+    const url = makeAbsolute(srcMatch[1].trim(), sourceUrl);
+    if (isRelevantImage(url)) return url;
+  }
+
+  return null;
+}
+
+/**
+ * Parse srcset and return the URL with the largest width descriptor.
+ * srcset format: "url1 300w, url2 800w, url3 1600w"
+ */
+function pickLargestFromSrcset(srcset: string, sourceUrl: string): string | null {
+  const candidates = srcset.split(",").map(s => {
+    const parts = s.trim().split(/\s+/);
+    const url = parts[0];
+    const descriptor = parts[1] || "";
+    let width = 0;
+    if (descriptor.endsWith("w")) {
+      width = parseInt(descriptor, 10) || 0;
+    } else if (descriptor.endsWith("x")) {
+      width = (parseFloat(descriptor) || 1) * 1000; // approximate
+    }
+    return { url, width };
+  }).filter(c => c.url && isRelevantImage(c.url));
+
+  if (candidates.length === 0) return null;
+
+  // Pick the one with largest width, minimum 600w to avoid tiny thumbs
+  candidates.sort((a, b) => b.width - a.width);
+  const best = candidates[0];
+  return makeAbsolute(best.url, sourceUrl);
+}
+
+/**
  * KEY FUNCTION: Parse HTML and associate each image with its closest preceding heading.
- * This gives us the REAL room/section name directly from the hotel site structure.
  */
 function extractImagesWithSectionContext(html: string, sourceUrl: string, collection: ImageCollection, hotelName: string) {
-  // Strategy: Split HTML by heading tags. Each section = heading + content with images.
-  // The heading gives us the section name, and all images in that content belong to it.
-
-  // First, find all headings and their positions
   const headingRegex = /<h([1-4])[^>]*>([\s\S]*?)<\/h\1>/gi;
-  const imgRegex = /(?:src|data-src|data-lazy-src|data-original|data-bg)\s*=\s*["']([^"']+\.(?:jpg|jpeg|png|webp|avif)[^"']*)["']/gi;
-  const altRegex = /alt\s*=\s*["']([^"']{3,120})["']/i;
 
   interface Section {
     name: string;
@@ -277,13 +375,11 @@ function extractImagesWithSectionContext(html: string, sourceUrl: string, collec
     endIdx: number;
   }
 
-  // Collect all headings with positions
   const sections: Section[] = [];
   let hMatch;
   while ((hMatch = headingRegex.exec(html)) !== null) {
     const rawHeading = hMatch[2].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/&#\d+;/g, " ").trim();
     if (rawHeading.length >= 3 && rawHeading.length <= 100) {
-      // Skip generic navigation headings
       const lower = rawHeading.toLowerCase();
       if (!isGenericHeading(lower)) {
         sections.push({ name: rawHeading, startIdx: hMatch.index, endIdx: 0 });
@@ -291,50 +387,24 @@ function extractImagesWithSectionContext(html: string, sourceUrl: string, collec
     }
   }
 
-  // Set endIdx for each section (start of next section or end of HTML)
   for (let i = 0; i < sections.length; i++) {
     sections[i].endIdx = i < sections.length - 1 ? sections[i + 1].startIdx : html.length;
   }
 
-  // Also try to capture images from structured containers (div/article/section with data attributes or class names)
-  // that contain both a title element and images
   extractFromStructuredContainers(html, sourceUrl, collection);
 
-  // Process each section: extract images that appear within it
+  // Process each section: extract HIGH-RES images
   for (const section of sections) {
     const sectionHtml = html.substring(section.startIdx, section.endIdx);
-    let iMatch;
-    const sectionImgRegex = new RegExp(imgRegex.source, "gi");
-
-    while ((iMatch = sectionImgRegex.exec(sectionHtml)) !== null) {
-      const imgUrl = iMatch[1].trim();
-      if (!isRelevantImage(imgUrl)) continue;
-      const absUrl = makeAbsolute(imgUrl, sourceUrl);
-      if (collection.seen.has(absUrl)) continue;
-      collection.seen.add(absUrl);
-
-      // Try to find alt text near this image
-      const nearbyHtml = sectionHtml.substring(Math.max(0, iMatch.index - 100), iMatch.index + 300);
-      const altText = altRegex.exec(nearbyHtml)?.[1] || "";
-
-      collection.photos.push({
-        url: absUrl,
-        alt: altText || section.name,
-        section_name: section.name,
-        category: inferCategory(section.name, altText),
-        confidence: 0.95,
-      });
-    }
+    extractHighResImages(sectionHtml, sourceUrl, collection, section.name);
   }
 
-  // Also collect images NOT under any heading (e.g., hero images, gallery sliders)
+  // Orphan images before first heading
   if (sections.length > 0) {
-    // Images before the first heading
     const preHeadingHtml = html.substring(0, sections[0].startIdx);
-    extractOrphanImages(preHeadingHtml, sourceUrl, collection, hotelName);
+    extractHighResImages(preHeadingHtml, sourceUrl, collection, "");
   } else {
-    // No headings found, extract all images with alt-text context
-    extractOrphanImages(html, sourceUrl, collection, hotelName);
+    extractHighResImages(html, sourceUrl, collection, "");
   }
 }
 
@@ -371,34 +441,8 @@ function extractFromStructuredContainers(html: string, sourceUrl: string, collec
   }
 }
 
-function extractOrphanImages(html: string, sourceUrl: string, collection: ImageCollection, hotelName: string) {
-  const imgRegex = /(?:src|data-src|data-lazy-src|data-original)\s*=\s*["']([^"']+\.(?:jpg|jpeg|png|webp|avif)[^"']*)["']/gi;
-  const altRegex = /alt\s*=\s*["']([^"']{3,120})["']/i;
-  let match;
-  while ((match = imgRegex.exec(html)) !== null) {
-    const imgUrl = match[1].trim();
-    if (!isRelevantImage(imgUrl)) continue;
-    const absUrl = makeAbsolute(imgUrl, sourceUrl);
-    if (collection.seen.has(absUrl)) continue;
-    collection.seen.add(absUrl);
 
-    const nearbyHtml = html.substring(Math.max(0, match.index - 100), match.index + 300);
-    const altText = altRegex.exec(nearbyHtml)?.[1] || "";
 
-    // Use alt text as section_name if it looks meaningful
-    const sectionName = (altText && altText.length > 3 && !isGenericAlt(altText))
-      ? altText
-      : "";
-
-    collection.photos.push({
-      url: absUrl,
-      alt: altText || hotelName,
-      section_name: sectionName,
-      category: inferCategory(sectionName, altText),
-      confidence: sectionName ? 0.7 : 0.4,
-    });
-  }
-}
 
 function extractRoomDetailLinks(html: string, baseUrl: string): Array<{ url: string; roomName: string }> {
   const links: Array<{ url: string; roomName: string }> = [];
@@ -508,32 +552,122 @@ function extractDomain(url: string): string {
   try { return new URL(url).hostname; } catch { return ""; }
 }
 
+/**
+ * Maximize image quality by requesting the largest version from known CDN patterns.
+ */
 function standardizeImageUrl(url: string): string {
   try {
     const u = new URL(url);
+    const lower = url.toLowerCase();
+
+    // Cloudinary: request w_2000 quality auto
     if (u.hostname.includes("cloudinary.com") && u.pathname.includes("/upload/")) {
-      const newPath = u.pathname.replace(/\/upload\/[^/]*\//, "/upload/w_1200,q_auto,f_auto/");
-      if (newPath !== u.pathname) return u.origin + newPath + u.search;
+      const newPath = u.pathname.replace(/\/upload\/[^/]*\//, "/upload/w_2000,q_auto,f_auto/");
+      if (newPath !== u.pathname) return u.origin + newPath;
     }
-    if (u.hostname.includes("imgix") || u.searchParams.has("w") || u.searchParams.has("fit")) {
-      u.searchParams.set("w", "1200");
-      u.searchParams.set("q", "80");
+
+    // Imgix: request high-quality
+    if (u.hostname.includes("imgix") || (u.searchParams.has("w") && u.searchParams.has("fit"))) {
+      u.searchParams.set("w", "2000");
+      u.searchParams.set("q", "85");
       u.searchParams.set("fit", "max");
-      u.searchParams.set("auto", "format");
+      u.searchParams.set("auto", "format,compress");
       return u.toString();
     }
+
+    // Akamai / generic CDN with wid/width params
     if (u.search.includes("wid=") || u.search.includes("width=")) {
-      u.searchParams.set("wid", "1200");
+      u.searchParams.set("wid", "2000");
       u.searchParams.delete("width");
       if (u.searchParams.has("hei")) u.searchParams.delete("hei");
       if (u.searchParams.has("height")) u.searchParams.delete("height");
-      u.searchParams.set("qlt", "80");
+      u.searchParams.set("qlt", "85");
       return u.toString();
     }
+
+    // Contentful
+    if (u.hostname.includes("ctfassets.net") || u.hostname.includes("contentful")) {
+      u.searchParams.set("w", "2000");
+      u.searchParams.set("q", "85");
+      u.searchParams.set("fm", "jpg");
+      u.searchParams.set("fl", "progressive");
+      return u.toString();
+    }
+
+    // Fastly / generic resize params
+    if (u.searchParams.has("width") || u.searchParams.has("w")) {
+      u.searchParams.set("width", "2000");
+      u.searchParams.delete("w");
+      if (u.searchParams.has("height")) u.searchParams.delete("height");
+      u.searchParams.set("quality", "85");
+      return u.toString();
+    }
+
+    // WordPress / WP thumbnails — remove dimension suffix like -300x200
+    if (/\-\d{2,4}x\d{2,4}\.(jpg|jpeg|png|webp)/i.test(u.pathname)) {
+      const cleanPath = u.pathname.replace(/\-\d{2,4}x\d{2,4}\./, ".");
+      return u.origin + cleanPath;
+    }
+
+    // Hilton images
+    if (lower.includes("hilton.com") && lower.includes("/im/")) {
+      u.searchParams.set("wid", "2000");
+      u.searchParams.set("resMode", "sharp2");
+      u.searchParams.set("op_usm", "1.75,0.3,2,0");
+      return u.toString();
+    }
+
+    // Marriott
+    if (lower.includes("marriott.com") && (u.searchParams.has("downsize") || u.searchParams.has("output-quality"))) {
+      u.searchParams.set("downsize", "2000px:*");
+      u.searchParams.set("output-quality", "85");
+      return u.toString();
+    }
+
+    // Accor / ahstatic
+    if (lower.includes("ahstatic.com") || lower.includes("accor")) {
+      if (u.searchParams.has("width")) u.searchParams.set("width", "2000");
+      if (u.searchParams.has("w")) u.searchParams.set("w", "2000");
+      return u.toString();
+    }
+
+    // Generic: if URL has resize/crop params, try to increase them
+    if (u.searchParams.has("resize")) {
+      u.searchParams.set("resize", "2000");
+      return u.toString();
+    }
+
     return url;
   } catch {
     return url;
   }
+}
+
+/**
+ * Detect likely thumbnails by URL patterns (small dimensions).
+ */
+function isLikelyThumbnail(url: string): boolean {
+  const lower = url.toLowerCase();
+  // Skip tiny thumbnails: -100x100, _thumb, /thumb/, 150x150 etc.
+  if (lower.includes("_thumb") || lower.includes("/thumb/") || lower.includes("/thumbnail/")) return true;
+  if (lower.includes("_small") || lower.includes("/small/")) return true;
+
+  // Check for explicit small dimensions in URL
+  const dimMatch = url.match(/[\-_/](\d{2,4})x(\d{2,4})/);
+  if (dimMatch) {
+    const w = parseInt(dimMatch[1], 10);
+    const h = parseInt(dimMatch[2], 10);
+    if (w < 300 && h < 300) return true;
+  }
+
+  // Check for width params indicating small images
+  try {
+    const u = new URL(url);
+    const wParam = u.searchParams.get("w") || u.searchParams.get("width") || u.searchParams.get("wid");
+    if (wParam && parseInt(wParam, 10) < 300) return true;
+  } catch { /* ignore */ }
+
+  return false;
 }
 
 function findOfficialSite(results: any[], hotelName: string): any | null {
