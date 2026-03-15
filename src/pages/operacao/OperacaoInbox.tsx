@@ -1603,7 +1603,7 @@ function OperacaoInboxInner() {
           </div>
 
           {/* ─── Column 2: Chat ─── */}
-          <div className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden ${isMobile && !selectedId ? "hidden" : ""}`}>
+          <div className={`flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden relative ${isMobile && !selectedId ? "hidden" : ""}`}>
             {selected ? (
               <>
                 {/* Chat header */}
