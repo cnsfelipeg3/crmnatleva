@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Camera, Loader2, ExternalLink, Check, ChevronLeft, ChevronRight, ZoomIn, Info, X, MapPin, Globe, Sparkles } from "lucide-react";
+import {
+  Camera, Loader2, ExternalLink, Check, ChevronLeft, ChevronRight,
+  ZoomIn, Info, X, MapPin, Globe, Sparkles, FolderOpen, ChevronRight as ChevronNav,
+  Bed, Maximize2, Users, Eye, Wifi, ArrowLeft
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface HotelPhoto {
@@ -27,6 +31,12 @@ export interface HotelPhoto {
   };
 }
 
+interface SectionDetail {
+  description: string;
+  details: Record<string, string>;
+  amenities: string[];
+}
+
 interface Props {
   hotelName: string;
   hotelCity: string;
@@ -34,11 +44,23 @@ interface Props {
   onSelectPhotos?: (photos: HotelPhoto[]) => void;
 }
 
-const categoryIcons: Record<string, string> = {
-  fachada: "🏨", lobby: "🛎️", piscina: "🏊", praia: "🏖️",
-  restaurante: "🍽️", bar: "🍹", spa: "💆", academia: "🏋️",
-  quarto: "🛏️", suite: "👑", banheiro: "🚿",
-  area_comum: "🌿", vista: "🌅", jardim: "🌺", eventos: "🎪", outro: "📷",
+const categoryConfig: Record<string, { icon: string; label: string }> = {
+  quarto: { icon: "🛏️", label: "Quartos" },
+  suite: { icon: "👑", label: "Suítes" },
+  fachada: { icon: "🏨", label: "Fachada" },
+  lobby: { icon: "🛎️", label: "Lobby" },
+  piscina: { icon: "🏊", label: "Piscina" },
+  praia: { icon: "🏖️", label: "Praia" },
+  restaurante: { icon: "🍽️", label: "Restaurantes" },
+  bar: { icon: "🍹", label: "Bar & Lounge" },
+  spa: { icon: "💆", label: "Spa & Wellness" },
+  academia: { icon: "🏋️", label: "Academia" },
+  banheiro: { icon: "🚿", label: "Banheiros" },
+  area_comum: { icon: "🌿", label: "Áreas Comuns" },
+  vista: { icon: "🌅", label: "Vistas" },
+  jardim: { icon: "🌺", label: "Jardim" },
+  eventos: { icon: "🎪", label: "Eventos" },
+  outro: { icon: "📷", label: "Outras Fotos" },
 };
 
 const categorySortOrder = [
@@ -115,31 +137,20 @@ async function fetchProxiedImageUrl(imageUrl: string, refererUrl?: string): Prom
 
 async function classifyPhotosWithAI(photos: HotelPhoto[], hotelName: string, roomNames?: string[]): Promise<HotelPhoto[]> {
   if (photos.length === 0) return photos;
-
   try {
     const { data, error } = await supabase.functions.invoke("classify-hotel-photos", {
       body: { photo_urls: photos.map(p => p.url), hotel_name: hotelName, room_names: roomNames || [] },
     });
-
-    if (error || !data?.photos) {
-      console.warn("Classification failed, returning unclassified photos");
-      return photos;
-    }
+    if (error || !data?.photos) return photos;
 
     const classified = data.photos as Array<{
-      index: number;
-      environment_name?: string;
-      category?: string;
-      room_type?: string;
-      bed_type?: string;
-      description?: string;
-      confidence?: number;
+      index: number; environment_name?: string; category?: string;
+      room_type?: string; bed_type?: string; description?: string; confidence?: number;
     }>;
 
     return photos.map((photo, idx) => {
       const match = classified.find(c => c.index === idx);
       if (!match) return photo;
-
       return {
         ...photo,
         environment_name: match.environment_name || photo.environment_name,
@@ -151,17 +162,22 @@ async function classifyPhotosWithAI(photos: HotelPhoto[], hotelName: string, roo
         confidence: match.confidence ?? photo.confidence,
       };
     });
-  } catch (err) {
-    console.error("Classification error:", err);
+  } catch {
     return photos;
   }
 }
+
+type NavState =
+  | { level: "categories" }
+  | { level: "items"; category: string }
+  | { level: "detail"; category: string; itemName: string };
 
 export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry, onSelectPhotos }: Props) {
   const [loading, setLoading] = useState(false);
   const [loadingSource, setLoadingSource] = useState<"google" | "official" | null>(null);
   const [classifying, setClassifying] = useState(false);
   const [photos, setPhotos] = useState<HotelPhoto[]>([]);
+  const [sectionDetails, setSectionDetails] = useState<Record<string, SectionDetail>>({});
   const [sourceUrl, setSourceUrl] = useState("");
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -172,6 +188,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
   const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set());
   const [resolvingImageUrls, setResolvingImageUrls] = useState<Set<string>>(new Set());
   const [knownRoomNames, setKnownRoomNames] = useState<string[]>([]);
+  const [nav, setNav] = useState<NavState>({ level: "categories" });
   const proxiedObjectUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
@@ -191,7 +208,6 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
 
   const resolveImageForDisplay = useCallback(async (url: string) => {
     if (!url || proxiedImageUrls[url] || failedImageUrls.has(url) || resolvingImageUrls.has(url)) return;
-
     setResolvingImageUrls((prev) => new Set(prev).add(url));
     try {
       const resolvedUrl = await fetchProxiedImageUrl(url, sourceUrl || undefined);
@@ -224,7 +240,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
             const resolvedUrl = await fetchProxiedImageUrl(photo.url, refererUrl);
             proxiedObjectUrlsRef.current.push(resolvedUrl);
             setProxiedImageUrls((prev) => ({ ...prev, [photo.url]: resolvedUrl }));
-          } catch { /* fallback to direct URL */ }
+          } catch { /* fallback */ }
         })
       );
     }
@@ -255,24 +271,16 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
         body: { action: "search", query: searchQuery },
       });
       if (searchError) throw searchError;
-
       const results = searchData?.results || [];
       if (results.length === 0) { toast.info("Hotel não encontrado no Google Places"); return; }
-
       const placeId = results[0].place_id;
-      if (!placeId || placeId.startsWith("fallback:")) {
-        toast.info("Fotos não disponíveis para este local no Google Places");
-        return;
-      }
-
+      if (!placeId || placeId.startsWith("fallback:")) { toast.info("Fotos não disponíveis no Google Places"); return; }
       const { data: detailsData, error: detailsError } = await supabase.functions.invoke("places-search", {
         body: { action: "details", place_id: placeId },
       });
       if (detailsError) throw detailsError;
-
       const placePhotos = detailsData?.photos || [];
       if (placePhotos.length === 0) { toast.info("Nenhuma foto encontrada no Google Places"); return; }
-
       const resolvedPhotos: HotelPhoto[] = await Promise.all(
         placePhotos.map(async (ph: any, idx: number) => {
           let url = "";
@@ -285,21 +293,18 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
           return { url, alt: `${hotelName} foto ${idx + 1}`, category: "outro", confidence: 0.5 } as HotelPhoto;
         })
       );
-
       const validPhotos = resolvedPhotos.filter(p => p.url);
       clearProxiedImages();
       setPhotos(validPhotos);
+      setSectionDetails({});
       setSourceUrl("");
       setScraped(true);
       setActiveSource("google");
-
+      setNav({ level: "categories" });
       if (validPhotos.length > 0) {
         toast.success(`${validPhotos.length} fotos encontradas via Google Places`);
         preloadViaProxy(validPhotos);
-        // Auto-classify
         await runClassification(validPhotos);
-      } else {
-        toast.info("Não foi possível carregar as fotos do Google Places");
       }
     } catch (err: any) {
       toast.error(err.message || "Erro ao buscar fotos no Google Places");
@@ -315,7 +320,6 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     setLoadingSource("official");
     try {
       toast.info("🕷️ Navegando pelo site completo do hotel...", { duration: 5000 });
-
       const { data, error } = await supabase.functions.invoke("scrape-hotel-photos", {
         body: { hotel_name: hotelName, hotel_city: hotelCity, hotel_country: hotelCountry },
       });
@@ -328,39 +332,31 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
         room_name: p.section_name || p.room_name || "",
       }));
       const scraperRoomNames: string[] = data.room_names || [];
+      const scrapedSectionDetails: Record<string, SectionDetail> = data.section_details || {};
       const pagesScraped: number = data.pages_scraped || 0;
-      const totalSitePages: number = data.total_site_pages || 0;
       const resolvedPhotos = await resolveHotelPhotosUrls(rawPhotos);
 
       clearProxiedImages();
       setPhotos(resolvedPhotos);
+      setSectionDetails(scrapedSectionDetails);
       setSourceUrl(data.source_url || "");
       setScraped(true);
       setActiveSource("official");
       setKnownRoomNames(scraperRoomNames);
+      setNav({ level: "categories" });
 
       const photosWithSections = resolvedPhotos.filter(p => p.environment_name && p.environment_name.length > 2).length;
       const sectionRatio = resolvedPhotos.length > 0 ? photosWithSections / resolvedPhotos.length : 0;
 
-      if (scraperRoomNames.length > 0) {
-        console.log("Room names from website:", scraperRoomNames);
-        console.log(`${photosWithSections}/${resolvedPhotos.length} photos with section context (${Math.round(sectionRatio * 100)}%)`);
-      }
-      console.log(`Scraped ${pagesScraped} pages out of ${totalSitePages} found on site`);
-
       if (resolvedPhotos.length > 0) {
         const sectionCount = new Set(resolvedPhotos.map(p => p.environment_name).filter(Boolean)).size;
         toast.success(
-          `📸 ${resolvedPhotos.length} fotos HD encontradas em ${pagesScraped} páginas — ${sectionCount} ambientes identificados`,
+          `📸 ${resolvedPhotos.length} fotos HD em ${pagesScraped} páginas — ${sectionCount} ambientes`,
           { duration: 5000 }
         );
         preloadViaProxy(resolvedPhotos, data.source_url || undefined);
-
         if (sectionRatio < 0.5) {
-          console.log("Many photos without section context, running AI classification...");
           await runClassification(resolvedPhotos, scraperRoomNames);
-        } else {
-          console.log("Most photos already have section names from scraper, skipping AI classification");
         }
       } else {
         toast.info("Nenhuma foto encontrada. Tente Google Places.");
@@ -387,37 +383,45 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     toast.success(`${selected.length} fotos adicionadas à proposta`);
   };
 
-  // Group by environment_name (real name from AI), falling back to category
-  const grouped = photos.reduce((acc, photo) => {
-    const key = photo.environment_name || photo.room_name || photo.category || "outro";
-    if (!acc[key]) acc[key] = { photos: [], category: photo.category || "outro" };
-    acc[key].photos.push(photo);
+  // Group by category → then by environment_name within each category
+  const categoryGroups = photos.reduce((acc, photo) => {
+    const cat = photo.category || "outro";
+    const envName = photo.environment_name || photo.room_name || "Sem nome";
+    if (!acc[cat]) acc[cat] = {};
+    if (!acc[cat][envName]) acc[cat][envName] = [];
+    acc[cat][envName].push(photo);
     return acc;
-  }, {} as Record<string, { photos: HotelPhoto[]; category: string }>);
+  }, {} as Record<string, Record<string, HotelPhoto[]>>);
 
-  // Sort groups: by category order, then alphabetically within same category
-  const sortedGroupKeys = Object.keys(grouped).sort((a, b) => {
-    const catA = categorySortOrder.indexOf(grouped[a].category);
-    const catB = categorySortOrder.indexOf(grouped[b].category);
-    const orderA = catA >= 0 ? catA : 99;
-    const orderB = catB >= 0 ? catB : 99;
-    if (orderA !== orderB) return orderA - orderB;
-    return a.localeCompare(b, "pt-BR");
+  const sortedCategories = Object.keys(categoryGroups).sort((a, b) => {
+    const idxA = categorySortOrder.indexOf(a);
+    const idxB = categorySortOrder.indexOf(b);
+    return (idxA >= 0 ? idxA : 99) - (idxB >= 0 ? idxB : 99);
   });
 
-  // Flat list for lightbox
-  const allPhotos = sortedGroupKeys.flatMap(key => grouped[key].photos);
-  const lightboxPhoto = lightboxIndex !== null ? allPhotos[lightboxIndex] : null;
+  // Current view photos for lightbox
+  const currentViewPhotos = (() => {
+    if (nav.level === "detail") {
+      return categoryGroups[nav.category]?.[nav.itemName] || [];
+    }
+    if (nav.level === "items") {
+      const items = categoryGroups[nav.category] || {};
+      return Object.values(items).flat();
+    }
+    return photos;
+  })();
+
+  const lightboxPhoto = lightboxIndex !== null ? currentViewPhotos[lightboxIndex] : null;
 
   const goNext = useCallback(() => {
     if (lightboxIndex === null) return;
-    setLightboxIndex((lightboxIndex + 1) % allPhotos.length);
-  }, [lightboxIndex, allPhotos.length]);
+    setLightboxIndex((lightboxIndex + 1) % currentViewPhotos.length);
+  }, [lightboxIndex, currentViewPhotos.length]);
 
   const goPrev = useCallback(() => {
     if (lightboxIndex === null) return;
-    setLightboxIndex((lightboxIndex - 1 + allPhotos.length) % allPhotos.length);
-  }, [lightboxIndex, allPhotos.length]);
+    setLightboxIndex((lightboxIndex - 1 + currentViewPhotos.length) % currentViewPhotos.length);
+  }, [lightboxIndex, currentViewPhotos.length]);
 
   useEffect(() => {
     if (lightboxIndex === null) return;
@@ -432,11 +436,11 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
   }, [lightboxIndex, goNext, goPrev, lightboxPhoto, toggleSelect]);
 
   const openLightbox = (photo: HotelPhoto) => {
-    const idx = allPhotos.findIndex(p => p.url === photo.url);
+    const idx = currentViewPhotos.findIndex(p => p.url === photo.url);
     setLightboxIndex(idx >= 0 ? idx : 0);
   };
 
-  // --- Initial buttons ---
+  // ── Initial buttons ──
   if (!scraped && photos.length === 0) {
     return (
       <div className="flex flex-wrap gap-2">
@@ -452,16 +456,243 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     );
   }
 
+  // ── Breadcrumb ──
+  const renderBreadcrumb = () => {
+    const crumbs: { label: string; onClick?: () => void }[] = [
+      { label: "📂 Galeria", onClick: nav.level !== "categories" ? () => setNav({ level: "categories" }) : undefined },
+    ];
+    if (nav.level === "items" || nav.level === "detail") {
+      const cfg = categoryConfig[nav.category] || { icon: "📷", label: nav.category };
+      crumbs.push({
+        label: `${cfg.icon} ${cfg.label}`,
+        onClick: nav.level === "detail" ? () => setNav({ level: "items", category: nav.category }) : undefined,
+      });
+    }
+    if (nav.level === "detail") {
+      crumbs.push({ label: nav.itemName });
+    }
+
+    return (
+      <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
+        {crumbs.map((c, i) => (
+          <span key={i} className="flex items-center gap-1">
+            {i > 0 && <ChevronNav className="w-3 h-3 text-muted-foreground/40" />}
+            {c.onClick ? (
+              <button onClick={c.onClick} className="hover:text-foreground transition-colors font-medium">
+                {c.label}
+              </button>
+            ) : (
+              <span className="text-foreground font-semibold">{c.label}</span>
+            )}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  // ── Category folders view ──
+  const renderCategories = () => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      {sortedCategories.map(cat => {
+        const items = categoryGroups[cat];
+        const itemNames = Object.keys(items);
+        const totalPhotos = Object.values(items).reduce((sum, arr) => sum + arr.length, 0);
+        const coverPhoto = Object.values(items).flat()[0];
+        const cfg = categoryConfig[cat] || { icon: "📷", label: cat };
+
+        return (
+          <button
+            key={cat}
+            onClick={() => {
+              // If only one item in category, skip to detail
+              if (itemNames.length === 1) {
+                setNav({ level: "detail", category: cat, itemName: itemNames[0] });
+              } else {
+                setNav({ level: "items", category: cat });
+              }
+            }}
+            className="group relative rounded-xl overflow-hidden border border-border/50 hover:border-primary/30 hover:shadow-md transition-all text-left bg-card"
+          >
+            <div className="aspect-[4/3] overflow-hidden bg-muted">
+              {coverPhoto && (
+                <img
+                  src={getDisplayUrl(coverPhoto.url)}
+                  alt={cfg.label}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  loading="lazy"
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
+                  onError={() => handleImageError(coverPhoto.url)}
+                />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 p-3">
+              <div className="flex items-center gap-1.5">
+                <span className="text-lg">{cfg.icon}</span>
+                <span className="text-sm font-bold text-white drop-shadow-lg">{cfg.label}</span>
+              </div>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] text-white/70">{totalPhotos} fotos</span>
+                {itemNames.length > 1 && (
+                  <span className="text-[10px] text-white/70">• {itemNames.length} ambientes</span>
+                )}
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // ── Items list within a category ──
+  const renderItems = () => {
+    if (nav.level !== "items") return null;
+    const items = categoryGroups[nav.category] || {};
+    const itemNames = Object.keys(items).sort((a, b) => a.localeCompare(b, "pt-BR"));
+    const cfg = categoryConfig[nav.category] || { icon: "📷", label: nav.category };
+
+    return (
+      <div className="space-y-2">
+        {itemNames.map(name => {
+          const itemPhotos = items[name];
+          const coverPhoto = itemPhotos[0];
+          const detail = sectionDetails[name];
+
+          return (
+            <button
+              key={name}
+              onClick={() => setNav({ level: "detail", category: nav.category, itemName: name })}
+              className="w-full group flex items-stretch gap-3 rounded-xl overflow-hidden border border-border/40 hover:border-primary/30 hover:shadow-md transition-all bg-card text-left"
+            >
+              <div className="w-28 sm:w-36 flex-shrink-0 overflow-hidden bg-muted">
+                {coverPhoto && (
+                  <img
+                    src={getDisplayUrl(coverPhoto.url)}
+                    alt={name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 aspect-[4/3]"
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    onError={() => handleImageError(coverPhoto.url)}
+                  />
+                )}
+              </div>
+              <div className="flex-1 py-3 pr-3 min-w-0">
+                <h4 className="text-sm font-bold text-foreground truncate">{name}</h4>
+                {detail?.description && (
+                  <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">{detail.description}</p>
+                )}
+                <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                  <Badge variant="outline" className="text-[9px] gap-1">
+                    <Camera className="w-2.5 h-2.5" /> {itemPhotos.length}
+                  </Badge>
+                  {detail?.details?.["Tamanho"] && (
+                    <Badge variant="outline" className="text-[9px] gap-1">
+                      <Maximize2 className="w-2.5 h-2.5" /> {detail.details["Tamanho"]}
+                    </Badge>
+                  )}
+                  {detail?.details?.["Cama"] && (
+                    <Badge variant="outline" className="text-[9px] gap-1">
+                      <Bed className="w-2.5 h-2.5" /> {detail.details["Cama"]}
+                    </Badge>
+                  )}
+                  {detail?.details?.["Capacidade"] && (
+                    <Badge variant="outline" className="text-[9px] gap-1">
+                      <Users className="w-2.5 h-2.5" /> {detail.details["Capacidade"]}
+                    </Badge>
+                  )}
+                  {detail?.details?.["Vista"] && (
+                    <Badge variant="outline" className="text-[9px] gap-1">
+                      <Eye className="w-2.5 h-2.5" /> {detail.details["Vista"]}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center pr-3">
+                <ChevronNav className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ── Detail view: photos + info for a specific item ──
+  const renderDetail = () => {
+    if (nav.level !== "detail") return null;
+    const itemPhotos = categoryGroups[nav.category]?.[nav.itemName] || [];
+    const detail = sectionDetails[nav.itemName];
+
+    return (
+      <div className="space-y-4">
+        {/* Info card */}
+        {detail && (detail.description || Object.keys(detail.details).length > 0 || detail.amenities.length > 0) && (
+          <div className="rounded-xl border border-border/40 bg-muted/30 p-4 space-y-3">
+            {detail.description && (
+              <p className="text-sm text-foreground leading-relaxed">{detail.description}</p>
+            )}
+            {Object.keys(detail.details).length > 0 && (
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                {Object.entries(detail.details).map(([key, val]) => (
+                  <div key={key} className="text-xs">
+                    <span className="text-muted-foreground/60 uppercase tracking-wider text-[10px]">{key}</span>
+                    <span className="block font-semibold text-foreground">{val}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {detail.amenities.length > 0 && (
+              <div>
+                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Comodidades</span>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {detail.amenities.slice(0, 20).map((a, i) => (
+                    <span key={i} className="text-[10px] bg-background border border-border/40 px-2 py-0.5 rounded-full text-muted-foreground">{a}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Photo grid */}
+        <PhotoGrid
+          photos={itemPhotos}
+          selectedPhotos={selectedPhotos}
+          toggleSelect={toggleSelect}
+          openLightbox={openLightbox}
+          failedUrls={failedImageUrls}
+          resolvingUrls={resolvingImageUrls}
+          getDisplayUrl={getDisplayUrl}
+          onImageError={handleImageError}
+        />
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <Camera className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold text-foreground">
+        <div className="flex items-center gap-2 min-w-0">
+          {nav.level !== "categories" && (
+            <Button
+              type="button" variant="ghost" size="sm"
+              onClick={() => {
+                if (nav.level === "detail") setNav({ level: "items", category: nav.category });
+                else setNav({ level: "categories" });
+              }}
+              className="h-7 w-7 p-0"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          )}
+          <Camera className="w-4 h-4 text-primary flex-shrink-0" />
+          <span className="text-sm font-semibold text-foreground truncate">
             {activeSource === "google" ? "Google Places" : "Site Oficial"} — {hotelName}
           </span>
-          <Badge variant="secondary" className="text-[10px]">{photos.length} fotos</Badge>
+          <Badge variant="secondary" className="text-[10px] flex-shrink-0">{photos.length} fotos</Badge>
           {classifying && (
             <Badge variant="outline" className="text-[10px] gap-1 animate-pulse">
               <Sparkles className="w-3 h-3" /> Classificando...
@@ -477,43 +708,23 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
           <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedPhotos(new Set(photos.map(p => p.url)))} className="text-[10px] h-6 px-2">
             Selecionar todas
           </Button>
-          {/* Re-classify button */}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => runClassification(photos)}
-            disabled={classifying || photos.length === 0}
-            className="text-[10px] h-6 px-2 gap-1"
-          >
+          <Button type="button" variant="outline" size="sm" onClick={() => runClassification(photos)} disabled={classifying || photos.length === 0} className="text-[10px] h-6 px-2 gap-1">
             {classifying ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
             Reclassificar
           </Button>
-          {/* Switch source */}
-          <Button
-            type="button"
-            variant={activeSource === "google" ? "default" : "outline"}
-            size="sm"
-            onClick={fetchGooglePlacesPhotos}
-            disabled={loading}
-            className="text-[10px] h-6 px-2 gap-1"
-          >
+          <Button type="button" variant={activeSource === "google" ? "default" : "outline"} size="sm" onClick={fetchGooglePlacesPhotos} disabled={loading} className="text-[10px] h-6 px-2 gap-1">
             {loadingSource === "google" ? <Loader2 className="w-3 h-3 animate-spin" /> : <MapPin className="w-3 h-3" />}
-            Google Places
+            Google
           </Button>
-          <Button
-            type="button"
-            variant={activeSource === "official" ? "default" : "outline"}
-            size="sm"
-            onClick={scrapePhotos}
-            disabled={loading}
-            className="text-[10px] h-6 px-2 gap-1"
-          >
+          <Button type="button" variant={activeSource === "official" ? "default" : "outline"} size="sm" onClick={scrapePhotos} disabled={loading} className="text-[10px] h-6 px-2 gap-1">
             {loadingSource === "official" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Globe className="w-3 h-3" />}
             Site Oficial
           </Button>
         </div>
       </div>
+
+      {/* Breadcrumb */}
+      {renderBreadcrumb()}
 
       {/* Selection bar */}
       {selectedPhotos.size > 0 && (
@@ -526,54 +737,10 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
         </div>
       )}
 
-      {/* Sections grouped by real environment name */}
-      <div className="space-y-5">
-        {sortedGroupKeys.map(envName => {
-          const group = grouped[envName];
-          if (!group || group.photos.length === 0) return null;
-          const cat = group.category;
-          const icon = categoryIcons[cat] || "📷";
-
-          // Show bed type / room type info from first photo
-          const firstPhoto = group.photos[0];
-          const roomType = firstPhoto?.room_type;
-          const bedType = firstPhoto?.bed_type;
-
-          return (
-            <div key={envName} className="space-y-2">
-              <div className="flex items-center gap-2 border-b border-border pb-1.5">
-                <span className="text-base">{icon}</span>
-                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
-                  {envName}
-                </h3>
-                {roomType && (
-                  <Badge variant="outline" className="text-[9px] font-normal">🛏️ {roomType}</Badge>
-                )}
-                {bedType && !roomType?.toLowerCase().includes(bedType.toLowerCase()) && (
-                  <Badge variant="outline" className="text-[9px] font-normal">Cama {bedType}</Badge>
-                )}
-                <Badge variant="outline" className="text-[9px] ml-auto">{group.photos.length}</Badge>
-              </div>
-
-              {/* Description from AI */}
-              {firstPhoto?.description && (
-                <p className="text-[11px] text-muted-foreground pl-7 -mt-1">{firstPhoto.description}</p>
-              )}
-
-              <PhotoGrid
-                photos={group.photos}
-                selectedPhotos={selectedPhotos}
-                toggleSelect={toggleSelect}
-                openLightbox={openLightbox}
-                failedUrls={failedImageUrls}
-                resolvingUrls={resolvingImageUrls}
-                getDisplayUrl={getDisplayUrl}
-                onImageError={handleImageError}
-              />
-            </div>
-          );
-        })}
-      </div>
+      {/* Content based on navigation level */}
+      {nav.level === "categories" && renderCategories()}
+      {nav.level === "items" && renderItems()}
+      {nav.level === "detail" && renderDetail()}
 
       {/* Lightbox */}
       {lightboxIndex !== null && lightboxPhoto && createPortal(
@@ -584,7 +751,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
           <div className="relative flex items-center justify-between px-3 sm:px-5 py-2.5 bg-black/90 backdrop-blur-sm z-10 shrink-0 border-b border-white/10">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <span className="text-white/50 text-xs font-mono shrink-0">
-                {(lightboxIndex ?? 0) + 1}/{allPhotos.length}
+                {(lightboxIndex ?? 0) + 1}/{currentViewPhotos.length}
               </span>
               <span className="text-white text-xs sm:text-sm font-medium truncate">
                 {lightboxPhoto.environment_name || lightboxPhoto.room_name || lightboxPhoto.category}
@@ -594,7 +761,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
               )}
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-              {lightboxPhoto.description && (
+              {(lightboxPhoto.description || sectionDetails[lightboxPhoto.environment_name || ""]) && (
                 <Button type="button" variant="ghost" size="sm" onClick={() => setShowInfo(!showInfo)}
                   className="text-white/70 hover:text-white hover:bg-white/10 h-8 px-2 text-xs gap-1">
                   <Info className="w-3.5 h-3.5" />
@@ -602,8 +769,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                 </Button>
               )}
               <Button
-                type="button"
-                size="sm"
+                type="button" size="sm"
                 onClick={() => toggleSelect(lightboxPhoto.url)}
                 className={cn(
                   "h-8 px-3 text-xs gap-1.5 transition-all",
@@ -646,33 +812,39 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
             </button>
 
             {/* Details overlay */}
-            {showInfo && lightboxPhoto.description && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-md text-white rounded-xl p-4 max-w-md w-[90%] sm:w-auto space-y-2 z-20 border border-white/10">
-                <h4 className="font-semibold text-sm">{lightboxPhoto.environment_name || lightboxPhoto.room_name}</h4>
-                <p className="text-xs text-white/80">{lightboxPhoto.description}</p>
-                <div className="flex flex-wrap gap-2 text-xs text-white/70">
-                  {lightboxPhoto.room_type && <span>🛏️ {lightboxPhoto.room_type}</span>}
-                  {lightboxPhoto.bed_type && <span>Cama: {lightboxPhoto.bed_type}</span>}
-                  {lightboxPhoto.room_details?.size_sqm && <span>📐 {lightboxPhoto.room_details.size_sqm} m²</span>}
-                  {lightboxPhoto.room_details?.max_guests && <span>👥 Até {lightboxPhoto.room_details.max_guests}</span>}
-                  {lightboxPhoto.room_details?.view && <span>🌅 {lightboxPhoto.room_details.view}</span>}
+            {showInfo && (() => {
+              const envName = lightboxPhoto.environment_name || "";
+              const detail = sectionDetails[envName];
+              const desc = lightboxPhoto.description || detail?.description;
+              if (!desc && !detail) return null;
+              return (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-md text-white rounded-xl p-4 max-w-md w-[90%] sm:w-auto space-y-2 z-20 border border-white/10">
+                  <h4 className="font-semibold text-sm">{envName || lightboxPhoto.room_name}</h4>
+                  {desc && <p className="text-xs text-white/80">{desc}</p>}
+                  {detail && Object.keys(detail.details).length > 0 && (
+                    <div className="flex flex-wrap gap-3 text-xs text-white/70">
+                      {Object.entries(detail.details).map(([k, v]) => (
+                        <span key={k}>📐 {k}: {v}</span>
+                      ))}
+                    </div>
+                  )}
+                  {detail?.amenities && detail.amenities.length > 0 && (
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {detail.amenities.slice(0, 12).map((a, i) => (
+                        <span key={i} className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">{a}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {lightboxPhoto.room_details?.amenities && lightboxPhoto.room_details.amenities.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    {lightboxPhoto.room_details.amenities.map((a, i) => (
-                      <span key={i} className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">{a}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Thumbnail strip */}
           <div className="relative px-3 sm:px-5 py-2 bg-black/90 backdrop-blur-sm shrink-0 border-t border-white/10">
             <ScrollArea className="w-full">
               <div className="flex gap-1.5">
-                {allPhotos.map((p, i) => (
+                {currentViewPhotos.map((p, i) => (
                   <button
                     key={p.url + i}
                     onClick={() => setLightboxIndex(i)}
@@ -753,7 +925,6 @@ const PhotoGrid = ({
 
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
 
-            {/* Selection */}
             <button
               onClick={(e) => { e.stopPropagation(); toggleSelect(photo.url); }}
               className={cn(
@@ -766,7 +937,6 @@ const PhotoGrid = ({
               <Check className="w-3 h-3" />
             </button>
 
-            {/* Zoom icon */}
             {!isFailed && !isResolving && (
               <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <ZoomIn className="w-3.5 h-3.5 text-white drop-shadow-lg" />

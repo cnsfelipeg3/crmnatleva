@@ -16,9 +16,17 @@ interface ScrapedPhoto {
   confidence: number;
 }
 
+interface SectionInfo {
+  name: string;
+  description: string;
+  details: Record<string, string>; // e.g. { "Tamanho": "45 m²", "Cama": "King" }
+  amenities: string[];
+}
+
 interface ImageCollection {
   photos: ScrapedPhoto[];
   seen: Set<string>;
+  sections: Map<string, SectionInfo>;
 }
 
 // ═══════════════════════════════════════════════
@@ -80,7 +88,7 @@ Deno.serve(async (req) => {
     const officialDomain = mainUrl ? new URL(mainUrl).hostname : null;
     console.log(`🏨 Official domain: ${officialDomain || "none"} → ${mainUrl}`);
 
-    const collection: ImageCollection = { photos: [], seen: new Set() };
+    const collection: ImageCollection = { photos: [], seen: new Set(), sections: new Map() };
 
     // ── Step 3: MAP the entire site to discover ALL pages ──
     console.log("🗺️ Mapping entire hotel website...");
@@ -160,7 +168,15 @@ Deno.serve(async (req) => {
       }));
 
     const roomNames = [...new Set(photos.map(p => p.section_name).filter(Boolean))];
+    
+    // Build section_details from collected section info
+    const sectionDetails: Record<string, { description: string; details: Record<string, string>; amenities: string[] }> = {};
+    for (const [name, info] of collection.sections) {
+      sectionDetails[name] = { description: info.description, details: info.details, amenities: info.amenities };
+    }
+    
     console.log(`✅ Returning ${photos.length} HD photos with ${roomNames.length} sections:`, roomNames);
+    console.log(`📝 Section details for ${Object.keys(sectionDetails).length} sections`);
 
     return new Response(
       JSON.stringify({
@@ -168,6 +184,7 @@ Deno.serve(async (req) => {
         photos,
         source_url: mainUrl || "",
         room_names: roomNames,
+        section_details: sectionDetails,
         pages_scraped: pagesToScrape.length,
         total_site_pages: allSiteUrls.length,
       }),
@@ -299,15 +316,19 @@ async function scrapePageForPhotos(
     const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ url, formats: ["html"], onlyMainContent: false, waitFor: 3000 }),
+      body: JSON.stringify({ url, formats: ["html", "markdown"], onlyMainContent: false, waitFor: 3000 }),
     });
     if (!resp.ok) return;
     const data = await resp.json();
     const html = data.data?.html || data.html || "";
+    const markdown = data.data?.markdown || data.markdown || "";
     if (html.length < 300) return;
 
-    // First try structured extraction (headings → images)
+    // First try structured extraction (headings → images + text descriptions)
     extractImagesWithSectionContext(html, url, collection, hotelName);
+    
+    // Extract section descriptions from markdown (cleaner text)
+    extractSectionDescriptions(markdown, collection);
 
     // Also extract any images that might not be under headings
     // Use the inferred section name from URL if no heading context was found
@@ -523,6 +544,148 @@ function extractFromStructuredContainers(html: string, sourceUrl: string, collec
       });
     }
   }
+}
+
+/**
+ * Extract text descriptions and details from markdown content, associating them with known sections.
+ * Parses headings + following paragraphs for descriptions, bullet lists for amenities,
+ * and key-value patterns for details (size, capacity, etc.)
+ */
+function extractSectionDescriptions(markdown: string, collection: ImageCollection) {
+  if (!markdown || markdown.length < 50) return;
+
+  // Split markdown by headings
+  const lines = markdown.split("\n");
+  let currentSection = "";
+  let currentText: string[] = [];
+  let currentAmenities: string[] = [];
+  let currentDetails: Record<string, string> = {};
+
+  const flushSection = () => {
+    if (!currentSection || currentSection.length < 3) return;
+    
+    // Only store if we have photos for this section or a close match
+    const sectionKey = findMatchingSection(currentSection, collection);
+    if (!sectionKey) return;
+
+    const desc = currentText
+      .filter(t => t.length > 15 && !isGenericHeading(t.toLowerCase()))
+      .slice(0, 3)
+      .join(" ")
+      .substring(0, 500);
+
+    const existing = collection.sections.get(sectionKey);
+    if (existing) {
+      if (!existing.description && desc) existing.description = desc;
+      if (currentAmenities.length > 0) existing.amenities = [...new Set([...existing.amenities, ...currentAmenities])];
+      Object.assign(existing.details, currentDetails);
+    } else {
+      collection.sections.set(sectionKey, {
+        name: sectionKey,
+        description: desc,
+        details: { ...currentDetails },
+        amenities: [...currentAmenities],
+      });
+    }
+  };
+
+  for (const line of lines) {
+    const headingMatch = line.match(/^#{1,4}\s+(.+)/);
+    if (headingMatch) {
+      flushSection();
+      currentSection = headingMatch[1].replace(/\*+/g, "").trim();
+      currentText = [];
+      currentAmenities = [];
+      currentDetails = {};
+      continue;
+    }
+
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // Bullet list items → amenities
+    if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("• ")) {
+      const item = trimmed.replace(/^[-*•]\s+/, "").trim();
+      if (item.length > 2 && item.length < 80) {
+        currentAmenities.push(item);
+      }
+      continue;
+    }
+
+    // Key-value patterns: "Tamanho: 45 m²", "Capacidade: 2 hóspedes"
+    const kvMatch = trimmed.match(/^([A-Za-zÀ-ÿ\s]{3,25})[:：]\s*(.{2,80})$/);
+    if (kvMatch) {
+      const key = kvMatch[1].trim();
+      const val = kvMatch[2].trim();
+      const keyLower = key.toLowerCase();
+      // Filter relevant keys
+      if (/taman|size|m²|sqm|metr|área|area|dimensi/i.test(keyLower + val)) {
+        currentDetails["Tamanho"] = val;
+      } else if (/cama|bed|lit/i.test(keyLower)) {
+        currentDetails["Cama"] = val;
+      } else if (/capaci|guest|hóspede|ospiti|person|ocupa/i.test(keyLower)) {
+        currentDetails["Capacidade"] = val;
+      } else if (/vista|view|panoram|affaccio/i.test(keyLower)) {
+        currentDetails["Vista"] = val;
+      } else if (/andar|floor|piano/i.test(keyLower)) {
+        currentDetails["Andar"] = val;
+      } else if (key.length >= 3) {
+        currentDetails[key] = val;
+      }
+      continue;
+    }
+
+    // Regular paragraph text → description
+    if (trimmed.length > 15 && !trimmed.startsWith("[") && !trimmed.startsWith("!")) {
+      currentText.push(trimmed.replace(/\*+/g, "").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1"));
+    }
+
+    // Also look for size patterns inline: "45 m²", "45 sqm", "484 sq ft"
+    const sizeMatch = trimmed.match(/(\d{2,4})\s*(?:m²|m2|sqm|sq\.?\s*(?:m|ft|feet))/i);
+    if (sizeMatch && !currentDetails["Tamanho"]) {
+      const unit = trimmed.toLowerCase().includes("ft") || trimmed.toLowerCase().includes("feet") ? "sq ft" : "m²";
+      currentDetails["Tamanho"] = `${sizeMatch[1]} ${unit}`;
+    }
+
+    // Look for guest count patterns: "up to 3 guests", "até 2 hóspedes"
+    const guestMatch = trimmed.match(/(?:up to|até|max|maximum|fino a)\s*(\d+)\s*(?:guest|hóspede|ospiti|person|adulto|people)/i);
+    if (guestMatch && !currentDetails["Capacidade"]) {
+      currentDetails["Capacidade"] = `Até ${guestMatch[1]} hóspedes`;
+    }
+  }
+  flushSection();
+}
+
+/**
+ * Find a matching section name in the collection for a given heading.
+ */
+function findMatchingSection(heading: string, collection: ImageCollection): string | null {
+  const headingNorm = normalizeStr(heading);
+  
+  // Direct match with photo section names
+  const sectionNames = new Set(collection.photos.map(p => p.section_name).filter(Boolean));
+  for (const name of sectionNames) {
+    if (normalizeStr(name) === headingNorm) return name;
+  }
+  
+  // Partial match
+  for (const name of sectionNames) {
+    const nameNorm = normalizeStr(name);
+    if (nameNorm.includes(headingNorm) || headingNorm.includes(nameNorm)) return name;
+  }
+  
+  // Also check existing sections map
+  for (const [key] of collection.sections) {
+    if (normalizeStr(key) === headingNorm) return key;
+  }
+  
+  // If heading looks like a room/facility name, store it anyway
+  const lower = heading.toLowerCase();
+  if (/room|suite|quarto|camera|chambre|deluxe|superior|standard|penthouse|presidential|royal|spa|pool|piscina|restaurante|restaurant|bar|lounge|gym|fitness|garden|terrace|rooftop/i.test(lower)) {
+    return heading;
+  }
+  
+  return null;
 }
 
 
