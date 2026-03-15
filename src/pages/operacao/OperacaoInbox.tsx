@@ -1425,6 +1425,11 @@ function OperacaoInboxInner() {
         id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
         message_type: "image" as MsgType, text: caption || "📷 Imagem", status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: previewUrl,
       }] }));
+      // Persist image to DB
+      const convForImg = conversations.find(c => c.id === selectedId);
+      if (convForImg?.db_id) {
+        supabase.from("chat_messages").insert({ conversation_id: convForImg.db_id, sender_type: "atendente", message_type: "image", content: caption || "📷 Imagem", media_url: publicUrl, read_status: "sent", external_message_id: tempId }).then(() => {});
+      }
     } catch (err) { toast({ title: "Erro ao enviar mídia", description: String(err), variant: "destructive" }); }
     setMediaPendingFile(null); setMediaCaption(""); setIsSending(false);
   }, [mediaPendingFile, mediaCaption, selectedId, uploadToStorage, isSending]);
