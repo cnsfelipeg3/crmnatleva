@@ -30,6 +30,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { initPersistence, persistConversation, persistMessages, loadPersistedMessages } from "@/hooks/useChatPersistence";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
+import { ClientContextPanel } from "@/components/livechat/ClientContextPanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
