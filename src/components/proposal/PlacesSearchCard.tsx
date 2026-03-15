@@ -1038,32 +1038,12 @@ export default function PlacesSearchCard({
         </Button>
       </div>
 
-      {/* Provider Toggle */}
+      {/* Search source label */}
       <div className="px-4 pt-3 pb-1 flex gap-2">
-        <button
-          onClick={() => { setProvider("google"); setResults([]); setError(null); }}
-          className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
-            provider === "google"
-              ? "bg-primary text-primary-foreground border-primary shadow-sm"
-              : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/60"
-          )}
-        >
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-primary-foreground border border-primary shadow-sm">
           <Map className="h-3.5 w-3.5" />
-          Google Places
-        </button>
-        <button
-          onClick={() => { setProvider("amadeus"); setResults([]); setError(null); }}
-          className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
-            provider === "amadeus"
-              ? "bg-primary text-primary-foreground border-primary shadow-sm"
-              : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/60"
-          )}
-        >
-          <Building2 className="h-3.5 w-3.5" />
-          Amadeus
-        </button>
+          Google Places + Site Oficial
+        </div>
       </div>
 
       {/* Search Input */}
