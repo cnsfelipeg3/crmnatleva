@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,13 +7,12 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Trash2, Search } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Search, Pencil, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface GenericSettingsListProps {
   title: string;
   tableName?: string;
-  /** If no table, use local state with these defaults */
   defaultItems?: string[];
   backPath?: string;
 }
@@ -28,11 +26,13 @@ export default function GenericSettingsList({
   const [search, setSearch] = useState("");
   const [newItem, setNewItem] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const editRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // For now, use localStorage to persist simple lists
     const stored = localStorage.getItem(`settings_${title}`);
     if (stored) {
       setItems(JSON.parse(stored));
@@ -61,10 +61,41 @@ export default function GenericSettingsList({
 
   const handleRemove = (item: string) => {
     save(items.filter(i => i !== item));
+    setEditingIndex(null);
     toast({ title: "Removido!" });
   };
 
-  const filtered = items.filter(i => i.toLowerCase().includes(search.toLowerCase()));
+  const startEdit = (index: number) => {
+    setEditingIndex(index);
+    setEditValue(items[index]);
+    setTimeout(() => editRef.current?.focus(), 50);
+  };
+
+  const confirmEdit = () => {
+    if (editingIndex === null) return;
+    const trimmed = editValue.trim();
+    if (!trimmed) {
+      toast({ title: "Nome não pode ficar vazio", variant: "destructive" });
+      return;
+    }
+    if (trimmed !== items[editingIndex] && items.includes(trimmed)) {
+      toast({ title: "Item já existe", variant: "destructive" });
+      return;
+    }
+    const updated = [...items];
+    updated[editingIndex] = trimmed;
+    save(updated);
+    setEditingIndex(null);
+    toast({ title: "Atualizado!" });
+  };
+
+  const cancelEdit = () => {
+    setEditingIndex(null);
+  };
+
+  const filtered = items
+    .map((item, idx) => ({ item, idx }))
+    .filter(({ item }) => item.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="p-6 space-y-5 animate-fade-in">
@@ -109,12 +140,46 @@ export default function GenericSettingsList({
         <div className="text-center py-12 text-muted-foreground">Nenhum item encontrado.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-          {filtered.map((item) => (
-            <Card key={item} className="p-3 glass-card flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">{item}</span>
-              <Button variant="ghost" size="sm" onClick={() => handleRemove(item)}>
-                <Trash2 className="w-3.5 h-3.5 text-destructive" />
-              </Button>
+          {filtered.map(({ item, idx }) => (
+            <Card key={idx} className="p-3 glass-card flex items-center justify-between gap-2">
+              {editingIndex === idx ? (
+                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                  <Input
+                    ref={editRef}
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") confirmEdit();
+                      if (e.key === "Escape") cancelEdit();
+                    }}
+                    className="h-8 text-sm"
+                  />
+                  <Button variant="ghost" size="sm" onClick={confirmEdit} className="h-8 w-8 p-0 shrink-0">
+                    <Check className="w-3.5 h-3.5 text-accent" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={cancelEdit} className="h-8 w-8 p-0 shrink-0">
+                    <X className="w-3.5 h-3.5 text-muted-foreground" />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <span
+                    className="text-sm font-medium text-foreground cursor-pointer hover:text-primary transition-colors flex-1 min-w-0 truncate"
+                    onClick={() => startEdit(idx)}
+                    title="Clique para editar"
+                  >
+                    {item}
+                  </span>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <Button variant="ghost" size="sm" onClick={() => startEdit(idx)} className="h-8 w-8 p-0">
+                      <Pencil className="w-3.5 h-3.5 text-muted-foreground" />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleRemove(item)} className="h-8 w-8 p-0">
+                      <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                    </Button>
+                  </div>
+                </>
+              )}
             </Card>
           ))}
         </div>
