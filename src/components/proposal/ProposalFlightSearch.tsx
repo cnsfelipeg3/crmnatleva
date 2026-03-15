@@ -61,6 +61,7 @@ const emptySegment = (isConnection = false): FlightSegmentData => ({
   airline: "", airline_name: "", flight_number: "", origin_iata: "", destination_iata: "",
   departure_date: "", departure_time: "", arrival_time: "", duration_minutes: 0,
   terminal: "", arrival_terminal: "", aircraft_type: "", notes: "", is_connection: isConnection,
+  carry_on_included: true, carry_on_weight_kg: 10, checked_bags_included: 0, checked_bag_weight_kg: 23, baggage_notes: "",
 });
 
 export default function ProposalFlightSearch({ segments, onSegmentsChange }: ProposalFlightSearchProps) {
