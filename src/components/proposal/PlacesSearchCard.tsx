@@ -62,6 +62,9 @@ interface CuratedPhoto {
   selected: boolean;
   isCover: boolean;
   source: "google" | "manual";
+  description?: string;
+  room_type?: string | null;
+  category?: string;
 }
 
 export interface PlacesEnrichmentData {
