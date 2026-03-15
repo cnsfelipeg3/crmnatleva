@@ -33,9 +33,11 @@ Deno.serve(async (req) => {
     const locationStr = [hotel_city, hotel_country].filter(Boolean).join(", ");
     const hotelNameNorm = normalizeStr(hotel_name);
 
+    // Extract just the hotel brand name for better search (remove address details)
+    const cleanHotelName = hotel_name.replace(/\s*[-–—]\s*(Rod\.|Acesso|Av\.|Rua|R\.).*$/i, "").trim();
+
     // ── Step 1: Find the OFFICIAL hotel website ──
-    // Use a very specific search to find the hotel's own domain
-    const searchQuery = `"${hotel_name}" ${locationStr} site oficial hotel`;
+    const searchQuery = `${cleanHotelName} ${locationStr} site oficial`;
     console.log("Searching for hotel:", searchQuery);
 
     const searchResponse = await fetch("https://api.firecrawl.dev/v1/search", {
