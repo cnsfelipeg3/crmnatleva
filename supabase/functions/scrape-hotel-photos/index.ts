@@ -60,9 +60,13 @@ Deno.serve(async (req) => {
 
     // ── Step 3: Collect images from official domain ──
     const images: ImageCollection = { urls: [], seen: new Set() };
+    const roomNames: string[] = [];
 
     if (officialResult) {
       collectImagesFromResult(officialResult, images, officialDomain);
+      // Extract room names from the search result markdown
+      const markdown = officialResult.markdown || "";
+      extractRoomNamesFromContent("", markdown, roomNames);
     }
 
     // Scrape the main official page for more images
@@ -72,8 +76,8 @@ Deno.serve(async (req) => {
       await scrapeMainUrl(mainUrl, images, FIRECRAWL_API_KEY);
     }
 
-    // Scrape rooms/accommodation pages
-    await scrapeRoomsPages(mainUrl, images, FIRECRAWL_API_KEY);
+    // Scrape rooms/accommodation pages (also extracts room names)
+    await scrapeRoomsPages(mainUrl, images, FIRECRAWL_API_KEY, roomNames);
 
     // If we got few images from official site, also collect from other results
     if (images.urls.length < 10) {
