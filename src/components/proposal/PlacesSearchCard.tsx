@@ -139,6 +139,55 @@ function parseCityCountry(address: string): { city: string; country: string } {
   };
 }
 
+function isGoogleJsPhotoServiceUrl(value: string): boolean {
+  return /maps\.googleapis\.com\/maps\/api\/place\/js\/PhotoService\.GetPhoto/i.test(value);
+}
+
+function extractGoogleJsPhotoReference(value: string): string | null {
+  const match = value.match(/[?&]1s([^&]+)/i);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
+function normalizeGooglePhotoReference(photoReference: string): {
+  normalized: string;
+  isDirectUrl: boolean;
+  isJsServiceUrl: boolean;
+} {
+  const raw = (photoReference || "").trim();
+  const isDirectUrl = /^https?:\/\//i.test(raw);
+  const isJsServiceUrl = isGoogleJsPhotoServiceUrl(raw);
+
+  if (isJsServiceUrl) {
+    return {
+      normalized: extractGoogleJsPhotoReference(raw) || "",
+      isDirectUrl,
+      isJsServiceUrl,
+    };
+  }
+
+  return {
+    normalized: raw,
+    isDirectUrl,
+    isJsServiceUrl,
+  };
+}
+
+async function fetchPlacePhotoFromEdge(photoReference: string, maxWidth: number): Promise<string> {
+  const { data: photoData, error: photoErr } = await withTimeout(
+    supabase.functions.invoke("places-search", {
+      body: { action: "photo", photo_reference: photoReference, max_width: maxWidth },
+    }),
+    5000,
+    "Timeout ao carregar foto"
+  );
+
+  if (photoErr) throw photoErr;
+  if (photoData?.error) throw new Error(photoData.error);
+  if (!photoData?.url) throw new Error("URL da foto não retornada");
+
+  return photoData.url;
+}
+
 const PHOTO_LABELS = [
   "Fachada", "Lobby", "Quarto Deluxe", "Suíte Junior", "Suíte Master",
   "Piscina", "Restaurante", "Spa", "Vista", "Área Comum", "Bar", "Jardim",
@@ -523,20 +572,11 @@ export default function PlacesSearchCard({
             let url = photo.url || "";
 
             if (!url && typeof photo.photo_reference === "string") {
-              if (/^https?:\/\//i.test(photo.photo_reference)) {
-                url = photo.photo_reference;
-              } else if (!disableEdgeSearchRef.current) {
+              const { normalized, isDirectUrl, isJsServiceUrl } = normalizeGooglePhotoReference(photo.photo_reference);
+
+              if (normalized && !/^https?:\/\//i.test(normalized) && !disableEdgeSearchRef.current) {
                 try {
-                  const { data: photoData, error: photoErr } = await withTimeout(
-                    supabase.functions.invoke("places-search", {
-                      body: { action: "photo", photo_reference: photo.photo_reference, max_width: 800 },
-                    }),
-                    5000,
-                    "Timeout ao carregar foto"
-                  );
-                  if (photoErr) throw photoErr;
-                  if (photoData?.error) throw new Error(photoData.error);
-                  url = photoData?.url || "";
+                  url = await fetchPlacePhotoFromEdge(normalized, 800);
                 } catch (photoError) {
                   const message = photoError instanceof Error ? photoError.message : "";
                   if (/referer restrictions|request_denied|api keys|denied|permission/i.test(message.toLowerCase())) {
@@ -545,8 +585,12 @@ export default function PlacesSearchCard({
                 }
               }
 
-              if (!url) {
-                url = getPhotoUrl(photo.photo_reference, 800);
+              if (!url && isDirectUrl && !isJsServiceUrl) {
+                url = photo.photo_reference;
+              }
+
+              if (!url && normalized && !/^https?:\/\//i.test(normalized)) {
+                url = getPhotoUrl(normalized, 800);
               }
             }
 
@@ -1208,28 +1252,38 @@ export default function PlacesSearchCard({
 
 /* ═══ Thumbnail subcomponent ═══ */
 function PlaceThumbnail({ photoRef, alt }: { photoRef: string; alt: string }) {
-  const [src, setSrc] = useState<string>(() => {
-    // If it's already a full URL, use it directly
-    if (/^https?:\/\//i.test(photoRef)) return photoRef;
-    return "";
-  });
+  const [src, setSrc] = useState<string>("");
 
   useEffect(() => {
-    if (src) return; // Already resolved
     let cancelled = false;
+
     (async () => {
+      const { normalized, isDirectUrl, isJsServiceUrl } = normalizeGooglePhotoReference(photoRef);
+
+      if (!normalized) {
+        if (!cancelled) setSrc("");
+        return;
+      }
+
+      if (isDirectUrl && !isJsServiceUrl) {
+        if (!cancelled) setSrc(photoRef);
+        return;
+      }
+
       try {
-        const { data } = await supabase.functions.invoke("places-search", {
-          body: { action: "photo", photo_reference: photoRef, max_width: 200 },
-        });
-        if (!cancelled && data?.url) setSrc(data.url);
+        const resolvedUrl = await fetchPlacePhotoFromEdge(normalized, 200);
+        if (!cancelled) setSrc(resolvedUrl);
       } catch {
-        // Fallback to client-side URL builder
-        if (!cancelled) setSrc(getPhotoUrl(photoRef, 200));
+        if (!cancelled) {
+          setSrc(/^https?:\/\//i.test(normalized) ? normalized : getPhotoUrl(normalized, 200));
+        }
       }
     })();
-    return () => { cancelled = true; };
-  }, [photoRef, src]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [photoRef]);
 
   if (!src) return <div className="w-full h-full bg-muted/30 flex items-center justify-center"><MapPin className="h-4 w-4 text-muted-foreground/30" /></div>;
   return <img src={src} alt={alt} className="w-full h-full object-cover" />;
