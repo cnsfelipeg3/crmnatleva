@@ -732,7 +732,7 @@ function OperacaoInboxInner() {
                 text: stripQuotes(m.text || mediaInfo.caption || ""),
                 media_url: mediaInfo.mediaUrl,
                 status: mapZapiStatus(m.status, m.from_me),
-                created_at: String(m.timestamp || m.created_at),
+                created_at: toIsoTimestamp(m.timestamp || m.created_at),
               };
             })
             .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
