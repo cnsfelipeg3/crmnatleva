@@ -28,6 +28,12 @@ export interface FlightSegmentData {
   aircraft_type: string;
   notes: string;
   is_connection?: boolean;
+  // Baggage fields
+  carry_on_included: boolean;
+  carry_on_weight_kg: number;
+  checked_bags_included: number;
+  checked_bag_weight_kg: number;
+  baggage_notes: string;
 }
 
 interface ProposalFlightSearchProps {
@@ -55,6 +61,7 @@ const emptySegment = (isConnection = false): FlightSegmentData => ({
   airline: "", airline_name: "", flight_number: "", origin_iata: "", destination_iata: "",
   departure_date: "", departure_time: "", arrival_time: "", duration_minutes: 0,
   terminal: "", arrival_terminal: "", aircraft_type: "", notes: "", is_connection: isConnection,
+  carry_on_included: true, carry_on_weight_kg: 10, checked_bags_included: 0, checked_bag_weight_kg: 23, baggage_notes: "",
 });
 
 export default function ProposalFlightSearch({ segments, onSegmentsChange }: ProposalFlightSearchProps) {
@@ -190,6 +197,7 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
   };
 
   const applyFlightData = (idx: number, seg: any, form: SearchFormData) => {
+    const prev = segments[idx];
     const updated: FlightSegmentData = {
       airline: seg.airline || form.airline.toUpperCase(),
       airline_name: seg.airline_name || form.airlineName || form.airline.toUpperCase(),
@@ -203,8 +211,13 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
       terminal: seg.terminal || "",
       arrival_terminal: seg.arrival_terminal || "",
       aircraft_type: seg.aircraft_type || "",
-      notes: segments[idx]?.notes || "",
-      is_connection: segments[idx]?.is_connection || false,
+      notes: prev?.notes || "",
+      is_connection: prev?.is_connection || false,
+      carry_on_included: prev?.carry_on_included ?? true,
+      carry_on_weight_kg: prev?.carry_on_weight_kg ?? 10,
+      checked_bags_included: prev?.checked_bags_included ?? 0,
+      checked_bag_weight_kg: prev?.checked_bag_weight_kg ?? 23,
+      baggage_notes: prev?.baggage_notes || "",
     };
     onSegmentsChange(segments.map((s, i) => (i === idx ? updated : s)));
   };

@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import AirlineLogo from "@/components/AirlineLogo";
-import { PlaneTakeoff, PlaneLanding, Clock, Terminal } from "lucide-react";
+import { PlaneTakeoff, PlaneLanding, Clock, Terminal, Luggage, Briefcase, Plane } from "lucide-react";
 import type { FlightSegmentData } from "./ProposalFlightSearch";
 
 function formatDuration(min: number): string {
@@ -24,6 +25,8 @@ interface FlightSegmentCardProps {
 }
 
 export default function FlightSegmentCard({ seg, compact }: FlightSegmentCardProps) {
+  const hasBaggage = seg.carry_on_included || (seg.checked_bags_included ?? 0) > 0;
+
   return (
     <Card className={`overflow-hidden border-border/60 ${compact ? "border-l-0 border-r-0 rounded-none shadow-none" : ""}`}>
       <div className={`bg-gradient-to-r from-primary/5 to-primary/10 ${compact ? "p-3 sm:p-4" : "p-4 sm:p-5"}`}>
@@ -32,11 +35,17 @@ export default function FlightSegmentCard({ seg, compact }: FlightSegmentCardPro
             <AirlineLogo iata={seg.airline} size={compact ? 28 : 40} />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <span className="font-semibold text-sm text-foreground">{seg.airline_name || seg.airline}</span>
               <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-mono font-medium">
                 {seg.airline}{seg.flight_number}
               </span>
+              {seg.aircraft_type && (
+                <Badge variant="outline" className="text-[10px] gap-1 h-5 border-border/60 text-muted-foreground font-normal">
+                  <Plane className="w-2.5 h-2.5" />
+                  {seg.aircraft_type}
+                </Badge>
+              )}
               {seg.departure_date && (
                 <span className="text-xs text-muted-foreground ml-auto">
                   {new Date(seg.departure_date + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
@@ -82,10 +91,31 @@ export default function FlightSegmentCard({ seg, compact }: FlightSegmentCardPro
                 )}
               </div>
             </div>
-            {(seg.aircraft_type || seg.notes) && (
-              <div className="mt-2 pt-2 border-t border-border/40 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                {seg.aircraft_type && <span className="flex items-center gap-1">✈ {seg.aircraft_type}</span>}
-                {seg.notes && <span className="italic">{seg.notes}</span>}
+
+            {/* Baggage + notes footer */}
+            {(hasBaggage || seg.notes) && (
+              <div className="mt-2 pt-2 border-t border-border/40 flex flex-wrap gap-2 items-center">
+                {seg.carry_on_included && (
+                  <Badge variant="secondary" className="text-[10px] gap-1 h-5 font-normal">
+                    <Briefcase className="w-2.5 h-2.5" />
+                    Mão {seg.carry_on_weight_kg || 10}kg
+                  </Badge>
+                )}
+                {(seg.checked_bags_included ?? 0) > 0 && (
+                  <Badge variant="secondary" className="text-[10px] gap-1 h-5 font-normal">
+                    <Luggage className="w-2.5 h-2.5" />
+                    {seg.checked_bags_included}x {seg.checked_bag_weight_kg || 23}kg
+                  </Badge>
+                )}
+                {!seg.carry_on_included && (seg.checked_bags_included ?? 0) === 0 && (
+                  <Badge variant="outline" className="text-[10px] gap-1 h-5 font-normal text-muted-foreground border-destructive/30">
+                    Sem bagagem inclusa
+                  </Badge>
+                )}
+                {seg.baggage_notes && (
+                  <span className="text-[10px] text-muted-foreground italic">{seg.baggage_notes}</span>
+                )}
+                {seg.notes && <span className="text-[10px] text-muted-foreground italic ml-auto">{seg.notes}</span>}
               </div>
             )}
           </div>
