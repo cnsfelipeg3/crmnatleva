@@ -149,14 +149,29 @@ async function classifyPhotosWithAI(photos: HotelPhoto[], hotelName: string, roo
       room_type?: string; bed_type?: string; description?: string; confidence?: number;
     }>;
 
+    // Clean environment names: strip hotel name if AI used it
+    const hotelNameLower = hotelName.toLowerCase().trim();
+    const cleanEnvName = (name: string | undefined): string => {
+      if (!name) return "";
+      const cleaned = name.trim();
+      // If the environment_name IS the hotel name, return empty so it gets filtered
+      if (cleaned.toLowerCase() === hotelNameLower) return "";
+      // If it starts with the hotel name + " - ", strip the prefix
+      if (cleaned.toLowerCase().startsWith(hotelNameLower + " -")) {
+        return cleaned.slice(hotelNameLower.length + 2).trim();
+      }
+      return cleaned;
+    };
+
     return photos.map((photo, idx) => {
       const match = classified.find(c => c.index === idx);
       if (!match) return photo;
+      const envName = cleanEnvName(match.environment_name) || match.category || photo.category || "outro";
       return {
         ...photo,
-        environment_name: match.environment_name || photo.environment_name,
+        environment_name: envName,
         category: match.category || photo.category,
-        room_name: match.environment_name || photo.room_name,
+        room_name: envName,
         room_type: match.room_type || photo.room_type,
         bed_type: match.bed_type || photo.bed_type,
         description: match.description || photo.description,
