@@ -884,7 +884,7 @@ export default function PlacesSearchCard({
                       </div>
                     </div>
 
-                    {/* Label */}
+                    {/* Label + Description */}
                     <div className="px-2 py-1.5 bg-card">
                       <input
                         type="text"
@@ -893,6 +893,16 @@ export default function PlacesSearchCard({
                         className="w-full text-[10px] font-medium text-foreground bg-transparent outline-none placeholder:text-muted-foreground/40 truncate"
                         placeholder="Legenda..."
                       />
+                      {photo.description && (
+                        <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-2 leading-tight">
+                          {photo.description}
+                        </p>
+                      )}
+                      {photo.room_type && (
+                        <Badge variant="secondary" className="text-[8px] h-3.5 px-1 mt-0.5">
+                          {photo.room_type}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 ))}
