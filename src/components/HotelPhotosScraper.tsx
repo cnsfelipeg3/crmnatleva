@@ -318,28 +318,17 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       const rawPhotos: HotelPhoto[] = data.photos || [];
       const resolvedPhotos = await resolveHotelPhotosUrls(rawPhotos);
 
-      const blockedOfficialPattern = /s3\.amazonaws\.com\/static-webstudio-accorhotels-usa-1\.wp-ha\.fastbooking\.com/i;
-      const allLikelyBlocked =
-        resolvedPhotos.length > 0 && resolvedPhotos.every((photo) => blockedOfficialPattern.test(photo.url));
-
-      if (allLikelyBlocked) {
-        toast.warning("O site oficial bloqueou as imagens deste hotel. Carregando Google Places como fallback.");
-        await fetchGooglePlacesPhotos();
-        return;
-      }
-
       clearProxiedImages();
       setPhotos(resolvedPhotos);
       setSourceUrl(data.source_url || "");
       setScraped(true);
       setActiveSource("official");
-      const verification = data.verification;
+
       if (resolvedPhotos.length > 0) {
-        const rejectedMsg = verification?.rejected > 0 ? ` (${verification.rejected} fotos de outros hotéis removidas)` : "";
-        toast.success(`${resolvedPhotos.length} fotos verificadas e classificadas por IA${rejectedMsg}`);
+        toast.success(`${resolvedPhotos.length} fotos encontradas no site oficial`);
         preloadViaProxy(resolvedPhotos, data.source_url || undefined);
       } else {
-        toast.info("Nenhuma foto relevante encontrada no site do hotel");
+        toast.info("Nenhuma foto encontrada no site oficial. Tente Google Places.");
       }
     } catch (err: any) {
       toast.error(err.message || "Erro ao buscar fotos do hotel");
