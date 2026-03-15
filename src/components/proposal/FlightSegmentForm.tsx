@@ -101,8 +101,10 @@ export default function FlightSegmentForm({ seg, onUpdate }: FlightSegmentFormPr
           <AirlineAutocomplete
             value={seg.airline}
             onChange={(iata, name) => {
-              onUpdate("airline", iata);
-              if (name) onUpdate("airline_name", name);
+              // Must update both fields at once to avoid stale state overwrite
+              const updates: Partial<FlightSegmentData> = { airline: iata };
+              if (name) updates.airline_name = name;
+              Object.entries(updates).forEach(([k, v]) => onUpdate(k as keyof FlightSegmentData, v));
             }}
             placeholder="Digite ou selecione..."
           />
