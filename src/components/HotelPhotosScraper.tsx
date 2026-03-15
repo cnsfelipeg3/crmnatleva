@@ -8,7 +8,8 @@ import { toast } from "sonner";
 import {
   Camera, Loader2, ExternalLink, Check, ChevronLeft, ChevronRight,
   ZoomIn, Info, X, MapPin, Globe, Sparkles, FolderOpen, ChevronRight as ChevronNav,
-  Bed, Maximize2, Users, Eye, Wifi, ArrowLeft
+  Bed, Maximize2, Users, Eye, Wifi, ArrowLeft, Droplets, Wind, Tv, LockKeyhole,
+  Wine, Coffee, Shirt, Phone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
