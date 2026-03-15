@@ -579,7 +579,7 @@ function OperacaoInboxInner() {
       await initPersistence();
       const data = await fetchAllRows("conversations", "*", {
       order: { column: "last_message_at", ascending: false },
-        // Render conversations IMMEDIATELY without waiting for preview backfill
+        cacheMs: 0,
         const mapConv = (c: any, fallbackPreview?: string) => {
           const cleanPhone = (c.phone || "").replace(/\D/g, "");
           const canonicalId = cleanPhone ? `wa_${cleanPhone}` : c.id;
