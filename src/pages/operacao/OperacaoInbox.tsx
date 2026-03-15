@@ -584,6 +584,7 @@ function OperacaoInboxInner() {
         media_url: m.media_url || undefined,
         status: normalizeDbStatus(m.status ?? m.read_status),
         created_at: m.created_at,
+        external_message_id: m.external_message_id || undefined,
       }))
     );
 
@@ -688,11 +689,16 @@ function OperacaoInboxInner() {
             ]);
 
             const mergedRows = [...(legacyResp.data || []), ...(modernResp.data || [])];
-            const dedupedRows = Array.from(
-              new Map(
-                mergedRows.map((row: any) => [row.id || `${row.created_at}_${row.sender_type}_${row.text || row.content || ""}`, row]),
-              ).values(),
-            ).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            // Dedup by external_message_id first, then by id, then by content signature
+            const dedupMap = new Map<string, any>();
+            for (const row of mergedRows) {
+              const r = row as any;
+              const extId = r.external_message_id;
+              const key = extId || r.id || `${r.created_at}_${r.sender_type}_${r.text || r.content || ""}`;
+              if (!dedupMap.has(key)) dedupMap.set(key, row);
+            }
+            const dedupedRows = Array.from(dedupMap.values())
+              .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
             dbMsgs = mapDbMessages(dedupedRows, selectedId);
           }
 
@@ -1167,6 +1173,23 @@ function OperacaoInboxInner() {
           lastMsgIdsRef.current.add(realId);
           setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m => m.id === tempId ? { ...m, id: realId } : m) }));
         }
+        // Persist sent message to chat_messages so it survives page reload
+        const dbConvId = selected?.db_id;
+        if (dbConvId) {
+          await supabase.from("chat_messages").insert({
+            conversation_id: dbConvId,
+            sender_type: "atendente",
+            message_type: "text",
+            content: text,
+            read_status: "sent",
+            external_message_id: realId || tempId,
+          }).then(() => {});
+          await supabase.from("conversations").update({
+            last_message_preview: text,
+            last_message_at: new Date().toISOString(),
+            unread_count: 0,
+          }).eq("id", dbConvId).then(() => {});
+        }
       } catch (err) { toast({ title: "Erro ao enviar", description: "Falha na comunicação com WhatsApp", variant: "destructive" }); }
     } else if (selectedId.length > 10) {
       await supabase.from("chat_messages").insert({ conversation_id: selectedId, sender_type: "atendente", message_type: "text", content: text, read_status: "sent" });
@@ -1309,6 +1332,11 @@ function OperacaoInboxInner() {
             id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
             message_type: "audio" as MsgType, text: "", status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: localUrl,
           }] }));
+          // Persist audio to DB
+          const convForAudio = conversations.find(c => c.id === selectedId);
+          if (convForAudio?.db_id) {
+            supabase.from("chat_messages").insert({ conversation_id: convForAudio.db_id, sender_type: "atendente", message_type: "audio", content: "", media_url: audioUrl, read_status: "sent", external_message_id: tempId }).then(() => {});
+          }
         } catch (err) { toast({ title: "Erro ao enviar áudio", description: String(err), variant: "destructive" }); }
       };
       mediaRecorder.start();
@@ -1376,6 +1404,11 @@ function OperacaoInboxInner() {
         id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
         message_type: fileInputMediaType as MsgType, text: label, status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: publicUrl,
       }] }));
+      // Persist media to DB
+      const convForMedia = conversations.find(c => c.id === selectedId);
+      if (convForMedia?.db_id) {
+        supabase.from("chat_messages").insert({ conversation_id: convForMedia.db_id, sender_type: "atendente", message_type: fileInputMediaType, content: label, media_url: publicUrl, read_status: "sent", external_message_id: tempId }).then(() => {});
+      }
     } catch (err) { toast({ title: "Erro ao enviar mídia", description: String(err), variant: "destructive" }); }
     e.target.value = ""; setShowMediaMenu(false);
   }, [selectedId, fileInputMediaType, uploadToStorage]);
@@ -1398,6 +1431,11 @@ function OperacaoInboxInner() {
         id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
         message_type: "image" as MsgType, text: caption || "📷 Imagem", status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: previewUrl,
       }] }));
+      // Persist image to DB
+      const convForImg = conversations.find(c => c.id === selectedId);
+      if (convForImg?.db_id) {
+        supabase.from("chat_messages").insert({ conversation_id: convForImg.db_id, sender_type: "atendente", message_type: "image", content: caption || "📷 Imagem", media_url: publicUrl, read_status: "sent", external_message_id: tempId }).then(() => {});
+      }
     } catch (err) { toast({ title: "Erro ao enviar mídia", description: String(err), variant: "destructive" }); }
     setMediaPendingFile(null); setMediaCaption(""); setIsSending(false);
   }, [mediaPendingFile, mediaCaption, selectedId, uploadToStorage, isSending]);
