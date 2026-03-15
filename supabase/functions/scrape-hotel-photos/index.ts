@@ -975,7 +975,57 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
     "hoteis.com", "hotel.com.br", "zarpo.com", "omnibees.com",
     "skyscanner.com", "momondo.com", "orbitz.com",
     "travelocity.com", "wotif.com", "lastminute.com",
+    // Fake aggregator patterns
+    "hoteltour.com", "hotelguide", "hotelscanner", "hotelplanner",
+    "hotel-review", "hotelopia", "hoteltravel", "hotel-info",
+    "hotel-mix", "hotel.info", "ctrip.com", "trip.com",
+    "traveloka.com", "klook.com", "viator.com", "getyourguide.com",
+    "hostelworld.com", "hometogo.com", "vrbo.com", "airbnb.com",
+    "lonelyplanet.com", "timeout.com", "travelandleisure.com",
+    "cntraveler.com", "frommers.com", "fodors.com",
+    "jalan.net", "ikyu.com", "rakuten.co.jp",
+    "yelp.com", "trustpilot.com",
   ];
+
+  // Known luxury hotel chains and their domains
+  const chainDomains: Record<string, string[]> = {
+    "aman": ["aman.com"],
+    "four seasons": ["fourseasons.com"],
+    "ritz carlton": ["ritzcarlton.com"],
+    "st regis": ["stregis.com", "marriott.com"],
+    "park hyatt": ["hyatt.com"],
+    "mandarin oriental": ["mandarinoriental.com"],
+    "peninsula": ["peninsula.com"],
+    "rosewood": ["rosewoodhotels.com"],
+    "bulgari": ["bulgarihotels.com"],
+    "one and only": ["oneandonlyresorts.com"],
+    "six senses": ["sixsenses.com"],
+    "banyan tree": ["banyantree.com"],
+    "como": ["comohotels.com"],
+    "belmond": ["belmond.com"],
+    "raffles": ["raffles.com"],
+    "fairmont": ["fairmont.com"],
+    "sofitel": ["sofitel.com", "all.accor.com"],
+    "pullman": ["pullman-hotels.com", "all.accor.com"],
+    "novotel": ["novotel.com", "all.accor.com"],
+    "hilton": ["hilton.com"],
+    "marriott": ["marriott.com"],
+    "hyatt": ["hyatt.com"],
+    "sheraton": ["marriott.com"],
+    "westin": ["marriott.com"],
+    "intercontinental": ["ihg.com"],
+    "radisson": ["radissonhotels.com"],
+    "accor": ["all.accor.com", "accor.com"],
+    "hassler": ["hotelhasslerroma.com"],
+    "waldorf astoria": ["hilton.com"],
+    "conrad": ["hilton.com"],
+    "w hotel": ["marriott.com"],
+    "edition": ["marriott.com"],
+    "oberoi": ["oberoihotels.com"],
+    "taj": ["tajhotels.com"],
+    "hoshinoya": ["hoshinoresorts.com"],
+    "星のや": ["hoshinoresorts.com"],
+  };
 
   let bestScore = -1;
   let bestResult: any = null;
@@ -985,25 +1035,44 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
     const domain = extractDomain(result.url);
     const domainNorm = normalizeStr(domain);
 
+    // Hard-skip aggregators
     if (aggregators.some(a => domain.includes(a))) continue;
+    // Also skip domains that look like aggregators (contain "hotel" + "tour/guide/review")
+    if (/hotel.*(tour|guide|review|scanner|planner|info|mix|compare)/i.test(domain)) continue;
 
     let score = 0;
+
+    // Check if this is a known chain domain for this hotel
+    for (const [brand, domains] of Object.entries(chainDomains)) {
+      if (nameNorm.includes(brand)) {
+        if (domains.some(d => domain.includes(d))) {
+          score += 15; // Very strong signal
+        }
+      }
+    }
+
     const domainMatchCount = nameWords.filter(w => domainNorm.includes(w)).length;
     score += domainMatchCount * 3;
 
     const title = normalizeStr(result.title || "");
     if (title.includes(nameNorm)) score += 5;
 
-    const chainDomains = [
+    // Generic chain domain bonus
+    const genericChains = [
       "accor.com", "all.accor.com", "hilton.com", "marriott.com", "ihg.com", "hyatt.com",
       "pullman-hotels.com", "sofitel.com", "novotel.com", "ibis.com",
-      "wyndham.com", "radisson.com", "ahstatic.com",
+      "wyndham.com", "radissonhotels.com", "ahstatic.com",
+      "fourseasons.com", "ritzcarlton.com", "mandarinoriental.com",
+      "peninsula.com", "rosewoodhotels.com", "aman.com",
+      "belmond.com", "oneandonlyresorts.com", "sixsenses.com",
+      "banyantree.com", "comohotels.com", "oberoihotels.com",
+      "tajhotels.com", "hoshinoresorts.com",
     ];
-    if (chainDomains.some(c => domain.includes(c))) score += 4;
+    if (genericChains.some(c => domain.includes(c))) score += 4;
 
-    const brandWords = ["pullman", "sofitel", "novotel", "hilton", "marriott", "hyatt", "sheraton", "westin", "fairmont", "hassler"];
-    for (const brand of brandWords) {
-      if (nameNorm.includes(brand) && domainNorm.includes(brand)) score += 6;
+    // Brand name directly in domain
+    for (const brand of nameWords) {
+      if (brand.length > 3 && domainNorm.includes(brand)) score += 3;
     }
 
     if (score > bestScore) {
