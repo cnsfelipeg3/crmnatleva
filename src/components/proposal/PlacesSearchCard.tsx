@@ -765,8 +765,8 @@ export default function PlacesSearchCard({
                     )}
                   >
                     {/* Image */}
-                    <div className="aspect-[4/3] bg-muted/20 relative">
-                      <img src={photo.url} alt={photo.label} className="w-full h-full object-cover" loading="lazy" />
+                    <div className="aspect-[4/3] bg-muted/20 relative flex items-center justify-center">
+                      <img src={photo.url} alt={photo.label} className="max-w-full max-h-full object-contain" loading="lazy" />
 
                       {/* Overlay actions */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -860,8 +860,8 @@ export default function PlacesSearchCard({
             </div>
             <div className="rounded-xl border border-border/50 overflow-hidden bg-card shadow-sm">
               {coverPhoto && (
-                <div className="h-32 overflow-hidden">
-                  <img src={coverPhoto.url} alt="" className="w-full h-full object-cover" />
+                <div className="w-full overflow-hidden bg-muted/10">
+                  <img src={coverPhoto.url} alt="" className="w-full h-auto max-h-64 object-contain" />
                 </div>
               )}
               <div className="p-3">
@@ -875,8 +875,8 @@ export default function PlacesSearchCard({
                 {selectedCount > 1 && (
                   <div className="flex gap-1 mt-2 overflow-x-auto">
                     {curatedPhotos.filter(p => p.selected && !p.isCover).slice(0, 4).map((p, i) => (
-                      <div key={i} className="w-12 h-9 rounded-md overflow-hidden shrink-0">
-                        <img src={p.url} alt="" className="w-full h-full object-cover" />
+                      <div key={i} className="w-14 h-10 rounded-md overflow-hidden shrink-0 bg-muted/10 flex items-center justify-center">
+                        <img src={p.url} alt="" className="max-w-full max-h-full object-contain" />
                       </div>
                     ))}
                     {selectedCount > 5 && (
