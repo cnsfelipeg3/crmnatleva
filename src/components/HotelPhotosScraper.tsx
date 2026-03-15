@@ -113,12 +113,12 @@ async function fetchProxiedImageUrl(imageUrl: string, refererUrl?: string): Prom
   return URL.createObjectURL(blob);
 }
 
-async function classifyPhotosWithAI(photos: HotelPhoto[], hotelName: string): Promise<HotelPhoto[]> {
+async function classifyPhotosWithAI(photos: HotelPhoto[], hotelName: string, roomNames?: string[]): Promise<HotelPhoto[]> {
   if (photos.length === 0) return photos;
 
   try {
     const { data, error } = await supabase.functions.invoke("classify-hotel-photos", {
-      body: { photo_urls: photos.map(p => p.url), hotel_name: hotelName },
+      body: { photo_urls: photos.map(p => p.url), hotel_name: hotelName, room_names: roomNames || [] },
     });
 
     if (error || !data?.photos) {
@@ -171,6 +171,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
   const [proxiedImageUrls, setProxiedImageUrls] = useState<Record<string, string>>({});
   const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set());
   const [resolvingImageUrls, setResolvingImageUrls] = useState<Set<string>>(new Set());
+  const [knownRoomNames, setKnownRoomNames] = useState<string[]>([]);
   const proxiedObjectUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
@@ -229,11 +230,11 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     }
   }, []);
 
-  const runClassification = useCallback(async (photosToClassify: HotelPhoto[]) => {
+  const runClassification = useCallback(async (photosToClassify: HotelPhoto[], roomNames?: string[]) => {
     setClassifying(true);
     toast.info("🤖 Classificando fotos por ambiente...", { duration: 3000 });
     try {
-      const classified = await classifyPhotosWithAI(photosToClassify, hotelName);
+      const classified = await classifyPhotosWithAI(photosToClassify, hotelName, roomNames || knownRoomNames);
       setPhotos(classified);
       const envCount = new Set(classified.map(p => p.environment_name).filter(Boolean)).size;
       toast.success(`✨ ${envCount} ambientes identificados em ${classified.length} fotos`);
@@ -242,7 +243,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     } finally {
       setClassifying(false);
     }
-  }, [hotelName]);
+  }, [hotelName, knownRoomNames]);
 
   const fetchGooglePlacesPhotos = async () => {
     if (!hotelName) { toast.error("Selecione um hotel primeiro"); return; }
@@ -320,6 +321,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       if (!data.success) throw new Error(data.error);
 
       const rawPhotos: HotelPhoto[] = data.photos || [];
+      const scraperRoomNames: string[] = data.room_names || [];
       const resolvedPhotos = await resolveHotelPhotosUrls(rawPhotos);
 
       clearProxiedImages();
@@ -327,12 +329,16 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       setSourceUrl(data.source_url || "");
       setScraped(true);
       setActiveSource("official");
+      setKnownRoomNames(scraperRoomNames);
+
+      if (scraperRoomNames.length > 0) {
+        console.log("Room names extracted from hotel website:", scraperRoomNames);
+      }
 
       if (resolvedPhotos.length > 0) {
         toast.success(`${resolvedPhotos.length} fotos encontradas no site oficial`);
         preloadViaProxy(resolvedPhotos, data.source_url || undefined);
-        // Auto-classify
-        await runClassification(resolvedPhotos);
+        await runClassification(resolvedPhotos, scraperRoomNames);
       } else {
         toast.info("Nenhuma foto encontrada. Tente Google Places.");
       }

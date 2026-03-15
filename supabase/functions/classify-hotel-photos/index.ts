@@ -37,9 +37,11 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { photo_urls, hotel_name } = await req.json();
+    const { photo_urls, hotel_name, room_names } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    const knownRoomNames: string[] = Array.isArray(room_names) ? room_names : [];
 
     if (!photo_urls || !Array.isArray(photo_urls) || photo_urls.length === 0) {
       return new Response(JSON.stringify({ error: "Nenhuma foto fornecida" }), {
@@ -68,35 +70,40 @@ Deno.serve(async (req) => {
 
       console.log(`Batch has ${validImages.length} valid images, classifying...`);
 
+      const roomNamesSection = knownRoomNames.length > 0
+        ? `\n\nNOMES REAIS DOS QUARTOS/SUÍTES DESTE HOTEL (extraídos do site oficial):
+${knownRoomNames.map((n, i) => `  ${i + 1}. ${n}`).join("\n")}
+
+REGRA OBRIGATÓRIA: Use EXATAMENTE estes nomes acima para classificar fotos de quartos e suítes. 
+NÃO invente nomes. Se a foto é de um quarto mas você não consegue determinar qual dos nomes acima corresponde, use o nome mais provável da lista.
+Para ambientes que NÃO são quartos (lobby, piscina, restaurante etc.), use o nome real se reconhecer, senão descreva brevemente.\n`
+        : "";
+
       const systemPrompt = `Você é um curador visual especialista em hotéis de luxo.
 
 Analise CADA foto e classifique usando os NOMES REAIS dos ambientes do hotel "${hotel_name || "não informado"}".
-
+${roomNamesSection}
 Para cada foto retorne:
 
-1. "environment_name": O nome REAL do ambiente como o hotel o nomeia. Exemplos reais:
-   - Quartos: "Quarto Superior Twin", "Suite Master Ocean View", "Apartamento Deluxe King", "Studio Premium", "Villa com Piscina Privativa"
-   - Gastronomia: "Restaurante Amalfi" (nome real), "Bar da Piscina", "Lobby Bar", "Buffet Café da Manhã"  
-   - Lazer: "Piscina Infinity", "Piscina Infantil", "Spa L'Occitane", "Academia", "Kids Club"
-   - Áreas: "Lobby & Recepção", "Business Center", "Salão de Eventos", "Jardim Tropical"
-   - Exteriores: "Fachada Principal", "Vista Aérea", "Praia Privativa", "Deck Panorâmico"
-   Use os nomes que aparecem no site do hotel. Se não souber o nome exato, descreva: "Quarto com Vista para o Mar", "Área da Piscina"
+1. "environment_name": O nome REAL do ambiente. 
+   ${knownRoomNames.length > 0 ? "Para quartos/suítes, USE OBRIGATORIAMENTE um dos nomes da lista acima." : "Use os nomes que aparecem no site do hotel."}
+   Para outros ambientes: "Lobby & Recepção", "Restaurante [Nome]", "Piscina", "Spa", "Fachada", etc.
+   Para banheiros, associe ao quarto: "Banheiro - [Nome do Quarto]"
 
 2. "category": Uma das: fachada, lobby, quarto, suite, banheiro, piscina, restaurante, bar, spa, academia, area_comum, vista, jardim, praia, eventos, outro
 
-3. "room_type": Se for quarto/suíte, o tipo exato: "Superior Twin", "Deluxe King", "Suite Junior", "Suite Master", "Standard Double", etc. null se não for quarto.
+3. "room_type": Se for quarto/suíte, o tipo exato da lista. null se não for quarto.
 
-4. "bed_type": Se for quarto: "King", "Queen", "Twin", "Casal", "Solteiro", "Beliche". null se não for quarto.
+4. "bed_type": Se for quarto: "King", "Queen", "Twin", "Casal", "Solteiro". null se não for quarto.
 
-5. "description": 1 frase descrevendo o que se vê na foto (decoração, vista, tamanho, detalhes notáveis).
+5. "description": 1 frase descrevendo o que se vê na foto.
 
 6. "confidence": 0.0 a 1.0
 
-REGRAS IMPORTANTES:
-- Use nomes que o hotel realmente usa nos seus materiais. Se reconhecer a marca/rede (Accor, Hilton, Marriott etc.), use a nomenclatura padrão daquela rede.
-- Agrupe fotos do MESMO ambiente sob o MESMO environment_name.
-- Diferencie claramente: quartos diferentes devem ter nomes diferentes.
-- Para banheiros, associe ao quarto se possível: "Banheiro - Suite Master"
+REGRAS:
+- Agrupe fotos do MESMO ambiente sob o MESMO environment_name (escrito de forma idêntica).
+- Diferencie quartos diferentes com nomes diferentes.
+${knownRoomNames.length > 0 ? "- NUNCA invente nomes de quartos. Use SOMENTE os nomes da lista fornecida." : ""}
 
 Retorne APENAS JSON válido:
 {
