@@ -102,6 +102,8 @@ export default function ClientDetail() {
   // Travel preferences
   const [prefs, setPrefs] = useState<TravelPreferences>({ ...defaultPrefs });
   const [editingPrefs, setEditingPrefs] = useState(false);
+  const [showLinkConv, setShowLinkConv] = useState(false);
+  const [linkedConvName, setLinkedConvName] = useState<string | null>(null);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [newLoyalty, setNewLoyalty] = useState("");
   const [newAirline, setNewAirline] = useState("");
