@@ -138,6 +138,10 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [scraped, setScraped] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [proxiedImageUrls, setProxiedImageUrls] = useState<Record<string, string>>({});
+  const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set());
+  const [resolvingImageUrls, setResolvingImageUrls] = useState<Set<string>>(new Set());
+  const proxiedObjectUrlsRef = useRef<string[]>([]);
 
   const scrapePhotos = async () => {
     if (!hotelName) { toast.error("Selecione um hotel primeiro"); return; }
