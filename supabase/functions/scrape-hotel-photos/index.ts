@@ -401,6 +401,12 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
     "melhoreshoteis.com", "hotelurbano.com", "zarpo.com", "omnibees.com",
     "hotelsdotcom.com", "oyster.com", "hotel.info", "hrs.com",
     "laterooms.com", "hostelworld.com", "bestday.com",
+    // Travel content aggregators
+    "wanderlog.com", "theculturetrip.com", "lonelyplanet.com", "fodors.com",
+    "skyscanner.com", "momondo.com", "hostelworld.com", "orbitz.com",
+    "travelocity.com", "wotif.com", "lastminute.com", "destinia.com",
+    "melhordestino.com.br", "passagenspromo.com.br", "maxmilhas.com.br",
+    "123milhas.com", "voeazul.com.br", "latamairlines.com",
   ];
 
   // Detect generic hotel directory patterns
