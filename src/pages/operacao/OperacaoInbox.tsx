@@ -1304,8 +1304,16 @@ function OperacaoInboxInner() {
       if (activeFilter === "unread") return c.unread_count > 0;
       if (activeFilter === "vip") return c.is_vip;
       if (activeFilter === "qualificacao") return c.stage === "qualificacao";
-      if (activeFilter === "proposta_enviada") return c.stage === "proposta_enviada";
-      if (activeFilter === "no_reply") return c.unread_count > 0 && c.assigned_to === "";
+      if (activeFilter === "proposta_enviada") return c.stage === "proposta_enviada" || c.stage === "proposta_preparacao" || c.stage === "negociacao";
+      if (activeFilter === "fechado") return c.stage === "fechado";
+      if (activeFilter === "pos_venda") return c.stage === "pos_venda";
+      if (activeFilter === "no_reply") return c.unread_count > 0;
+      if (activeFilter === "urgent") {
+        // Urgent = unread > 3 or last message > 24h ago with unread
+        const lastMsgTime = new Date(c.last_message_at).getTime();
+        const hoursAgo = (Date.now() - lastMsgTime) / 3600000;
+        return c.unread_count > 3 || (c.unread_count > 0 && hoursAgo > 24);
+      }
       return true;
     }).sort((a, b) => {
       if (a.is_pinned && !b.is_pinned) return -1;
