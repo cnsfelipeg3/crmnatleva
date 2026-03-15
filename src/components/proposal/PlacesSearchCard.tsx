@@ -1195,7 +1195,7 @@ export default function PlacesSearchCard({
         </ScrollArea>
       )}
 
-      {query.length >= 2 && results.length === 0 && !loading && !loadingDetails && !error && (
+      {query.trim().length >= minQueryLength && results.length === 0 && !loading && !loadingDetails && !error && (
         <div className="px-4 pb-6 text-center py-8">
           <MapPin className="h-10 w-10 text-muted-foreground/15 mx-auto mb-3" />
           <p className="text-xs text-muted-foreground">Nenhum local encontrado</p>
