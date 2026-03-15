@@ -82,15 +82,15 @@ const TYPE_ICONS: Record<string, typeof Plane> = {
 };
 
 /* ───────── Custom Leaflet Icons ───────── */
-function createPulsingIcon(color: string, size: number = 14): L.DivIcon {
+function createPulsingIcon(color: string, size: number = 10): L.DivIcon {
   return L.divIcon({
     className: "",
     iconSize: [size * 3, size * 3],
     iconAnchor: [size * 1.5, size * 1.5],
     html: `<div style="position:relative;width:${size * 3}px;height:${size * 3}px;display:flex;align-items:center;justify-content:center;">
-      <div style="position:absolute;width:${size * 3}px;height:${size * 3}px;border-radius:50%;background:${color};opacity:0.15;animation:pulse-ring 2s ease-out infinite;"></div>
-      <div style="position:absolute;width:${size * 1.5}px;height:${size * 1.5}px;border-radius:50%;background:${color};opacity:0.3;animation:pulse-ring 2s ease-out infinite 0.3s;"></div>
-      <div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);position:relative;z-index:2;"></div>
+      <div style="position:absolute;width:${size * 3}px;height:${size * 3}px;border-radius:50%;background:${color};opacity:0.12;animation:pulse-ring 2s ease-out infinite;"></div>
+      <div style="position:absolute;width:${size * 1.5}px;height:${size * 1.5}px;border-radius:50%;background:${color};opacity:0.25;animation:pulse-ring 2s ease-out infinite 0.3s;"></div>
+      <div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);position:relative;z-index:2;"></div>
     </div>`,
   });
 }
