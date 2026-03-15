@@ -9,6 +9,7 @@ import {
   ChevronRight, Bot,
   CheckCheck, Workflow, Brain, Loader2,
   Trash2, WifiOff, Pin, PinOff, Pencil, Wand2,
+  AlertTriangle,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -91,9 +92,12 @@ const FILTERS = [
   { key: "unread", label: "Não lidas" },
   { key: "mine", label: "Minhas" },
   { key: "vip", label: "VIP" },
-  { key: "qualificacao", label: "Em qualificação" },
-  { key: "proposta_enviada", label: "Proposta enviada" },
+  { key: "qualificacao", label: "Qualificação" },
+  { key: "proposta_enviada", label: "Proposta" },
+  { key: "fechado", label: "Clientes" },
+  { key: "pos_venda", label: "Pós-venda" },
   { key: "no_reply", label: "Sem resposta" },
+  { key: "urgent", label: "Urgentes" },
 ];
 
 // ─── Helpers ───
@@ -1301,8 +1305,16 @@ function OperacaoInboxInner() {
       if (activeFilter === "unread") return c.unread_count > 0;
       if (activeFilter === "vip") return c.is_vip;
       if (activeFilter === "qualificacao") return c.stage === "qualificacao";
-      if (activeFilter === "proposta_enviada") return c.stage === "proposta_enviada";
-      if (activeFilter === "no_reply") return c.unread_count > 0 && c.assigned_to === "";
+      if (activeFilter === "proposta_enviada") return c.stage === "proposta_enviada" || c.stage === "proposta_preparacao" || c.stage === "negociacao";
+      if (activeFilter === "fechado") return c.stage === "fechado";
+      if (activeFilter === "pos_venda") return c.stage === "pos_venda";
+      if (activeFilter === "no_reply") return c.unread_count > 0;
+      if (activeFilter === "urgent") {
+        // Urgent = unread > 3 or last message > 24h ago with unread
+        const lastMsgTime = new Date(c.last_message_at).getTime();
+        const hoursAgo = (Date.now() - lastMsgTime) / 3600000;
+        return c.unread_count > 3 || (c.unread_count > 0 && hoursAgo > 24);
+      }
       return true;
     }).sort((a, b) => {
       if (a.is_pinned && !b.is_pinned) return -1;
@@ -1817,113 +1829,169 @@ function OperacaoInboxInner() {
       <div className="flex-1 flex min-h-0 overflow-hidden">
         <div className="flex h-full w-full min-h-0">
           {/* ─── Column 1: Conversations List ─── */}
-          <div className={`md:w-[340px] w-full border-r border-border flex flex-col h-full overflow-hidden bg-card/30 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
-            <div className="p-3 space-y-2 shrink-0">
-              {/* ChatLive title row */}
-              <div className="flex items-center gap-2 pb-1">
-                <MessageSquare className="h-3.5 w-3.5 text-primary" />
-                <span className="text-xs font-bold tracking-tight text-foreground">ChatLive</span>
-                {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0 h-4">{totalUnread}</Badge>}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Buscar nome ou telefone..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 pr-8 h-9 text-sm bg-background" />
-                  {searchQuery && (
-                    <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+          <div className={`md:w-[360px] w-full border-r border-border flex flex-col h-full overflow-hidden bg-card/20 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
+            {/* Sidebar Header */}
+            <div className="px-3 pt-3 pb-2 space-y-2.5 shrink-0 border-b border-border/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <div>
+                    <span className="text-sm font-bold tracking-tight text-foreground">Inbox</span>
+                    {waConnected && <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                  </div>
+                  {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0 h-4">{totalUnread}</Badge>}
                 </div>
-                <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive shrink-0">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Limpar conversas</AlertDialogTitle>
-                      <AlertDialogDescription>Tem certeza que deseja limpar todas as conversas do dashboard? As conversas no WhatsApp não serão apagadas.</AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleClearConversations} className="bg-destructive text-destructive-foreground">Limpar tudo</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <div className="flex items-center gap-1">
+                  <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Limpar conversas</AlertDialogTitle>
+                        <AlertDialogDescription>Tem certeza que deseja limpar todas as conversas do dashboard? As conversas no WhatsApp não serão apagadas.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleClearConversations} className="bg-destructive text-destructive-foreground">Limpar tudo</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input placeholder="Buscar por nome, telefone..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 pr-8 h-8 text-xs bg-background/50 border-border/50" />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
               </div>
               <ScrollArea className="w-full">
-                <div className="flex gap-1">
-                  {FILTERS.map(f => (
-                    <button key={f.key} onClick={() => setActiveFilter(f.key)} className={`px-2.5 py-1 text-[10px] rounded-full whitespace-nowrap font-medium transition-all ${activeFilter === f.key ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-secondary/80"}`}>
-                      {f.label}
-                    </button>
-                  ))}
+                <div className="flex gap-1 pb-0.5">
+                  {FILTERS.map(f => {
+                    const count = f.key === "unread" ? conversations.filter(c => c.unread_count > 0).length
+                      : f.key === "vip" ? conversations.filter(c => c.is_vip).length
+                      : 0;
+                    return (
+                      <button key={f.key} onClick={() => setActiveFilter(f.key)} className={`px-2.5 py-1 text-[10px] rounded-full whitespace-nowrap font-medium transition-all flex items-center gap-1 ${activeFilter === f.key ? "bg-primary text-primary-foreground shadow-sm" : "bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
+                        {f.label}
+                        {count > 0 && <span className={`text-[9px] ${activeFilter === f.key ? "opacity-80" : "opacity-50"}`}>({count})</span>}
+                      </button>
+                    );
+                  })}
                 </div>
               </ScrollArea>
             </div>
 
+            {/* Conversations List */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-              <div className="px-2 pb-2">
+              <div className="py-1">
                 {filteredConversations.map(conv => {
                   const stageInfo = getStageInfo(conv.stage);
                   const isSelected = conv.id === selectedId;
                   const _previewRaw = stripQuotes((conv.last_message_preview || "").replace(/\n/g, " "));
-                  const _previewTruncated = _previewRaw.length > 35 ? _previewRaw.slice(0, 35) + "…" : _previewRaw;
                   const _contactName = conv.contact_name || "Sem nome";
+                  const lastMsgTime = new Date(conv.last_message_at).getTime();
+                  const hoursAgo = (Date.now() - lastMsgTime) / 3600000;
+                  const isUrgent = conv.unread_count > 3 || (conv.unread_count > 0 && hoursAgo > 24);
+                  const hasUnread = conv.unread_count > 0;
+
+                  // Build preview text with media type detection
+                  const previewContent = (() => {
+                    if (!_previewRaw) return { icon: null, text: "Sem mensagens", italic: true };
+                    const lower = _previewRaw.toLowerCase();
+                    if (lower === "📎 audio" || lower.includes("mensagem de voz") || lower === "audio" || lower === "🎤 áudio")
+                      return { icon: <Mic className="h-3 w-3 text-primary shrink-0" />, text: "Mensagem de voz", italic: false };
+                    if (lower === "📎 image" || lower.includes("📷"))
+                      return { icon: <Image className="h-3 w-3 shrink-0 text-muted-foreground" />, text: "Foto", italic: false };
+                    if (lower === "📎 video")
+                      return { icon: <Video className="h-3 w-3 shrink-0 text-muted-foreground" />, text: "Vídeo", italic: false };
+                    if (lower === "📎 document")
+                      return { icon: <File className="h-3 w-3 shrink-0 text-muted-foreground" />, text: "Documento", italic: false };
+                    const displayText = _previewRaw.length > 50 ? _previewRaw.slice(0, 50) + "…" : _previewRaw;
+                    return { icon: null, text: displayText, italic: false };
+                  })();
+
                   return (
                     <motion.div
                       key={conv.id}
                       onClick={() => handleSelectConversation(conv.id)}
-                      className={`group p-3 rounded-lg cursor-pointer mb-1 transition-all border ${isSelected ? "bg-primary/5 border-primary/20" : "border-transparent hover:bg-secondary/50"}`}
-                      whileTap={{ scale: 0.98 }}
+                      className={`group px-3 py-2.5 cursor-pointer transition-all border-l-2 ${
+                        isSelected
+                          ? "bg-primary/5 border-l-primary"
+                          : isUrgent
+                            ? "border-l-destructive/60 hover:bg-destructive/5"
+                            : "border-l-transparent hover:bg-secondary/40"
+                      }`}
+                      whileTap={{ scale: 0.99 }}
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="relative shrink-0">
+                      <div className="flex items-start gap-2.5">
+                        {/* Avatar */}
+                        <div className="relative shrink-0 mt-0.5">
                           {profilePicsRef.current.get(conv.id) ? (
-                            <img src={profilePicsRef.current.get(conv.id)} alt="" className="h-10 w-10 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
+                            <img src={profilePicsRef.current.get(conv.id)} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-border/30" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
                           ) : null}
-                          <div className={`h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-sm font-bold text-foreground ${profilePicsRef.current.get(conv.id) ? 'hidden' : ''}`}>
-                            {_contactName.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                          <div className={`h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-xs font-bold text-primary ring-1 ring-border/30 ${profilePicsRef.current.get(conv.id) ? 'hidden' : ''}`}>
+                            {_contactName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
                           </div>
+                          {conv.is_vip && (
+                            <div className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-amber-500 flex items-center justify-center ring-2 ring-card">
+                              <Star className="h-2.5 w-2.5 text-white fill-white" />
+                            </div>
+                          )}
                         </div>
-                        <div className="flex-1 min-w-0 pr-1">
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '4px' }}>
-                            <span className={`text-sm truncate ${conv.unread_count > 0 ? "font-bold text-foreground" : "font-medium text-foreground"}`}>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0">
+                          {/* Row 1: Name + Time */}
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={`text-[13px] truncate leading-tight ${hasUnread ? "font-bold text-foreground" : "font-semibold text-foreground/90"}`}>
                               {/^\d{10,}$/.test(_contactName) ? formatPhoneDisplay(_contactName) : _contactName}
                             </span>
-                            <span className="text-[11px] text-foreground whitespace-nowrap">
+                            <span className={`text-[10px] shrink-0 tabular-nums ${hasUnread ? "text-primary font-semibold" : "text-muted-foreground"}`}>
                               {formatTimestamp(conv.last_message_at)}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <p className={`text-xs truncate flex-1 min-w-0 ${conv.unread_count > 0 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                              {(() => {
-                                if (!_previewRaw) return <span className="text-muted-foreground/50 italic">Sem mensagens</span>;
-                                const isAudio = _previewRaw === "📎 audio" || _previewRaw.toLowerCase().includes("mensagem de voz") || _previewRaw.toLowerCase() === "audio" || _previewRaw === "🎤 Áudio";
-                                const isImage = _previewRaw === "📎 image" || _previewRaw.toLowerCase().includes("📷");
-                                const isVideo = _previewRaw === "📎 video";
-                                const isDocument = _previewRaw === "📎 document";
-                                if (isAudio) return <><Mic className="h-3 w-3 text-primary shrink-0" /> <span>Mensagem de voz</span></>;
-                                if (isImage) return <><Image className="h-3 w-3 shrink-0" /> <span>Foto</span></>;
-                                if (isVideo) return <><Video className="h-3 w-3 shrink-0" /> <span>Vídeo</span></>;
-                                if (isDocument) return <><File className="h-3 w-3 shrink-0" /> <span>Documento</span></>;
-                                return _previewTruncated;
-                              })()}
-                            </p>
+
+                          {/* Row 2: Preview + Unread */}
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <div className={`flex items-center gap-1 flex-1 min-w-0 text-xs leading-tight ${hasUnread ? "text-foreground/80 font-medium" : "text-muted-foreground"}`}>
+                              {previewContent.icon}
+                              <span className={`truncate ${previewContent.italic ? "italic text-muted-foreground/40" : ""}`}>
+                                {previewContent.text}
+                              </span>
+                            </div>
                             <div className="flex items-center gap-1 shrink-0">
-                              {conv.is_pinned && <Pin className="h-3 w-3 text-muted-foreground rotate-45" />}
-                              {conv.unread_count > 0 && (
-                                <span className="h-5 min-w-[20px] rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground px-1.5">
+                              {conv.is_pinned && <Pin className="h-3 w-3 text-muted-foreground/50 rotate-45" />}
+                              {hasUnread && (
+                                <span className="h-[18px] min-w-[18px] rounded-full bg-primary flex items-center justify-center text-[9px] font-bold text-primary-foreground px-1">
                                   {conv.unread_count > 99 ? "99+" : conv.unread_count}
                                 </span>
                               )}
                             </div>
                           </div>
+
+                          {/* Row 3: Metadata - Stage + Tags + Assigned */}
                           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                            <div className={`h-1.5 w-1.5 rounded-full ${stageInfo.color}`} />
-                            <span className="text-[9px] text-muted-foreground">{stageInfo.label}</span>
+                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${stageInfo.color}/10`}>
+                              <div className={`h-1.5 w-1.5 rounded-full ${stageInfo.color}`} />
+                              <span className="text-muted-foreground">{stageInfo.label}</span>
+                            </div>
+                            {conv.tags?.slice(0, 1).map(tag => (
+                              <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-secondary/60 text-muted-foreground/70">{tag}</span>
+                            ))}
+                            {isUrgent && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium flex items-center gap-0.5">
+                                <AlertTriangle className="h-2.5 w-2.5" />
+                                Atenção
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1939,8 +2007,10 @@ function OperacaoInboxInner() {
                       </>
                     ) : (
                       <>
-                        <MessageSquare className="h-10 w-10 text-muted-foreground/20 mb-3" />
-                        <p className="text-sm text-muted-foreground">{searchQuery ? "Nenhuma conversa encontrada" : "Nenhuma conversa ainda"}</p>
+                        <div className="h-14 w-14 rounded-2xl bg-secondary/50 flex items-center justify-center mb-3">
+                          <MessageSquare className="h-6 w-6 text-muted-foreground/30" />
+                        </div>
+                        <p className="text-sm font-medium text-muted-foreground">{searchQuery ? "Nenhuma conversa encontrada" : "Nenhuma conversa ainda"}</p>
                         <p className="text-xs text-muted-foreground/60 mt-1">{searchQuery ? "Tente buscar por outro termo" : "As mensagens recebidas aparecerão aqui"}</p>
                       </>
                     )}
