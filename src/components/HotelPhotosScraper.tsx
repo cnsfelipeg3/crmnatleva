@@ -624,31 +624,95 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     if (nav.level !== "detail") return null;
     const itemPhotos = categoryGroups[nav.category]?.[nav.itemName] || [];
     const detail = sectionDetails[nav.itemName];
+    const hasInfo = detail && (detail.description || Object.keys(detail.details).length > 0 || detail.amenities.length > 0);
+
+    // Map detail keys to icons
+    const detailIcons: Record<string, React.ReactNode> = {
+      "Tamanho": <Maximize2 className="w-4 h-4" />,
+      "Cama": <Bed className="w-4 h-4" />,
+      "Capacidade": <Users className="w-4 h-4" />,
+      "Vista": <Eye className="w-4 h-4" />,
+      "Andar": <MapPin className="w-4 h-4" />,
+      "Banheiro": <Droplets className="w-4 h-4" />,
+    };
+
+    // Map amenities to icons
+    const amenityIcon = (amenity: string): React.ReactNode => {
+      const a = amenity.toLowerCase();
+      if (a.includes("wi-fi") || a.includes("wifi") || a.includes("internet")) return <Wifi className="w-3 h-3" />;
+      if (a.includes("ar-condicionado") || a.includes("air") || a.includes("climate")) return <Wind className="w-3 h-3" />;
+      if (a.includes("tv") || a.includes("televisão")) return <Tv className="w-3 h-3" />;
+      if (a.includes("cofre") || a.includes("safe")) return <Lock className="w-3 h-3" />;
+      if (a.includes("minibar") || a.includes("frigobar")) return <Wine className="w-3 h-3" />;
+      if (a.includes("café") || a.includes("coffee") || a.includes("chá")) return <Coffee className="w-3 h-3" />;
+      if (a.includes("banheir") || a.includes("ducha") || a.includes("chuveiro") || a.includes("banheira")) return <Droplets className="w-3 h-3" />;
+      if (a.includes("roupão") || a.includes("chinelo") || a.includes("toalha")) return <Shirt className="w-3 h-3" />;
+      if (a.includes("telefone") || a.includes("phone")) return <Phone className="w-3 h-3" />;
+      if (a.includes("serviço") || a.includes("room service") || a.includes("concierge")) return <Sparkles className="w-3 h-3" />;
+      return <Check className="w-3 h-3" />;
+    };
 
     return (
       <div className="space-y-4">
-        {/* Info card */}
-        {detail && (detail.description || Object.keys(detail.details).length > 0 || detail.amenities.length > 0) && (
-          <div className="rounded-xl border border-border/40 bg-muted/30 p-4 space-y-3">
-            {detail.description && (
-              <p className="text-sm text-foreground leading-relaxed">{detail.description}</p>
-            )}
+        {/* Hero banner with first photo */}
+        {itemPhotos.length > 0 && hasInfo && (
+          <div className="relative rounded-xl overflow-hidden h-48 sm:h-56">
+            <img
+              src={getDisplayUrl(itemPhotos[0].url)}
+              alt={nav.itemName}
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
+              onError={() => handleImageError(itemPhotos[0].url)}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-5">
+              <h3 className="text-xl font-bold text-white drop-shadow-lg">{nav.itemName}</h3>
+              {detail?.description && (
+                <p className="text-sm text-white/85 mt-1.5 leading-relaxed max-w-2xl line-clamp-2">{detail.description}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Info card — structured */}
+        {hasInfo && (
+          <div className="space-y-4">
+            {/* Details grid */}
             {Object.keys(detail.details).length > 0 && (
-              <div className="flex flex-wrap gap-x-6 gap-y-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {Object.entries(detail.details).map(([key, val]) => (
-                  <div key={key} className="text-xs">
-                    <span className="text-muted-foreground/60 uppercase tracking-wider text-[10px]">{key}</span>
-                    <span className="block font-semibold text-foreground">{val}</span>
+                  <div key={key} className="flex items-center gap-3 rounded-xl border border-border/50 bg-card p-3">
+                    <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                      {detailIcons[key] || <Info className="w-4 h-4" />}
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">{key}</span>
+                      <span className="text-sm font-semibold text-foreground block truncate">{val}</span>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
+
+            {/* Description (only if no hero banner showed it) */}
+            {detail.description && itemPhotos.length === 0 && (
+              <p className="text-sm text-muted-foreground leading-relaxed">{detail.description}</p>
+            )}
+
+            {/* Amenities */}
             {detail.amenities.length > 0 && (
-              <div>
-                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">Comodidades</span>
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {detail.amenities.slice(0, 20).map((a, i) => (
-                    <span key={i} className="text-[10px] bg-background border border-border/40 px-2 py-0.5 rounded-full text-muted-foreground">{a}</span>
+              <div className="rounded-xl border border-border/50 bg-card p-4">
+                <h4 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-primary" />
+                  Comodidades
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {detail.amenities.slice(0, 24).map((a, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+                      <span className="text-primary/70 flex-shrink-0">{amenityIcon(a)}</span>
+                      <span className="truncate">{a}</span>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -658,7 +722,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
 
         {/* Photo grid */}
         <PhotoGrid
-          photos={itemPhotos}
+          photos={hasInfo ? itemPhotos.slice(1) : itemPhotos}
           selectedPhotos={selectedPhotos}
           toggleSelect={toggleSelect}
           openLightbox={openLightbox}
