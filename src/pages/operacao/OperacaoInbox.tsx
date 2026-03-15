@@ -269,16 +269,22 @@ function OperacaoInboxInner() {
     return () => { cancelled = true; };
   }, [selectedId, selected?.db_id]);
 
+  const getMessagesViewport = useCallback((): HTMLElement | null => {
+    if (!scrollAreaRef.current) return null;
+    const radixViewport = scrollAreaRef.current.querySelector<HTMLElement>("[data-radix-scroll-area-viewport]");
+    return radixViewport || scrollAreaRef.current;
+  }, []);
+
   const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
     requestAnimationFrame(() => {
-      const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+      const viewport = getMessagesViewport();
       if (viewport) {
         viewport.scrollTo({ top: viewport.scrollHeight, behavior });
       } else {
         messagesEndRef.current?.scrollIntoView({ behavior });
       }
     });
-  }, []);
+  }, [getMessagesViewport]);
 
   // Auto-scroll when messages change (only if user hasn't scrolled up)
   useEffect(() => {
@@ -297,15 +303,17 @@ function OperacaoInboxInner() {
 
   // Track user scroll position
   useEffect(() => {
-    const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
+    const viewport = getMessagesViewport();
     if (!viewport) return;
+
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = viewport;
       isUserScrolledUpRef.current = scrollHeight - scrollTop - clientHeight > 100;
     };
-    viewport.addEventListener("scroll", handleScroll);
+
+    viewport.addEventListener("scroll", handleScroll, { passive: true });
     return () => viewport.removeEventListener("scroll", handleScroll);
-  }, [selectedId]);
+  }, [selectedId, getMessagesViewport]);
 
   useEffect(() => {
     if (!inputText && textareaRef.current) textareaRef.current.style.height = "40px";
@@ -1457,8 +1465,8 @@ function OperacaoInboxInner() {
   return (
     <div
       ref={livechatContainerRef}
-      className={`flex flex-col bg-background overflow-hidden ${isMobile ? "fixed inset-0 z-50" : "h-full"}`}
-      style={isMobile ? { height: mobileHeight } : { height: '100%' }}
+      className={`flex flex-col bg-background overflow-hidden overscroll-none ${isMobile ? "fixed inset-0 z-50 min-h-0 w-full" : "h-full min-h-0"}`}
+      style={isMobile ? { height: mobileHeight } : { height: "100%" }}
     >
       {/* Content */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -1662,7 +1670,7 @@ function OperacaoInboxInner() {
                 </div>
 
                 {/* Messages */}
-                <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0 overflow-hidden px-4">
+                <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 md:px-4">
                   <div className="py-4 space-y-3">
                     {currentMessages.map((msg, idx) => (
                       <Fragment key={msg.id}>
@@ -1796,7 +1804,7 @@ function OperacaoInboxInner() {
                     )}
                     <div ref={messagesEndRef} />
                   </div>
-                </ScrollArea>
+                </div>
 
                 {/* Media pending preview */}
                 {mediaPendingFile && (
@@ -1864,7 +1872,10 @@ function OperacaoInboxInner() {
                 )}
 
                 {/* Input area */}
-                <div className="border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card/50 shrink-0">
+                <div
+                  className="sticky bottom-0 z-20 border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card/95 backdrop-blur-sm shrink-0"
+                  style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" } : undefined}
+                >
                   {isRecording ? (
                     <div className="flex items-center gap-3">
                       <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-destructive hover:text-destructive" onClick={cancelRecording}>
