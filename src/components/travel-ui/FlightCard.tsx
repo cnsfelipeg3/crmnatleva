@@ -89,6 +89,9 @@ export default function FlightCard({ segment: seg, index = 0 }: FlightCardProps)
           <div className="flex-1">
             <p className="text-2xl sm:text-3xl font-bold text-foreground tracking-tighter font-mono">{seg.origin_iata}</p>
             <p className="text-xs text-muted-foreground mt-1">{iataToLabel(seg.origin_iata)}</p>
+            {seg.terminal && (
+              <p className="text-[10px] text-muted-foreground/70 mt-0.5">Terminal {seg.terminal}</p>
+            )}
             <div className="flex items-center gap-2 mt-2">
               {seg.departure_date && <span className="text-xs text-muted-foreground">{fmtDate(seg.departure_date)}</span>}
               {seg.departure_time && <span className="text-sm font-bold text-foreground font-mono">{seg.departure_time?.slice(0, 5)}</span>}
@@ -111,6 +114,9 @@ export default function FlightCard({ segment: seg, index = 0 }: FlightCardProps)
           <div className="flex-1 text-right">
             <p className="text-2xl sm:text-3xl font-bold text-foreground tracking-tighter font-mono">{seg.destination_iata}</p>
             <p className="text-xs text-muted-foreground mt-1">{iataToLabel(seg.destination_iata)}</p>
+            {seg.arrival_terminal && (
+              <p className="text-[10px] text-muted-foreground/70 mt-0.5">Terminal {seg.arrival_terminal}</p>
+            )}
             <div className="flex items-center gap-2 mt-2 justify-end">
               {seg.arrival_date && seg.arrival_date !== seg.departure_date && (
                 <span className="text-xs text-muted-foreground">{fmtDate(seg.arrival_date)}</span>
@@ -151,8 +157,8 @@ export default function FlightCard({ segment: seg, index = 0 }: FlightCardProps)
                 <DetailItem label="Companhia" value={seg.airline_name || seg.airline || ""} />
                 <DetailItem label="Voo" value={seg.flight_number || ""} />
                 <DetailItem label="Data" value={fmtDate(seg.departure_date || null)} />
-                <DetailItem label="Partida" value={`${seg.departure_time?.slice(0, 5) || ""} ${seg.terminal ? `· Terminal ${seg.terminal}` : ""}`} />
-                <DetailItem label="Chegada" value={`${seg.arrival_time?.slice(0, 5) || ""} ${seg.arrival_terminal ? `· Terminal ${seg.arrival_terminal}` : ""}`} />
+                <DetailItem label="Partida" value={seg.departure_time?.slice(0, 5) || ""} />
+                <DetailItem label="Chegada" value={seg.arrival_time?.slice(0, 5) || ""} />
                 <DetailItem label="Duração" value={fmtDuration(seg.duration_minutes)} />
                 {seg.flight_class && <DetailItem label="Classe" value={seg.flight_class} />}
                 {seg.cabin_type && <DetailItem label="Cabine" value={seg.cabin_type} />}
