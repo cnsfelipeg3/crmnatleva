@@ -255,9 +255,9 @@ Deno.serve(async (req) => {
       if (existingConv) {
         conversationId = existingConv.id;
         const updateData: Record<string, unknown> = {
-          last_message_at: timestamp,
+          last_message_at: timestampIso,
           last_message_preview: preview,
-          updated_at: timestamp,
+          updated_at: timestampIso,
         };
         if (!fromMe && existingConv.contact_name) {
           const existing = existingConv.contact_name.trim();
