@@ -11,15 +11,17 @@ const corsHeaders = {
 interface ScrapedPhoto {
   url: string;
   alt: string;
-  section_name: string; // The heading/section this image belongs to
+  section_name: string;
   category: string;
   confidence: number;
+  source: "official" | "booking" | "google";
+  html_context?: string; // surrounding HTML context for AI classification
 }
 
 interface SectionInfo {
   name: string;
   description: string;
-  details: Record<string, string>; // e.g. { "Tamanho": "45 m²", "Cama": "King" }
+  details: Record<string, string>;
   amenities: string[];
 }
 
@@ -27,6 +29,13 @@ interface ImageCollection {
   photos: ScrapedPhoto[];
   seen: Set<string>;
   sections: Map<string, SectionInfo>;
+}
+
+interface BookingRoomData {
+  name: string;
+  photos: string[];
+  details: Record<string, string>;
+  amenities: string[];
 }
 
 // ═══════════════════════════════════════════════
@@ -55,131 +64,93 @@ Deno.serve(async (req) => {
     const locationStr = [hotel_city, hotel_country].filter(Boolean).join(", ");
     const cleanHotelName = hotel_name.replace(/\s*[-–—]\s*(Rod\.|Acesso|Av\.|Rua|R\.).*$/i, "").trim();
 
-    // ── Step 1: Find the OFFICIAL hotel website ──
-    const searchQuery = `${cleanHotelName} ${locationStr} site oficial`;
-    console.log("🔍 Searching for hotel:", searchQuery);
+    // ── Run OFFICIAL SITE + BOOKING.COM scraping in PARALLEL ──
+    console.log("🚀 Starting parallel scraping: Official Site + Booking.com");
 
-    const searchResponse = await fetch("https://api.firecrawl.dev/v1/search", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ query: searchQuery, limit: 8, scrapeOptions: { formats: ["markdown"] } }),
-    });
+    const [officialResult, bookingResult] = await Promise.allSettled([
+      scrapeOfficialSite(cleanHotelName, locationStr, hotel_name, FIRECRAWL_API_KEY),
+      scrapeBookingCom(cleanHotelName, locationStr, hotel_name, FIRECRAWL_API_KEY),
+    ]);
 
-    const searchData = await searchResponse.json();
-    if (!searchResponse.ok) {
-      console.error("Search error:", searchData);
-      return new Response(
-        JSON.stringify({ success: false, error: searchData.error || "Erro na busca" }),
-        { status: searchResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const official = officialResult.status === "fulfilled" ? officialResult.value : null;
+    const booking = bookingResult.status === "fulfilled" ? bookingResult.value : null;
 
-    const results = searchData.data || [];
-    if (results.length === 0) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Nenhum resultado encontrado para este hotel" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    if (officialResult.status === "rejected") console.warn("Official scrape failed:", officialResult.reason);
+    if (bookingResult.status === "rejected") console.warn("Booking scrape failed:", bookingResult.reason);
 
-    // ── Step 2: Identify the OFFICIAL site ──
-    const officialResult = findOfficialSite(results, hotel_name);
-    const mainUrl = officialResult?.url || results[0]?.url;
-    const officialDomain = mainUrl ? new URL(mainUrl).hostname : null;
-    console.log(`🏨 Official domain: ${officialDomain || "none"} → ${mainUrl}`);
-
+    // ── Merge results ──
     const collection: ImageCollection = { photos: [], seen: new Set(), sections: new Map() };
 
-    // ── Step 3: MAP the entire site to discover ALL pages ──
-    console.log("🗺️ Mapping entire hotel website...");
-    let allSiteUrls = await mapEntireSite(mainUrl, FIRECRAWL_API_KEY);
-    console.log(`📄 Found ${allSiteUrls.length} pages on the site`);
-
-    // ── Step 3b: If map returned 0 pages, generate common hotel page URLs manually ──
-    if (allSiteUrls.length === 0 && mainUrl) {
-      console.log("⚠️ Map returned 0 pages — generating common hotel page paths...");
-      const commonPaths = [
-        "/rooms", "/suites", "/accommodation", "/accommodations",
-        "/dining", "/restaurant", "/restaurants",
-        "/spa", "/wellness",
-        "/gallery", "/photos", "/photo-gallery", "/media",
-        "/facilities", "/amenities", "/experiences",
-        "/pool", "/fitness", "/meetings", "/events",
-        // Japanese
-        "/guest-rooms", "/guestrooms",
-        // Multi-lang
-        "/en/rooms", "/en/dining", "/en/spa", "/en/gallery",
-        "/en/accommodation", "/en/facilities", "/en/experiences",
-      ];
-      const base = new URL(mainUrl);
-      const generatedUrls = commonPaths.map(p => base.origin + p);
-      // Test which URLs exist by trying to fetch HEAD
-      const validUrls: string[] = [mainUrl];
-      const headChecks = await Promise.allSettled(
-        generatedUrls.map(async (url) => {
-          try {
-            const resp = await fetch(url, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(5000) });
-            if (resp.ok || resp.status === 301 || resp.status === 302) return url;
-          } catch { /* skip */ }
-          return null;
-        })
-      );
-      for (const result of headChecks) {
-        if (result.status === "fulfilled" && result.value) validUrls.push(result.value);
+    // 1. Add official photos first (higher priority)
+    if (official) {
+      for (const photo of official.photos) {
+        if (!collection.seen.has(normalizeUrlForDedup(photo.url))) {
+          collection.seen.add(normalizeUrlForDedup(photo.url));
+          collection.photos.push(photo);
+        }
       }
-      allSiteUrls = validUrls;
-      console.log(`📄 Generated ${allSiteUrls.length} reachable URLs from common paths`);
-    }
-
-    // ── Step 4: Categorize pages by relevance ──
-    const categorizedPages = categorizePages(allSiteUrls, mainUrl);
-    console.log(`  Priority pages: ${categorizedPages.priority.length}`);
-    console.log(`  Gallery pages: ${categorizedPages.gallery.length}`);
-    console.log(`  Other pages: ${categorizedPages.other.length}`);
-
-    // ── Step 5: Scrape ALL relevant pages (priority first, then gallery, then others) ──
-    const pagesToScrape = [
-      ...categorizedPages.priority,
-      ...categorizedPages.gallery,
-      ...categorizedPages.other,
-    ].slice(0, 30);
-
-    // If no categorized pages found, at least scrape the main URL
-    if (pagesToScrape.length === 0 && mainUrl) {
-      pagesToScrape.push({ url: mainUrl, inferredSection: "" });
-    }
-
-    console.log(`🕷️ Scraping ${pagesToScrape.length} pages for high-res photos...`);
-
-    const batchSize = 3;
-    for (let i = 0; i < pagesToScrape.length; i += batchSize) {
-      const batch = pagesToScrape.slice(i, i + batchSize);
-      await Promise.allSettled(
-        batch.map(page => scrapePageForPhotos(page.url, page.inferredSection, collection, FIRECRAWL_API_KEY, hotel_name))
-      );
-      console.log(`  Scraped ${Math.min(i + batchSize, pagesToScrape.length)}/${pagesToScrape.length} pages, ${collection.photos.length} photos so far`);
-    }
-
-    // Also scrape the main/home page if we haven't
-    if (mainUrl && !pagesToScrape.some(p => p.url === mainUrl)) {
-      await scrapePageForPhotos(mainUrl, "", collection, FIRECRAWL_API_KEY, hotel_name);
-    }
-
-    // Fallback: if still few images, use search results markdown
-    if (collection.photos.length < 10) {
-      console.log(`⚠️ Only ${collection.photos.length} photos, extracting from search results...`);
-      if (officialResult) {
-        collectImagesFromMarkdown(officialResult.markdown || "", officialResult.url || "", collection, officialDomain);
-      }
-      for (const result of results) {
-        if (result === officialResult) continue;
-        collectImagesFromMarkdown(result.markdown || "", result.url || "", collection, null);
+      for (const [name, info] of official.sections) {
+        collection.sections.set(name, info);
       }
     }
 
-    console.log(`📸 Total candidate images: ${collection.photos.length}`);
+    // 2. Cross-reference room names from Booking
+    const bookingRoomNames = booking?.rooms.map(r => r.name) || [];
+    const officialRoomNames = official ? [...new Set(official.photos.map(p => p.section_name).filter(Boolean))] : [];
+    
+    // Merge validated room names
+    const validatedRoomNames = [...new Set([...officialRoomNames, ...bookingRoomNames])];
+    console.log(`📋 Validated room names: ${validatedRoomNames.join(", ")}`);
 
-    // ── Step 6: Filter, deduplicate, maximize quality, and return ──
+    // 3. Add Booking photos as FALLBACK (only for room types not well-covered by official)
+    if (booking) {
+      const officialCategoryCount: Record<string, number> = {};
+      for (const p of collection.photos) {
+        const cat = p.category || "outro";
+        officialCategoryCount[cat] = (officialCategoryCount[cat] || 0) + 1;
+      }
+
+      for (const room of booking.rooms) {
+        // Check if we already have enough photos for this room type
+        const cat = inferCategory(room.name, "");
+        const existingCount = officialCategoryCount[cat] || 0;
+
+        // Add Booking photos if official has < 3 for this category, or if total < 20
+        const shouldAdd = existingCount < 3 || collection.photos.length < 20;
+        
+        for (const photoUrl of room.photos) {
+          const dedupKey = normalizeUrlForDedup(photoUrl);
+          if (collection.seen.has(dedupKey)) continue;
+          if (!shouldAdd && collection.photos.length > 60) continue;
+
+          collection.seen.add(dedupKey);
+          collection.photos.push({
+            url: photoUrl,
+            alt: room.name,
+            section_name: room.name,
+            category: cat,
+            confidence: 0.85,
+            source: "booking",
+            html_context: `Booking.com room listing: "${room.name}". ${Object.entries(room.details).map(([k,v]) => `${k}: ${v}`).join(", ")}`,
+          });
+          officialCategoryCount[cat] = (officialCategoryCount[cat] || 0) + 1;
+        }
+
+        // Add section details from Booking if missing
+        if (!collection.sections.has(room.name) && (room.details || room.amenities.length > 0)) {
+          collection.sections.set(room.name, {
+            name: room.name,
+            description: "",
+            details: room.details,
+            amenities: room.amenities,
+          });
+        }
+      }
+    }
+
+    console.log(`📸 Total merged photos: ${collection.photos.length} (Official: ${official?.photos.length || 0}, Booking fallback added)`);
+
+    // ── Filter, deduplicate, maximize quality, and return ──
     const photos = collection.photos
       .filter(img => {
         const url = img.url.toLowerCase();
@@ -188,8 +159,11 @@ Deno.serve(async (req) => {
         if (isLikelyThumbnail(img.url)) return false;
         return /\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(img.url) && img.url.length > 50;
       })
-      // Prioritize photos WITH section names
       .sort((a, b) => {
+        // Official first, then booking
+        if (a.source === "official" && b.source !== "official") return -1;
+        if (a.source !== "official" && b.source === "official") return 1;
+        // Photos with section names first
         if (a.section_name && !b.section_name) return -1;
         if (!a.section_name && b.section_name) return 1;
         return (b.confidence || 0) - (a.confidence || 0);
@@ -201,31 +175,38 @@ Deno.serve(async (req) => {
         section_name: img.section_name,
         category: inferCategory(img.section_name, img.alt),
         confidence: img.section_name ? 0.95 : 0.5,
+        source: img.source,
+        html_context: img.html_context,
       }));
 
-    const roomNames = [...new Set(photos.map(p => p.section_name).filter(Boolean))];
-    
-    // Build section_details from collected section info
+    const roomNames = validatedRoomNames.length > 0 ? validatedRoomNames : [...new Set(photos.map(p => p.section_name).filter(Boolean))];
+
+    // Build section_details
     const rawSectionDetails: Record<string, { description: string; details: Record<string, string>; amenities: string[] }> = {};
     for (const [name, info] of collection.sections) {
       rawSectionDetails[name] = { description: info.description, details: info.details, amenities: info.amenities };
     }
 
-    // ── Step 7: Use AI to translate & clean up descriptions to PT-BR ──
     const sectionDetails = await translateSectionDetails(rawSectionDetails, hotel_name);
-    
-    console.log(`✅ Returning ${photos.length} HD photos with ${roomNames.length} sections:`, roomNames);
-    console.log(`📝 Section details for ${Object.keys(sectionDetails).length} sections`);
+
+    const officialCount = photos.filter(p => p.source === "official").length;
+    const bookingCount = photos.filter(p => p.source === "booking").length;
+    console.log(`✅ Returning ${photos.length} photos (${officialCount} official, ${bookingCount} booking) with ${roomNames.length} rooms`);
 
     return new Response(
       JSON.stringify({
         success: true,
         photos,
-        source_url: mainUrl || "",
+        source_url: official?.sourceUrl || "",
         room_names: roomNames,
         section_details: sectionDetails,
-        pages_scraped: pagesToScrape.length,
-        total_site_pages: allSiteUrls.length,
+        pages_scraped: official?.pagesScraped || 0,
+        total_site_pages: official?.totalPages || 0,
+        booking_rooms_found: booking?.rooms.length || 0,
+        sources_used: {
+          official: (official?.photos.length || 0) > 0,
+          booking: bookingCount > 0,
+        },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -239,17 +220,300 @@ Deno.serve(async (req) => {
 });
 
 // ═══════════════════════════════════════════════
-// Full-site navigation: Map → Categorize → Scrape all pages
+// OFFICIAL SITE SCRAPING (enhanced with HTML context)
+// ═══════════════════════════════════════════════
+
+async function scrapeOfficialSite(
+  cleanHotelName: string,
+  locationStr: string,
+  hotelName: string,
+  apiKey: string
+): Promise<{ photos: ScrapedPhoto[]; sections: Map<string, SectionInfo>; sourceUrl: string; pagesScraped: number; totalPages: number }> {
+  const searchQuery = `${cleanHotelName} ${locationStr} site oficial`;
+  console.log("🔍 Searching for official site:", searchQuery);
+
+  const searchResponse = await fetch("https://api.firecrawl.dev/v1/search", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ query: searchQuery, limit: 8, scrapeOptions: { formats: ["markdown"] } }),
+  });
+
+  const searchData = await searchResponse.json();
+  if (!searchResponse.ok) throw new Error(searchData.error || "Erro na busca");
+
+  const results = searchData.data || [];
+  if (results.length === 0) throw new Error("Nenhum resultado encontrado");
+
+  const officialResult = findOfficialSite(results, hotelName);
+  const mainUrl = officialResult?.url || results[0]?.url;
+  const officialDomain = mainUrl ? new URL(mainUrl).hostname : null;
+  console.log(`🏨 Official domain: ${officialDomain || "none"} → ${mainUrl}`);
+
+  const collection: ImageCollection = { photos: [], seen: new Set(), sections: new Map() };
+
+  // Map the entire site
+  let allSiteUrls = await mapEntireSite(mainUrl, apiKey);
+  if (allSiteUrls.length === 0 && mainUrl) {
+    allSiteUrls = await generateCommonUrls(mainUrl);
+  }
+
+  const categorizedPages = categorizePages(allSiteUrls, mainUrl);
+  const pagesToScrape = [
+    ...categorizedPages.priority,
+    ...categorizedPages.gallery,
+    ...categorizedPages.other,
+  ].slice(0, 30);
+
+  if (pagesToScrape.length === 0 && mainUrl) {
+    pagesToScrape.push({ url: mainUrl, inferredSection: "" });
+  }
+
+  console.log(`🕷️ Scraping ${pagesToScrape.length} official pages...`);
+
+  const batchSize = 3;
+  for (let i = 0; i < pagesToScrape.length; i += batchSize) {
+    const batch = pagesToScrape.slice(i, i + batchSize);
+    await Promise.allSettled(
+      batch.map(page => scrapePageForPhotos(page.url, page.inferredSection, collection, apiKey, hotelName, "official"))
+    );
+  }
+
+  if (mainUrl && !pagesToScrape.some(p => p.url === mainUrl)) {
+    await scrapePageForPhotos(mainUrl, "", collection, apiKey, hotelName, "official");
+  }
+
+  // Fallback from search results
+  if (collection.photos.length < 10) {
+    if (officialResult) collectImagesFromMarkdown(officialResult.markdown || "", officialResult.url || "", collection, officialDomain, "official");
+    for (const result of results) {
+      if (result === officialResult) continue;
+      collectImagesFromMarkdown(result.markdown || "", result.url || "", collection, null, "official");
+    }
+  }
+
+  return {
+    photos: collection.photos,
+    sections: collection.sections,
+    sourceUrl: mainUrl || "",
+    pagesScraped: pagesToScrape.length,
+    totalPages: allSiteUrls.length,
+  };
+}
+
+// ═══════════════════════════════════════════════
+// BOOKING.COM SCRAPING (room names + fallback photos)
+// ═══════════════════════════════════════════════
+
+async function scrapeBookingCom(
+  cleanHotelName: string,
+  locationStr: string,
+  hotelName: string,
+  apiKey: string
+): Promise<{ rooms: BookingRoomData[] }> {
+  // Search for the hotel on Booking.com
+  const searchQuery = `site:booking.com ${cleanHotelName} ${locationStr} hotel`;
+  console.log("🔍 Searching Booking.com for:", searchQuery);
+
+  const searchResponse = await fetch("https://api.firecrawl.dev/v1/search", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ query: searchQuery, limit: 5, scrapeOptions: { formats: ["markdown", "html"] } }),
+  });
+
+  const searchData = await searchResponse.json();
+  if (!searchResponse.ok) {
+    console.warn("Booking search failed:", searchData.error);
+    return { rooms: [] };
+  }
+
+  const results = searchData.data || [];
+  const bookingResult = results.find((r: any) => r.url && r.url.includes("booking.com/hotel"));
+  if (!bookingResult) {
+    console.log("❌ No Booking.com result found");
+    return { rooms: [] };
+  }
+
+  console.log(`📖 Found Booking page: ${bookingResult.url}`);
+
+  // Scrape the Booking.com page for structured room data
+  let html = bookingResult.html || "";
+  let markdown = bookingResult.markdown || "";
+
+  // If we don't have HTML from search, scrape the page directly
+  if (html.length < 500) {
+    try {
+      const scrapeResp = await fetch("https://api.firecrawl.dev/v1/scrape", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ url: bookingResult.url, formats: ["html", "markdown"], onlyMainContent: false, waitFor: 3000 }),
+      });
+      if (scrapeResp.ok) {
+        const scrapeData = await scrapeResp.json();
+        html = scrapeData.data?.html || scrapeData.html || html;
+        markdown = scrapeData.data?.markdown || scrapeData.markdown || markdown;
+      }
+    } catch (e) {
+      console.warn("Booking.com scrape failed:", e);
+    }
+  }
+
+  const rooms = extractBookingRoomData(html, markdown, bookingResult.url);
+  console.log(`🏨 Booking.com: Found ${rooms.length} room types: ${rooms.map(r => r.name).join(", ")}`);
+  return { rooms };
+}
+
+/**
+ * Extract structured room data from Booking.com HTML/Markdown.
+ * Booking has a well-structured room listing with names, photos, and details.
+ */
+function extractBookingRoomData(html: string, markdown: string, sourceUrl: string): BookingRoomData[] {
+  const rooms: BookingRoomData[] = [];
+  const seenRoomNames = new Set<string>();
+
+  // Strategy 1: Extract from HTML structure
+  // Booking uses data-room-id or class patterns like "hprt-table", "room_header", "rt-photo-cell"
+  
+  // Extract room names from headings and spans
+  const roomNamePatterns = [
+    /<(?:h[1-4]|span|a)[^>]*class="[^"]*(?:hprt-roomtype|room_link|room-header|room_title|roomType)[^"]*"[^>]*>([^<]{3,80})</gi,
+    /<(?:h[1-4])[^>]*>\s*<a[^>]*>\s*([^<]{3,80})<\/a>/gi,
+    /data-room-name="([^"]{3,80})"/gi,
+  ];
+
+  for (const pattern of roomNamePatterns) {
+    let match;
+    while ((match = pattern.exec(html)) !== null) {
+      const name = match[1].replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/<[^>]+>/g, "").trim();
+      if (name.length >= 3 && name.length <= 80 && !seenRoomNames.has(name.toLowerCase())) {
+        seenRoomNames.add(name.toLowerCase());
+        rooms.push({ name, photos: [], details: {}, amenities: [] });
+      }
+    }
+  }
+
+  // Strategy 2: Extract from markdown (more reliable for text)
+  const mdRoomPattern = /#{1,4}\s+(.+?)(?:\n|$)/g;
+  let mdMatch;
+  while ((mdMatch = mdRoomPattern.exec(markdown)) !== null) {
+    const heading = mdMatch[1].replace(/\*+/g, "").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").trim();
+    if (heading.length >= 3 && heading.length <= 80 && !seenRoomNames.has(heading.toLowerCase())) {
+      // Only add if it looks like a room name (not generic heading)
+      const lower = heading.toLowerCase();
+      if (/room|suite|studio|deluxe|superior|standard|classic|twin|double|single|king|queen|penthouse|villa|bungalow|apartment|junior|executive|premium|comfort|economy|family|cottage|chalet|loft/i.test(lower)) {
+        seenRoomNames.add(lower);
+        rooms.push({ name: heading, photos: [], details: {}, amenities: [] });
+      }
+    }
+  }
+
+  // Strategy 3: Extract photos from bstatic.com (Booking's CDN)
+  const bookingPhotoRegex = /(?:src|data-src|srcset)\s*=\s*["']([^"']*bstatic\.com[^"']*\.(?:jpg|jpeg|png|webp)[^"']*)["']/gi;
+  const allBookingPhotos: string[] = [];
+  let photoMatch;
+  while ((photoMatch = bookingPhotoRegex.exec(html)) !== null) {
+    let url = photoMatch[1].trim();
+    // Get the highest resolution: remove /max\d+/ or replace with max1280
+    url = url.replace(/\/max\d+\//, "/max1280/");
+    url = url.replace(/\/square\d+\//, "/max1280/");
+    if (url.startsWith("//")) url = "https:" + url;
+    if (!allBookingPhotos.includes(url) && !isLikelyThumbnail(url)) {
+      allBookingPhotos.push(url);
+    }
+  }
+
+  // Also extract from markdown image links
+  const mdImgRegex = /!\[([^\]]*)\]\(([^)]*bstatic\.com[^)]*)\)/gi;
+  while ((photoMatch = mdImgRegex.exec(markdown)) !== null) {
+    let url = photoMatch[2].trim();
+    url = url.replace(/\/max\d+\//, "/max1280/");
+    if (url.startsWith("//")) url = "https:" + url;
+    if (!allBookingPhotos.includes(url) && !isLikelyThumbnail(url)) {
+      allBookingPhotos.push(url);
+    }
+  }
+
+  // Try to associate photos with rooms using proximity in HTML
+  // For each room, find photos near its heading in the HTML
+  for (const room of rooms) {
+    const roomIdx = html.toLowerCase().indexOf(room.name.toLowerCase());
+    if (roomIdx === -1) continue;
+    
+    // Look for bstatic photos within ~5000 chars after the room name
+    const nearbyHtml = html.substring(roomIdx, roomIdx + 5000);
+    const nearbyPhotos: string[] = [];
+    let nearMatch;
+    const nearRegex = /(?:src|data-src)\s*=\s*["']([^"']*bstatic\.com[^"']*\.(?:jpg|jpeg|png|webp)[^"']*)["']/gi;
+    while ((nearMatch = nearRegex.exec(nearbyHtml)) !== null) {
+      let url = nearMatch[1].trim();
+      url = url.replace(/\/max\d+\//, "/max1280/");
+      if (url.startsWith("//")) url = "https:" + url;
+      if (!nearbyPhotos.includes(url) && !isLikelyThumbnail(url)) {
+        nearbyPhotos.push(url);
+      }
+    }
+    room.photos = nearbyPhotos.slice(0, 5); // Max 5 photos per room from Booking
+
+    // Extract room details from nearby text
+    const nearbyText = markdown.substring(
+      Math.max(0, markdown.toLowerCase().indexOf(room.name.toLowerCase())),
+      Math.min(markdown.length, markdown.toLowerCase().indexOf(room.name.toLowerCase()) + 2000)
+    );
+
+    // Size
+    const sizeMatch = nearbyText.match(/(\d{2,4})\s*(?:m²|m2|sqm|sq\.?\s*(?:m|ft))/i);
+    if (sizeMatch) room.details["Tamanho"] = `${sizeMatch[1]} m²`;
+
+    // Bed type
+    const bedMatch = nearbyText.match(/(?:bed|cama|lit)\s*[:：]?\s*(\d+\s*(?:king|queen|twin|double|single|casal|solteiro)[^,.\n]{0,30})/i);
+    if (bedMatch) room.details["Cama"] = bedMatch[1].trim();
+
+    // Guests
+    const guestMatch = nearbyText.match(/(?:sleep|hóspede|guest|person|adulto)\s*[:：]?\s*(\d+)/i);
+    if (guestMatch) room.details["Capacidade"] = `Até ${guestMatch[1]} hóspedes`;
+
+    // Amenities from bullet lists
+    const amenityRegex = /[-•*]\s+([^-•*\n]{4,60})/g;
+    let amenMatch;
+    while ((amenMatch = amenityRegex.exec(nearbyText)) !== null) {
+      const item = amenMatch[1].trim();
+      if (item.length > 3 && item.length < 60 && !room.amenities.includes(item)) {
+        room.amenities.push(item);
+      }
+    }
+  }
+
+  // Distribute unassociated photos to rooms that have none
+  const unassociatedPhotos = allBookingPhotos.filter(url => !rooms.some(r => r.photos.includes(url)));
+  let photoIdx = 0;
+  for (const room of rooms) {
+    if (room.photos.length === 0 && photoIdx < unassociatedPhotos.length) {
+      room.photos.push(unassociatedPhotos[photoIdx]);
+      photoIdx++;
+    }
+  }
+
+  // If no rooms were identified but we have photos, create a generic room entry
+  if (rooms.length === 0 && allBookingPhotos.length > 0) {
+    rooms.push({
+      name: "Hotel Photos",
+      photos: allBookingPhotos.slice(0, 10),
+      details: {},
+      amenities: [],
+    });
+  }
+
+  return rooms;
+}
+
+// ═══════════════════════════════════════════════
+// Full-site navigation: Map → Categorize → Scrape
 // ═══════════════════════════════════════════════
 
 interface CategorizedPage {
   url: string;
-  inferredSection: string; // pre-inferred section name from URL/path
+  inferredSection: string;
 }
 
-/**
- * Use Firecrawl Map to discover ALL pages on the hotel website.
- */
 async function mapEntireSite(mainUrl: string | undefined, apiKey: string): Promise<string[]> {
   if (!mainUrl) return [];
   try {
@@ -258,27 +522,44 @@ async function mapEntireSite(mainUrl: string | undefined, apiKey: string): Promi
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ url: mainUrl, limit: 200, includeSubdomains: false }),
     });
-    if (!resp.ok) {
-      console.warn("Map failed, falling back to manual discovery");
-      return [mainUrl];
-    }
+    if (!resp.ok) return [mainUrl];
     const data = await resp.json();
     const urls: string[] = data.links || [];
-    // Filter to same domain
     const baseDomain = new URL(mainUrl).hostname;
-    return urls.filter(u => {
-      try { return new URL(u).hostname === baseDomain; } catch { return false; }
-    });
-  } catch (e) {
-    console.warn("Map error:", e);
-    return [mainUrl];
-  }
+    return urls.filter(u => { try { return new URL(u).hostname === baseDomain; } catch { return false; } });
+  } catch { return [mainUrl]; }
 }
 
-/**
- * Categorize discovered pages by relevance for hotel photos.
- * Priority: rooms/suites > gallery > restaurant/spa/facilities > other
- */
+async function generateCommonUrls(mainUrl: string): Promise<string[]> {
+  const commonPaths = [
+    "/rooms", "/suites", "/accommodation", "/accommodations",
+    "/dining", "/restaurant", "/restaurants",
+    "/spa", "/wellness",
+    "/gallery", "/photos", "/photo-gallery", "/media",
+    "/facilities", "/amenities", "/experiences",
+    "/pool", "/fitness", "/meetings", "/events",
+    "/guest-rooms", "/guestrooms",
+    "/en/rooms", "/en/dining", "/en/spa", "/en/gallery",
+    "/en/accommodation", "/en/facilities", "/en/experiences",
+  ];
+  const base = new URL(mainUrl);
+  const generatedUrls = commonPaths.map(p => base.origin + p);
+  const validUrls: string[] = [mainUrl];
+  const headChecks = await Promise.allSettled(
+    generatedUrls.map(async (url) => {
+      try {
+        const resp = await fetch(url, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(5000) });
+        if (resp.ok || resp.status === 301 || resp.status === 302) return url;
+      } catch { /* skip */ }
+      return null;
+    })
+  );
+  for (const result of headChecks) {
+    if (result.status === "fulfilled" && result.value) validUrls.push(result.value);
+  }
+  return validUrls;
+}
+
 function categorizePages(urls: string[], mainUrl: string | undefined): {
   priority: CategorizedPage[];
   gallery: CategorizedPage[];
@@ -290,32 +571,17 @@ function categorizePages(urls: string[], mainUrl: string | undefined): {
 
   const roomKeywords = [
     "room", "suite", "accommodation", "camera", "chambre", "zimmer", "quarto", "habitacion", "camere",
-    // Japanese
-    "客室", "お部屋", "ルーム", "スイート", "和室", "洋室", "和洋室", "guestroom", "heya",
+    "客室", "お部屋", "ルーム", "スイート", "和室", "洋室", "和洋室", "guestroom",
   ];
-  const galleryKeywords = [
-    "gallery", "galeria", "photo", "foto", "image", "media", "virtual-tour",
-    // Japanese
-    "ギャラリー", "フォトギャラリー", "写真",
-  ];
+  const galleryKeywords = ["gallery", "galeria", "photo", "foto", "image", "media", "virtual-tour", "ギャラリー", "写真"];
   const facilityKeywords = [
     "restaurant", "ristorante", "dining", "bar", "lounge",
-    "spa", "wellness", "pool", "piscina",
-    "fitness", "gym", "academia",
-    "meeting", "event", "wedding",
-    "garden", "terrace", "rooftop",
+    "spa", "wellness", "pool", "piscina", "fitness", "gym", "academia",
+    "meeting", "event", "wedding", "garden", "terrace", "rooftop",
     "experience", "service", "facility", "amenities",
-    // Japanese
-    "レストラン", "ダイニング", "バー", "ラウンジ",
-    "温泉", "大浴場", "露天風呂", "スパ", "プール",
-    "フィットネス", "ジム",
-    "宴会", "会議", "ウェディング", "結婚",
-    "庭園", "テラス",
-    "施設", "アクティビティ", "館内",
-    "onsen", "rotenburo",
+    "レストラン", "ダイニング", "温泉", "大浴場", "スパ", "プール", "フィットネス",
+    "宴会", "ウェディング", "庭園", "施設",
   ];
-
-  // Skip these pages entirely
   const skipKeywords = [
     "book", "reserv", "checkout", "cart", "login", "account", "profile",
     "privacy", "cookie", "legal", "terms", "conditions", "sitemap",
@@ -325,47 +591,33 @@ function categorizePages(urls: string[], mainUrl: string | undefined): {
 
   for (const url of urls) {
     const lower = url.toLowerCase();
-    if (url === mainUrl) continue; // handled separately
+    if (url === mainUrl) continue;
     if (skipKeywords.some(k => lower.includes(k))) continue;
 
     const path = new URL(url).pathname.toLowerCase();
     const pathSegments = path.split("/").filter(Boolean);
     const lastSegment = pathSegments[pathSegments.length - 1] || "";
+    let inferredSection = lastSegment.replace(/[-_]/g, " ").replace(/\.\w+$/, "")
+      .split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 
-    // Infer a section name from the URL path
-    let inferredSection = "";
-    if (pathSegments.length > 0) {
-      // Use last meaningful segment as section context hint
-      inferredSection = lastSegment
-        .replace(/[-_]/g, " ")
-        .replace(/\.\w+$/, "")
-        .split(" ")
-        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(" ");
-    }
-
-    if (roomKeywords.some(k => lower.includes(k))) {
-      priority.push({ url, inferredSection });
-    } else if (galleryKeywords.some(k => lower.includes(k))) {
-      gallery.push({ url, inferredSection });
-    } else if (facilityKeywords.some(k => lower.includes(k))) {
-      other.push({ url, inferredSection });
-    }
-    // Pages that don't match any keyword are skipped (about, history, etc.)
+    if (roomKeywords.some(k => lower.includes(k))) priority.push({ url, inferredSection });
+    else if (galleryKeywords.some(k => lower.includes(k))) gallery.push({ url, inferredSection });
+    else if (facilityKeywords.some(k => lower.includes(k))) other.push({ url, inferredSection });
   }
 
   return { priority, gallery, other };
 }
 
 /**
- * Scrape a single page and extract high-res images with section context.
+ * Scrape a single page — now captures HTML CONTEXT around each image for AI classification.
  */
 async function scrapePageForPhotos(
   url: string,
   inferredSection: string,
   collection: ImageCollection,
   apiKey: string,
-  hotelName: string
+  hotelName: string,
+  source: "official" | "booking" | "google"
 ) {
   try {
     const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
@@ -379,18 +631,13 @@ async function scrapePageForPhotos(
     const markdown = data.data?.markdown || data.markdown || "";
     if (html.length < 300) return;
 
-    // First try structured extraction (headings → images + text descriptions)
-    extractImagesWithSectionContext(html, url, collection, hotelName);
-    
-    // Extract section descriptions from markdown (cleaner text)
+    // Enhanced extraction with HTML context
+    extractImagesWithSectionContext(html, url, collection, hotelName, source);
     extractSectionDescriptions(markdown, collection);
 
-    // Also extract any images that might not be under headings
-    // Use the inferred section name from URL if no heading context was found
     const photosBeforeOrphan = collection.photos.length;
-    extractHighResImages(html, url, collection, "");
+    extractHighResImages(html, url, collection, "", source);
 
-    // For orphan images (added without section), apply the inferred section
     if (inferredSection) {
       for (let i = photosBeforeOrphan; i < collection.photos.length; i++) {
         if (!collection.photos[i].section_name) {
@@ -405,211 +652,178 @@ async function scrapePageForPhotos(
 }
 
 /**
- * Extract images from HTML, preferring srcset high-res versions.
- * Associates each image with its parent section heading.
+ * Extract images with rich HTML context for AI classification.
+ * Captures: parent heading, alt text, surrounding captions, nearby text, CSS classes.
  */
-function extractHighResImages(html: string, sourceUrl: string, collection: ImageCollection, sectionName: string) {
-  // First pass: collect srcset high-res URLs per img tag
+function extractImagesWithSectionContext(
+  html: string,
+  sourceUrl: string,
+  collection: ImageCollection,
+  hotelName: string,
+  source: "official" | "booking" | "google"
+) {
+  const headingRegex = /<h([1-4])[^>]*>([\s\S]*?)<\/h\1>/gi;
+
+  interface Section { name: string; startIdx: number; endIdx: number; }
+  const sections: Section[] = [];
+  let hMatch;
+  while ((hMatch = headingRegex.exec(html)) !== null) {
+    const rawHeading = hMatch[2].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/&#\d+;/g, " ").trim();
+    if (rawHeading.length >= 3 && rawHeading.length <= 100 && !isGenericHeading(rawHeading.toLowerCase())) {
+      sections.push({ name: rawHeading, startIdx: hMatch.index, endIdx: 0 });
+    }
+  }
+  for (let i = 0; i < sections.length; i++) {
+    sections[i].endIdx = i < sections.length - 1 ? sections[i + 1].startIdx : html.length;
+  }
+
+  extractFromStructuredContainers(html, sourceUrl, collection, source);
+
+  for (const section of sections) {
+    const sectionHtml = html.substring(section.startIdx, section.endIdx);
+    extractHighResImagesWithContext(sectionHtml, sourceUrl, collection, section.name, source);
+  }
+
+  if (sections.length > 0) {
+    const preHeadingHtml = html.substring(0, sections[0].startIdx);
+    extractHighResImages(preHeadingHtml, sourceUrl, collection, "", source);
+  } else {
+    extractHighResImages(html, sourceUrl, collection, "", source);
+  }
+}
+
+/**
+ * Enhanced image extraction that captures surrounding HTML context (captions, figcaption, nearby text).
+ */
+function extractHighResImagesWithContext(
+  html: string,
+  sourceUrl: string,
+  collection: ImageCollection,
+  sectionName: string,
+  source: "official" | "booking" | "google"
+) {
   const imgTagRegex = /<img[^>]+>/gi;
   let tagMatch;
   while ((tagMatch = imgTagRegex.exec(html)) !== null) {
     const tag = tagMatch[0];
     const bestUrl = getBestImageUrl(tag, sourceUrl);
     if (!bestUrl || !isRelevantImage(bestUrl)) continue;
-    if (collection.seen.has(bestUrl)) continue;
-
-    // Skip tiny thumbnails by checking URL for small dimensions
+    if (collection.seen.has(normalizeUrlForDedup(bestUrl))) continue;
     if (isLikelyThumbnail(bestUrl)) continue;
 
-    collection.seen.add(bestUrl);
+    collection.seen.add(normalizeUrlForDedup(bestUrl));
 
     const altMatch = tag.match(/alt\s*=\s*["']([^"']{3,120})["']/i);
     const altText = altMatch?.[1] || "";
+    const titleMatch = tag.match(/title\s*=\s*["']([^"']{3,120})["']/i);
+    const titleText = titleMatch?.[1] || "";
+
+    // Capture HTML context: look for figcaption, caption, or nearby text
+    const imgIdx = tagMatch.index;
+    const contextStart = Math.max(0, imgIdx - 300);
+    const contextEnd = Math.min(html.length, imgIdx + tag.length + 300);
+    const surroundingHtml = html.substring(contextStart, contextEnd);
+
+    // Extract figcaption
+    const figcaptionMatch = surroundingHtml.match(/<figcaption[^>]*>([\s\S]*?)<\/figcaption>/i);
+    const caption = figcaptionMatch?.[1]?.replace(/<[^>]+>/g, "").trim() || "";
+
+    // Extract nearby paragraph text
+    const nearbyPMatch = surroundingHtml.match(/<p[^>]*>([^<]{10,200})<\/p>/i);
+    const nearbyText = nearbyPMatch?.[1]?.trim() || "";
+
+    // Extract class names from parent containers
+    const classMatch = surroundingHtml.match(/class="([^"]*(?:room|suite|gallery|photo|image|slider|hero|banner|feature)[^"]*)"/i);
+    const cssClasses = classMatch?.[1] || "";
+
+    // Build rich context string
+    const contextParts = [
+      sectionName ? `Section: "${sectionName}"` : "",
+      altText ? `Alt: "${altText}"` : "",
+      titleText ? `Title: "${titleText}"` : "",
+      caption ? `Caption: "${caption}"` : "",
+      nearbyText ? `Nearby text: "${nearbyText.substring(0, 100)}"` : "",
+      cssClasses ? `CSS: "${cssClasses}"` : "",
+    ].filter(Boolean);
+    const htmlContext = contextParts.join(" | ");
 
     collection.photos.push({
       url: bestUrl,
-      alt: altText || sectionName,
+      alt: altText || caption || titleText || sectionName,
       section_name: sectionName,
-      category: inferCategory(sectionName, altText),
+      category: inferCategory(sectionName, altText + " " + caption),
       confidence: sectionName ? 0.95 : 0.5,
+      source,
+      html_context: htmlContext,
     });
   }
 
-  // Second pass: background images and data attributes not in img tags
+  // Background images
   const bgRegex = /(?:data-bg|data-image|style\s*=\s*["'][^"']*url\s*\(\s*["']?)([^"')\s]+\.(?:jpg|jpeg|png|webp|avif)[^"')\s]*)["')\s]*/gi;
   let bgMatch;
   while ((bgMatch = bgRegex.exec(html)) !== null) {
     const imgUrl = bgMatch[1].trim();
     if (!isRelevantImage(imgUrl)) continue;
     const absUrl = makeAbsolute(imgUrl, sourceUrl);
-    if (collection.seen.has(absUrl)) continue;
+    const dedupKey = normalizeUrlForDedup(absUrl);
+    if (collection.seen.has(dedupKey)) continue;
     if (isLikelyThumbnail(absUrl)) continue;
-    collection.seen.add(absUrl);
+    collection.seen.add(dedupKey);
     collection.photos.push({
       url: absUrl,
       alt: sectionName,
       section_name: sectionName,
       category: inferCategory(sectionName, ""),
       confidence: sectionName ? 0.9 : 0.4,
+      source,
+      html_context: sectionName ? `Background image in section: "${sectionName}"` : "",
     });
   }
 }
 
-/**
- * From an <img> tag, extract the HIGHEST resolution URL available.
- * Priority: srcset (largest) > data-src > data-lazy-src > data-original > src
- */
-function getBestImageUrl(imgTag: string, sourceUrl: string): string | null {
-  // Try srcset first — pick the largest variant
-  const srcsetMatch = imgTag.match(/srcset\s*=\s*["']([^"']+)["']/i);
-  if (srcsetMatch) {
-    const srcsetUrl = pickLargestFromSrcset(srcsetMatch[1], sourceUrl);
-    if (srcsetUrl) return srcsetUrl;
-  }
-
-  // Try high-res data attributes
-  const hiResAttrs = ["data-src-lg", "data-src-xl", "data-full-src", "data-zoom-src", "data-highres", "data-original"];
-  for (const attr of hiResAttrs) {
-    const match = imgTag.match(new RegExp(`${attr}\\s*=\\s*["']([^"']+)["']`, "i"));
-    if (match) {
-      const url = makeAbsolute(match[1].trim(), sourceUrl);
-      if (isRelevantImage(url)) return url;
-    }
-  }
-
-  // Fallback data attributes
-  const fallbackAttrs = ["data-src", "data-lazy-src"];
-  for (const attr of fallbackAttrs) {
-    const match = imgTag.match(new RegExp(`${attr}\\s*=\\s*["']([^"']+)["']`, "i"));
-    if (match) {
-      const url = makeAbsolute(match[1].trim(), sourceUrl);
-      if (isRelevantImage(url)) return url;
-    }
-  }
-
-  // Regular src
-  const srcMatch = imgTag.match(/\bsrc\s*=\s*["']([^"']+)["']/i);
-  if (srcMatch) {
-    const url = makeAbsolute(srcMatch[1].trim(), sourceUrl);
-    if (isRelevantImage(url)) return url;
-  }
-
-  return null;
+function extractHighResImages(html: string, sourceUrl: string, collection: ImageCollection, sectionName: string, source: "official" | "booking" | "google" = "official") {
+  extractHighResImagesWithContext(html, sourceUrl, collection, sectionName, source);
 }
 
-/**
- * Parse srcset and return the URL with the largest width descriptor.
- * srcset format: "url1 300w, url2 800w, url3 1600w"
- */
-function pickLargestFromSrcset(srcset: string, sourceUrl: string): string | null {
-  const candidates = srcset.split(",").map(s => {
-    const parts = s.trim().split(/\s+/);
-    const url = parts[0];
-    const descriptor = parts[1] || "";
-    let width = 0;
-    if (descriptor.endsWith("w")) {
-      width = parseInt(descriptor, 10) || 0;
-    } else if (descriptor.endsWith("x")) {
-      width = (parseFloat(descriptor) || 1) * 1000; // approximate
-    }
-    return { url, width };
-  }).filter(c => c.url && isRelevantImage(c.url));
-
-  if (candidates.length === 0) return null;
-
-  // Pick the one with largest width, minimum 600w to avoid tiny thumbs
-  candidates.sort((a, b) => b.width - a.width);
-  const best = candidates[0];
-  return makeAbsolute(best.url, sourceUrl);
-}
-
-/**
- * KEY FUNCTION: Parse HTML and associate each image with its closest preceding heading.
- */
-function extractImagesWithSectionContext(html: string, sourceUrl: string, collection: ImageCollection, hotelName: string) {
-  const headingRegex = /<h([1-4])[^>]*>([\s\S]*?)<\/h\1>/gi;
-
-  interface Section {
-    name: string;
-    startIdx: number;
-    endIdx: number;
-  }
-
-  const sections: Section[] = [];
-  let hMatch;
-  while ((hMatch = headingRegex.exec(html)) !== null) {
-    const rawHeading = hMatch[2].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/&#\d+;/g, " ").trim();
-    if (rawHeading.length >= 3 && rawHeading.length <= 100) {
-      const lower = rawHeading.toLowerCase();
-      if (!isGenericHeading(lower)) {
-        sections.push({ name: rawHeading, startIdx: hMatch.index, endIdx: 0 });
-      }
-    }
-  }
-
-  for (let i = 0; i < sections.length; i++) {
-    sections[i].endIdx = i < sections.length - 1 ? sections[i + 1].startIdx : html.length;
-  }
-
-  extractFromStructuredContainers(html, sourceUrl, collection);
-
-  // Process each section: extract HIGH-RES images
-  for (const section of sections) {
-    const sectionHtml = html.substring(section.startIdx, section.endIdx);
-    extractHighResImages(sectionHtml, sourceUrl, collection, section.name);
-  }
-
-  // Orphan images before first heading
-  if (sections.length > 0) {
-    const preHeadingHtml = html.substring(0, sections[0].startIdx);
-    extractHighResImages(preHeadingHtml, sourceUrl, collection, "");
-  } else {
-    extractHighResImages(html, sourceUrl, collection, "");
-  }
-}
-
-function extractFromStructuredContainers(html: string, sourceUrl: string, collection: ImageCollection) {
-  // Look for common hotel site patterns: containers with a title + images
-  // e.g., <div class="room-card"><h3>Deluxe Room</h3><img src="..."/></div>
+function extractFromStructuredContainers(html: string, sourceUrl: string, collection: ImageCollection, source: "official" | "booking" | "google") {
   const containerRegex = /<(?:div|article|section|li)[^>]*class="[^"]*(?:room|suite|accommodation|camera|chambre|zimmer)[^"]*"[^>]*>([\s\S]*?)<\/(?:div|article|section|li)>/gi;
   let cMatch;
   while ((cMatch = containerRegex.exec(html)) !== null) {
     const containerHtml = cMatch[1];
-    // Find the first heading or strong/span with text as the room name
     const nameMatch = containerHtml.match(/<(?:h[1-6]|strong|span[^>]*class="[^"]*title[^"]*")[^>]*>([^<]{3,80})<\//i);
     if (!nameMatch) continue;
     const roomName = nameMatch[1].replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").trim();
     if (roomName.length < 3 || isGenericHeading(roomName.toLowerCase())) continue;
 
-    // Extract images from this container
     const imgRegex2 = /(?:src|data-src)\s*=\s*["']([^"']+\.(?:jpg|jpeg|png|webp|avif)[^"']*)["']/gi;
     let iMatch;
     while ((iMatch = imgRegex2.exec(containerHtml)) !== null) {
       const imgUrl = iMatch[1].trim();
       if (!isRelevantImage(imgUrl)) continue;
       const absUrl = makeAbsolute(imgUrl, sourceUrl);
-      if (collection.seen.has(absUrl)) continue;
-      collection.seen.add(absUrl);
+      const dedupKey = normalizeUrlForDedup(absUrl);
+      if (collection.seen.has(dedupKey)) continue;
+      collection.seen.add(dedupKey);
+
+      // Extract description text from container
+      const descMatch = containerHtml.match(/<p[^>]*>([^<]{10,200})<\/p>/i);
+      const desc = descMatch?.[1]?.trim() || "";
+
       collection.photos.push({
         url: absUrl,
         alt: roomName,
         section_name: roomName,
         category: inferCategory(roomName, ""),
         confidence: 0.95,
+        source,
+        html_context: `Room card: "${roomName}"${desc ? ` | Description: "${desc.substring(0, 100)}"` : ""}`,
       });
     }
   }
 }
 
-/**
- * Extract text descriptions and details from markdown content, associating them with known sections.
- * Parses headings + following paragraphs for descriptions, bullet lists for amenities,
- * and key-value patterns for details (size, capacity, etc.)
- */
 function extractSectionDescriptions(markdown: string, collection: ImageCollection) {
   if (!markdown || markdown.length < 50) return;
-
-  // Split markdown by headings
   const lines = markdown.split("\n");
   let currentSection = "";
   let currentText: string[] = [];
@@ -618,29 +832,16 @@ function extractSectionDescriptions(markdown: string, collection: ImageCollectio
 
   const flushSection = () => {
     if (!currentSection || currentSection.length < 3) return;
-    
-    // Only store if we have photos for this section or a close match
     const sectionKey = findMatchingSection(currentSection, collection);
     if (!sectionKey) return;
-
-    const desc = currentText
-      .filter(t => t.length > 15 && !isGenericHeading(t.toLowerCase()))
-      .slice(0, 3)
-      .join(" ")
-      .substring(0, 500);
-
+    const desc = currentText.filter(t => t.length > 15 && !isGenericHeading(t.toLowerCase())).slice(0, 3).join(" ").substring(0, 500);
     const existing = collection.sections.get(sectionKey);
     if (existing) {
       if (!existing.description && desc) existing.description = desc;
       if (currentAmenities.length > 0) existing.amenities = [...new Set([...existing.amenities, ...currentAmenities])];
       Object.assign(existing.details, currentDetails);
     } else {
-      collection.sections.set(sectionKey, {
-        name: sectionKey,
-        description: desc,
-        details: { ...currentDetails },
-        amenities: [...currentAmenities],
-      });
+      collection.sections.set(sectionKey, { name: sectionKey, description: desc, details: { ...currentDetails }, amenities: [...currentAmenities] });
     }
   };
 
@@ -649,167 +850,104 @@ function extractSectionDescriptions(markdown: string, collection: ImageCollectio
     if (headingMatch) {
       flushSection();
       currentSection = headingMatch[1].replace(/\*+/g, "").trim();
-      currentText = [];
-      currentAmenities = [];
-      currentDetails = {};
+      currentText = []; currentAmenities = []; currentDetails = {};
       continue;
     }
-
     const trimmed = line.trim();
     if (!trimmed) continue;
-
-    // Bullet list items → amenities
     if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("• ")) {
       const item = trimmed.replace(/^[-*•]\s+/, "").trim();
-      if (item.length > 2 && item.length < 80) {
-        currentAmenities.push(item);
-      }
+      if (item.length > 2 && item.length < 80) currentAmenities.push(item);
       continue;
     }
-
-    // Key-value patterns: "Tamanho: 45 m²", "Capacidade: 2 hóspedes"
     const kvMatch = trimmed.match(/^([A-Za-zÀ-ÿ\s]{3,25})[:：]\s*(.{2,80})$/);
     if (kvMatch) {
-      const key = kvMatch[1].trim();
-      const val = kvMatch[2].trim();
-      const keyLower = key.toLowerCase();
-      // Filter relevant keys
-      if (/taman|size|m²|sqm|metr|área|area|dimensi/i.test(keyLower + val)) {
-        currentDetails["Tamanho"] = val;
-      } else if (/cama|bed|lit/i.test(keyLower)) {
-        currentDetails["Cama"] = val;
-      } else if (/capaci|guest|hóspede|ospiti|person|ocupa/i.test(keyLower)) {
-        currentDetails["Capacidade"] = val;
-      } else if (/vista|view|panoram|affaccio/i.test(keyLower)) {
-        currentDetails["Vista"] = val;
-      } else if (/andar|floor|piano/i.test(keyLower)) {
-        currentDetails["Andar"] = val;
-      } else if (key.length >= 3) {
-        currentDetails[key] = val;
-      }
+      const key = kvMatch[1].trim(), val = kvMatch[2].trim(), keyLower = key.toLowerCase();
+      if (/taman|size|m²|sqm|metr|área|area|dimensi/i.test(keyLower + val)) currentDetails["Tamanho"] = val;
+      else if (/cama|bed|lit/i.test(keyLower)) currentDetails["Cama"] = val;
+      else if (/capaci|guest|hóspede|ospiti|person|ocupa/i.test(keyLower)) currentDetails["Capacidade"] = val;
+      else if (/vista|view|panoram|affaccio/i.test(keyLower)) currentDetails["Vista"] = val;
+      else if (/andar|floor|piano/i.test(keyLower)) currentDetails["Andar"] = val;
+      else if (key.length >= 3) currentDetails[key] = val;
       continue;
     }
-
-    // Regular paragraph text → description
     if (trimmed.length > 15 && !trimmed.startsWith("[") && !trimmed.startsWith("!")) {
       currentText.push(trimmed.replace(/\*+/g, "").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1"));
     }
-
-    // Also look for size patterns inline: "45 m²", "45 sqm", "484 sq ft"
     const sizeMatch = trimmed.match(/(\d{2,4})\s*(?:m²|m2|sqm|sq\.?\s*(?:m|ft|feet))/i);
     if (sizeMatch && !currentDetails["Tamanho"]) {
-      const unit = trimmed.toLowerCase().includes("ft") || trimmed.toLowerCase().includes("feet") ? "sq ft" : "m²";
+      const unit = trimmed.toLowerCase().includes("ft") ? "sq ft" : "m²";
       currentDetails["Tamanho"] = `${sizeMatch[1]} ${unit}`;
     }
-
-    // Look for guest count patterns: "up to 3 guests", "até 2 hóspedes"
     const guestMatch = trimmed.match(/(?:up to|até|max|maximum|fino a)\s*(\d+)\s*(?:guest|hóspede|ospiti|person|adulto|people)/i);
-    if (guestMatch && !currentDetails["Capacidade"]) {
-      currentDetails["Capacidade"] = `Até ${guestMatch[1]} hóspedes`;
-    }
+    if (guestMatch && !currentDetails["Capacidade"]) currentDetails["Capacidade"] = `Até ${guestMatch[1]} hóspedes`;
   }
   flushSection();
 }
 
-/**
- * Find a matching section name in the collection for a given heading.
- */
 function findMatchingSection(heading: string, collection: ImageCollection): string | null {
   const headingNorm = normalizeStr(heading);
-  
-  // Direct match with photo section names
   const sectionNames = new Set(collection.photos.map(p => p.section_name).filter(Boolean));
-  for (const name of sectionNames) {
-    if (normalizeStr(name) === headingNorm) return name;
-  }
-  
-  // Partial match
+  for (const name of sectionNames) { if (normalizeStr(name) === headingNorm) return name; }
   for (const name of sectionNames) {
     const nameNorm = normalizeStr(name);
     if (nameNorm.includes(headingNorm) || headingNorm.includes(nameNorm)) return name;
   }
-  
-  // Also check existing sections map
-  for (const [key] of collection.sections) {
-    if (normalizeStr(key) === headingNorm) return key;
-  }
-  
-  // If heading looks like a room/facility name, store it anyway
+  for (const [key] of collection.sections) { if (normalizeStr(key) === headingNorm) return key; }
   const lower = heading.toLowerCase();
-  if (/room|suite|quarto|camera|chambre|deluxe|superior|standard|penthouse|presidential|royal|spa|pool|piscina|restaurante|restaurant|bar|lounge|gym|fitness|garden|terrace|rooftop|客室|和室|洋室|スイート|ルーム|レストラン|温泉|大浴場|スパ|プール|ラウンジ|バー|庭園|施設/i.test(lower)) {
+  if (/room|suite|quarto|camera|chambre|deluxe|superior|standard|penthouse|presidential|royal|spa|pool|piscina|restaurante|restaurant|bar|lounge|gym|fitness|garden|terrace|rooftop|客室|和室|洋室|スイート|レストラン|温泉|スパ|プール|庭園|施設/i.test(lower)) {
     return heading;
   }
-  
   return null;
 }
 
-
-
-/**
- * Use AI to translate and clean up all section details to PT-BR.
- */
 async function translateSectionDetails(
   raw: Record<string, { description: string; details: Record<string, string>; amenities: string[] }>,
   hotelName: string
 ): Promise<Record<string, { description: string; details: Record<string, string>; amenities: string[] }>> {
   const entries = Object.entries(raw).filter(([_, v]) => v.description || v.amenities.length > 0 || Object.keys(v.details).length > 0);
   if (entries.length === 0) return raw;
-
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) return raw;
 
   try {
     const inputData = Object.fromEntries(entries.map(([name, info]) => [name, {
-      description: info.description || "",
-      details: info.details,
-      amenities: info.amenities,
+      description: info.description || "", details: info.details, amenities: info.amenities,
     }]));
 
     const prompt = `Você é um curador de conteúdo hoteleiro premium. Recebeu dados brutos extraídos do site do hotel "${hotelName}".
 
 Sua tarefa:
 1. TRADUZIR todas as descrições, detalhes e comodidades para português brasileiro fluente e elegante.
-2. LIMPAR textos bagunçados: remover lixo de HTML, links, códigos, textos duplicados ou sem sentido.
-3. REESCREVER as descrições de forma profissional, concisa e atraente (máx 2 frases por ambiente).
-4. PADRONIZAR as chaves de detalhes: usar "Tamanho", "Cama", "Capacidade", "Vista", "Andar", "Banheiro".
-5. TRADUZIR todas as comodidades para PT-BR. Ex: "Free Wi-Fi" → "Wi-Fi gratuito", "Air conditioning" → "Ar-condicionado".
-6. NÃO traduzir os nomes dos quartos/ambientes (as chaves do objeto). Mantê-los exatamente como estão.
-7. Se uma descrição for muito curta ou genérica, melhore-a com base no contexto do hotel.
+2. LIMPAR textos bagunçados.
+3. REESCREVER as descrições de forma profissional e concisa (máx 2 frases por ambiente).
+4. PADRONIZAR chaves: "Tamanho", "Cama", "Capacidade", "Vista", "Andar", "Banheiro".
+5. TRADUZIR comodidades para PT-BR.
+6. NÃO traduzir nomes dos quartos/ambientes (chaves do objeto).
 
 Dados brutos:
 ${JSON.stringify(inputData, null, 2)}
 
-Retorne APENAS um JSON válido com a MESMA estrutura:
+Retorne APENAS JSON válido com a MESMA estrutura:
 {
-  "Nome Original do Quarto": {
-    "description": "Descrição traduzida e elegante em PT-BR",
+  "Nome Original": {
+    "description": "Descrição elegante em PT-BR",
     "details": { "Tamanho": "45 m²", "Cama": "King Size" },
-    "amenities": ["Wi-Fi gratuito", "Ar-condicionado", "Minibar"]
+    "amenities": ["Wi-Fi gratuito", "Ar-condicionado"]
   }
 }`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: prompt }],
-      }),
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: [{ role: "user", content: prompt }] }),
     });
 
-    if (!response.ok) {
-      console.warn("AI translation failed:", response.status);
-      return raw;
-    }
-
+    if (!response.ok) return raw;
     const data = await response.json();
     const aiText = data.choices?.[0]?.message?.content || "";
     const jsonMatch = aiText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return raw;
-
     const translated = JSON.parse(jsonMatch[0]);
     const result = { ...raw };
     for (const [name, info] of Object.entries(translated) as [string, any][]) {
@@ -821,12 +959,32 @@ Retorne APENAS um JSON válido com a MESMA estrutura:
         };
       }
     }
-    console.log(`Translated ${Object.keys(translated).length} section descriptions to PT-BR`);
     return result;
-  } catch (e) {
-    console.warn("Translation error:", e);
-    return raw;
-  }
+  } catch { return raw; }
+}
+
+// ═══════════════════════════════════════════════
+// Deduplication
+// ═══════════════════════════════════════════════
+
+/**
+ * Normalize URL for deduplication: strips size params, CDN variants, etc.
+ * Two URLs pointing to the same photo at different sizes should deduplicate.
+ */
+function normalizeUrlForDedup(url: string): string {
+  try {
+    const u = new URL(url);
+    // Remove common size/quality params
+    const sizeParams = ["w", "h", "width", "height", "wid", "hei", "resize", "fit", "q", "quality", "qlt", "fm", "fl", "auto", "crop", "downsize", "output-quality"];
+    for (const p of sizeParams) u.searchParams.delete(p);
+    // Remove WP dimension suffix
+    const cleanPath = u.pathname.replace(/\-\d{2,4}x\d{2,4}\./, ".");
+    // Remove Cloudinary transforms
+    const finalPath = cleanPath.replace(/\/upload\/[^/]+\//, "/upload/");
+    // Remove bstatic size dirs
+    const bstaticPath = finalPath.replace(/\/max\d+\//, "/").replace(/\/square\d+\//, "/");
+    return u.origin + bstaticPath;
+  } catch { return url; }
 }
 
 // ═══════════════════════════════════════════════
@@ -840,17 +998,9 @@ function isGenericHeading(text: string): boolean {
     "read more", "see all", "show", "close", "open", "ver mais", "saiba mais",
     "loading", "©", "copyright", "newsletter", "subscribe", "inscreva",
     "follow us", "siga", "social", "share", "compartilh",
-    "best rate", "melhor tarifa", "miglior tariffa",
-    "book", "prenota", "réserver",
+    "best rate", "melhor tarifa", "book", "prenota", "réserver",
   ];
   return generic.some(g => text.includes(g));
-}
-
-function isGenericAlt(text: string): boolean {
-  const lower = text.toLowerCase();
-  return lower.includes("logo") || lower.includes("icon") || lower.includes("banner") ||
-    lower.includes("button") || lower.includes("arrow") || lower === "image" || lower === "photo" ||
-    lower.includes("placeholder") || lower.length < 4;
 }
 
 function inferCategory(sectionName: string, alt: string): string {
@@ -881,259 +1031,157 @@ function extractDomain(url: string): string {
   try { return new URL(url).hostname; } catch { return ""; }
 }
 
-/**
- * Maximize image quality by requesting the largest version from known CDN patterns.
- */
 function standardizeImageUrl(url: string): string {
   try {
     const u = new URL(url);
     const lower = url.toLowerCase();
-
-    // Cloudinary: request w_2000 quality auto
     if (u.hostname.includes("cloudinary.com") && u.pathname.includes("/upload/")) {
       const newPath = u.pathname.replace(/\/upload\/[^/]*\//, "/upload/w_2000,q_auto,f_auto/");
       if (newPath !== u.pathname) return u.origin + newPath;
     }
-
-    // Imgix: request high-quality
     if (u.hostname.includes("imgix") || (u.searchParams.has("w") && u.searchParams.has("fit"))) {
-      u.searchParams.set("w", "2000");
-      u.searchParams.set("q", "85");
-      u.searchParams.set("fit", "max");
-      u.searchParams.set("auto", "format,compress");
+      u.searchParams.set("w", "2000"); u.searchParams.set("q", "85"); u.searchParams.set("fit", "max"); u.searchParams.set("auto", "format,compress");
       return u.toString();
     }
-
-    // Akamai / generic CDN with wid/width params
     if (u.search.includes("wid=") || u.search.includes("width=")) {
-      u.searchParams.set("wid", "2000");
-      u.searchParams.delete("width");
+      u.searchParams.set("wid", "2000"); u.searchParams.delete("width");
       if (u.searchParams.has("hei")) u.searchParams.delete("hei");
-      if (u.searchParams.has("height")) u.searchParams.delete("height");
-      u.searchParams.set("qlt", "85");
-      return u.toString();
+      u.searchParams.set("qlt", "85"); return u.toString();
     }
-
-    // Contentful
     if (u.hostname.includes("ctfassets.net") || u.hostname.includes("contentful")) {
-      u.searchParams.set("w", "2000");
-      u.searchParams.set("q", "85");
-      u.searchParams.set("fm", "jpg");
-      u.searchParams.set("fl", "progressive");
+      u.searchParams.set("w", "2000"); u.searchParams.set("q", "85"); u.searchParams.set("fm", "jpg"); u.searchParams.set("fl", "progressive");
       return u.toString();
     }
-
-    // Fastly / generic resize params
     if (u.searchParams.has("width") || u.searchParams.has("w")) {
-      u.searchParams.set("width", "2000");
-      u.searchParams.delete("w");
-      if (u.searchParams.has("height")) u.searchParams.delete("height");
-      u.searchParams.set("quality", "85");
+      u.searchParams.set("width", "2000"); u.searchParams.delete("w"); u.searchParams.set("quality", "85");
       return u.toString();
     }
-
-    // WordPress / WP thumbnails — remove dimension suffix like -300x200
     if (/\-\d{2,4}x\d{2,4}\.(jpg|jpeg|png|webp)/i.test(u.pathname)) {
-      const cleanPath = u.pathname.replace(/\-\d{2,4}x\d{2,4}\./, ".");
-      return u.origin + cleanPath;
+      return u.origin + u.pathname.replace(/\-\d{2,4}x\d{2,4}\./, ".") + u.search;
     }
-
-    // Hilton images
+    if (lower.includes("bstatic.com")) {
+      return url.replace(/\/max\d+\//, "/max1280/").replace(/\/square\d+\//, "/max1280/");
+    }
     if (lower.includes("hilton.com") && lower.includes("/im/")) {
-      u.searchParams.set("wid", "2000");
-      u.searchParams.set("resMode", "sharp2");
-      u.searchParams.set("op_usm", "1.75,0.3,2,0");
+      u.searchParams.set("wid", "2000"); u.searchParams.set("resMode", "sharp2");
       return u.toString();
     }
-
-    // Marriott
-    if (lower.includes("marriott.com") && (u.searchParams.has("downsize") || u.searchParams.has("output-quality"))) {
-      u.searchParams.set("downsize", "2000px:*");
-      u.searchParams.set("output-quality", "85");
+    if (lower.includes("marriott.com")) {
+      u.searchParams.set("downsize", "2000px:*"); u.searchParams.set("output-quality", "85");
       return u.toString();
     }
-
-    // Accor / ahstatic
-    if (lower.includes("ahstatic.com") || lower.includes("accor")) {
-      if (u.searchParams.has("width")) u.searchParams.set("width", "2000");
-      if (u.searchParams.has("w")) u.searchParams.set("w", "2000");
-      return u.toString();
-    }
-
-    // Generic: if URL has resize/crop params, try to increase them
-    if (u.searchParams.has("resize")) {
-      u.searchParams.set("resize", "2000");
-      return u.toString();
-    }
-
     return url;
-  } catch {
-    return url;
-  }
+  } catch { return url; }
 }
 
-/**
- * Detect likely thumbnails by URL patterns (small dimensions).
- */
 function isLikelyThumbnail(url: string): boolean {
   const lower = url.toLowerCase();
-  // Skip tiny thumbnails: -100x100, _thumb, /thumb/, 150x150 etc.
   if (lower.includes("_thumb") || lower.includes("/thumb/") || lower.includes("/thumbnail/")) return true;
   if (lower.includes("_small") || lower.includes("/small/")) return true;
-
-  // Check for explicit small dimensions in URL
   const dimMatch = url.match(/[\-_/](\d{2,4})x(\d{2,4})/);
   if (dimMatch) {
-    const w = parseInt(dimMatch[1], 10);
-    const h = parseInt(dimMatch[2], 10);
+    const w = parseInt(dimMatch[1], 10), h = parseInt(dimMatch[2], 10);
     if (w < 300 && h < 300) return true;
   }
-
-  // Check for width params indicating small images
   try {
     const u = new URL(url);
     const wParam = u.searchParams.get("w") || u.searchParams.get("width") || u.searchParams.get("wid");
     if (wParam && parseInt(wParam, 10) < 300) return true;
   } catch { /* ignore */ }
-
   return false;
+}
+
+function getBestImageUrl(imgTag: string, sourceUrl: string): string | null {
+  const srcsetMatch = imgTag.match(/srcset\s*=\s*["']([^"']+)["']/i);
+  if (srcsetMatch) {
+    const srcsetUrl = pickLargestFromSrcset(srcsetMatch[1], sourceUrl);
+    if (srcsetUrl) return srcsetUrl;
+  }
+  const hiResAttrs = ["data-src-lg", "data-src-xl", "data-full-src", "data-zoom-src", "data-highres", "data-original"];
+  for (const attr of hiResAttrs) {
+    const match = imgTag.match(new RegExp(`${attr}\\s*=\\s*["']([^"']+)["']`, "i"));
+    if (match) { const url = makeAbsolute(match[1].trim(), sourceUrl); if (isRelevantImage(url)) return url; }
+  }
+  const fallbackAttrs = ["data-src", "data-lazy-src"];
+  for (const attr of fallbackAttrs) {
+    const match = imgTag.match(new RegExp(`${attr}\\s*=\\s*["']([^"']+)["']`, "i"));
+    if (match) { const url = makeAbsolute(match[1].trim(), sourceUrl); if (isRelevantImage(url)) return url; }
+  }
+  const srcMatch = imgTag.match(/\bsrc\s*=\s*["']([^"']+)["']/i);
+  if (srcMatch) { const url = makeAbsolute(srcMatch[1].trim(), sourceUrl); if (isRelevantImage(url)) return url; }
+  return null;
+}
+
+function pickLargestFromSrcset(srcset: string, sourceUrl: string): string | null {
+  const candidates = srcset.split(",").map(s => {
+    const parts = s.trim().split(/\s+/);
+    const url = parts[0];
+    const descriptor = parts[1] || "";
+    let width = 0;
+    if (descriptor.endsWith("w")) width = parseInt(descriptor, 10) || 0;
+    else if (descriptor.endsWith("x")) width = (parseFloat(descriptor) || 1) * 1000;
+    return { url, width };
+  }).filter(c => c.url && isRelevantImage(c.url));
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => b.width - a.width);
+  return makeAbsolute(candidates[0].url, sourceUrl);
 }
 
 function findOfficialSite(results: any[], hotelName: string): any | null {
   const nameNorm = normalizeStr(hotelName);
   const nameWords = nameNorm.split(/\s+/).filter(w => w.length > 2);
-
   const aggregators = [
     "booking.com", "expedia.com", "hotels.com", "trivago.com", "kayak.com",
     "tripadvisor.com", "agoda.com", "priceline.com", "hotelscombined.com",
     "google.com", "bing.com", "wikipedia.org", "facebook.com", "instagram.com",
-    "decolar.com", "hurb.com", "cvc.com.br",
-    "hoteis.com", "hotel.com.br", "zarpo.com", "omnibees.com",
-    "skyscanner.com", "momondo.com", "orbitz.com",
-    "travelocity.com", "wotif.com", "lastminute.com",
-    // Fake aggregator patterns
-    "hoteltour.com", "hotelguide", "hotelscanner", "hotelplanner",
-    "hotel-review", "hotelopia", "hoteltravel", "hotel-info",
-    "hotel-mix", "hotel.info", "ctrip.com", "trip.com",
-    "traveloka.com", "klook.com", "viator.com", "getyourguide.com",
-    "hostelworld.com", "hometogo.com", "vrbo.com", "airbnb.com",
-    "lonelyplanet.com", "timeout.com", "travelandleisure.com",
-    "cntraveler.com", "frommers.com", "fodors.com",
-    "jalan.net", "ikyu.com", "rakuten.co.jp",
-    "yelp.com", "trustpilot.com",
+    "decolar.com", "hurb.com", "cvc.com.br", "hoteis.com", "zarpo.com", "omnibees.com",
+    "skyscanner.com", "momondo.com", "orbitz.com", "travelocity.com",
+    "ctrip.com", "trip.com", "traveloka.com", "klook.com", "viator.com",
+    "airbnb.com", "jalan.net", "ikyu.com", "rakuten.co.jp", "yelp.com",
   ];
-
-  // Known luxury hotel chains and their domains
   const chainDomains: Record<string, string[]> = {
-    "aman": ["aman.com"],
-    "four seasons": ["fourseasons.com"],
-    "ritz carlton": ["ritzcarlton.com"],
-    "st regis": ["stregis.com", "marriott.com"],
-    "park hyatt": ["hyatt.com"],
-    "mandarin oriental": ["mandarinoriental.com"],
-    "peninsula": ["peninsula.com"],
-    "rosewood": ["rosewoodhotels.com"],
-    "bulgari": ["bulgarihotels.com"],
-    "one and only": ["oneandonlyresorts.com"],
-    "six senses": ["sixsenses.com"],
-    "banyan tree": ["banyantree.com"],
-    "como": ["comohotels.com"],
-    "belmond": ["belmond.com"],
-    "raffles": ["raffles.com"],
-    "fairmont": ["fairmont.com"],
-    "sofitel": ["sofitel.com", "all.accor.com"],
-    "pullman": ["pullman-hotels.com", "all.accor.com"],
-    "novotel": ["novotel.com", "all.accor.com"],
-    "hilton": ["hilton.com"],
-    "marriott": ["marriott.com"],
-    "hyatt": ["hyatt.com"],
-    "sheraton": ["marriott.com"],
-    "westin": ["marriott.com"],
-    "intercontinental": ["ihg.com"],
-    "radisson": ["radissonhotels.com"],
-    "accor": ["all.accor.com", "accor.com"],
-    "hassler": ["hotelhasslerroma.com"],
-    "waldorf astoria": ["hilton.com"],
-    "conrad": ["hilton.com"],
-    "w hotel": ["marriott.com"],
-    "edition": ["marriott.com"],
-    "oberoi": ["oberoihotels.com"],
-    "taj": ["tajhotels.com"],
+    "aman": ["aman.com"], "four seasons": ["fourseasons.com"], "ritz carlton": ["ritzcarlton.com"],
+    "st regis": ["stregis.com", "marriott.com"], "park hyatt": ["hyatt.com"],
+    "mandarin oriental": ["mandarinoriental.com"], "rosewood": ["rosewoodhotels.com"],
+    "bulgari": ["bulgarihotels.com"], "six senses": ["sixsenses.com"],
+    "belmond": ["belmond.com"], "raffles": ["raffles.com"], "fairmont": ["fairmont.com"],
+    "sofitel": ["sofitel.com", "all.accor.com"], "hilton": ["hilton.com"],
+    "marriott": ["marriott.com"], "hyatt": ["hyatt.com"], "intercontinental": ["ihg.com"],
+    "hassler": ["hotelhasslerroma.com"], "waldorf astoria": ["hilton.com"],
     "hoshinoya": ["hoshinoresorts.com"],
-    "星のや": ["hoshinoresorts.com"],
   };
 
-  let bestScore = -1;
-  let bestResult: any = null;
-
+  let bestScore = -1, bestResult: any = null;
   for (const result of results) {
     if (!result.url) continue;
     const domain = extractDomain(result.url);
-    const domainNorm = normalizeStr(domain);
-
-    // Hard-skip aggregators
     if (aggregators.some(a => domain.includes(a))) continue;
-    // Also skip domains that look like aggregators (contain "hotel" + "tour/guide/review")
-    if (/hotel.*(tour|guide|review|scanner|planner|info|mix|compare)/i.test(domain)) continue;
-
     let score = 0;
-
-    // Check if this is a known chain domain for this hotel
     for (const [brand, domains] of Object.entries(chainDomains)) {
-      if (nameNorm.includes(brand)) {
-        if (domains.some(d => domain.includes(d))) {
-          score += 15; // Very strong signal
-        }
-      }
+      if (nameNorm.includes(brand) && domains.some(d => domain.includes(d))) score += 15;
     }
-
-    const domainMatchCount = nameWords.filter(w => domainNorm.includes(w)).length;
-    score += domainMatchCount * 3;
-
+    const domainNorm = normalizeStr(domain);
+    score += nameWords.filter(w => domainNorm.includes(w)).length * 3;
     const title = normalizeStr(result.title || "");
     if (title.includes(nameNorm)) score += 5;
-
-    // Generic chain domain bonus
-    const genericChains = [
-      "accor.com", "all.accor.com", "hilton.com", "marriott.com", "ihg.com", "hyatt.com",
-      "pullman-hotels.com", "sofitel.com", "novotel.com", "ibis.com",
-      "wyndham.com", "radissonhotels.com", "ahstatic.com",
-      "fourseasons.com", "ritzcarlton.com", "mandarinoriental.com",
-      "peninsula.com", "rosewoodhotels.com", "aman.com",
-      "belmond.com", "oneandonlyresorts.com", "sixsenses.com",
-      "banyantree.com", "comohotels.com", "oberoihotels.com",
-      "tajhotels.com", "hoshinoresorts.com",
-    ];
-    if (genericChains.some(c => domain.includes(c))) score += 4;
-
-    // Brand name directly in domain
-    for (const brand of nameWords) {
-      if (brand.length > 3 && domainNorm.includes(brand)) score += 3;
-    }
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestResult = result;
-    }
+    if (score > bestScore) { bestScore = score; bestResult = result; }
   }
-
   return bestResult;
 }
 
-function collectImagesFromMarkdown(markdown: string, sourceUrl: string, collection: ImageCollection, filterDomain: string | null) {
+function collectImagesFromMarkdown(markdown: string, sourceUrl: string, collection: ImageCollection, filterDomain: string | null, source: "official" | "booking" | "google") {
   const mdImgRegex = /!\[([^\]]*)\]\(([^)]+)\)/gi;
   let match;
   while ((match = mdImgRegex.exec(markdown)) !== null) {
     const imgUrl = match[2]?.trim();
     if (filterDomain && !isFromDomain(imgUrl, sourceUrl, filterDomain)) continue;
-    addImageToCollection(collection, imgUrl, match[1] || "", sourceUrl, "");
+    addImageToCollection(collection, imgUrl, match[1] || "", sourceUrl, "", source);
   }
-
   const urlRegex = /https?:\/\/[^\s\)>"']+\.(?:jpg|jpeg|png|webp)(?:\?[^\s\)>"']*)?/gi;
   while ((match = urlRegex.exec(markdown)) !== null) {
     const imgUrl = match[0];
     if (filterDomain && !isFromDomain(imgUrl, sourceUrl, filterDomain)) continue;
-    addImageToCollection(collection, imgUrl, "", sourceUrl, "");
+    addImageToCollection(collection, imgUrl, "", sourceUrl, "", source);
   }
 }
 
@@ -1142,26 +1190,21 @@ function isFromDomain(imageUrl: string, sourceUrl: string, officialDomain: strin
   if (sourceDomain.includes(officialDomain) || officialDomain.includes(sourceDomain)) return true;
   const imgDomain = extractDomain(imageUrl.startsWith("http") ? imageUrl : `https://${officialDomain}${imageUrl}`);
   if (imgDomain.includes(officialDomain) || officialDomain.includes(imgDomain)) return true;
-  const allowedCDNs = [
-    "cloudinary", "akamai", "cloudfront", "amazonaws", "imgix", "ctfassets",
-    "bstatic", "trvl-media", "ahstatic", "fastbooking", "accor",
-    "hilton.com/im/", "marriott.com/content", "wyndham", "ihg.com",
-  ];
+  const allowedCDNs = ["cloudinary", "akamai", "cloudfront", "amazonaws", "imgix", "ctfassets", "bstatic", "trvl-media", "ahstatic", "fastbooking", "accor"];
   return allowedCDNs.some(cdn => imageUrl.toLowerCase().includes(cdn));
 }
 
-function addImageToCollection(collection: ImageCollection, rawUrl: string, alt: string, sourceUrl: string, sectionName: string) {
-  if (!rawUrl || collection.seen.has(rawUrl)) return;
-  if (!isRelevantImage(rawUrl)) return;
+function addImageToCollection(collection: ImageCollection, rawUrl: string, alt: string, sourceUrl: string, sectionName: string, source: "official" | "booking" | "google") {
+  if (!rawUrl || !isRelevantImage(rawUrl)) return;
   const absUrl = makeAbsolute(rawUrl, sourceUrl);
-  if (collection.seen.has(absUrl)) return;
-  collection.seen.add(absUrl);
+  const dedupKey = normalizeUrlForDedup(absUrl);
+  if (collection.seen.has(dedupKey)) return;
+  collection.seen.add(dedupKey);
   collection.photos.push({
-    url: absUrl,
-    alt,
-    section_name: sectionName,
+    url: absUrl, alt, section_name: sectionName,
     category: inferCategory(sectionName, alt),
     confidence: sectionName ? 0.8 : 0.4,
+    source,
   });
 }
 
@@ -1170,25 +1213,16 @@ function isRelevantImage(url: string): boolean {
   const lower = url.toLowerCase();
   if (lower.startsWith("data:")) return false;
   if (lower.endsWith(".svg") || lower.endsWith(".gif") || lower.endsWith(".ico")) return false;
-  if (lower.includes("logo") && lower.includes("svg")) return false;
   if (lower.includes("tracking") || lower.includes("pixel") || lower.includes("1x1")) return false;
   if (lower.includes("sprite") || lower.includes("spacer")) return false;
   if (lower.includes("facebook.com") || lower.includes("twitter.com") || lower.includes("instagram.com")) return false;
   if (lower.includes("google-analytics") || lower.includes("doubleclick")) return false;
   if (lower.includes("badge") || (lower.includes("flag") && lower.includes("16"))) return false;
   if (/\.(jpg|jpeg|png|webp|avif)(\?|$|#)/i.test(url)) return true;
-  if (lower.includes("ctfassets") || lower.includes("cloudinary")) return true;
-  if (lower.includes("imgix") || lower.includes("akamai")) return true;
+  if (lower.includes("ctfassets") || lower.includes("cloudinary") || lower.includes("imgix") || lower.includes("akamai")) return true;
   if (lower.includes("cloudfront") || lower.includes("amazonaws")) return true;
-  if (lower.includes("hilton.com") && lower.includes("image")) return true;
-  if (lower.includes("marriott.com") && lower.includes("image")) return true;
-  if (lower.includes("/photo") || lower.includes("/gallery") || lower.includes("/image")) return true;
   if (lower.includes("bstatic.com")) return true;
-  if (lower.includes("trvl-media") || lower.includes("expedia")) return true;
-  if (lower.includes("w=") && lower.includes("h=")) return true;
-  if (lower.includes("width=") || lower.includes("height=")) return true;
-  if (lower.includes("resize") || lower.includes("crop")) return true;
-  if (/\/\w+[-_]\d{3,4}x\d{3,4}/i.test(url)) return true;
+  if (lower.includes("/photo") || lower.includes("/gallery") || lower.includes("/image")) return true;
   return false;
 }
 
