@@ -643,7 +643,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       if (a.includes("wi-fi") || a.includes("wifi") || a.includes("internet")) return <Wifi className="w-3 h-3" />;
       if (a.includes("ar-condicionado") || a.includes("air") || a.includes("climate")) return <Wind className="w-3 h-3" />;
       if (a.includes("tv") || a.includes("televisão")) return <Tv className="w-3 h-3" />;
-      if (a.includes("cofre") || a.includes("safe")) return <Lock className="w-3 h-3" />;
+      if (a.includes("cofre") || a.includes("safe")) return <LockKeyhole className="w-3 h-3" />;
       if (a.includes("minibar") || a.includes("frigobar")) return <Wine className="w-3 h-3" />;
       if (a.includes("café") || a.includes("coffee") || a.includes("chá")) return <Coffee className="w-3 h-3" />;
       if (a.includes("banheir") || a.includes("ducha") || a.includes("chuveiro") || a.includes("banheira")) return <Droplets className="w-3 h-3" />;
