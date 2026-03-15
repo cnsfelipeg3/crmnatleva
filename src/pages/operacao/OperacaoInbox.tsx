@@ -752,7 +752,6 @@ function OperacaoInboxInner() {
           if (cancelled) return;
 
           const zapiMsgs: Message[] = rawMsgs
-          const zapiMsgs: Message[] = rawMsgs
             .map((m: any) => {
               const mediaInfo = extractMediaFromRawData(m.raw_data, m.type || "text");
               return {
