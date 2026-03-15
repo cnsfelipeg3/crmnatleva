@@ -143,6 +143,61 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
   const [resolvingImageUrls, setResolvingImageUrls] = useState<Set<string>>(new Set());
   const proxiedObjectUrlsRef = useRef<string[]>([]);
 
+  useEffect(() => {
+    return () => {
+      proxiedObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      proxiedObjectUrlsRef.current = [];
+    };
+  }, []);
+
+  const clearProxiedImages = useCallback(() => {
+    proxiedObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    proxiedObjectUrlsRef.current = [];
+    setProxiedImageUrls({});
+    setFailedImageUrls(new Set());
+    setResolvingImageUrls(new Set());
+  }, []);
+
+  const resolveImageForDisplay = useCallback(async (url: string) => {
+    if (!url) return;
+    if (proxiedImageUrls[url]) return;
+    if (failedImageUrls.has(url)) return;
+    if (resolvingImageUrls.has(url)) return;
+
+    setResolvingImageUrls((prev) => new Set(prev).add(url));
+
+    try {
+      const blob = await fetchProxiedImageBlob(url);
+      const objectUrl = URL.createObjectURL(blob);
+      proxiedObjectUrlsRef.current.push(objectUrl);
+      setProxiedImageUrls((prev) => ({ ...prev, [url]: objectUrl }));
+      setFailedImageUrls((prev) => {
+        const next = new Set(prev);
+        next.delete(url);
+        return next;
+      });
+    } catch {
+      setFailedImageUrls((prev) => new Set(prev).add(url));
+    } finally {
+      setResolvingImageUrls((prev) => {
+        const next = new Set(prev);
+        next.delete(url);
+        return next;
+      });
+    }
+  }, [failedImageUrls, proxiedImageUrls, resolvingImageUrls]);
+
+  const handleImageError = useCallback((url: string) => {
+    if (!url) return;
+    if (proxiedImageUrls[url]) {
+      setFailedImageUrls((prev) => new Set(prev).add(url));
+      return;
+    }
+    void resolveImageForDisplay(url);
+  }, [proxiedImageUrls, resolveImageForDisplay]);
+
+  const getDisplayUrl = useCallback((url: string) => proxiedImageUrls[url] || url, [proxiedImageUrls]);
+
   const scrapePhotos = async () => {
     if (!hotelName) { toast.error("Selecione um hotel primeiro"); return; }
     setLoading(true);
