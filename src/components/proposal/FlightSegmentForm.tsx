@@ -73,6 +73,7 @@ export default function FlightSegmentForm({ seg, onUpdate, onUpdateMulti }: Flig
           const segs2 = extractSegments(res2);
           if (segs2?.length) {
             applySegmentData(segs2[0]);
+            toast.success("Dados do voo preenchidos via Amadeus!");
             return;
           }
         }
@@ -100,15 +101,27 @@ export default function FlightSegmentForm({ seg, onUpdate, onUpdateMulti }: Flig
   };
 
   const applySegmentData = (data: any) => {
-    if (data.departure_time) onUpdate("departure_time", data.departure_time);
-    if (data.arrival_time) onUpdate("arrival_time", data.arrival_time);
-    if (data.duration_minutes) onUpdate("duration_minutes", data.duration_minutes);
-    if (data.terminal) onUpdate("terminal", data.terminal);
-    if (data.arrival_terminal) onUpdate("arrival_terminal", data.arrival_terminal);
-    if (data.aircraft_type) onUpdate("aircraft_type", data.aircraft_type);
-    if (data.origin_iata && !seg.origin_iata) onUpdate("origin_iata", data.origin_iata);
-    if (data.destination_iata && !seg.destination_iata) onUpdate("destination_iata", data.destination_iata);
-    if (data.airline_name && !seg.airline_name) onUpdate("airline_name", data.airline_name);
+    const updates: Partial<FlightSegmentData> = {};
+    if (data.departure_time) updates.departure_time = data.departure_time;
+    if (data.arrival_time) updates.arrival_time = data.arrival_time;
+    if (data.duration_minutes) updates.duration_minutes = data.duration_minutes;
+    if (data.terminal) updates.terminal = data.terminal;
+    if (data.arrival_terminal) updates.arrival_terminal = data.arrival_terminal;
+    if (data.aircraft_type) updates.aircraft_type = data.aircraft_type;
+    if (data.origin_iata && !seg.origin_iata) updates.origin_iata = data.origin_iata;
+    if (data.destination_iata && !seg.destination_iata) updates.destination_iata = data.destination_iata;
+    if (data.airline_name) updates.airline_name = data.airline_name;
+    
+    console.log("[Amadeus] Applying segment data:", JSON.stringify(data));
+    console.log("[Amadeus] Updates to apply:", JSON.stringify(updates));
+    
+    if (onUpdateMulti && Object.keys(updates).length > 0) {
+      onUpdateMulti(updates);
+    } else {
+      Object.entries(updates).forEach(([key, value]) => {
+        onUpdate(key as keyof FlightSegmentData, value);
+      });
+    }
   };
 
   return (
