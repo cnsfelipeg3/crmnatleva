@@ -182,6 +182,29 @@ export default function PlacesSearchCard({
   const disableEdgeSearchRef = useRef(false);
   const disableClientGoogleRef = useRef(false);
 
+  /* ── Amadeus hotel search ── */
+  const searchAmadeus = useCallback(async (q: string): Promise<PlaceResult[]> => {
+    const { data, error: fnError } = await withTimeout(
+      supabase.functions.invoke("amadeus-search", {
+        body: { action: "hotel_search", keyword: q },
+      }),
+      5000,
+      "Timeout na busca Amadeus",
+    );
+    if (fnError) throw fnError;
+    return (data?.data || []).map((h: any, idx: number) => ({
+      place_id: `amadeus:${h.hotelId || idx}`,
+      name: h.name || q,
+      address: h.address || h.iataCode || "",
+      rating: null,
+      user_ratings_total: 0,
+      types: ["lodging"],
+      photo_reference: null,
+      location: h.location || null,
+      price_level: null,
+    }));
+  }, []);
+
   /* ── Search ── */
   const search = useCallback(async (q: string) => {
     const requestId = ++requestIdRef.current;
@@ -205,6 +228,26 @@ export default function PlacesSearchCard({
     });
 
     const normalizedQuery = destinationContext ? `${q} ${destinationContext}` : q;
+
+    // If Amadeus provider is selected, use Amadeus-only search
+    if (provider === "amadeus") {
+      try {
+        const amadeusResults = await searchAmadeus(normalizedQuery);
+        safeSet(() => {
+          setResults(amadeusResults);
+          setError(amadeusResults.length === 0 ? "Nenhum hotel encontrado no Amadeus." : null);
+          setLoading(false);
+        });
+      } catch (err) {
+        console.error("Amadeus search error:", err);
+        safeSet(() => {
+          setResults([]);
+          setError("Erro ao buscar hotéis no Amadeus. Verifique a configuração.");
+          setLoading(false);
+        });
+      }
+      return;
+    }
 
     const mapFallbackResults = (items: any[]): PlaceResult[] =>
       items.map((item: any, idx: number) => ({
@@ -293,15 +336,15 @@ export default function PlacesSearchCard({
     });
 
     const settled = await Promise.allSettled(
-      providers.map(async (provider) => ({
-        source: provider.source,
-        results: await provider.run(),
+      providers.map(async (prov) => ({
+        source: prov.source,
+        results: await prov.run(),
       })),
     );
 
     if (isStale()) return;
 
-    const bySource = new Map<"client" | "edge" | "hotel", PlaceResult[]>();
+    const bySource: Record<string, PlaceResult[]> = {};
     let hasError = false;
     let hasEmpty = false;
 
@@ -310,7 +353,7 @@ export default function PlacesSearchCard({
 
       if (entry.status === "fulfilled") {
         if (entry.value.results.length > 0) {
-          bySource.set(source, entry.value.results);
+          bySource[source] = entry.value.results;
         } else {
           hasEmpty = true;
         }
@@ -330,14 +373,14 @@ export default function PlacesSearchCard({
       }
     });
 
-    const chosenResults = bySource.get("client") || bySource.get("edge") || bySource.get("hotel") || [];
+    const chosenResults = bySource["client"] || bySource["edge"] || bySource["hotel"] || [];
 
     safeSet(() => {
       setResults(chosenResults);
       setError(chosenResults.length === 0 && hasError && !hasEmpty ? "Não foi possível buscar locais. Tente novamente." : null);
       setLoading(false);
     });
-  }, [destinationContext]);
+  }, [destinationContext, provider, searchAmadeus]);
 
   const handleInput = (val: string) => {
     setQuery(val);
