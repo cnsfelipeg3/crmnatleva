@@ -150,6 +150,15 @@ function shouldShowDateSeparator(msgs: Message[], index: number): boolean {
   return prev.getDate() !== curr.getDate() || prev.getMonth() !== curr.getMonth() || prev.getFullYear() !== curr.getFullYear();
 }
 
+function stripQuotes(text: string): string {
+  if (!text) return text;
+  const trimmed = text.trim();
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
 function getStageInfo(stage: Stage) {
   return STAGES.find(s => s.key === stage) || STAGES[0];
 }
@@ -1611,7 +1620,7 @@ function OperacaoInboxInner() {
           </div>
 
           {/* ─── Column 2: Chat ─── */}
-          <div className={`flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden relative ${isMobile && !selectedId ? "hidden" : ""}`}>
+          <div className={`flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden relative ${isMobile && !selectedId ? "hidden" : ""}`} style={{ maxHeight: '100%' }}>
             {selected ? (
               <>
                 {/* Chat header */}
@@ -1686,7 +1695,7 @@ function OperacaoInboxInner() {
                                 <Bot className="h-3 w-3 text-primary" />
                                 <span className="text-[9px] font-bold text-primary uppercase tracking-wider">Sistema / Bot</span>
                               </div>
-                              <p className="text-sm leading-relaxed text-foreground">{msg.text}</p>
+                              <p className="text-sm leading-relaxed text-foreground">{stripQuotes(msg.text)}</p>
                               <span className="text-[9px] text-muted-foreground">{formatMsgTime(msg.created_at)}</span>
                             </div>
                           ) : (
@@ -1742,7 +1751,7 @@ function OperacaoInboxInner() {
                                     ) : (
                                       <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2"><Image className="h-4 w-4" /><span>📷 Imagem indisponível</span></div>
                                     )}
-                                    {msg.text && <p className="text-sm leading-relaxed mt-1">{msg.text}</p>}
+                                    {msg.text && <p className="text-sm leading-relaxed mt-1">{stripQuotes(msg.text)}</p>}
                                   </div>
                                 )}
                                 {/* Video */}
@@ -1753,7 +1762,7 @@ function OperacaoInboxInner() {
                                     ) : (
                                       <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2"><Video className="h-4 w-4" /><span>🎬 Vídeo indisponível</span></div>
                                     )}
-                                    {msg.text && <p className="text-sm leading-relaxed mt-1">{msg.text}</p>}
+                                    {msg.text && <p className="text-sm leading-relaxed mt-1">{stripQuotes(msg.text)}</p>}
                                   </div>
                                 )}
                                 {/* Document */}
@@ -1768,7 +1777,7 @@ function OperacaoInboxInner() {
                                   </div>
                                 )}
                                 {/* Text */}
-                                {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>}
+                                {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap">{stripQuotes(msg.text)}</p>}
                                 <div className="flex items-center justify-end gap-1 mt-1">
                                   {msg.edited && <span className="text-[8px] opacity-50 italic">editada</span>}
                                   <span className="text-[9px] opacity-60">{formatMsgTime(msg.created_at)}</span>
@@ -1808,7 +1817,7 @@ function OperacaoInboxInner() {
 
                 {/* Media pending preview */}
                 {mediaPendingFile && (
-                  <div className="px-4 py-3 border-t border-border bg-card/50 space-y-2">
+                  <div className="px-4 py-3 border-t border-border bg-card/50 space-y-2 shrink-0">
                     <div className="flex items-center gap-3">
                       <img src={mediaPendingFile.previewUrl} alt="Preview" className="h-16 w-16 rounded-lg object-cover" />
                       <div className="flex-1"><Input placeholder="Legenda (opcional)..." value={mediaCaption} onChange={e => setMediaCaption(e.target.value)} className="h-8 text-xs" /></div>
@@ -1873,7 +1882,7 @@ function OperacaoInboxInner() {
 
                 {/* Input area */}
                 <div
-                  className="sticky bottom-0 z-20 border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card/95 backdrop-blur-sm shrink-0"
+                  className="border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card shrink-0 z-20"
                   style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" } : undefined}
                 >
                   {isRecording ? (
