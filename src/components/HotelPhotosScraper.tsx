@@ -105,7 +105,7 @@ async function resolveHotelPhotosUrls(inputPhotos: HotelPhoto[]): Promise<HotelP
   );
 }
 
-async function fetchProxiedImageBlob(imageUrl: string): Promise<Blob> {
+async function fetchProxiedImageBlob(imageUrl: string, refererUrl?: string): Promise<Blob> {
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -124,7 +124,7 @@ async function fetchProxiedImageBlob(imageUrl: string): Promise<Blob> {
       apikey: publishableKey,
       ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
     },
-    body: JSON.stringify({ imageUrl }),
+    body: JSON.stringify({ imageUrl, refererUrl }),
   });
 
   if (!response.ok) {
@@ -174,7 +174,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     setResolvingImageUrls((prev) => new Set(prev).add(url));
 
     try {
-      const blob = await fetchProxiedImageBlob(url);
+      const blob = await fetchProxiedImageBlob(url, sourceUrl || undefined);
       const objectUrl = URL.createObjectURL(blob);
       proxiedObjectUrlsRef.current.push(objectUrl);
       setProxiedImageUrls((prev) => ({ ...prev, [url]: objectUrl }));
@@ -192,7 +192,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
         return next;
       });
     }
-  }, [failedImageUrls, proxiedImageUrls, resolvingImageUrls]);
+  }, [failedImageUrls, proxiedImageUrls, resolvingImageUrls, sourceUrl]);
 
   const handleImageError = useCallback((url: string) => {
     if (!url) return;
@@ -205,7 +205,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
 
   const getDisplayUrl = useCallback((url: string) => proxiedImageUrls[url] || url, [proxiedImageUrls]);
 
-  const preloadViaProxy = useCallback(async (photosToLoad: HotelPhoto[]) => {
+  const preloadViaProxy = useCallback(async (photosToLoad: HotelPhoto[], refererUrl?: string) => {
     // Eagerly proxy all photos to avoid hotlink blocking
     const batchSize = 5;
     for (let i = 0; i < photosToLoad.length; i += batchSize) {
@@ -214,7 +214,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
         batch.map(async (photo) => {
           if (!photo.url) return;
           try {
-            const blob = await fetchProxiedImageBlob(photo.url);
+            const blob = await fetchProxiedImageBlob(photo.url, refererUrl);
             const objectUrl = URL.createObjectURL(blob);
             proxiedObjectUrlsRef.current.push(objectUrl);
             setProxiedImageUrls((prev) => ({ ...prev, [photo.url]: objectUrl }));
