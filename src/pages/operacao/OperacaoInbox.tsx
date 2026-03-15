@@ -689,11 +689,15 @@ function OperacaoInboxInner() {
             ]);
 
             const mergedRows = [...(legacyResp.data || []), ...(modernResp.data || [])];
-            const dedupedRows = Array.from(
-              new Map(
-                mergedRows.map((row: any) => [row.id || `${row.created_at}_${row.sender_type}_${row.text || row.content || ""}`, row]),
-              ).values(),
-            ).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+            // Dedup by external_message_id first, then by id, then by content signature
+            const dedupMap = new Map<string, any>();
+            for (const row of mergedRows) {
+              const extId = row.external_message_id;
+              const key = extId || row.id || `${row.created_at}_${row.sender_type}_${row.text || row.content || ""}`;
+              if (!dedupMap.has(key)) dedupMap.set(key, row);
+            }
+            const dedupedRows = Array.from(dedupMap.values())
+              .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
             dbMsgs = mapDbMessages(dedupedRows, selectedId);
           }
 
