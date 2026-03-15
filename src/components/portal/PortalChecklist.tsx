@@ -394,6 +394,8 @@ export default function PortalChecklist(props: PortalChecklistProps) {
               items={items.filter(i => i.category === cat)}
               isOpen={openCats[cat] ?? true}
               onToggle={() => setOpenCats(prev => ({ ...prev, [cat]: !prev[cat] }))}
+              checkedIds={checkedIds}
+              onCheckToggle={toggleCheck}
             />
           </motion.div>
         ))}
