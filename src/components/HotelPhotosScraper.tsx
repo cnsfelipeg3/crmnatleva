@@ -171,6 +171,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
   const [proxiedImageUrls, setProxiedImageUrls] = useState<Record<string, string>>({});
   const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set());
   const [resolvingImageUrls, setResolvingImageUrls] = useState<Set<string>>(new Set());
+  const [knownRoomNames, setKnownRoomNames] = useState<string[]>([]);
   const proxiedObjectUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
