@@ -28,6 +28,12 @@ export interface FlightSegmentData {
   aircraft_type: string;
   notes: string;
   is_connection?: boolean;
+  // Baggage fields
+  carry_on_included: boolean;
+  carry_on_weight_kg: number;
+  checked_bags_included: number;
+  checked_bag_weight_kg: number;
+  baggage_notes: string;
 }
 
 interface ProposalFlightSearchProps {
