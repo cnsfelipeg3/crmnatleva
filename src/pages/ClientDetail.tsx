@@ -236,13 +236,8 @@ export default function ClientDetail() {
     return getVisitedCountries(destinations);
   }, [sales]);
 
-  // Timeline
-  const timelineSales = useMemo(() => {
-    const now = new Date();
-    if (timelineTab === "past") return sales.filter(s => !s.departure_date || new Date(s.departure_date) < now);
-    if (timelineTab === "future") return sales.filter(s => s.departure_date && new Date(s.departure_date) >= now);
-    return sales;
-  }, [sales, timelineTab]);
+
+
 
   const addToList = (field: "loyalty_programs" | "preferred_airlines" | "preferred_hotel_chains", value: string, setter: (v: string) => void) => {
     if (!value.trim()) return;
