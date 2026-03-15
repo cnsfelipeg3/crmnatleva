@@ -341,7 +341,7 @@ export default function PlacesSearchCard({
       setError(chosenResults.length === 0 && hasError && !hasEmpty ? "Não foi possível buscar locais. Tente novamente." : null);
       setLoading(false);
     });
-  }, [destinationContext, provider]);
+  }, [destinationContext]);
 
   const handleInput = (val: string) => {
     setQuery(val);
