@@ -330,17 +330,18 @@ function OperacaoInboxInner() {
   }): Promise<string | null> => {
     const dbConvId = await resolveDbConversationId(payload.conversationId);
     if (!dbConvId) {
-      console.error("persistOutgoingMessage: could not resolve DB conversation ID for", payload.conversationId);
-      return null;
+      console.error("[PERSIST] could not resolve DB conversation ID for", payload.conversationId);
+      throw new Error("Não foi possível identificar a conversa no banco de dados.");
     }
 
     const createdAt = payload.createdAt || new Date().toISOString();
     const externalId = payload.externalMessageId || `local_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    let persistedId: string | null = null;
+    let persistedTable: string | null = null;
 
-    // MANDATORY persistence - single source of truth
-    const { data: inserted, error } = await (supabase
-      .from("conversation_messages" as any)
-      .upsert({
+    // ── PRIMARY: conversation_messages (unified table) ──
+    try {
+      const unifiedRow = {
         conversation_id: dbConvId,
         external_message_id: externalId,
         direction: "outgoing",
@@ -351,23 +352,70 @@ function OperacaoInboxInner() {
         status: "sent",
         timestamp: createdAt,
         created_at: createdAt,
-      }, { onConflict: "conversation_id,external_message_id" })
-      .select("id")
-      .single() as any);
+      };
 
-    if (error) {
-      console.error("CRITICAL: Failed to persist outgoing message:", error);
-      throw new Error(`Falha ao salvar mensagem: ${error.message}`);
+      const { data: inserted, error } = await (supabase
+        .from("conversation_messages" as any)
+        .insert(unifiedRow)
+        .select("id")
+        .single() as any);
+
+      if (!error && inserted?.id) {
+        persistedId = inserted.id;
+        persistedTable = "conversation_messages";
+        console.log(`[PERSIST✓] Mensagem gravada em conversation_messages: ${persistedId}`);
+      } else {
+        console.warn(`[PERSIST] conversation_messages falhou: ${error?.message}. Tentando fallback...`);
+      }
+    } catch (err: any) {
+      console.warn(`[PERSIST] conversation_messages exception: ${err.message}. Tentando fallback...`);
     }
 
-    // Update conversation metadata
+    // ── FALLBACK: chat_messages (legacy, funcional) ──
+    if (!persistedId) {
+      try {
+        const legacyRow = {
+          conversation_id: dbConvId,
+          external_message_id: externalId,
+          sender_type: "atendente",
+          message_type: payload.messageType,
+          content: payload.text || "",
+          media_url: payload.mediaUrl || null,
+          read_status: "sent",
+        };
+        const { data: legacyInserted, error: legacyErr } = await supabase
+          .from("chat_messages")
+          .insert(legacyRow)
+          .select("id")
+          .single();
+
+        if (!legacyErr && legacyInserted?.id) {
+          persistedId = legacyInserted.id;
+          persistedTable = "chat_messages";
+          console.warn(`[PERSIST⚠] Mensagem gravada via FALLBACK em chat_messages: ${persistedId}`);
+        } else {
+          console.error(`[PERSIST✗] chat_messages fallback also failed: ${legacyErr?.message}`);
+        }
+      } catch (err: any) {
+        console.error(`[PERSIST✗] chat_messages fallback exception: ${err.message}`);
+      }
+    }
+
+    // ── If both failed, throw to block UI ──
+    if (!persistedId) {
+      const errorMsg = "FALHA CRÍTICA: Mensagem NÃO foi salva em nenhuma tabela. A mensagem será removida do chat.";
+      console.error(`[PERSIST✗✗] ${errorMsg}`);
+      throw new Error(errorMsg);
+    }
+
+    // ── Update conversation metadata ──
     await supabase.from("conversations").update({
       last_message_preview: payload.text || `📎 ${payload.messageType}`,
       last_message_at: createdAt,
       unread_count: 0,
-    }).eq("id", dbConvId);
+    }).eq("id", dbConvId).then(() => {});
 
-    return inserted?.id || null;
+    return persistedId;
   }, [resolveDbConversationId]);
   // Load active flow name for selected conversation
   useEffect(() => {
