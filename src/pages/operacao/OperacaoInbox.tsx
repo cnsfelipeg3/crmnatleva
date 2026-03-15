@@ -783,20 +783,51 @@ function OperacaoInboxInner() {
             dbMsgs = mapDbMessages(dedupedRows, selectedId);
           }
 
+          // Build cross-reference index: external_message_id → db message
+          const extIdIndex = new Map<string, Message>();
+          for (const msg of dbMsgs) {
+            const extId = (msg as any).external_message_id;
+            if (extId) extIdIndex.set(extId, msg);
+          }
+
           const mergedMap = new Map<string, Message>();
-          for (const msg of [...dbMsgs, ...zapiMsgs]) {
+          // Add all DB messages first
+          for (const msg of dbMsgs) {
             const key = msg.id || `${msg.created_at}_${msg.sender_type}_${msg.message_type}_${msg.text || ""}`;
-            const existing = mergedMap.get(key);
-            if (!existing) {
-              mergedMap.set(key, msg);
+            mergedMap.set(key, msg);
+          }
+          // Add zapi messages, merging with DB messages that share the same external_message_id
+          for (const msg of zapiMsgs) {
+            // Check if this zapi message matches a DB message by external_message_id
+            const dbMatch = extIdIndex.get(msg.id);
+            if (dbMatch) {
+              // Merge: prefer zapi status/media, keep best text
+              const dbKey = dbMatch.id || `${dbMatch.created_at}_${dbMatch.sender_type}_${dbMatch.message_type}_${dbMatch.text || ""}`;
+              mergedMap.set(dbKey, {
+                ...dbMatch,
+                status: msg.status !== "sent" ? msg.status : dbMatch.status,
+                media_url: msg.media_url || dbMatch.media_url,
+                text: msg.text || dbMatch.text,
+                created_at: msg.created_at || dbMatch.created_at,
+              });
               continue;
             }
-            mergedMap.set(key, {
-              ...existing,
-              ...msg,
-              text: msg.text || existing.text,
-              media_url: msg.media_url || existing.media_url,
-            });
+            // Check for content-based duplicates (same timestamp + sender + text)
+            const contentKey = `${msg.created_at}_${msg.sender_type}_${msg.message_type}_${msg.text || ""}`;
+            const existingByContent = mergedMap.get(contentKey);
+            if (existingByContent) {
+              mergedMap.set(contentKey, {
+                ...existingByContent,
+                status: msg.status !== "sent" ? msg.status : existingByContent.status,
+                media_url: msg.media_url || existingByContent.media_url,
+              });
+              continue;
+            }
+            // No match found - add as new message
+            const key = msg.id || contentKey;
+            if (!mergedMap.has(key)) {
+              mergedMap.set(key, msg);
+            }
           }
 
           const mergedMsgs = Array.from(mergedMap.values()).sort(
