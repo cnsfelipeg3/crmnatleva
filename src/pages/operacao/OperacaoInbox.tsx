@@ -237,7 +237,7 @@ function OperacaoInboxInner() {
   const [chatSyncVersion, setChatSyncVersion] = useState(0);
   const [reloadingMessages, setReloadingMessages] = useState(false);
   const [rebuildingHistoryAll, setRebuildingHistoryAll] = useState(false);
-  const [botActive, setBotActive] = useState(true);
+  const [flowRunning, setFlowRunning] = useState(false);
   const [activeFlowName, setActiveFlowName] = useState<string | null>(null);
   const flowNameCacheRef = useRef<Record<string, string | null>>({});
   const [waConnected, setWaConnected] = useState(false);
