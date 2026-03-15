@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
             source: "whatsapp_api",
             stage: "novo_lead",
             tags: [],
-            last_message_at: timestamp,
+            last_message_at: timestampIso,
             last_message_preview: preview,
             unread_count: fromMe ? 0 : 1,
             is_vip: false,
