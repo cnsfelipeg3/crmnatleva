@@ -840,7 +840,7 @@ export default function PlacesSearchCard({
             </div>
             <div className="min-w-0">
               <span className="text-sm font-bold text-foreground block truncate">Curadoria de Conteúdo</span>
-              <span className="text-[10px] text-muted-foreground">{provider === "amadeus" ? "Amadeus + Google Photos" : "Google Places"}</span>
+              <span className="text-[10px] text-muted-foreground">Google Places + Site Oficial</span>
             </div>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
