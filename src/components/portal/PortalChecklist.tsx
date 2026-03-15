@@ -286,6 +286,27 @@ export default function PortalChecklist(props: PortalChecklistProps) {
     return cats;
   }, [items]);
 
+  const storageKey = `checklist-ticked-${props.sale?.id || "default"}`;
+
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch { return new Set(); }
+  });
+
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify([...checkedIds]));
+  }, [checkedIds, storageKey]);
+
+  const toggleCheck = useCallback((id: string) => {
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+
   const [openCats, setOpenCats] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
     categories.forEach(c => { map[c] = true; });
@@ -293,10 +314,10 @@ export default function PortalChecklist(props: PortalChecklistProps) {
   });
 
   const total = items.filter(i => i.status !== "informativo").length;
-  const done = items.filter(i => i.status === "concluido").length;
+  const done = items.filter(i => i.status === "concluido" || checkedIds.has(i.id)).length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const attentionCount = items.filter(i => i.status === "atencao").length;
-  const pendingCount = items.filter(i => i.status === "pendente").length;
+  const attentionCount = items.filter(i => i.status === "atencao" && !checkedIds.has(i.id)).length;
+  const pendingCount = items.filter(i => i.status === "pendente" && !checkedIds.has(i.id)).length;
 
   const summaryMessage = attentionCount > 0
     ? `${attentionCount} ponto${attentionCount > 1 ? "s" : ""} exige${attentionCount > 1 ? "m" : ""} atenção`
