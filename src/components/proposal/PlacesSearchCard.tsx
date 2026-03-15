@@ -1052,7 +1052,7 @@ export default function PlacesSearchCard({
           <Input
             value={query}
             onChange={(e) => handleInput(e.target.value)}
-            placeholder={provider === "google" ? "Buscar hotel, lugar ou atração..." : "Buscar hotel pelo nome..."}
+            placeholder="Buscar hotel, lugar ou atração..."
             className="pr-8 h-11 text-sm"
             autoFocus
           />
