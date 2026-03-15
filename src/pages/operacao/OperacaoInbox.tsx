@@ -1510,21 +1510,25 @@ function OperacaoInboxInner() {
       const ext = file.name.split('.').pop() || "jpg";
       const fileName = `image_${Date.now()}.${ext}`;
       const publicUrl = await uploadToStorage(file, "images", fileName);
-      await callZapiProxy("send-image", { phone, image: publicUrl, caption });
-      const tempId = `temp_media_${Date.now()}`;
-      lastMsgIdsRef.current.add(tempId);
+      const sendResult = await callZapiProxy("send-image", { phone, image: publicUrl, caption });
+      const realId = sendResult?.messageId || sendResult?.id || `temp_media_${Date.now()}`;
+      lastMsgIdsRef.current.add(realId);
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
-        id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
+        id: realId, conversation_id: selectedId, sender_type: "atendente" as const,
         message_type: "image" as MsgType, text: caption || "📷 Imagem", status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: previewUrl,
       }] }));
-      // Persist image to DB
-      const convForImg = conversations.find(c => c.id === selectedId);
-      if (convForImg?.db_id) {
-        supabase.from("chat_messages").insert({ conversation_id: convForImg.db_id, sender_type: "atendente", message_type: "image", content: caption || "📷 Imagem", media_url: publicUrl, read_status: "sent", external_message_id: tempId }).then(() => {});
-      }
+
+      await persistOutgoingMessage({
+        conversationId: selectedId,
+        messageType: "image",
+        text: caption || "📷 Imagem",
+        mediaUrl: publicUrl,
+        externalMessageId: realId,
+        createdAt: new Date().toISOString(),
+      });
     } catch (err) { toast({ title: "Erro ao enviar mídia", description: String(err), variant: "destructive" }); }
-    setMediaPendingFile(null); setMediaCaption(""); setIsSending(false);
-  }, [mediaPendingFile, mediaCaption, selectedId, uploadToStorage, isSending]);
+    setMediaPendingFile(null); setMediaCaption("" ); setIsSending(false);
+  }, [mediaPendingFile, mediaCaption, selectedId, uploadToStorage, isSending, persistOutgoingMessage]);
 
   const handleTogglePin = useCallback(async (convId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
