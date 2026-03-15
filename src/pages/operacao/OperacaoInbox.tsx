@@ -578,7 +578,7 @@ function OperacaoInboxInner() {
     const loadDbConversations = async () => {
       await initPersistence();
       const data = await fetchAllRows("conversations", "*", {
-      if (data && data.length > 0) {
+      order: { column: "last_message_at", ascending: false },
         // Render conversations IMMEDIATELY without waiting for preview backfill
         const mapConv = (c: any, fallbackPreview?: string) => {
           const cleanPhone = (c.phone || "").replace(/\D/g, "");
