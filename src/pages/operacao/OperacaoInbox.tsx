@@ -1402,25 +1402,29 @@ function OperacaoInboxInner() {
           const { data: urlData } = supabase.storage.from('audios').getPublicUrl(fileName);
           const audioUrl = urlData.publicUrl;
           const localUrl = URL.createObjectURL(blob);
-          await callZapiProxy("send-audio", { phone, audio: audioUrl });
-          const tempId = `temp_audio_${Date.now()}`;
-          lastMsgIdsRef.current.add(tempId);
+          const sendResult = await callZapiProxy("send-audio", { phone, audio: audioUrl });
+          const realId = sendResult?.messageId || sendResult?.id || `temp_audio_${Date.now()}`;
+          lastMsgIdsRef.current.add(realId);
           setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
-            id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
+            id: realId, conversation_id: selectedId, sender_type: "atendente" as const,
             message_type: "audio" as MsgType, text: "", status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: localUrl,
           }] }));
-          // Persist audio to DB
-          const convForAudio = conversations.find(c => c.id === selectedId);
-          if (convForAudio?.db_id) {
-            supabase.from("chat_messages").insert({ conversation_id: convForAudio.db_id, sender_type: "atendente", message_type: "audio", content: "", media_url: audioUrl, read_status: "sent", external_message_id: tempId }).then(() => {});
-          }
+
+          await persistOutgoingMessage({
+            conversationId: selectedId,
+            messageType: "audio",
+            text: "",
+            mediaUrl: audioUrl,
+            externalMessageId: realId,
+            createdAt: new Date().toISOString(),
+          });
         } catch (err) { toast({ title: "Erro ao enviar áudio", description: String(err), variant: "destructive" }); }
       };
       mediaRecorder.start();
       setIsRecording(true); setRecordingTime(0);
       recordingTimerRef.current = setInterval(() => { setRecordingTime(t => { if (t >= 119) { stopRecording(); return t; } return t + 1; }); }, 1000);
     } catch { toast({ title: "Erro", description: "Não foi possível acessar o microfone", variant: "destructive" }); }
-  }, [selectedId, uploadToStorage]);
+  }, [selectedId, uploadToStorage, persistOutgoingMessage]);
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") mediaRecorderRef.current.stop();
