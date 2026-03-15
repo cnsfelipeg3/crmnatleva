@@ -62,6 +62,9 @@ interface CuratedPhoto {
   selected: boolean;
   isCover: boolean;
   source: "google" | "manual";
+  description?: string;
+  room_type?: string | null;
+  category?: string;
 }
 
 export interface PlacesEnrichmentData {
@@ -111,12 +114,27 @@ const PHOTO_LABELS = [
 ];
 
 function guessPhotoLabel(index: number): string {
-  if (index === 0) return "Fachada";
-  if (index === 1) return "Lobby";
-  if (index <= 4) return `Quarto ${index}`;
-  if (index === 5) return "Piscina";
-  if (index === 6) return "Restaurante";
   return `Foto ${index + 1}`;
+}
+
+async function classifyPhotosWithAI(
+  photoUrls: string[],
+  hotelName: string,
+): Promise<{ label: string; description: string; room_type: string | null; category: string }[]> {
+  try {
+    const { data, error } = await supabase.functions.invoke("classify-hotel-photos", {
+      body: { photo_urls: photoUrls, hotel_name: hotelName },
+    });
+    if (error || !data?.photos) return [];
+    return (data.photos as any[]).map((p: any) => ({
+      label: p.label || "Foto",
+      description: p.description || "",
+      room_type: p.room_type || null,
+      category: p.category || "outro",
+    }));
+  } catch {
+    return [];
+  }
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
@@ -149,6 +167,7 @@ export default function PlacesSearchCard({
 
   // Curation state
   const [curatedPhotos, setCuratedPhotos] = useState<CuratedPhoto[]>([]);
+  const [classifyingPhotos, setClassifyingPhotos] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
@@ -456,11 +475,45 @@ export default function PlacesSearchCard({
               selected: i < 6,
               isCover: i === 0,
               source: "google" as const,
+              description: "",
+              room_type: null,
+              category: "outro",
             };
           })
         );
 
-        setCuratedPhotos(photosResolved.filter((photo) => Boolean(photo.url)));
+        const validPhotos = photosResolved.filter((photo) => Boolean(photo.url));
+        setCuratedPhotos(validPhotos);
+
+        // AI classification in background
+        if (validPhotos.length > 0) {
+          setClassifyingPhotos(true);
+          classifyPhotosWithAI(
+            validPhotos.map((p) => p.url),
+            data.name || "",
+          ).then((classifications) => {
+            if (classifications.length > 0) {
+              setCuratedPhotos((prev) =>
+                prev.map((photo, i) => {
+                  const cls = classifications[i];
+                  if (!cls) return photo;
+                  return {
+                    ...photo,
+                    label: cls.label || photo.label,
+                    description: cls.description || "",
+                    room_type: cls.room_type,
+                    category: cls.category || "outro",
+                  };
+                })
+              );
+              toast.success("Fotos classificadas por IA");
+            }
+          }).catch(() => {
+            // Keep fallback labels
+          }).finally(() => {
+            setClassifyingPhotos(false);
+          });
+        }
       } else {
         setCuratedPhotos([]);
       }
@@ -725,6 +778,11 @@ export default function PlacesSearchCard({
               <Badge variant="secondary" className="text-[9px] h-4">
                 {selectedCount} selecionada{selectedCount !== 1 ? "s" : ""}
               </Badge>
+              {classifyingPhotos && (
+                <Badge variant="outline" className="text-[9px] h-4 gap-1 animate-pulse">
+                  <Sparkles className="h-2.5 w-2.5" /> Classificando...
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-1.5">
               {selectedCount < 5 && (
@@ -826,7 +884,7 @@ export default function PlacesSearchCard({
                       </div>
                     </div>
 
-                    {/* Label */}
+                    {/* Label + Description */}
                     <div className="px-2 py-1.5 bg-card">
                       <input
                         type="text"
@@ -835,6 +893,16 @@ export default function PlacesSearchCard({
                         className="w-full text-[10px] font-medium text-foreground bg-transparent outline-none placeholder:text-muted-foreground/40 truncate"
                         placeholder="Legenda..."
                       />
+                      {photo.description && (
+                        <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-2 leading-tight">
+                          {photo.description}
+                        </p>
+                      )}
+                      {photo.room_type && (
+                        <Badge variant="secondary" className="text-[8px] h-3.5 px-1 mt-0.5">
+                          {photo.room_type}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 ))}
