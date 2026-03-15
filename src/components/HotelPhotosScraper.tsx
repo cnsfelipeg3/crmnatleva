@@ -461,10 +461,11 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
             </button>
 
             <img
-              src={lightboxPhoto.url}
+              src={getDisplayUrl(lightboxPhoto.url)}
               alt={lightboxPhoto.room_name || lightboxPhoto.alt || ""}
               className="max-w-full max-h-full object-contain select-none"
               draggable={false}
+              onError={() => handleImageError(lightboxPhoto.url)}
             />
 
             <button onClick={goNext}
