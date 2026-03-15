@@ -106,28 +106,33 @@ async function resolveHotelPhotosUrls(inputPhotos: HotelPhoto[]): Promise<HotelP
 }
 
 async function fetchProxiedImageBlob(imageUrl: string): Promise<Blob> {
-  const { data, error } = await supabase.functions.invoke("image-proxy", {
-    body: { imageUrl },
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!projectId || !publishableKey) {
+    throw new Error("Configuração do backend indisponível para proxy de imagem");
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const response = await fetch(`https://${projectId}.supabase.co/functions/v1/image-proxy`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: publishableKey,
+      ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    },
+    body: JSON.stringify({ imageUrl }),
   });
 
-  if (error) throw error;
-
-  if (typeof Blob !== "undefined" && data instanceof Blob) {
-    return data;
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(errorText || `Falha no proxy (${response.status})`);
   }
 
-  if (data instanceof ArrayBuffer) {
-    return new Blob([data], { type: "image/jpeg" });
-  }
-
-  if (data?.base64) {
-    const byteString = atob(data.base64);
-    const bytes = new Uint8Array(byteString.length);
-    for (let i = 0; i < byteString.length; i += 1) bytes[i] = byteString.charCodeAt(i);
-    return new Blob([bytes], { type: data.contentType || "image/jpeg" });
-  }
-
-  throw new Error("Resposta de proxy inválida");
+  return await response.blob();
 }
 
 export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry, onSelectPhotos }: Props) {
