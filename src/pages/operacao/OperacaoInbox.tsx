@@ -10,9 +10,7 @@ import {
   CheckCheck, Workflow, Brain, Loader2,
   Trash2, WifiOff, Pin, PinOff, Pencil, Wand2,
 } from "lucide-react";
-import { Menu } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { SidebarProvider, useSidebar } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -203,8 +201,6 @@ async function callZapiProxy(action: string, payload?: any) {
 // ════════════════════════════════════════
 function OperacaoInboxInner() {
   const isMobile = useIsMobile();
-  const { toggleSidebar } = useSidebar();
-
   // Inbox state
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -463,7 +459,7 @@ function OperacaoInboxInner() {
     return {
       id: msgId, conversation_id: convId,
       sender_type: fromMe ? "atendente" : "cliente",
-      message_type: msgType, text,
+      message_type: msgType, text: stripQuotes(text),
       media_url: mediaUrl,
       status: fromMe ? "sent" : "delivered",
       created_at: timestamp,
@@ -584,7 +580,7 @@ function OperacaoInboxInner() {
         conversation_id: conversationKey,
         sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
         message_type: normalizeDbMessageType(m.message_type),
-        text: m.text ?? m.content ?? "",
+        text: stripQuotes(m.text ?? m.content ?? ""),
         media_url: m.media_url || undefined,
         status: normalizeDbStatus(m.status ?? m.read_status),
         created_at: m.created_at,
@@ -630,7 +626,7 @@ function OperacaoInboxInner() {
                 conversation_id: selectedId,
                 sender_type: (m.from_me ? "atendente" : "cliente") as "cliente" | "atendente",
                 message_type: (m.type || "text") as MsgType,
-                text: m.text || mediaInfo.caption || "",
+                text: stripQuotes(m.text || mediaInfo.caption || ""),
                 media_url: mediaInfo.mediaUrl,
                 status: mapZapiStatus(m.status, m.from_me),
                 created_at: String(m.timestamp || m.created_at),
@@ -772,7 +768,7 @@ function OperacaoInboxInner() {
           id: msgId, conversation_id: waKey,
           sender_type: (n.from_me ? "atendente" : "cliente") as "cliente" | "atendente",
           message_type: (n.type || "text") as MsgType,
-          text: n.text || mediaInfo2.caption || "",
+          text: stripQuotes(n.text || mediaInfo2.caption || ""),
           media_url: mediaInfo2.mediaUrl,
           status: mapZapiStatus(n.status, n.from_me),
           created_at: n.timestamp || n.created_at,
@@ -1485,11 +1481,6 @@ function OperacaoInboxInner() {
             <div className="p-3 space-y-2 shrink-0">
               {/* ChatLive title row */}
               <div className="flex items-center gap-2 pb-1">
-                {isMobile && (
-                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={toggleSidebar}>
-                    <Menu className="h-4 w-4" />
-                  </Button>
-                )}
                 <MessageSquare className="h-3.5 w-3.5 text-primary" />
                 <span className="text-xs font-bold tracking-tight text-foreground">ChatLive</span>
                 {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0 h-4">{totalUnread}</Badge>}
@@ -1538,7 +1529,7 @@ function OperacaoInboxInner() {
                 {filteredConversations.map(conv => {
                   const stageInfo = getStageInfo(conv.stage);
                   const isSelected = conv.id === selectedId;
-                  const _previewRaw = (conv.last_message_preview || "").replace(/\n/g, " ").trim();
+                  const _previewRaw = stripQuotes((conv.last_message_preview || "").replace(/\n/g, " "));
                   const _previewTruncated = _previewRaw.length > 35 ? _previewRaw.slice(0, 35) + "…" : _previewRaw;
                   const _contactName = conv.contact_name || "Sem nome";
                   return (
@@ -1716,7 +1707,7 @@ function OperacaoInboxInner() {
                                     <p className={`text-[10px] font-bold ${msg.sender_type === "atendente" ? "text-primary-foreground/70" : "text-primary"}`}>
                                       {msg.quoted_msg.sender_type === "atendente" ? "Você" : selected?.contact_name || "Lead"}
                                     </p>
-                                    <p className={`text-xs truncate ${msg.sender_type === "atendente" ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{msg.quoted_msg.text}</p>
+                                    <p className={`text-xs truncate ${msg.sender_type === "atendente" ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{stripQuotes(msg.quoted_msg.text)}</p>
                                   </div>
                                 )}
                                 {/* Audio */}
@@ -1834,7 +1825,7 @@ function OperacaoInboxInner() {
                   <div className="px-4 py-2 border-t border-border bg-card/50 flex items-center gap-3">
                     <div className="flex-1 border-l-2 border-primary pl-3">
                       <p className="text-[10px] font-bold text-primary">{replyingTo.sender_type === "atendente" ? "Você" : selected?.contact_name || "Lead"}</p>
-                      <p className="text-xs text-muted-foreground truncate">{replyingTo.text || "📎 Mídia"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{stripQuotes(replyingTo.text) || "📎 Mídia"}</p>
                     </div>
                     <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setReplyingTo(null)}><X className="h-3 w-3" /></Button>
                   </div>
@@ -1846,7 +1837,7 @@ function OperacaoInboxInner() {
                     <Pencil className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                     <div className="flex-1 border-l-2 border-amber-500 pl-3">
                       <p className="text-[10px] font-bold text-amber-500">Editando mensagem</p>
-                      <p className="text-xs text-muted-foreground truncate">{editingMsg.text}</p>
+                      <p className="text-xs text-muted-foreground truncate">{stripQuotes(editingMsg.text)}</p>
                     </div>
                     <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setEditingMsg(null); setInputText(""); }}><X className="h-3 w-3" /></Button>
                   </div>
@@ -2059,9 +2050,5 @@ function OperacaoInboxInner() {
 }
 
 export default function OperacaoInbox() {
-  return (
-    <SidebarProvider>
-      <OperacaoInboxInner />
-    </SidebarProvider>
-  );
+  return <OperacaoInboxInner />;
 }
