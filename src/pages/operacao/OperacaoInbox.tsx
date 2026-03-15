@@ -645,46 +645,25 @@ function OperacaoInboxInner() {
             ...allCandidateConversations.map(c => c.id),
           ]));
 
-          let allConversationIds: string[] = [];
-          if (candidateIds.length > 0) {
-            // Find which conversation IDs actually have messages
-            const [{ data: legacyCheck }, { data: modernCheck }] = await Promise.all([
-              supabase
-                .from("messages")
-                .select("conversation_id")
-                .in("conversation_id", candidateIds)
-                .limit(50),
-              supabase
-                .from("chat_messages")
-                .select("conversation_id")
-                .in("conversation_id", candidateIds)
-                .limit(50),
-            ]);
-            allConversationIds = Array.from(new Set([
-              ...(legacyCheck || []).map((r: any) => r.conversation_id),
-              ...(modernCheck || []).map((r: any) => r.conversation_id),
-            ]));
-            // If none found with messages, use db_id as fallback
-            if (allConversationIds.length === 0 && selected?.db_id) {
-              allConversationIds = [selected.db_id];
-            }
-          }
+          const allConversationIds = candidateIds.length > 0
+            ? candidateIds
+            : (selected?.db_id ? [selected.db_id] : []);
 
           let dbMsgs: Message[] = [];
           if (allConversationIds.length > 0) {
-            // Query messages from ALL matching conversation IDs
+            // Query most recent messages first (not oldest), then sort below for UI chronology
             const [legacyResp, modernResp] = await Promise.all([
               supabase
                 .from("messages")
                 .select("*")
                 .in("conversation_id", allConversationIds)
-                .order("created_at", { ascending: true })
+                .order("created_at", { ascending: false })
                 .limit(1000),
               supabase
                 .from("chat_messages")
                 .select("*")
                 .in("conversation_id", allConversationIds)
-                .order("created_at", { ascending: true })
+                .order("created_at", { ascending: false })
                 .limit(1000),
             ]);
 
