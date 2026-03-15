@@ -177,18 +177,16 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMes
   ]);
 }
 
-type SearchProvider = "google";
-
 /* ═══ Component ═══ */
 export default function PlacesSearchCard({
   initialQuery = "",
   destinationContext,
+  entityType = "destination",
   onEnrich,
   onCancel,
   className,
 }: PlacesSearchCardProps) {
-  // Provider state
-  const [provider, setProvider] = useState<SearchProvider>("google");
+  const minQueryLength = entityType === "hotel" ? 3 : 2;
 
   // Search state
   const [query, setQuery] = useState(initialQuery);
