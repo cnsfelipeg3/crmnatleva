@@ -114,6 +114,9 @@ export default function FlightCard({ segment: seg, index = 0 }: FlightCardProps)
           <div className="flex-1 text-right">
             <p className="text-2xl sm:text-3xl font-bold text-foreground tracking-tighter font-mono">{seg.destination_iata}</p>
             <p className="text-xs text-muted-foreground mt-1">{iataToLabel(seg.destination_iata)}</p>
+            {seg.arrival_terminal && (
+              <p className="text-[10px] text-muted-foreground/70 mt-0.5">Terminal {seg.arrival_terminal}</p>
+            )}
             <div className="flex items-center gap-2 mt-2 justify-end">
               {seg.arrival_date && seg.arrival_date !== seg.departure_date && (
                 <span className="text-xs text-muted-foreground">{fmtDate(seg.arrival_date)}</span>
