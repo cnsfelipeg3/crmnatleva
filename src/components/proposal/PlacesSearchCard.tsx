@@ -17,7 +17,7 @@ import {
   Search, Loader2, Star, MapPin, Phone, Globe, Image as ImageIcon,
   X, ChevronLeft, ChevronRight, RotateCcw, Check, Camera, Upload,
   GripVertical, Eye, Crown, CheckSquare, Square, Maximize2,
-  Info, Sparkles, FolderOpen, Save, Building2, Map,
+  Info, Sparkles, FolderOpen, Save, Building2, Map as MapIcon,
 } from "lucide-react";
 
 /* ═══ Types ═══ */
