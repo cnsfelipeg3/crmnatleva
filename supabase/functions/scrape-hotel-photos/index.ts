@@ -168,7 +168,15 @@ Deno.serve(async (req) => {
       }));
 
     const roomNames = [...new Set(photos.map(p => p.section_name).filter(Boolean))];
+    
+    // Build section_details from collected section info
+    const sectionDetails: Record<string, { description: string; details: Record<string, string>; amenities: string[] }> = {};
+    for (const [name, info] of collection.sections) {
+      sectionDetails[name] = { description: info.description, details: info.details, amenities: info.amenities };
+    }
+    
     console.log(`✅ Returning ${photos.length} HD photos with ${roomNames.length} sections:`, roomNames);
+    console.log(`📝 Section details for ${Object.keys(sectionDetails).length} sections`);
 
     return new Response(
       JSON.stringify({
@@ -176,6 +184,7 @@ Deno.serve(async (req) => {
         photos,
         source_url: mainUrl || "",
         room_names: roomNames,
+        section_details: sectionDetails,
         pages_scraped: pagesToScrape.length,
         total_site_pages: allSiteUrls.length,
       }),
