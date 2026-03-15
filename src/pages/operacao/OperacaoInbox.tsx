@@ -1076,19 +1076,12 @@ function OperacaoInboxInner() {
       try {
         const data = await callZapiProxy("get-chats");
         const chats = Array.isArray(data) ? data : [];
-        const phoneList = chats.map((c: any) => (c.phone || c.id || "").replace(/\D/g, "")).filter(Boolean);
-        const knownPhones = new Set<string>();
-        if (phoneList.length > 0) {
-          const { data: dbConvs } = await supabase.from("conversations").select("phone").in("phone", phoneList);
-          for (const c of dbConvs || []) knownPhones.add(c.phone || "");
-        }
         const newConvs: Conversation[] = [];
         for (const chat of chats) {
           const phone = chat.phone || chat.id || "";
           if (!phone || phone.includes("@g.us") || phone === "status@broadcast") continue;
           const cleanPhone = phone.replace(/\D/g, "");
           if (!cleanPhone) continue;
-          if (!knownPhones.has(cleanPhone)) continue;
           const convId = `wa_${cleanPhone}`;
           const contactName = chat.name || chat.chatName || chat.contact?.name || formatPhoneDisplay(cleanPhone);
           let lastMsgTime: string | null = null;
@@ -1111,22 +1104,47 @@ function OperacaoInboxInner() {
         }
         // Save any inline chat photos to cache
         if (newConvs.length > 0) saveProfilePicsCache();
-        // Backfill empty previews from zapi_messages
-        for (const conv of newConvs) {
-          if (!conv.last_message_preview && conv.phone) {
+        // Backfill previews from zapi_messages for ALL conversations (not just empty ones)
+        const PREVIEW_BATCH = 8;
+        for (let bi = 0; bi < newConvs.length; bi += PREVIEW_BATCH) {
+          const batch = newConvs.slice(bi, bi + PREVIEW_BATCH);
+          await Promise.allSettled(batch.map(async (conv) => {
+            if (!conv.phone) return;
             try {
               const { data: lastZapi } = await supabase.from("zapi_messages" as any)
-                .select("text, type, timestamp")
+                .select("text, type, timestamp, from_me")
                 .in("phone", [conv.phone, `${conv.phone}@c.us`])
                 .order("timestamp", { ascending: false })
                 .limit(1)
                 .maybeSingle();
               if (lastZapi) {
-                conv.last_message_preview = (lastZapi as any).text || `📎 ${(lastZapi as any).type || "mensagem"}`;
-                if ((lastZapi as any).timestamp) conv.last_message_at = toIsoTimestamp((lastZapi as any).timestamp);
+                const zapiPreview = (lastZapi as any).text || `📎 ${(lastZapi as any).type || "mensagem"}`;
+                const zapiTime = (lastZapi as any).timestamp ? toIsoTimestamp((lastZapi as any).timestamp) : null;
+                // Use zapi preview if it's newer or current is empty
+                const currentTime = conv.last_message_at ? new Date(conv.last_message_at).getTime() : 0;
+                const zapiTimeMs = zapiTime ? new Date(zapiTime).getTime() : 0;
+                if (!conv.last_message_preview || zapiTimeMs >= currentTime) {
+                  conv.last_message_preview = zapiPreview;
+                  if (zapiTime && zapiTimeMs > currentTime) conv.last_message_at = zapiTime;
+                }
               }
             } catch {}
-          }
+          }));
+        }
+        // Also check chat_messages / messages tables for conversations that still lack preview
+        for (let bi = 0; bi < newConvs.length; bi += PREVIEW_BATCH) {
+          const batch = newConvs.slice(bi, bi + PREVIEW_BATCH).filter(c => !c.last_message_preview);
+          if (batch.length === 0) continue;
+          await Promise.allSettled(batch.map(async (conv) => {
+            // Find DB conversation by phone
+            const { data: dbConvMatch } = await supabase.from("conversations").select("id").eq("phone", conv.phone).limit(1).maybeSingle();
+            if (!dbConvMatch) return;
+            const { data: lastChat } = await supabase.from("chat_messages").select("content, message_type, created_at").eq("conversation_id", dbConvMatch.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+            if (lastChat) {
+              conv.last_message_preview = (lastChat as any).content || `📎 ${(lastChat as any).message_type}`;
+              conv.last_message_at = (lastChat as any).created_at || conv.last_message_at;
+            }
+          }));
         }
         if (newConvs.length > 0) {
           const deduped = new Map<string, Conversation>();
