@@ -92,8 +92,44 @@ Deno.serve(async (req) => {
 
     // ── Step 3: MAP the entire site to discover ALL pages ──
     console.log("🗺️ Mapping entire hotel website...");
-    const allSiteUrls = await mapEntireSite(mainUrl, FIRECRAWL_API_KEY);
+    let allSiteUrls = await mapEntireSite(mainUrl, FIRECRAWL_API_KEY);
     console.log(`📄 Found ${allSiteUrls.length} pages on the site`);
+
+    // ── Step 3b: If map returned 0 pages, generate common hotel page URLs manually ──
+    if (allSiteUrls.length === 0 && mainUrl) {
+      console.log("⚠️ Map returned 0 pages — generating common hotel page paths...");
+      const commonPaths = [
+        "/rooms", "/suites", "/accommodation", "/accommodations",
+        "/dining", "/restaurant", "/restaurants",
+        "/spa", "/wellness",
+        "/gallery", "/photos", "/photo-gallery", "/media",
+        "/facilities", "/amenities", "/experiences",
+        "/pool", "/fitness", "/meetings", "/events",
+        // Japanese
+        "/guest-rooms", "/guestrooms",
+        // Multi-lang
+        "/en/rooms", "/en/dining", "/en/spa", "/en/gallery",
+        "/en/accommodation", "/en/facilities", "/en/experiences",
+      ];
+      const base = new URL(mainUrl);
+      const generatedUrls = commonPaths.map(p => base.origin + p);
+      // Test which URLs exist by trying to fetch HEAD
+      const validUrls: string[] = [mainUrl];
+      const headChecks = await Promise.allSettled(
+        generatedUrls.map(async (url) => {
+          try {
+            const resp = await fetch(url, { method: "HEAD", redirect: "follow", signal: AbortSignal.timeout(5000) });
+            if (resp.ok || resp.status === 301 || resp.status === 302) return url;
+          } catch { /* skip */ }
+          return null;
+        })
+      );
+      for (const result of headChecks) {
+        if (result.status === "fulfilled" && result.value) validUrls.push(result.value);
+      }
+      allSiteUrls = validUrls;
+      console.log(`📄 Generated ${allSiteUrls.length} reachable URLs from common paths`);
+    }
 
     // ── Step 4: Categorize pages by relevance ──
     const categorizedPages = categorizePages(allSiteUrls, mainUrl);
@@ -102,19 +138,19 @@ Deno.serve(async (req) => {
     console.log(`  Other pages: ${categorizedPages.other.length}`);
 
     // ── Step 5: Scrape ALL relevant pages (priority first, then gallery, then others) ──
-    // Priority = rooms, suites, accommodation pages
-    // Gallery = gallery, photos, media pages  
-    // Other = restaurant, spa, facilities, etc.
-
     const pagesToScrape = [
       ...categorizedPages.priority,
       ...categorizedPages.gallery,
       ...categorizedPages.other,
-    ].slice(0, 30); // Max 30 pages to stay within limits
+    ].slice(0, 30);
+
+    // If no categorized pages found, at least scrape the main URL
+    if (pagesToScrape.length === 0 && mainUrl) {
+      pagesToScrape.push({ url: mainUrl, inferredSection: "" });
+    }
 
     console.log(`🕷️ Scraping ${pagesToScrape.length} pages for high-res photos...`);
 
-    // Scrape pages in parallel batches of 3
     const batchSize = 3;
     for (let i = 0; i < pagesToScrape.length; i += batchSize) {
       const batch = pagesToScrape.slice(i, i + batchSize);
