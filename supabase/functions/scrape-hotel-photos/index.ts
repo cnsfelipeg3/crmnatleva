@@ -546,6 +546,148 @@ function extractFromStructuredContainers(html: string, sourceUrl: string, collec
   }
 }
 
+/**
+ * Extract text descriptions and details from markdown content, associating them with known sections.
+ * Parses headings + following paragraphs for descriptions, bullet lists for amenities,
+ * and key-value patterns for details (size, capacity, etc.)
+ */
+function extractSectionDescriptions(markdown: string, collection: ImageCollection) {
+  if (!markdown || markdown.length < 50) return;
+
+  // Split markdown by headings
+  const lines = markdown.split("\n");
+  let currentSection = "";
+  let currentText: string[] = [];
+  let currentAmenities: string[] = [];
+  let currentDetails: Record<string, string> = {};
+
+  const flushSection = () => {
+    if (!currentSection || currentSection.length < 3) return;
+    
+    // Only store if we have photos for this section or a close match
+    const sectionKey = findMatchingSection(currentSection, collection);
+    if (!sectionKey) return;
+
+    const desc = currentText
+      .filter(t => t.length > 15 && !isGenericHeading(t.toLowerCase()))
+      .slice(0, 3)
+      .join(" ")
+      .substring(0, 500);
+
+    const existing = collection.sections.get(sectionKey);
+    if (existing) {
+      if (!existing.description && desc) existing.description = desc;
+      if (currentAmenities.length > 0) existing.amenities = [...new Set([...existing.amenities, ...currentAmenities])];
+      Object.assign(existing.details, currentDetails);
+    } else {
+      collection.sections.set(sectionKey, {
+        name: sectionKey,
+        description: desc,
+        details: { ...currentDetails },
+        amenities: [...currentAmenities],
+      });
+    }
+  };
+
+  for (const line of lines) {
+    const headingMatch = line.match(/^#{1,4}\s+(.+)/);
+    if (headingMatch) {
+      flushSection();
+      currentSection = headingMatch[1].replace(/\*+/g, "").trim();
+      currentText = [];
+      currentAmenities = [];
+      currentDetails = {};
+      continue;
+    }
+
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // Bullet list items → amenities
+    if (trimmed.startsWith("- ") || trimmed.startsWith("* ") || trimmed.startsWith("• ")) {
+      const item = trimmed.replace(/^[-*•]\s+/, "").trim();
+      if (item.length > 2 && item.length < 80) {
+        currentAmenities.push(item);
+      }
+      continue;
+    }
+
+    // Key-value patterns: "Tamanho: 45 m²", "Capacidade: 2 hóspedes"
+    const kvMatch = trimmed.match(/^([A-Za-zÀ-ÿ\s]{3,25})[:：]\s*(.{2,80})$/);
+    if (kvMatch) {
+      const key = kvMatch[1].trim();
+      const val = kvMatch[2].trim();
+      const keyLower = key.toLowerCase();
+      // Filter relevant keys
+      if (/taman|size|m²|sqm|metr|área|area|dimensi/i.test(keyLower + val)) {
+        currentDetails["Tamanho"] = val;
+      } else if (/cama|bed|lit/i.test(keyLower)) {
+        currentDetails["Cama"] = val;
+      } else if (/capaci|guest|hóspede|ospiti|person|ocupa/i.test(keyLower)) {
+        currentDetails["Capacidade"] = val;
+      } else if (/vista|view|panoram|affaccio/i.test(keyLower)) {
+        currentDetails["Vista"] = val;
+      } else if (/andar|floor|piano/i.test(keyLower)) {
+        currentDetails["Andar"] = val;
+      } else if (key.length >= 3) {
+        currentDetails[key] = val;
+      }
+      continue;
+    }
+
+    // Regular paragraph text → description
+    if (trimmed.length > 15 && !trimmed.startsWith("[") && !trimmed.startsWith("!")) {
+      currentText.push(trimmed.replace(/\*+/g, "").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1"));
+    }
+
+    // Also look for size patterns inline: "45 m²", "45 sqm", "484 sq ft"
+    const sizeMatch = trimmed.match(/(\d{2,4})\s*(?:m²|m2|sqm|sq\.?\s*(?:m|ft|feet))/i);
+    if (sizeMatch && !currentDetails["Tamanho"]) {
+      const unit = trimmed.toLowerCase().includes("ft") || trimmed.toLowerCase().includes("feet") ? "sq ft" : "m²";
+      currentDetails["Tamanho"] = `${sizeMatch[1]} ${unit}`;
+    }
+
+    // Look for guest count patterns: "up to 3 guests", "até 2 hóspedes"
+    const guestMatch = trimmed.match(/(?:up to|até|max|maximum|fino a)\s*(\d+)\s*(?:guest|hóspede|ospiti|person|adulto|people)/i);
+    if (guestMatch && !currentDetails["Capacidade"]) {
+      currentDetails["Capacidade"] = `Até ${guestMatch[1]} hóspedes`;
+    }
+  }
+  flushSection();
+}
+
+/**
+ * Find a matching section name in the collection for a given heading.
+ */
+function findMatchingSection(heading: string, collection: ImageCollection): string | null {
+  const headingNorm = normalizeStr(heading);
+  
+  // Direct match with photo section names
+  const sectionNames = new Set(collection.photos.map(p => p.section_name).filter(Boolean));
+  for (const name of sectionNames) {
+    if (normalizeStr(name) === headingNorm) return name;
+  }
+  
+  // Partial match
+  for (const name of sectionNames) {
+    const nameNorm = normalizeStr(name);
+    if (nameNorm.includes(headingNorm) || headingNorm.includes(nameNorm)) return name;
+  }
+  
+  // Also check existing sections map
+  for (const [key] of collection.sections) {
+    if (normalizeStr(key) === headingNorm) return key;
+  }
+  
+  // If heading looks like a room/facility name, store it anyway
+  const lower = heading.toLowerCase();
+  if (/room|suite|quarto|camera|chambre|deluxe|superior|standard|penthouse|presidential|royal|spa|pool|piscina|restaurante|restaurant|bar|lounge|gym|fitness|garden|terrace|rooftop/i.test(lower)) {
+    return heading;
+  }
+  
+  return null;
+}
+
 
 
 // ═══════════════════════════════════════════════
