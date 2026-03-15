@@ -229,10 +229,10 @@ export default function PlacesSearchCard({
 
     const normalizedQuery = destinationContext ? `${q} ${destinationContext}` : q;
 
-    // If Amadeus provider is selected, use Amadeus-only search
+    // If Amadeus provider is selected, use Amadeus-only search (don't append destinationContext)
     if (provider === "amadeus") {
       try {
-        const amadeusResults = await searchAmadeus(normalizedQuery);
+        const amadeusResults = await searchAmadeus(q);
         safeSet(() => {
           setResults(amadeusResults);
           setError(amadeusResults.length === 0 ? "Nenhum hotel encontrado no Amadeus." : null);
