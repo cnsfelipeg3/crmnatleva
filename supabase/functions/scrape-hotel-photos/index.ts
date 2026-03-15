@@ -86,15 +86,13 @@ Deno.serve(async (req) => {
     const roomDetails = await scrapeRoomsPages(mainUrl, hotel_name, locationStr, images, FIRECRAWL_API_KEY, officialDomain);
     console.log(`Extracted room details for ${Object.keys(roomDetails).length} room types`);
 
-    // If we got very few images from official site, also try other results but TAG them
-    if (images.urls.length < 5) {
-      console.log("Few images from official site, checking other results...");
+    // If we got few images from official site, also collect from other results and let AI verify
+    if (images.urls.length < 10) {
+      console.log(`Only ${images.urls.length} images from official site, collecting from other results...`);
       for (const result of results) {
         if (result === officialResult) continue;
-        // Only collect if the result looks related to the target hotel
-        if (isResultRelevant(result, hotel_name)) {
-          collectImagesFromResult(result, images, null); // no domain filter for fallback
-        }
+        // Collect images without domain filter — AI verification will reject wrong-hotel photos
+        collectImagesFromResult(result, images, null);
       }
     }
 
@@ -396,6 +394,17 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
     "tripadvisor.com", "agoda.com", "priceline.com", "hotelscombined.com",
     "google.com", "bing.com", "wikipedia.org", "facebook.com", "instagram.com",
     "decolar.com", "hurb.com", "cvc.com.br",
+    // Hotel directory / aggregator sites that list MULTIPLE hotels
+    "lemeshotel.com", "hoteis.com", "hotel.com.br", "guiadoturismo.com",
+    "melhoreshoteis.com", "hotelurbano.com", "zarpo.com", "omnibees.com",
+    "hotelsdotcom.com", "oyster.com", "hotel.info", "hrs.com",
+    "laterooms.com", "hostelworld.com", "bestday.com",
+  ];
+
+  // Detect generic hotel directory patterns
+  const directoryPatterns = [
+    /hotel(?:is|s|eiro|eira)?\.com/i,       // generic "hotel(s/is).com" sites
+    /guia|directory|listings|comparador/i,    // directory keywords in domain
   ];
 
   // Score each result
@@ -409,6 +418,9 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
 
     // Skip aggregators
     if (aggregators.some(a => domain.includes(a))) continue;
+
+    // Skip generic hotel directory sites
+    if (directoryPatterns.some(p => p.test(domain))) continue;
 
     let score = 0;
 
@@ -424,11 +436,20 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
 
     // Hotel chain official domains get bonus
     const chainDomains = [
-      "accor.com", "hilton.com", "marriott.com", "ihg.com", "hyatt.com",
+      "accor.com", "all.accor.com", "hilton.com", "marriott.com", "ihg.com", "hyatt.com",
       "pullman-hotels.com", "sofitel.com", "novotel.com", "ibis.com",
       "starwoodhotels.com", "wyndham.com", "radisson.com",
+      "ahstatic.com", // Accor CDN
     ];
-    if (chainDomains.some(c => domain.includes(c))) score += 2;
+    if (chainDomains.some(c => domain.includes(c))) score += 4;
+
+    // Bonus for domains that look like the hotel's own site (contain brand + city)
+    const brandWords = ["pullman", "sofitel", "novotel", "hilton", "marriott", "hyatt", "sheraton", "westin", "fairmont"];
+    for (const brand of brandWords) {
+      if (nameNorm.includes(brand) && domainNorm.includes(brand)) {
+        score += 6; // Strong signal: domain matches the hotel brand
+      }
+    }
 
     // Penalize if domain contains a DIFFERENT hotel name
     const otherHotels = ["ibis", "novotel", "mercure", "sofitel", "fairmont", "mgallery"];
@@ -439,6 +460,11 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
         score -= 10; // Heavy penalty for wrong hotel brand in URL
       }
     }
+
+    // Penalize sites that list multiple hotels (check if content mentions "outros hotéis", multiple hotel names, etc.)
+    const contentSample = (result.markdown || "").substring(0, 2000).toLowerCase();
+    const multiHotelSignals = ["outros hotéis", "hotéis em", "lista de hotéis", "compare hotéis", "veja também"];
+    if (multiHotelSignals.some(s => contentSample.includes(s))) score -= 5;
 
     if (score > bestScore) {
       bestScore = score;
@@ -500,8 +526,12 @@ function isFromDomain(imageUrl: string, sourceUrl: string, officialDomain: strin
   const imgDomain = extractDomain(imageUrl.startsWith("http") ? imageUrl : `https://${officialDomain}${imageUrl}`);
   if (imgDomain.includes(officialDomain) || officialDomain.includes(imgDomain)) return true;
 
-  // CDNs serving the hotel's images (common patterns)
-  const allowedCDNs = ["cloudinary", "akamai", "cloudfront", "amazonaws", "imgix", "ctfassets", "bstatic", "trvl-media"];
+  // CDNs serving hotel images (common patterns) — always allow
+  const allowedCDNs = [
+    "cloudinary", "akamai", "cloudfront", "amazonaws", "imgix", "ctfassets",
+    "bstatic", "trvl-media", "ahstatic", "fastbooking", "accor",
+    "hilton.com/im/", "marriott.com/content", "wyndham", "ihg.com",
+  ];
   if (allowedCDNs.some(cdn => imageUrl.toLowerCase().includes(cdn))) return true;
 
   return false;
