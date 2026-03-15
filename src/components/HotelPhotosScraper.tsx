@@ -377,12 +377,30 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                           <span className="text-[10px] text-muted-foreground">👥 {roomPhotos[0].room_details.max_guests}</span>
                         )}
                       </div>
-                      <PhotoGrid photos={roomPhotos} selectedPhotos={selectedPhotos} toggleSelect={toggleSelect} openLightbox={openLightbox} />
+                      <PhotoGrid
+                        photos={roomPhotos}
+                        selectedPhotos={selectedPhotos}
+                        toggleSelect={toggleSelect}
+                        openLightbox={openLightbox}
+                        failedUrls={failedImageUrls}
+                        resolvingUrls={resolvingImageUrls}
+                        getDisplayUrl={getDisplayUrl}
+                        onImageError={handleImageError}
+                      />
                     </div>
                   ))}
                 </div>
               ) : (
-                <PhotoGrid photos={catPhotos} selectedPhotos={selectedPhotos} toggleSelect={toggleSelect} openLightbox={openLightbox} />
+                <PhotoGrid
+                  photos={catPhotos}
+                  selectedPhotos={selectedPhotos}
+                  toggleSelect={toggleSelect}
+                  openLightbox={openLightbox}
+                  failedUrls={failedImageUrls}
+                  resolvingUrls={resolvingImageUrls}
+                  getDisplayUrl={getDisplayUrl}
+                  onImageError={handleImageError}
+                />
               )}
             </div>
           );
