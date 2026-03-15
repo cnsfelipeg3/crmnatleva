@@ -819,6 +819,11 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
                             {item.subtitle && (
                               <p className="text-[10px] text-muted-foreground truncate mt-0.5">{item.subtitle}</p>
                             )}
+                            {item.details["Localizador"] && (
+                              <span className="text-[10px] text-primary/80 font-mono font-semibold flex items-center gap-1 mt-0.5">
+                                📋 {item.details["Localizador"]}
+                              </span>
+                            )}
                             {item.time && (
                               <span className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-0.5">
                                 <Clock className="h-2.5 w-2.5" /> {item.time}
