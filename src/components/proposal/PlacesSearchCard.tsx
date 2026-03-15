@@ -1026,10 +1026,10 @@ export default function PlacesSearchCard({
           </div>
           <div>
             <span className="text-sm font-bold text-foreground block">
-              {provider === "google" ? "Buscar no Google Places" : "Buscar no Amadeus"}
+              Buscar no Google Places
             </span>
             <span className="text-[10px] text-muted-foreground">
-              {provider === "google" ? "Hotéis, atrações, restaurantes" : "Base global de hotéis Amadeus"}
+              Hotéis, atrações, restaurantes
             </span>
           </div>
         </div>
