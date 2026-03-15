@@ -88,7 +88,7 @@ Deno.serve(async (req) => {
     const officialDomain = mainUrl ? new URL(mainUrl).hostname : null;
     console.log(`🏨 Official domain: ${officialDomain || "none"} → ${mainUrl}`);
 
-    const collection: ImageCollection = { photos: [], seen: new Set() };
+    const collection: ImageCollection = { photos: [], seen: new Set(), sections: new Map() };
 
     // ── Step 3: MAP the entire site to discover ALL pages ──
     console.log("🗺️ Mapping entire hotel website...");
