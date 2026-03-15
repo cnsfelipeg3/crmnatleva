@@ -1907,7 +1907,22 @@ function OperacaoInboxInner() {
                           variant="ghost"
                           size="sm"
                           className="h-8 gap-1.5 text-[10px] px-2"
-                          disabled={reloadingMessages}
+                          disabled={rebuildingHistoryAll}
+                          onClick={handleRebuildAllHistory}
+                        >
+                          <RefreshCw className={`h-3.5 w-3.5 ${rebuildingHistoryAll ? "animate-spin" : ""}`} />
+                          {!isMobile && "Reconstruir Histórico"}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Reimportar todo o histórico do WhatsApp</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1.5 text-[10px] px-2"
+                          disabled={reloadingMessages || rebuildingHistoryAll}
                           onClick={handleReloadMessages}
                         >
                           <RefreshCw className={`h-3.5 w-3.5 ${reloadingMessages ? "animate-spin" : ""}`} />
