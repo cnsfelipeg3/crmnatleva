@@ -62,6 +62,49 @@ const categoryLabels: Record<string, string> = {
   outro: "Outros Espaços",
 };
 
+function isGoogleJsPhotoServiceUrl(value: string): boolean {
+  return /maps\.googleapis\.com\/maps\/api\/place\/js\/PhotoService\.GetPhoto/i.test(value);
+}
+
+function extractGoogleJsPhotoReference(value: string): string | null {
+  const match = value.match(/[?&]1s([^&]+)/i);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
+async function resolveGooglePhotoUrl(url: string): Promise<string> {
+  if (!url || !isGoogleJsPhotoServiceUrl(url)) return url;
+
+  const photoReference = extractGoogleJsPhotoReference(url);
+  if (!photoReference) return url;
+
+  try {
+    const { data, error } = await supabase.functions.invoke("places-search", {
+      body: { action: "photo", photo_reference: photoReference, max_width: 1200 },
+    });
+
+    if (error || data?.error || !data?.url) return url;
+    return data.url;
+  } catch {
+    return url;
+  }
+}
+
+async function resolveHotelPhotosUrls(inputPhotos: HotelPhoto[]): Promise<HotelPhoto[]> {
+  const cache = new Map<string, string>();
+
+  return Promise.all(
+    inputPhotos.map(async (photo) => {
+      if (cache.has(photo.url)) {
+        return { ...photo, url: cache.get(photo.url) || photo.url };
+      }
+
+      const resolvedUrl = await resolveGooglePhotoUrl(photo.url);
+      cache.set(photo.url, resolvedUrl);
+      return { ...photo, url: resolvedUrl };
+    })
+  );
+}
+
 export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry, onSelectPhotos }: Props) {
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState<HotelPhoto[]>([]);
