@@ -433,12 +433,25 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
         const to = L.latLng(d[0], d[1]);
         const curvedPts = getCurvedPoints(from, to);
 
+        // Shadow line for depth
+        const shadowLine = L.polyline(curvedPts, {
+          color: isReturn ? "#f59e0b" : "#10b981",
+          weight: 6,
+          opacity: 0.12,
+          smoothFactor: 2,
+          lineCap: "round",
+          lineJoin: "round",
+        });
+        lg.addLayer(shadowLine);
+
         const polyline = L.polyline(curvedPts, {
           color: isReturn ? "#f59e0b" : "#34d399",
-          weight: 3,
-          opacity: 0.7,
-          dashArray: isReturn ? "12 8" : undefined,
-          smoothFactor: 1,
+          weight: 2.5,
+          opacity: isReturn ? 0.65 : 0.85,
+          dashArray: isReturn ? "8 6" : undefined,
+          smoothFactor: 2,
+          lineCap: "round",
+          lineJoin: "round",
         });
         lg.addLayer(polyline);
 
