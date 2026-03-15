@@ -248,6 +248,91 @@ serve(async (req) => {
       });
     }
 
+    if (action === "hotel_search") {
+      const { keyword, cityCode, latitude, longitude } = params;
+      
+      // Strategy 1: Search by keyword (Hotel Name Autocomplete)
+      if (keyword && keyword.length >= 2) {
+        const searchParams: Record<string, string> = {
+          keyword: keyword,
+          max: "10",
+        };
+        if (cityCode) searchParams.subType = "HOTEL_LEISURE,HOTEL_GDS";
+        
+        try {
+          const data = await amadeusGet("/v1/reference-data/locations/hotel", searchParams);
+          const results = (data.data || []).map((h: any) => ({
+            hotelId: h.id || "",
+            name: h.name || "",
+            iataCode: h.iataCode || "",
+            subType: h.subType || "",
+            address: h.address ? [h.address.lines?.join(", "), h.address.cityName, h.address.countryCode].filter(Boolean).join(", ") : "",
+            location: h.geoCode ? { lat: h.geoCode.latitude, lng: h.geoCode.longitude } : null,
+          }));
+          return new Response(JSON.stringify({ data: results }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } catch (err) {
+          console.error("Amadeus hotel keyword search failed:", err);
+        }
+      }
+
+      // Strategy 2: Search by geocode
+      if (latitude && longitude) {
+        try {
+          const data = await amadeusGet("/v1/reference-data/locations/hotels/by-geocode", {
+            latitude: String(latitude),
+            longitude: String(longitude),
+            radius: "20",
+            radiusUnit: "KM",
+            hotelSource: "ALL",
+          });
+          const results = (data.data || []).slice(0, 15).map((h: any) => ({
+            hotelId: h.hotelId || "",
+            name: h.name || "",
+            iataCode: h.iataCode || "",
+            chainCode: h.chainCode || "",
+            address: h.address ? [h.address.countryCode].filter(Boolean).join(", ") : "",
+            location: h.geoCode ? { lat: h.geoCode.latitude, lng: h.geoCode.longitude } : null,
+            distance: h.distance ? `${h.distance.value} ${h.distance.unit}` : null,
+          }));
+          return new Response(JSON.stringify({ data: results }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } catch (err) {
+          console.error("Amadeus hotel geocode search failed:", err);
+        }
+      }
+
+      // Strategy 3: Search by city code
+      if (cityCode) {
+        try {
+          const data = await amadeusGet("/v1/reference-data/locations/hotels/by-city", {
+            cityCode: cityCode.toUpperCase(),
+            hotelSource: "ALL",
+          });
+          const results = (data.data || []).slice(0, 15).map((h: any) => ({
+            hotelId: h.hotelId || "",
+            name: h.name || "",
+            iataCode: h.iataCode || "",
+            chainCode: h.chainCode || "",
+            address: h.address ? [h.address.countryCode].filter(Boolean).join(", ") : "",
+            location: h.geoCode ? { lat: h.geoCode.latitude, lng: h.geoCode.longitude } : null,
+            distance: h.distance ? `${h.distance.value} ${h.distance.unit}` : null,
+          }));
+          return new Response(JSON.stringify({ data: results }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } catch (err) {
+          console.error("Amadeus hotel city search failed:", err);
+        }
+      }
+
+      return new Response(JSON.stringify({ data: [] }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (action === "flight_schedule") {
       // Flight Offers Search - but we only extract schedule info, NO prices
       const { origin, destination, departureDate, returnDate, airline, flightNumber } = params;
