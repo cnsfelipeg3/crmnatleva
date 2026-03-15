@@ -105,7 +105,7 @@ async function resolveHotelPhotosUrls(inputPhotos: HotelPhoto[]): Promise<HotelP
   );
 }
 
-async function fetchProxiedImageBlob(imageUrl: string, refererUrl?: string): Promise<Blob> {
+async function fetchProxiedImageUrl(imageUrl: string, refererUrl?: string): Promise<string> {
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
@@ -132,7 +132,16 @@ async function fetchProxiedImageBlob(imageUrl: string, refererUrl?: string): Pro
     throw new Error(errorText || `Falha no proxy (${response.status})`);
   }
 
-  return await response.blob();
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    const data = await response.json();
+    if (data.publicUrl) return data.publicUrl;
+    throw new Error("Resposta inesperada do proxy");
+  }
+
+  // Fallback: binary response (legacy)
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
 }
 
 export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry, onSelectPhotos }: Props) {
@@ -174,10 +183,9 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     setResolvingImageUrls((prev) => new Set(prev).add(url));
 
     try {
-      const blob = await fetchProxiedImageBlob(url, sourceUrl || undefined);
-      const objectUrl = URL.createObjectURL(blob);
-      proxiedObjectUrlsRef.current.push(objectUrl);
-      setProxiedImageUrls((prev) => ({ ...prev, [url]: objectUrl }));
+      const resolvedUrl = await fetchProxiedImageUrl(url, sourceUrl || undefined);
+      proxiedObjectUrlsRef.current.push(resolvedUrl);
+      setProxiedImageUrls((prev) => ({ ...prev, [url]: resolvedUrl }));
       setFailedImageUrls((prev) => {
         const next = new Set(prev);
         next.delete(url);
@@ -214,10 +222,9 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
         batch.map(async (photo) => {
           if (!photo.url) return;
           try {
-            const blob = await fetchProxiedImageBlob(photo.url, refererUrl);
-            const objectUrl = URL.createObjectURL(blob);
-            proxiedObjectUrlsRef.current.push(objectUrl);
-            setProxiedImageUrls((prev) => ({ ...prev, [photo.url]: objectUrl }));
+            const resolvedUrl = await fetchProxiedImageUrl(photo.url, refererUrl);
+            proxiedObjectUrlsRef.current.push(resolvedUrl);
+            setProxiedImageUrls((prev) => ({ ...prev, [photo.url]: resolvedUrl }));
           } catch {
             // Will fall back to direct URL with referrerPolicy="no-referrer"
           }
