@@ -107,28 +107,48 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Você é um classificador especialista de fotos de hotéis. Analise URLs, alt text e contexto para classificar imagens E identificar tipos de quartos com precisão.
+            content: `Você é um classificador especialista de fotos de hotéis de luxo. Sua missão é classificar imagens com PRECISÃO MÁXIMA, usando nomes REAIS dos ambientes e quartos.
 
-CATEGORIAS:
-- fachada, lobby, restaurante, piscina, spa, area_comum, vista, bar, praia, outro
+CATEGORIAS DE ÁREAS:
+- fachada (exterior, vista aérea, entrada principal)
+- lobby (recepção, hall de entrada)
+- restaurante (cada restaurante deve ter seu NOME REAL se visível na URL — ex: "Restaurante Zen", "Ciao Ristorante", "Toro Steakhouse")
+- bar (bares, lounges — usar nome real: "Center Bar", "Moon Lounge", "Swim-up Bar")
+- piscina (piscinas — diferenciar: "Piscina Principal", "Piscina Familiar", "Parque Aquático")
+- praia (área de praia)
+- spa (spa, sauna, jacuzzi — usar nome real se disponível: "Rock Spa")
+- area_comum (casino, nightclub, loja, campo de golfe, boliche, salão de eventos)
+- vista (vistas panorâmicas)
+- outro (não classificável mas relevante)
 
-CATEGORIAS DE QUARTOS (use o nome REAL do tipo de quarto encontrado na URL/alt/contexto):
-- quarto_standard (quartos básicos/standard)
-- quarto_superior (suítes superiores)
-- quarto_deluxe (quartos deluxe)
-- quarto_family (quartos familiares)
-- quarto_premium (suítes premium/presidenciais/royalty)
+CATEGORIAS DE QUARTOS — CRÍTICO: Identifique o NOME EXATO do tipo de quarto pela URL!
+- quarto_standard (quartos básicos, junior suites)
+- quarto_superior (suítes superiores/intermediárias)  
+- quarto_deluxe (quartos deluxe, suítes de luxo)
+- quarto_family (quartos familiares, family suites)
+- quarto_premium (suítes presidenciais, royalty, penthouse)
 
-IMPORTANTE para quartos:
-1. Identifique o NOME REAL do quarto pela URL e contexto (ex: "Islander Junior Suite", "Rock Family Suite", "Caribbean Sand Suite")
-2. Se possível, extraia detalhes como tipo de cama, metragem, vista
-3. NÃO generalize todos como "quarto_superior" - diferencie entre standard, deluxe, family, premium etc.
+REGRAS:
+1. Para QUARTOS: o campo room_name DEVE conter o nome REAL extraído da URL/contexto. Exemplos: "Islander Junior Suite", "Caribbean Sand Suite", "Rock Royalty Suite", "Rock Family Suite", "Caribbean Pure Wellness Suite". NUNCA use nomes genéricos.
+2. Para RESTAURANTES e BARES: use o nome real no room_name (ex: "Zen Restaurant", "Toro Steakhouse").
+3. Se a URL contém palavras como "suite", "room", "habitacion", SEMPRE é um quarto.
+4. Fotos de banheiro pertencem ao quarto associado (identifique pelo nome na URL).
+5. Varanda/balcão de quarto = categoria do quarto correspondente.
+6. Extraia room_details: tipo de cama (king, twin/dobles, queen), vista, amenidades visíveis.
 
-EXCLUA: banners, ícones, logos, mapas, elementos UI, imagens sociais, imagens muito pequenas.`
+EXCLUA: banners, ícones, logos, mapas, UI, redes sociais, imagens < 100px.`
           },
           {
             role: "user",
-            content: `Hotel: ${hotel_name} em ${locationStr}\n\nImagens:\n${imageList}\n\nClassifique cada foto relevante com categoria correta e, para quartos, identifique o nome real do tipo de quarto.`
+            content: `Hotel: ${hotel_name} em ${locationStr}
+
+Imagens encontradas:
+${imageList}
+
+Classifique CADA imagem com:
+- Categoria correta
+- Nome REAL do ambiente/quarto (não genérico!)
+- Detalhes do quarto quando aplicável (cama, metragem, amenidades)`
           }
         ],
         tools: [
