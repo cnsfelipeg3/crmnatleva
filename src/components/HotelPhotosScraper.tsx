@@ -1087,7 +1087,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                       i === lightboxIndex ? "border-primary opacity-100 scale-110" : "border-transparent opacity-40 hover:opacity-70"
                     )}
                   >
-                    <img src={getDisplayUrl(p.url)} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" crossOrigin="anonymous" onError={() => handleImageError(p.url)} />
+                    <img src={getDisplayUrl(p.url)} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" onError={() => handleImageError(p.url)} />
                   </button>
                 ))}
               </div>
