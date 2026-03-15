@@ -572,20 +572,11 @@ export default function PlacesSearchCard({
             let url = photo.url || "";
 
             if (!url && typeof photo.photo_reference === "string") {
-              if (/^https?:\/\//i.test(photo.photo_reference)) {
-                url = photo.photo_reference;
-              } else if (!disableEdgeSearchRef.current) {
+              const { normalized, isDirectUrl, isJsServiceUrl } = normalizeGooglePhotoReference(photo.photo_reference);
+
+              if (normalized && !/^https?:\/\//i.test(normalized) && !disableEdgeSearchRef.current) {
                 try {
-                  const { data: photoData, error: photoErr } = await withTimeout(
-                    supabase.functions.invoke("places-search", {
-                      body: { action: "photo", photo_reference: photo.photo_reference, max_width: 800 },
-                    }),
-                    5000,
-                    "Timeout ao carregar foto"
-                  );
-                  if (photoErr) throw photoErr;
-                  if (photoData?.error) throw new Error(photoData.error);
-                  url = photoData?.url || "";
+                  url = await fetchPlacePhotoFromEdge(normalized, 800);
                 } catch (photoError) {
                   const message = photoError instanceof Error ? photoError.message : "";
                   if (/referer restrictions|request_denied|api keys|denied|permission/i.test(message.toLowerCase())) {
@@ -594,8 +585,12 @@ export default function PlacesSearchCard({
                 }
               }
 
-              if (!url) {
-                url = getPhotoUrl(photo.photo_reference, 800);
+              if (!url && isDirectUrl && !isJsServiceUrl) {
+                url = photo.photo_reference;
+              }
+
+              if (!url && normalized && !/^https?:\/\//i.test(normalized)) {
+                url = getPhotoUrl(normalized, 800);
               }
             }
 
