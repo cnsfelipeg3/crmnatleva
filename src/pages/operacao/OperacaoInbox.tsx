@@ -330,17 +330,18 @@ function OperacaoInboxInner() {
   }): Promise<string | null> => {
     const dbConvId = await resolveDbConversationId(payload.conversationId);
     if (!dbConvId) {
-      console.error("persistOutgoingMessage: could not resolve DB conversation ID for", payload.conversationId);
-      return null;
+      console.error("[PERSIST] could not resolve DB conversation ID for", payload.conversationId);
+      throw new Error("Não foi possível identificar a conversa no banco de dados.");
     }
 
     const createdAt = payload.createdAt || new Date().toISOString();
     const externalId = payload.externalMessageId || `local_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    let persistedId: string | null = null;
+    let persistedTable: string | null = null;
 
-    // MANDATORY persistence - single source of truth
-    const { data: inserted, error } = await (supabase
-      .from("conversation_messages" as any)
-      .upsert({
+    // ── PRIMARY: conversation_messages (unified table) ──
+    try {
+      const unifiedRow = {
         conversation_id: dbConvId,
         external_message_id: externalId,
         direction: "outgoing",
@@ -351,23 +352,70 @@ function OperacaoInboxInner() {
         status: "sent",
         timestamp: createdAt,
         created_at: createdAt,
-      }, { onConflict: "conversation_id,external_message_id" })
-      .select("id")
-      .single() as any);
+      };
 
-    if (error) {
-      console.error("CRITICAL: Failed to persist outgoing message:", error);
-      throw new Error(`Falha ao salvar mensagem: ${error.message}`);
+      const { data: inserted, error } = await (supabase
+        .from("conversation_messages" as any)
+        .insert(unifiedRow)
+        .select("id")
+        .single() as any);
+
+      if (!error && inserted?.id) {
+        persistedId = inserted.id;
+        persistedTable = "conversation_messages";
+        console.log(`[PERSIST✓] Mensagem gravada em conversation_messages: ${persistedId}`);
+      } else {
+        console.warn(`[PERSIST] conversation_messages falhou: ${error?.message}. Tentando fallback...`);
+      }
+    } catch (err: any) {
+      console.warn(`[PERSIST] conversation_messages exception: ${err.message}. Tentando fallback...`);
     }
 
-    // Update conversation metadata
+    // ── FALLBACK: chat_messages (legacy, funcional) ──
+    if (!persistedId) {
+      try {
+        const legacyRow = {
+          conversation_id: dbConvId,
+          external_message_id: externalId,
+          sender_type: "atendente",
+          message_type: payload.messageType,
+          content: payload.text || "",
+          media_url: payload.mediaUrl || null,
+          read_status: "sent",
+        };
+        const { data: legacyInserted, error: legacyErr } = await supabase
+          .from("chat_messages")
+          .insert(legacyRow)
+          .select("id")
+          .single();
+
+        if (!legacyErr && legacyInserted?.id) {
+          persistedId = legacyInserted.id;
+          persistedTable = "chat_messages";
+          console.warn(`[PERSIST⚠] Mensagem gravada via FALLBACK em chat_messages: ${persistedId}`);
+        } else {
+          console.error(`[PERSIST✗] chat_messages fallback also failed: ${legacyErr?.message}`);
+        }
+      } catch (err: any) {
+        console.error(`[PERSIST✗] chat_messages fallback exception: ${err.message}`);
+      }
+    }
+
+    // ── If both failed, throw to block UI ──
+    if (!persistedId) {
+      const errorMsg = "FALHA CRÍTICA: Mensagem NÃO foi salva em nenhuma tabela. A mensagem será removida do chat.";
+      console.error(`[PERSIST✗✗] ${errorMsg}`);
+      throw new Error(errorMsg);
+    }
+
+    // ── Update conversation metadata ──
     await supabase.from("conversations").update({
       last_message_preview: payload.text || `📎 ${payload.messageType}`,
       last_message_at: createdAt,
       unread_count: 0,
-    }).eq("id", dbConvId);
+    }).eq("id", dbConvId).then(() => {});
 
-    return inserted?.id || null;
+    return persistedId;
   }, [resolveDbConversationId]);
   // Load active flow name for selected conversation
   useEffect(() => {
@@ -1519,34 +1567,67 @@ function OperacaoInboxInner() {
     if (selectedId.startsWith("wa_")) {
       const phone = selectedId.replace("wa_", "");
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const msgCreatedAt = new Date().toISOString();
       const newMsg: Message = {
         id: tempId, conversation_id: selectedId, sender_type: "atendente", message_type: "text",
-        text, status: "sent", created_at: new Date().toISOString(),
+        text, status: "sent", created_at: msgCreatedAt,
         quoted_msg: replyRef ? { text: replyRef.text || "📎 Mídia", sender_type: replyRef.sender_type, message_type: replyRef.message_type } : undefined,
       };
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), newMsg] }));
       lastMsgIdsRef.current.add(tempId);
       isUserScrolledUpRef.current = false;
       scrollToBottom();
+
+      let sendSuccess = false;
+      let persistedExternalId = tempId;
+
       try {
+        // 1. Send via WhatsApp
         const sendPayload: any = { phone, message: text };
         if (replyRef?.id && !replyRef.id.startsWith("temp_")) sendPayload.messageId = replyRef.id;
         const sendResult = await callZapiProxy("send-text", sendPayload);
         const realId = sendResult?.messageId || sendResult?.id;
-        const persistedExternalId = realId || tempId;
+        persistedExternalId = realId || tempId;
+        sendSuccess = true;
+
         if (realId) {
           lastMsgIdsRef.current.add(realId);
           setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m => m.id === tempId ? { ...m, id: realId } : m) }));
         }
+      } catch (err: any) {
+        // Send failed - remove temp message
+        setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).filter(m => m.id !== tempId) }));
+        toast({ title: "Erro ao enviar", description: err?.message || "Falha na comunicação com WhatsApp", variant: "destructive" });
+        setIsSending(false);
+        return;
+      }
 
+      // 2. MANDATORY persistence - if this fails, mark message as failed
+      try {
         await persistOutgoingMessage({
           conversationId: selectedId,
           messageType: "text",
           text,
           externalMessageId: persistedExternalId,
-          createdAt: new Date().toISOString(),
+          createdAt: msgCreatedAt,
         });
-      } catch (err) { toast({ title: "Erro ao enviar", description: "Falha na comunicação com WhatsApp", variant: "destructive" }); }
+      } catch (persistErr: any) {
+        console.error("[SEND] Mensagem enviada mas NÃO persistida:", persistErr);
+        // Mark message in UI as failed (don't remove - it was sent via WhatsApp)
+        setMessages(prev => ({
+          ...prev,
+          [selectedId]: (prev[selectedId] || []).map(m =>
+            m.id === persistedExternalId || m.id === tempId
+              ? { ...m, status: "sent" as MsgStatus, text: `⚠️ ${text}` }
+              : m
+          ),
+        }));
+        toast({
+          title: "⚠️ Mensagem enviada mas NÃO salva",
+          description: "A mensagem foi entregue ao WhatsApp mas falhou ao salvar no banco. Ela pode não aparecer no histórico.",
+          variant: "destructive",
+        });
+      }
     } else if (selectedId.length > 10) {
       await supabase.from("chat_messages").insert({ conversation_id: selectedId, sender_type: "atendente", message_type: "text", content: text, read_status: "sent" });
       await supabase.from("conversations").update({ last_message_preview: text, last_message_at: new Date().toISOString(), unread_count: 0 }).eq("id", selectedId);
