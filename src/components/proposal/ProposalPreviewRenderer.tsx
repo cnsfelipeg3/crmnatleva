@@ -632,8 +632,8 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       {/* ──── FLIGHTS ──── */}
       {flights.length > 0 && (
         <section className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
-          <SectionTitle subtitle="Clique para ver os detalhes do voo">Voos</SectionTitle>
-          <div className="max-w-4xl mx-auto space-y-4">
+          <SectionTitle subtitle="Seus voos com todos os detalhes">Voos</SectionTitle>
+          <div className="max-w-3xl mx-auto space-y-8">
             {flights.map((f, idx) => <FlightCard key={f.id || idx} flight={f} idx={idx} />)}
           </div>
         </section>
