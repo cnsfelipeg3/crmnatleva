@@ -27,6 +27,7 @@ import { AISuggestionPanel } from "@/components/livechat/AISuggestionPanel";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { initPersistence, persistConversation, persistMessages, loadPersistedMessages } from "@/hooks/useChatPersistence";
+import { fetchAllRows } from "@/lib/fetchAll";
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
 import data from "@emoji-mart/data";
@@ -233,7 +234,9 @@ function OperacaoInboxInner() {
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
+  const [chatSyncVersion, setChatSyncVersion] = useState(0);
   const [reloadingMessages, setReloadingMessages] = useState(false);
+  const [rebuildingHistoryAll, setRebuildingHistoryAll] = useState(false);
   const [flowRunning, setFlowRunning] = useState(false);
   const [botActive, setBotActive] = useState(true);
   const [activeFlowName, setActiveFlowName] = useState<string | null>(null);
@@ -243,6 +246,7 @@ function OperacaoInboxInner() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isUserScrolledUpRef = useRef(false);
+  const lastAutoReconcileRef = useRef(0);
 
   const selected = conversations.find(c => c.id === selectedId);
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
@@ -573,7 +577,12 @@ function OperacaoInboxInner() {
   useEffect(() => {
     const loadDbConversations = async () => {
       await initPersistence();
-      const { data } = await supabase.from("conversations").select("*").order("last_message_at", { ascending: false }).limit(50);
+      const data = await fetchAllRows("conversations", "*", {
+        order: { column: "last_message_at", ascending: false },
+        cacheMs: 0,
+        bypassCache: true,
+      });
+
       if (data && data.length > 0) {
         // Render conversations IMMEDIATELY without waiting for preview backfill
         const mapConv = (c: any, fallbackPreview?: string) => {
@@ -638,7 +647,7 @@ function OperacaoInboxInner() {
                 const phone = (convRecord?.phone || "").replace(/\D/g, "");
                 if (phone) {
                   const { data: zapiMsg } = await supabase.from("zapi_messages" as any).select("text, type, timestamp").in("phone", [phone, `${phone}@c.us`]).order("timestamp", { ascending: false }).limit(1).maybeSingle();
-                  if (zapiMsg) lastMsg = { content: (zapiMsg as any).text || `📎 ${(zapiMsg as any).type}`, message_type: (zapiMsg as any).type || "text", created_at: (zapiMsg as any).timestamp };
+                  if (zapiMsg) lastMsg = { content: (zapiMsg as any).text || `📎 ${(zapiMsg as any).type}`, message_type: (zapiMsg as any).type || "text", created_at: toIsoTimestamp((zapiMsg as any).timestamp) };
                 }
               }
               if (lastMsg) {
@@ -694,6 +703,26 @@ function OperacaoInboxInner() {
     const hasCached = (messages[selectedId] || []).length > 0;
     if (!hasCached) setLoadingMessages(true);
 
+    const fetchPaginated = async <T = any>(builder: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: any }>) => {
+      const pageSize = 1000;
+      let from = 0;
+      const allRows: T[] = [];
+
+      while (true) {
+        const { data, error } = await builder(from, from + pageSize - 1);
+        if (error) throw error;
+
+        const page = data || [];
+        if (page.length === 0) break;
+        allRows.push(...page);
+        if (page.length < pageSize) break;
+
+        from += pageSize;
+      }
+
+      return allRows;
+    };
+
     const loadMessages = async () => {
       try {
         if (selectedId.startsWith("wa_")) {
@@ -707,20 +736,21 @@ function OperacaoInboxInner() {
           const dbPhoneCandidates = Array.from(new Set([phone, `+${phone}`, `${phone}@c.us`, `${phone}@g.us`, `${phone}-group`]));
 
           // Always search by phone to find ALL conversation IDs (there may be duplicates with/without "+")
-          const [zapiResp, byPhoneResp, byExternalResp] = await Promise.all([
-            supabase
-              .from("zapi_messages" as any)
-              .select("*")
-              .in("phone", phoneCandidates)
-              .order("timestamp", { ascending: false })
-              .limit(1000),
+          const [rawMsgs, byPhoneResp, byExternalResp] = await Promise.all([
+            fetchPaginated<any>((from, to) =>
+              supabase
+                .from("zapi_messages" as any)
+                .select("*")
+                .in("phone", phoneCandidates)
+                .order("timestamp", { ascending: false })
+                .range(from, to)
+            ),
             supabase.from("conversations").select("id, updated_at").in("phone", dbPhoneCandidates).order("updated_at", { ascending: false }),
             supabase.from("conversations").select("id, updated_at").eq("external_conversation_id", selectedId).order("updated_at", { ascending: false }),
           ]);
 
           if (cancelled) return;
 
-          const rawMsgs = zapiResp.data || [];
           const zapiMsgs: Message[] = rawMsgs
             .map((m: any) => {
               const mediaInfo = extractMediaFromRawData(m.raw_data, m.type || "text");
@@ -1061,7 +1091,7 @@ function OperacaoInboxInner() {
                 .maybeSingle();
               if (lastZapi) {
                 conv.last_message_preview = (lastZapi as any).text || `📎 ${(lastZapi as any).type || "mensagem"}`;
-                if ((lastZapi as any).timestamp) conv.last_message_at = (lastZapi as any).timestamp;
+                if ((lastZapi as any).timestamp) conv.last_message_at = toIsoTimestamp((lastZapi as any).timestamp);
               }
             } catch {}
           }
@@ -1137,7 +1167,7 @@ function OperacaoInboxInner() {
             text: (m as any).text || mediaInfo3.caption || "",
             media_url: mediaInfo3.mediaUrl,
             status: mapZapiStatus((m as any).status, (m as any).from_me),
-            created_at: (m as any).timestamp || (m as any).created_at,
+            created_at: toIsoTimestamp((m as any).timestamp || (m as any).created_at),
           });
         }
         if (newMsgs.length > 0) {
@@ -1175,7 +1205,7 @@ function OperacaoInboxInner() {
 
     checkAndStartPolling();
     return () => { if (whatsappPollRef.current) clearInterval(whatsappPollRef.current); };
-  }, [selectedId, extractMediaFromRawData, getZapiPhoneCandidates]);
+  }, [selectedId, extractMediaFromRawData, getZapiPhoneCandidates, chatSyncVersion]);
 
   const filteredConversations = (() => {
     const filtered = conversations.filter(c => {
@@ -1242,35 +1272,74 @@ function OperacaoInboxInner() {
     textareaRef.current?.focus();
   }, [inputText, isCorrecting, correctMessage]);
 
+  const ensureWhatsAppWebhookSync = useCallback(async () => {
+    const status = await callZapiProxy("check-status");
+    if (!status?.connected) {
+      setWaConnected(false);
+      throw new Error("WhatsApp desconectado. Reconecte para sincronizar o histórico.");
+    }
+
+    setWaConnected(true);
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl) return;
+
+    const webhookUrl = `${supabaseUrl}/functions/v1/zapi-webhook`;
+    await Promise.allSettled([
+      callZapiProxy("set-webhook", { webhookUrl }),
+      callZapiProxy("set-webhook-sent", { webhookUrl }),
+      callZapiProxy("set-notify-sent-by-me"),
+    ]);
+  }, []);
+
   const handleReloadMessages = useCallback(async () => {
     if (!selectedId || reloadingMessages) return;
 
     setReloadingMessages(true);
     try {
       if (selectedId.startsWith("wa_")) {
-        const status = await callZapiProxy("check-status");
-        if (status?.connected) {
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          if (supabaseUrl) {
-            const webhookUrl = `${supabaseUrl}/functions/v1/zapi-webhook`;
-            await Promise.allSettled([
-              callZapiProxy("set-webhook", { webhookUrl }),
-              callZapiProxy("set-webhook-sent", { webhookUrl }),
-              callZapiProxy("set-notify-sent-by-me"),
-            ]);
-          }
-          await callZapiProxy("get-chats");
-        }
+        await ensureWhatsAppWebhookSync();
+        await callZapiProxy("get-chats");
       }
 
+      lastMsgIdsRef.current.clear();
       setMessages(prev => ({ ...prev, [selectedId]: [] }));
       setReloadVersion(v => v + 1);
+      setChatSyncVersion(v => v + 1);
       toast({ title: "Recarregando mensagens…", description: "Resincronizando histórico completo da conversa." });
     } catch (err: any) {
-      setReloadingMessages(false);
       toast({ title: "Falha ao recarregar", description: err?.message || "Não foi possível resincronizar as mensagens.", variant: "destructive" });
+    } finally {
+      setReloadingMessages(false);
     }
-  }, [selectedId, reloadingMessages]);
+  }, [selectedId, reloadingMessages, ensureWhatsAppWebhookSync]);
+
+  const handleRebuildAllHistory = useCallback(async () => {
+    if (rebuildingHistoryAll) return;
+
+    setRebuildingHistoryAll(true);
+    try {
+      await ensureWhatsAppWebhookSync();
+      const result = await callZapiProxy("rebuild-history", {});
+
+      lastMsgIdsRef.current.clear();
+      setMessages({});
+      setReloadVersion(v => v + 1);
+      setChatSyncVersion(v => v + 1);
+
+      toast({
+        title: "Reconstrução concluída",
+        description: `${result?.messagesInserted || 0} mensagens reimportadas em ${result?.chatsProcessed || 0} conversas.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Falha na reconstrução",
+        description: err?.message || "Não foi possível reconstruir o histórico completo.",
+        variant: "destructive",
+      });
+    } finally {
+      setRebuildingHistoryAll(false);
+    }
+  }, [rebuildingHistoryAll, ensureWhatsAppWebhookSync]);
 
   // Send message
   const handleSend = useCallback(async () => {
@@ -1838,7 +1907,22 @@ function OperacaoInboxInner() {
                           variant="ghost"
                           size="sm"
                           className="h-8 gap-1.5 text-[10px] px-2"
-                          disabled={reloadingMessages}
+                          disabled={rebuildingHistoryAll}
+                          onClick={handleRebuildAllHistory}
+                        >
+                          <RefreshCw className={`h-3.5 w-3.5 ${rebuildingHistoryAll ? "animate-spin" : ""}`} />
+                          {!isMobile && "Reconstruir Histórico"}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Reimportar todo o histórico do WhatsApp</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1.5 text-[10px] px-2"
+                          disabled={reloadingMessages || rebuildingHistoryAll}
                           onClick={handleReloadMessages}
                         >
                           <RefreshCw className={`h-3.5 w-3.5 ${reloadingMessages ? "animate-spin" : ""}`} />

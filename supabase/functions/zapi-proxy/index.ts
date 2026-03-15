@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +11,299 @@ const INSTANCE_ID = Deno.env.get("ZAPI_INSTANCE_ID") || "";
 const TOKEN = Deno.env.get("ZAPI_TOKEN") || "";
 const CLIENT_TOKEN = Deno.env.get("ZAPI_CLIENT_TOKEN") || "";
 const BASE_URL = `https://api.z-api.io/instances/${INSTANCE_ID}/token/${TOKEN}`;
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+function normalizePhone(raw: string): string {
+  return String(raw || "")
+    .replace(/@c\.us|@s\.whatsapp\.net|@g\.us|-group/gi, "")
+    .replace(/\D/g, "")
+    .trim();
+}
+
+function parseTimestampSeconds(msg: any): number {
+  const raw = msg?.momment ?? msg?.moment ?? msg?.timestamp ?? msg?.messageTimestamp ?? msg?.time;
+  const num = Number(raw);
+  if (Number.isFinite(num) && num > 0) {
+    return num > 1_000_000_000_000 ? Math.floor(num / 1000) : Math.floor(num);
+  }
+
+  if (typeof raw === "string") {
+    const d = new Date(raw);
+    if (!isNaN(d.getTime())) return Math.floor(d.getTime() / 1000);
+  }
+
+  return Math.floor(Date.now() / 1000);
+}
+
+function detectMessageType(msg: any): string {
+  if (msg?.image) return "image";
+  if (msg?.audio) return "audio";
+  if (msg?.video) return "video";
+  if (msg?.document) return "document";
+  if (msg?.sticker) return "sticker";
+
+  const explicit = String(msg?.type || "").toLowerCase();
+  if (["image", "audio", "video", "document", "sticker", "text"].includes(explicit)) {
+    return explicit;
+  }
+
+  return "text";
+}
+
+function extractTextContent(msg: any, msgType: string): string {
+  const text =
+    msg?.text?.message ||
+    (typeof msg?.text === "string" ? msg.text : "") ||
+    msg?.body ||
+    msg?.caption ||
+    msg?.image?.caption ||
+    msg?.video?.caption ||
+    (msgType === "document" ? msg?.document?.fileName : "") ||
+    "";
+
+  return String(text || "").trim();
+}
+
+function parseChatsPayload(data: any): any[] {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.chats)) return data.chats;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
+function parseChatMessagesPayload(data: any): any[] {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.messages)) return data.messages;
+  if (Array.isArray(data?.chatMessages)) return data.chatMessages;
+  if (Array.isArray(data?.data)) return data.data;
+  return [];
+}
+
+async function callZapi(path: string, method = "GET", payload?: unknown) {
+  const url = `${BASE_URL}${path}`;
+  console.log(`[Z-API] ${method} ${url}`);
+
+  const response = await fetch(url, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      "Client-Token": CLIENT_TOKEN,
+    },
+    body: payload && (method === "POST" || method === "PUT") ? JSON.stringify(payload) : undefined,
+  });
+
+  const responseText = await response.text();
+  const data = responseText ? (() => {
+    try {
+      return JSON.parse(responseText);
+    } catch {
+      return { raw: responseText };
+    }
+  })() : {};
+
+  if (!response.ok) {
+    throw new Error(`Z-API ${path} failed (${response.status}): ${JSON.stringify(data).slice(0, 300)}`);
+  }
+
+  return data;
+}
+
+async function rebuildHistory(payload: any) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error("Missing backend service credentials for history rebuild");
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  const specificPhone = payload?.phone ? normalizePhone(payload.phone) : null;
+  const rawChats = specificPhone
+    ? [{ phone: specificPhone, name: payload?.name || specificPhone }]
+    : parseChatsPayload(await callZapi("/chats", "GET"));
+
+  const chats = rawChats.filter((chat: any) => {
+    const phone = String(chat?.phone || chat?.id || "");
+    return !!phone && !phone.includes("@g.us") && phone !== "status@broadcast";
+  });
+
+  const stats = {
+    chatsFound: chats.length,
+    chatsProcessed: 0,
+    messagesFound: 0,
+    messagesInserted: 0,
+    duplicatesSkipped: 0,
+    errors: [] as Array<{ phone: string; error: string }>,
+  };
+
+  for (const chat of chats) {
+    const chatPhoneRaw = String(chat?.phone || chat?.id || specificPhone || "");
+    const cleanPhone = normalizePhone(chatPhoneRaw);
+    if (!cleanPhone) continue;
+
+    stats.chatsProcessed += 1;
+
+    try {
+      let chatMessagesData: any;
+      try {
+        chatMessagesData = await callZapi(`/chat-messages/${encodeURIComponent(chatPhoneRaw)}`, "GET");
+      } catch {
+        chatMessagesData = await callZapi(`/chat-messages/${encodeURIComponent(cleanPhone)}`, "GET");
+      }
+
+      const sourceMessages = parseChatMessagesPayload(chatMessagesData);
+      stats.messagesFound += sourceMessages.length;
+
+      if (sourceMessages.length === 0) {
+        continue;
+      }
+
+      const phoneCandidates = Array.from(new Set([
+        cleanPhone,
+        `+${cleanPhone}`,
+        `${cleanPhone}@c.us`,
+        `${cleanPhone}@s.whatsapp.net`,
+      ]));
+
+      const { data: existingRows, error: existingError } = await supabase
+        .from("zapi_messages")
+        .select("message_id, timestamp, from_me, type, text")
+        .in("phone", phoneCandidates);
+
+      if (existingError) throw existingError;
+
+      const existingMessageIds = new Set<string>();
+      const existingSignatures = new Set<string>();
+
+      for (const row of existingRows || []) {
+        const messageId = row.message_id ? String(row.message_id) : "";
+        if (messageId) existingMessageIds.add(messageId);
+
+        const text = String(row.text || "").trim().slice(0, 180);
+        const signature = `${Number(row.timestamp || 0)}|${row.from_me ? "1" : "0"}|${String(row.type || "text")}|${text}`;
+        existingSignatures.add(signature);
+      }
+
+      const rowsToInsert: any[] = [];
+      let latestTs = 0;
+      let latestPreview = "";
+
+      for (const msg of sourceMessages) {
+        const messageId = msg?.messageId ? String(msg.messageId) : (msg?.id ? String(msg.id) : null);
+        const fromMe = Boolean(msg?.fromMe ?? msg?.from_me);
+        const msgType = detectMessageType(msg);
+        const textContent = extractTextContent(msg, msgType);
+        const timestamp = parseTimestampSeconds(msg);
+
+        if (timestamp > latestTs) {
+          latestTs = timestamp;
+          latestPreview = textContent || `📎 ${msgType}`;
+        }
+
+        const signature = `${timestamp}|${fromMe ? "1" : "0"}|${msgType}|${textContent.slice(0, 180)}`;
+
+        if ((messageId && existingMessageIds.has(messageId)) || existingSignatures.has(signature)) {
+          stats.duplicatesSkipped += 1;
+          continue;
+        }
+
+        if (messageId) existingMessageIds.add(messageId);
+        existingSignatures.add(signature);
+
+        rowsToInsert.push({
+          phone: cleanPhone,
+          message_id: messageId,
+          from_me: fromMe,
+          text: textContent || null,
+          type: msgType,
+          sender_name: msg?.senderName || chat?.name || chat?.chatName || cleanPhone,
+          sender_photo: msg?.senderPhoto || chat?.imgUrl || chat?.image || chat?.photo || null,
+          status: msg?.status || (fromMe ? "SENT" : "RECEIVED"),
+          timestamp,
+          raw_data: msg,
+        });
+      }
+
+      if (rowsToInsert.length > 0) {
+        const chunkSize = 500;
+        for (let i = 0; i < rowsToInsert.length; i += chunkSize) {
+          const chunk = rowsToInsert.slice(i, i + chunkSize);
+          const { error: insertError } = await supabase.from("zapi_messages").insert(chunk);
+          if (insertError) throw insertError;
+        }
+      }
+
+      stats.messagesInserted += rowsToInsert.length;
+
+      const lastMessageAt = latestTs > 0 ? new Date(latestTs * 1000).toISOString() : null;
+      const convExternalId = `wa_${cleanPhone}`;
+
+      const { data: existingConv } = await supabase
+        .from("conversations")
+        .select("id, contact_name, last_message_at")
+        .or(`phone.eq.${cleanPhone},external_conversation_id.eq.${convExternalId}`)
+        .limit(1)
+        .maybeSingle();
+
+      const contactName = chat?.name || chat?.chatName || cleanPhone;
+
+      if (existingConv?.id) {
+        const currentMs = existingConv.last_message_at ? new Date(existingConv.last_message_at).getTime() : 0;
+        const incomingMs = lastMessageAt ? new Date(lastMessageAt).getTime() : 0;
+
+        const shouldReplaceName = !existingConv.contact_name ||
+          existingConv.contact_name === "Novo Contato" ||
+          existingConv.contact_name === "Desconhecido" ||
+          /^\+?\d[\d\s\-()]{6,}$/.test(existingConv.contact_name);
+
+        const updatePayload: Record<string, unknown> = {
+          phone: cleanPhone,
+          external_conversation_id: convExternalId,
+          updated_at: new Date().toISOString(),
+        };
+
+        if (shouldReplaceName) {
+          updatePayload.contact_name = contactName;
+        }
+
+        if (incomingMs >= currentMs && lastMessageAt) {
+          updatePayload.last_message_at = lastMessageAt;
+          updatePayload.last_message_preview = latestPreview || null;
+        }
+
+        await supabase.from("conversations").update(updatePayload).eq("id", existingConv.id);
+      } else {
+        await supabase.from("conversations").insert({
+          phone: cleanPhone,
+          contact_name: contactName,
+          source: "whatsapp_api",
+          stage: "novo_lead",
+          tags: [],
+          last_message_at: lastMessageAt || new Date().toISOString(),
+          last_message_preview: latestPreview || null,
+          unread_count: 0,
+          is_vip: false,
+          external_conversation_id: convExternalId,
+        });
+      }
+
+      await supabase.from("zapi_contacts").upsert({
+        phone: cleanPhone,
+        name: contactName,
+        profile_pic: chat?.imgUrl || chat?.image || chat?.photo || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "phone" });
+    } catch (error: any) {
+      console.error(`[Z-API] rebuild-history failed for ${cleanPhone}:`, error?.message || String(error));
+      stats.errors.push({
+        phone: cleanPhone,
+        error: error?.message || String(error),
+      });
+    }
+  }
+
+  return stats;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -25,6 +319,14 @@ serve(async (req) => {
     }
 
     const { action, payload } = await req.json();
+
+    if (action === "rebuild-history") {
+      const result = await rebuildHistory(payload);
+      return new Response(JSON.stringify({ success: true, ...result }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     let url = "";
     let method = "GET";
     let body: string | undefined;
@@ -230,7 +532,7 @@ serve(async (req) => {
       status: response.ok ? 200 : response.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[Z-API] Error:", error.message);
     return new Response(
       JSON.stringify({ error: error.message }),
