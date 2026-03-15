@@ -236,7 +236,7 @@ Deno.serve(async (req) => {
         sender_name: contactName,
         sender_photo: body.senderPhoto || null,
         status: msgStatus,
-        timestamp,
+        timestamp: timestampEpoch,
         raw_data: body,
       });
 
