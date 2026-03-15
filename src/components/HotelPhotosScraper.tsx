@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -105,6 +105,31 @@ async function resolveHotelPhotosUrls(inputPhotos: HotelPhoto[]): Promise<HotelP
   );
 }
 
+async function fetchProxiedImageBlob(imageUrl: string): Promise<Blob> {
+  const { data, error } = await supabase.functions.invoke("image-proxy", {
+    body: { imageUrl },
+  });
+
+  if (error) throw error;
+
+  if (typeof Blob !== "undefined" && data instanceof Blob) {
+    return data;
+  }
+
+  if (data instanceof ArrayBuffer) {
+    return new Blob([data], { type: "image/jpeg" });
+  }
+
+  if (data?.base64) {
+    const byteString = atob(data.base64);
+    const bytes = new Uint8Array(byteString.length);
+    for (let i = 0; i < byteString.length; i += 1) bytes[i] = byteString.charCodeAt(i);
+    return new Blob([bytes], { type: data.contentType || "image/jpeg" });
+  }
+
+  throw new Error("Resposta de proxy inválida");
+}
+
 export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry, onSelectPhotos }: Props) {
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState<HotelPhoto[]>([]);
@@ -113,6 +138,65 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [scraped, setScraped] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [proxiedImageUrls, setProxiedImageUrls] = useState<Record<string, string>>({});
+  const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set());
+  const [resolvingImageUrls, setResolvingImageUrls] = useState<Set<string>>(new Set());
+  const proxiedObjectUrlsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    return () => {
+      proxiedObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+      proxiedObjectUrlsRef.current = [];
+    };
+  }, []);
+
+  const clearProxiedImages = useCallback(() => {
+    proxiedObjectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    proxiedObjectUrlsRef.current = [];
+    setProxiedImageUrls({});
+    setFailedImageUrls(new Set());
+    setResolvingImageUrls(new Set());
+  }, []);
+
+  const resolveImageForDisplay = useCallback(async (url: string) => {
+    if (!url) return;
+    if (proxiedImageUrls[url]) return;
+    if (failedImageUrls.has(url)) return;
+    if (resolvingImageUrls.has(url)) return;
+
+    setResolvingImageUrls((prev) => new Set(prev).add(url));
+
+    try {
+      const blob = await fetchProxiedImageBlob(url);
+      const objectUrl = URL.createObjectURL(blob);
+      proxiedObjectUrlsRef.current.push(objectUrl);
+      setProxiedImageUrls((prev) => ({ ...prev, [url]: objectUrl }));
+      setFailedImageUrls((prev) => {
+        const next = new Set(prev);
+        next.delete(url);
+        return next;
+      });
+    } catch {
+      setFailedImageUrls((prev) => new Set(prev).add(url));
+    } finally {
+      setResolvingImageUrls((prev) => {
+        const next = new Set(prev);
+        next.delete(url);
+        return next;
+      });
+    }
+  }, [failedImageUrls, proxiedImageUrls, resolvingImageUrls]);
+
+  const handleImageError = useCallback((url: string) => {
+    if (!url) return;
+    if (proxiedImageUrls[url]) {
+      setFailedImageUrls((prev) => new Set(prev).add(url));
+      return;
+    }
+    void resolveImageForDisplay(url);
+  }, [proxiedImageUrls, resolveImageForDisplay]);
+
+  const getDisplayUrl = useCallback((url: string) => proxiedImageUrls[url] || url, [proxiedImageUrls]);
 
   const scrapePhotos = async () => {
     if (!hotelName) { toast.error("Selecione um hotel primeiro"); return; }
@@ -127,6 +211,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       const rawPhotos: HotelPhoto[] = data.photos || [];
       const resolvedPhotos = await resolveHotelPhotosUrls(rawPhotos);
 
+      clearProxiedImages();
       setPhotos(resolvedPhotos);
       setSourceUrl(data.source_url || "");
       setScraped(true);
@@ -292,12 +377,30 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                           <span className="text-[10px] text-muted-foreground">👥 {roomPhotos[0].room_details.max_guests}</span>
                         )}
                       </div>
-                      <PhotoGrid photos={roomPhotos} selectedPhotos={selectedPhotos} toggleSelect={toggleSelect} openLightbox={openLightbox} />
+                      <PhotoGrid
+                        photos={roomPhotos}
+                        selectedPhotos={selectedPhotos}
+                        toggleSelect={toggleSelect}
+                        openLightbox={openLightbox}
+                        failedUrls={failedImageUrls}
+                        resolvingUrls={resolvingImageUrls}
+                        getDisplayUrl={getDisplayUrl}
+                        onImageError={handleImageError}
+                      />
                     </div>
                   ))}
                 </div>
               ) : (
-                <PhotoGrid photos={catPhotos} selectedPhotos={selectedPhotos} toggleSelect={toggleSelect} openLightbox={openLightbox} />
+                <PhotoGrid
+                  photos={catPhotos}
+                  selectedPhotos={selectedPhotos}
+                  toggleSelect={toggleSelect}
+                  openLightbox={openLightbox}
+                  failedUrls={failedImageUrls}
+                  resolvingUrls={resolvingImageUrls}
+                  getDisplayUrl={getDisplayUrl}
+                  onImageError={handleImageError}
+                />
               )}
             </div>
           );
@@ -358,10 +461,11 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
             </button>
 
             <img
-              src={lightboxPhoto.url}
+              src={getDisplayUrl(lightboxPhoto.url)}
               alt={lightboxPhoto.room_name || lightboxPhoto.alt || ""}
               className="max-w-full max-h-full object-contain select-none"
               draggable={false}
+              onError={() => handleImageError(lightboxPhoto.url)}
             />
 
             <button onClick={goNext}
@@ -403,7 +507,13 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                       i === lightboxIndex ? "border-primary opacity-100 scale-110" : "border-transparent opacity-40 hover:opacity-70"
                     )}
                   >
-                    <img src={p.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                    <img
+                      src={getDisplayUrl(p.url)}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={() => handleImageError(p.url)}
+                    />
                   </button>
                 ))}
               </div>
@@ -424,19 +534,28 @@ function PhotoGrid({
   selectedPhotos,
   toggleSelect,
   openLightbox,
+  failedUrls,
+  resolvingUrls,
+  getDisplayUrl,
+  onImageError,
 }: {
   photos: HotelPhoto[];
   selectedPhotos: Set<string>;
   toggleSelect: (url: string) => void;
   openLightbox: (photo: HotelPhoto) => void;
+  failedUrls: Set<string>;
+  resolvingUrls: Set<string>;
+  getDisplayUrl: (url: string) => string;
+  onImageError: (url: string) => void;
 }) {
-  const [failedUrls, setFailedUrls] = useState<Set<string>>(new Set());
-
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
       {photos.map((photo, i) => {
         const isSelected = selectedPhotos.has(photo.url);
         const isFailed = failedUrls.has(photo.url);
+        const isResolving = resolvingUrls.has(photo.url);
+        const displayUrl = getDisplayUrl(photo.url);
+
         return (
           <div
             key={photo.url + i}
@@ -457,12 +576,18 @@ function PhotoGrid({
               </div>
             ) : (
               <img
-                src={photo.url}
+                src={displayUrl}
                 alt={photo.room_name || photo.alt || photo.category}
                 className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                 loading="lazy"
-                onError={() => setFailedUrls(prev => new Set(prev).add(photo.url))}
+                onError={() => onImageError(photo.url)}
               />
+            )}
+
+            {isResolving && !isFailed && (
+              <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+                <Loader2 className="w-4 h-4 text-primary animate-spin" />
+              </div>
             )}
 
             {/* Hover overlay */}
@@ -482,7 +607,7 @@ function PhotoGrid({
             </button>
 
             {/* Expand icon */}
-            {!isFailed && (
+            {!isFailed && !isResolving && (
               <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <ZoomIn className="w-3.5 h-3.5 text-white drop-shadow-lg" />
               </div>
