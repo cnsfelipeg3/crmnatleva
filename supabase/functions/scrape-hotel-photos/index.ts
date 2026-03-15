@@ -283,12 +283,13 @@ async function scrapeMainUrl(mainUrl: string, collection: ImageCollection, apiKe
   }
 }
 
-async function scrapeRoomsPages(mainUrl: string | undefined, collection: ImageCollection, apiKey: string) {
+async function scrapeRoomsPages(mainUrl: string | undefined, collection: ImageCollection, apiKey: string, roomNames: string[]) {
   if (!mainUrl) return;
 
   const roomPaths = [
     "/rooms", "/quartos", "/habitaciones", "/accommodations", "/suites",
     "/rooms-suites", "/rooms-and-suites", "/accommodation", "/acomodacoes",
+    "/rooms-and-rates", "/our-rooms", "/guest-rooms",
   ];
 
   let base: URL;
@@ -300,19 +301,96 @@ async function scrapeRoomsPages(mainUrl: string | undefined, collection: ImageCo
       const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ url: roomUrl, formats: ["html"], onlyMainContent: true, waitFor: 3000 }),
+        body: JSON.stringify({ url: roomUrl, formats: ["html", "markdown"], onlyMainContent: true, waitFor: 3000 }),
       });
       if (!resp.ok) continue;
       const data = await resp.json();
       const html = data.data?.html || data.html || "";
+      const markdown = data.data?.markdown || data.markdown || "";
 
       if (html.length > 500) {
         console.log(`Found rooms page at ${roomUrl}`);
         extractImagesFromHtml(html, roomUrl, collection);
-        break; // Found a rooms page, stop searching
+        extractRoomNamesFromContent(html, markdown, roomNames);
+        break;
       }
     } catch { continue; }
   }
+}
+
+function extractRoomNamesFromContent(html: string, markdown: string, roomNames: string[]) {
+  const seen = new Set<string>(roomNames.map(n => n.toLowerCase()));
+
+  // Extract from heading tags (h1-h4)
+  const headingRegex = /<h[1-4][^>]*>([^<]+)<\/h[1-4]>/gi;
+  let m;
+  while ((m = headingRegex.exec(html)) !== null) {
+    const text = m[1].replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").trim();
+    if (isLikelyRoomName(text) && !seen.has(text.toLowerCase())) {
+      seen.add(text.toLowerCase());
+      roomNames.push(text);
+    }
+  }
+
+  // Extract from markdown headings (## Room Name)
+  const mdHeadingRegex = /^#{1,4}\s+(.+)$/gm;
+  while ((m = mdHeadingRegex.exec(markdown)) !== null) {
+    const text = m[1].trim();
+    if (isLikelyRoomName(text) && !seen.has(text.toLowerCase())) {
+      seen.add(text.toLowerCase());
+      roomNames.push(text);
+    }
+  }
+
+  // Extract from links with room-related text
+  const linkRegex = /<a[^>]*>([^<]{5,80})<\/a>/gi;
+  while ((m = linkRegex.exec(html)) !== null) {
+    const text = m[1].replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").trim();
+    if (isLikelyRoomName(text) && !seen.has(text.toLowerCase())) {
+      seen.add(text.toLowerCase());
+      roomNames.push(text);
+    }
+  }
+
+  // Extract from title/alt attributes on images
+  const attrRegex = /(?:title|alt)\s*=\s*["']([^"']{5,80})["']/gi;
+  while ((m = attrRegex.exec(html)) !== null) {
+    const text = m[1].trim();
+    if (isLikelyRoomName(text) && !seen.has(text.toLowerCase())) {
+      seen.add(text.toLowerCase());
+      roomNames.push(text);
+    }
+  }
+
+  console.log(`Extracted ${roomNames.length} room/suite names`);
+}
+
+function isLikelyRoomName(text: string): boolean {
+  if (!text || text.length < 4 || text.length > 80) return false;
+  const lower = text.toLowerCase();
+  
+  const roomKeywords = [
+    "suite", "suíte", "room", "quarto", "deluxe", "superior", "standard",
+    "penthouse", "villa", "junior", "executive", "presidential", "classic",
+    "grand", "premium", "studio", "duplex", "apartamento", "loft",
+    "master", "royal", "imperial", "signature", "corner", "garden",
+    "ocean", "sea", "view", "pool", "terrace", "balcony",
+    "double", "twin", "single", "king", "queen",
+    "habitación", "habitacion", "chambre",
+  ];
+  
+  if (roomKeywords.some(kw => lower.includes(kw))) return true;
+
+  // Exclude generic navigation/UI text
+  const excludePatterns = [
+    "book now", "reserve", "check", "cookie", "privacy", "menu",
+    "contact", "about", "navigate", "home", "back", "more",
+    "read more", "see all", "show", "close", "open",
+    "loading", "©", "copyright",
+  ];
+  if (excludePatterns.some(p => lower.includes(p))) return false;
+
+  return false;
 }
 
 function extractImagesFromHtml(html: string, sourceUrl: string, collection: ImageCollection) {
