@@ -700,7 +700,7 @@ function findMatchingSection(heading: string, collection: ImageCollection): stri
   
   // If heading looks like a room/facility name, store it anyway
   const lower = heading.toLowerCase();
-  if (/room|suite|quarto|camera|chambre|deluxe|superior|standard|penthouse|presidential|royal|spa|pool|piscina|restaurante|restaurant|bar|lounge|gym|fitness|garden|terrace|rooftop/i.test(lower)) {
+  if (/room|suite|quarto|camera|chambre|deluxe|superior|standard|penthouse|presidential|royal|spa|pool|piscina|restaurante|restaurant|bar|lounge|gym|fitness|garden|terrace|rooftop|客室|和室|洋室|スイート|ルーム|レストラン|温泉|大浴場|スパ|プール|ラウンジ|バー|庭園|施設/i.test(lower)) {
     return heading;
   }
   
