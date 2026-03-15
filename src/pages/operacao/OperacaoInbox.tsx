@@ -648,33 +648,47 @@ function OperacaoInboxInner() {
           return Array.from(byId.values()).sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
         });
 
-        // Background: backfill empty previews in parallel batches
-        const convIdsNeedingPreview = data.filter(c => !c.last_message_preview).map(c => c.id);
-        if (convIdsNeedingPreview.length > 0) {
-          const BATCH = 5;
-          for (let i = 0; i < convIdsNeedingPreview.length; i += BATCH) {
-            const batch = convIdsNeedingPreview.slice(i, i + BATCH);
-            await Promise.allSettled(batch.map(async (convId) => {
+        // Background: backfill ALL previews from actual message data (not just empty ones)
+        const allConvData = data;
+        if (allConvData.length > 0) {
+          const BATCH = 8;
+          for (let i = 0; i < allConvData.length; i += BATCH) {
+            const batch = allConvData.slice(i, i + BATCH);
+            await Promise.allSettled(batch.map(async (convRecord) => {
+              const convId = convRecord.id;
+              const phone = (convRecord.phone || "").replace(/\D/g, "");
+              const cleanPhone = phone;
+              const canonicalId = cleanPhone ? `wa_${cleanPhone}` : convId;
+
+              // Try chat_messages first
               let { data: lastMsg } = await supabase.from("chat_messages").select("content, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+
+              // Fallback to legacy messages table
               if (!lastMsg) {
                 const { data: legacyMsg } = await supabase.from("messages").select("text, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).maybeSingle();
                 if (legacyMsg) lastMsg = { content: (legacyMsg as any).text, message_type: (legacyMsg as any).message_type, created_at: (legacyMsg as any).created_at };
               }
-              if (!lastMsg) {
-                const convRecord = data.find(c => c.id === convId);
-                const phone = (convRecord?.phone || "").replace(/\D/g, "");
-                if (phone) {
-                  const { data: zapiMsg } = await supabase.from("zapi_messages" as any).select("text, type, timestamp").in("phone", [phone, `${phone}@c.us`]).order("timestamp", { ascending: false }).limit(1).maybeSingle();
-                  if (zapiMsg) lastMsg = { content: (zapiMsg as any).text || `📎 ${(zapiMsg as any).type}`, message_type: (zapiMsg as any).type || "text", created_at: toIsoTimestamp((zapiMsg as any).timestamp) };
-                }
+
+              // Fallback to zapi_messages by phone
+              if (!lastMsg && cleanPhone) {
+                const phoneCandidates = [cleanPhone, `${cleanPhone}@c.us`];
+                const { data: zapiMsg } = await supabase.from("zapi_messages" as any).select("text, type, timestamp, from_me").in("phone", phoneCandidates).order("timestamp", { ascending: false }).limit(1).maybeSingle();
+                if (zapiMsg) lastMsg = { content: (zapiMsg as any).text || `📎 ${(zapiMsg as any).type}`, message_type: (zapiMsg as any).type || "text", created_at: toIsoTimestamp((zapiMsg as any).timestamp) };
               }
+
               if (lastMsg) {
                 const preview = lastMsg.content || `📎 ${lastMsg.message_type}`;
-                const convRecord = data.find(c => c.id === convId);
-                const cleanPhone = (convRecord?.phone || "").replace(/\D/g, "");
-                const canonicalId = cleanPhone ? `wa_${cleanPhone}` : convId;
-                setConversations(prev => prev.map(c => c.id === canonicalId ? { ...c, last_message_preview: preview, last_message_at: lastMsg!.created_at || c.last_message_at } : c));
-                supabase.from("conversations").update({ last_message_preview: preview, last_message_at: lastMsg.created_at }).eq("id", convId).then(() => {});
+                const msgTime = lastMsg.created_at;
+                const currentPreview = convRecord.last_message_preview || "";
+                const currentTime = convRecord.last_message_at || "";
+                // Only update if we found a different/better preview or the current one is empty
+                const needsUpdate = !currentPreview || currentPreview !== preview || (msgTime && (!currentTime || new Date(msgTime) > new Date(currentTime)));
+                
+                setConversations(prev => prev.map(c => c.id === canonicalId ? { ...c, last_message_preview: preview, last_message_at: msgTime || c.last_message_at } : c));
+                
+                if (needsUpdate) {
+                  supabase.from("conversations").update({ last_message_preview: preview, last_message_at: msgTime || currentTime }).eq("id", convId).then(() => {});
+                }
               }
             }));
           }
@@ -888,6 +902,26 @@ function OperacaoInboxInner() {
 
           if (!cancelled) {
             setMessages(prev => ({ ...prev, [selectedId]: mergedMsgs }));
+            // Sync sidebar preview with actual last message
+            if (mergedMsgs.length > 0) {
+              const lastMsg = mergedMsgs[mergedMsgs.length - 1];
+              const lastPreview = lastMsg.text || `📎 ${lastMsg.message_type}`;
+              setConversations(prev => prev.map(c => {
+                if (c.id !== selectedId) return c;
+                // Only update if current preview is empty or older
+                const currentTime = new Date(c.last_message_at || 0).getTime();
+                const msgTime = new Date(lastMsg.created_at).getTime();
+                if (!c.last_message_preview || msgTime >= currentTime) {
+                  return { ...c, last_message_preview: lastPreview, last_message_at: lastMsg.created_at };
+                }
+                return c;
+              }));
+              // Also update DB
+              const sel = conversations.find(c => c.id === selectedId);
+              if (sel?.db_id) {
+                supabase.from("conversations").update({ last_message_preview: lastPreview, last_message_at: lastMsg.created_at }).eq("id", sel.db_id).then(() => {});
+              }
+            }
           }
           return;
         }
@@ -903,7 +937,20 @@ function OperacaoInboxInner() {
             const dedupedRows = Array.from(
               new Map(mergedRows.map((row: any) => [row.id || `${row.created_at}_${row.sender_type}_${row.text || row.content || ""}`, row])).values(),
             ).sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-            setMessages(prev => ({ ...prev, [selectedId]: mapDbMessages(dedupedRows, selectedId) }));
+            const mapped = mapDbMessages(dedupedRows, selectedId);
+            setMessages(prev => ({ ...prev, [selectedId]: mapped }));
+            // Sync sidebar preview
+            if (mapped.length > 0) {
+              const lastMsg = mapped[mapped.length - 1];
+              const lastPreview = lastMsg.text || `📎 ${lastMsg.message_type}`;
+              setConversations(prev => prev.map(c => {
+                if (c.id !== selectedId) return c;
+                if (!c.last_message_preview || new Date(lastMsg.created_at).getTime() >= new Date(c.last_message_at || 0).getTime()) {
+                  return { ...c, last_message_preview: lastPreview, last_message_at: lastMsg.created_at };
+                }
+                return c;
+              }));
+            }
           }
         }
       } catch (error) {
@@ -1062,19 +1109,12 @@ function OperacaoInboxInner() {
       try {
         const data = await callZapiProxy("get-chats");
         const chats = Array.isArray(data) ? data : [];
-        const phoneList = chats.map((c: any) => (c.phone || c.id || "").replace(/\D/g, "")).filter(Boolean);
-        const knownPhones = new Set<string>();
-        if (phoneList.length > 0) {
-          const { data: dbConvs } = await supabase.from("conversations").select("phone").in("phone", phoneList);
-          for (const c of dbConvs || []) knownPhones.add(c.phone || "");
-        }
         const newConvs: Conversation[] = [];
         for (const chat of chats) {
           const phone = chat.phone || chat.id || "";
           if (!phone || phone.includes("@g.us") || phone === "status@broadcast") continue;
           const cleanPhone = phone.replace(/\D/g, "");
           if (!cleanPhone) continue;
-          if (!knownPhones.has(cleanPhone)) continue;
           const convId = `wa_${cleanPhone}`;
           const contactName = chat.name || chat.chatName || chat.contact?.name || formatPhoneDisplay(cleanPhone);
           let lastMsgTime: string | null = null;
@@ -1097,22 +1137,47 @@ function OperacaoInboxInner() {
         }
         // Save any inline chat photos to cache
         if (newConvs.length > 0) saveProfilePicsCache();
-        // Backfill empty previews from zapi_messages
-        for (const conv of newConvs) {
-          if (!conv.last_message_preview && conv.phone) {
+        // Backfill previews from zapi_messages for ALL conversations (not just empty ones)
+        const PREVIEW_BATCH = 8;
+        for (let bi = 0; bi < newConvs.length; bi += PREVIEW_BATCH) {
+          const batch = newConvs.slice(bi, bi + PREVIEW_BATCH);
+          await Promise.allSettled(batch.map(async (conv) => {
+            if (!conv.phone) return;
             try {
               const { data: lastZapi } = await supabase.from("zapi_messages" as any)
-                .select("text, type, timestamp")
+                .select("text, type, timestamp, from_me")
                 .in("phone", [conv.phone, `${conv.phone}@c.us`])
                 .order("timestamp", { ascending: false })
                 .limit(1)
                 .maybeSingle();
               if (lastZapi) {
-                conv.last_message_preview = (lastZapi as any).text || `📎 ${(lastZapi as any).type || "mensagem"}`;
-                if ((lastZapi as any).timestamp) conv.last_message_at = toIsoTimestamp((lastZapi as any).timestamp);
+                const zapiPreview = (lastZapi as any).text || `📎 ${(lastZapi as any).type || "mensagem"}`;
+                const zapiTime = (lastZapi as any).timestamp ? toIsoTimestamp((lastZapi as any).timestamp) : null;
+                // Use zapi preview if it's newer or current is empty
+                const currentTime = conv.last_message_at ? new Date(conv.last_message_at).getTime() : 0;
+                const zapiTimeMs = zapiTime ? new Date(zapiTime).getTime() : 0;
+                if (!conv.last_message_preview || zapiTimeMs >= currentTime) {
+                  conv.last_message_preview = zapiPreview;
+                  if (zapiTime && zapiTimeMs > currentTime) conv.last_message_at = zapiTime;
+                }
               }
             } catch {}
-          }
+          }));
+        }
+        // Also check chat_messages / messages tables for conversations that still lack preview
+        for (let bi = 0; bi < newConvs.length; bi += PREVIEW_BATCH) {
+          const batch = newConvs.slice(bi, bi + PREVIEW_BATCH).filter(c => !c.last_message_preview);
+          if (batch.length === 0) continue;
+          await Promise.allSettled(batch.map(async (conv) => {
+            // Find DB conversation by phone
+            const { data: dbConvMatch } = await supabase.from("conversations").select("id").eq("phone", conv.phone).limit(1).maybeSingle();
+            if (!dbConvMatch) return;
+            const { data: lastChat } = await supabase.from("chat_messages").select("content, message_type, created_at").eq("conversation_id", dbConvMatch.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+            if (lastChat) {
+              conv.last_message_preview = (lastChat as any).content || `📎 ${(lastChat as any).message_type}`;
+              conv.last_message_at = (lastChat as any).created_at || conv.last_message_at;
+            }
+          }));
         }
         if (newConvs.length > 0) {
           const deduped = new Map<string, Conversation>();
