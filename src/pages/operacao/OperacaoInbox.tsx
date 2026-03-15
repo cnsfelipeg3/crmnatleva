@@ -580,7 +580,7 @@ function OperacaoInboxInner() {
       const data = await fetchAllRows("conversations", "*", {
       order: { column: "last_message_at", ascending: false },
         cacheMs: 0,
-        const mapConv = (c: any, fallbackPreview?: string) => {
+        bypassCache: true,
           const cleanPhone = (c.phone || "").replace(/\D/g, "");
           const canonicalId = cleanPhone ? `wa_${cleanPhone}` : c.id;
           return {
