@@ -585,6 +585,8 @@ function PhotoGrid({
                 alt={photo.room_name || photo.alt || photo.category}
                 className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                 loading="lazy"
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
                 onError={() => onImageError(photo.url)}
               />
             )}
