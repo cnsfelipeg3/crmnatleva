@@ -2520,6 +2520,25 @@ function OperacaoInboxInner() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Link Client Dialog */}
+      {selected && (
+        <LinkClientDialog
+          open={showLinkClient}
+          onOpenChange={setShowLinkClient}
+          conversationId={selected.db_id || selected.id}
+          conversationPhone={selected.phone}
+          conversationName={selected.contact_name || selected.phone}
+          currentClientId={null}
+          onLinked={(clientId, clientName) => {
+            toast({ title: "Cliente vinculado!", description: `${selected.contact_name} → ${clientName}` });
+            setShowLinkClient(false);
+          }}
+          onUnlinked={() => {
+            toast({ title: "Vínculo removido" });
+          }}
+        />
+      )}
     </div>
   );
 }
