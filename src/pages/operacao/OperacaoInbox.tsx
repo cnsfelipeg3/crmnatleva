@@ -238,6 +238,7 @@ function OperacaoInboxInner() {
   const [reloadingMessages, setReloadingMessages] = useState(false);
   const [rebuildingHistoryAll, setRebuildingHistoryAll] = useState(false);
   const [flowRunning, setFlowRunning] = useState(false);
+  const [botActive, setBotActive] = useState(true);
   const [activeFlowName, setActiveFlowName] = useState<string | null>(null);
   const flowNameCacheRef = useRef<Record<string, string | null>>({});
   const [waConnected, setWaConnected] = useState(false);
