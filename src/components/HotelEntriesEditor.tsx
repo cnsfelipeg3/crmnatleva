@@ -194,7 +194,7 @@ export default function HotelEntriesEditor({
                             hotelCountry={hotel.hotel_country}
                           />
                         </div>
-                      )}
+                    </div>
                     <div className="space-y-1.5"><Label className="text-xs">Destino</Label><Input className="h-9 text-sm" value={hotel.hotel_city} onChange={e => updateHotel(hotel.id, "hotel_city", e.target.value)} /></div>
                     <div className="space-y-1.5"><Label className="text-xs">Check-in</Label><Input type="date" className="h-9 text-sm" value={hotel.hotel_checkin_date} onChange={e => updateHotel(hotel.id, "hotel_checkin_date", e.target.value)} /></div>
                     <div className="space-y-1.5"><Label className="text-xs">Check-out</Label><Input type="date" className="h-9 text-sm" value={hotel.hotel_checkout_date} onChange={e => updateHotel(hotel.id, "hotel_checkout_date", e.target.value)} /></div>
