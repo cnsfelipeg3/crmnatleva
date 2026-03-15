@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search } from "lucide-react";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
+import HotelPhotosScraper from "@/components/HotelPhotosScraper";
 
 const itemTypeIcons: Record<string, any> = {
   destination: MapPin,
@@ -528,6 +529,24 @@ export default function ProposalEditor() {
                                 <Input value={item.data?.meal_plan || ""} onChange={(e) => updateItemData(idx, "meal_plan", e.target.value)} placeholder="Café da manhã incluso" />
                               </div>
                             </>
+                          )}
+
+                          {/* Hotel Photos Scraper */}
+                          {item.item_type === "hotel" && item.title && (
+                            <div className="md:col-span-2">
+                              <HotelPhotosScraper
+                                hotelName={item.title}
+                                hotelCity={item.data?.location || ""}
+                                hotelCountry=""
+                                onSelectPhotos={(photos) => {
+                                  if (photos.length > 0 && !item.image_url) {
+                                    updateItem(idx, "image_url", photos[0].url);
+                                  }
+                                  const existing = item.data?.official_photos || [];
+                                  updateItemData(idx, "official_photos", [...existing, ...photos]);
+                                }}
+                              />
+                            </div>
                           )}
                         </div>
                       </div>
