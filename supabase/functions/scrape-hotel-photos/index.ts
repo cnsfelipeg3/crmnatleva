@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
     console.log(`Returning ${photos.length} photos`);
 
     return new Response(
-      JSON.stringify({ success: true, photos, source_url: mainUrl || "" }),
+      JSON.stringify({ success: true, photos, source_url: mainUrl || "", room_names: roomNames }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
