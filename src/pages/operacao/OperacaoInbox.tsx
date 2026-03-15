@@ -1695,7 +1695,7 @@ function OperacaoInboxInner() {
                                 <Bot className="h-3 w-3 text-primary" />
                                 <span className="text-[9px] font-bold text-primary uppercase tracking-wider">Sistema / Bot</span>
                               </div>
-                              <p className="text-sm leading-relaxed text-foreground">{msg.text}</p>
+                              <p className="text-sm leading-relaxed text-foreground">{stripQuotes(msg.text)}</p>
                               <span className="text-[9px] text-muted-foreground">{formatMsgTime(msg.created_at)}</span>
                             </div>
                           ) : (
