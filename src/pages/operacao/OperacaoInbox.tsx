@@ -768,7 +768,7 @@ function OperacaoInboxInner() {
           id: msgId, conversation_id: waKey,
           sender_type: (n.from_me ? "atendente" : "cliente") as "cliente" | "atendente",
           message_type: (n.type || "text") as MsgType,
-          text: n.text || mediaInfo2.caption || "",
+          text: stripQuotes(n.text || mediaInfo2.caption || ""),
           media_url: mediaInfo2.mediaUrl,
           status: mapZapiStatus(n.status, n.from_me),
           created_at: n.timestamp || n.created_at,
