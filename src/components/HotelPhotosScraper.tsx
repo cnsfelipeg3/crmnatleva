@@ -554,7 +554,6 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                               loading="lazy"
                               referrerPolicy="no-referrer"
-                              crossOrigin="anonymous"
                               onError={() => handleImageError(coverPhoto.url)}
                             />
                           )}
@@ -567,7 +566,6 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                               loading="lazy"
                               referrerPolicy="no-referrer"
-                              crossOrigin="anonymous"
                               onError={() => handleImageError(secondPhoto.url)}
                             />
                           </div>
@@ -647,7 +645,6 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 aspect-[4/3]"
                   loading="lazy"
                   referrerPolicy="no-referrer"
-                  crossOrigin="anonymous"
                   onError={() => handleImageError(Object.values(items).flat()[0].url)}
                 />
               )}
@@ -704,7 +701,6 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
                         referrerPolicy="no-referrer"
-                        crossOrigin="anonymous"
                         onError={() => handleImageError(coverPhoto.url)}
                       />
                     )}
@@ -717,7 +713,6 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
                         referrerPolicy="no-referrer"
-                        crossOrigin="anonymous"
                         onError={() => handleImageError(secondPhoto.url)}
                       />
                     </div>
@@ -768,7 +763,6 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 aspect-[4/3]"
                     loading="lazy"
                     referrerPolicy="no-referrer"
-                    crossOrigin="anonymous"
                     onError={() => handleImageError(coverPhoto.url)}
                   />
                 )}
@@ -837,7 +831,6 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
               alt={nav.itemName}
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
-              crossOrigin="anonymous"
               onError={() => handleImageError(itemPhotos[0].url)}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
@@ -1041,7 +1034,6 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
               className="max-w-full max-h-full object-contain select-none"
               draggable={false}
               referrerPolicy="no-referrer"
-              crossOrigin="anonymous"
               onError={() => handleImageError(lightboxPhoto.url)}
             />
 
@@ -1095,7 +1087,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
                       i === lightboxIndex ? "border-primary opacity-100 scale-110" : "border-transparent opacity-40 hover:opacity-70"
                     )}
                   >
-                    <img src={getDisplayUrl(p.url)} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" crossOrigin="anonymous" onError={() => handleImageError(p.url)} />
+                    <img src={getDisplayUrl(p.url)} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" onError={() => handleImageError(p.url)} />
                   </button>
                 ))}
               </div>
@@ -1154,7 +1146,6 @@ const PhotoGrid = ({
                 className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105"
                 loading="lazy"
                 referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
                 onError={() => onImageError(photo.url)}
               />
             )}
