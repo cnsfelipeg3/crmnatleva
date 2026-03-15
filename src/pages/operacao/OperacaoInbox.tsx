@@ -892,7 +892,7 @@ function OperacaoInboxInner() {
           text: stripQuotes(n.text || mediaInfo2.caption || ""),
           media_url: mediaInfo2.mediaUrl,
           status: mapZapiStatus(n.status, n.from_me),
-          created_at: n.timestamp || n.created_at,
+          created_at: toIsoTimestamp(n.timestamp || n.created_at),
         };
         setMessages(prev => {
           const existing = prev[waKey] || [];
