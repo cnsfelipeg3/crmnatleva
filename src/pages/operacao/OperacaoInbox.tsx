@@ -902,6 +902,26 @@ function OperacaoInboxInner() {
 
           if (!cancelled) {
             setMessages(prev => ({ ...prev, [selectedId]: mergedMsgs }));
+            // Sync sidebar preview with actual last message
+            if (mergedMsgs.length > 0) {
+              const lastMsg = mergedMsgs[mergedMsgs.length - 1];
+              const lastPreview = lastMsg.text || `📎 ${lastMsg.message_type}`;
+              setConversations(prev => prev.map(c => {
+                if (c.id !== selectedId) return c;
+                // Only update if current preview is empty or older
+                const currentTime = new Date(c.last_message_at || 0).getTime();
+                const msgTime = new Date(lastMsg.created_at).getTime();
+                if (!c.last_message_preview || msgTime >= currentTime) {
+                  return { ...c, last_message_preview: lastPreview, last_message_at: lastMsg.created_at };
+                }
+                return c;
+              }));
+              // Also update DB
+              const sel = conversations.find(c => c.id === selectedId);
+              if (sel?.db_id) {
+                supabase.from("conversations").update({ last_message_preview: lastPreview, last_message_at: lastMsg.created_at }).eq("id", sel.db_id).then(() => {});
+              }
+            }
           }
           return;
         }
