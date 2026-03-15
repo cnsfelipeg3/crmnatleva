@@ -245,6 +245,7 @@ function OperacaoInboxInner() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isUserScrolledUpRef = useRef(false);
+  const lastAutoReconcileRef = useRef(0);
 
   const selected = conversations.find(c => c.id === selectedId);
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
