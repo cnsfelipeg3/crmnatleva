@@ -527,63 +527,6 @@ function extractFromStructuredContainers(html: string, sourceUrl: string, collec
 
 
 
-
-function extractRoomDetailLinks(html: string, baseUrl: string): Array<{ url: string; roomName: string }> {
-  const links: Array<{ url: string; roomName: string }> = [];
-  const seen = new Set<string>();
-
-  // Pattern: <a href="/rooms/deluxe">Deluxe Room</a>
-  const linkRegex = /<a[^>]*href=["']([^"']+(?:room|suite|camera|chambre|zimmer|quarto|accommodation)[^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
-  let match;
-  while ((match = linkRegex.exec(html)) !== null) {
-    const href = match[1].trim();
-    const linkText = match[2].replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").trim();
-    if (linkText.length < 3 || linkText.length > 80) continue;
-    if (isGenericHeading(linkText.toLowerCase())) continue;
-
-    const absUrl = makeAbsolute(href, baseUrl);
-    if (seen.has(absUrl)) continue;
-    seen.add(absUrl);
-    links.push({ url: absUrl, roomName: linkText });
-  }
-
-  // Also look for links in room containers that use different patterns
-  const altLinkRegex = /<a[^>]*href=["']([^"']{10,200})["'][^>]*>[^<]*<(?:h[1-6]|span|strong)[^>]*>([^<]{3,80})<\//gi;
-  while ((match = altLinkRegex.exec(html)) !== null) {
-    const href = match[1].trim();
-    const text = match[2].replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").trim();
-    if (text.length < 3 || isGenericHeading(text.toLowerCase())) continue;
-    const absUrl = makeAbsolute(href, baseUrl);
-    if (seen.has(absUrl)) continue;
-    // Only include if the URL looks like a room page
-    const lowerHref = absUrl.toLowerCase();
-    if (lowerHref.includes("room") || lowerHref.includes("suite") || lowerHref.includes("camera") ||
-        lowerHref.includes("accommodation") || lowerHref.includes("quarto") || lowerHref.includes("chambre")) {
-      seen.add(absUrl);
-      links.push({ url: absUrl, roomName: text });
-    }
-  }
-
-  return links;
-}
-
-async function discoverRoomsPaths(mainUrl: string, apiKey: string): Promise<string[]> {
-  try {
-    const resp = await fetch("https://api.firecrawl.dev/v1/map", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ url: mainUrl, search: "rooms suites accommodation", limit: 20 }),
-    });
-    if (!resp.ok) return [];
-    const data = await resp.json();
-    const urls: string[] = data.links || [];
-    const roomKeywords = ["room", "suite", "accommodation", "camera", "chambre", "quarto", "zimmer"];
-    return urls.filter(u => roomKeywords.some(kw => u.toLowerCase().includes(kw))).slice(0, 5);
-  } catch {
-    return [];
-  }
-}
-
 // ═══════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════
