@@ -986,7 +986,7 @@ function OperacaoInboxInner() {
       try {
         const phoneCandidates = getZapiPhoneCandidates(selectedId);
         if (phoneCandidates.length === 0) return;
-        const { data: zapiData } = await supabase.from("zapi_messages" as any).select("*").in("phone", phoneCandidates).order("timestamp", { ascending: true }).limit(200);
+        const { data: zapiData } = await supabase.from("zapi_messages" as any).select("*").in("phone", phoneCandidates).order("timestamp", { ascending: false }).limit(200);
         const rawMsgs = zapiData || [];
         const newMsgs: Message[] = [];
         for (const m of rawMsgs) {
