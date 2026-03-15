@@ -106,13 +106,20 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${collection.photos.length} candidate images`);
 
-    // ── Step 5: Filter and return ──
+    // ── Step 5: Filter, deduplicate, maximize quality, and return ──
     const photos = collection.photos
       .filter(img => {
         const url = img.url.toLowerCase();
         if (url.includes("icon") || url.includes("logo") || url.includes("sprite")) return false;
         if (url.includes("1x1") || url.includes("pixel") || url.includes("tracking")) return false;
+        if (isLikelyThumbnail(img.url)) return false;
         return /\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(img.url) && img.url.length > 50;
+      })
+      // Prioritize photos WITH section names (they're more valuable)
+      .sort((a, b) => {
+        if (a.section_name && !b.section_name) return -1;
+        if (!a.section_name && b.section_name) return 1;
+        return 0;
       })
       .slice(0, 60)
       .map(img => ({
