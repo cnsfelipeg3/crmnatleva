@@ -251,13 +251,13 @@ serve(async (req) => {
     if (action === "hotel_search") {
       const { keyword, cityCode, latitude, longitude } = params;
       
-      // Strategy 1: Search by keyword (Hotel Name Autocomplete)
-      if (keyword && keyword.length >= 2) {
+      // Strategy 1: Search by keyword (Hotel Name Autocomplete) — requires subType and min 4 chars
+      if (keyword && keyword.length >= 4) {
         const searchParams: Record<string, string> = {
-          keyword: keyword,
-          max: "10",
+          keyword: keyword.toUpperCase(),
+          subType: "HOTEL_LEISURE,HOTEL_GDS",
+          max: "15",
         };
-        if (cityCode) searchParams.subType = "HOTEL_LEISURE,HOTEL_GDS";
         
         try {
           const data = await amadeusGet("/v1/reference-data/locations/hotel", searchParams);
@@ -269,9 +269,11 @@ serve(async (req) => {
             address: h.address ? [h.address.lines?.join(", "), h.address.cityName, h.address.countryCode].filter(Boolean).join(", ") : "",
             location: h.geoCode ? { lat: h.geoCode.latitude, lng: h.geoCode.longitude } : null,
           }));
-          return new Response(JSON.stringify({ data: results }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          if (results.length > 0) {
+            return new Response(JSON.stringify({ data: results }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
         } catch (err) {
           console.error("Amadeus hotel keyword search failed:", err);
         }
@@ -287,7 +289,15 @@ serve(async (req) => {
             radiusUnit: "KM",
             hotelSource: "ALL",
           });
-          const results = (data.data || []).slice(0, 15).map((h: any) => ({
+          const allResults = data.data || [];
+          // If keyword provided, filter by name match
+          let filtered = allResults;
+          if (keyword && keyword.length >= 2) {
+            const kw = keyword.toUpperCase();
+            filtered = allResults.filter((h: any) => (h.name || "").toUpperCase().includes(kw));
+            if (filtered.length === 0) filtered = allResults;
+          }
+          const results = filtered.slice(0, 15).map((h: any) => ({
             hotelId: h.hotelId || "",
             name: h.name || "",
             iataCode: h.iataCode || "",
@@ -296,9 +306,11 @@ serve(async (req) => {
             location: h.geoCode ? { lat: h.geoCode.latitude, lng: h.geoCode.longitude } : null,
             distance: h.distance ? `${h.distance.value} ${h.distance.unit}` : null,
           }));
-          return new Response(JSON.stringify({ data: results }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          if (results.length > 0) {
+            return new Response(JSON.stringify({ data: results }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
         } catch (err) {
           console.error("Amadeus hotel geocode search failed:", err);
         }
@@ -311,7 +323,14 @@ serve(async (req) => {
             cityCode: cityCode.toUpperCase(),
             hotelSource: "ALL",
           });
-          const results = (data.data || []).slice(0, 15).map((h: any) => ({
+          const allResults = data.data || [];
+          let filtered = allResults;
+          if (keyword && keyword.length >= 2) {
+            const kw = keyword.toUpperCase();
+            filtered = allResults.filter((h: any) => (h.name || "").toUpperCase().includes(kw));
+            if (filtered.length === 0) filtered = allResults;
+          }
+          const results = filtered.slice(0, 15).map((h: any) => ({
             hotelId: h.hotelId || "",
             name: h.name || "",
             iataCode: h.iataCode || "",
