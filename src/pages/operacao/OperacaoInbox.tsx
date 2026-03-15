@@ -590,6 +590,7 @@ function OperacaoInboxInner() {
           const phone = selectedId.replace("wa_", "").trim();
           const dbPhoneCandidates = Array.from(new Set([phone, `+${phone}`, `${phone}@c.us`, `${phone}@g.us`, `${phone}-group`]));
 
+          // Always search by phone to find ALL conversation IDs (there may be duplicates with/without "+")
           const [zapiResp, byPhoneResp, byExternalResp] = await Promise.all([
             supabase
               .from("zapi_messages" as any)
@@ -597,12 +598,8 @@ function OperacaoInboxInner() {
               .in("phone", phoneCandidates)
               .order("timestamp", { ascending: false })
               .limit(1000),
-            selected?.db_id
-              ? Promise.resolve({ data: null })
-              : supabase.from("conversations").select("id, updated_at").in("phone", dbPhoneCandidates).order("updated_at", { ascending: false }),
-            selected?.db_id
-              ? Promise.resolve({ data: null })
-              : supabase.from("conversations").select("id, updated_at").eq("external_conversation_id", selectedId).order("updated_at", { ascending: false }),
+            supabase.from("conversations").select("id, updated_at").in("phone", dbPhoneCandidates).order("updated_at", { ascending: false }),
+            supabase.from("conversations").select("id, updated_at").eq("external_conversation_id", selectedId).order("updated_at", { ascending: false }),
           ]);
 
           if (cancelled) return;
@@ -624,48 +621,55 @@ function OperacaoInboxInner() {
             })
             .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
-          let fallbackConversationId = selected?.db_id || null;
+          // Collect ALL candidate conversation IDs (including db_id and phone matches)
+          const allCandidateConversations = [...(byPhoneResp.data || []), ...(byExternalResp.data || [])]
+            .filter(c => !!c.id)
+            .sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
+          
+          const candidateIds = Array.from(new Set([
+            ...(selected?.db_id ? [selected.db_id] : []),
+            ...allCandidateConversations.map(c => c.id),
+          ]));
 
-          if (!fallbackConversationId) {
-            const candidateConversations = [...(byPhoneResp.data || []), ...(byExternalResp.data || [])]
-              .filter(c => !!c.id)
-              .sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime());
-
-            const candidateIds = Array.from(new Set(candidateConversations.map(c => c.id)));
-
-            if (candidateIds.length > 0) {
-              const [{ data: latestLegacyMsg }, { data: latestModernMsg }] = await Promise.all([
-                supabase
-                  .from("messages")
-                  .select("conversation_id, created_at")
-                  .in("conversation_id", candidateIds)
-                  .order("created_at", { ascending: false })
-                  .limit(1),
-                supabase
-                  .from("chat_messages")
-                  .select("conversation_id, created_at")
-                  .in("conversation_id", candidateIds)
-                  .order("created_at", { ascending: false })
-                  .limit(1),
-              ]);
-
-              fallbackConversationId = latestLegacyMsg?.[0]?.conversation_id || latestModernMsg?.[0]?.conversation_id || candidateIds[0] || null;
+          let allConversationIds: string[] = [];
+          if (candidateIds.length > 0) {
+            // Find which conversation IDs actually have messages
+            const [{ data: legacyCheck }, { data: modernCheck }] = await Promise.all([
+              supabase
+                .from("messages")
+                .select("conversation_id")
+                .in("conversation_id", candidateIds)
+                .limit(50),
+              supabase
+                .from("chat_messages")
+                .select("conversation_id")
+                .in("conversation_id", candidateIds)
+                .limit(50),
+            ]);
+            allConversationIds = Array.from(new Set([
+              ...(legacyCheck || []).map((r: any) => r.conversation_id),
+              ...(modernCheck || []).map((r: any) => r.conversation_id),
+            ]));
+            // If none found with messages, use db_id as fallback
+            if (allConversationIds.length === 0 && selected?.db_id) {
+              allConversationIds = [selected.db_id];
             }
           }
 
           let dbMsgs: Message[] = [];
-          if (fallbackConversationId) {
+          if (allConversationIds.length > 0) {
+            // Query messages from ALL matching conversation IDs
             const [legacyResp, modernResp] = await Promise.all([
               supabase
                 .from("messages")
                 .select("*")
-                .eq("conversation_id", fallbackConversationId)
+                .in("conversation_id", allConversationIds)
                 .order("created_at", { ascending: true })
                 .limit(1000),
               supabase
                 .from("chat_messages")
                 .select("*")
-                .eq("conversation_id", fallbackConversationId)
+                .in("conversation_id", allConversationIds)
                 .order("created_at", { ascending: true })
                 .limit(1000),
             ]);
@@ -1453,7 +1457,7 @@ function OperacaoInboxInner() {
   return (
     <div
       ref={livechatContainerRef}
-      className={`flex flex-col bg-background ${isMobile ? "fixed inset-0 z-50" : "h-full"}`}
+      className={`flex flex-col bg-background overflow-hidden ${isMobile ? "fixed inset-0 z-50" : "h-full"}`}
       style={isMobile ? { height: mobileHeight } : { height: '100%' }}
     >
       {/* Content */}
@@ -1599,7 +1603,7 @@ function OperacaoInboxInner() {
           </div>
 
           {/* ─── Column 2: Chat ─── */}
-          <div className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden ${isMobile && !selectedId ? "hidden" : ""}`}>
+          <div className={`flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden relative ${isMobile && !selectedId ? "hidden" : ""}`}>
             {selected ? (
               <>
                 {/* Chat header */}
