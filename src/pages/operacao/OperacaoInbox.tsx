@@ -1567,34 +1567,67 @@ function OperacaoInboxInner() {
     if (selectedId.startsWith("wa_")) {
       const phone = selectedId.replace("wa_", "");
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      const msgCreatedAt = new Date().toISOString();
       const newMsg: Message = {
         id: tempId, conversation_id: selectedId, sender_type: "atendente", message_type: "text",
-        text, status: "sent", created_at: new Date().toISOString(),
+        text, status: "sent", created_at: msgCreatedAt,
         quoted_msg: replyRef ? { text: replyRef.text || "📎 Mídia", sender_type: replyRef.sender_type, message_type: replyRef.message_type } : undefined,
       };
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), newMsg] }));
       lastMsgIdsRef.current.add(tempId);
       isUserScrolledUpRef.current = false;
       scrollToBottom();
+
+      let sendSuccess = false;
+      let persistedExternalId = tempId;
+
       try {
+        // 1. Send via WhatsApp
         const sendPayload: any = { phone, message: text };
         if (replyRef?.id && !replyRef.id.startsWith("temp_")) sendPayload.messageId = replyRef.id;
         const sendResult = await callZapiProxy("send-text", sendPayload);
         const realId = sendResult?.messageId || sendResult?.id;
-        const persistedExternalId = realId || tempId;
+        persistedExternalId = realId || tempId;
+        sendSuccess = true;
+
         if (realId) {
           lastMsgIdsRef.current.add(realId);
           setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m => m.id === tempId ? { ...m, id: realId } : m) }));
         }
+      } catch (err: any) {
+        // Send failed - remove temp message
+        setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).filter(m => m.id !== tempId) }));
+        toast({ title: "Erro ao enviar", description: err?.message || "Falha na comunicação com WhatsApp", variant: "destructive" });
+        setIsSending(false);
+        return;
+      }
 
+      // 2. MANDATORY persistence - if this fails, mark message as failed
+      try {
         await persistOutgoingMessage({
           conversationId: selectedId,
           messageType: "text",
           text,
           externalMessageId: persistedExternalId,
-          createdAt: new Date().toISOString(),
+          createdAt: msgCreatedAt,
         });
-      } catch (err) { toast({ title: "Erro ao enviar", description: "Falha na comunicação com WhatsApp", variant: "destructive" }); }
+      } catch (persistErr: any) {
+        console.error("[SEND] Mensagem enviada mas NÃO persistida:", persistErr);
+        // Mark message in UI as failed (don't remove - it was sent via WhatsApp)
+        setMessages(prev => ({
+          ...prev,
+          [selectedId]: (prev[selectedId] || []).map(m =>
+            m.id === persistedExternalId || m.id === tempId
+              ? { ...m, status: "sent" as MsgStatus, text: `⚠️ ${text}` }
+              : m
+          ),
+        }));
+        toast({
+          title: "⚠️ Mensagem enviada mas NÃO salva",
+          description: "A mensagem foi entregue ao WhatsApp mas falhou ao salvar no banco. Ela pode não aparecer no histórico.",
+          variant: "destructive",
+        });
+      }
     } else if (selectedId.length > 10) {
       await supabase.from("chat_messages").insert({ conversation_id: selectedId, sender_type: "atendente", message_type: "text", content: text, read_status: "sent" });
       await supabase.from("conversations").update({ last_message_preview: text, last_message_at: new Date().toISOString(), unread_count: 0 }).eq("id", selectedId);
