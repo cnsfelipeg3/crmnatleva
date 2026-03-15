@@ -459,7 +459,7 @@ function OperacaoInboxInner() {
     return {
       id: msgId, conversation_id: convId,
       sender_type: fromMe ? "atendente" : "cliente",
-      message_type: msgType, text,
+      message_type: msgType, text: stripQuotes(text),
       media_url: mediaUrl,
       status: fromMe ? "sent" : "delivered",
       created_at: timestamp,
