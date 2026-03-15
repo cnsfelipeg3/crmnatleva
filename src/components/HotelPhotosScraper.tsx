@@ -230,11 +230,11 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     }
   }, []);
 
-  const runClassification = useCallback(async (photosToClassify: HotelPhoto[]) => {
+  const runClassification = useCallback(async (photosToClassify: HotelPhoto[], roomNames?: string[]) => {
     setClassifying(true);
     toast.info("🤖 Classificando fotos por ambiente...", { duration: 3000 });
     try {
-      const classified = await classifyPhotosWithAI(photosToClassify, hotelName);
+      const classified = await classifyPhotosWithAI(photosToClassify, hotelName, roomNames || knownRoomNames);
       setPhotos(classified);
       const envCount = new Set(classified.map(p => p.environment_name).filter(Boolean)).size;
       toast.success(`✨ ${envCount} ambientes identificados em ${classified.length} fotos`);
@@ -243,7 +243,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     } finally {
       setClassifying(false);
     }
-  }, [hotelName]);
+  }, [hotelName, knownRoomNames]);
 
   const fetchGooglePlacesPhotos = async () => {
     if (!hotelName) { toast.error("Selecione um hotel primeiro"); return; }
