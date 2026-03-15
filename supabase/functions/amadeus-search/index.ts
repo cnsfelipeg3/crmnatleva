@@ -460,6 +460,10 @@ serve(async (req) => {
               ? (dictionaries?.carriers?.[operatingCode] || operatingCode)
               : "";
 
+            // Aircraft type from segment + dictionaries lookup
+            const aircraftCode = seg.aircraft?.code || "";
+            const aircraftName = aircraftCode ? (dictionaries?.aircraft?.[aircraftCode] || aircraftCode) : "";
+
             return {
               direction,
               segment_order: segIdx + 1,
@@ -474,6 +478,7 @@ serve(async (req) => {
               duration_minutes: durationMinutes,
               terminal: seg.departure?.terminal || "",
               arrival_terminal: seg.arrival?.terminal || "",
+              aircraft_type: aircraftName || aircraftCode,
               operated_by: operatingName,
               connection_time_minutes: connectionTimeMinutes,
               cabin_type: "",
