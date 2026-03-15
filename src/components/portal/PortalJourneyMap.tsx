@@ -215,6 +215,7 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const [filter, setFilter] = useState<FilterType>("all");
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
