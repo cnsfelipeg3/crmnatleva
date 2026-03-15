@@ -475,11 +475,45 @@ export default function PlacesSearchCard({
               selected: i < 6,
               isCover: i === 0,
               source: "google" as const,
+              description: "",
+              room_type: null,
+              category: "outro",
             };
           })
         );
 
-        setCuratedPhotos(photosResolved.filter((photo) => Boolean(photo.url)));
+        const validPhotos = photosResolved.filter((photo) => Boolean(photo.url));
+        setCuratedPhotos(validPhotos);
+
+        // AI classification in background
+        if (validPhotos.length > 0) {
+          setClassifyingPhotos(true);
+          classifyPhotosWithAI(
+            validPhotos.map((p) => p.url),
+            data.name || "",
+          ).then((classifications) => {
+            if (classifications.length > 0) {
+              setCuratedPhotos((prev) =>
+                prev.map((photo, i) => {
+                  const cls = classifications[i];
+                  if (!cls) return photo;
+                  return {
+                    ...photo,
+                    label: cls.label || photo.label,
+                    description: cls.description || "",
+                    room_type: cls.room_type,
+                    category: cls.category || "outro",
+                  };
+                })
+              );
+              toast.success("Fotos classificadas por IA");
+            }
+          }).catch(() => {
+            // Keep fallback labels
+          }).finally(() => {
+            setClassifyingPhotos(false);
+          });
+        }
       } else {
         setCuratedPhotos([]);
       }
