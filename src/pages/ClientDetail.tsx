@@ -18,8 +18,10 @@ import {
   TrendingUp, Target, Plane, Hotel, Calendar, Eye, Clock,
   AlertTriangle, CheckCircle2, Send, FileText, Loader2,
   Heart, Compass, Utensils, Armchair, Star, Save, Globe, Activity,
+  MessageSquare, Link2,
 } from "lucide-react";
 import ClientTimeline from "@/components/ClientTimeline";
+import { LinkConversationDialog } from "@/components/LinkConversationDialog";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
