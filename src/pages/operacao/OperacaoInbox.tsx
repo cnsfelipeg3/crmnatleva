@@ -2050,9 +2050,5 @@ function OperacaoInboxInner() {
 }
 
 export default function OperacaoInbox() {
-  return (
-    <SidebarProvider>
-      <OperacaoInboxInner />
-    </SidebarProvider>
-  );
+  return <OperacaoInboxInner />;
 }
