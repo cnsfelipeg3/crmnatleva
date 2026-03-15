@@ -1181,7 +1181,14 @@ const PhotoGrid = ({
             </button>
 
             {!isFailed && !isResolving && (
-              <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute bottom-1 left-1 right-1 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                {photo.source === "booking" ? (
+                  <span className="text-[8px] font-bold bg-blue-600/80 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-wider">Booking</span>
+                ) : photo.source === "google" ? (
+                  <span className="text-[8px] font-bold bg-green-600/80 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-wider">Google</span>
+                ) : (
+                  <span className="text-[8px] font-bold bg-black/50 text-white px-1.5 py-0.5 rounded-sm uppercase tracking-wider">Oficial</span>
+                )}
                 <ZoomIn className="w-3.5 h-3.5 text-white drop-shadow-lg" />
               </div>
             )}
