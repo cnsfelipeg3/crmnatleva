@@ -146,7 +146,7 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMes
   ]);
 }
 
-type SearchProvider = "google" | "amadeus";
+type SearchProvider = "google";
 
 /* ═══ Component ═══ */
 export default function PlacesSearchCard({
