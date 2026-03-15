@@ -14,13 +14,12 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
-  // Parse request body for incremental migration
   let body: any = {};
   try { body = await req.json(); } catch {}
-  const step = body.step || "all"; // "chat_messages", "legacy_messages", "zapi_messages", "dedup", "reindex", "all"
+  const step = body.step || "chat_messages";
   const batchOffset = body.offset || 0;
   const PAGE = body.page_size || 500;
-  const MAX_BATCHES = body.max_batches || 20; // Process max 10k rows per invocation
+  const MAX_BATCHES = body.max_batches || 20;
 
   const stats = {
     step,
@@ -34,9 +33,7 @@ serve(async (req) => {
   };
 
   try {
-    // ── STEP: Migrate chat_messages ──
-    if (step === "chat_messages" || step === "all") {
-      console.log(`Migrating chat_messages from offset ${batchOffset}...`);
+    if (step === "chat_messages") {
       let offset = batchOffset;
       let batchCount = 0;
 
@@ -47,12 +44,10 @@ serve(async (req) => {
           .order("created_at", { ascending: true })
           .range(offset, offset + PAGE - 1);
 
-        if (error) { stats.errors.push(`chat_messages fetch: ${error.message}`); break; }
+        if (error) { stats.errors.push(`fetch: ${error.message}`); break; }
         if (!rows || rows.length === 0) break;
 
-        const withExtId = [];
-        const noExtId = [];
-
+        // Insert one by one to handle duplicates gracefully
         for (const m of rows as any[]) {
           const row = {
             conversation_id: m.conversation_id,
@@ -67,40 +62,33 @@ serve(async (req) => {
             timestamp: m.created_at || null,
             created_at: m.created_at || new Date().toISOString(),
           };
-          if (row.external_message_id) withExtId.push(row);
-          else noExtId.push(row);
-        }
 
-        if (withExtId.length > 0) {
           const { error: insertErr } = await supabase
             .from("conversation_messages")
-            .upsert(withExtId, { onConflict: "conversation_id,external_message_id", ignoreDuplicates: true });
-          if (insertErr) stats.errors.push(`chat_messages upsert: ${insertErr.message}`);
-        }
-        if (noExtId.length > 0) {
-          const { error: insertErr2 } = await supabase.from("conversation_messages").insert(noExtId);
-          if (insertErr2) stats.errors.push(`chat_messages insert: ${insertErr2.message}`);
+            .insert(row);
+
+          if (insertErr) {
+            if (insertErr.message.includes("duplicate") || insertErr.code === "23505") {
+              stats.skipped++;
+            } else {
+              stats.errors.push(`insert: ${insertErr.message}`);
+              if (stats.errors.length > 10) break;
+            }
+          } else {
+            stats.migrated++;
+          }
         }
 
-        stats.migrated += rows.length;
         offset += PAGE;
         batchCount++;
-
-        if (rows.length < PAGE) break;
+        if (rows.length < PAGE || stats.errors.length > 10) break;
       }
 
       stats.next_offset = offset;
       stats.has_more = batchCount >= MAX_BATCHES;
-
-      if (step === "all" && !stats.has_more) {
-        // Continue to next step in "all" mode - but for 656k records we'll need multiple calls
-        // Return with instruction to continue
-      }
     }
 
-    // ── STEP: Migrate legacy messages ──
     if (step === "legacy_messages") {
-      console.log(`Migrating legacy messages from offset ${batchOffset}...`);
       let offset = batchOffset;
       let batchCount = 0;
 
@@ -111,11 +99,8 @@ serve(async (req) => {
           .order("created_at", { ascending: true })
           .range(offset, offset + PAGE - 1);
 
-        if (error) { stats.errors.push(`messages fetch: ${error.message}`); break; }
+        if (error) { stats.errors.push(`fetch: ${error.message}`); break; }
         if (!rows || rows.length === 0) break;
-
-        const withExtId = [];
-        const noExtId = [];
 
         for (const m of rows as any[]) {
           const row = {
@@ -135,19 +120,16 @@ serve(async (req) => {
             timestamp: m.created_at || null,
             created_at: m.created_at || new Date().toISOString(),
           };
-          if (row.external_message_id) withExtId.push(row);
-          else noExtId.push(row);
+
+          const { error: insertErr } = await supabase.from("conversation_messages").insert(row);
+          if (insertErr) {
+            if (insertErr.message.includes("duplicate") || insertErr.code === "23505") stats.skipped++;
+            else stats.errors.push(`insert: ${insertErr.message}`);
+          } else {
+            stats.migrated++;
+          }
         }
 
-        if (withExtId.length > 0) {
-          await supabase.from("conversation_messages")
-            .upsert(withExtId, { onConflict: "conversation_id,external_message_id", ignoreDuplicates: true });
-        }
-        if (noExtId.length > 0) {
-          await supabase.from("conversation_messages").insert(noExtId);
-        }
-
-        stats.migrated += rows.length;
         offset += PAGE;
         batchCount++;
         if (rows.length < PAGE) break;
@@ -157,9 +139,7 @@ serve(async (req) => {
       stats.has_more = batchCount >= MAX_BATCHES;
     }
 
-    // ── STEP: Migrate zapi_messages ──
     if (step === "zapi_messages") {
-      console.log(`Migrating zapi_messages from offset ${batchOffset}...`);
       let offset = batchOffset;
       let batchCount = 0;
 
@@ -170,7 +150,7 @@ serve(async (req) => {
           .order("timestamp", { ascending: true })
           .range(offset, offset + PAGE - 1);
 
-        if (error) { stats.errors.push(`zapi fetch: ${error.message}`); break; }
+        if (error) { stats.errors.push(`fetch: ${error.message}`); break; }
         if (!rows || rows.length === 0) break;
 
         for (const m of rows as any[]) {
@@ -227,14 +207,13 @@ serve(async (req) => {
             created_at: ts.toISOString(),
           };
 
-          if (row.external_message_id) {
-            await supabase.from("conversation_messages").upsert(row, {
-              onConflict: "conversation_id,external_message_id", ignoreDuplicates: true,
-            });
+          const { error: insertErr } = await supabase.from("conversation_messages").insert(row);
+          if (insertErr) {
+            if (insertErr.message.includes("duplicate") || insertErr.code === "23505") stats.skipped++;
+            else stats.errors.push(`insert: ${insertErr.message}`);
           } else {
-            await supabase.from("conversation_messages").insert(row);
+            stats.migrated++;
           }
-          stats.migrated++;
         }
 
         offset += PAGE;
@@ -246,12 +225,10 @@ serve(async (req) => {
       stats.has_more = batchCount >= MAX_BATCHES;
     }
 
-    // ── STEP: Deduplicate conversations ──
     if (step === "dedup") {
-      console.log("Deduplicating conversations...");
       const { data: allConvs } = await supabase
         .from("conversations")
-        .select("id, phone, external_conversation_id, updated_at")
+        .select("id, phone, updated_at")
         .not("phone", "is", null)
         .order("updated_at", { ascending: false });
 
@@ -279,9 +256,7 @@ serve(async (req) => {
       }
     }
 
-    // ── STEP: Reindex all conversations ──
     if (step === "reindex") {
-      console.log("Reindexing conversations...");
       const { data: convIds } = await supabase.from("conversations").select("id");
       if (convIds) {
         for (const c of convIds) {
@@ -291,12 +266,10 @@ serve(async (req) => {
       }
     }
 
-    console.log("Migration step complete:", stats);
     return new Response(JSON.stringify({ success: true, ...stats }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
-    console.error("Migration error:", err);
     return new Response(JSON.stringify({ error: err.message, ...stats }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
