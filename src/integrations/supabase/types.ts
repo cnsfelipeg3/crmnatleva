@@ -1287,6 +1287,59 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          direction: string
+          external_message_id: string | null
+          id: string
+          media_url: string | null
+          message_type: string
+          metadata: Json | null
+          sender_type: string
+          status: string | null
+          timestamp: string | null
+        }
+        Insert: {
+          content?: string
+          conversation_id: string
+          created_at?: string
+          direction?: string
+          external_message_id?: string | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          metadata?: Json | null
+          sender_type?: string
+          status?: string | null
+          timestamp?: string | null
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          direction?: string
+          external_message_id?: string | null
+          id?: string
+          media_url?: string | null
+          message_type?: string
+          metadata?: Json | null
+          sender_type?: string
+          status?: string | null
+          timestamp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_transfers: {
         Row: {
           conversation_id: string
@@ -5533,6 +5586,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      reindex_conversation: { Args: { conv_id: string }; Returns: undefined }
       smart_capitalize_name: { Args: { input_name: string }; Returns: string }
     }
     Enums: {

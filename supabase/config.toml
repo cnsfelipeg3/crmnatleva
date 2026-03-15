@@ -113,3 +113,6 @@ verify_jwt = false
 
 [functions.extract-quote-context]
 verify_jwt = false
+
+[functions.migrate-messages]
+verify_jwt = false
