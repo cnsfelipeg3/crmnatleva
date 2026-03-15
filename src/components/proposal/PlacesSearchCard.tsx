@@ -167,6 +167,7 @@ export default function PlacesSearchCard({
 
   // Curation state
   const [curatedPhotos, setCuratedPhotos] = useState<CuratedPhoto[]>([]);
+  const [classifyingPhotos, setClassifyingPhotos] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
