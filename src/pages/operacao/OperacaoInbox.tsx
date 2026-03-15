@@ -1146,7 +1146,7 @@ function OperacaoInboxInner() {
             text: (m as any).text || mediaInfo3.caption || "",
             media_url: mediaInfo3.mediaUrl,
             status: mapZapiStatus((m as any).status, (m as any).from_me),
-            created_at: (m as any).timestamp || (m as any).created_at,
+            created_at: toIsoTimestamp((m as any).timestamp || (m as any).created_at),
           });
         }
         if (newMsgs.length > 0) {
