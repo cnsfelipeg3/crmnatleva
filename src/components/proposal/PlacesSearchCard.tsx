@@ -860,8 +860,8 @@ export default function PlacesSearchCard({
             </div>
             <div className="rounded-xl border border-border/50 overflow-hidden bg-card shadow-sm">
               {coverPhoto && (
-                <div className="h-32 overflow-hidden">
-                  <img src={coverPhoto.url} alt="" className="w-full h-full object-cover" />
+                <div className="w-full overflow-hidden bg-muted/10">
+                  <img src={coverPhoto.url} alt="" className="w-full h-auto max-h-64 object-contain" />
                 </div>
               )}
               <div className="p-3">
