@@ -139,6 +139,55 @@ function parseCityCountry(address: string): { city: string; country: string } {
   };
 }
 
+function isGoogleJsPhotoServiceUrl(value: string): boolean {
+  return /maps\.googleapis\.com\/maps\/api\/place\/js\/PhotoService\.GetPhoto/i.test(value);
+}
+
+function extractGoogleJsPhotoReference(value: string): string | null {
+  const match = value.match(/[?&]1s([^&]+)/i);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+}
+
+function normalizeGooglePhotoReference(photoReference: string): {
+  normalized: string;
+  isDirectUrl: boolean;
+  isJsServiceUrl: boolean;
+} {
+  const raw = (photoReference || "").trim();
+  const isDirectUrl = /^https?:\/\//i.test(raw);
+  const isJsServiceUrl = isGoogleJsPhotoServiceUrl(raw);
+
+  if (isJsServiceUrl) {
+    return {
+      normalized: extractGoogleJsPhotoReference(raw) || "",
+      isDirectUrl,
+      isJsServiceUrl,
+    };
+  }
+
+  return {
+    normalized: raw,
+    isDirectUrl,
+    isJsServiceUrl,
+  };
+}
+
+async function fetchPlacePhotoFromEdge(photoReference: string, maxWidth: number): Promise<string> {
+  const { data: photoData, error: photoErr } = await withTimeout(
+    supabase.functions.invoke("places-search", {
+      body: { action: "photo", photo_reference: photoReference, max_width: maxWidth },
+    }),
+    5000,
+    "Timeout ao carregar foto"
+  );
+
+  if (photoErr) throw photoErr;
+  if (photoData?.error) throw new Error(photoData.error);
+  if (!photoData?.url) throw new Error("URL da foto não retornada");
+
+  return photoData.url;
+}
+
 const PHOTO_LABELS = [
   "Fachada", "Lobby", "Quarto Deluxe", "Suíte Junior", "Suíte Master",
   "Piscina", "Restaurante", "Spa", "Vista", "Área Comum", "Bar", "Jardim",
