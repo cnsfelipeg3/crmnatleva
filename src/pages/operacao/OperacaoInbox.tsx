@@ -1251,35 +1251,74 @@ function OperacaoInboxInner() {
     textareaRef.current?.focus();
   }, [inputText, isCorrecting, correctMessage]);
 
+  const ensureWhatsAppWebhookSync = useCallback(async () => {
+    const status = await callZapiProxy("check-status");
+    if (!status?.connected) {
+      setWaConnected(false);
+      throw new Error("WhatsApp desconectado. Reconecte para sincronizar o histórico.");
+    }
+
+    setWaConnected(true);
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    if (!supabaseUrl) return;
+
+    const webhookUrl = `${supabaseUrl}/functions/v1/zapi-webhook`;
+    await Promise.allSettled([
+      callZapiProxy("set-webhook", { webhookUrl }),
+      callZapiProxy("set-webhook-sent", { webhookUrl }),
+      callZapiProxy("set-notify-sent-by-me"),
+    ]);
+  }, []);
+
   const handleReloadMessages = useCallback(async () => {
     if (!selectedId || reloadingMessages) return;
 
     setReloadingMessages(true);
     try {
       if (selectedId.startsWith("wa_")) {
-        const status = await callZapiProxy("check-status");
-        if (status?.connected) {
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          if (supabaseUrl) {
-            const webhookUrl = `${supabaseUrl}/functions/v1/zapi-webhook`;
-            await Promise.allSettled([
-              callZapiProxy("set-webhook", { webhookUrl }),
-              callZapiProxy("set-webhook-sent", { webhookUrl }),
-              callZapiProxy("set-notify-sent-by-me"),
-            ]);
-          }
-          await callZapiProxy("get-chats");
-        }
+        await ensureWhatsAppWebhookSync();
+        await callZapiProxy("get-chats");
       }
 
+      lastMsgIdsRef.current.clear();
       setMessages(prev => ({ ...prev, [selectedId]: [] }));
       setReloadVersion(v => v + 1);
+      setChatSyncVersion(v => v + 1);
       toast({ title: "Recarregando mensagens…", description: "Resincronizando histórico completo da conversa." });
     } catch (err: any) {
-      setReloadingMessages(false);
       toast({ title: "Falha ao recarregar", description: err?.message || "Não foi possível resincronizar as mensagens.", variant: "destructive" });
+    } finally {
+      setReloadingMessages(false);
     }
-  }, [selectedId, reloadingMessages]);
+  }, [selectedId, reloadingMessages, ensureWhatsAppWebhookSync]);
+
+  const handleRebuildAllHistory = useCallback(async () => {
+    if (rebuildingHistoryAll) return;
+
+    setRebuildingHistoryAll(true);
+    try {
+      await ensureWhatsAppWebhookSync();
+      const result = await callZapiProxy("rebuild-history", {});
+
+      lastMsgIdsRef.current.clear();
+      setMessages({});
+      setReloadVersion(v => v + 1);
+      setChatSyncVersion(v => v + 1);
+
+      toast({
+        title: "Reconstrução concluída",
+        description: `${result?.messagesInserted || 0} mensagens reimportadas em ${result?.chatsProcessed || 0} conversas.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Falha na reconstrução",
+        description: err?.message || "Não foi possível reconstruir o histórico completo.",
+        variant: "destructive",
+      });
+    } finally {
+      setRebuildingHistoryAll(false);
+    }
+  }, [rebuildingHistoryAll, ensureWhatsAppWebhookSync]);
 
   // Send message
   const handleSend = useCallback(async () => {
