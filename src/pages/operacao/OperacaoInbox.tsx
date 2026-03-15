@@ -228,11 +228,91 @@ function OperacaoInboxInner() {
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
 
   const getZapiPhoneCandidates = useCallback((conversationId: string) => {
-    const phone = conversationId.replace("wa_", "").trim();
+    const phone = conversationId.replace("wa_", "").replace(/\D/g, "").trim();
     if (!phone) return [] as string[];
-    return Array.from(new Set([phone, `${phone}-group`, `${phone}@g.us`]));
+    return Array.from(new Set([
+      phone,
+      `+${phone}`,
+      `${phone}@c.us`,
+      `${phone}@s.whatsapp.net`,
+      `${phone}-group`,
+      `${phone}@g.us`,
+    ]));
   }, []);
 
+  const resolveDbConversationId = useCallback(async (conversationId: string): Promise<string | null> => {
+    if (!conversationId) return null;
+    if (!conversationId.startsWith("wa_")) return conversationId.length > 10 ? conversationId : null;
+
+    const fromState = conversations.find(c => c.id === conversationId)?.db_id;
+    if (fromState) return fromState;
+
+    const phone = conversationId.replace("wa_", "").replace(/\D/g, "");
+    if (!phone) return null;
+
+    const phoneCandidates = Array.from(new Set([
+      phone,
+      `+${phone}`,
+      `${phone}@c.us`,
+      `${phone}@s.whatsapp.net`,
+      `${phone}-group`,
+      `${phone}@g.us`,
+    ]));
+
+    const [byPhoneResp, byExternalResp] = await Promise.all([
+      supabase.from("conversations").select("id, updated_at").in("phone", phoneCandidates).order("updated_at", { ascending: false }).limit(1),
+      supabase.from("conversations").select("id, updated_at").eq("external_conversation_id", `wa_${phone}`).order("updated_at", { ascending: false }).limit(1),
+    ]);
+
+    const convId = byPhoneResp.data?.[0]?.id || byExternalResp.data?.[0]?.id || null;
+    if (convId) {
+      setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, db_id: c.db_id || convId } : c));
+    }
+    return convId;
+  }, [conversations]);
+
+  const persistOutgoingMessage = useCallback(async (payload: {
+    conversationId: string;
+    messageType: MsgType;
+    text: string;
+    mediaUrl?: string;
+    externalMessageId?: string;
+    createdAt?: string;
+  }) => {
+    const dbConvId = await resolveDbConversationId(payload.conversationId);
+    if (!dbConvId) return;
+
+    const createdAt = payload.createdAt || new Date().toISOString();
+    const externalId = payload.externalMessageId || `local_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+    await Promise.allSettled([
+      supabase.from("chat_messages").insert({
+        conversation_id: dbConvId,
+        sender_type: "atendente",
+        message_type: payload.messageType,
+        content: payload.text,
+        media_url: payload.mediaUrl || null,
+        read_status: "sent",
+        external_message_id: externalId,
+      }),
+      supabase.from("messages").insert({
+        conversation_id: dbConvId,
+        sender_type: "atendente",
+        message_type: payload.messageType,
+        text: payload.text || null,
+        media_url: payload.mediaUrl || null,
+        status: "sent",
+        external_message_id: externalId,
+        created_at: createdAt,
+      }),
+    ]);
+
+    await supabase.from("conversations").update({
+      last_message_preview: payload.text || `📎 ${payload.messageType}`,
+      last_message_at: createdAt,
+      unread_count: 0,
+    }).eq("id", dbConvId);
+  }, [resolveDbConversationId]);
   // Load active flow name for selected conversation
   useEffect(() => {
     if (!selectedId) { setActiveFlowName(null); return; }
