@@ -911,7 +911,7 @@ function OperacaoInboxInner() {
           setConversations(prev => prev.map(c => {
             if (c.id !== waKey) return c;
             const isOpen = waKey === selectedIdRef.current;
-            return { ...c, last_message_preview: n.text || `📎 ${n.type || "media"}`, last_message_at: n.timestamp || n.created_at || new Date().toISOString(), unread_count: isOpen ? 0 : c.unread_count + 1 };
+            return { ...c, last_message_preview: n.text || `📎 ${n.type || "media"}`, last_message_at: toIsoTimestamp(n.timestamp || n.created_at), unread_count: isOpen ? 0 : c.unread_count + 1 };
           }));
         }
       })
