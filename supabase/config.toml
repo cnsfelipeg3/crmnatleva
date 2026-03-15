@@ -101,3 +101,12 @@ verify_jwt = false
 
 [functions.places-search]
 verify_jwt = false
+
+[functions.scrape-hotel-photos]
+verify_jwt = false
+
+[functions.classify-hotel-photos]
+verify_jwt = false
+
+[functions.image-proxy]
+verify_jwt = false
