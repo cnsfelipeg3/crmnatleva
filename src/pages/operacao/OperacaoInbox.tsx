@@ -1465,8 +1465,8 @@ function OperacaoInboxInner() {
   return (
     <div
       ref={livechatContainerRef}
-      className={`flex flex-col bg-background overflow-hidden ${isMobile ? "fixed inset-0 z-50" : "h-full"}`}
-      style={isMobile ? { height: mobileHeight } : { height: '100%' }}
+      className={`flex flex-col bg-background overflow-hidden overscroll-none ${isMobile ? "fixed inset-0 z-50 min-h-0 w-full" : "h-full min-h-0"}`}
+      style={isMobile ? { height: mobileHeight } : { height: "100%" }}
     >
       {/* Content */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
