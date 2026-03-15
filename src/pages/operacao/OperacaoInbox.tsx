@@ -91,9 +91,12 @@ const FILTERS = [
   { key: "unread", label: "Não lidas" },
   { key: "mine", label: "Minhas" },
   { key: "vip", label: "VIP" },
-  { key: "qualificacao", label: "Em qualificação" },
-  { key: "proposta_enviada", label: "Proposta enviada" },
+  { key: "qualificacao", label: "Qualificação" },
+  { key: "proposta_enviada", label: "Proposta" },
+  { key: "fechado", label: "Clientes" },
+  { key: "pos_venda", label: "Pós-venda" },
   { key: "no_reply", label: "Sem resposta" },
+  { key: "urgent", label: "Urgentes" },
 ];
 
 // ─── Helpers ───
