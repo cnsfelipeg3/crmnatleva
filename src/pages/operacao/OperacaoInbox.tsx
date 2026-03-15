@@ -1762,7 +1762,7 @@ function OperacaoInboxInner() {
                                     ) : (
                                       <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2"><Video className="h-4 w-4" /><span>🎬 Vídeo indisponível</span></div>
                                     )}
-                                    {msg.text && <p className="text-sm leading-relaxed mt-1">{msg.text}</p>}
+                                    {msg.text && <p className="text-sm leading-relaxed mt-1">{stripQuotes(msg.text)}</p>}
                                   </div>
                                 )}
                                 {/* Document */}
