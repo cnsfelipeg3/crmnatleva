@@ -186,11 +186,19 @@ serve(async (req) => {
         break;
 
       case "set-webhook-sent":
-        url = `${BASE_URL}/update-webhook-received-delivery`;
+        url = `${BASE_URL}/update-every-webhooks`;
         method = "PUT";
         body = JSON.stringify({
           value: payload.webhookUrl,
-          enabled: true,
+          notifySentByMe: true,
+        });
+        break;
+
+      case "set-notify-sent-by-me":
+        url = `${BASE_URL}/update-notify-sent-by-me`;
+        method = "PUT";
+        body = JSON.stringify({
+          notifySentByMe: true,
         });
         break;
 
