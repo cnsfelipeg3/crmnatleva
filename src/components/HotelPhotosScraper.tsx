@@ -321,6 +321,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       if (!data.success) throw new Error(data.error);
 
       const rawPhotos: HotelPhoto[] = data.photos || [];
+      const scraperRoomNames: string[] = data.room_names || [];
       const resolvedPhotos = await resolveHotelPhotosUrls(rawPhotos);
 
       clearProxiedImages();
@@ -328,12 +329,16 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       setSourceUrl(data.source_url || "");
       setScraped(true);
       setActiveSource("official");
+      setKnownRoomNames(scraperRoomNames);
+
+      if (scraperRoomNames.length > 0) {
+        console.log("Room names extracted from hotel website:", scraperRoomNames);
+      }
 
       if (resolvedPhotos.length > 0) {
         toast.success(`${resolvedPhotos.length} fotos encontradas no site oficial`);
         preloadViaProxy(resolvedPhotos, data.source_url || undefined);
-        // Auto-classify
-        await runClassification(resolvedPhotos);
+        await runClassification(resolvedPhotos, scraperRoomNames);
       } else {
         toast.info("Nenhuma foto encontrada. Tente Google Places.");
       }
