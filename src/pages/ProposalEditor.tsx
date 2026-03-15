@@ -530,6 +530,24 @@ export default function ProposalEditor() {
                               </div>
                             </>
                           )}
+
+                          {/* Hotel Photos Scraper */}
+                          {item.item_type === "hotel" && item.title && (
+                            <div className="md:col-span-2">
+                              <HotelPhotosScraper
+                                hotelName={item.title}
+                                hotelCity={item.data?.location || ""}
+                                hotelCountry=""
+                                onSelectPhotos={(photos) => {
+                                  if (photos.length > 0 && !item.image_url) {
+                                    updateItem(idx, "image_url", photos[0].url);
+                                  }
+                                  const existing = item.data?.official_photos || [];
+                                  updateItemData(idx, "official_photos", [...existing, ...photos]);
+                                }}
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
                       <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-destructive" onClick={() => removeItem(idx)}>
