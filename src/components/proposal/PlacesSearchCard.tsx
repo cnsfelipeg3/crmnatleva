@@ -367,11 +367,48 @@ export default function PlacesSearchCard({
       }
     });
 
-    const chosenResults = bySource["client"] || bySource["edge"] || bySource["hotel"] || [];
+    const sourceWeights: Record<string, number> = { edge: 12, client: 8, hotel: 4 };
+
+    const mergedResults = Object.entries(bySource)
+      .flatMap(([source, items]) =>
+        items.map((item) => ({ item, source, isHotelLike: isHotelLikeResult(item) }))
+      )
+      .filter(({ item }) => Boolean(item.place_id) && Boolean(item.name));
+
+    const hotelPreferred = entityType === "hotel"
+      ? mergedResults.filter(({ isHotelLike }) => isHotelLike)
+      : mergedResults;
+
+    const pool = hotelPreferred.length > 0 ? hotelPreferred : mergedResults;
+
+    const dedupedMap = new Map<string, { item: PlaceResult; source: string; isHotelLike: boolean }>();
+    pool.forEach((entry) => {
+      const key = entry.item.place_id || `${normalizeText(entry.item.name)}|${normalizeText(entry.item.address)}`;
+      const existing = dedupedMap.get(key);
+      if (!existing || sourceWeights[entry.source] > sourceWeights[existing.source]) {
+        dedupedMap.set(key, entry);
+      }
+    });
+
+    const rankedResults = Array.from(dedupedMap.values())
+      .sort((a, b) => {
+        const score = (entry: { item: PlaceResult; source: string; isHotelLike: boolean }) => {
+          const haystack = normalizeText(`${entry.item.name} ${entry.item.address}`);
+          const queryMatches = queryTokens.filter((token) => haystack.includes(token)).length;
+          const destinationMatches = destinationTokens.filter((token) => haystack.includes(token)).length;
+          const ratingScore = typeof entry.item.rating === "number" ? Math.min(entry.item.rating, 5) : 0;
+          const hotelScore = entityType === "hotel" ? (entry.isHotelLike ? 18 : -12) : 0;
+          return queryMatches * 10 + destinationMatches * 4 + ratingScore + hotelScore + (sourceWeights[entry.source] || 0);
+        };
+
+        return score(b) - score(a);
+      })
+      .map(({ item }) => item)
+      .slice(0, 8);
 
     safeSet(() => {
-      setResults(chosenResults);
-      setError(chosenResults.length === 0 && hasError && !hasEmpty ? "Não foi possível buscar locais. Tente novamente." : null);
+      setResults(rankedResults);
+      setError(rankedResults.length === 0 && hasError && !hasEmpty ? "Não foi possível buscar locais. Tente novamente." : null);
       setLoading(false);
     });
   }, [destinationContext]);
