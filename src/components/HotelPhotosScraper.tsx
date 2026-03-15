@@ -161,7 +161,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     return (
       <Button type="button" variant="outline" size="sm" onClick={scrapePhotos} disabled={loading || !hotelName} className="gap-2 text-xs">
         {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
-        {loading ? "Buscando fotos oficiais..." : "Buscar fotos do site oficial"}
+        {loading ? "Buscando fotos e informações..." : "Buscar fotos e informações no site oficial"}
       </Button>
     );
   }
