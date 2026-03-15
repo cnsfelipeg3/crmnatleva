@@ -327,7 +327,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       if (resolvedPhotos.length > 0) {
         const rejectedMsg = verification?.rejected > 0 ? ` (${verification.rejected} fotos de outros hotéis removidas)` : "";
         toast.success(`${resolvedPhotos.length} fotos verificadas e classificadas por IA${rejectedMsg}`);
-        preloadViaProxy(resolvedPhotos);
+        preloadViaProxy(resolvedPhotos, data.source_url || undefined);
       } else {
         toast.info("Nenhuma foto relevante encontrada no site do hotel");
       }
