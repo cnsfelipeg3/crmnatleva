@@ -535,6 +535,7 @@ function OperacaoInboxInner() {
   const [isSending, setIsSending] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [showContactProfile, setShowContactProfile] = useState(false);
+  const [showClientContext, setShowClientContext] = useState(true);
   const [showFlowMenu, setShowFlowMenu] = useState(false);
   const [showMobilePlusMenu, setShowMobilePlusMenu] = useState(false);
   const [availableFlows, setAvailableFlows] = useState<{ id: string; name: string; status: string }[]>([]);
