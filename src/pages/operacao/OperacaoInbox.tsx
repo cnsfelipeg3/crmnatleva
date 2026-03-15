@@ -201,8 +201,6 @@ async function callZapiProxy(action: string, payload?: any) {
 // ════════════════════════════════════════
 function OperacaoInboxInner() {
   const isMobile = useIsMobile();
-  const { toggleSidebar } = useSidebar();
-
   // Inbox state
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
