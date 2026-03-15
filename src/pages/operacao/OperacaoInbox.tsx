@@ -1665,6 +1665,27 @@ function OperacaoInboxInner() {
                     )}
                     <Tooltip>
                       <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 gap-1.5 text-[10px] px-2"
+                          disabled={reloadingMessages}
+                          onClick={async () => {
+                            setReloadingMessages(true);
+                            setMessages(prev => ({ ...prev, [selectedId!]: [] }));
+                            setReloadVersion(v => v + 1);
+                            toast({ title: "Recarregando mensagens…", description: "Buscando todas as mensagens da conversa." });
+                            setTimeout(() => setReloadingMessages(false), 3000);
+                          }}
+                        >
+                          <RefreshCw className={`h-3.5 w-3.5 ${reloadingMessages ? "animate-spin" : ""}`} />
+                          {!isMobile && "Recarregar"}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Recarregar todas as mensagens</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowSummaryDialog(true)}>
                           <Brain className="h-4 w-4 text-primary" />
                         </Button>
