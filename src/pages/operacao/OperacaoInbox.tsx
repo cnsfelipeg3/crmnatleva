@@ -1326,6 +1326,11 @@ function OperacaoInboxInner() {
             id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
             message_type: "audio" as MsgType, text: "", status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: localUrl,
           }] }));
+          // Persist audio to DB
+          const convForAudio = conversations.find(c => c.id === selectedId);
+          if (convForAudio?.db_id) {
+            supabase.from("chat_messages").insert({ conversation_id: convForAudio.db_id, sender_type: "atendente", message_type: "audio", content: "", media_url: audioUrl, read_status: "sent", external_message_id: tempId }).then(() => {});
+          }
         } catch (err) { toast({ title: "Erro ao enviar áudio", description: String(err), variant: "destructive" }); }
       };
       mediaRecorder.start();
