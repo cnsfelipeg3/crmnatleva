@@ -16,6 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { QuoteSummaryCard } from "./QuoteSummaryCard";
 
 // ─── Types ───
 type Stage = "novo_lead" | "qualificacao" | "proposta_preparacao" | "proposta_enviada" | "negociacao" | "fechado" | "pos_venda" | "perdido";
@@ -369,6 +370,9 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
               <span className="font-medium text-foreground">{assignedName}</span>
             </div>
           </div>
+
+          {/* ─── AI Quote Summary ─── */}
+          <QuoteSummaryCard conversationDbId={conversation.db_id || conversation.id} />
 
           {/* ─── Stage ─── */}
           <Section title="Etapa do Funil" icon={Tag} defaultOpen={true}>
