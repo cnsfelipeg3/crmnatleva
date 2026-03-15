@@ -327,40 +327,47 @@ function OperacaoInboxInner() {
     mediaUrl?: string;
     externalMessageId?: string;
     createdAt?: string;
-  }) => {
+  }): Promise<string | null> => {
     const dbConvId = await resolveDbConversationId(payload.conversationId);
-    if (!dbConvId) return;
+    if (!dbConvId) {
+      console.error("persistOutgoingMessage: could not resolve DB conversation ID for", payload.conversationId);
+      return null;
+    }
 
     const createdAt = payload.createdAt || new Date().toISOString();
     const externalId = payload.externalMessageId || `local_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
-    await Promise.allSettled([
-      supabase.from("chat_messages").insert({
+    // MANDATORY persistence - single source of truth
+    const { data: inserted, error } = await supabase
+      .from("conversation_messages" as any)
+      .upsert({
         conversation_id: dbConvId,
-        sender_type: "atendente",
-        message_type: payload.messageType,
-        content: payload.text,
-        media_url: payload.mediaUrl || null,
-        read_status: "sent",
         external_message_id: externalId,
-      }),
-      supabase.from("messages").insert({
-        conversation_id: dbConvId,
+        direction: "outgoing",
         sender_type: "atendente",
+        content: payload.text || "",
         message_type: payload.messageType,
-        text: payload.text || null,
         media_url: payload.mediaUrl || null,
         status: "sent",
-        external_message_id: externalId,
+        timestamp: createdAt,
         created_at: createdAt,
-      }),
-    ]);
+      }, { onConflict: "conversation_id,external_message_id" })
+      .select("id")
+      .single();
 
+    if (error) {
+      console.error("CRITICAL: Failed to persist outgoing message:", error);
+      throw new Error(`Falha ao salvar mensagem: ${error.message}`);
+    }
+
+    // Update conversation metadata
     await supabase.from("conversations").update({
       last_message_preview: payload.text || `📎 ${payload.messageType}`,
       last_message_at: createdAt,
       unread_count: 0,
     }).eq("id", dbConvId);
+
+    return inserted?.id || null;
   }, [resolveDbConversationId]);
   // Load active flow name for selected conversation
   useEffect(() => {
