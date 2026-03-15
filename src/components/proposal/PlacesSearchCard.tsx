@@ -208,25 +208,7 @@ export default function PlacesSearchCard({
 
     const normalizedQuery = destinationContext ? `${q} ${destinationContext}` : q;
 
-    // If Amadeus provider is selected, use Amadeus-only search (don't append destinationContext)
-    if (provider === "amadeus") {
-      try {
-        const amadeusResults = await searchAmadeus(q);
-        safeSet(() => {
-          setResults(amadeusResults);
-          setError(amadeusResults.length === 0 ? "Nenhum hotel encontrado no Amadeus." : null);
-          setLoading(false);
-        });
-      } catch (err) {
-        console.error("Amadeus search error:", err);
-        safeSet(() => {
-          setResults([]);
-          setError("Erro ao buscar hotéis no Amadeus. Verifique a configuração.");
-          setLoading(false);
-        });
-      }
-      return;
-    }
+    // Google Places search (primary provider)
 
     const mapFallbackResults = (items: any[]): PlaceResult[] =>
       items.map((item: any, idx: number) => ({
