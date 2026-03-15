@@ -157,8 +157,8 @@ export default function FlightCard({ segment: seg, index = 0 }: FlightCardProps)
                 <DetailItem label="Companhia" value={seg.airline_name || seg.airline || ""} />
                 <DetailItem label="Voo" value={seg.flight_number || ""} />
                 <DetailItem label="Data" value={fmtDate(seg.departure_date || null)} />
-                <DetailItem label="Partida" value={`${seg.departure_time?.slice(0, 5) || ""} ${seg.terminal ? `· Terminal ${seg.terminal}` : ""}`} />
-                <DetailItem label="Chegada" value={`${seg.arrival_time?.slice(0, 5) || ""} ${seg.arrival_terminal ? `· Terminal ${seg.arrival_terminal}` : ""}`} />
+                <DetailItem label="Partida" value={seg.departure_time?.slice(0, 5) || ""} />
+                <DetailItem label="Chegada" value={seg.arrival_time?.slice(0, 5) || ""} />
                 <DetailItem label="Duração" value={fmtDuration(seg.duration_minutes)} />
                 {seg.flight_class && <DetailItem label="Classe" value={seg.flight_class} />}
                 {seg.cabin_type && <DetailItem label="Cabine" value={seg.cabin_type} />}
