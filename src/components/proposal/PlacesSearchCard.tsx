@@ -394,6 +394,128 @@ export default function PlacesSearchCard({
     setLoadingPhotos(false);
     setError(null);
 
+    // Resultado de Amadeus — buscar fotos via Google Places
+    if (placeId.startsWith("amadeus:")) {
+      const amadeusPlace = results.find((r) => r.place_id === placeId);
+      if (amadeusPlace) {
+        // Set basic place info immediately
+        setSelectedPlace({
+          place_id: amadeusPlace.place_id,
+          name: amadeusPlace.name,
+          address: amadeusPlace.address,
+          phone: null,
+          website: null,
+          rating: null,
+          user_ratings_total: 0,
+          price_level: null,
+          types: ["lodging"],
+          location: amadeusPlace.location,
+          photos: [],
+          editorial_summary: null,
+          reviews: [],
+        });
+        setResults([]);
+        setLoadingPhotos(true);
+
+        // Try to get photos from Google Places using hotel name + location
+        try {
+          const searchQuery = amadeusPlace.location
+            ? `${amadeusPlace.name}`
+            : amadeusPlace.name;
+          const locationBias = amadeusPlace.location || undefined;
+
+          const { data: searchData } = await supabase.functions.invoke("places-search", {
+            body: { action: "search", query: searchQuery, location_bias: locationBias },
+          });
+
+          const googleResults = searchData?.results || [];
+          if (googleResults.length > 0) {
+            const googlePlaceId = googleResults[0].place_id;
+
+            // Get full details + photos from Google
+            const { data: detailsData } = await supabase.functions.invoke("places-search", {
+              body: { action: "details", place_id: googlePlaceId },
+            });
+
+            if (detailsData && !detailsData.error) {
+              // Merge Google details with Amadeus base info
+              setSelectedPlace((prev) =>
+                prev ? {
+                  ...prev,
+                  rating: detailsData.rating || prev.rating,
+                  user_ratings_total: detailsData.user_ratings_total || prev.user_ratings_total,
+                  website: detailsData.website || prev.website,
+                  phone: detailsData.phone || prev.phone,
+                  editorial_summary: detailsData.editorial_summary || prev.editorial_summary,
+                  address: detailsData.address || prev.address,
+                } : prev,
+              );
+
+              // Resolve photos
+              if (Array.isArray(detailsData.photos) && detailsData.photos.length > 0) {
+                const photosResolved = await Promise.all(
+                  detailsData.photos.slice(0, 10).map(async (photo: any, i: number) => {
+                    let url = photo.url || "";
+                    if (!url && typeof photo.photo_reference === "string") {
+                      if (/^https?:\/\//i.test(photo.photo_reference)) {
+                        url = photo.photo_reference;
+                      } else {
+                        try {
+                          const { data: photoData } = await supabase.functions.invoke("places-search", {
+                            body: { action: "photo", photo_reference: photo.photo_reference, max_width: 800 },
+                          });
+                          url = photoData?.url || "";
+                        } catch {
+                          url = getPhotoUrl(photo.photo_reference, 800);
+                        }
+                      }
+                    }
+                    return {
+                      url,
+                      label: guessPhotoLabel(i),
+                      selected: i < 6,
+                      isCover: i === 0,
+                      source: "google" as const,
+                      description: "",
+                      room_type: null,
+                      category: "outro",
+                    };
+                  }),
+                );
+                const validPhotos = photosResolved.filter((p) => Boolean(p.url));
+                setCuratedPhotos(validPhotos);
+
+                // AI classification
+                if (validPhotos.length > 0) {
+                  setClassifyingPhotos(true);
+                  classifyPhotosWithAI(validPhotos.map((p) => p.url), amadeusPlace.name)
+                    .then((cls) => {
+                      if (cls.length > 0) {
+                        setCuratedPhotos((prev) =>
+                          prev.map((photo, i) => {
+                            const c = cls[i];
+                            return c ? { ...photo, label: c.label || photo.label, description: c.description, room_type: c.room_type, category: c.category } : photo;
+                          }),
+                        );
+                        toast.success("Fotos classificadas por IA");
+                      }
+                    })
+                    .catch(() => {})
+                    .finally(() => setClassifyingPhotos(false));
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching Google photos for Amadeus hotel:", err);
+        } finally {
+          setLoadingPhotos(false);
+          setLoadingDetails(false);
+        }
+        return;
+      }
+    }
+
     // Resultado de fallback (hotel-search)
     if (placeId.startsWith("fallback:")) {
       const fallback = results.find((r) => r.place_id === placeId);
