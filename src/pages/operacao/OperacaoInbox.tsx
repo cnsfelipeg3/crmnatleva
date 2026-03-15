@@ -1184,7 +1184,7 @@ function OperacaoInboxInner() {
 
     checkAndStartPolling();
     return () => { if (whatsappPollRef.current) clearInterval(whatsappPollRef.current); };
-  }, [selectedId, extractMediaFromRawData, getZapiPhoneCandidates]);
+  }, [selectedId, extractMediaFromRawData, getZapiPhoneCandidates, chatSyncVersion]);
 
   const filteredConversations = (() => {
     const filtered = conversations.filter(c => {
