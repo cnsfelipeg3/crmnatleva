@@ -83,8 +83,10 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       setPhotos(data.photos || []);
       setSourceUrl(data.source_url || "");
       setScraped(true);
+      const verification = data.verification;
       if (data.photos?.length > 0) {
-        toast.success(`${data.photos.length} fotos encontradas e classificadas por IA`);
+        const rejectedMsg = verification?.rejected > 0 ? ` (${verification.rejected} fotos de outros hotéis removidas)` : "";
+        toast.success(`${data.photos.length} fotos verificadas e classificadas por IA${rejectedMsg}`);
       } else {
         toast.info("Nenhuma foto relevante encontrada no site do hotel");
       }
