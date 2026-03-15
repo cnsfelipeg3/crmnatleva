@@ -318,6 +318,16 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       const rawPhotos: HotelPhoto[] = data.photos || [];
       const resolvedPhotos = await resolveHotelPhotosUrls(rawPhotos);
 
+      const blockedOfficialPattern = /s3\.amazonaws\.com\/static-webstudio-accorhotels-usa-1\.wp-ha\.fastbooking\.com/i;
+      const allLikelyBlocked =
+        resolvedPhotos.length > 0 && resolvedPhotos.every((photo) => blockedOfficialPattern.test(photo.url));
+
+      if (allLikelyBlocked) {
+        toast.warning("O site oficial bloqueou as imagens deste hotel. Carregando Google Places como fallback.");
+        await fetchGooglePlacesPhotos();
+        return;
+      }
+
       clearProxiedImages();
       setPhotos(resolvedPhotos);
       setSourceUrl(data.source_url || "");
