@@ -1191,6 +1191,27 @@ function OperacaoInboxInner() {
     textareaRef.current?.focus();
   }, [inputText, isCorrecting, correctMessage]);
 
+  const handleReloadMessages = useCallback(async () => {
+    if (!selectedId || reloadingMessages) return;
+
+    setReloadingMessages(true);
+    try {
+      if (selectedId.startsWith("wa_")) {
+        const status = await callZapiProxy("check-status");
+        if (status?.connected) {
+          await callZapiProxy("get-chats");
+        }
+      }
+
+      setMessages(prev => ({ ...prev, [selectedId]: [] }));
+      setReloadVersion(v => v + 1);
+      toast({ title: "Recarregando mensagens…", description: "Resincronizando histórico completo da conversa." });
+    } catch (err: any) {
+      setReloadingMessages(false);
+      toast({ title: "Falha ao recarregar", description: err?.message || "Não foi possível resincronizar as mensagens.", variant: "destructive" });
+    }
+  }, [selectedId, reloadingMessages]);
+
   // Send message
   const handleSend = useCallback(async () => {
     if (!inputText.trim() || !selectedId || isSending) return;
