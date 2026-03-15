@@ -197,6 +197,7 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
   };
 
   const applyFlightData = (idx: number, seg: any, form: SearchFormData) => {
+    const prev = segments[idx];
     const updated: FlightSegmentData = {
       airline: seg.airline || form.airline.toUpperCase(),
       airline_name: seg.airline_name || form.airlineName || form.airline.toUpperCase(),
@@ -210,8 +211,13 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
       terminal: seg.terminal || "",
       arrival_terminal: seg.arrival_terminal || "",
       aircraft_type: seg.aircraft_type || "",
-      notes: segments[idx]?.notes || "",
-      is_connection: segments[idx]?.is_connection || false,
+      notes: prev?.notes || "",
+      is_connection: prev?.is_connection || false,
+      carry_on_included: prev?.carry_on_included ?? true,
+      carry_on_weight_kg: prev?.carry_on_weight_kg ?? 10,
+      checked_bags_included: prev?.checked_bags_included ?? 0,
+      checked_bag_weight_kg: prev?.checked_bag_weight_kg ?? 23,
+      baggage_notes: prev?.baggage_notes || "",
     };
     onSegmentsChange(segments.map((s, i) => (i === idx ? updated : s)));
   };
