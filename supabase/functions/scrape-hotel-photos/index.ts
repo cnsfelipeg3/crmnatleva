@@ -86,15 +86,13 @@ Deno.serve(async (req) => {
     const roomDetails = await scrapeRoomsPages(mainUrl, hotel_name, locationStr, images, FIRECRAWL_API_KEY, officialDomain);
     console.log(`Extracted room details for ${Object.keys(roomDetails).length} room types`);
 
-    // If we got very few images from official site, also try other results but TAG them
-    if (images.urls.length < 5) {
-      console.log("Few images from official site, checking other results...");
+    // If we got few images from official site, also collect from other results and let AI verify
+    if (images.urls.length < 10) {
+      console.log(`Only ${images.urls.length} images from official site, collecting from other results...`);
       for (const result of results) {
         if (result === officialResult) continue;
-        // Only collect if the result looks related to the target hotel
-        if (isResultRelevant(result, hotel_name)) {
-          collectImagesFromResult(result, images, null); // no domain filter for fallback
-        }
+        // Collect images without domain filter — AI verification will reject wrong-hotel photos
+        collectImagesFromResult(result, images, null);
       }
     }
 
