@@ -105,6 +105,31 @@ async function resolveHotelPhotosUrls(inputPhotos: HotelPhoto[]): Promise<HotelP
   );
 }
 
+async function fetchProxiedImageBlob(imageUrl: string): Promise<Blob> {
+  const { data, error } = await supabase.functions.invoke("image-proxy", {
+    body: { imageUrl },
+  });
+
+  if (error) throw error;
+
+  if (typeof Blob !== "undefined" && data instanceof Blob) {
+    return data;
+  }
+
+  if (data instanceof ArrayBuffer) {
+    return new Blob([data], { type: "image/jpeg" });
+  }
+
+  if (data?.base64) {
+    const byteString = atob(data.base64);
+    const bytes = new Uint8Array(byteString.length);
+    for (let i = 0; i < byteString.length; i += 1) bytes[i] = byteString.charCodeAt(i);
+    return new Blob([bytes], { type: data.contentType || "image/jpeg" });
+  }
+
+  throw new Error("Resposta de proxy inválida");
+}
+
 export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry, onSelectPhotos }: Props) {
   const [loading, setLoading] = useState(false);
   const [photos, setPhotos] = useState<HotelPhoto[]>([]);
