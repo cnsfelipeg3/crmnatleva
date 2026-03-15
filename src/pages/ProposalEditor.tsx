@@ -479,36 +479,12 @@ export default function ProposalEditor() {
 
                           {/* Type-specific fields */}
                           {item.item_type === "flight" && (
-                            <>
-                              <div className="space-y-1">
-                                <Label className="text-xs">Companhia aérea</Label>
-                                <Input value={item.data?.airline || ""} onChange={(e) => updateItemData(idx, "airline", e.target.value)} placeholder="LATAM" />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-xs">Nº do voo</Label>
-                                <Input value={item.data?.flight_number || ""} onChange={(e) => updateItemData(idx, "flight_number", e.target.value)} placeholder="LA8084" />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-xs">Origem</Label>
-                                <Input value={item.data?.origin || ""} onChange={(e) => updateItemData(idx, "origin", e.target.value)} placeholder="GRU" />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-xs">Destino</Label>
-                                <Input value={item.data?.destination || ""} onChange={(e) => updateItemData(idx, "destination", e.target.value)} placeholder="FCO" />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-xs">Partida</Label>
-                                <Input type="datetime-local" value={item.data?.departure || ""} onChange={(e) => updateItemData(idx, "departure", e.target.value)} />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-xs">Chegada</Label>
-                                <Input type="datetime-local" value={item.data?.arrival || ""} onChange={(e) => updateItemData(idx, "arrival", e.target.value)} />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-xs">Bagagem</Label>
-                                <Input value={item.data?.baggage || ""} onChange={(e) => updateItemData(idx, "baggage", e.target.value)} placeholder="23kg despachada" />
-                              </div>
-                            </>
+                            <div className="md:col-span-2">
+                              <ProposalFlightSearch
+                                segments={item.data?.flight_segments || []}
+                                onSegmentsChange={(segs) => updateItemData(idx, "flight_segments", segs)}
+                              />
+                            </div>
                           )}
 
                           {item.item_type === "hotel" && (
