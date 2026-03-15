@@ -2465,9 +2465,9 @@ function OperacaoInboxInner() {
               </div>
             )}
 
-            {/* Contact Profile Panel */}
+            {/* Contact Profile Panel (mobile) */}
             <AnimatePresence>
-              {showContactProfile && selected && (
+              {showContactProfile && selected && isMobile && (
                 <ContactProfilePanel
                   contact={{ ...selected, created_at: selected.last_message_at }}
                   profilePic={profilePicsRef.current.get(selected.id)}
@@ -2476,6 +2476,16 @@ function OperacaoInboxInner() {
               )}
             </AnimatePresence>
           </div>
+
+          {/* ─── Column 3: Client Context Panel ─── */}
+          {!isMobile && showClientContext && selected && (
+            <ClientContextPanel
+              conversation={selected}
+              profilePic={profilePicsRef.current.get(selected.id)}
+              onClose={() => setShowClientContext(false)}
+              onStageChange={(stage) => handleStageChange(selected.id, stage)}
+            />
+          )}
         </div>
       </div>
 
