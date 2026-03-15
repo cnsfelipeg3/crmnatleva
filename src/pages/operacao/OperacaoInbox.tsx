@@ -2113,6 +2113,17 @@ function OperacaoInboxInner() {
                     {!isMobile && (
                       <Tooltip>
                         <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-[10px] px-2" onClick={() => setShowLinkClient(true)}>
+                            <Link2 className="h-3.5 w-3.5" />
+                            Vincular Cliente
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">Vincular conversa a um cliente cadastrado</p></TooltipContent>
+                      </Tooltip>
+                    )}
+                    {!isMobile && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                           <Button variant="ghost" size="icon" className={`h-8 w-8 ${showClientContext ? 'bg-primary/10' : ''}`} onClick={() => setShowClientContext(prev => !prev)}>
                             <User className="h-4 w-4 text-primary" />
                           </Button>
