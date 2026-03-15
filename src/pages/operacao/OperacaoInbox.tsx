@@ -626,7 +626,7 @@ function OperacaoInboxInner() {
                 conversation_id: selectedId,
                 sender_type: (m.from_me ? "atendente" : "cliente") as "cliente" | "atendente",
                 message_type: (m.type || "text") as MsgType,
-                text: m.text || mediaInfo.caption || "",
+                text: stripQuotes(m.text || mediaInfo.caption || ""),
                 media_url: mediaInfo.mediaUrl,
                 status: mapZapiStatus(m.status, m.from_me),
                 created_at: String(m.timestamp || m.created_at),
