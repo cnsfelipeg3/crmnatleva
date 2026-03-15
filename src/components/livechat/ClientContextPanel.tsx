@@ -371,6 +371,9 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
             </div>
           </div>
 
+          {/* ─── AI Quote Summary ─── */}
+          <QuoteSummaryCard conversationDbId={conversation.db_id || conversation.id} />
+
           {/* ─── Stage ─── */}
           <Section title="Etapa do Funil" icon={Tag} defaultOpen={true}>
             <div className="flex items-center gap-2">
