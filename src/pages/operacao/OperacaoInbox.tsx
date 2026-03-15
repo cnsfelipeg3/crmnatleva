@@ -580,7 +580,7 @@ function OperacaoInboxInner() {
         conversation_id: conversationKey,
         sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
         message_type: normalizeDbMessageType(m.message_type),
-        text: m.text ?? m.content ?? "",
+        text: stripQuotes(m.text ?? m.content ?? ""),
         media_url: m.media_url || undefined,
         status: normalizeDbStatus(m.status ?? m.read_status),
         created_at: m.created_at,
