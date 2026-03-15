@@ -434,34 +434,8 @@ function extractFromStructuredContainers(html: string, sourceUrl: string, collec
   }
 }
 
-function extractOrphanImages(html: string, sourceUrl: string, collection: ImageCollection, hotelName: string) {
-  const imgRegex = /(?:src|data-src|data-lazy-src|data-original)\s*=\s*["']([^"']+\.(?:jpg|jpeg|png|webp|avif)[^"']*)["']/gi;
-  const altRegex = /alt\s*=\s*["']([^"']{3,120})["']/i;
-  let match;
-  while ((match = imgRegex.exec(html)) !== null) {
-    const imgUrl = match[1].trim();
-    if (!isRelevantImage(imgUrl)) continue;
-    const absUrl = makeAbsolute(imgUrl, sourceUrl);
-    if (collection.seen.has(absUrl)) continue;
-    collection.seen.add(absUrl);
 
-    const nearbyHtml = html.substring(Math.max(0, match.index - 100), match.index + 300);
-    const altText = altRegex.exec(nearbyHtml)?.[1] || "";
 
-    // Use alt text as section_name if it looks meaningful
-    const sectionName = (altText && altText.length > 3 && !isGenericAlt(altText))
-      ? altText
-      : "";
-
-    collection.photos.push({
-      url: absUrl,
-      alt: altText || hotelName,
-      section_name: sectionName,
-      category: inferCategory(sectionName, altText),
-      confidence: sectionName ? 0.7 : 0.4,
-    });
-  }
-}
 
 function extractRoomDetailLinks(html: string, baseUrl: string): Array<{ url: string; roomName: string }> {
   const links: Array<{ url: string; roomName: string }> = [];
