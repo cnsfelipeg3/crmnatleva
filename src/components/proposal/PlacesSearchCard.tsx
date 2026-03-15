@@ -1252,28 +1252,38 @@ export default function PlacesSearchCard({
 
 /* ═══ Thumbnail subcomponent ═══ */
 function PlaceThumbnail({ photoRef, alt }: { photoRef: string; alt: string }) {
-  const [src, setSrc] = useState<string>(() => {
-    // If it's already a full URL, use it directly
-    if (/^https?:\/\//i.test(photoRef)) return photoRef;
-    return "";
-  });
+  const [src, setSrc] = useState<string>("");
 
   useEffect(() => {
-    if (src) return; // Already resolved
     let cancelled = false;
+
     (async () => {
+      const { normalized, isDirectUrl, isJsServiceUrl } = normalizeGooglePhotoReference(photoRef);
+
+      if (!normalized) {
+        if (!cancelled) setSrc("");
+        return;
+      }
+
+      if (isDirectUrl && !isJsServiceUrl) {
+        if (!cancelled) setSrc(photoRef);
+        return;
+      }
+
       try {
-        const { data } = await supabase.functions.invoke("places-search", {
-          body: { action: "photo", photo_reference: photoRef, max_width: 200 },
-        });
-        if (!cancelled && data?.url) setSrc(data.url);
+        const resolvedUrl = await fetchPlacePhotoFromEdge(normalized, 200);
+        if (!cancelled) setSrc(resolvedUrl);
       } catch {
-        // Fallback to client-side URL builder
-        if (!cancelled) setSrc(getPhotoUrl(photoRef, 200));
+        if (!cancelled) {
+          setSrc(/^https?:\/\//i.test(normalized) ? normalized : getPhotoUrl(normalized, 200));
+        }
       }
     })();
-    return () => { cancelled = true; };
-  }, [photoRef, src]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [photoRef]);
 
   if (!src) return <div className="w-full h-full bg-muted/30 flex items-center justify-center"><MapPin className="h-4 w-4 text-muted-foreground/30" /></div>;
   return <img src={src} alt={alt} className="w-full h-full object-cover" />;
