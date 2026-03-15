@@ -883,20 +883,23 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
               const desc = lightboxPhoto.description || detail?.description;
               if (!desc && !detail) return null;
               return (
-                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-md text-white rounded-xl p-4 max-w-md w-[90%] sm:w-auto space-y-2 z-20 border border-white/10">
-                  <h4 className="font-semibold text-sm">{envName || lightboxPhoto.room_name}</h4>
-                  {desc && <p className="text-xs text-white/80">{desc}</p>}
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-md text-white rounded-xl p-5 max-w-lg w-[90%] sm:w-auto space-y-3 z-20 border border-white/10">
+                  <h4 className="font-bold text-base">{envName || lightboxPhoto.room_name}</h4>
+                  {desc && <p className="text-sm text-white/80 leading-relaxed">{desc}</p>}
                   {detail && Object.keys(detail.details).length > 0 && (
-                    <div className="flex flex-wrap gap-3 text-xs text-white/70">
+                    <div className="flex flex-wrap gap-3">
                       {Object.entries(detail.details).map(([k, v]) => (
-                        <span key={k}>📐 {k}: {v}</span>
+                        <div key={k} className="bg-white/10 rounded-lg px-3 py-1.5">
+                          <span className="text-[10px] text-white/50 uppercase tracking-wider block">{k}</span>
+                          <span className="text-xs font-semibold text-white">{v}</span>
+                        </div>
                       ))}
                     </div>
                   )}
                   {detail?.amenities && detail.amenities.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-1">
+                    <div className="flex flex-wrap gap-1.5 pt-1">
                       {detail.amenities.slice(0, 12).map((a, i) => (
-                        <span key={i} className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">{a}</span>
+                        <span key={i} className="px-2 py-0.5 bg-white/10 rounded-full text-[10px] text-white/80">{a}</span>
                       ))}
                     </div>
                   )}
