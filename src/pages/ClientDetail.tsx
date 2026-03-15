@@ -18,8 +18,10 @@ import {
   TrendingUp, Target, Plane, Hotel, Calendar, Eye, Clock,
   AlertTriangle, CheckCircle2, Send, FileText, Loader2,
   Heart, Compass, Utensils, Armchair, Star, Save, Globe, Activity,
+  MessageSquare, Link2,
 } from "lucide-react";
 import ClientTimeline from "@/components/ClientTimeline";
+import { LinkConversationDialog } from "@/components/LinkConversationDialog";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -100,6 +102,8 @@ export default function ClientDetail() {
   // Travel preferences
   const [prefs, setPrefs] = useState<TravelPreferences>({ ...defaultPrefs });
   const [editingPrefs, setEditingPrefs] = useState(false);
+  const [showLinkConv, setShowLinkConv] = useState(false);
+  const [linkedConvName, setLinkedConvName] = useState<string | null>(null);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [newLoyalty, setNewLoyalty] = useState("");
   const [newAirline, setNewAirline] = useState("");
@@ -283,6 +287,9 @@ export default function ClientDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => setShowLinkConv(true)} className="gap-1.5">
+            <MessageSquare className="w-4 h-4" /> Vincular WhatsApp
+          </Button>
           <Button size="sm" onClick={() => navigate("/sales/new")}><Plus className="w-4 h-4 mr-1" /> Nova Venda</Button>
         </div>
       </div>
@@ -490,6 +497,23 @@ export default function ClientDetail() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Link Conversation Dialog */}
+      <LinkConversationDialog
+        open={showLinkConv}
+        onOpenChange={setShowLinkConv}
+        clientId={id!}
+        clientName={client.display_name}
+        clientPhone={client.phone}
+        onLinked={(convId, convName) => {
+          setLinkedConvName(convName);
+          toast({ title: "Conversa vinculada!", description: `${client.display_name} ↔ ${convName}` });
+        }}
+        onUnlinked={() => {
+          setLinkedConvName(null);
+          toast({ title: "Vínculo removido" });
+        }}
+      />
     </div>
   );
 }

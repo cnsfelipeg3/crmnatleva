@@ -9,7 +9,7 @@ import {
   ChevronRight, Bot,
   CheckCheck, Workflow, Brain, Loader2,
   Trash2, WifiOff, Pin, PinOff, Pencil, Wand2,
-  AlertTriangle,
+  AlertTriangle, Link2,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ import { fetchAllRows } from "@/lib/fetchAll";
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ClientContextPanel } from "@/components/livechat/ClientContextPanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
+import { LinkClientDialog } from "@/components/livechat/LinkClientDialog";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 
@@ -256,6 +257,7 @@ function OperacaoInboxInner() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
+  const [showLinkClient, setShowLinkClient] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [chatSyncVersion, setChatSyncVersion] = useState(0);
   const [reloadingMessages, setReloadingMessages] = useState(false);
@@ -2111,6 +2113,17 @@ function OperacaoInboxInner() {
                     {!isMobile && (
                       <Tooltip>
                         <TooltipTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-[10px] px-2" onClick={() => setShowLinkClient(true)}>
+                            <Link2 className="h-3.5 w-3.5" />
+                            Vincular Cliente
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">Vincular conversa a um cliente cadastrado</p></TooltipContent>
+                      </Tooltip>
+                    )}
+                    {!isMobile && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
                           <Button variant="ghost" size="icon" className={`h-8 w-8 ${showClientContext ? 'bg-primary/10' : ''}`} onClick={() => setShowClientContext(prev => !prev)}>
                             <User className="h-4 w-4 text-primary" />
                           </Button>
@@ -2506,6 +2519,25 @@ function OperacaoInboxInner() {
             <img src={lightboxUrl} alt="Imagem" className="w-full rounded-lg" />
           </DialogContent>
         </Dialog>
+      )}
+
+      {/* Link Client Dialog */}
+      {selected && (
+        <LinkClientDialog
+          open={showLinkClient}
+          onOpenChange={setShowLinkClient}
+          conversationId={selected.db_id || selected.id}
+          conversationPhone={selected.phone}
+          conversationName={selected.contact_name || selected.phone}
+          currentClientId={null}
+          onLinked={(clientId, clientName) => {
+            toast({ title: "Cliente vinculado!", description: `${selected.contact_name} → ${clientName}` });
+            setShowLinkClient(false);
+          }}
+          onUnlinked={() => {
+            toast({ title: "Vínculo removido" });
+          }}
+        />
       )}
     </div>
   );
