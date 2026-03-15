@@ -1184,8 +1184,12 @@ export default function PlacesSearchCard({
             <Search className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <span className="text-sm font-bold text-foreground block">Buscar no Google Places</span>
-            <span className="text-[10px] text-muted-foreground">Hotéis, atrações, restaurantes</span>
+            <span className="text-sm font-bold text-foreground block">
+              {provider === "google" ? "Buscar no Google Places" : "Buscar no Amadeus"}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {provider === "google" ? "Hotéis, atrações, restaurantes" : "Base global de hotéis Amadeus"}
+            </span>
           </div>
         </div>
         <Button variant="ghost" size="icon" onClick={onCancel} className="h-7 w-7">
@@ -1193,13 +1197,41 @@ export default function PlacesSearchCard({
         </Button>
       </div>
 
+      {/* Provider Toggle */}
+      <div className="px-4 pt-3 pb-1 flex gap-2">
+        <button
+          onClick={() => { setProvider("google"); setResults([]); setError(null); }}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+            provider === "google"
+              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+              : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/60"
+          )}
+        >
+          <Map className="h-3.5 w-3.5" />
+          Google Places
+        </button>
+        <button
+          onClick={() => { setProvider("amadeus"); setResults([]); setError(null); }}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border",
+            provider === "amadeus"
+              ? "bg-primary text-primary-foreground border-primary shadow-sm"
+              : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/60"
+          )}
+        >
+          <Building2 className="h-3.5 w-3.5" />
+          Amadeus
+        </button>
+      </div>
+
       {/* Search Input */}
-      <div className="p-4">
+      <div className="p-4 pt-2">
         <div className="relative">
           <Input
             value={query}
             onChange={(e) => handleInput(e.target.value)}
-            placeholder="Buscar hotel, lugar ou atração..."
+            placeholder={provider === "google" ? "Buscar hotel, lugar ou atração..." : "Buscar hotel pelo nome..."}
             className="pr-8 h-11 text-sm"
             autoFocus
           />
