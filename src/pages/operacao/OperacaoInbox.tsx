@@ -1804,7 +1804,7 @@ function OperacaoInboxInner() {
                     )}
                     <div ref={messagesEndRef} />
                   </div>
-                </ScrollArea>
+                </div>
 
                 {/* Media pending preview */}
                 {mediaPendingFile && (
