@@ -13,6 +13,7 @@ import {
 import { Plus, Trash2, ChevronDown, Hotel, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import HotelAutocomplete from "@/components/HotelAutocomplete";
+import HotelPhotosScraper from "@/components/HotelPhotosScraper";
 
 /* ─── Types ─────────────────────────────────── */
 
