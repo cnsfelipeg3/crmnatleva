@@ -470,6 +470,8 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
               alt={lightboxPhoto.room_name || lightboxPhoto.alt || ""}
               className="max-w-full max-h-full object-contain select-none"
               draggable={false}
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
               onError={() => handleImageError(lightboxPhoto.url)}
             />
 
