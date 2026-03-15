@@ -300,6 +300,9 @@ export default function ProposalEditor() {
           <TabsTrigger value="info">Informações</TabsTrigger>
           <TabsTrigger value="items">Itens da Viagem</TabsTrigger>
           <TabsTrigger value="finance">Valores & Pagamento</TabsTrigger>
+          <TabsTrigger value="preview" className="gap-1.5">
+            <Eye className="w-3.5 h-3.5" /> Preview da Apresentação
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="info" className="space-y-4">
