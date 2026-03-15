@@ -14,7 +14,7 @@ import {
   UtensilsCrossed, Car, Ticket, ShieldCheck, Package, Sparkles,
   ChevronRight, Calendar, Clock, CheckCircle2, AlertCircle,
   Banknote, BadgeDollarSign, BarChart3, PieChart, Target,
-  X, Save, Trash2, Edit2, Zap, Eye, EyeOff, ArrowRight,
+  X, Save, Trash2, Edit2, Zap, Eye, EyeOff, ArrowRight, ArrowLeftRight,
   Flame, TrendingDown, Activity, Gauge, DollarSign,
   Plane, Coffee, Heart, Globe, Shield, Star,
   Camera, ImageIcon, Users,
