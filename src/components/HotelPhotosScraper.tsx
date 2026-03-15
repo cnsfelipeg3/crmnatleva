@@ -256,113 +256,114 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       </div>
 
       {/* Lightbox */}
-      <Dialog open={lightboxIndex !== null} onOpenChange={() => { setLightboxIndex(null); setShowInfo(false); }}>
-        <DialogContent className="fixed inset-0 max-w-none w-screen h-screen translate-x-0 translate-y-0 top-0 left-0 p-0 gap-0 bg-black border-none rounded-none overflow-hidden [&>button]:hidden data-[state=open]:slide-in-from-bottom-0">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Galeria de fotos</DialogTitle>
-          </DialogHeader>
+      {lightboxIndex !== null && lightboxPhoto && createPortal(
+        <div className="fixed inset-0 z-50 bg-black flex flex-col" role="dialog" aria-modal="true" aria-label="Galeria de fotos">
+          {/* Backdrop click to close */}
+          <div className="absolute inset-0" onClick={() => { setLightboxIndex(null); setShowInfo(false); }} />
 
-          {lightboxPhoto && (
-            <div className="flex flex-col w-full h-full">
-              {/* Top bar */}
-              <div className="flex items-center justify-between px-4 py-2.5 bg-black/80 backdrop-blur-sm z-10 shrink-0 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <span className="text-white/60 text-xs font-mono">
-                    {(lightboxIndex ?? 0) + 1} / {allPhotos.length}
-                  </span>
-                  <span className="text-white/90 text-sm font-medium">
-                    {lightboxPhoto.room_name || categoryLabels[lightboxPhoto.category] || lightboxPhoto.category}
-                  </span>
+          {/* Top bar */}
+          <div className="relative flex items-center justify-between px-3 sm:px-5 py-2.5 bg-black/90 backdrop-blur-sm z-10 shrink-0 border-b border-white/10">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <span className="text-white/50 text-xs font-mono shrink-0">
+                {(lightboxIndex ?? 0) + 1}/{allPhotos.length}
+              </span>
+              <span className="text-white text-xs sm:text-sm font-medium truncate">
+                {lightboxPhoto.room_name || categoryLabels[lightboxPhoto.category] || lightboxPhoto.category}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              {lightboxPhoto.room_details && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => setShowInfo(!showInfo)}
+                  className="text-white/70 hover:text-white hover:bg-white/10 h-8 px-2 text-xs gap-1">
+                  <Info className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Detalhes</span>
+                </Button>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => toggleSelect(lightboxPhoto.url)}
+                className={cn(
+                  "h-8 px-3 text-xs gap-1.5 transition-all",
+                  selectedPhotos.has(lightboxPhoto.url)
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "bg-white/10 text-white border border-white/20 hover:bg-white/20"
+                )}
+              >
+                <Check className="w-3.5 h-3.5" />
+                {selectedPhotos.has(lightboxPhoto.url) ? "Selecionada" : "Selecionar"}
+              </Button>
+              <button
+                onClick={() => { setLightboxIndex(null); setShowInfo(false); }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Image area */}
+          <div className="relative flex-1 flex items-center justify-center min-h-0 overflow-hidden px-12 sm:px-16">
+            <button onClick={goPrev}
+              className="absolute left-2 sm:left-4 z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors backdrop-blur-sm">
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+
+            <img
+              src={lightboxPhoto.url}
+              alt={lightboxPhoto.room_name || lightboxPhoto.alt || ""}
+              className="max-w-full max-h-full object-contain select-none"
+              draggable={false}
+            />
+
+            <button onClick={goNext}
+              className="absolute right-2 sm:right-4 z-10 w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20 transition-colors backdrop-blur-sm">
+              <ChevronRight className="w-5 h-5" />
+            </button>
+
+            {/* Room details overlay */}
+            {showInfo && lightboxPhoto.room_details && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/85 backdrop-blur-md text-white rounded-xl p-4 max-w-md w-[90%] sm:w-auto space-y-2 z-20 border border-white/10">
+                <h4 className="font-semibold text-sm">{lightboxPhoto.room_name}</h4>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-white/80">
+                  {lightboxPhoto.room_details.size_sqm && <div>📐 {lightboxPhoto.room_details.size_sqm} m²</div>}
+                  {lightboxPhoto.room_details.max_guests && <div>👥 Até {lightboxPhoto.room_details.max_guests} hóspedes</div>}
+                  {lightboxPhoto.room_details.bed_type && <div>🛏️ {lightboxPhoto.room_details.bed_type}</div>}
+                  {lightboxPhoto.room_details.view && <div>🌅 Vista: {lightboxPhoto.room_details.view}</div>}
                 </div>
-                <div className="flex items-center gap-2">
-                  {lightboxPhoto.room_details && (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setShowInfo(!showInfo)}
-                      className="text-white/70 hover:text-white hover:bg-white/10 h-7 px-2 text-xs gap-1">
-                      <Info className="w-3.5 h-3.5" /> Detalhes
-                    </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant={selectedPhotos.has(lightboxPhoto.url) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => toggleSelect(lightboxPhoto.url)}
-                    className="h-7 px-3 text-xs gap-1"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    {selectedPhotos.has(lightboxPhoto.url) ? "Selecionada" : "Selecionar"}
-                  </Button>
-                  <Button type="button" variant="ghost" size="icon"
-                    onClick={() => { setLightboxIndex(null); setShowInfo(false); }}
-                    className="text-white/70 hover:text-white hover:bg-white/10 h-8 w-8">
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Image area */}
-              <div className="flex-1 relative flex items-center justify-center min-h-0 overflow-hidden">
-                <button onClick={goPrev}
-                  className="absolute left-4 z-10 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors">
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-
-                <img
-                  src={lightboxPhoto.url}
-                  alt={lightboxPhoto.room_name || lightboxPhoto.alt || ""}
-                  className="max-w-[85%] max-h-[calc(100%-1rem)] object-contain select-none"
-                  draggable={false}
-                />
-
-                <button onClick={goNext}
-                  className="absolute right-4 z-10 w-10 h-10 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors">
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-
-                {/* Room details overlay */}
-                {showInfo && lightboxPhoto.room_details && (
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm text-white rounded-xl p-4 max-w-md w-[90%] space-y-2 z-20">
-                    <h4 className="font-semibold text-sm">{lightboxPhoto.room_name}</h4>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-white/80">
-                      {lightboxPhoto.room_details.size_sqm && <div>📐 {lightboxPhoto.room_details.size_sqm} m²</div>}
-                      {lightboxPhoto.room_details.max_guests && <div>👥 Até {lightboxPhoto.room_details.max_guests} hóspedes</div>}
-                      {lightboxPhoto.room_details.bed_type && <div>🛏️ {lightboxPhoto.room_details.bed_type}</div>}
-                      {lightboxPhoto.room_details.view && <div>🌅 Vista: {lightboxPhoto.room_details.view}</div>}
-                    </div>
-                    {lightboxPhoto.room_details.amenities && lightboxPhoto.room_details.amenities.length > 0 && (
-                      <div className="flex flex-wrap gap-1 pt-1">
-                        {lightboxPhoto.room_details.amenities.map((a, i) => (
-                          <span key={i} className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">{a}</span>
-                        ))}
-                      </div>
-                    )}
+                {lightboxPhoto.room_details.amenities && lightboxPhoto.room_details.amenities.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {lightboxPhoto.room_details.amenities.map((a, i) => (
+                      <span key={i} className="px-1.5 py-0.5 bg-white/10 rounded text-[10px]">{a}</span>
+                    ))}
                   </div>
                 )}
               </div>
+            )}
+          </div>
 
-              {/* Thumbnail strip */}
-              <div className="px-4 py-2 bg-black/80 backdrop-blur-sm shrink-0 border-t border-white/10">
-                <ScrollArea className="w-full">
-                  <div className="flex gap-1.5 justify-center">
-                    {allPhotos.map((p, i) => (
-                      <button
-                        key={p.url + i}
-                        onClick={() => setLightboxIndex(i)}
-                        className={cn(
-                          "shrink-0 w-14 h-10 rounded overflow-hidden border-2 transition-all",
-                          i === lightboxIndex ? "border-primary opacity-100 scale-105" : "border-transparent opacity-40 hover:opacity-70"
-                        )}
-                      >
-                        <img src={p.url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                      </button>
-                    ))}
-                  </div>
-                  <ScrollBar orientation="horizontal" />
-                </ScrollArea>
+          {/* Thumbnail strip */}
+          <div className="relative px-3 sm:px-5 py-2 bg-black/90 backdrop-blur-sm shrink-0 border-t border-white/10">
+            <ScrollArea className="w-full">
+              <div className="flex gap-1.5">
+                {allPhotos.map((p, i) => (
+                  <button
+                    key={p.url + i}
+                    onClick={() => setLightboxIndex(i)}
+                    className={cn(
+                      "shrink-0 w-14 h-10 rounded overflow-hidden border-2 transition-all",
+                      i === lightboxIndex ? "border-primary opacity-100 scale-110" : "border-transparent opacity-40 hover:opacity-70"
+                    )}
+                  >
+                    <img src={p.url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  </button>
+                ))}
               </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
