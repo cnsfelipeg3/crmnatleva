@@ -515,6 +515,7 @@ export default function ClientDetail() {
         }}
       />
     </div>
+  );
 }
 
 /* ─── Helper Components ───────────────────────────────────────── */
