@@ -401,10 +401,16 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
   // --- Initial button ---
   if (!scraped && photos.length === 0) {
     return (
-      <Button type="button" variant="outline" size="sm" onClick={scrapePhotos} disabled={loading || !hotelName} className="gap-2 text-xs">
-        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
-        {loading ? "Buscando fotos e informações..." : "Buscar fotos e informações no site oficial"}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={fetchGooglePlacesPhotos} disabled={loading || !hotelName} className="gap-2 text-xs">
+          {loadingSource === "google" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MapPin className="w-3.5 h-3.5" />}
+          {loadingSource === "google" ? "Buscando no Google Places..." : "Google Places"}
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={scrapePhotos} disabled={loading || !hotelName} className="gap-2 text-xs">
+          {loadingSource === "official" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
+          {loadingSource === "official" ? "Buscando no site oficial..." : "Site Oficial"}
+        </Button>
+      </div>
     );
   }
 
