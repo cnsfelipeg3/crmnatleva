@@ -765,8 +765,8 @@ export default function PlacesSearchCard({
                     )}
                   >
                     {/* Image */}
-                    <div className="aspect-[4/3] bg-muted/20 relative">
-                      <img src={photo.url} alt={photo.label} className="w-full h-full object-cover" loading="lazy" />
+                    <div className="aspect-[4/3] bg-muted/20 relative flex items-center justify-center">
+                      <img src={photo.url} alt={photo.label} className="max-w-full max-h-full object-contain" loading="lazy" />
 
                       {/* Overlay actions */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
