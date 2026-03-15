@@ -497,8 +497,24 @@ export default function ClientDetail() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Link Conversation Dialog */}
+      <LinkConversationDialog
+        open={showLinkConv}
+        onOpenChange={setShowLinkConv}
+        clientId={id!}
+        clientName={client.display_name}
+        clientPhone={client.phone}
+        onLinked={(convId, convName) => {
+          setLinkedConvName(convName);
+          toast({ title: "Conversa vinculada!", description: `${client.display_name} ↔ ${convName}` });
+        }}
+        onUnlinked={() => {
+          setLinkedConvName(null);
+          toast({ title: "Vínculo removido" });
+        }}
+      />
     </div>
-  );
 }
 
 /* ─── Helper Components ───────────────────────────────────────── */
