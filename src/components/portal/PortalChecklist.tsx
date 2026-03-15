@@ -1,9 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   CheckCircle2, Circle, AlertTriangle, Info, FileText, CreditCard, Plane,
-  Luggage, Shield, MapPin, ChevronDown, ChevronRight,
+  Luggage, Shield, MapPin, ChevronDown, ChevronRight, Check,
 } from "lucide-react";
 
 /* ── Types ── */
