@@ -6,8 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Search, Loader2, Plus, Trash2, Edit2, Check, PlaneTakeoff, PlaneLanding, Clock, Terminal, ChevronRight } from "lucide-react";
+import { Search, Loader2, Plus, Trash2, Edit2, Check, PlaneTakeoff, PlaneLanding, Clock, Terminal } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
+import AirlineAutocomplete from "@/components/AirlineAutocomplete";
+import AirportAutocomplete from "@/components/AirportAutocomplete";
 
 export interface FlightSegmentData {
   airline: string;
@@ -30,7 +32,6 @@ interface ProposalFlightSearchProps {
   onSegmentsChange: (segments: FlightSegmentData[]) => void;
 }
 
-// Simple in-memory cache (24h TTL)
 const flightCache: Record<string, { data: any; ts: number }> = {};
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
@@ -53,51 +54,44 @@ function getNextDayIndicator(depTime: string, arrTime: string): string {
   return "";
 }
 
+interface SearchFormData {
+  airline: string;
+  airlineName: string;
+  flightNumber: string;
+  date: string;
+  origin: string;
+  destination: string;
+}
+
 const emptySegment = (): FlightSegmentData => ({
-  airline: "",
-  airline_name: "",
-  flight_number: "",
-  origin_iata: "",
-  destination_iata: "",
-  departure_date: "",
-  departure_time: "",
-  arrival_time: "",
-  duration_minutes: 0,
-  terminal: "",
-  arrival_terminal: "",
-  aircraft_type: "",
-  notes: "",
+  airline: "", airline_name: "", flight_number: "", origin_iata: "", destination_iata: "",
+  departure_date: "", departure_time: "", arrival_time: "", duration_minutes: 0,
+  terminal: "", arrival_terminal: "", aircraft_type: "", notes: "",
 });
 
 export default function ProposalFlightSearch({ segments, onSegmentsChange }: ProposalFlightSearchProps) {
-  const [searchForms, setSearchForms] = useState<Record<number, { airline: string; flightNumber: string; date: string; origin: string; destination: string }>>({});
+  const [searchForms, setSearchForms] = useState<Record<number, SearchFormData>>({});
   const [loadingIdx, setLoadingIdx] = useState<number | null>(null);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
 
-  const addSegment = () => {
-    onSegmentsChange([...segments, emptySegment()]);
-  };
-
-  const removeSegment = (idx: number) => {
-    onSegmentsChange(segments.filter((_, i) => i !== idx));
-  };
-
+  const addSegment = () => onSegmentsChange([...segments, emptySegment()]);
+  const removeSegment = (idx: number) => onSegmentsChange(segments.filter((_, i) => i !== idx));
   const updateSegment = (idx: number, field: keyof FlightSegmentData, value: any) => {
     onSegmentsChange(segments.map((s, i) => (i === idx ? { ...s, [field]: value } : s)));
   };
 
-  const getSearchForm = (idx: number) => {
-    return searchForms[idx] || { airline: "", flightNumber: "", date: "", origin: "", destination: "" };
+  const getForm = (idx: number): SearchFormData => {
+    return searchForms[idx] || { airline: "", airlineName: "", flightNumber: "", date: "", origin: "", destination: "" };
   };
 
-  const setSearchForm = (idx: number, form: any) => {
+  const setForm = (idx: number, form: SearchFormData) => {
     setSearchForms((prev) => ({ ...prev, [idx]: form }));
   };
 
   const searchFlight = async (idx: number) => {
-    const form = getSearchForm(idx);
+    const form = getForm(idx);
     if (!form.airline || !form.flightNumber || !form.date) {
-      toast.error("Preencha companhia, número do voo e data.");
+      toast.error("Preencha companhia aérea, número do voo e data.");
       return;
     }
 
@@ -111,27 +105,20 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
 
     setLoadingIdx(idx);
     try {
-      // Try schedule API first (flight_by_number)
-      const { data: res, error } = await supabase.functions.invoke("amadeus-search", {
-        body: {
-          action: "flight_by_number",
-          airline: form.airline.toUpperCase(),
-          flightNumber: form.flightNumber,
-          departureDate: form.date,
-        },
-      });
+      // Strategy 1: flight_by_number (Schedule API)
+      let seg = await tryFlightByNumber(form);
 
-      if (error) throw new Error(error.message);
-      if (res?.error) throw new Error(res.error);
+      // Strategy 2: flight_schedule (Flight Offers) as fallback
+      if (!seg && form.origin && form.destination) {
+        seg = await tryFlightSchedule(form);
+      }
 
-      const flights = res?.data || [];
-      if (flights.length > 0 && flights[0].itineraries?.[0]?.segments?.length > 0) {
-        const seg = flights[0].itineraries[0].segments[0];
+      if (seg) {
         flightCache[cacheKey] = { data: seg, ts: Date.now() };
         applyFlightData(idx, seg, form);
         toast.success("Informações do voo preenchidas automaticamente!");
       } else {
-        toast.warning("Voo não encontrado na API. Preencha manualmente.");
+        toast.warning("Voo não encontrado na API Amadeus. Preencha os dados manualmente.");
       }
     } catch (err: any) {
       console.error("Flight search error:", err);
@@ -141,10 +128,50 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
     }
   };
 
-  const applyFlightData = (idx: number, seg: any, form: any) => {
+  const tryFlightByNumber = async (form: SearchFormData) => {
+    try {
+      const { data: res, error } = await supabase.functions.invoke("amadeus-search", {
+        body: {
+          action: "flight_by_number",
+          airline: form.airline.toUpperCase(),
+          flightNumber: form.flightNumber,
+          departureDate: form.date,
+        },
+      });
+      if (error || res?.error) return null;
+      const flights = res?.data || [];
+      if (flights.length > 0 && flights[0].itineraries?.[0]?.segments?.length > 0) {
+        return flights[0].itineraries[0].segments[0];
+      }
+    } catch { /* fall through */ }
+    return null;
+  };
+
+  const tryFlightSchedule = async (form: SearchFormData) => {
+    try {
+      const { data: res, error } = await supabase.functions.invoke("amadeus-search", {
+        body: {
+          action: "flight_schedule",
+          origin: form.origin.toUpperCase(),
+          destination: form.destination.toUpperCase(),
+          departureDate: form.date,
+          airline: form.airline.toUpperCase(),
+          flightNumber: form.airline.toUpperCase() + form.flightNumber,
+        },
+      });
+      if (error || res?.error) return null;
+      const offers = res?.data || [];
+      if (offers.length > 0 && offers[0].itineraries?.[0]?.segments?.length > 0) {
+        return offers[0].itineraries[0].segments[0];
+      }
+    } catch { /* fall through */ }
+    return null;
+  };
+
+  const applyFlightData = (idx: number, seg: any, form: SearchFormData) => {
     const updated: FlightSegmentData = {
       airline: seg.airline || form.airline.toUpperCase(),
-      airline_name: seg.airline_name || form.airline.toUpperCase(),
+      airline_name: seg.airline_name || form.airlineName || form.airline.toUpperCase(),
       flight_number: seg.flight_number || form.flightNumber,
       origin_iata: seg.origin_iata || form.origin?.toUpperCase() || "",
       destination_iata: seg.destination_iata || form.destination?.toUpperCase() || "",
@@ -160,7 +187,6 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
     onSegmentsChange(segments.map((s, i) => (i === idx ? updated : s)));
   };
 
-  // If no segments yet, show initial add button
   if (segments.length === 0) {
     return (
       <div className="text-center py-6">
@@ -178,11 +204,10 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
         const isLoading = loadingIdx === idx;
         const isEditing = editingIdx === idx;
         const hasFilled = !!seg.origin_iata && !!seg.destination_iata && !!seg.departure_time;
-        const form = getSearchForm(idx);
+        const form = getForm(idx);
 
         return (
           <div key={idx} className="space-y-3">
-            {/* Segment label */}
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Trecho {idx + 1}
@@ -200,26 +225,25 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
               </div>
             </div>
 
-            {/* Search form - show when not filled OR editing */}
+            {/* Search form */}
             {(!hasFilled || isEditing) && (
               <Card className="p-4 border-dashed border-primary/30 bg-primary/5">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Companhia</Label>
-                    <Input
+                    <Label className="text-xs">Companhia aérea</Label>
+                    <AirlineAutocomplete
                       value={form.airline}
-                      onChange={(e) => setSearchForm(idx, { ...form, airline: e.target.value })}
-                      placeholder="LA, G3, EK..."
-                      className="uppercase"
-                      maxLength={3}
+                      onChange={(iata, name) => setForm(idx, { ...form, airline: iata, airlineName: name || "" })}
+                      placeholder="Digite ou selecione..."
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Nº do voo</Label>
                     <Input
                       value={form.flightNumber}
-                      onChange={(e) => setSearchForm(idx, { ...form, flightNumber: e.target.value })}
+                      onChange={(e) => setForm(idx, { ...form, flightNumber: e.target.value.replace(/\D/g, "") })}
                       placeholder="8084"
+                      className="font-mono"
                     />
                   </div>
                   <div className="space-y-1">
@@ -227,67 +251,51 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                     <Input
                       type="date"
                       value={form.date}
-                      onChange={(e) => setSearchForm(idx, { ...form, date: e.target.value })}
+                      onChange={(e) => setForm(idx, { ...form, date: e.target.value })}
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Origem</Label>
-                    <Input
+                    <AirportAutocomplete
                       value={form.origin}
-                      onChange={(e) => setSearchForm(idx, { ...form, origin: e.target.value })}
-                      placeholder="GRU"
-                      className="uppercase"
-                      maxLength={3}
+                      onChange={(iata) => setForm(idx, { ...form, origin: iata })}
+                      placeholder="GRU, São Paulo..."
                     />
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Destino</Label>
-                    <Input
+                    <AirportAutocomplete
                       value={form.destination}
-                      onChange={(e) => setSearchForm(idx, { ...form, destination: e.target.value })}
-                      placeholder="FCO"
-                      className="uppercase"
-                      maxLength={3}
+                      onChange={(iata) => setForm(idx, { ...form, destination: iata })}
+                      placeholder="FCO, Roma..."
                     />
                   </div>
                 </div>
                 <Button
                   onClick={() => searchFlight(idx)}
-                  disabled={isLoading}
+                  disabled={isLoading || !form.airline || !form.flightNumber || !form.date}
                   className="mt-3 gap-2 w-full sm:w-auto"
                 >
                   {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Buscando informações do voo...
-                    </>
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Buscando informações do voo...</>
                   ) : (
-                    <>
-                      <Search className="w-4 h-4" />
-                      Buscar informações do voo
-                    </>
+                    <><Search className="w-4 h-4" /> Buscar informações do voo</>
                   )}
                 </Button>
               </Card>
             )}
 
-            {/* Visual Flight Card - show when filled */}
+            {/* Visual Flight Card */}
             {hasFilled && !isEditing && (
               <Card className="overflow-hidden border-border/60">
                 <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-4 sm:p-5">
                   <div className="flex items-start gap-4">
-                    {/* Airline logo */}
                     <div className="shrink-0 w-14 h-14 rounded-xl bg-background/80 backdrop-blur border border-border/50 flex items-center justify-center shadow-sm">
                       <AirlineLogo iata={seg.airline} size={40} />
                     </div>
-
-                    {/* Flight info */}
                     <div className="flex-1 min-w-0">
-                      {/* Airline + flight number */}
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="font-semibold text-sm text-foreground">
-                          {seg.airline_name || seg.airline}
-                        </span>
+                        <span className="font-semibold text-sm text-foreground">{seg.airline_name || seg.airline}</span>
                         <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-mono font-medium">
                           {seg.airline}{seg.flight_number}
                         </span>
@@ -297,14 +305,9 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                           </span>
                         )}
                       </div>
-
-                      {/* Route visualization */}
                       <div className="flex items-center gap-3 sm:gap-6">
-                        {/* Departure */}
                         <div className="text-center min-w-[60px]">
-                          <p className="text-xl sm:text-2xl font-bold text-foreground leading-none">
-                            {seg.departure_time || "—"}
-                          </p>
+                          <p className="text-xl sm:text-2xl font-bold text-foreground leading-none">{seg.departure_time || "—"}</p>
                           <p className="text-lg font-bold text-primary mt-1">{seg.origin_iata}</p>
                           {seg.terminal && (
                             <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5 mt-0.5">
@@ -312,8 +315,6 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                             </p>
                           )}
                         </div>
-
-                        {/* Route line */}
                         <div className="flex-1 flex flex-col items-center gap-1 px-2">
                           <div className="flex items-center w-full gap-1">
                             <PlaneTakeoff className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -325,12 +326,9 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                             <PlaneLanding className="w-3.5 h-3.5 text-primary shrink-0" />
                           </div>
                           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                            <Clock className="w-2.5 h-2.5" />
-                            {formatDuration(seg.duration_minutes)}
+                            <Clock className="w-2.5 h-2.5" /> {formatDuration(seg.duration_minutes)}
                           </div>
                         </div>
-
-                        {/* Arrival */}
                         <div className="text-center min-w-[60px]">
                           <p className="text-xl sm:text-2xl font-bold text-foreground leading-none">
                             {seg.arrival_time || "—"}
@@ -346,18 +344,10 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                           )}
                         </div>
                       </div>
-
-                      {/* Extra info row */}
                       {(seg.aircraft_type || seg.notes) && (
                         <div className="mt-3 pt-2.5 border-t border-border/40 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                          {seg.aircraft_type && (
-                            <span className="flex items-center gap-1">
-                              ✈ {seg.aircraft_type}
-                            </span>
-                          )}
-                          {seg.notes && (
-                            <span className="italic">{seg.notes}</span>
-                          )}
+                          {seg.aircraft_type && <span className="flex items-center gap-1">✈ {seg.aircraft_type}</span>}
+                          {seg.notes && <span className="italic">{seg.notes}</span>}
                         </div>
                       )}
                     </div>
@@ -366,7 +356,7 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
               </Card>
             )}
 
-            {/* Editable fields when editing */}
+            {/* Editable fields */}
             {hasFilled && isEditing && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-3 bg-muted/30 rounded-lg border border-border/40">
                 <div className="space-y-1">
