@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Camera, Loader2, ExternalLink, Check, ChevronLeft, ChevronRight, ZoomIn, Info, X } from "lucide-react";
+import { Camera, Loader2, ExternalLink, Check, ChevronLeft, ChevronRight, ZoomIn, Info, X, MapPin, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface HotelPhoto {
@@ -137,12 +137,14 @@ async function fetchProxiedImageBlob(imageUrl: string): Promise<Blob> {
 
 export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry, onSelectPhotos }: Props) {
   const [loading, setLoading] = useState(false);
+  const [loadingSource, setLoadingSource] = useState<"google" | "official" | null>(null);
   const [photos, setPhotos] = useState<HotelPhoto[]>([]);
   const [sourceUrl, setSourceUrl] = useState("");
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [scraped, setScraped] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [activeSource, setActiveSource] = useState<"google" | "official" | null>(null);
   const [proxiedImageUrls, setProxiedImageUrls] = useState<Record<string, string>>({});
   const [failedImageUrls, setFailedImageUrls] = useState<Set<string>>(new Set());
   const [resolvingImageUrls, setResolvingImageUrls] = useState<Set<string>>(new Set());
@@ -224,9 +226,88 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     }
   }, []);
 
+  const fetchGooglePlacesPhotos = async () => {
+    if (!hotelName) { toast.error("Selecione um hotel primeiro"); return; }
+    setLoading(true);
+    setLoadingSource("google");
+    try {
+      // Step 1: Search for the hotel on Google Places
+      const searchQuery = `${hotelName} ${hotelCity || ""} ${hotelCountry || ""} hotel`.trim();
+      const { data: searchData, error: searchError } = await supabase.functions.invoke("places-search", {
+        body: { action: "search", query: searchQuery },
+      });
+      if (searchError) throw searchError;
+      
+      const results = searchData?.results || [];
+      if (results.length === 0) {
+        toast.info("Hotel não encontrado no Google Places");
+        return;
+      }
+
+      // Step 2: Get details with photos
+      const placeId = results[0].place_id;
+      if (!placeId || placeId.startsWith("fallback:")) {
+        toast.info("Fotos não disponíveis para este local no Google Places");
+        return;
+      }
+
+      const { data: detailsData, error: detailsError } = await supabase.functions.invoke("places-search", {
+        body: { action: "details", place_id: placeId },
+      });
+      if (detailsError) throw detailsError;
+
+      const placePhotos = detailsData?.photos || [];
+      if (placePhotos.length === 0) {
+        toast.info("Nenhuma foto encontrada no Google Places para este hotel");
+        return;
+      }
+
+      // Step 3: Resolve photo URLs
+      const resolvedPhotos: HotelPhoto[] = await Promise.all(
+        placePhotos.map(async (ph: any, idx: number) => {
+          let url = "";
+          try {
+            const { data: photoData } = await supabase.functions.invoke("places-search", {
+              body: { action: "photo", photo_reference: ph.photo_reference, max_width: 1200 },
+            });
+            url = photoData?.url || "";
+          } catch { /* skip */ }
+
+          return {
+            url,
+            alt: `${hotelName} - Google Places foto ${idx + 1}`,
+            category: "outro",
+            confidence: 0.5,
+          } as HotelPhoto;
+        })
+      );
+
+      const validPhotos = resolvedPhotos.filter(p => p.url);
+
+      clearProxiedImages();
+      setPhotos(validPhotos);
+      setSourceUrl("");
+      setScraped(true);
+      setActiveSource("google");
+
+      if (validPhotos.length > 0) {
+        toast.success(`${validPhotos.length} fotos encontradas via Google Places`);
+        preloadViaProxy(validPhotos);
+      } else {
+        toast.info("Não foi possível carregar as fotos do Google Places");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao buscar fotos no Google Places");
+    } finally {
+      setLoading(false);
+      setLoadingSource(null);
+    }
+  };
+
   const scrapePhotos = async () => {
     if (!hotelName) { toast.error("Selecione um hotel primeiro"); return; }
     setLoading(true);
+    setLoadingSource("official");
     try {
       const { data, error } = await supabase.functions.invoke("scrape-hotel-photos", {
         body: { hotel_name: hotelName, hotel_city: hotelCity, hotel_country: hotelCountry },
@@ -241,11 +322,11 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       setPhotos(resolvedPhotos);
       setSourceUrl(data.source_url || "");
       setScraped(true);
+      setActiveSource("official");
       const verification = data.verification;
       if (resolvedPhotos.length > 0) {
         const rejectedMsg = verification?.rejected > 0 ? ` (${verification.rejected} fotos de outros hotéis removidas)` : "";
         toast.success(`${resolvedPhotos.length} fotos verificadas e classificadas por IA${rejectedMsg}`);
-        // Start pre-loading images via proxy in background
         preloadViaProxy(resolvedPhotos);
       } else {
         toast.info("Nenhuma foto relevante encontrada no site do hotel");
@@ -254,6 +335,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       toast.error(err.message || "Erro ao buscar fotos do hotel");
     } finally {
       setLoading(false);
+      setLoadingSource(null);
     }
   };
 
@@ -319,23 +401,31 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
   // --- Initial button ---
   if (!scraped && photos.length === 0) {
     return (
-      <Button type="button" variant="outline" size="sm" onClick={scrapePhotos} disabled={loading || !hotelName} className="gap-2 text-xs">
-        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
-        {loading ? "Buscando fotos e informações..." : "Buscar fotos e informações no site oficial"}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" size="sm" onClick={fetchGooglePlacesPhotos} disabled={loading || !hotelName} className="gap-2 text-xs">
+          {loadingSource === "google" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MapPin className="w-3.5 h-3.5" />}
+          {loadingSource === "google" ? "Buscando no Google Places..." : "Google Places"}
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={scrapePhotos} disabled={loading || !hotelName} className="gap-2 text-xs">
+          {loadingSource === "official" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Globe className="w-3.5 h-3.5" />}
+          {loadingSource === "official" ? "Buscando no site oficial..." : "Site Oficial"}
+        </Button>
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Camera className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold text-foreground">Galeria Oficial — {hotelName}</span>
+          <span className="text-sm font-semibold text-foreground">
+            {activeSource === "google" ? "Google Places" : "Site Oficial"} — {hotelName}
+          </span>
           <Badge variant="secondary" className="text-[10px]">{photos.length} fotos</Badge>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           {sourceUrl && (
             <a href={sourceUrl} target="_blank" rel="noreferrer" className="text-[10px] text-muted-foreground hover:text-primary flex items-center gap-1">
               <ExternalLink className="w-3 h-3" /> Site
@@ -344,8 +434,28 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
           <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedPhotos(new Set(photos.map(p => p.url)))} className="text-[10px] h-6 px-2">
             Selecionar todas
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={scrapePhotos} disabled={loading} className="text-[10px] h-6 px-2">
-            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "↻ Rebuscar"}
+          {/* Switch source buttons */}
+          <Button
+            type="button"
+            variant={activeSource === "google" ? "default" : "outline"}
+            size="sm"
+            onClick={fetchGooglePlacesPhotos}
+            disabled={loading}
+            className="text-[10px] h-6 px-2 gap-1"
+          >
+            {loadingSource === "google" ? <Loader2 className="w-3 h-3 animate-spin" /> : <MapPin className="w-3 h-3" />}
+            Google Places
+          </Button>
+          <Button
+            type="button"
+            variant={activeSource === "official" ? "default" : "outline"}
+            size="sm"
+            onClick={scrapePhotos}
+            disabled={loading}
+            className="text-[10px] h-6 px-2 gap-1"
+          >
+            {loadingSource === "official" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Globe className="w-3 h-3" />}
+            Site Oficial
           </Button>
         </div>
       </div>
