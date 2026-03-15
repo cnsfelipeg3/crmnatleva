@@ -157,11 +157,14 @@ Retorne APENAS JSON válido:
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
           if (parsed.photos && Array.isArray(parsed.photos)) {
-            // Re-map indices
+            // Re-map indices: the AI returns local batch indices (0-based per batch)
             for (const photo of parsed.photos) {
-              const validImg = validImages[photo.index];
-              if (validImg) {
-                photo.index = validImg.originalIndex;
+              // If the AI returned indices 0..N within the batch, map them back
+              if (typeof photo.index === 'number' && photo.index < validImages.length) {
+                const validImg = validImages[photo.index];
+                if (validImg) {
+                  photo.index = validImg.originalIndex;
+                }
               }
             }
             allClassified.push(...parsed.photos);
