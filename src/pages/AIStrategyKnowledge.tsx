@@ -154,7 +154,7 @@ export default function AIStrategyKnowledge() {
     if (filterFunction !== "all" && r.function_area !== filterFunction) return false;
     if (filterOrigin !== "all" && r.origin_type !== filterOrigin) return false;
     if (filterStatus !== "all" && r.status !== filterStatus) return false;
-    if (filterTag && !(r.tags || []).includes(filterTag)) return false;
+    if (filterTag !== "all" && !(r.tags || []).includes(filterTag)) return false;
     if (search) {
       const q = search.toLowerCase();
       return r.title.toLowerCase().includes(q) || r.rule.toLowerCase().includes(q) || (r.tags || []).some(t => t.toLowerCase().includes(q));
