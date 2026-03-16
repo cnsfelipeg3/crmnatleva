@@ -78,6 +78,7 @@ export default function ProposalEditor() {
     total_value: "",
     value_per_person: "",
     payment_conditions: [] as { method: string; details: string }[],
+    proposal_strategy: prefillStrategy,
   });
 
   const [items, setItems] = useState<any[]>([]);
