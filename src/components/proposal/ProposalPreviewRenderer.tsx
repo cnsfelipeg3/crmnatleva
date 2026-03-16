@@ -679,7 +679,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── EXPERIENCES ──── */}
       {experiences.length > 0 && (
-        <section className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
+        <section data-track-section="experiences" className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
           <SectionTitle subtitle="Momentos que farão sua viagem inesquecível">Experiências</SectionTitle>
           <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {experiences.map((exp, idx) => <ExperienceCard key={exp.id || idx} exp={exp} idx={idx} />)}
