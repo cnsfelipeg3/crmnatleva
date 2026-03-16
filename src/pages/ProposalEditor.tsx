@@ -136,6 +136,7 @@ export default function ProposalEditor() {
         value_per_person: existing.value_per_person?.toString() || "",
         payment_conditions: (existing.payment_conditions as any[]) || [],
         proposal_strategy: (existing as any).proposal_strategy || "",
+        proposal_outcome: (existing as any).proposal_outcome || "pending",
       });
     }
   }, [existing]);
