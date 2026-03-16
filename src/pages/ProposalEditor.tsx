@@ -45,18 +45,33 @@ export default function ProposalEditor() {
   const queryClient = useQueryClient();
   const { user, profile } = useAuth();
   const isNew = !id || id === "nova";
+  const [searchParams] = useSearchParams();
+
+  // Pre-fill from AI briefing URL params
+  const prefillTitle = searchParams.get("title") || "";
+  const prefillClientName = searchParams.get("client_name") || "";
+  const prefillOrigin = searchParams.get("origin") || "";
+  const prefillDests = searchParams.get("destinations")?.split(",").filter(Boolean) || [];
+  const prefillStartDate = searchParams.get("start_date") || "";
+  const prefillEndDate = searchParams.get("end_date") || "";
+  const prefillPax = parseInt(searchParams.get("pax") || "0") || 1;
+  const prefillIntro = searchParams.get("intro") || "";
+  const prefillNotes = searchParams.get("notes") || "";
+  const prefillItinerary = searchParams.get("itinerary") || "";
+
+  const defaultIntro = "Preparamos uma experiência exclusiva para sua viagem, combinando destinos icônicos, hospedagens selecionadas e uma logística cuidadosamente planejada.";
 
   const [form, setForm] = useState({
-    title: "",
-    client_name: "",
-    origin: "",
-    destinations: [] as string[],
-    travel_start_date: "",
-    travel_end_date: "",
-    passenger_count: 1,
+    title: prefillTitle,
+    client_name: prefillClientName,
+    origin: prefillOrigin,
+    destinations: prefillDests,
+    travel_start_date: prefillStartDate,
+    travel_end_date: prefillEndDate,
+    passenger_count: prefillPax,
     consultant_name: profile?.full_name || "",
     status: "draft",
-    intro_text: "Preparamos uma experiência exclusiva para sua viagem, combinando destinos icônicos, hospedagens selecionadas e uma logística cuidadosamente planejada.",
+    intro_text: prefillIntro || defaultIntro,
     cover_image_url: "",
     total_value: "",
     value_per_person: "",
