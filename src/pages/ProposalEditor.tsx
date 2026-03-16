@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check } from "lucide-react";
+import { emitLearningEvent, emitProposalOutcome } from "@/lib/learningEvents";
 import ProposalPreviewRenderer from "@/components/proposal/ProposalPreviewRenderer";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import HotelPhotosScraper from "@/components/HotelPhotosScraper";
