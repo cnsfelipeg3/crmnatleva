@@ -116,3 +116,6 @@ verify_jwt = false
 
 [functions.migrate-messages]
 verify_jwt = false
+
+[functions.ai-learn-patterns]
+verify_jwt = false
