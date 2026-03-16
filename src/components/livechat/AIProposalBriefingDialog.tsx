@@ -439,6 +439,46 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                             className="overflow-hidden"
                           >
                             <div className="px-4 py-3 space-y-3">
+                              {/* ── Trip Cycles Timeline ── */}
+                              {briefing.detected_trip_cycles && briefing.detected_trip_cycles.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">Linha do tempo de viagens detectada</p>
+                                  <div className="space-y-1.5">
+                                    {briefing.detected_trip_cycles.map((cycle, i) => {
+                                      const cycleInfo = CYCLE_STATUS_MAP[cycle.status] || CYCLE_STATUS_MAP.cotacao_solicitada;
+                                      return (
+                                        <div
+                                          key={i}
+                                          className={`flex items-center gap-2 px-3 py-2 rounded-md border text-xs ${
+                                            cycle.is_current_demand
+                                              ? "border-primary/30 bg-primary/5 ring-1 ring-primary/10"
+                                              : "border-border/30 bg-card"
+                                          }`}
+                                        >
+                                          <span className="text-sm shrink-0">{cycleInfo.emoji}</span>
+                                          <div className="flex-1 min-w-0">
+                                            <span className="font-semibold text-foreground">
+                                              {cycle.destination}
+                                              {cycle.subdestinations?.length ? ` (${cycle.subdestinations.join(", ")})` : ""}
+                                            </span>
+                                            {cycle.period && <span className="text-muted-foreground ml-1.5">· {cycle.period}</span>}
+                                            {cycle.passengers && <span className="text-muted-foreground ml-1.5">· {cycle.passengers} pax</span>}
+                                          </div>
+                                          <Badge variant="outline" className={`text-[9px] px-1.5 border shrink-0 ${cycleInfo.className}`}>
+                                            {cycleInfo.label}
+                                          </Badge>
+                                          {cycle.is_current_demand && (
+                                            <Badge className="text-[9px] px-1.5 bg-primary text-primary-foreground shrink-0">
+                                              ATUAL
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
                               {briefing.client_history_summary && (
                                 <p className="text-xs text-foreground/70 leading-relaxed italic">
                                   "{briefing.client_history_summary}"
@@ -454,7 +494,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                                         <span className="text-foreground/70 font-medium">{t.topic}</span>
                                         {t.period && <span className="text-muted-foreground/50">({t.period})</span>}
                                         {t.reason && (
-                                          <Badge variant="outline" className="text-[9px] px-1.5 text-muted-foreground/60">{t.reason}</Badge>
+                                          <Badge variant="outline" className="text-[9px] px-1.5 text-muted-foreground/60">{t.reason.replace(/_/g, " ")}</Badge>
                                         )}
                                       </div>
                                     ))}
