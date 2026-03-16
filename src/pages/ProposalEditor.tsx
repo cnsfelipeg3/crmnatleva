@@ -278,7 +278,7 @@ export default function ProposalEditor() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       const slug = existing?.slug || generateSlug();
-      const payload = {
+      const payload: Record<string, any> = {
         title: form.title,
         client_name: form.client_name,
         origin: form.origin,
@@ -293,6 +293,7 @@ export default function ProposalEditor() {
         total_value: form.total_value ? parseFloat(form.total_value) : null,
         value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
         payment_conditions: form.payment_conditions,
+        proposal_strategy: form.proposal_strategy || null,
         slug,
         created_by: user?.id,
         updated_at: new Date().toISOString(),
