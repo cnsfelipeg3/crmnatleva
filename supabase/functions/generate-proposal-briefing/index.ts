@@ -21,16 +21,26 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // ─── LAYER 1: Full conversation messages ───
-    const { data: allMessages, error: msgErr } = await sb
-      .from("conversation_messages")
-      .select("content, sender_type, created_at, message_type, direction")
-      .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: true })
-      .limit(500);
+    // ─── LAYER 1: ALL conversation messages (no limit) ───
+    // Fetch in pages to get everything
+    let allMessages: any[] = [];
+    let page = 0;
+    const PAGE_SIZE = 1000;
+    while (true) {
+      const { data: batch, error: batchErr } = await sb
+        .from("conversation_messages")
+        .select("content, sender_type, created_at, message_type, direction")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      if (batchErr) throw batchErr;
+      if (!batch?.length) break;
+      allMessages = allMessages.concat(batch);
+      if (batch.length < PAGE_SIZE) break;
+      page++;
+    }
 
-    if (msgErr) throw msgErr;
-    if (!allMessages?.length) {
+    if (!allMessages.length) {
       return new Response(JSON.stringify({ briefing: null, reason: "no_messages" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -48,6 +58,8 @@ serve(async (req) => {
 
     // ─── LAYER 2: Client commercial history ───
     let clientContext = "";
+    let tripMemoryContext = "";
+
     if (clientId) {
       // Client details
       const { data: client } = await sb
@@ -81,13 +93,13 @@ serve(async (req) => {
         if (prefParts.length) clientContext += `\nPREFERÊNCIAS REGISTRADAS:\n${prefParts.join("\n")}\n`;
       }
 
-      // Past sales (up to 10 most recent)
+      // Past sales
       const { data: sales } = await sb
         .from("sales")
         .select("name, destination_iata, origin_iata, close_date, status, received_value, airline, travel_date, return_date")
         .eq("client_id", clientId)
         .order("close_date", { ascending: false })
-        .limit(10);
+        .limit(15);
       if (sales?.length) {
         clientContext += `\nHISTÓRICO DE VENDAS/VIAGENS (${sales.length} registros):\n`;
         for (const s of sales) {
@@ -117,71 +129,136 @@ serve(async (req) => {
           clientContext += `- [${n.created_at?.slice(0, 10)}] ${n.content.slice(0, 200)}\n`;
         }
       }
+
+      // ─── LAYER 2b: Existing trip memory ───
+      const { data: memories } = await sb
+        .from("client_trip_memory")
+        .select("*")
+        .eq("client_id", clientId)
+        .order("detected_at", { ascending: false })
+        .limit(20);
+      if (memories?.length) {
+        tripMemoryContext = `\nMEMÓRIA DE VIAGENS DO CLIENTE (${memories.length} ciclos registrados):\n`;
+        for (const m of memories) {
+          const parts = [
+            m.trip_destination,
+            m.trip_subdestinations?.length ? `(${m.trip_subdestinations.join(", ")})` : null,
+            m.trip_dates ? `Datas: ${m.trip_dates}` : null,
+            m.passengers ? `${m.passengers} pax` : null,
+            `Status: ${m.trip_status}`,
+            m.confidence_score ? `Confiança: ${m.confidence_score}` : null,
+            m.conversation_period ? `Período: ${m.conversation_period}` : null,
+          ].filter(Boolean);
+          tripMemoryContext += `- ${parts.join(" | ")}\n`;
+        }
+      }
     }
 
-    // ─── LAYER 3: Build smart transcript ───
-    // Strategy: summarize older messages, keep recent ones in detail
+    // ─── LAYER 3: Build smart transcript with STRONG recency bias ───
     const totalMsgs = allMessages.length;
-    const RECENT_WINDOW = 100;
+    // Keep last 150 messages in FULL detail (this is the primary analysis window)
+    const RECENT_FULL = 150;
+    // Keep last 50 messages with MAXIMUM detail (longer content)
+    const RECENT_MAX = 50;
     let transcript = "";
 
-    if (totalMsgs > RECENT_WINDOW) {
-      // Summarize older block
-      const olderMessages = allMessages.slice(0, totalMsgs - RECENT_WINDOW);
-      const olderChunks: string[] = [];
-      // Group by ~month for context
-      let currentMonth = "";
-      let monthMsgs: string[] = [];
+    if (totalMsgs > RECENT_FULL) {
+      // === OLDER BLOCK: grouped by month, summarized ===
+      const olderMessages = allMessages.slice(0, totalMsgs - RECENT_FULL);
+      const monthGroups: Record<string, { count: number; topics: string[] }> = {};
+      
       for (const m of olderMessages) {
-        const month = (m.created_at || "").slice(0, 7); // YYYY-MM
-        if (month !== currentMonth && monthMsgs.length > 0) {
-          olderChunks.push(`[${currentMonth}] (${monthMsgs.length} msgs): ${monthMsgs.slice(0, 5).map(t => t.slice(0, 120)).join(" | ")} ...`);
-          monthMsgs = [];
-        }
-        currentMonth = month;
-        const sender = m.direction === "incoming" ? "CLI" : "CONS";
-        if (m.content && m.message_type === "text") {
-          monthMsgs.push(`${sender}: ${(m.content || "").slice(0, 150)}`);
+        if (!m.content || m.message_type !== "text") continue;
+        const month = (m.created_at || "").slice(0, 7);
+        if (!monthGroups[month]) monthGroups[month] = { count: 0, topics: [] };
+        monthGroups[month].count++;
+        // Extract travel-relevant keywords from older messages
+        const content = (m.content || "").toLowerCase();
+        const travelKeywords = ["viagem", "hotel", "voo", "passagem", "destino", "roteiro", "orçamento",
+          "cotação", "proposta", "reserva", "aeroporto", "bagagem", "transfer"];
+        if (travelKeywords.some(k => content.includes(k)) && monthGroups[month].topics.length < 8) {
+          const sender = m.direction === "incoming" ? "CLI" : "CONS";
+          monthGroups[month].topics.push(`${sender}: ${(m.content || "").slice(0, 200)}`);
         }
       }
-      if (monthMsgs.length > 0) {
-        olderChunks.push(`[${currentMonth}] (${monthMsgs.length} msgs): ${monthMsgs.slice(0, 5).map(t => t.slice(0, 120)).join(" | ")} ...`);
+      
+      const monthEntries = Object.entries(monthGroups).sort((a, b) => a[0].localeCompare(b[0]));
+      transcript += "=== HISTÓRICO ANTIGO (resumo por mês — use APENAS como contexto de fundo) ===\n";
+      for (const [month, data] of monthEntries) {
+        transcript += `\n[${month}] (${data.count} mensagens de texto):\n`;
+        if (data.topics.length > 0) {
+          transcript += data.topics.join("\n") + "\n";
+        } else {
+          transcript += "(sem mensagens relevantes sobre viagem)\n";
+        }
       }
-      transcript += "=== HISTÓRICO ANTIGO (resumo) ===\n" + olderChunks.join("\n") + "\n\n";
+      transcript += "\n";
 
-      // Recent messages in full
-      const recentMessages = allMessages.slice(totalMsgs - RECENT_WINDOW);
-      transcript += "=== MENSAGENS RECENTES (detalhadas) ===\n";
-      transcript += recentMessages.map(m => {
+      // === RECENT BLOCK: full detail ===
+      const recentAll = allMessages.slice(totalMsgs - RECENT_FULL);
+      const olderRecent = recentAll.slice(0, RECENT_FULL - RECENT_MAX);
+      const newestRecent = recentAll.slice(RECENT_FULL - RECENT_MAX);
+
+      transcript += "=== MENSAGENS RECENTES (contexto recente) ===\n";
+      transcript += olderRecent.map(m => {
         const sender = m.direction === "incoming" ? "CLIENTE" : "CONSULTOR";
-        return `[${sender} ${(m.created_at || "").slice(0, 16)}]: ${(m.content || "").slice(0, 500)}`;
+        return `[${sender} ${(m.created_at || "").slice(0, 16)}]: ${(m.content || "").slice(0, 400)}`;
+      }).join("\n");
+
+      transcript += "\n\n=== MENSAGENS MAIS RECENTES (PRIORIDADE MÁXIMA — BASE PRINCIPAL DA PROPOSTA) ===\n";
+      transcript += newestRecent.map(m => {
+        const sender = m.direction === "incoming" ? "CLIENTE" : "CONSULTOR";
+        // Full content for newest messages
+        return `[${sender} ${(m.created_at || "").slice(0, 16)}]: ${(m.content || "").slice(0, 800)}`;
       }).join("\n");
     } else {
-      transcript = allMessages.map(m => {
+      // Small conversation: include everything
+      transcript = "=== CONVERSA COMPLETA ===\n";
+      transcript += allMessages.map(m => {
         const sender = m.direction === "incoming" ? "CLIENTE" : "CONSULTOR";
-        return `[${sender} ${(m.created_at || "").slice(0, 16)}]: ${(m.content || "").slice(0, 500)}`;
+        return `[${sender} ${(m.created_at || "").slice(0, 16)}]: ${(m.content || "").slice(0, 600)}`;
       }).join("\n");
     }
 
     // ─── AI CALL with enhanced prompt ───
-    const systemPrompt = `Você é um analista sênior de uma agência de turismo premium (NatLeva Turismo).
+    const systemPrompt = `Você é um analista sênior da agência de turismo NatLeva. 
 
-Sua tarefa é analisar a JORNADA COMPLETA do cliente e extrair um briefing para a viagem que está sendo discutida AGORA.
+SUA TAREFA PRINCIPAL: identificar qual viagem o cliente está discutindo AGORA e gerar um briefing APENAS dessa viagem.
 
-REGRAS CRÍTICAS:
-1. A conversa pode conter MÚLTIPLOS assuntos e viagens ao longo do tempo. Você DEVE separar o que é passado do que é presente.
-2. Identifique "ciclos de intenção": cotações antigas, viagens já realizadas, assuntos encerrados vs. a demanda ATUAL.
-3. Se o cliente falou de San Andrés em dezembro e agora fala de Japão, a proposta DEVE ser sobre Japão.
-4. NUNCA misture dados de viagens diferentes na mesma proposta.
-5. Use o histórico passado APENAS para enriquecer a personalização (ex: "cliente prefere premium", "já viajou para X").
-6. Se houver ambiguidade entre 2+ demandas ativas, sinalize em "ambiguous_demands".
+## REGRAS DE PRIORIDADE TEMPORAL (CRÍTICAS)
 
-PRIORIDADE: Mensagens mais recentes > mensagens antigas. Contexto comercial recente > histórico distante.
+1. **MENSAGENS RECENTES TÊM PESO ABSOLUTO.** Se o cliente enviou um briefing detalhado recentemente (com destinos, datas, hotéis, voos, valores), essa É a demanda atual. Ponto final.
+
+2. **NUNCA use um assunto antigo como demanda atual.** Se o cliente falou de San Andrés em dezembro de 2025 e agora fala de Japão, a proposta DEVE ser de Japão.
+
+3. **Um briefing detalhado recente (com roteiro, hotéis, valores) AUTOMATICAMENTE invalida qualquer destino discutido no passado.**
+
+4. **Separação temporal obrigatória:** Identifique TODOS os ciclos de intenção na conversa e classifique cada um:
+   - cotacao_solicitada (pediu orçamento)
+   - proposta_enviada (consultor mandou proposta)
+   - viagem_realizada (viajou)
+   - cotacao_abandonada (parou de falar no assunto)
+   - demanda_ativa (está falando AGORA)
+
+5. **Critério para "demanda ativa":** A demanda ativa é o assunto de viagem dominante nas ÚLTIMAS mensagens da conversa. Sinais fortes: menção de destinos, datas, hotéis, voos, roteiro, valores, passageiros.
+
+6. **NUNCA misture viagens.** Cada ciclo é independente.
+
+7. **Use o histórico apenas para enriquecer** (perfil, preferências), NUNCA para definir o destino da proposta.
+
+## DETECÇÃO DE CICLOS
+
+Analise a conversa inteira e identifique cada ciclo de viagem separadamente. Para cada ciclo, registre em "detected_trip_cycles".
+
+## SOBRE A MEMÓRIA DE VIAGENS
+
+Se houver memória de viagens existente, use-a para entender rapidamente o histórico sem depender só da conversa.
 
 Responda usando a ferramenta generate_briefing.`;
 
     const userContent = `NOME DO CLIENTE: ${clientName}
 ${clientContext ? "\n" + clientContext : ""}
+${tripMemoryContext ? "\n" + tripMemoryContext : ""}
 
 TRANSCRIÇÃO DA CONVERSA (total: ${totalMsgs} mensagens):
 
@@ -208,28 +285,52 @@ ${transcript}`;
               parameters: {
                 type: "object",
                 properties: {
-                  // ─── NEW: Client Journey Context ───
+                  // ─── Trip Cycles Detection ───
+                  detected_trip_cycles: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        destination: { type: "string", description: "Main destination of this cycle" },
+                        subdestinations: { type: "array", items: { type: "string" } },
+                        period: { type: "string", description: "When discussed (e.g. 'dezembro 2025')" },
+                        dates: { type: "string", description: "Travel dates if mentioned" },
+                        passengers: { type: "number" },
+                        status: { 
+                          type: "string", 
+                          enum: ["cotacao_solicitada", "proposta_enviada", "viagem_realizada", "cotacao_abandonada", "demanda_ativa"],
+                          description: "Commercial status of this trip cycle" 
+                        },
+                        is_current_demand: { type: "boolean", description: "TRUE only for the active current demand" },
+                        evidence: { type: "string", description: "Key evidence from messages" }
+                      },
+                      required: ["destination", "status", "is_current_demand"]
+                    },
+                    description: "ALL trip cycles detected in the conversation, both past and present."
+                  },
+
+                  // ─── Client Journey Context ───
                   client_history_summary: {
                     type: "string",
-                    description: "Brief summary of the client's PAST journey with the agency: previous trips, old quotes, patterns. 2-4 sentences in Portuguese."
+                    description: "Brief summary of the client's PAST journey. 2-4 sentences in Portuguese."
                   },
                   discarded_topics: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
-                        topic: { type: "string", description: "The old/discarded topic (e.g. 'San Andrés')" },
-                        period: { type: "string", description: "When it was discussed (e.g. 'dezembro 2024')" },
-                        reason: { type: "string", description: "Why it was discarded (e.g. 'assunto encerrado', 'viagem já realizada', 'proposta não fechada')" }
+                        topic: { type: "string" },
+                        period: { type: "string" },
+                        reason: { type: "string", enum: ["assunto_encerrado", "viagem_realizada", "proposta_nao_fechada", "cotacao_antiga", "conversa_de_suporte"] }
                       },
                       required: ["topic"]
                     },
-                    description: "List of past conversation topics that are NOT the current demand."
+                    description: "Past topics that are NOT the current demand."
                   },
                   current_demand_confidence: {
                     type: "string",
                     enum: ["alta", "media", "baixa"],
-                    description: "How confident the AI is that it correctly identified the CURRENT trip being discussed."
+                    description: "Confidence in correctly identifying the CURRENT trip. 'alta' = clear briefing in recent messages."
                   },
                   ambiguous_demands: {
                     type: "array",
@@ -238,25 +339,21 @@ ${transcript}`;
                       properties: {
                         destination: { type: "string" },
                         period: { type: "string" },
-                        evidence: { type: "string", description: "Brief evidence from conversation" }
+                        evidence: { type: "string" }
                       },
                       required: ["destination"]
                     },
-                    description: "If there are 2+ competing current demands and AI is unsure, list them here so consultant can choose. Empty if clear."
+                    description: "ONLY if 2+ competing CURRENT demands exist. Empty if clear."
                   },
                   client_profile_insights: {
                     type: "string",
-                    description: "Insights about the client from past behavior: spending tier, preferences patterns, response style. Helps personalize the proposal."
+                    description: "Insights from past behavior: spending tier, preferences, patterns."
                   },
 
-                  // ─── Trip data (current demand only) ───
-                  origin: { type: "string", description: "City/airport of origin for CURRENT trip." },
-                  destination: { type: "string", description: "Main destination for CURRENT trip." },
-                  sub_destinations: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Additional cities/regions for CURRENT trip."
-                  },
+                  // ─── Trip data (CURRENT demand only) ───
+                  origin: { type: "string" },
+                  destination: { type: "string", description: "Main destination of the CURRENT trip only." },
+                  sub_destinations: { type: "array", items: { type: "string" } },
                   departure_date: { type: "string" },
                   return_date: { type: "string" },
                   duration_days: { type: "number" },
@@ -264,10 +361,7 @@ ${transcript}`;
                   children: { type: "number" },
                   babies: { type: "number" },
                   trip_type: { type: "string" },
-                  trip_style: {
-                    type: "string",
-                    enum: ["essencial", "conforto", "premium", "ultra_luxo"],
-                  },
+                  trip_style: { type: "string", enum: ["essencial", "conforto", "premium", "ultra_luxo"] },
                   hotel_preference: { type: "string" },
                   flight_preference: { type: "string" },
                   other_preferences: { type: "string" },
@@ -276,7 +370,7 @@ ${transcript}`;
                   urgency_level: { type: "string", enum: ["alta", "media", "baixa"] },
                   closing_probability: { type: "string", enum: ["alta", "media", "baixa"] },
                   client_profile: { type: "string", enum: ["premium", "padrao", "economico", "indeterminado"] },
-                  briefing_summary: { type: "string", description: "Summary of the CURRENT demand only." },
+                  briefing_summary: { type: "string", description: "Summary of CURRENT demand only." },
                   proposal_title: { type: "string" },
                   intro_text: { type: "string" },
                   itinerary_suggestion: {
@@ -295,7 +389,7 @@ ${transcript}`;
                   internal_notes: { type: "string" },
                   confidence: { type: "string", enum: ["high", "medium", "low", "none"] },
                 },
-                required: ["confidence", "briefing_summary", "current_demand_confidence"],
+                required: ["confidence", "briefing_summary", "current_demand_confidence", "detected_trip_cycles"],
                 additionalProperties: false,
               },
             },
@@ -333,6 +427,55 @@ ${transcript}`;
         briefing.total_messages_analyzed = totalMsgs;
       } catch {
         briefing = null;
+      }
+    }
+
+    // ─── LAYER 4: Save detected trip cycles to memory ───
+    if (briefing?.detected_trip_cycles?.length && clientId) {
+      try {
+        for (const cycle of briefing.detected_trip_cycles) {
+          // Check if this cycle already exists in memory
+          const { data: existing } = await sb
+            .from("client_trip_memory")
+            .select("id, trip_status")
+            .eq("client_id", clientId)
+            .ilike("trip_destination", cycle.destination)
+            .limit(1);
+
+          if (existing?.length) {
+            // Update status if changed
+            if (existing[0].trip_status !== cycle.status) {
+              await sb.from("client_trip_memory")
+                .update({ 
+                  trip_status: cycle.status,
+                  trip_subdestinations: cycle.subdestinations || [],
+                  trip_dates: cycle.dates || null,
+                  passengers: cycle.passengers || null,
+                  conversation_period: cycle.period || null,
+                  confidence_score: cycle.is_current_demand ? "alta" : "media",
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("id", existing[0].id);
+            }
+          } else {
+            // Insert new cycle
+            await sb.from("client_trip_memory").insert({
+              client_id: clientId,
+              conversation_id: conversationId,
+              trip_destination: cycle.destination,
+              trip_subdestinations: cycle.subdestinations || [],
+              trip_dates: cycle.dates || null,
+              passengers: cycle.passengers || null,
+              conversation_period: cycle.period || null,
+              trip_status: cycle.status,
+              confidence_score: cycle.is_current_demand ? "alta" : "media",
+              source_summary: cycle.evidence || null,
+            });
+          }
+        }
+      } catch (memErr) {
+        console.error("Error saving trip memory:", memErr);
+        // Non-blocking: don't fail the response
       }
     }
 

@@ -46,13 +46,23 @@ export interface ProposalBriefing {
   confidence?: string | null;
   client_name?: string | null;
   client_id?: string | null;
-  // New journey-aware fields
+  // Journey-aware fields
   client_history_summary?: string | null;
   discarded_topics?: { topic: string; period?: string; reason?: string }[] | null;
   current_demand_confidence?: string | null;
   ambiguous_demands?: { destination: string; period?: string; evidence?: string }[] | null;
   client_profile_insights?: string | null;
   total_messages_analyzed?: number | null;
+  detected_trip_cycles?: {
+    destination: string;
+    subdestinations?: string[];
+    period?: string;
+    dates?: string;
+    passengers?: number;
+    status: string;
+    is_current_demand: boolean;
+    evidence?: string;
+  }[] | null;
 }
 
 interface AIProposalBriefingDialogProps {
@@ -266,7 +276,16 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
   const style = briefing?.trip_style ? STYLE_MAP[briefing.trip_style] : null;
   const urgency = briefing?.urgency_level ? URGENCY_MAP[briefing.urgency_level] : null;
   const hasAmbiguity = (briefing?.ambiguous_demands?.length || 0) > 1;
-  const hasHistory = !!(briefing?.client_history_summary || briefing?.discarded_topics?.length);
+  const hasCycles = !!(briefing?.detected_trip_cycles?.length);
+  const hasHistory = !!(briefing?.client_history_summary || briefing?.discarded_topics?.length || hasCycles);
+
+  const CYCLE_STATUS_MAP: Record<string, { label: string; emoji: string; className: string }> = {
+    cotacao_solicitada: { label: "Cotação", emoji: "📋", className: "text-amber-600 bg-amber-500/10 border-amber-500/20" },
+    proposta_enviada: { label: "Proposta enviada", emoji: "📤", className: "text-blue-600 bg-blue-500/10 border-blue-500/20" },
+    viagem_realizada: { label: "Viagem realizada", emoji: "✅", className: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20" },
+    cotacao_abandonada: { label: "Abandonada", emoji: "⏸️", className: "text-muted-foreground bg-muted/50 border-border/50" },
+    demanda_ativa: { label: "Demanda atual", emoji: "🔥", className: "text-primary bg-primary/10 border-primary/20" },
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -403,10 +422,15 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                         className="flex items-center gap-2 w-full text-left px-4 py-2.5 bg-secondary/20 hover:bg-secondary/30 transition-colors"
                       >
                         <History className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-xs font-semibold text-foreground">Contexto Histórico do Cliente</span>
+                        <span className="text-xs font-semibold text-foreground">Jornada de Viagens do Cliente</span>
+                        {hasCycles && (
+                          <Badge variant="outline" className="text-[9px] px-1.5">
+                            {briefing.detected_trip_cycles!.length} ciclo{briefing.detected_trip_cycles!.length > 1 ? "s" : ""}
+                          </Badge>
+                        )}
                         {briefing.discarded_topics?.length ? (
                           <Badge variant="outline" className="text-[9px] px-1.5">
-                            {briefing.discarded_topics.length} assunto{briefing.discarded_topics.length > 1 ? "s" : ""} descartado{briefing.discarded_topics.length > 1 ? "s" : ""}
+                            {briefing.discarded_topics.length} descartado{briefing.discarded_topics.length > 1 ? "s" : ""}
                           </Badge>
                         ) : null}
                         {showHistory ? <EyeOff className="h-3 w-3 ml-auto text-muted-foreground" /> : <Eye className="h-3 w-3 ml-auto text-muted-foreground" />}
@@ -420,6 +444,46 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                             className="overflow-hidden"
                           >
                             <div className="px-4 py-3 space-y-3">
+                              {/* ── Trip Cycles Timeline ── */}
+                              {briefing.detected_trip_cycles && briefing.detected_trip_cycles.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">Linha do tempo de viagens detectada</p>
+                                  <div className="space-y-1.5">
+                                    {briefing.detected_trip_cycles.map((cycle, i) => {
+                                      const cycleInfo = CYCLE_STATUS_MAP[cycle.status] || CYCLE_STATUS_MAP.cotacao_solicitada;
+                                      return (
+                                        <div
+                                          key={i}
+                                          className={`flex items-center gap-2 px-3 py-2 rounded-md border text-xs ${
+                                            cycle.is_current_demand
+                                              ? "border-primary/30 bg-primary/5 ring-1 ring-primary/10"
+                                              : "border-border/30 bg-card"
+                                          }`}
+                                        >
+                                          <span className="text-sm shrink-0">{cycleInfo.emoji}</span>
+                                          <div className="flex-1 min-w-0">
+                                            <span className="font-semibold text-foreground">
+                                              {cycle.destination}
+                                              {cycle.subdestinations?.length ? ` (${cycle.subdestinations.join(", ")})` : ""}
+                                            </span>
+                                            {cycle.period && <span className="text-muted-foreground ml-1.5">· {cycle.period}</span>}
+                                            {cycle.passengers && <span className="text-muted-foreground ml-1.5">· {cycle.passengers} pax</span>}
+                                          </div>
+                                          <Badge variant="outline" className={`text-[9px] px-1.5 border shrink-0 ${cycleInfo.className}`}>
+                                            {cycleInfo.label}
+                                          </Badge>
+                                          {cycle.is_current_demand && (
+                                            <Badge className="text-[9px] px-1.5 bg-primary text-primary-foreground shrink-0">
+                                              ATUAL
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
                               {briefing.client_history_summary && (
                                 <p className="text-xs text-foreground/70 leading-relaxed italic">
                                   "{briefing.client_history_summary}"
@@ -435,7 +499,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                                         <span className="text-foreground/70 font-medium">{t.topic}</span>
                                         {t.period && <span className="text-muted-foreground/50">({t.period})</span>}
                                         {t.reason && (
-                                          <Badge variant="outline" className="text-[9px] px-1.5 text-muted-foreground/60">{t.reason}</Badge>
+                                          <Badge variant="outline" className="text-[9px] px-1.5 text-muted-foreground/60">{t.reason.replace(/_/g, " ")}</Badge>
                                         )}
                                       </div>
                                     ))}
