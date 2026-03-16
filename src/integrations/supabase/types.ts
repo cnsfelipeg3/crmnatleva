@@ -479,6 +479,178 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_learned_patterns: {
+        Row: {
+          category: string
+          confidence: number
+          created_at: string
+          data_source: string | null
+          description: string | null
+          detected_rule: string
+          estimated_impact: string | null
+          id: string
+          is_active: boolean
+          is_promoted: boolean
+          metadata: Json | null
+          promoted_to_rule_id: string | null
+          sample_size: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          confidence?: number
+          created_at?: string
+          data_source?: string | null
+          description?: string | null
+          detected_rule: string
+          estimated_impact?: string | null
+          id?: string
+          is_active?: boolean
+          is_promoted?: boolean
+          metadata?: Json | null
+          promoted_to_rule_id?: string | null
+          sample_size?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          confidence?: number
+          created_at?: string
+          data_source?: string | null
+          description?: string | null
+          detected_rule?: string
+          estimated_impact?: string | null
+          id?: string
+          is_active?: boolean
+          is_promoted?: boolean
+          metadata?: Json | null
+          promoted_to_rule_id?: string | null
+          sample_size?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_learned_patterns_promoted_to_rule_id_fkey"
+            columns: ["promoted_to_rule_id"]
+            isOneToOne: false
+            referencedRelation: "ai_strategy_knowledge"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_learning_events: {
+        Row: {
+          client_id: string | null
+          client_opened: boolean | null
+          client_profile: string | null
+          client_responded: boolean | null
+          conversation_id: string | null
+          created_at: string
+          created_by: string | null
+          deal_won: boolean | null
+          destination: string | null
+          event_type: string
+          flight_option_chosen: string | null
+          hotel_option_chosen: string | null
+          id: string
+          loss_reason: string | null
+          metadata: Json | null
+          observations: string | null
+          passenger_count: number | null
+          proposal_id: string | null
+          proposal_text_summary: string | null
+          sale_id: string | null
+          strategy_chosen: string | null
+          time_to_close_hours: number | null
+          time_to_response_hours: number | null
+          trip_type: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          client_opened?: boolean | null
+          client_profile?: string | null
+          client_responded?: boolean | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_won?: boolean | null
+          destination?: string | null
+          event_type?: string
+          flight_option_chosen?: string | null
+          hotel_option_chosen?: string | null
+          id?: string
+          loss_reason?: string | null
+          metadata?: Json | null
+          observations?: string | null
+          passenger_count?: number | null
+          proposal_id?: string | null
+          proposal_text_summary?: string | null
+          sale_id?: string | null
+          strategy_chosen?: string | null
+          time_to_close_hours?: number | null
+          time_to_response_hours?: number | null
+          trip_type?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          client_opened?: boolean | null
+          client_profile?: string | null
+          client_responded?: boolean | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_won?: boolean | null
+          destination?: string | null
+          event_type?: string
+          flight_option_chosen?: string | null
+          hotel_option_chosen?: string | null
+          id?: string
+          loss_reason?: string | null
+          metadata?: Json | null
+          observations?: string | null
+          passenger_count?: number | null
+          proposal_id?: string | null
+          proposal_text_summary?: string | null
+          sale_id?: string | null
+          strategy_chosen?: string | null
+          time_to_close_hours?: number | null
+          time_to_response_hours?: number | null
+          trip_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_learning_events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_learning_events_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_learning_events_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_learning_events_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_strategy_knowledge: {
         Row: {
           category: string
