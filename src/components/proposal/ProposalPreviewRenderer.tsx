@@ -32,8 +32,26 @@ function fmtCurrency(v: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 }
 
+function parseLocalDate(d: string): Date | null {
+  if (!d) return null;
+  // Handle dd/MM/yyyy format
+  const brMatch = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (brMatch) {
+    return new Date(Number(brMatch[3]), Number(brMatch[2]) - 1, Number(brMatch[1]));
+  }
+  // Handle yyyy-MM-dd format
+  const isoMatch = d.split("T")[0].match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch) {
+    return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+  }
+  const fallback = new Date(d);
+  return isNaN(fallback.getTime()) ? null : fallback;
+}
+
 function fmtDate(d: string) {
-  return format(new Date(d + "T00:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  const date = parseLocalDate(d);
+  if (!date) return d || "—";
+  return format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 }
 
 /* ═══ Section Title ═══ */
@@ -520,9 +538,11 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   const experiences = items.filter((i) => i.item_type === "experience");
   const paymentConditions = (proposal.payment_conditions as any[]) || [];
 
+  const startDate = parseLocalDate(proposal.travel_start_date);
+  const endDate = parseLocalDate(proposal.travel_end_date);
   const dateRange =
-    proposal.travel_start_date && proposal.travel_end_date
-      ? `${format(new Date(proposal.travel_start_date + "T00:00:00"), "dd", { locale: ptBR })} — ${format(new Date(proposal.travel_end_date + "T00:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`
+    startDate && endDate
+      ? `${format(startDate, "dd", { locale: ptBR })} — ${format(endDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`
       : proposal.travel_start_date
         ? fmtDate(proposal.travel_start_date)
         : "";
