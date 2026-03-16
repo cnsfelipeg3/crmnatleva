@@ -205,6 +205,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/livechat/import-chatguru", icon: FileDown, label: "Importar Conversas" },
               { to: "/implementacao/base-conhecimento", icon: BookOpen, label: "Base de Conhecimento" },
               { to: "/implementacao/estrategia-ia", icon: Brain, label: "Estratégia IA" },
+              { to: "/implementacao/aprendizados-ia", icon: Lightbulb, label: "Aprendizados IA" },
             ].map((item) => renderNavItem(item, true))}
           </div>
         )}
