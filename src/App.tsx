@@ -88,6 +88,7 @@ const PortalAdminConfig = lazy(() => import("@/pages/portal-admin/PortalAdminCon
 
 // Implementação
 const BaseConhecimento = lazy(() => import("@/pages/implementacao/BaseConhecimento"));
+const AIStrategyKnowledge = lazy(() => import("@/pages/AIStrategyKnowledge"));
 
 // Portal do Cliente
 const PortalLogin = lazy(() => import("@/pages/portal/PortalLogin"));
@@ -214,6 +215,7 @@ function AppRoutes() {
 
           {/* Implementação */}
           <Route path="/implementacao/base-conhecimento" element={<BaseConhecimento />} />
+          <Route path="/implementacao/estrategia-ia" element={<AIStrategyKnowledge />} />
 
           {/* Operação Diária */}
           <Route path="/operacao/inbox" element={<OperacaoInbox />} />

@@ -268,6 +268,35 @@ serve(async (req) => {
       }).join("\n");
     }
 
+    // ─── LAYER 2c: Strategy Knowledge Base ───
+    let strategyContext = "";
+    try {
+      const { data: rules } = await sb
+        .from("ai_strategy_knowledge")
+        .select("category, title, rule, example, priority")
+        .eq("is_active", true)
+        .order("priority", { ascending: false })
+        .limit(30);
+      if (rules?.length) {
+        const grouped: Record<string, typeof rules> = {};
+        for (const r of rules) {
+          if (!grouped[r.category]) grouped[r.category] = [];
+          grouped[r.category].push(r);
+        }
+        strategyContext = "\n\n## BASE DE CONHECIMENTO ESTRATÉGICA DA NATLEVA\n\nUse estas regras como guia obrigatório para interpretar a conversa e gerar a proposta:\n";
+        for (const [cat, items] of Object.entries(grouped)) {
+          strategyContext += `\n### ${cat.toUpperCase().replace(/_/g, " ")}\n`;
+          for (const item of items) {
+            strategyContext += `- **${item.title}**: ${item.rule}`;
+            if (item.example) strategyContext += ` (Ex: ${item.example})`;
+            strategyContext += "\n";
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error loading strategy knowledge:", err);
+    }
+
     // ─── AI CALL with enhanced prompt ───
     const systemPrompt = `Você é um analista sênior da agência de turismo NatLeva. 
 
@@ -302,7 +331,7 @@ Analise a conversa inteira e identifique cada ciclo de viagem separadamente. Par
 
 Se houver memória de viagens existente, use-a para entender rapidamente o histórico sem depender só da conversa.
 
-Responda usando a ferramenta generate_briefing.`;
+Responda usando a ferramenta generate_briefing.${strategyContext}`;
 
     const userContent = `NOME DO CLIENTE: ${clientName}
 ${clientContext ? "\n" + clientContext : ""}
