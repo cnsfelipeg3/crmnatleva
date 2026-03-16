@@ -79,6 +79,7 @@ export default function ProposalEditor() {
     value_per_person: "",
     payment_conditions: [] as { method: string; details: string }[],
     proposal_strategy: prefillStrategy,
+    proposal_outcome: "pending",
   });
 
   const [items, setItems] = useState<any[]>([]);
@@ -135,6 +136,7 @@ export default function ProposalEditor() {
         value_per_person: existing.value_per_person?.toString() || "",
         payment_conditions: (existing.payment_conditions as any[]) || [],
         proposal_strategy: (existing as any).proposal_strategy || "",
+        proposal_outcome: (existing as any).proposal_outcome || "pending",
       });
     }
   }, [existing]);
@@ -294,6 +296,7 @@ export default function ProposalEditor() {
         value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
         payment_conditions: form.payment_conditions,
         proposal_strategy: form.proposal_strategy || null,
+        proposal_outcome: form.proposal_outcome || "pending",
         slug,
         created_by: user?.id,
         updated_at: new Date().toISOString(),
@@ -502,6 +505,18 @@ export default function ProposalEditor() {
                     <SelectItem value="negotiation">Em negociação</SelectItem>
                     <SelectItem value="approved">Aprovada</SelectItem>
                     <SelectItem value="lost">Perdida</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Resultado</Label>
+                <Select value={form.proposal_outcome} onValueChange={(v) => setForm((f) => ({ ...f, proposal_outcome: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Em aberto</SelectItem>
+                    <SelectItem value="won">✅ Ganha</SelectItem>
+                    <SelectItem value="lost">❌ Perdida</SelectItem>
+                    <SelectItem value="expired">⏰ Expirada</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

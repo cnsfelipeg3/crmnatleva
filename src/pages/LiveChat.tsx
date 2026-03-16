@@ -37,6 +37,7 @@ import { LiveChatSimulator } from "@/components/livechat/LiveChatSimulator";
 import { LiveChatLogs } from "@/components/livechat/LiveChatLogs";
 import { AudioWaveformPlayer } from "@/components/livechat/AudioWaveformPlayer";
 import { AISuggestionPanel } from "@/components/livechat/AISuggestionPanel";
+import { BuyingMomentAlert } from "@/components/livechat/BuyingMomentAlert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { initPersistence, persistConversation, persistMessages, loadPersistedMessages } from "@/hooks/useChatPersistence";
@@ -2498,6 +2499,15 @@ export default function LiveChat() {
                       conversationHistory={(messages[selectedId] || []).map(m => ({ text: m.text || "", sender_type: m.sender_type, message_type: m.message_type }))}
                       contactName={selected.contact_name || "Cliente"}
                       stage={selected.stage || "novo_lead"}
+                    />
+                  )}
+
+                  {/* Buying Moment Alert */}
+                  {selectedId && selected && (
+                    <BuyingMomentAlert
+                      messages={(messages[selectedId] || []).map(m => ({ text: m.text || "", sender_type: m.sender_type, created_at: m.created_at }))}
+                      onGenerateProposal={() => setShowContactProfile(true)}
+                      onDismiss={() => {}}
                     />
                   )}
 
