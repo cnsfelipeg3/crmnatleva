@@ -56,6 +56,9 @@ serve(async (req) => {
         sample_size: stats.total,
         estimated_impact: rate >= 50 ? "alto" : rate >= 30 ? "médio" : "baixo",
         data_source: "proposals",
+        function_area: "estrategia_comercial",
+        tags: [strategy, "taxa_conversao"],
+        origin_context: "análise global de estratégias",
       });
     }
 
