@@ -1843,7 +1843,61 @@ export default function LiveChat() {
     toast({ title: "Etapa atualizada", description: `Conversa movida para ${getStageInfo(newStage).label}` });
   };
 
-  const handleAISuggest = () => {
+  const handleExportConversation = useCallback(() => {
+    if (!selectedId || !selected) return;
+    const msgs = currentMessages;
+    if (msgs.length === 0) {
+      toast({ title: "Sem mensagens", description: "Esta conversa não possui mensagens para exportar." });
+      return;
+    }
+
+    const contactName = selectedDisplayName;
+    const phone = selected.phone || "";
+    const now = new Date();
+
+    let txt = "════════════════════════════════════════\n";
+    txt += `EXPORTAÇÃO DE CONVERSA — CRM NATLEVA\n`;
+    txt += `════════════════════════════════════════\n`;
+    txt += `Contato: ${contactName}\n`;
+    txt += `Telefone: ${phone}\n`;
+    txt += `Total de mensagens: ${msgs.length}\n`;
+    txt += `Período: ${new Date(msgs[0].created_at).toLocaleString("pt-BR")} — ${new Date(msgs[msgs.length - 1].created_at).toLocaleString("pt-BR")}\n`;
+    txt += `Exportado em: ${now.toLocaleString("pt-BR")}\n`;
+    txt += `════════════════════════════════════════\n\n`;
+
+    let lastDate = "";
+    for (const msg of msgs) {
+      const msgDate = new Date(msg.created_at);
+      const dateStr = msgDate.toLocaleDateString("pt-BR");
+      if (dateStr !== lastDate) {
+        lastDate = dateStr;
+        txt += `\n── ${dateStr} ${"─".repeat(30)}\n\n`;
+      }
+
+      const time = msgDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      const sender = msg.sender_type === "cliente" ? `📩 ${contactName}` : msg.sender_type === "sistema" ? "🤖 Sistema" : "📤 Consultor";
+      const typeLabel = msg.message_type !== "text" ? ` [${msg.message_type}]` : "";
+      const mediaNote = msg.media_url ? ` 📎 ${msg.media_url}` : "";
+
+      txt += `[${time}] ${sender}${typeLabel}\n`;
+      txt += `${msg.text || "(sem texto)"}${mediaNote}\n\n`;
+    }
+
+    txt += `\n════════════════════════════════════════\n`;
+    txt += `FIM DA EXPORTAÇÃO\n`;
+    txt += `════════════════════════════════════════\n`;
+
+    const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const safeName = contactName.replace(/[^a-zA-Z0-9À-ÿ\s-]/g, "").replace(/\s+/g, "-").toLowerCase();
+    a.download = `conversa-${safeName}-${now.toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Conversa exportada!", description: `${msgs.length} mensagens exportadas com sucesso.` });
+  }, [selectedId, selected, currentMessages, selectedDisplayName]);
+
     if (!selectedId) return;
     setShowAIPanel(prev => !prev);
   };
