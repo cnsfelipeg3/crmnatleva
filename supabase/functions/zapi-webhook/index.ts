@@ -321,25 +321,50 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── 4. Insert into messages table ──
+      // ── 4. Insert into UNIFIED conversation_messages table (primary) + legacy messages (fallback) ──
       const mediaUrl = body.image?.imageUrl || body.image?.thumbnailUrl ||
                        body.audio?.audioUrl ||
                        body.video?.videoUrl ||
                        body.document?.documentUrl || null;
 
+      const direction = fromMe ? "outgoing" : "incoming";
+      const senderType = fromMe ? "atendente" : "cliente";
+      const msgStatus = fromMe ? "sent" : "delivered";
+
+      // PRIMARY: conversation_messages (unified)
+      const { error: unifiedErr } = await supabase.from("conversation_messages").insert({
+        conversation_id: conversationId,
+        external_message_id: messageId,
+        direction,
+        sender_type: senderType,
+        content: textContent || "",
+        message_type: msgType,
+        media_url: mediaUrl,
+        status: msgStatus,
+        timestamp: timestampIso,
+        created_at: timestampIso,
+      });
+
+      if (unifiedErr) {
+        console.warn("[Z-API Webhook] conversation_messages insert failed:", unifiedErr.message);
+      } else {
+        console.log("[Z-API Webhook] ✓ Message saved to conversation_messages");
+      }
+
+      // FALLBACK: legacy messages table (for backwards compatibility)
       const { error: msgError } = await supabase.from("messages").insert({
         conversation_id: conversationId,
-        sender_type: fromMe ? "atendente" : "cliente",
+        sender_type: senderType,
         message_type: msgType,
         text: textContent || null,
         media_url: mediaUrl,
-        status: fromMe ? "sent" : "delivered",
+        status: msgStatus,
         external_message_id: messageId,
         created_at: timestampIso,
       });
 
       if (msgError) {
-        console.error("[Z-API Webhook] Error inserting message:", msgError.message);
+        console.error("[Z-API Webhook] Legacy messages insert failed:", msgError.message);
       }
 
       // ── 5. Execute matched flow OR continue active flow session (fire-and-forget) ──
