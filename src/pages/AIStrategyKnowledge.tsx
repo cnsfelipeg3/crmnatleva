@@ -127,7 +127,7 @@ export default function AIStrategyKnowledge() {
   const [filterFunction, setFilterFunction] = useState("all");
   const [filterOrigin, setFilterOrigin] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [filterTag, setFilterTag] = useState("");
+  const [filterTag, setFilterTag] = useState("all");
   const [editOpen, setEditOpen] = useState(false);
   const [editRule, setEditRule] = useState<Partial<StrategyRule> & typeof emptyRule>(emptyRule);
   const [saving, setSaving] = useState(false);
