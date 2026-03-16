@@ -22,11 +22,34 @@ serve(async (req) => {
     );
 
     // ─── Conversation metadata + scope resolution ───
-    const { data: conv } = await sb
-      .from("conversations")
-      .select("id, contact_name, display_name, phone, client_id")
-      .eq("id", conversationId)
-      .single();
+    // Detect if conversationId is a valid UUID or a WhatsApp-style external ID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const isUuid = uuidRegex.test(conversationId);
+
+    let conv: any = null;
+    if (isUuid) {
+      const { data } = await sb
+        .from("conversations")
+        .select("id, contact_name, display_name, phone, client_id")
+        .eq("id", conversationId)
+        .single();
+      conv = data;
+    } else {
+      // Try external_id or external_conversation_id lookup
+      const { data: byExternal } = await sb
+        .from("conversations")
+        .select("id, contact_name, display_name, phone, client_id")
+        .or(`external_id.eq.${conversationId},external_conversation_id.eq.${conversationId}`)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      conv = byExternal?.[0] || null;
+    }
+
+    if (!conv) {
+      return new Response(JSON.stringify({ briefing: { confidence: "none" }, error: "Conversation not found" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const normalizePhone = (v?: string | null) => (v || "").replace(/\D/g, "");
     const convPhone = normalizePhone(conv?.phone);
@@ -57,7 +80,8 @@ serve(async (req) => {
     }
 
     // Gather full conversation scope (same WhatsApp number), including current conversation
-    let scopedConversationIds = [conversationId];
+    const resolvedConvId = conv.id;
+    let scopedConversationIds = [resolvedConvId];
     if (phoneCandidates.length > 0) {
       const { data: relatedConversations } = await sb
         .from("conversations")
