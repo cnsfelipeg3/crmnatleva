@@ -1152,11 +1152,23 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                                     <p className="text-[10px] text-muted-foreground">{pkg.highlight || ""}</p>
                                   </div>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right space-y-1">
                                   <p className="text-lg font-bold text-foreground">
                                     R$ {flightPrice.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
                                   </p>
                                   <p className="text-[9px] text-muted-foreground">voo total</p>
+                                  {(() => {
+                                    const prob = estimateWinProbability(pkg.tier, briefing);
+                                    return (
+                                      <div className="flex items-center justify-end gap-1">
+                                        <Target className="h-3 w-3 text-muted-foreground" />
+                                        <span className={`text-[10px] font-bold ${prob.color}`}>
+                                          {prob.label}
+                                        </span>
+                                        {prob.percent >= 60 && <span className="text-[9px]">⭐</span>}
+                                      </div>
+                                    );
+                                  })()}
                                 </div>
                               </div>
 
