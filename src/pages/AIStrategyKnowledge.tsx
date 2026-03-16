@@ -15,6 +15,7 @@ import {
   Plus, Trash2, Edit2, Save, X, Search, Filter,
   Brain, ChevronLeft, Sparkles, Target, BookOpen,
   DollarSign, MessageSquare, Shield, Loader2,
+  Download, Upload,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
