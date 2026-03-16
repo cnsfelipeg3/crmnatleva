@@ -2502,6 +2502,15 @@ export default function LiveChat() {
                     />
                   )}
 
+                  {/* Buying Moment Alert */}
+                  {selectedId && selected && (
+                    <BuyingMomentAlert
+                      messages={(messages[selectedId] || []).map(m => ({ text: m.text || "", sender_type: m.sender_type, created_at: m.created_at }))}
+                      onGenerateProposal={() => setShowContactProfile(true)}
+                      onDismiss={() => {}}
+                    />
+                  )}
+
                   {/* Disconnected warning */}
                   {!waConnected && selectedId?.startsWith("wa_") && (
                     <div className="px-4 py-2 border-t border-destructive/20 bg-destructive/5 flex items-center gap-2">
