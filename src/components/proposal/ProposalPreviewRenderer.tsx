@@ -733,7 +733,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── CTA ──── */}
       {!embedded && (
-        <section className="py-20 sm:py-28 px-6">
+        <section data-track-section="cta" className="py-20 sm:py-28 px-6">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="max-w-2xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Pronto para viver essa experiência?
@@ -743,6 +743,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
               href={`https://wa.me/?text=${encodeURIComponent(`Olá! Gostaria de reservar a viagem "${proposal.title}".`)}`}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => tracking?.trackCTA("whatsapp")}
               className="inline-flex items-center gap-2.5 bg-gradient-to-r from-accent to-accent/80 text-accent-foreground px-10 py-4 rounded-full text-lg font-semibold hover:scale-[1.02] transition-all duration-300 shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
