@@ -143,6 +143,9 @@ serve(async (req) => {
         sample_size: closedEvents.length,
         estimated_impact: "médio",
         data_source: "proposals",
+        function_area: "follow_up",
+        tags: ["timing", "follow_up", "ciclo_venda"],
+        origin_context: "análise de tempo até fechamento",
       });
     }
 
