@@ -15,6 +15,7 @@ import {
   Plus, Trash2, Edit2, Save, X, Search, Filter,
   Brain, ChevronLeft, Sparkles, Target, BookOpen,
   DollarSign, MessageSquare, Shield, Loader2,
+  Download, Upload,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -137,6 +138,189 @@ export default function AIStrategyKnowledge() {
   const catLabel = (v: string) => CATEGORIES.find((c) => c.value === v)?.label || v;
   const CatIcon = (v: string) => CATEGORIES.find((c) => c.value === v)?.icon || BookOpen;
 
+  // ─── Export to TXT ───
+  const handleExport = () => {
+    const grouped: Record<string, StrategyRule[]> = {};
+    for (const r of rules) {
+      const cat = catLabel(r.category);
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(r);
+    }
+
+    let txt = "========================================\n";
+    txt += "BASE DE CONHECIMENTO ESTRATÉGICA — NATLEVA\n";
+    txt += `Exportado em: ${new Date().toLocaleString("pt-BR")}\n`;
+    txt += `Total de regras: ${rules.length}\n`;
+    txt += "========================================\n\n";
+
+    for (const [category, catRules] of Object.entries(grouped)) {
+      const sorted = catRules.sort((a, b) => b.priority - a.priority);
+      txt += `\n${"─".repeat(50)}\n`;
+      txt += `📂 ${category.toUpperCase()}\n`;
+      txt += `${"─".repeat(50)}\n`;
+      txt += `   ${sorted.length} regra(s) nesta categoria\n\n`;
+
+      for (const r of sorted) {
+        txt += `  ┌─ ${r.title}\n`;
+        txt += `  │  Prioridade: P${r.priority} | Status: ${r.is_active ? "✅ Ativa" : "❌ Inativa"}\n`;
+        if (r.description) txt += `  │  Descrição: ${r.description}\n`;
+        txt += `  │\n`;
+        txt += `  │  REGRA:\n`;
+        for (const line of r.rule.split("\n")) {
+          txt += `  │  ${line}\n`;
+        }
+        if (r.example) {
+          txt += `  │\n`;
+          txt += `  │  EXEMPLO:\n`;
+          for (const line of r.example.split("\n")) {
+            txt += `  │  ${line}\n`;
+          }
+        }
+        txt += `  └${"─".repeat(40)}\n\n`;
+      }
+    }
+
+    const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `base-conhecimento-natleva-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`${rules.length} regras exportadas com sucesso`);
+  };
+
+  // ─── Import from TXT ───
+  const handleImport = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".txt";
+    input.onchange = async (e: any) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      const parsed = parseTxtRules(text);
+      if (parsed.length === 0) {
+        toast.error("Nenhuma regra encontrada no arquivo. Verifique o formato.");
+        return;
+      }
+      if (!confirm(`Importar ${parsed.length} regra(s)? Regras existentes com mesmo título serão atualizadas.`)) return;
+
+      let created = 0, updated = 0, errors = 0;
+      for (const rule of parsed) {
+        const { data: existing } = await supabase
+          .from("ai_strategy_knowledge")
+          .select("id")
+          .eq("title", rule.title)
+          .limit(1);
+
+        if (existing && existing.length > 0) {
+          const { error } = await supabase
+            .from("ai_strategy_knowledge")
+            .update({ ...rule, updated_at: new Date().toISOString() })
+            .eq("id", existing[0].id);
+          if (error) errors++; else updated++;
+        } else {
+          const { error } = await supabase
+            .from("ai_strategy_knowledge")
+            .insert({ ...rule });
+          if (error) errors++; else created++;
+        }
+      }
+      toast.success(`Importação concluída: ${created} criadas, ${updated} atualizadas${errors ? `, ${errors} erros` : ""}`);
+      fetchRules();
+    };
+    input.click();
+  };
+
+  const parseTxtRules = (text: string): Omit<StrategyRule, "id" | "created_at">[] => {
+    const results: Omit<StrategyRule, "id" | "created_at">[] = [];
+    const catMap: Record<string, string> = {};
+    for (const c of CATEGORIES) catMap[c.label.toLowerCase()] = c.value;
+
+    // Split by rule blocks (┌─ Title)
+    const blocks = text.split(/\s*┌─\s*/);
+    let currentCategory = "geral";
+
+    for (const block of blocks) {
+      // Detect category headers before blocks
+      const catMatch = text.substring(0, text.indexOf(`┌─ ${block.split("\n")[0]}`)).match(/📂\s*(.+)/g);
+      if (catMatch) {
+        const lastCat = catMatch[catMatch.length - 1]?.replace("📂", "").trim().toLowerCase();
+        if (lastCat) currentCategory = catMap[lastCat] || "geral";
+      }
+
+      const lines = block.split("\n").map(l => l.replace(/^\s*│?\s*/, "").trim());
+      const title = lines[0]?.trim();
+      if (!title || title.includes("════") || title.includes("────") || title.includes("Exportado")) continue;
+
+      let priority = 5;
+      let is_active = true;
+      let description: string | null = null;
+      let rule = "";
+      let example: string | null = null;
+
+      let section: "meta" | "rule" | "example" = "meta";
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].replace(/^[└┌│─]+\s*/, "").trim();
+        if (!line || line.match(/^─+$/)) continue;
+
+        const prioMatch = line.match(/Prioridade:\s*P(\d+)/);
+        if (prioMatch) {
+          priority = parseInt(prioMatch[1]);
+          is_active = !line.includes("❌");
+          continue;
+        }
+        const descMatch = line.match(/^Descrição:\s*(.+)/);
+        if (descMatch) { description = descMatch[1]; continue; }
+        if (line === "REGRA:") { section = "rule"; continue; }
+        if (line === "EXEMPLO:") { section = "example"; continue; }
+
+        if (section === "rule") rule += (rule ? "\n" : "") + line;
+        if (section === "example") example = (example || "") + (example ? "\n" : "") + line;
+      }
+
+      if (title && rule) {
+        results.push({ category: currentCategory, title, description, rule, example, priority, is_active });
+      }
+    }
+
+    // Reparse with better category detection
+    if (results.length === 0) {
+      // Fallback: simpler parsing for edited files
+      const sections = text.split(/📂\s*/);
+      for (const sec of sections.slice(1)) {
+        const secLines = sec.split("\n");
+        const catName = secLines[0]?.trim().toLowerCase();
+        const cat = catMap[catName] || "geral";
+        const ruleBlocks = sec.split(/┌─\s*/);
+        for (const rb of ruleBlocks.slice(1)) {
+          const rbLines = rb.split("\n");
+          const t = rbLines[0]?.trim();
+          if (!t) continue;
+          let p = 5, active = true, desc: string | null = null, r = "", ex: string | null = null;
+          let mode: "m" | "r" | "e" = "m";
+          for (const l of rbLines.slice(1)) {
+            const cl = l.replace(/^\s*[│└┌─]+\s*/, "").trim();
+            if (!cl) continue;
+            const pm = cl.match(/Prioridade:\s*P(\d+)/);
+            if (pm) { p = parseInt(pm[1]); active = !cl.includes("❌"); continue; }
+            const dm = cl.match(/^Descrição:\s*(.+)/);
+            if (dm) { desc = dm[1]; continue; }
+            if (cl === "REGRA:") { mode = "r"; continue; }
+            if (cl === "EXEMPLO:") { mode = "e"; continue; }
+            if (mode === "r") r += (r ? "\n" : "") + cl;
+            if (mode === "e") ex = (ex || "") + (ex ? "\n" : "") + cl;
+          }
+          if (t && r) results.push({ category: cat, title: t, description: desc, rule: r, example: ex, priority: p, is_active: active });
+        }
+      }
+    }
+
+    return results;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -147,7 +331,13 @@ export default function AIStrategyKnowledge() {
           <h1 className="text-2xl font-bold text-foreground">Base de Conhecimento Estratégica</h1>
           <p className="text-sm text-muted-foreground">Regras e estratégias que guiam a IA na interpretação de conversas e geração de propostas</p>
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="outline" onClick={handleExport} disabled={rules.length === 0}>
+            <Download className="h-4 w-4 mr-2" /> Exportar TXT
+          </Button>
+          <Button variant="outline" onClick={handleImport}>
+            <Upload className="h-4 w-4 mr-2" /> Importar TXT
+          </Button>
           <Button onClick={() => { setEditRule({ ...emptyRule }); setEditOpen(true); }}>
             <Plus className="h-4 w-4 mr-2" /> Nova Regra
           </Button>
