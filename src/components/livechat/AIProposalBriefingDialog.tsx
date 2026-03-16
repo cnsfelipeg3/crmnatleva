@@ -4,7 +4,7 @@ import {
   Plane, MapPin, Calendar, Users, Heart, Hotel, CreditCard,
   Loader2, Sparkles, Check, AlertCircle, ArrowRight, Baby, User,
   Clock, Target, FileText, Route, ChevronDown, ChevronUp,
-  Pencil, X, Shield, Zap, Star,
+  Pencil, X, Shield, Zap, Star, History, Eye, EyeOff, Info,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,13 @@ export interface ProposalBriefing {
   confidence?: string | null;
   client_name?: string | null;
   client_id?: string | null;
+  // New journey-aware fields
+  client_history_summary?: string | null;
+  discarded_topics?: { topic: string; period?: string; reason?: string }[] | null;
+  current_demand_confidence?: string | null;
+  ambiguous_demands?: { destination: string; period?: string; evidence?: string }[] | null;
+  client_profile_insights?: string | null;
+  total_messages_analyzed?: number | null;
 }
 
 interface AIProposalBriefingDialogProps {
@@ -60,6 +67,12 @@ const CONFIDENCE_MAP: Record<string, { label: string; className: string }> = {
   medium: { label: "Média confiança", className: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
   low: { label: "Baixa confiança", className: "bg-orange-500/10 text-orange-600 border-orange-500/20" },
   none: { label: "Sem dados", className: "bg-muted text-muted-foreground" },
+};
+
+const DEMAND_CONFIDENCE_MAP: Record<string, { label: string; className: string; icon: string }> = {
+  alta: { label: "Demanda atual clara", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20", icon: "✅" },
+  media: { label: "Demanda parcialmente clara", className: "bg-amber-500/10 text-amber-600 border-amber-500/20", icon: "⚠️" },
+  baixa: { label: "Demanda incerta", className: "bg-red-500/10 text-red-600 border-red-500/20", icon: "❓" },
 };
 
 const STYLE_MAP: Record<string, { label: string; emoji: string }> = {
@@ -133,7 +146,6 @@ function EditableField({ label, value, onChange, icon: Icon, multiline }: {
   );
 }
 
-// Steps: 0=loading, 1=review, 2=creating
 type Step = "loading" | "review" | "creating";
 
 export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId, contactName }: AIProposalBriefingDialogProps) {
@@ -141,11 +153,12 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
   const [step, setStep] = useState<Step>("loading");
   const [briefing, setBriefing] = useState<ProposalBriefing | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   const [showItinerary, setShowItinerary] = useState(true);
   const [showNextSteps, setShowNextSteps] = useState(true);
   const [consultantNotes, setConsultantNotes] = useState("");
+  const [selectedDemandIdx, setSelectedDemandIdx] = useState<number | null>(null);
 
-  // Editable fields
   const [origin, setOrigin] = useState("");
   const [destination, setDestination] = useState("");
   const [subDests, setSubDests] = useState("");
@@ -166,13 +179,13 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
     if (open && conversationDbId) {
       extractBriefing();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, conversationDbId]);
 
   const extractBriefing = async () => {
     setStep("loading");
     setError(null);
     setBriefing(null);
+    setSelectedDemandIdx(null);
 
     try {
       const { data, error: fnErr } = await supabase.functions.invoke("generate-proposal-briefing", {
@@ -183,22 +196,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
       if (data?.briefing && data.briefing.confidence !== "none") {
         const b = data.briefing as ProposalBriefing;
         setBriefing(b);
-        // Pre-fill editable fields
-        setOrigin(b.origin || "");
-        setDestination(b.destination || "");
-        setSubDests((b.sub_destinations || []).join(", "));
-        setDepartureDate(b.departure_date || "");
-        setReturnDate(b.return_date || "");
-        setAdults(b.adults?.toString() || "");
-        setChildren(b.children?.toString() || "");
-        setBabies(b.babies?.toString() || "");
-        setTripType(b.trip_type || "");
-        setBudget(b.budget || "");
-        setHotelPref(b.hotel_preference || "");
-        setFlightPref(b.flight_preference || "");
-        setOtherPrefs(b.other_preferences || "");
-        setProposalTitle(b.proposal_title || "");
-        setIntroText(b.intro_text || "");
+        populateFields(b);
         setStep("review");
       } else {
         setError("Nenhuma viagem identificada nesta conversa.");
@@ -211,10 +209,36 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
     }
   };
 
+  const populateFields = (b: ProposalBriefing) => {
+    setOrigin(b.origin || "");
+    setDestination(b.destination || "");
+    setSubDests((b.sub_destinations || []).join(", "));
+    setDepartureDate(b.departure_date || "");
+    setReturnDate(b.return_date || "");
+    setAdults(b.adults?.toString() || "");
+    setChildren(b.children?.toString() || "");
+    setBabies(b.babies?.toString() || "");
+    setTripType(b.trip_type || "");
+    setBudget(b.budget || "");
+    setHotelPref(b.hotel_preference || "");
+    setFlightPref(b.flight_preference || "");
+    setOtherPrefs(b.other_preferences || "");
+    setProposalTitle(b.proposal_title || "");
+    setIntroText(b.intro_text || "");
+  };
+
+  const handleSelectDemand = (idx: number) => {
+    if (!briefing?.ambiguous_demands?.[idx]) return;
+    const demand = briefing.ambiguous_demands[idx];
+    setSelectedDemandIdx(idx);
+    setDestination(demand.destination);
+    setDepartureDate(demand.period || "");
+    setProposalTitle(`${demand.destination} · ${demand.period || ""}`);
+    toast({ title: "Demanda selecionada", description: `Proposta será baseada em: ${demand.destination}` });
+  };
+
   const handleCreateProposal = () => {
     setStep("creating");
-
-    // Build query params for pre-filling the proposal editor
     const params = new URLSearchParams();
     if (proposalTitle) params.set("title", proposalTitle);
     if (briefing?.client_name || contactName) params.set("client_name", briefing?.client_name || contactName);
@@ -229,24 +253,20 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
     if (totalPax > 0) params.set("pax", totalPax.toString());
     if (introText) params.set("intro", introText);
     if (consultantNotes) params.set("notes", consultantNotes);
-
-    // Build itinerary summary for notes
     const itinSummary = briefing?.itinerary_suggestion?.map(s => `${s.city}: ${s.nights} noites`).join(" → ") || "";
     if (itinSummary) params.set("itinerary", itinSummary);
-
-    // Navigate to proposal editor with pre-filled data
     onOpenChange(false);
     navigate(`/propostas/nova?${params.toString()}`);
   };
 
   const confidence = CONFIDENCE_MAP[briefing?.confidence || "none"] || CONFIDENCE_MAP.none;
+  const demandConf = briefing?.current_demand_confidence
+    ? DEMAND_CONFIDENCE_MAP[briefing.current_demand_confidence]
+    : null;
   const style = briefing?.trip_style ? STYLE_MAP[briefing.trip_style] : null;
   const urgency = briefing?.urgency_level ? URGENCY_MAP[briefing.urgency_level] : null;
-
-  const paxParts: string[] = [];
-  if (adults && parseInt(adults) > 0) paxParts.push(`${adults} adulto${parseInt(adults) > 1 ? "s" : ""}`);
-  if (children && parseInt(children) > 0) paxParts.push(`${children} criança${parseInt(children) > 1 ? "s" : ""}`);
-  if (babies && parseInt(babies) > 0) paxParts.push(`${babies} bebê${parseInt(babies) > 1 ? "s" : ""}`);
+  const hasAmbiguity = (briefing?.ambiguous_demands?.length || 0) > 1;
+  const hasHistory = !!(briefing?.client_history_summary || briefing?.discarded_topics?.length);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -260,14 +280,21 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
             <div>
               <h2 className="text-base font-semibold text-foreground">Criar Proposta com IA</h2>
               <p className="text-xs text-muted-foreground">
-                {step === "loading" ? "Analisando conversa..." : step === "creating" ? "Criando proposta..." : "Revise o briefing antes de criar a proposta"}
+                {step === "loading" ? "Analisando jornada completa do cliente..." : step === "creating" ? "Criando proposta..." : "Revise o briefing antes de criar a proposta"}
               </p>
             </div>
-            {briefing && (
-              <Badge className={`ml-auto text-[10px] px-2 py-0.5 border ${confidence.className}`}>
-                {confidence.label}
-              </Badge>
-            )}
+            <div className="ml-auto flex items-center gap-2">
+              {briefing?.total_messages_analyzed && (
+                <Badge variant="outline" className="text-[9px] px-1.5 text-muted-foreground">
+                  {briefing.total_messages_analyzed} msgs
+                </Badge>
+              )}
+              {briefing && (
+                <Badge className={`text-[10px] px-2 py-0.5 border ${confidence.className}`}>
+                  {confidence.label}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
 
@@ -290,13 +317,14 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                     <Loader2 className="h-5 w-5 animate-spin text-primary absolute -top-1 -right-1" />
                   </div>
                   <div className="text-center space-y-1.5">
-                    <p className="text-sm font-medium text-foreground">Analisando conversa com IA</p>
-                    <p className="text-xs text-muted-foreground">Extraindo briefing completo da viagem...</p>
+                    <p className="text-sm font-medium text-foreground">Analisando jornada completa</p>
+                    <p className="text-xs text-muted-foreground">Lendo histórico, vendas e conversa atual...</p>
                   </div>
-                  <div className="flex gap-6 mt-4 text-[10px] text-muted-foreground/60">
-                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> Identificando destinos</span>
-                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Extraindo datas</span>
-                    <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> Lendo preferências</span>
+                  <div className="flex flex-wrap justify-center gap-4 mt-4 text-[10px] text-muted-foreground/60">
+                    <span className="flex items-center gap-1"><History className="h-3 w-3" /> Histórico do cliente</span>
+                    <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> Separando assuntos</span>
+                    <span className="flex items-center gap-1"><Target className="h-3 w-3" /> Identificando demanda atual</span>
+                    <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> Extraindo preferências</span>
                   </div>
                 </motion.div>
               )}
@@ -323,12 +351,122 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                   animate={{ opacity: 1, y: 0 }}
                   className="space-y-5"
                 >
-                  {/* Briefing Summary */}
+                  {/* ═══ AMBIGUITY ALERT ═══ */}
+                  {hasAmbiguity && (
+                    <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg px-4 py-3">
+                      <div className="flex items-start gap-2 mb-2">
+                        <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs font-semibold text-amber-700">Múltiplas demandas detectadas</p>
+                          <p className="text-[10px] text-amber-600/80 mt-0.5">Selecione qual viagem deseja transformar em proposta:</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5 mt-2">
+                        {briefing.ambiguous_demands!.map((d, i) => (
+                          <button
+                            key={i}
+                            onClick={() => handleSelectDemand(i)}
+                            className={`w-full text-left px-3 py-2 rounded-md border text-xs transition-all ${
+                              selectedDemandIdx === i
+                                ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                                : "border-border/50 hover:border-primary/30 hover:bg-primary/5"
+                            }`}
+                          >
+                            <span className="font-medium">{d.destination}</span>
+                            {d.period && <span className="text-muted-foreground ml-1.5">· {d.period}</span>}
+                            {d.evidence && <p className="text-[10px] text-muted-foreground/70 mt-0.5">"{d.evidence}"</p>}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ═══ DEMAND CONFIDENCE ═══ */}
+                  {demandConf && (
+                    <div className="flex items-center gap-2">
+                      <Badge className={`text-[10px] px-2 py-0.5 border ${demandConf.className}`}>
+                        {demandConf.icon} {demandConf.label}
+                      </Badge>
+                      {briefing.destination && (
+                        <span className="text-xs text-foreground/70">
+                          Viagem detectada: <strong>{briefing.destination}</strong>
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ═══ CLIENT JOURNEY CONTEXT (collapsible) ═══ */}
+                  {hasHistory && (
+                    <div className="border border-border/30 rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => setShowHistory(!showHistory)}
+                        className="flex items-center gap-2 w-full text-left px-4 py-2.5 bg-secondary/20 hover:bg-secondary/30 transition-colors"
+                      >
+                        <History className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs font-semibold text-foreground">Contexto Histórico do Cliente</span>
+                        {briefing.discarded_topics?.length ? (
+                          <Badge variant="outline" className="text-[9px] px-1.5">
+                            {briefing.discarded_topics.length} assunto{briefing.discarded_topics.length > 1 ? "s" : ""} descartado{briefing.discarded_topics.length > 1 ? "s" : ""}
+                          </Badge>
+                        ) : null}
+                        {showHistory ? <EyeOff className="h-3 w-3 ml-auto text-muted-foreground" /> : <Eye className="h-3 w-3 ml-auto text-muted-foreground" />}
+                      </button>
+                      <AnimatePresence>
+                        {showHistory && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-4 py-3 space-y-3">
+                              {briefing.client_history_summary && (
+                                <p className="text-xs text-foreground/70 leading-relaxed italic">
+                                  "{briefing.client_history_summary}"
+                                </p>
+                              )}
+                              {briefing.discarded_topics && briefing.discarded_topics.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-1.5">Assuntos descartados da proposta</p>
+                                  <div className="space-y-1">
+                                    {briefing.discarded_topics.map((t, i) => (
+                                      <div key={i} className="flex items-center gap-2 text-xs">
+                                        <X className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                                        <span className="text-foreground/70 font-medium">{t.topic}</span>
+                                        {t.period && <span className="text-muted-foreground/50">({t.period})</span>}
+                                        {t.reason && (
+                                          <Badge variant="outline" className="text-[9px] px-1.5 text-muted-foreground/60">{t.reason}</Badge>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {briefing.client_profile_insights && (
+                                <div className="bg-primary/5 rounded-md px-3 py-2">
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    <Info className="h-3 w-3 text-primary" />
+                                    <span className="text-[10px] text-primary/80 uppercase tracking-wide font-medium">Insights do perfil</span>
+                                  </div>
+                                  <p className="text-xs text-foreground/70 leading-relaxed">{briefing.client_profile_insights}</p>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
+
+                  {/* ═══ BRIEFING SUMMARY ═══ */}
                   {briefing.briefing_summary && (
                     <div className="bg-primary/5 border border-primary/10 rounded-lg px-4 py-3">
                       <div className="flex items-start gap-2">
                         <FileText className="h-3.5 w-3.5 text-primary mt-0.5 shrink-0" />
-                        <p className="text-xs text-foreground/80 italic leading-relaxed">"{briefing.briefing_summary}"</p>
+                        <div>
+                          <p className="text-[10px] text-primary/60 uppercase tracking-wide mb-1">Demanda Atual</p>
+                          <p className="text-xs text-foreground/80 italic leading-relaxed">"{briefing.briefing_summary}"</p>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -359,10 +497,8 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
 
                   <Separator />
 
-                  {/* Editable Fields - Proposal Title */}
+                  {/* Editable Fields */}
                   <EditableField label="Título da Proposta" value={proposalTitle} onChange={setProposalTitle} icon={FileText} />
-
-                  {/* Route & Dates */}
                   <div className="grid grid-cols-2 gap-4">
                     <EditableField label="Origem" value={origin} onChange={setOrigin} icon={MapPin} />
                     <EditableField label="Destino Principal" value={destination} onChange={setDestination} icon={Plane} />
@@ -372,15 +508,11 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                     <EditableField label="Ida" value={departureDate} onChange={setDepartureDate} icon={Calendar} />
                     <EditableField label="Volta / Duração" value={returnDate} onChange={setReturnDate} icon={Calendar} />
                   </div>
-
-                  {/* Passengers */}
                   <div className="grid grid-cols-3 gap-3">
                     <EditableField label="Adultos" value={adults} onChange={setAdults} icon={User} />
                     <EditableField label="Crianças" value={children} onChange={setChildren} icon={Users} />
                     <EditableField label="Bebês" value={babies} onChange={setBabies} icon={Baby} />
                   </div>
-
-                  {/* Trip Type & Budget */}
                   <div className="grid grid-cols-2 gap-4">
                     <EditableField label="Tipo de Viagem" value={tripType} onChange={setTripType} icon={Heart} />
                     <EditableField label="Orçamento" value={budget} onChange={setBudget} icon={CreditCard} />
@@ -388,7 +520,6 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
 
                   <Separator />
 
-                  {/* Preferences */}
                   <EditableField label="Preferência de Hotel" value={hotelPref} onChange={setHotelPref} icon={Hotel} />
                   <EditableField label="Preferência de Voo" value={flightPref} onChange={setFlightPref} icon={Plane} />
                   <EditableField label="Outras Preferências" value={otherPrefs} onChange={setOtherPrefs} multiline />
@@ -499,7 +630,6 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                     </div>
                   )}
 
-                  {/* Intro Text */}
                   <EditableField label="Texto de Introdução da Proposta" value={introText} onChange={setIntroText} multiline />
 
                   <Separator />
@@ -538,7 +668,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
         {step === "review" && briefing && (
           <div className="px-6 py-4 border-t border-border/50 bg-secondary/20 flex items-center justify-between">
             <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
-              <Sparkles className="h-2.5 w-2.5" /> Briefing gerado por IA — revise antes de criar
+              <Sparkles className="h-2.5 w-2.5" /> Análise contextual por IA — revise antes de criar
             </p>
             <Button onClick={handleCreateProposal} className="gap-2 h-9">
               <ArrowRight className="h-4 w-4" />
