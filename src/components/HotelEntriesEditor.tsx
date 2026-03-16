@@ -58,7 +58,10 @@ export function createEmptyHotelEntry(): HotelEntry {
     hotel_name: "", hotel_city: "", hotel_country: "", hotel_address: "",
     hotel_lat: 0, hotel_lng: 0, hotel_place_id: "",
     hotel_room: "", hotel_meal_plan: "", hotel_reservation_code: "",
-    hotel_checkin_date: "", hotel_checkout_date: "", hotel_qty_rooms: "1",
+    hotel_checkin_date: "", hotel_checkout_date: "",
+    hotel_checkin_time: "", hotel_checkout_time: "",
+    hotel_checkin_time_source: "", hotel_checkin_time_notes: "",
+    hotel_qty_rooms: "1",
     emission_type: "milhas", supplier_id: "", miles_program: "",
     miles_qty: "", miles_price: "", taxes: "", emission_source: "", cash_value: "",
   };
