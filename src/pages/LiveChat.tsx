@@ -1898,6 +1898,7 @@ export default function LiveChat() {
     toast({ title: "Conversa exportada!", description: `${msgs.length} mensagens exportadas com sucesso.` });
   }, [selectedId, selected, currentMessages, selectedDisplayName]);
 
+  const handleAISuggest = () => {
     if (!selectedId) return;
     setShowAIPanel(prev => !prev);
   };
