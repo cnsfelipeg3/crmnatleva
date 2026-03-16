@@ -276,16 +276,16 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
   const style = briefing?.trip_style ? STYLE_MAP[briefing.trip_style] : null;
   const urgency = briefing?.urgency_level ? URGENCY_MAP[briefing.urgency_level] : null;
   const hasAmbiguity = (briefing?.ambiguous_demands?.length || 0) > 1;
-  const hasHistory = !!(briefing?.client_history_summary || briefing?.discarded_topics?.length);
+  const hasCycles = !!(briefing?.detected_trip_cycles?.length);
+  const hasHistory = !!(briefing?.client_history_summary || briefing?.discarded_topics?.length || hasCycles);
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-primary" />
+  const CYCLE_STATUS_MAP: Record<string, { label: string; emoji: string; className: string }> = {
+    cotacao_solicitada: { label: "Cotação", emoji: "📋", className: "text-amber-600 bg-amber-500/10 border-amber-500/20" },
+    proposta_enviada: { label: "Proposta enviada", emoji: "📤", className: "text-blue-600 bg-blue-500/10 border-blue-500/20" },
+    viagem_realizada: { label: "Viagem realizada", emoji: "✅", className: "text-emerald-600 bg-emerald-500/10 border-emerald-500/20" },
+    cotacao_abandonada: { label: "Abandonada", emoji: "⏸️", className: "text-muted-foreground bg-muted/50 border-border/50" },
+    demanda_ativa: { label: "Demanda atual", emoji: "🔥", className: "text-primary bg-primary/10 border-primary/20" },
+  };
             </div>
             <div>
               <h2 className="text-base font-semibold text-foreground">Criar Proposta com IA</h2>
