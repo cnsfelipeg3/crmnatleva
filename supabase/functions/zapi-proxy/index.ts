@@ -229,9 +229,31 @@ async function rebuildHistory(payload: any) {
         for (let i = 0; i < rowsToInsert.length; i += chunkSize) {
           const chunk = rowsToInsert.slice(i, i + chunkSize);
           const { error: insertError } = await supabase.from("zapi_messages").insert(chunk);
-          if (insertError) throw insertError;
+          if (insertError) {
+            console.error(`[Z-API] zapi_messages insert error for ${cleanPhone}:`, insertError.message);
+          }
         }
       }
+
+      // --- DUAL-WRITE: Also populate unified conversation_messages table ---
+      // First resolve the conversation_id for this phone
+      const convExternalIdForUnified = `wa_${cleanPhone}`;
+      const phoneCandidatesForConv = Array.from(new Set([
+        cleanPhone, `+${cleanPhone}`, `${cleanPhone}@c.us`, `${cleanPhone}@s.whatsapp.net`,
+      ]));
+
+      const { data: convRow } = await supabase
+        .from("conversations")
+        .select("id")
+        .or(`phone.eq.${cleanPhone},external_conversation_id.eq.${convExternalIdForUnified}`)
+        .limit(1)
+        .maybeSingle();
+
+      // We may need to create the conversation first (done later in the flow),
+      // so we'll store convId and do unified insert after conversation upsert
+      let resolvedConvId = convRow?.id || null;
+
+      // We'll defer unified insert to after conversation upsert below
 
       stats.messagesInserted += rowsToInsert.length;
 
