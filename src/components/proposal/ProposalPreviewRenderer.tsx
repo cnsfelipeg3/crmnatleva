@@ -718,7 +718,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── PAYMENT ──── */}
       {paymentConditions.length > 0 && (
-        <section className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
+        <section data-track-section="payment" className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
           <SectionTitle>Condições de Pagamento</SectionTitle>
           <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
             {paymentConditions.map((pc: any, idx: number) => (
