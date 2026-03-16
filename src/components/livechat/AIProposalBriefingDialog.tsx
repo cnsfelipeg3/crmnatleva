@@ -295,6 +295,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
               <Sparkles className="h-5 w-5 text-primary" />
+            </div>
             <div>
               <h2 className="text-base font-semibold text-foreground">Criar Proposta com IA</h2>
               <p className="text-xs text-muted-foreground">
