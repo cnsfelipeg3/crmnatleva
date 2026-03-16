@@ -1629,8 +1629,22 @@ function OperacaoInboxInner() {
         });
       }
     } else if (selectedId.length > 10) {
+      const nowIso = new Date().toISOString();
+      // Dual-write: conversation_messages (primary) + chat_messages (legacy)
+      const unifiedRow = {
+        conversation_id: selectedId,
+        external_message_id: `local_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        direction: "outgoing",
+        sender_type: "atendente",
+        content: text,
+        message_type: "text",
+        status: "sent",
+        timestamp: nowIso,
+        created_at: nowIso,
+      };
+      await (supabase.from("conversation_messages" as any).insert(unifiedRow) as any);
       await supabase.from("chat_messages").insert({ conversation_id: selectedId, sender_type: "atendente", message_type: "text", content: text, read_status: "sent" });
-      await supabase.from("conversations").update({ last_message_preview: text, last_message_at: new Date().toISOString(), unread_count: 0 }).eq("id", selectedId);
+      await supabase.from("conversations").update({ last_message_preview: text, last_message_at: nowIso, unread_count: 0 }).eq("id", selectedId);
 
       if (selected?.source === "whatsapp" && selected?.phone) {
         try {
@@ -1641,13 +1655,14 @@ function OperacaoInboxInner() {
         } catch (err) { console.error("Error sending via official API:", err); }
       }
 
-      const { data } = await supabase.from("chat_messages").select("*").eq("conversation_id", selectedId).order("created_at");
-      if (data) {
-        setMessages(prev => ({ ...prev, [selectedId]: data.map(m => ({
+      // Reload from unified table
+      const { data } = await (supabase.from("conversation_messages" as any).select("*").eq("conversation_id", selectedId).order("created_at") as any);
+      if (data && (data as any[]).length > 0) {
+        setMessages(prev => ({ ...prev, [selectedId]: (data as any[]).map((m: any) => ({
           id: m.id, conversation_id: m.conversation_id,
-          sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
-          message_type: m.message_type as MsgType,
-          text: m.content || "", status: (m.read_status || "sent") as MsgStatus, created_at: m.created_at,
+          sender_type: (m.sender_type || "cliente") as "cliente" | "atendente" | "sistema",
+          message_type: normalizeDbMessageType(m.message_type),
+          text: stripQuotes(m.content || ""), status: normalizeDbStatus(m.status), created_at: toIsoTimestamp(m.created_at),
         })) }));
         isUserScrolledUpRef.current = false;
         scrollToBottom();
