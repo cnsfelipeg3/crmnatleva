@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import ProposalPreviewRenderer from "@/components/proposal/ProposalPreviewRenderer";
+import ProposalEmailGate from "@/components/proposal/ProposalEmailGate";
+import { useProposalTracking } from "@/hooks/useProposalTracking";
+import { emitLearningEvent } from "@/lib/learningEvents";
 
 export default function ProposalPublicView() {
   const { slug } = useParams();
@@ -10,8 +13,25 @@ export default function ProposalPublicView() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
-  const [startTime] = useState(Date.now());
 
+  // Email gate state
+  const [viewerEmail, setViewerEmail] = useState<string | null>(() => {
+    try { return sessionStorage.getItem(`proposal_viewer_${slug}`); } catch { return null; }
+  });
+  const [viewerId, setViewerId] = useState<string | null>(() => {
+    try { return sessionStorage.getItem(`proposal_viewer_id_${slug}`); } catch { return null; }
+  });
+  const [gateLoading, setGateLoading] = useState(false);
+  const [unlocked, setUnlocked] = useState(!!viewerEmail);
+
+  // Tracking hook
+  const tracking = useProposalTracking({
+    proposalId: proposal?.id || "",
+    viewerId: viewerId || "",
+    enabled: !!proposal?.id && !!viewerId && unlocked,
+  });
+
+  // Load proposal data
   useEffect(() => {
     if (!slug) return;
     (async () => {
@@ -30,31 +50,103 @@ export default function ProposalPublicView() {
         .order("position");
       setItems(itemsData || []);
       setLoading(false);
-
-      // Track view
-      await supabase.from("proposal_views").insert({
-        proposal_id: data.id,
-        device_type: /Mobi/i.test(navigator.userAgent) ? "mobile" : "desktop",
-        user_agent: navigator.userAgent.slice(0, 200),
-      });
-      await supabase.from("proposals").update({
-        views_count: (data.views_count || 0) + 1,
-        last_viewed_at: new Date().toISOString(),
-      }).eq("id", data.id);
     })();
-
-    return () => {
-      if (proposal?.id) {
-        const duration = Math.round((Date.now() - startTime) / 1000);
-        supabase.from("proposal_views").update({ duration_seconds: duration }).eq("proposal_id", proposal.id).order("viewed_at", { ascending: false }).limit(1);
-      }
-    };
   }, [slug]);
+
+  // Handle email submission
+  const handleEmailSubmit = useCallback(async (email: string, name?: string) => {
+    if (!proposal?.id) return;
+    setGateLoading(true);
+
+    try {
+      const deviceType = /Mobi/i.test(navigator.userAgent) ? "mobile" : "desktop";
+      const ua = navigator.userAgent.slice(0, 200);
+
+      // Upsert viewer record
+      const { data: existing } = await supabase
+        .from("proposal_viewers" as any)
+        .select("id, total_views")
+        .eq("proposal_id", proposal.id)
+        .eq("email", email)
+        .maybeSingle();
+
+      let vid: string;
+      if (existing) {
+        vid = (existing as any).id;
+        await supabase.from("proposal_viewers" as any).update({
+          last_active_at: new Date().toISOString(),
+          total_views: ((existing as any).total_views || 1) + 1,
+          name: name || undefined,
+          device_type: deviceType,
+          user_agent: ua,
+        }).eq("id", vid);
+      } else {
+        const { data: newViewer } = await supabase
+          .from("proposal_viewers" as any)
+          .insert({
+            proposal_id: proposal.id,
+            email,
+            name: name || null,
+            device_type: deviceType,
+            user_agent: ua,
+          })
+          .select("id")
+          .single();
+        vid = (newViewer as any)?.id;
+      }
+
+      if (vid) {
+        setViewerId(vid);
+        setViewerEmail(email);
+        setUnlocked(true);
+        try {
+          sessionStorage.setItem(`proposal_viewer_${slug}`, email);
+          sessionStorage.setItem(`proposal_viewer_id_${slug}`, vid);
+        } catch {}
+
+        // Update proposal views
+        await supabase.from("proposals").update({
+          views_count: (proposal.views_count || 0) + 1,
+          last_viewed_at: new Date().toISOString(),
+        }).eq("id", proposal.id);
+
+        // Also insert legacy proposal_views
+        await supabase.from("proposal_views").insert({
+          proposal_id: proposal.id,
+          device_type: deviceType,
+          user_agent: ua,
+        });
+
+        // Emit learning event
+        emitLearningEvent({
+          event_type: "proposal_opened",
+          proposal_id: proposal.id,
+          client_opened: true,
+          metadata: {
+            viewer_email: email,
+            viewer_name: name,
+            viewer_id: vid,
+            device_type: deviceType,
+            is_return_visit: !!existing,
+          },
+        });
+      }
+    } catch (err) {
+      console.error("[ProposalView] Email gate error:", err);
+    } finally {
+      setGateLoading(false);
+    }
+  }, [proposal, slug]);
+
+  // Extract destination from items for the gate
+  const destination = proposal?.destinations
+    || items.find((i: any) => i.item_type === "flight")?.title
+    || proposal?.title;
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5 }} className="text-muted-foreground">
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <motion.div animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5 }} className="text-white/50">
           Carregando sua proposta...
         </motion.div>
       </div>
@@ -72,5 +164,24 @@ export default function ProposalPublicView() {
     );
   }
 
-  return <ProposalPreviewRenderer proposal={proposal} items={items} />;
+  // Show email gate if not unlocked
+  if (!unlocked) {
+    return (
+      <ProposalEmailGate
+        proposalTitle={proposal?.title}
+        destination={destination}
+        coverImage={proposal?.cover_image_url}
+        onSubmit={handleEmailSubmit}
+        loading={gateLoading}
+      />
+    );
+  }
+
+  return (
+    <ProposalPreviewRenderer
+      proposal={proposal}
+      items={items}
+      tracking={tracking}
+    />
+  );
 }
