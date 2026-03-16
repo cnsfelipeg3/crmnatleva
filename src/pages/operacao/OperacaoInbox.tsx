@@ -1199,6 +1199,7 @@ function OperacaoInboxInner() {
         }
         // Save any inline chat photos to cache
         if (newConvs.length > 0) saveProfilePicsCache();
+        if (newConvs.length > 0) {
           const deduped = new Map<string, Conversation>();
           for (const conv of newConvs) {
             const existing = deduped.get(conv.id);
