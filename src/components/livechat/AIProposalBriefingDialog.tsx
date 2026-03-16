@@ -286,7 +286,15 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
     cotacao_abandonada: { label: "Abandonada", emoji: "⏸️", className: "text-muted-foreground bg-muted/50 border-border/50" },
     demanda_ativa: { label: "Demanda atual", emoji: "🔥", className: "text-primary bg-primary/10 border-primary/20" },
   };
-            </div>
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Sparkles className="h-5 w-5 text-primary" />
             <div>
               <h2 className="text-base font-semibold text-foreground">Criar Proposta com IA</h2>
               <p className="text-xs text-muted-foreground">
