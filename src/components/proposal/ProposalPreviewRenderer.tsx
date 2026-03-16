@@ -32,8 +32,26 @@ function fmtCurrency(v: number) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 }
 
+function parseLocalDate(d: string): Date | null {
+  if (!d) return null;
+  // Handle dd/MM/yyyy format
+  const brMatch = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (brMatch) {
+    return new Date(Number(brMatch[3]), Number(brMatch[2]) - 1, Number(brMatch[1]));
+  }
+  // Handle yyyy-MM-dd format
+  const isoMatch = d.split("T")[0].match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoMatch) {
+    return new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+  }
+  const fallback = new Date(d);
+  return isNaN(fallback.getTime()) ? null : fallback;
+}
+
 function fmtDate(d: string) {
-  return format(new Date(d + "T00:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+  const date = parseLocalDate(d);
+  if (!date) return d || "—";
+  return format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 }
 
 /* ═══ Section Title ═══ */
