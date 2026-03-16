@@ -58,6 +58,7 @@ export default function ProposalEditor() {
   const prefillIntro = searchParams.get("intro") || "";
   const prefillNotes = searchParams.get("notes") || "";
   const prefillItinerary = searchParams.get("itinerary") || "";
+  const hasAiStructure = searchParams.get("has_structure") === "1";
 
   const defaultIntro = "Preparamos uma experiência exclusiva para sua viagem, combinando destinos icônicos, hospedagens selecionadas e uma logística cuidadosamente planejada.";
 
