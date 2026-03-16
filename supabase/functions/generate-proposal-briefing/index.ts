@@ -80,7 +80,8 @@ serve(async (req) => {
     }
 
     // Gather full conversation scope (same WhatsApp number), including current conversation
-    let scopedConversationIds = [conversationId];
+    const resolvedConvId = conv.id;
+    let scopedConversationIds = [resolvedConvId];
     if (phoneCandidates.length > 0) {
       const { data: relatedConversations } = await sb
         .from("conversations")
