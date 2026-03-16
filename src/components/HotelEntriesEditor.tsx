@@ -36,6 +36,10 @@ export interface HotelEntry {
   hotel_reservation_code: string;
   hotel_checkin_date: string;
   hotel_checkout_date: string;
+  hotel_checkin_time: string;
+  hotel_checkout_time: string;
+  hotel_checkin_time_source: string;
+  hotel_checkin_time_notes: string;
   hotel_qty_rooms: string;
   // Cost
   emission_type: "milhas" | "pagante";
