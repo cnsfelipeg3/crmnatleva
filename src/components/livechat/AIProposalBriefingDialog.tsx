@@ -63,6 +63,12 @@ export interface ProposalBriefing {
     is_current_demand: boolean;
     evidence?: string;
   }[] | null;
+  proposal_structure?: {
+    destinations?: { name: string; country?: string; nights?: number; highlights?: string }[];
+    flights?: { origin: string; destination: string; departure_date?: string; return_date?: string; cabin?: string; airline?: string; flight_number?: string; passengers?: number; notes?: string }[];
+    hotels?: { city: string; hotel_name?: string; rooms?: number; checkin?: string; checkout?: string; room_type?: string; board?: string; notes?: string }[];
+    experiences?: { name: string; city?: string; description?: string; duration?: string }[];
+  } | null;
 }
 
 interface AIProposalBriefingDialogProps {
