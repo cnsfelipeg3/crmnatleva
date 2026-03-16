@@ -689,7 +689,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── FINANCIAL ──── */}
       {(proposal.total_value || proposal.value_per_person) && (
-        <section className="py-12 sm:py-20 px-6">
+        <section data-track-section="pricing" className="py-12 sm:py-20 px-6">
           <SectionTitle>Investimento</SectionTitle>
           <div className="max-w-2xl mx-auto">
             <div className="rounded-2xl border border-accent/15 bg-gradient-to-b from-card to-accent/[0.03] p-8 sm:p-10 text-center space-y-6 shadow-xl shadow-accent/5">
