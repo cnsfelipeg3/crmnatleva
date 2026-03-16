@@ -140,6 +140,117 @@ export default function ProposalEditor() {
     if (existingItems) setItems(existingItems);
   }, [existingItems]);
 
+  // Auto-populate items from AI proposal_structure
+  useEffect(() => {
+    if (!isNew || !hasAiStructure) return;
+    try {
+      const raw = sessionStorage.getItem("ai_proposal_structure");
+      if (!raw) return;
+      sessionStorage.removeItem("ai_proposal_structure");
+      const structure = JSON.parse(raw);
+      const newItems: any[] = [];
+
+      // Destinations
+      if (structure.destinations?.length) {
+        for (const d of structure.destinations) {
+          newItems.push({
+            item_type: "destination",
+            title: d.name + (d.country ? `, ${d.country}` : ""),
+            description: [
+              d.nights ? `${d.nights} noites` : null,
+              d.highlights,
+            ].filter(Boolean).join(" — "),
+            image_url: "",
+            data: { nights: d.nights, country: d.country },
+          });
+        }
+      }
+
+      // Flights
+      if (structure.flights?.length) {
+        for (const f of structure.flights) {
+          newItems.push({
+            item_type: "flight",
+            title: `${f.origin} → ${f.destination}`,
+            description: [
+              f.cabin,
+              f.airline,
+              f.flight_number,
+              f.departure_date ? `Ida: ${f.departure_date}` : null,
+              f.return_date ? `Volta: ${f.return_date}` : null,
+              f.passengers ? `${f.passengers} pax` : null,
+              f.notes,
+            ].filter(Boolean).join(" · "),
+            image_url: "",
+            data: {
+              origin: f.origin,
+              destination: f.destination,
+              departure_date: f.departure_date,
+              return_date: f.return_date,
+              cabin: f.cabin,
+              airline: f.airline,
+              flight_number: f.flight_number,
+              passengers: f.passengers,
+            },
+          });
+        }
+      }
+
+      // Hotels
+      if (structure.hotels?.length) {
+        for (const h of structure.hotels) {
+          newItems.push({
+            item_type: "hotel",
+            title: h.hotel_name || `Hotel em ${h.city}`,
+            description: [
+              h.city,
+              h.rooms ? `${h.rooms} quarto(s)` : null,
+              h.room_type,
+              h.board,
+              h.checkin ? `Check-in: ${h.checkin}` : null,
+              h.checkout ? `Check-out: ${h.checkout}` : null,
+              h.notes,
+            ].filter(Boolean).join(" · "),
+            image_url: "",
+            data: {
+              city: h.city,
+              hotel_name: h.hotel_name,
+              rooms: h.rooms,
+              checkin: h.checkin,
+              checkout: h.checkout,
+              room_type: h.room_type,
+              board: h.board,
+            },
+          });
+        }
+      }
+
+      // Experiences
+      if (structure.experiences?.length) {
+        for (const e of structure.experiences) {
+          newItems.push({
+            item_type: "experience",
+            title: e.name,
+            description: [
+              e.city,
+              e.description,
+              e.duration,
+            ].filter(Boolean).join(" — "),
+            image_url: "",
+            data: { city: e.city, duration: e.duration },
+          });
+        }
+      }
+
+      if (newItems.length > 0) {
+        setItems(newItems);
+        toast.success(`IA adicionou ${newItems.length} item(ns) à proposta automaticamente`);
+      }
+    } catch (e) {
+      console.error("Error loading AI proposal structure:", e);
+    }
+  }, [isNew, hasAiStructure]);
+
   const toggleCollapse = (idx: number) => {
     setCollapsedItems(prev => {
       const next = new Set(prev);
