@@ -5,6 +5,7 @@ import {
   Loader2, Sparkles, Check, AlertCircle, ArrowRight, Baby, User,
   Clock, Target, FileText, Route, ChevronDown, ChevronUp,
   Pencil, X, Shield, Zap, Star, History, Eye, EyeOff, Info,
+  Search, ArrowLeft, CheckCircle2, Timer, Luggage,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,7 +47,6 @@ export interface ProposalBriefing {
   confidence?: string | null;
   client_name?: string | null;
   client_id?: string | null;
-  // Journey-aware fields
   client_history_summary?: string | null;
   discarded_topics?: { topic: string; period?: string; reason?: string }[] | null;
   current_demand_confidence?: string | null;
@@ -162,7 +162,230 @@ function EditableField({ label, value, onChange, icon: Icon, multiline }: {
   );
 }
 
-type Step = "loading" | "review" | "creating";
+// ── Flight Card ──
+function FlightCard({ flight, index, selected, onSelect }: { flight: any; index: number; selected: boolean; onSelect: () => void }) {
+  const formatDuration = (min: number) => {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return `${h}h${m > 0 ? `${m}min` : ""}`;
+  };
+
+  const formatTime = (iso: string) => {
+    if (!iso) return "";
+    const t = iso.split("T")[1];
+    return t ? t.slice(0, 5) : iso;
+  };
+
+  const formatDate = (iso: string) => {
+    if (!iso) return "";
+    const d = iso.split("T")[0];
+    if (!d) return "";
+    const [y, m, day] = d.split("-");
+    return `${day}/${m}`;
+  };
+
+  const ida = flight.itineraries?.[0];
+  const volta = flight.itineraries?.[1];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      onClick={onSelect}
+      className={`relative border rounded-xl p-4 cursor-pointer transition-all hover:shadow-md ${
+        selected
+          ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm"
+          : "border-border/50 hover:border-primary/30"
+      }`}
+    >
+      {/* Tags */}
+      {(flight.tags?.length > 0 || flight.is_recommended) && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {flight.is_recommended && (
+            <Badge className="text-[9px] px-1.5 py-0 bg-primary text-primary-foreground">⭐ Recomendado</Badge>
+          )}
+          {flight.tags?.map((tag: string, i: number) => (
+            <Badge key={i} variant="outline" className="text-[9px] px-1.5 py-0 border-primary/30 text-primary">{tag}</Badge>
+          ))}
+        </div>
+      )}
+
+      {/* Airline + Price */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-lg bg-secondary/50 flex items-center justify-center text-xs font-bold text-foreground">
+            {flight.airline || "?"}
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground">{flight.airline_name || "Companhia"}</p>
+            <p className="text-[10px] text-muted-foreground">
+              {flight.cabin || "Economy"} · {flight.passengers} pax
+              {flight.baggage && ` · ${flight.baggage}`}
+            </p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-lg font-bold text-foreground">
+            R$ {Number(flight.price).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
+          </p>
+          <p className="text-[10px] text-muted-foreground">total</p>
+        </div>
+      </div>
+
+      {/* Itinerary Ida */}
+      {ida && (
+        <div className="flex items-center gap-3 py-2 border-t border-border/30">
+          <div className="text-center min-w-[50px]">
+            <p className="text-sm font-semibold">{formatTime(ida.segments?.[0]?.departure_time)}</p>
+            <p className="text-[10px] text-muted-foreground">{ida.segments?.[0]?.origin_iata}</p>
+            <p className="text-[9px] text-muted-foreground/60">{formatDate(ida.segments?.[0]?.departure_time)}</p>
+          </div>
+          <div className="flex-1 flex flex-col items-center">
+            <p className="text-[10px] text-muted-foreground">{formatDuration(ida.total_duration_minutes)}</p>
+            <div className="w-full flex items-center gap-1">
+              <div className="h-px flex-1 bg-border" />
+              {ida.stops > 0 && (
+                <span className="text-[9px] text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
+                  {ida.stops} escala{ida.stops > 1 ? "s" : ""}
+                </span>
+              )}
+              {ida.stops === 0 && (
+                <span className="text-[9px] text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">Direto</span>
+              )}
+              <div className="h-px flex-1 bg-border" />
+            </div>
+            <p className="text-[9px] text-muted-foreground/50">IDA</p>
+          </div>
+          <div className="text-center min-w-[50px]">
+            <p className="text-sm font-semibold">{formatTime(ida.segments?.[ida.segments.length - 1]?.arrival_time)}</p>
+            <p className="text-[10px] text-muted-foreground">{ida.segments?.[ida.segments.length - 1]?.destination_iata}</p>
+            <p className="text-[9px] text-muted-foreground/60">{formatDate(ida.segments?.[ida.segments.length - 1]?.arrival_time)}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Itinerary Volta */}
+      {volta && (
+        <div className="flex items-center gap-3 py-2 border-t border-border/20">
+          <div className="text-center min-w-[50px]">
+            <p className="text-sm font-semibold">{formatTime(volta.segments?.[0]?.departure_time)}</p>
+            <p className="text-[10px] text-muted-foreground">{volta.segments?.[0]?.origin_iata}</p>
+          </div>
+          <div className="flex-1 flex flex-col items-center">
+            <p className="text-[10px] text-muted-foreground">{formatDuration(volta.total_duration_minutes)}</p>
+            <div className="w-full flex items-center gap-1">
+              <div className="h-px flex-1 bg-border" />
+              {volta.stops > 0 && (
+                <span className="text-[9px] text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
+                  {volta.stops} escala{volta.stops > 1 ? "s" : ""}
+                </span>
+              )}
+              {volta.stops === 0 && (
+                <span className="text-[9px] text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">Direto</span>
+              )}
+              <div className="h-px flex-1 bg-border" />
+            </div>
+            <p className="text-[9px] text-muted-foreground/50">VOLTA</p>
+          </div>
+          <div className="text-center min-w-[50px]">
+            <p className="text-sm font-semibold">{formatTime(volta.segments?.[volta.segments.length - 1]?.arrival_time)}</p>
+            <p className="text-[10px] text-muted-foreground">{volta.segments?.[volta.segments.length - 1]?.destination_iata}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Selection indicator */}
+      {selected && (
+        <div className="absolute top-3 right-3">
+          <CheckCircle2 className="h-5 w-5 text-primary" />
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ── Hotel Card ──
+function HotelCard({ hotel, index, selected, onSelect }: { hotel: any; index: number; selected: boolean; onSelect: () => void }) {
+  const priceLevelLabels = ["Econômico", "Moderado", "Superior", "Luxo", "Ultra Luxo"];
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      onClick={onSelect}
+      className={`relative border rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-md ${
+        selected
+          ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm"
+          : "border-border/50 hover:border-primary/30"
+      }`}
+    >
+      {/* Photo */}
+      {hotel.photo_url && (
+        <div className="h-28 w-full bg-secondary/30 overflow-hidden">
+          <img
+            src={hotel.photo_url}
+            alt={hotel.name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
+
+      <div className="p-3">
+        {/* Tags */}
+        {(hotel.tags?.length > 0 || hotel.is_recommended) && (
+          <div className="flex flex-wrap gap-1 mb-2">
+            {hotel.is_recommended && (
+              <Badge className="text-[9px] px-1.5 py-0 bg-primary text-primary-foreground">⭐ Recomendado</Badge>
+            )}
+            {hotel.tags?.map((tag: string, i: number) => (
+              <Badge key={i} variant="outline" className="text-[9px] px-1.5 py-0 border-primary/30 text-primary">{tag}</Badge>
+            ))}
+          </div>
+        )}
+
+        <h4 className="text-sm font-semibold text-foreground leading-tight">{hotel.name}</h4>
+        
+        <div className="flex items-center gap-2 mt-1">
+          {hotel.rating && (
+            <div className="flex items-center gap-0.5">
+              <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+              <span className="text-xs font-medium">{hotel.rating}</span>
+              {hotel.user_ratings_total > 0 && (
+                <span className="text-[10px] text-muted-foreground">({hotel.user_ratings_total})</span>
+              )}
+            </div>
+          )}
+          {hotel.stars && (
+            <span className="text-[10px] text-muted-foreground">{hotel.stars}★</span>
+          )}
+          {hotel.price_level != null && (
+            <Badge variant="outline" className="text-[9px] px-1 py-0">
+              {priceLevelLabels[hotel.price_level] || "N/A"}
+            </Badge>
+          )}
+        </div>
+
+        {hotel.address && (
+          <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">
+            <MapPin className="h-2.5 w-2.5 inline mr-0.5" />
+            {hotel.address}
+          </p>
+        )}
+      </div>
+
+      {selected && (
+        <div className="absolute top-2 right-2 bg-background/80 rounded-full p-0.5">
+          <CheckCircle2 className="h-5 w-5 text-primary" />
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+type Step = "loading" | "review" | "suggestions" | "creating";
 
 export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId, contactName }: AIProposalBriefingDialogProps) {
   const navigate = useNavigate();
@@ -190,6 +413,14 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
   const [otherPrefs, setOtherPrefs] = useState("");
   const [proposalTitle, setProposalTitle] = useState("");
   const [introText, setIntroText] = useState("");
+
+  // ── Suggestions state ──
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [flightSuggestions, setFlightSuggestions] = useState<any[]>([]);
+  const [hotelSuggestions, setHotelSuggestions] = useState<Record<string, any[]>>({});
+  const [selectedFlightIdx, setSelectedFlightIdx] = useState<number | null>(null);
+  const [selectedHotels, setSelectedHotels] = useState<Record<string, number>>({});
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open && conversationDbId) {
@@ -253,6 +484,74 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
     toast({ title: "Demanda selecionada", description: `Proposta será baseada em: ${demand.destination}` });
   };
 
+  // ── Search Suggestions ──
+  const handleSearchSuggestions = async () => {
+    setSuggestionsLoading(true);
+    setSuggestionsError(null);
+    setStep("suggestions");
+    setFlightSuggestions([]);
+    setHotelSuggestions({});
+    setSelectedFlightIdx(null);
+    setSelectedHotels({});
+
+    try {
+      // Parse dates - try to convert DD/MM/YYYY to YYYY-MM-DD
+      const parseDate = (d: string): string => {
+        if (!d) return "";
+        // Already ISO format
+        if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+        // DD/MM/YYYY or DD/MM
+        const parts = d.split("/");
+        if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+        if (parts.length === 2) {
+          const year = new Date().getFullYear();
+          return `${year}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+        }
+        return d;
+      };
+
+      const body = {
+        origin: origin,
+        destination: destination,
+        sub_destinations: subDests.split(",").map(s => s.trim()).filter(Boolean),
+        departure_date: parseDate(departureDate),
+        return_date: parseDate(returnDate),
+        adults: parseInt(adults) || 1,
+        children: parseInt(children) || 0,
+        babies: parseInt(babies) || 0,
+        flight_preference: flightPref,
+        hotel_preference: hotelPref,
+        trip_style: briefing?.trip_style || "",
+      };
+
+      const { data, error: fnErr } = await supabase.functions.invoke("proposal-suggestions", { body });
+      if (fnErr) throw fnErr;
+
+      setFlightSuggestions(data?.flights || []);
+      setHotelSuggestions(data?.hotels || {});
+
+      if (!data?.flights?.length && !Object.keys(data?.hotels || {}).length) {
+        setSuggestionsError("Nenhuma sugestão encontrada. Verifique datas e destinos.");
+      }
+    } catch (err: any) {
+      console.error("Suggestions error:", err);
+      setSuggestionsError(err.message || "Erro ao buscar sugestões");
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  const toggleHotelSelection = (city: string, index: number) => {
+    setSelectedHotels(prev => {
+      if (prev[city] === index) {
+        const next = { ...prev };
+        delete next[city];
+        return next;
+      }
+      return { ...prev, [city]: index };
+    });
+  };
+
   const handleCreateProposal = () => {
     setStep("creating");
     const params = new URLSearchParams();
@@ -272,14 +571,52 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
     const itinSummary = briefing?.itinerary_suggestion?.map(s => `${s.city}: ${s.nights} noites`).join(" → ") || "";
     if (itinSummary) params.set("itinerary", itinSummary);
 
-    // Pass proposal_structure via sessionStorage (too large for URL)
-    if (briefing?.proposal_structure) {
-      try {
-        sessionStorage.setItem("ai_proposal_structure", JSON.stringify(briefing.proposal_structure));
-        params.set("has_structure", "1");
-      } catch (e) {
-        console.error("Failed to save proposal structure:", e);
+    // Build proposal_structure from briefing + selected suggestions
+    const structure = briefing?.proposal_structure ? { ...briefing.proposal_structure } : { destinations: [], flights: [], hotels: [], experiences: [] };
+
+    // Add selected flight to structure
+    if (selectedFlightIdx !== null && flightSuggestions[selectedFlightIdx]) {
+      const f = flightSuggestions[selectedFlightIdx];
+      const ida = f.itineraries?.[0];
+      const volta = f.itineraries?.[1];
+      structure.flights = [{
+        origin: ida?.segments?.[0]?.origin_iata || origin,
+        destination: ida?.segments?.[ida.segments.length - 1]?.destination_iata || destination,
+        departure_date: ida?.segments?.[0]?.departure_time?.split("T")[0] || departureDate,
+        return_date: volta?.segments?.[0]?.departure_time?.split("T")[0] || returnDate,
+        cabin: f.cabin || flightPref || "",
+        airline: f.airline || "",
+        flight_number: ida?.segments?.map((s: any) => s.flight_number).join(", ") || "",
+        passengers: totalPax || undefined,
+        notes: `Preço: R$ ${Number(f.price).toLocaleString("pt-BR")} | ${f.airline_name} | ${f.stops === 0 ? "Direto" : `${f.stops} escala(s)`}`,
+      }];
+    }
+
+    // Add selected hotels to structure
+    const selectedHotelsList: any[] = [];
+    for (const [city, idx] of Object.entries(selectedHotels)) {
+      const hotel = hotelSuggestions[city]?.[idx];
+      if (hotel) {
+        selectedHotelsList.push({
+          city,
+          hotel_name: hotel.name,
+          rooms: 1,
+          notes: [
+            hotel.rating ? `Rating: ${hotel.rating}` : "",
+            hotel.address || "",
+          ].filter(Boolean).join(" | "),
+        });
       }
+    }
+    if (selectedHotelsList.length > 0) {
+      structure.hotels = selectedHotelsList;
+    }
+
+    try {
+      sessionStorage.setItem("ai_proposal_structure", JSON.stringify(structure));
+      params.set("has_structure", "1");
+    } catch (e) {
+      console.error("Failed to save proposal structure:", e);
     }
 
     onOpenChange(false);
@@ -304,9 +641,12 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
     demanda_ativa: { label: "Demanda atual", emoji: "🔥", className: "text-primary bg-primary/10 border-primary/20" },
   };
 
+  const canSearchSuggestions = origin && destination && departureDate;
+  const hasSelections = selectedFlightIdx !== null || Object.keys(selectedHotels).length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[92vh] p-0 gap-0 overflow-hidden">
         {/* Header */}
         <div className="px-6 py-4 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
           <div className="flex items-center gap-3">
@@ -316,7 +656,10 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
             <div>
               <h2 className="text-base font-semibold text-foreground">Criar Proposta com IA</h2>
               <p className="text-xs text-muted-foreground">
-                {step === "loading" ? "Analisando jornada completa do cliente..." : step === "creating" ? "Criando proposta..." : "Revise o briefing antes de criar a proposta"}
+                {step === "loading" ? "Analisando jornada completa do cliente..." :
+                 step === "suggestions" ? "Selecione voos e hotéis para a proposta" :
+                 step === "creating" ? "Criando proposta..." :
+                 "Revise o briefing antes de criar a proposta"}
               </p>
             </div>
             <div className="ml-auto flex items-center gap-2">
@@ -335,7 +678,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
         </div>
 
         {/* Content */}
-        <ScrollArea className="max-h-[calc(90vh-180px)]">
+        <ScrollArea className="max-h-[calc(92vh-180px)]">
           <div className="px-6 py-4">
             <AnimatePresence mode="wait">
               {step === "loading" && (
@@ -461,7 +804,6 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                             className="overflow-hidden"
                           >
                             <div className="px-4 py-3 space-y-3">
-                              {/* ── Trip Cycles Timeline ── */}
                               {briefing.detected_trip_cycles && briefing.detected_trip_cycles.length > 0 && (
                                 <div>
                                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide mb-2">Linha do tempo de viagens detectada</p>
@@ -730,6 +1072,117 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                 </motion.div>
               )}
 
+              {/* ═══ SUGGESTIONS STEP ═══ */}
+              {step === "suggestions" && (
+                <motion.div
+                  key="suggestions"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-6"
+                >
+                  {suggestionsLoading && (
+                    <div className="flex flex-col items-center py-12 gap-4">
+                      <div className="relative">
+                        <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                          <Search className="h-7 w-7 text-primary animate-pulse" />
+                        </div>
+                        <Loader2 className="h-5 w-5 animate-spin text-primary absolute -top-1 -right-1" />
+                      </div>
+                      <div className="text-center space-y-1.5">
+                        <p className="text-sm font-medium text-foreground">Buscando opções reais</p>
+                        <p className="text-xs text-muted-foreground">Consultando voos e hotéis disponíveis...</p>
+                      </div>
+                      <div className="flex flex-wrap justify-center gap-4 mt-2 text-[10px] text-muted-foreground/60">
+                        <span className="flex items-center gap-1"><Plane className="h-3 w-3" /> Voos Amadeus</span>
+                        <span className="flex items-center gap-1"><Hotel className="h-3 w-3" /> Hotéis Google Places</span>
+                        <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> IA classificando</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {suggestionsError && !suggestionsLoading && (
+                    <div className="bg-destructive/5 border border-destructive/20 rounded-lg px-4 py-3 text-center">
+                      <AlertCircle className="h-5 w-5 text-destructive/60 mx-auto mb-2" />
+                      <p className="text-xs text-destructive/80">{suggestionsError}</p>
+                    </div>
+                  )}
+
+                  {!suggestionsLoading && (
+                    <>
+                      {/* ── Flight Suggestions ── */}
+                      {flightSuggestions.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <Plane className="h-4 w-4 text-primary" />
+                            <h3 className="text-sm font-semibold text-foreground">Voos Sugeridos</h3>
+                            <Badge variant="outline" className="text-[9px] px-1.5">{flightSuggestions.length} opções</Badge>
+                            {selectedFlightIdx !== null && (
+                              <Badge className="text-[9px] px-1.5 bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                                <Check className="h-2.5 w-2.5 mr-0.5" /> 1 selecionado
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="space-y-3">
+                            {flightSuggestions.map((f, i) => (
+                              <FlightCard
+                                key={i}
+                                flight={f}
+                                index={i}
+                                selected={selectedFlightIdx === i}
+                                onSelect={() => setSelectedFlightIdx(prev => prev === i ? null : i)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* ── Hotel Suggestions ── */}
+                      {Object.keys(hotelSuggestions).length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <Hotel className="h-4 w-4 text-primary" />
+                            <h3 className="text-sm font-semibold text-foreground">Hotéis Sugeridos</h3>
+                            {Object.keys(selectedHotels).length > 0 && (
+                              <Badge className="text-[9px] px-1.5 bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                                <Check className="h-2.5 w-2.5 mr-0.5" /> {Object.keys(selectedHotels).length} selecionado(s)
+                              </Badge>
+                            )}
+                          </div>
+
+                          {Object.entries(hotelSuggestions).map(([city, hotels]) => (
+                            <div key={city} className="mb-4">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <MapPin className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-xs font-semibold text-foreground">{city}</span>
+                                <Badge variant="outline" className="text-[9px] px-1.5">{hotels.length} opções</Badge>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                {hotels.map((h: any, i: number) => (
+                                  <HotelCard
+                                    key={i}
+                                    hotel={h}
+                                    index={i}
+                                    selected={selectedHotels[city] === i}
+                                    onSelect={() => toggleHotelSelection(city, i)}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* No results info */}
+                      {flightSuggestions.length === 0 && Object.keys(hotelSuggestions).length === 0 && !suggestionsError && (
+                        <div className="text-center py-8">
+                          <p className="text-sm text-muted-foreground">Nenhuma sugestão disponível para os parâmetros informados.</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </motion.div>
+              )}
+
               {step === "creating" && (
                 <motion.div
                   key="creating"
@@ -751,10 +1204,40 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
             <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1">
               <Sparkles className="h-2.5 w-2.5" /> Análise contextual por IA — revise antes de criar
             </p>
-            <Button onClick={handleCreateProposal} className="gap-2 h-9">
-              <ArrowRight className="h-4 w-4" />
-              Criar Proposta
+            <div className="flex items-center gap-2">
+              {canSearchSuggestions && (
+                <Button variant="outline" onClick={handleSearchSuggestions} className="gap-2 h-9 text-xs">
+                  <Search className="h-3.5 w-3.5" />
+                  Buscar Voos e Hotéis
+                </Button>
+              )}
+              <Button onClick={handleCreateProposal} className="gap-2 h-9">
+                <ArrowRight className="h-4 w-4" />
+                Criar Proposta
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "suggestions" && !suggestionsLoading && (
+          <div className="px-6 py-4 border-t border-border/50 bg-secondary/20 flex items-center justify-between">
+            <Button variant="ghost" size="sm" onClick={() => setStep("review")} className="gap-1.5 text-xs h-8">
+              <ArrowLeft className="h-3.5 w-3.5" /> Voltar ao briefing
             </Button>
+            <div className="flex items-center gap-3">
+              {hasSelections && (
+                <p className="text-[10px] text-emerald-600 flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {selectedFlightIdx !== null ? "1 voo" : ""}
+                  {selectedFlightIdx !== null && Object.keys(selectedHotels).length > 0 ? " + " : ""}
+                  {Object.keys(selectedHotels).length > 0 ? `${Object.keys(selectedHotels).length} hotel(is)` : ""}
+                </p>
+              )}
+              <Button onClick={handleCreateProposal} className="gap-2 h-9">
+                <ArrowRight className="h-4 w-4" />
+                {hasSelections ? "Criar com seleções" : "Criar sem sugestões"}
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>
