@@ -130,6 +130,48 @@ export default function HotelEntriesEditor({
     });
   };
 
+  const fetchCheckinTimes = async (hotel: HotelEntry) => {
+    if (!hotel.hotel_name) {
+      toast({ title: "Nome do hotel necessário", description: "Preencha o nome do hotel antes de buscar horários", variant: "destructive" });
+      return;
+    }
+    setFetchingTimes(prev => new Set([...prev, hotel.id]));
+    try {
+      const { data, error } = await supabase.functions.invoke("hotel-checkin-times", {
+        body: {
+          hotel_name: hotel.hotel_name,
+          hotel_city: hotel.hotel_city,
+          hotel_country: hotel.hotel_country,
+        },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        onChange(hotels.map(h => {
+          if (h.id !== hotel.id) return h;
+          return {
+            ...h,
+            hotel_checkin_time: data.checkin_time || h.hotel_checkin_time,
+            hotel_checkout_time: data.checkout_time || h.hotel_checkout_time,
+            hotel_checkin_time_source: data.source || "",
+            hotel_checkin_time_notes: data.notes || data.note || "",
+          };
+        }));
+        const conf = data.confidence === "high" ? "✅ alta" : data.confidence === "medium" ? "⚡ média" : "⚠️ baixa";
+        toast({
+          title: "Horários encontrados",
+          description: `Check-in: ${data.checkin_time} · Check-out: ${data.checkout_time} (confiança ${conf})`,
+        });
+      } else {
+        toast({ title: "Não foi possível buscar", description: data?.error || "Tente preencher manualmente", variant: "destructive" });
+      }
+    } catch (err: any) {
+      console.error("Fetch checkin times error:", err);
+      toast({ title: "Erro ao buscar horários", description: err.message, variant: "destructive" });
+    } finally {
+      setFetchingTimes(prev => { const n = new Set(prev); n.delete(hotel.id); return n; });
+    }
+  };
+
   const totalCost = hotels.reduce((sum, h) => sum + calcHotelCost(h), 0);
 
   return (
