@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   Plane, MapPin, Calendar, Users, Heart, Hotel, CreditCard,
   Loader2, RefreshCw, Sparkles, Pencil, Check, X, ChevronDown,
-  ChevronUp, Baby, User, AlertCircle,
+  ChevronUp, AlertCircle, RotateCcw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -110,21 +110,40 @@ export function QuoteSummaryCard({ conversationDbId }: QuoteSummaryCardProps) {
   const [editingField, setEditingField] = useState<string | null>(null);
   const [manualOverrides, setManualOverrides] = useState<Record<string, string>>({});
 
-  const extractQuote = useCallback(async () => {
+  const extractQuote = useCallback(async (forceRebuild = false) => {
     if (!conversationDbId) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("extract-quote-context", {
-        body: { conversationId: conversationDbId },
+      const { data, error } = await supabase.functions.invoke("generate-proposal-briefing", {
+        body: { conversationId: conversationDbId, forceRebuild },
       });
       if (error) throw error;
-      if (data?.quote) {
-        setQuote(data.quote);
-        // Preserve manual overrides
-        setManualOverrides(prev => {
-          const merged = { ...prev };
-          return merged;
-        });
+
+      const briefing = data?.briefing;
+      if (briefing && briefing.confidence !== "none") {
+        const activeCycle = briefing.detected_trip_cycles?.find((cycle: any) => cycle.is_current_demand);
+        const mappedQuote: QuoteData = {
+          origin: briefing.origin,
+          destination: briefing.destination || activeCycle?.destination || null,
+          departure_date: briefing.departure_date,
+          return_date: briefing.return_date,
+          adults: briefing.adults,
+          children: briefing.children,
+          babies: briefing.babies,
+          trip_type: briefing.trip_type,
+          hotel_preference: briefing.hotel_preference,
+          flight_preference: briefing.flight_preference,
+          other_preferences: briefing.other_preferences,
+          budget: briefing.budget,
+          quote_status: activeCycle ? "cotacao_em_andamento" : null,
+          confidence: briefing.confidence,
+          summary: briefing.briefing_summary,
+        };
+        setQuote(mappedQuote);
+        setManualOverrides(prev => ({ ...prev }));
+        if (forceRebuild) {
+          toast({ title: "Contexto reanalisado", description: `Demanda ativa recalculada: ${mappedQuote.destination || "não identificada"}` });
+        }
       } else {
         setQuote(null);
       }
@@ -137,10 +156,9 @@ export function QuoteSummaryCard({ conversationDbId }: QuoteSummaryCardProps) {
     }
   }, [conversationDbId]);
 
-  // Auto-extract on mount
   useEffect(() => {
     if (conversationDbId && !loaded) {
-      extractQuote();
+      extractQuote(false);
     }
   }, [conversationDbId, loaded, extractQuote]);
 
@@ -211,21 +229,25 @@ export function QuoteSummaryCard({ conversationDbId }: QuoteSummaryCardProps) {
                   <p className="text-[11px] text-muted-foreground text-center">
                     Nenhuma cotação identificada nesta conversa.
                   </p>
-                  <Button variant="ghost" size="sm" className="text-[10px] h-6 gap-1" onClick={extractQuote} disabled={loading}>
-                    <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
-                    Tentar novamente
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" className="text-[10px] h-6 gap-1" onClick={() => extractQuote(false)} disabled={loading}>
+                      <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+                      Tentar novamente
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-[10px] h-6 gap-1" onClick={() => extractQuote(true)} disabled={loading}>
+                      <RotateCcw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+                      Reanalisar contexto
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-0.5">
-                  {/* Summary line */}
                   {quote?.summary && (
                     <p className="text-[11px] text-foreground/80 italic mb-2 leading-relaxed bg-primary/5 rounded-md px-2.5 py-1.5 border border-primary/10">
                       "{quote.summary}"
                     </p>
                   )}
 
-                  {/* Status badge */}
                   {statusLabel && (
                     <div className="flex items-center gap-1.5 mb-2">
                       <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
@@ -233,7 +255,6 @@ export function QuoteSummaryCard({ conversationDbId }: QuoteSummaryCardProps) {
                     </div>
                   )}
 
-                  {/* Route */}
                   <FieldRow icon={MapPin} label="Origem" value={getVal("origin")} editable
                     editing={editingField === "origin"} onEdit={() => setEditingField("origin")}
                     onSave={v => handleSaveField("origin", v)} onCancel={() => setEditingField(null)} />
@@ -241,7 +262,6 @@ export function QuoteSummaryCard({ conversationDbId }: QuoteSummaryCardProps) {
                     editing={editingField === "destination"} onEdit={() => setEditingField("destination")}
                     onSave={v => handleSaveField("destination", v)} onCancel={() => setEditingField(null)} />
 
-                  {/* Dates */}
                   <FieldRow icon={Calendar} label="Ida" value={getVal("departure_date")} editable
                     editing={editingField === "departure_date"} onEdit={() => setEditingField("departure_date")}
                     onSave={v => handleSaveField("departure_date", v)} onCancel={() => setEditingField(null)} />
@@ -249,10 +269,8 @@ export function QuoteSummaryCard({ conversationDbId }: QuoteSummaryCardProps) {
                     editing={editingField === "return_date"} onEdit={() => setEditingField("return_date")}
                     onSave={v => handleSaveField("return_date", v)} onCancel={() => setEditingField(null)} />
 
-                  {/* Passengers */}
                   <FieldRow icon={Users} label="Passageiros" value={paxStr} />
 
-                  {/* Trip type */}
                   {tripType && (
                     <div className="flex items-start gap-1.5 py-1">
                       <Heart className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
@@ -265,22 +283,18 @@ export function QuoteSummaryCard({ conversationDbId }: QuoteSummaryCardProps) {
                     </div>
                   )}
 
-                  {/* Budget */}
                   <FieldRow icon={CreditCard} label="Orçamento" value={getVal("budget")} editable
                     editing={editingField === "budget"} onEdit={() => setEditingField("budget")}
                     onSave={v => handleSaveField("budget", v)} onCancel={() => setEditingField(null)} />
 
-                  {/* Hotel */}
                   {getVal("hotel_preference") && (
                     <FieldRow icon={Hotel} label="Hotel" value={getVal("hotel_preference")} />
                   )}
 
-                  {/* Flight pref */}
                   {getVal("flight_preference") && (
                     <FieldRow icon={Plane} label="Preferência de voo" value={getVal("flight_preference")} />
                   )}
 
-                  {/* Other prefs */}
                   {getVal("other_preferences") && (
                     <div className="mt-1.5 bg-secondary/20 rounded-md px-2.5 py-1.5">
                       <span className="text-[9px] text-muted-foreground uppercase tracking-wide">Outras preferências</span>
@@ -288,15 +302,20 @@ export function QuoteSummaryCard({ conversationDbId }: QuoteSummaryCardProps) {
                     </div>
                   )}
 
-                  {/* Refresh button */}
                   <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/20">
                     <span className="text-[9px] text-muted-foreground/50 italic flex items-center gap-1">
-                      <Sparkles className="h-2.5 w-2.5" /> Resumo sugerido por IA
+                      <Sparkles className="h-2.5 w-2.5" /> Cotação baseada na demanda ativa atual
                     </span>
-                    <Button variant="ghost" size="sm" className="text-[10px] h-5 gap-1 px-1.5" onClick={extractQuote} disabled={loading}>
-                      <RefreshCw className={`h-2.5 w-2.5 ${loading ? "animate-spin" : ""}`} />
-                      Atualizar
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button variant="ghost" size="sm" className="text-[10px] h-5 gap-1 px-1.5" onClick={() => extractQuote(false)} disabled={loading}>
+                        <RefreshCw className={`h-2.5 w-2.5 ${loading ? "animate-spin" : ""}`} />
+                        Atualizar
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-[10px] h-5 gap-1 px-1.5" onClick={() => extractQuote(true)} disabled={loading}>
+                        <RotateCcw className={`h-2.5 w-2.5 ${loading ? "animate-spin" : ""}`} />
+                        Rebuild
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -307,3 +326,4 @@ export function QuoteSummaryCard({ conversationDbId }: QuoteSummaryCardProps) {
     </div>
   );
 }
+

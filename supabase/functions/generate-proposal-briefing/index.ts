@@ -13,7 +13,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { conversationId } = await req.json();
+    const { conversationId, forceRebuild = false } = await req.json();
     if (!conversationId) throw new Error("conversationId is required");
 
     const sb = createClient(
@@ -21,16 +21,74 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // ─── LAYER 1: ALL conversation messages (no limit) ───
-    // Fetch in pages to get everything
+    // ─── Conversation metadata + scope resolution ───
+    const { data: conv } = await sb
+      .from("conversations")
+      .select("id, contact_name, display_name, phone, client_id")
+      .eq("id", conversationId)
+      .single();
+
+    const normalizePhone = (v?: string | null) => (v || "").replace(/\D/g, "");
+    const convPhone = normalizePhone(conv?.phone);
+    const phoneCandidates = convPhone
+      ? Array.from(new Set([
+          convPhone,
+          `+${convPhone}`,
+          `${convPhone}@c.us`,
+          `${convPhone}@s.whatsapp.net`,
+          `${convPhone}@g.us`,
+          `${convPhone}-group`,
+        ]))
+      : [];
+
+    let clientName = conv?.display_name || conv?.contact_name || "";
+
+    // Resolve client from sister conversations when current conversation is not linked
+    let clientId = conv?.client_id || null;
+    if (!clientId && phoneCandidates.length > 0) {
+      const { data: linkedByPhone } = await sb
+        .from("conversations")
+        .select("client_id, updated_at")
+        .in("phone", phoneCandidates)
+        .not("client_id", "is", null)
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      clientId = linkedByPhone?.[0]?.client_id || null;
+    }
+
+    // Gather full conversation scope (same WhatsApp number), including current conversation
+    let scopedConversationIds = [conversationId];
+    if (phoneCandidates.length > 0) {
+      const { data: relatedConversations } = await sb
+        .from("conversations")
+        .select("id")
+        .in("phone", phoneCandidates)
+        .order("updated_at", { ascending: false });
+
+      scopedConversationIds = Array.from(new Set([
+        conversationId,
+        ...(relatedConversations || []).map((c) => c.id),
+      ]));
+    }
+
+    // Optional forensic reset/rebuild for this client scope
+    if (forceRebuild) {
+      if (clientId) {
+        await sb.from("client_trip_memory").delete().eq("client_id", clientId);
+      } else {
+        await sb.from("client_trip_memory").delete().in("conversation_id", scopedConversationIds);
+      }
+    }
+
+    // ─── LAYER 1: ALL conversation messages in scope (no limit) ───
     let allMessages: any[] = [];
     let page = 0;
     const PAGE_SIZE = 1000;
     while (true) {
       const { data: batch, error: batchErr } = await sb
         .from("conversation_messages")
-        .select("content, sender_type, created_at, message_type, direction")
-        .eq("conversation_id", conversationId)
+        .select("content, sender_type, created_at, message_type, direction, conversation_id")
+        .in("conversation_id", scopedConversationIds)
         .order("created_at", { ascending: true })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
       if (batchErr) throw batchErr;
@@ -45,16 +103,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // ─── Conversation metadata ───
-    const { data: conv } = await sb
-      .from("conversations")
-      .select("contact_name, display_name, phone, client_id")
-      .eq("id", conversationId)
-      .single();
-
-    let clientName = conv?.display_name || conv?.contact_name || "";
-    const clientId = conv?.client_id || null;
 
     // ─── LAYER 2: Client commercial history ───
     let clientContext = "";

@@ -694,15 +694,19 @@ function OperacaoInboxInner() {
           for (const dc of dbConvs) {
             const existing = byId.get(dc.id);
             if (existing) {
+              const dcTime = new Date(dc.last_message_at || 0).getTime();
+              const existingTime = new Date(existing.last_message_at || 0).getTime();
+              const incomingIsFresher = dcTime >= existingTime;
+
               byId.set(dc.id, {
                 ...existing,
-                db_id: dc.db_id || existing.db_id,
-                stage: dc.stage !== "novo_lead" ? dc.stage : existing.stage,
-                tags: dc.tags.length > 0 ? dc.tags : existing.tags,
-                contact_name: dc.contact_name !== "Novo Contato" ? dc.contact_name : existing.contact_name,
+                db_id: incomingIsFresher ? (dc.db_id || existing.db_id) : existing.db_id,
+                stage: incomingIsFresher && dc.stage !== "novo_lead" ? dc.stage : existing.stage,
+                tags: incomingIsFresher && dc.tags.length > 0 ? dc.tags : existing.tags,
+                contact_name: incomingIsFresher && dc.contact_name !== "Novo Contato" ? dc.contact_name : existing.contact_name,
                 unread_count: Math.max(dc.unread_count, existing.unread_count),
-                last_message_at: new Date(dc.last_message_at) > new Date(existing.last_message_at) ? dc.last_message_at : existing.last_message_at,
-                last_message_preview: new Date(dc.last_message_at) > new Date(existing.last_message_at) ? (dc.last_message_preview || existing.last_message_preview) : existing.last_message_preview,
+                last_message_at: incomingIsFresher ? dc.last_message_at : existing.last_message_at,
+                last_message_preview: incomingIsFresher ? (dc.last_message_preview || existing.last_message_preview) : existing.last_message_preview,
               });
             } else {
               byId.set(dc.id, dc);
