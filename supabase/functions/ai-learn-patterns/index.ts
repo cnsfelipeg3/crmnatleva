@@ -123,6 +123,9 @@ serve(async (req) => {
         sample_size: totalSample,
         estimated_impact: "alto",
         data_source: "proposals",
+        function_area: "perfil_cliente",
+        tags: [profile, best[0], "perfil", "segmentacao"],
+        origin_context: `perfil de cliente ${profile}`,
       });
     }
 
