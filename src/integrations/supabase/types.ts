@@ -488,12 +488,17 @@ export type Database = {
           description: string | null
           detected_rule: string
           estimated_impact: string | null
+          function_area: string | null
           id: string
           is_active: boolean
           is_promoted: boolean
           metadata: Json | null
+          origin_context: string | null
           promoted_to_rule_id: string | null
+          related_pattern_ids: string[] | null
           sample_size: number
+          subcategory: string | null
+          tags: string[] | null
           title: string
           updated_at: string
         }
@@ -505,12 +510,17 @@ export type Database = {
           description?: string | null
           detected_rule: string
           estimated_impact?: string | null
+          function_area?: string | null
           id?: string
           is_active?: boolean
           is_promoted?: boolean
           metadata?: Json | null
+          origin_context?: string | null
           promoted_to_rule_id?: string | null
+          related_pattern_ids?: string[] | null
           sample_size?: number
+          subcategory?: string | null
+          tags?: string[] | null
           title: string
           updated_at?: string
         }
@@ -522,12 +532,17 @@ export type Database = {
           description?: string | null
           detected_rule?: string
           estimated_impact?: string | null
+          function_area?: string | null
           id?: string
           is_active?: boolean
           is_promoted?: boolean
           metadata?: Json | null
+          origin_context?: string | null
           promoted_to_rule_id?: string | null
+          related_pattern_ids?: string[] | null
           sample_size?: number
+          subcategory?: string | null
+          tags?: string[] | null
           title?: string
           updated_at?: string
         }
@@ -654,43 +669,67 @@ export type Database = {
       ai_strategy_knowledge: {
         Row: {
           category: string
+          confidence: number | null
+          context: string | null
           created_at: string
           created_by: string | null
           description: string | null
+          estimated_impact: string | null
           example: string | null
+          function_area: string | null
           id: string
           is_active: boolean
+          origin_type: string | null
           priority: number
+          related_rule_ids: string[] | null
           rule: string
+          status: string | null
           subcategory: string | null
+          tags: string[] | null
           title: string
           updated_at: string
         }
         Insert: {
           category?: string
+          confidence?: number | null
+          context?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          estimated_impact?: string | null
           example?: string | null
+          function_area?: string | null
           id?: string
           is_active?: boolean
+          origin_type?: string | null
           priority?: number
+          related_rule_ids?: string[] | null
           rule: string
+          status?: string | null
           subcategory?: string | null
+          tags?: string[] | null
           title: string
           updated_at?: string
         }
         Update: {
           category?: string
+          confidence?: number | null
+          context?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
+          estimated_impact?: string | null
           example?: string | null
+          function_area?: string | null
           id?: string
           is_active?: boolean
+          origin_type?: string | null
           priority?: number
+          related_rule_ids?: string[] | null
           rule?: string
+          status?: string | null
           subcategory?: string | null
+          tags?: string[] | null
           title?: string
           updated_at?: string
         }

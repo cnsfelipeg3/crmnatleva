@@ -2,21 +2,24 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Brain, ChevronLeft, Loader2, RefreshCw, TrendingUp,
-  Target, Lightbulb, ArrowUpRight, CheckCircle2, XCircle,
-  BarChart3, Clock,
+  Target, Lightbulb, ArrowUpRight, CheckCircle2,
+  BarChart3, Clock, Search, Filter, Tag,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface LearnedPattern {
   id: string;
   category: string;
+  subcategory: string | null;
   title: string;
   description: string | null;
   detected_rule: string;
@@ -28,6 +31,10 @@ interface LearnedPattern {
   promoted_to_rule_id: string | null;
   created_at: string;
   updated_at: string;
+  tags: string[];
+  function_area: string;
+  data_source: string | null;
+  origin_context: string | null;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -37,6 +44,18 @@ const CATEGORY_LABELS: Record<string, string> = {
   timing_comercial: "Timing Comercial",
   analise_perdas: "Análise de Perdas",
   geral: "Geral",
+};
+
+const FUNCTION_LABELS: Record<string, string> = {
+  geral: "Geral",
+  interpretacao_conversa: "Interpretação de Conversa",
+  proposta_ia: "Proposta IA",
+  sugestao_voos: "Sugestão de Voos",
+  sugestao_hoteis: "Sugestão de Hotéis",
+  estrategia_comercial: "Estratégia Comercial",
+  follow_up: "Follow-up",
+  pricing: "Pricing",
+  perfil_cliente: "Perfil do Cliente",
 };
 
 const IMPACT_COLORS: Record<string, string> = {
@@ -51,6 +70,10 @@ export default function AILearningDashboard() {
   const [eventsCount, setEventsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filterCat, setFilterCat] = useState("all");
+  const [filterImpact, setFilterImpact] = useState("all");
+  const [filterTag, setFilterTag] = useState("");
 
   const fetchData = async () => {
     setLoading(true);
@@ -64,6 +87,20 @@ export default function AILearningDashboard() {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const allTags = [...new Set(patterns.flatMap(p => p.tags || []))].sort();
+  const allCategories = [...new Set(patterns.map(p => p.category))];
+
+  const filtered = patterns.filter(p => {
+    if (filterCat !== "all" && p.category !== filterCat) return false;
+    if (filterImpact !== "all" && p.estimated_impact !== filterImpact) return false;
+    if (filterTag && !(p.tags || []).includes(filterTag)) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return p.title.toLowerCase().includes(q) || p.detected_rule.toLowerCase().includes(q) || (p.tags || []).some(t => t.includes(q));
+    }
+    return true;
+  });
 
   const runAnalysis = async () => {
     setAnalyzing(true);
@@ -92,6 +129,12 @@ export default function AILearningDashboard() {
       example: `Confiança: ${p.confidence}% | Amostra: ${p.sample_size} | Impacto: ${p.estimated_impact}`,
       priority: Math.round(p.confidence / 10),
       is_active: true,
+      origin_type: "learned",
+      status: "validated",
+      confidence: p.confidence,
+      estimated_impact: p.estimated_impact,
+      function_area: p.function_area || "geral",
+      tags: p.tags || [],
     } as any).select("id").single();
 
     if (error) {
@@ -112,6 +155,7 @@ export default function AILearningDashboard() {
   const avgConfidence = patterns.length > 0
     ? Math.round(patterns.reduce((s, p) => s + p.confidence, 0) / patterns.length)
     : 0;
+  const highImpact = patterns.filter(p => p.estimated_impact === "alto").length;
 
   return (
     <div className="space-y-6">
@@ -137,16 +181,16 @@ export default function AILearningDashboard() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <Card><CardContent className="p-4 text-center">
           <BarChart3 className="h-5 w-5 mx-auto mb-1 text-primary" />
           <p className="text-2xl font-bold text-foreground">{eventsCount}</p>
-          <p className="text-xs text-muted-foreground">Eventos registrados</p>
+          <p className="text-xs text-muted-foreground">Eventos</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
           <Lightbulb className="h-5 w-5 mx-auto mb-1 text-yellow-500" />
           <p className="text-2xl font-bold text-foreground">{patterns.length}</p>
-          <p className="text-xs text-muted-foreground">Padrões detectados</p>
+          <p className="text-xs text-muted-foreground">Padrões</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
           <Target className="h-5 w-5 mx-auto mb-1 text-green-500" />
@@ -163,25 +207,75 @@ export default function AILearningDashboard() {
           <p className="text-2xl font-bold text-foreground">{avgConfidence}%</p>
           <p className="text-xs text-muted-foreground">Confiança média</p>
         </CardContent></Card>
+        <Card><CardContent className="p-4 text-center">
+          <Target className="h-5 w-5 mx-auto mb-1 text-red-500" />
+          <p className="text-2xl font-bold text-foreground">{highImpact}</p>
+          <p className="text-xs text-muted-foreground">Alto impacto</p>
+        </CardContent></Card>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[180px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Buscar padrões..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <Select value={filterCat} onValueChange={setFilterCat}>
+          <SelectTrigger className="w-[180px]">
+            <Filter className="h-4 w-4 mr-1" />
+            <SelectValue placeholder="Categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas categorias</SelectItem>
+            {allCategories.map(c => (
+              <SelectItem key={c} value={c}>{CATEGORY_LABELS[c] || c}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterImpact} onValueChange={setFilterImpact}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Impacto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todo impacto</SelectItem>
+            <SelectItem value="alto">Alto</SelectItem>
+            <SelectItem value="médio">Médio</SelectItem>
+            <SelectItem value="baixo">Baixo</SelectItem>
+          </SelectContent>
+        </Select>
+        {allTags.length > 0 && (
+          <Select value={filterTag} onValueChange={setFilterTag}>
+            <SelectTrigger className="w-[140px]">
+              <Tag className="h-3 w-3 mr-1" />
+              <SelectValue placeholder="Tag" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Todas tags</SelectItem>
+              {allTags.map(t => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Patterns List */}
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-      ) : patterns.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Brain className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p className="font-medium">Nenhum padrão detectado ainda</p>
+            <p className="font-medium">Nenhum padrão encontrado</p>
             <p className="text-sm mt-1">
               Registre eventos de propostas e clique em "Analisar Agora" para a IA começar a aprender.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <ScrollArea className="h-[calc(100vh-380px)]">
+        <ScrollArea className="h-[calc(100vh-440px)]">
           <div className="space-y-3">
-            {patterns.map((p) => (
+            {filtered.map((p) => (
               <Card key={p.id} className={`transition-opacity ${!p.is_active ? "opacity-50" : ""} ${p.is_promoted ? "border-primary/30 bg-primary/5" : ""}`}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
@@ -210,7 +304,7 @@ export default function AILearningDashboard() {
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground leading-relaxed">{p.detected_rule}</p>
-                      <div className="flex items-center gap-4 mt-2">
+                      <div className="flex items-center gap-4 mt-2 flex-wrap">
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs text-muted-foreground">Confiança:</span>
                           <Progress value={p.confidence} className="w-20 h-1.5" />
@@ -219,11 +313,23 @@ export default function AILearningDashboard() {
                         <span className="text-xs text-muted-foreground">
                           Amostra: {p.sample_size}
                         </span>
+                        {p.function_area && p.function_area !== "geral" && (
+                          <span className="text-xs text-muted-foreground">
+                            📍 {FUNCTION_LABELS[p.function_area] || p.function_area}
+                          </span>
+                        )}
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                           <Clock className="h-3 w-3" />
                           {new Date(p.updated_at).toLocaleDateString("pt-BR")}
                         </span>
                       </div>
+                      {(p.tags || []).length > 0 && (
+                        <div className="flex gap-1 flex-wrap mt-1.5">
+                          {p.tags.map(tag => (
+                            <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">{tag}</Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <Switch checked={p.is_active} onCheckedChange={() => toggleActive(p)} />

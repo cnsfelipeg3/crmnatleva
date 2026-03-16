@@ -56,6 +56,9 @@ serve(async (req) => {
         sample_size: stats.total,
         estimated_impact: rate >= 50 ? "alto" : rate >= 30 ? "médio" : "baixo",
         data_source: "proposals",
+        function_area: "estrategia_comercial",
+        tags: [strategy, "taxa_conversao"],
+        origin_context: "análise global de estratégias",
       });
     }
 
@@ -86,6 +89,9 @@ serve(async (req) => {
         sample_size: totalSample,
         estimated_impact: "alto",
         data_source: "proposals",
+        function_area: "proposta_ia",
+        tags: [dest, best[0], "destino", "alta_conversao"],
+        origin_context: `destino ${dest}`,
       });
     }
 
@@ -117,6 +123,9 @@ serve(async (req) => {
         sample_size: totalSample,
         estimated_impact: "alto",
         data_source: "proposals",
+        function_area: "perfil_cliente",
+        tags: [profile, best[0], "perfil", "segmentacao"],
+        origin_context: `perfil de cliente ${profile}`,
       });
     }
 
@@ -134,6 +143,9 @@ serve(async (req) => {
         sample_size: closedEvents.length,
         estimated_impact: "médio",
         data_source: "proposals",
+        function_area: "follow_up",
+        tags: ["timing", "follow_up", "ciclo_venda"],
+        origin_context: "análise de tempo até fechamento",
       });
     }
 
@@ -156,6 +168,9 @@ serve(async (req) => {
         sample_size: topLoss[0][1],
         estimated_impact: "alto",
         data_source: "proposals",
+        function_area: "objecoes",
+        tags: [topLoss[0][0], "perda", "objecao"],
+        origin_context: "análise de motivos de perda",
       });
     }
 
