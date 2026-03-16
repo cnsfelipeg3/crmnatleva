@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check } from "lucide-react";
+import { emitLearningEvent, emitProposalOutcome } from "@/lib/learningEvents";
 import ProposalPreviewRenderer from "@/components/proposal/ProposalPreviewRenderer";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import HotelPhotosScraper from "@/components/HotelPhotosScraper";
@@ -335,6 +336,31 @@ export default function ProposalEditor() {
     onSuccess: (proposalId) => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
       toast.success("Proposta salva com sucesso!");
+
+      // Emit learning events
+      if (isNew) {
+        emitLearningEvent({
+          event_type: "proposal_created",
+          proposal_id: proposalId as string,
+          strategy_chosen: form.proposal_strategy || undefined,
+          destination: form.destinations?.[0] || undefined,
+          passenger_count: form.passenger_count,
+          created_by: user?.id,
+        });
+      }
+
+      // If outcome changed from pending to won/lost/expired
+      if (form.proposal_outcome !== "pending" && existing?.proposal_outcome !== form.proposal_outcome) {
+        emitProposalOutcome({
+          proposalId: proposalId as string,
+          outcome: form.proposal_outcome as "won" | "lost" | "expired",
+          strategy: form.proposal_strategy,
+          destination: form.destinations?.[0],
+          createdAt: existing?.created_at,
+          userId: user?.id,
+        });
+      }
+
       if (isNew) navigate(`/propostas/${proposalId}`, { replace: true });
     },
     onError: (err: any) => toast.error(err.message),

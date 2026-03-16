@@ -10,7 +10,7 @@ import {
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
   GitBranch, Plug, Zap, BookOpen, FileDown, Presentation, RotateCcw,
   Inbox, Bot, Tag, TestTube, ScrollText, PackageOpen, Upload, Database, Globe,
-  PlaneTakeoff, Image as ImageIcon,
+  PlaneTakeoff, Image as ImageIcon, Lightbulb,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -205,6 +205,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/livechat/import-chatguru", icon: FileDown, label: "Importar Conversas" },
               { to: "/implementacao/base-conhecimento", icon: BookOpen, label: "Base de Conhecimento" },
               { to: "/implementacao/estrategia-ia", icon: Brain, label: "Estratégia IA" },
+              { to: "/implementacao/aprendizados-ia", icon: Lightbulb, label: "Aprendizados IA" },
             ].map((item) => renderNavItem(item, true))}
           </div>
         )}
