@@ -127,7 +127,7 @@ export default function AIStrategyKnowledge() {
   const [filterFunction, setFilterFunction] = useState("all");
   const [filterOrigin, setFilterOrigin] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [filterTag, setFilterTag] = useState("");
+  const [filterTag, setFilterTag] = useState("all");
   const [editOpen, setEditOpen] = useState(false);
   const [editRule, setEditRule] = useState<Partial<StrategyRule> & typeof emptyRule>(emptyRule);
   const [saving, setSaving] = useState(false);
@@ -154,7 +154,7 @@ export default function AIStrategyKnowledge() {
     if (filterFunction !== "all" && r.function_area !== filterFunction) return false;
     if (filterOrigin !== "all" && r.origin_type !== filterOrigin) return false;
     if (filterStatus !== "all" && r.status !== filterStatus) return false;
-    if (filterTag && !(r.tags || []).includes(filterTag)) return false;
+    if (filterTag !== "all" && !(r.tags || []).includes(filterTag)) return false;
     if (search) {
       const q = search.toLowerCase();
       return r.title.toLowerCase().includes(q) || r.rule.toLowerCase().includes(q) || (r.tags || []).some(t => t.toLowerCase().includes(q));
@@ -516,7 +516,7 @@ export default function AIStrategyKnowledge() {
               <SelectValue placeholder="Tag" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas tags</SelectItem>
+              <SelectItem value="all">Todas tags</SelectItem>
               {allTags.map((t) => (
                 <SelectItem key={t} value={t}>{t}</SelectItem>
               ))}
@@ -725,10 +725,10 @@ export default function AIStrategyKnowledge() {
                 </div>
                 <div>
                   <Label>Impacto Estimado</Label>
-                  <Select value={editRule.estimated_impact || ""} onValueChange={(v) => setEditRule({ ...editRule, estimated_impact: v || null })}>
+                  <Select value={editRule.estimated_impact || "none"} onValueChange={(v) => setEditRule({ ...editRule, estimated_impact: v === "none" ? null : v })}>
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Não definido</SelectItem>
+                      <SelectItem value="none">Não definido</SelectItem>
                       {IMPACT_OPTIONS.map((i) => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
