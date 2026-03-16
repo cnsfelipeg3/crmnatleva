@@ -88,6 +88,53 @@ interface PackageData {
   highlight?: string;
 }
 
+// Heuristic win probability based on client profile + tier
+// This will be replaced by ML model once enough outcome data exists
+function estimateWinProbability(
+  tier: string,
+  briefing: ProposalBriefing | null,
+  clientTags?: string[],
+): { percent: number; label: string; color: string } {
+  let base = tier === "conforto" ? 55 : tier === "essencial" ? 40 : 35;
+  const profile = (briefing?.client_profile || "").toLowerCase();
+  const tripType = (briefing?.trip_type || "").toLowerCase();
+  const urgency = (briefing?.urgency_level || "").toLowerCase();
+
+  // Profile adjustments
+  if (profile.includes("premium") || profile.includes("luxo")) {
+    if (tier === "premium") base += 20;
+    if (tier === "essencial") base -= 10;
+  }
+  if (profile.includes("econôm") || profile.includes("econom") || profile.includes("sensível")) {
+    if (tier === "essencial") base += 15;
+    if (tier === "premium") base -= 15;
+  }
+
+  // Trip type adjustments
+  if (tripType.includes("lua de mel") || tripType.includes("honeymoon")) {
+    if (tier === "premium") base += 10;
+    if (tier === "conforto") base += 5;
+  }
+  if (tripType.includes("famíl") || tripType.includes("familia")) {
+    if (tier === "conforto") base += 10;
+  }
+
+  // Urgency boost
+  if (urgency === "alta") base += 5;
+
+  // Tags
+  if (clientTags?.includes("VIP") || clientTags?.includes("Premium")) {
+    if (tier === "premium") base += 8;
+  }
+  if (clientTags?.includes("Econômico")) {
+    if (tier === "essencial") base += 10;
+  }
+
+  const clamped = Math.max(15, Math.min(85, base));
+  const color = clamped >= 60 ? "text-emerald-600" : clamped >= 40 ? "text-amber-600" : "text-muted-foreground";
+  return { percent: clamped, label: `${clamped}%`, color };
+}
+
 const CONFIDENCE_MAP: Record<string, { label: string; className: string }> = {
   high: { label: "Alta confiança", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
   medium: { label: "Média confiança", className: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
