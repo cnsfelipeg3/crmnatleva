@@ -150,7 +150,9 @@ Deno.serve(async (req) => {
     }
 
     const targetUrl = getValidatedUrl(imageUrl);
+    console.log(`[image-proxy] Processing: ${imageUrl}`);
     const candidates = buildCandidateUrls(targetUrl, refererUrl);
+    console.log(`[image-proxy] Candidates: ${candidates.map(c => c.toString()).join(', ')}`);
 
     for (const candidate of candidates) {
       const upstreamResponse = await fetchImageCandidate(candidate, refererUrl);
