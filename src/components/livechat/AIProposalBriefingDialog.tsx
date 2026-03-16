@@ -422,10 +422,15 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                         className="flex items-center gap-2 w-full text-left px-4 py-2.5 bg-secondary/20 hover:bg-secondary/30 transition-colors"
                       >
                         <History className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-xs font-semibold text-foreground">Contexto Histórico do Cliente</span>
+                        <span className="text-xs font-semibold text-foreground">Jornada de Viagens do Cliente</span>
+                        {hasCycles && (
+                          <Badge variant="outline" className="text-[9px] px-1.5">
+                            {briefing.detected_trip_cycles!.length} ciclo{briefing.detected_trip_cycles!.length > 1 ? "s" : ""}
+                          </Badge>
+                        )}
                         {briefing.discarded_topics?.length ? (
                           <Badge variant="outline" className="text-[9px] px-1.5">
-                            {briefing.discarded_topics.length} assunto{briefing.discarded_topics.length > 1 ? "s" : ""} descartado{briefing.discarded_topics.length > 1 ? "s" : ""}
+                            {briefing.discarded_topics.length} descartado{briefing.discarded_topics.length > 1 ? "s" : ""}
                           </Badge>
                         ) : null}
                         {showHistory ? <EyeOff className="h-3 w-3 ml-auto text-muted-foreground" /> : <Eye className="h-3 w-3 ml-auto text-muted-foreground" />}
