@@ -91,15 +91,24 @@ async function fetchImageCandidate(candidate: URL, refererUrl?: URL): Promise<Re
         headers: {
           Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          ...(referer ? { Referer: referer } : {}),
+          ...(referer ? { Referer: referer, Origin: new URL(referer).origin } : {}),
         },
       });
 
-      if (!response.ok || !response.body) continue;
+      if (!response.ok || !response.body) {
+        await response.text().catch(() => {}); // consume body
+        continue;
+      }
 
       const contentType = response.headers.get("content-type") || "";
-      // Accept any image content type, or octet-stream (some CDNs use it)
-      if (!contentType.toLowerCase().startsWith("image/") && !contentType.includes("octet-stream")) continue;
+      // Accept image types, octet-stream, or empty content-type (some CDNs)
+      const isImageLike = contentType.toLowerCase().startsWith("image/") || 
+                          contentType.includes("octet-stream") ||
+                          !contentType;
+      if (!isImageLike) {
+        await response.text().catch(() => {}); // consume body
+        continue;
+      }
 
       return response;
     } catch {
