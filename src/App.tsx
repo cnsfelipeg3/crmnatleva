@@ -89,6 +89,7 @@ const PortalAdminConfig = lazy(() => import("@/pages/portal-admin/PortalAdminCon
 // Implementação
 const BaseConhecimento = lazy(() => import("@/pages/implementacao/BaseConhecimento"));
 const AIStrategyKnowledge = lazy(() => import("@/pages/AIStrategyKnowledge"));
+const AILearningDashboard = lazy(() => import("@/pages/AILearningDashboard"));
 
 // Portal do Cliente
 const PortalLogin = lazy(() => import("@/pages/portal/PortalLogin"));
