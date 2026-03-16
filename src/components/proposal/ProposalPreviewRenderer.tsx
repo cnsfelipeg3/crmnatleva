@@ -669,7 +669,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── HOTELS ──── */}
       {hotels.length > 0 && (
-        <section className="py-12 sm:py-20 px-6">
+        <section data-track-section="hotels" className="py-12 sm:py-20 px-6">
           <SectionTitle subtitle="Clique para explorar fotos, quartos e avaliações">Hospedagens</SectionTitle>
           <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
             {hotels.map((h, idx) => <HotelCard key={h.id || idx} hotel={h} idx={idx} />)}
