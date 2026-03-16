@@ -640,7 +640,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── DESTINATIONS ──── */}
       {(destinations.length > 0 || (proposal.destinations?.length > 0 && destinations.length === 0)) && (
-        <section className="py-12 sm:py-20 px-6">
+        <section data-track-section="destinations" className="py-12 sm:py-20 px-6">
           <SectionTitle subtitle="Os lugares que você vai explorar">Seus Destinos</SectionTitle>
           <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {(destinations.length > 0 ? destinations : proposal.destinations.map((d: string, i: number) => ({ title: d, image_url: null, description: null, id: i }))).map((dest: any, idx: number) => (
