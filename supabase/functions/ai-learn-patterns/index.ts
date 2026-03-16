@@ -168,6 +168,9 @@ serve(async (req) => {
         sample_size: topLoss[0][1],
         estimated_impact: "alto",
         data_source: "proposals",
+        function_area: "objecoes",
+        tags: [topLoss[0][0], "perda", "objecao"],
+        origin_context: "análise de motivos de perda",
       });
     }
 
