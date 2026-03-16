@@ -163,8 +163,8 @@ Deno.serve(async (req) => {
       // Read image into ArrayBuffer
       const imageBytes = await upstreamResponse.arrayBuffer();
 
-      if (imageBytes.byteLength < 500) {
-        // Likely an error page or placeholder, skip
+      if (imageBytes.byteLength < 100) {
+        // Likely an error page, skip
         continue;
       }
 
