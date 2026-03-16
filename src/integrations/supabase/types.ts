@@ -4106,6 +4106,7 @@ export type Database = {
           origin: string | null
           passenger_count: number | null
           payment_conditions: Json | null
+          proposal_strategy: string | null
           sale_id: string | null
           slug: string
           status: string
@@ -4131,6 +4132,7 @@ export type Database = {
           origin?: string | null
           passenger_count?: number | null
           payment_conditions?: Json | null
+          proposal_strategy?: string | null
           sale_id?: string | null
           slug: string
           status?: string
@@ -4156,6 +4158,7 @@ export type Database = {
           origin?: string | null
           passenger_count?: number | null
           payment_conditions?: Json | null
+          proposal_strategy?: string | null
           sale_id?: string | null
           slug?: string
           status?: string

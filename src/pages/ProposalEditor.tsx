@@ -59,6 +59,7 @@ export default function ProposalEditor() {
   const prefillNotes = searchParams.get("notes") || "";
   const prefillItinerary = searchParams.get("itinerary") || "";
   const hasAiStructure = searchParams.get("has_structure") === "1";
+  const prefillStrategy = searchParams.get("proposal_strategy") || "";
 
   const defaultIntro = "Preparamos uma experiência exclusiva para sua viagem, combinando destinos icônicos, hospedagens selecionadas e uma logística cuidadosamente planejada.";
 
@@ -77,6 +78,7 @@ export default function ProposalEditor() {
     total_value: "",
     value_per_person: "",
     payment_conditions: [] as { method: string; details: string }[],
+    proposal_strategy: prefillStrategy,
   });
 
   const [items, setItems] = useState<any[]>([]);
@@ -132,6 +134,7 @@ export default function ProposalEditor() {
         total_value: existing.total_value?.toString() || "",
         value_per_person: existing.value_per_person?.toString() || "",
         payment_conditions: (existing.payment_conditions as any[]) || [],
+        proposal_strategy: (existing as any).proposal_strategy || "",
       });
     }
   }, [existing]);
@@ -275,7 +278,7 @@ export default function ProposalEditor() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       const slug = existing?.slug || generateSlug();
-      const payload = {
+      const payload: Record<string, any> = {
         title: form.title,
         client_name: form.client_name,
         origin: form.origin,
@@ -290,6 +293,7 @@ export default function ProposalEditor() {
         total_value: form.total_value ? parseFloat(form.total_value) : null,
         value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
         payment_conditions: form.payment_conditions,
+        proposal_strategy: form.proposal_strategy || null,
         slug,
         created_by: user?.id,
         updated_at: new Date().toISOString(),
@@ -297,11 +301,11 @@ export default function ProposalEditor() {
 
       let proposalId = id;
       if (isNew) {
-        const { data, error } = await supabase.from("proposals").insert(payload).select("id").single();
+        const { data, error } = await supabase.from("proposals").insert(payload as any).select("id").single();
         if (error) throw error;
         proposalId = data.id;
       } else {
-        const { error } = await supabase.from("proposals").update(payload).eq("id", id);
+        const { error } = await supabase.from("proposals").update(payload as any).eq("id", id);
         if (error) throw error;
       }
 

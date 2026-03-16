@@ -104,10 +104,10 @@ const STAGES: { key: Stage; label: string; color: string }[] = [
 ];
 
 const ALL_TAGS = [
-  "Instagram", "WebMotors", "OLX", "Indicação",
-  "SUV", "Sedan", "Esportivo", "Blindado",
-  "100-150k", "150-250k", "250k+",
-  "Urgente", "Financiamento", "À vista", "Trade-in", "VIP", "Alto potencial", "Risco",
+  "Instagram", "WhatsApp", "Indicação", "Site", "Google",
+  "Nacional", "Internacional", "Lua de mel", "Família", "Corporativo",
+  "Urgente", "VIP", "Alto potencial", "Risco", "Recorrente",
+  "All Inclusive", "Milhas", "Econômico", "Premium",
 ];
 
 const FILTERS = [

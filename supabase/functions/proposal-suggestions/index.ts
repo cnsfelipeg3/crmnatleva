@@ -193,7 +193,27 @@ Para cada pacote, selecione o voo e hotel mais adequado ao perfil do pacote. Adi
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
       const parsed = JSON.parse(toolCall.function.arguments);
-      return parsed.packages || buildPackagesFallback(flights, hotels);
+      const packages = parsed.packages || [];
+      if (packages.length > 0) {
+        // Validate bounds: clamp flight_index and hotel_selections to valid ranges
+        const maxFlightIdx = flights.length - 1;
+        for (const pkg of packages) {
+          if (typeof pkg.flight_index === "number") {
+            pkg.flight_index = Math.max(0, Math.min(pkg.flight_index, maxFlightIdx));
+          } else {
+            pkg.flight_index = 0;
+          }
+          if (pkg.hotel_selections && typeof pkg.hotel_selections === "object") {
+            for (const [city, idx] of Object.entries(pkg.hotel_selections)) {
+              const maxHotelIdx = (hotels[city]?.length || 1) - 1;
+              const numIdx = typeof idx === "number" ? idx : 0;
+              pkg.hotel_selections[city] = Math.max(0, Math.min(numIdx, maxHotelIdx));
+            }
+          }
+        }
+        return packages;
+      }
+      return buildPackagesFallback(flights, hotels);
     }
     return buildPackagesFallback(flights, hotels);
   } catch (e) {
