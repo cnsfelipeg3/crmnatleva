@@ -37,6 +37,7 @@ import { LiveChatSimulator } from "@/components/livechat/LiveChatSimulator";
 import { LiveChatLogs } from "@/components/livechat/LiveChatLogs";
 import { AudioWaveformPlayer } from "@/components/livechat/AudioWaveformPlayer";
 import { AISuggestionPanel } from "@/components/livechat/AISuggestionPanel";
+import { BuyingMomentAlert } from "@/components/livechat/BuyingMomentAlert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { initPersistence, persistConversation, persistMessages, loadPersistedMessages } from "@/hooks/useChatPersistence";
