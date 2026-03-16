@@ -131,6 +131,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
   const [addingNote, setAddingNote] = useState(false);
   const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
+  const [showBriefingDialog, setShowBriefingDialog] = useState(false);
 
   const initials = conversation.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
