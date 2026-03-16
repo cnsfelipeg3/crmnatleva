@@ -47,12 +47,12 @@ async function searchHotelsGooglePlaces(city: string, country?: string): Promise
 
   const query = `hotels in ${city}${country ? `, ${country}` : ""}`;
   const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&type=lodging&key=${apiKey}&language=pt-BR`;
-  
+
   try {
     const res = await fetch(url);
     if (!res.ok) { await res.text(); return []; }
     const data = await res.json();
-    return (data.results || []).slice(0, 8).map((p: any) => ({
+    return (data.results || []).slice(0, 10).map((p: any) => ({
       name: p.name,
       address: p.formatted_address || "",
       rating: p.rating || null,
@@ -74,15 +74,52 @@ function getPhotoUrl(photoRef: string): string {
   return `https://maps.googleapis.com/maps/api/place/photo?maxwidth=600&photo_reference=${photoRef}&key=${apiKey}`;
 }
 
-// ── AI Classification ──
-async function classifyWithAI(flights: any[], hotels: Record<string, any[]>, briefing: any): Promise<any> {
+// ── IATA Resolution ──
+const CITY_TO_IATA: Record<string, string> = {
+  "tóquio": "TYO", "tokyo": "TYO", "osaka": "OSA", "quioto": "UKY", "kyoto": "UKY",
+  "rio de janeiro": "GIG", "são paulo": "GRU", "sao paulo": "GRU",
+  "paris": "PAR", "londres": "LON", "london": "LON", "roma": "ROM", "rome": "ROM",
+  "nova york": "NYC", "new york": "NYC", "miami": "MIA", "orlando": "MCO",
+  "dubai": "DXB", "bangkok": "BKK", "singapura": "SIN", "singapore": "SIN",
+  "lisboa": "LIS", "lisbon": "LIS", "madrid": "MAD", "barcelona": "BCN",
+  "buenos aires": "EZE", "santiago": "SCL", "cancun": "CUN", "cancún": "CUN",
+  "punta cana": "PUJ", "cairo": "CAI", "istambul": "IST", "istanbul": "IST",
+  "florença": "FLR", "florence": "FLR", "milão": "MXP", "milan": "MXP",
+  "veneza": "VCE", "venice": "VCE", "amsterdam": "AMS", "berlim": "TXL", "berlin": "TXL",
+  "zurique": "ZRH", "zurich": "ZRH", "munique": "MUC", "munich": "MUC",
+  "atenas": "ATH", "athens": "ATH", "marrakech": "RAK", "bariloche": "BRC",
+  "salvador": "SSA", "recife": "REC", "natal": "NAT", "fortaleza": "FOR",
+  "florianópolis": "FLN", "florianopolis": "FLN", "maceió": "MCZ", "maceio": "MCZ",
+  "brasília": "BSB", "brasilia": "BSB", "belo horizonte": "CNF", "curitiba": "CWB",
+  "porto alegre": "POA", "manaus": "MAO",
+};
+
+function resolveIATA(name: string): string {
+  const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  return CITY_TO_IATA[normalized] || name.toUpperCase().slice(0, 3);
+}
+
+// ── Cabin class mapping ──
+const cabinMap: Record<string, string> = {
+  "economica": "ECONOMY", "economy": "ECONOMY",
+  "premium economy": "PREMIUM_ECONOMY", "premium": "PREMIUM_ECONOMY",
+  "executiva": "BUSINESS", "business": "BUSINESS",
+  "primeira classe": "FIRST", "first": "FIRST",
+};
+
+// ── AI Package Builder ──
+async function buildPackagesWithAI(flights: any[], hotels: Record<string, any[]>, briefing: any): Promise<any> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) {
-    console.warn("No LOVABLE_API_KEY, skipping AI classification");
-    return { flight_tags: {}, hotel_tags: {} };
+    console.warn("No LOVABLE_API_KEY, building packages manually");
+    return buildPackagesFallback(flights, hotels);
   }
 
-  const prompt = `Você é um consultor de viagens especializado. Analise as opções de voo e hotel abaixo e classifique cada uma com tags úteis para um comercial escolher rapidamente.
+  const prompt = `Você é um consultor de viagens especializado. Analise as opções abaixo e monte EXATAMENTE 3 pacotes de viagem:
+
+1. **Essencial** (💰) - Menor investimento possível, sem abrir mão de qualidade aceitável.
+2. **Conforto** (⭐) - Melhor custo-benefício, equilíbrio ideal entre preço e experiência.
+3. **Premium** (✨) - Melhor experiência possível, priorizar conforto e qualidade máxima.
 
 CONTEXTO DA VIAGEM:
 - Destino: ${briefing.destination || "não especificado"}
@@ -91,11 +128,13 @@ CONTEXTO DA VIAGEM:
 - Classe desejada: ${briefing.flight_preference || "não especificado"}
 - Hotel desejado: ${briefing.hotel_preference || "não especificado"}
 
-VOOS DISPONÍVEIS:
+VOOS DISPONÍVEIS (escolha 1 por pacote):
 ${JSON.stringify(flights.map((f, i) => ({ index: i, airline: f.airline_name, stops: f.stops, duration: f.total_duration_minutes, price: f.price, cabin: f.cabin })), null, 2)}
 
-HOTÉIS POR CIDADE:
-${JSON.stringify(Object.entries(hotels).map(([city, hs]) => ({ city, hotels: (hs as any[]).map((h, i) => ({ index: i, name: h.name, rating: h.rating, price_level: h.price_level })) })), null, 2)}`;
+HOTÉIS POR CIDADE (escolha 1 por cidade por pacote):
+${JSON.stringify(Object.entries(hotels).map(([city, hs]) => ({ city, hotels: (hs as any[]).map((h, i) => ({ index: i, name: h.name, rating: h.rating, price_level: h.price_level })) })), null, 2)}
+
+Para cada pacote, selecione o voo e hotel mais adequado ao perfil do pacote. Adicione uma justificativa curta.`;
 
   try {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -104,57 +143,147 @@ ${JSON.stringify(Object.entries(hotels).map(([city, hs]) => ({ city, hotels: (hs
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: "Responda SOMENTE com o tool call solicitado." },
+          { role: "system", content: "Responda SOMENTE com o tool call solicitado. Seja preciso nos índices." },
           { role: "user", content: prompt },
         ],
         tools: [{
           type: "function",
           function: {
-            name: "classify_options",
-            description: "Classifica voos e hotéis com tags para o comercial",
+            name: "build_packages",
+            description: "Monta 3 pacotes de viagem (essencial, conforto, premium)",
             parameters: {
               type: "object",
               properties: {
-                flight_tags: {
-                  type: "object",
-                  description: "Map de index do voo para array de tags. Tags possíveis: Melhor conforto, Melhor preço, Melhor custo-benefício, Menor duração, Voo direto, Recomendado",
-                  additionalProperties: { type: "array", items: { type: "string" } },
-                },
-                hotel_tags: {
-                  type: "object",
-                  description: "Map de 'cidade_index' para array de tags. Tags possíveis: Melhor localização, Melhor custo-benefício, Premium, Melhor avaliação, Ideal para família, Recomendado",
-                  additionalProperties: { type: "array", items: { type: "string" } },
-                },
-                flight_recommendation: { type: "number", description: "Index do voo mais recomendado" },
-                hotel_recommendations: {
-                  type: "object",
-                  description: "Map de cidade para index do hotel mais recomendado",
-                  additionalProperties: { type: "number" },
+                packages: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      tier: { type: "string", enum: ["essencial", "conforto", "premium"] },
+                      flight_index: { type: "number", description: "Index do voo selecionado para este pacote" },
+                      hotel_selections: {
+                        type: "object",
+                        description: "Map de cidade para index do hotel selecionado",
+                        additionalProperties: { type: "number" },
+                      },
+                      flight_reason: { type: "string", description: "Justificativa curta da escolha de voo" },
+                      hotel_reason: { type: "string", description: "Justificativa curta da escolha de hotel" },
+                      highlight: { type: "string", description: "Frase destaque do pacote (max 80 chars)" },
+                    },
+                    required: ["tier", "flight_index", "hotel_selections", "highlight"],
+                  },
+                  minItems: 3,
+                  maxItems: 3,
                 },
               },
-              required: ["flight_tags", "hotel_tags"],
+              required: ["packages"],
             },
           },
         }],
-        tool_choice: { type: "function", function: { name: "classify_options" } },
+        tool_choice: { type: "function", function: { name: "build_packages" } },
       }),
     });
 
     if (!res.ok) {
-      console.error("AI classification failed:", res.status);
-      return { flight_tags: {}, hotel_tags: {} };
+      console.error("AI package build failed:", res.status);
+      return buildPackagesFallback(flights, hotels);
     }
 
     const data = await res.json();
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     if (toolCall?.function?.arguments) {
-      return JSON.parse(toolCall.function.arguments);
+      const parsed = JSON.parse(toolCall.function.arguments);
+      return parsed.packages || buildPackagesFallback(flights, hotels);
     }
-    return { flight_tags: {}, hotel_tags: {} };
+    return buildPackagesFallback(flights, hotels);
   } catch (e) {
-    console.error("AI classification error:", e);
-    return { flight_tags: {}, hotel_tags: {} };
+    console.error("AI package build error:", e);
+    return buildPackagesFallback(flights, hotels);
   }
+}
+
+// ── Fallback: build packages without AI ──
+function buildPackagesFallback(flights: any[], hotels: Record<string, any[]>): any[] {
+  // Sort flights by price
+  const sorted = flights.map((f, i) => ({ ...f, _idx: i })).sort((a, b) => parseFloat(a.price) - parseFloat(b.price));
+
+  const essentialFlight = sorted[0]?._idx ?? 0;
+  const premiumFlight = sorted[sorted.length - 1]?._idx ?? 0;
+  const comfortFlight = sorted[Math.floor(sorted.length / 2)]?._idx ?? 0;
+
+  const hotelSelections = (tier: "low" | "mid" | "high") => {
+    const result: Record<string, number> = {};
+    for (const [city, hs] of Object.entries(hotels)) {
+      const arr = hs as any[];
+      if (arr.length === 0) continue;
+      const byStar = [...arr].sort((a, b) => (a.price_level ?? 0) - (b.price_level ?? 0));
+      if (tier === "low") result[city] = arr.indexOf(byStar[0]);
+      else if (tier === "high") result[city] = arr.indexOf(byStar[byStar.length - 1]);
+      else result[city] = arr.indexOf(byStar[Math.floor(byStar.length / 2)]);
+    }
+    return result;
+  };
+
+  return [
+    { tier: "essencial", flight_index: essentialFlight, hotel_selections: hotelSelections("low"), highlight: "Menor investimento com qualidade aceitável", flight_reason: "Opção mais econômica", hotel_reason: "Hotéis com melhor preço" },
+    { tier: "conforto", flight_index: comfortFlight, hotel_selections: hotelSelections("mid"), highlight: "Melhor equilíbrio entre preço e experiência", flight_reason: "Melhor custo-benefício", hotel_reason: "Hotéis com boa avaliação e preço justo" },
+    { tier: "premium", flight_index: premiumFlight, hotel_selections: hotelSelections("high"), highlight: "Experiência máxima de conforto e qualidade", flight_reason: "Mais confortável", hotel_reason: "Hotéis top com melhores avaliações" },
+  ];
+}
+
+// ── Parse Amadeus flight offers ──
+function parseFlightOffers(data: any, totalPax: number, cabin: string): any[] {
+  const dictionaries = data.dictionaries || {};
+  return (data.data || []).slice(0, 8).map((offer: any) => {
+    const itineraries = (offer.itineraries || []).map((itin: any, itinIdx: number) => {
+      const segments = (itin.segments || []).map((seg: any, segIdx: number) => {
+        const durationMatch = seg.duration?.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+        const durationMinutes = durationMatch ? (parseInt(durationMatch[1] || "0") * 60 + parseInt(durationMatch[2] || "0")) : 0;
+        let connectionTimeMinutes = 0;
+        if (segIdx > 0) {
+          const prevArr = new Date(itin.segments[segIdx - 1].arrival.at);
+          const currDep = new Date(seg.departure.at);
+          connectionTimeMinutes = Math.round((currDep.getTime() - prevArr.getTime()) / 60000);
+        }
+        const carrierCode = seg.carrierCode || "";
+        const operatingCode = seg.operating?.carrierCode || "";
+        const aircraftCode = seg.aircraft?.code || "";
+        return {
+          airline: carrierCode,
+          airline_name: dictionaries?.carriers?.[carrierCode] || carrierCode,
+          flight_number: `${carrierCode}${seg.number || ""}`,
+          origin_iata: seg.departure?.iataCode || "",
+          destination_iata: seg.arrival?.iataCode || "",
+          departure_time: seg.departure?.at || "",
+          arrival_time: seg.arrival?.at || "",
+          duration_minutes: durationMinutes,
+          connection_time_minutes: connectionTimeMinutes,
+          terminal_departure: seg.departure?.terminal || "",
+          terminal_arrival: seg.arrival?.terminal || "",
+          operated_by: operatingCode && operatingCode !== carrierCode ? (dictionaries?.carriers?.[operatingCode] || operatingCode) : "",
+          aircraft: dictionaries?.aircraft?.[aircraftCode] || aircraftCode,
+          cabin: offer.travelerPricings?.[0]?.fareDetailsBySegment?.find((f: any) => f.segmentId === seg.id)?.cabin || "",
+        };
+      });
+      const totalDuration = itin.duration?.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+      const totalMinutes = totalDuration ? (parseInt(totalDuration[1] || "0") * 60 + parseInt(totalDuration[2] || "0")) : 0;
+      return { direction: itinIdx === 0 ? "ida" : "volta", segments, total_duration_minutes: totalMinutes, stops: segments.length - 1 };
+    });
+    const baggage = offer.travelerPricings?.[0]?.fareDetailsBySegment?.[0]?.includedCheckedBags;
+    const baggageInfo = baggage ? (baggage.weight ? `${baggage.weight}${baggage.weightUnit || "KG"}` : baggage.quantity ? `${baggage.quantity} mala(s)` : "") : "";
+    return {
+      price: offer.price?.grandTotal || offer.price?.total || "N/A",
+      currency: offer.price?.currency || "BRL",
+      itineraries,
+      airline_name: itineraries[0]?.segments?.[0]?.airline_name || "",
+      airline: itineraries[0]?.segments?.[0]?.airline || "",
+      total_duration_minutes: itineraries[0]?.total_duration_minutes || 0,
+      stops: itineraries[0]?.stops || 0,
+      cabin: itineraries[0]?.segments?.[0]?.cabin || cabin || "",
+      baggage: baggageInfo,
+      passengers: totalPax,
+    };
+  });
 }
 
 // ── Main ──
@@ -171,146 +300,36 @@ serve(async (req) => {
       });
     }
 
-    // ── Map city names to IATA codes ──
-    const CITY_TO_IATA: Record<string, string> = {
-      "tóquio": "TYO", "tokyo": "TYO", "osaka": "OSA", "quioto": "UKY", "kyoto": "UKY",
-      "rio de janeiro": "GIG", "são paulo": "GRU", "sao paulo": "GRU",
-      "paris": "PAR", "londres": "LON", "london": "LON", "roma": "ROM", "rome": "ROM",
-      "nova york": "NYC", "new york": "NYC", "miami": "MIA", "orlando": "MCO",
-      "dubai": "DXB", "bangkok": "BKK", "singapura": "SIN", "singapore": "SIN",
-      "lisboa": "LIS", "lisbon": "LIS", "madrid": "MAD", "barcelona": "BCN",
-      "buenos aires": "EZE", "santiago": "SCL", "cancun": "CUN", "cancún": "CUN",
-      "punta cana": "PUJ", "cairo": "CAI", "istambul": "IST", "istanbul": "IST",
-      "florença": "FLR", "florence": "FLR", "milão": "MXP", "milan": "MXP",
-      "veneza": "VCE", "venice": "VCE", "amsterdam": "AMS", "berlim": "TXL", "berlin": "TXL",
-      "zurique": "ZRH", "zurich": "ZRH", "munique": "MUC", "munich": "MUC",
-      "atenas": "ATH", "athens": "ATH", "marrakech": "RAK", "bariloche": "BRC",
-      "salvador": "SSA", "recife": "REC", "natal": "NAT", "fortaleza": "FOR",
-      "florianópolis": "FLN", "florianopolis": "FLN", "maceió": "MCZ", "maceio": "MCZ",
-      "brasília": "BSB", "brasilia": "BSB", "belo horizonte": "CNF", "curitiba": "CWB",
-      "porto alegre": "POA", "manaus": "MAO",
-    };
-
-    const resolveIATA = (name: string): string => {
-      const normalized = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-      return CITY_TO_IATA[normalized] || name.toUpperCase().slice(0, 3);
-    };
-
     const originIATA = resolveIATA(origin);
     const destIATA = resolveIATA(destination);
     const totalPax = (adults || 1) + (children || 0) + (babies || 0);
-
-    // ── Cabin class mapping ──
-    const cabinMap: Record<string, string> = {
-      "economica": "ECONOMY", "economy": "ECONOMY",
-      "premium economy": "PREMIUM_ECONOMY", "premium": "PREMIUM_ECONOMY",
-      "executiva": "BUSINESS", "business": "BUSINESS",
-      "primeira classe": "FIRST", "first": "FIRST",
-    };
     const cabin = flight_preference ? cabinMap[flight_preference.toLowerCase()] || "" : "";
-
-    // ── PARALLEL: Search flights + hotels ──
     const allCities = [destination, ...(sub_destinations || [])].filter(Boolean);
 
     console.log(`🔍 Searching flights: ${originIATA} → ${destIATA}, ${departure_date}${return_date ? ` / ${return_date}` : ""}`);
     console.log(`🏨 Searching hotels in: ${allCities.join(", ")}`);
 
+    // ── PARALLEL: Search flights + hotels ──
     const [flightResult, ...hotelResults] = await Promise.allSettled([
-      // Flights
       (async () => {
         const params: Record<string, string> = {
           originLocationCode: originIATA,
           destinationLocationCode: destIATA,
           departureDate: departure_date,
           adults: String(adults || 1),
-          max: "6",
+          max: "8",
           currencyCode: "BRL",
           nonStop: "false",
         };
         if (return_date) params.returnDate = return_date;
         if (children) params.children = String(children);
         if (cabin) params.travelClass = cabin;
-
         const data = await amadeusGet("/v2/shopping/flight-offers", params);
-        const dictionaries = data.dictionaries || {};
-        
-        return (data.data || []).slice(0, 6).map((offer: any) => {
-          const itineraries = (offer.itineraries || []).map((itin: any, itinIdx: number) => {
-            const segments = (itin.segments || []).map((seg: any, segIdx: number) => {
-              const durationMatch = seg.duration?.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
-              const durationMinutes = durationMatch
-                ? (parseInt(durationMatch[1] || "0") * 60 + parseInt(durationMatch[2] || "0"))
-                : 0;
-
-              let connectionTimeMinutes = 0;
-              if (segIdx > 0) {
-                const prevArr = new Date(itin.segments[segIdx - 1].arrival.at);
-                const currDep = new Date(seg.departure.at);
-                connectionTimeMinutes = Math.round((currDep.getTime() - prevArr.getTime()) / 60000);
-              }
-
-              const carrierCode = seg.carrierCode || "";
-              const operatingCode = seg.operating?.carrierCode || "";
-              const aircraftCode = seg.aircraft?.code || "";
-
-              return {
-                airline: carrierCode,
-                airline_name: dictionaries?.carriers?.[carrierCode] || carrierCode,
-                flight_number: `${carrierCode}${seg.number || ""}`,
-                origin_iata: seg.departure?.iataCode || "",
-                destination_iata: seg.arrival?.iataCode || "",
-                departure_time: seg.departure?.at || "",
-                arrival_time: seg.arrival?.at || "",
-                duration_minutes: durationMinutes,
-                connection_time_minutes: connectionTimeMinutes,
-                terminal_departure: seg.departure?.terminal || "",
-                terminal_arrival: seg.arrival?.terminal || "",
-                operated_by: operatingCode && operatingCode !== carrierCode
-                  ? (dictionaries?.carriers?.[operatingCode] || operatingCode)
-                  : "",
-                aircraft: dictionaries?.aircraft?.[aircraftCode] || aircraftCode,
-                cabin: offer.travelerPricings?.[0]?.fareDetailsBySegment?.find((f: any) => f.segmentId === seg.id)?.cabin || "",
-              };
-            });
-
-            const totalDuration = itin.duration?.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
-            const totalMinutes = totalDuration
-              ? (parseInt(totalDuration[1] || "0") * 60 + parseInt(totalDuration[2] || "0"))
-              : 0;
-
-            return {
-              direction: itinIdx === 0 ? "ida" : "volta",
-              segments,
-              total_duration_minutes: totalMinutes,
-              stops: segments.length - 1,
-            };
-          });
-
-          // Baggage info
-          const baggage = offer.travelerPricings?.[0]?.fareDetailsBySegment?.[0]?.includedCheckedBags;
-          const baggageInfo = baggage
-            ? (baggage.weight ? `${baggage.weight}${baggage.weightUnit || "KG"}` : baggage.quantity ? `${baggage.quantity} mala(s)` : "")
-            : "";
-
-          return {
-            price: offer.price?.grandTotal || offer.price?.total || "N/A",
-            currency: offer.price?.currency || "BRL",
-            itineraries,
-            airline_name: itineraries[0]?.segments?.[0]?.airline_name || "",
-            airline: itineraries[0]?.segments?.[0]?.airline || "",
-            total_duration_minutes: itineraries[0]?.total_duration_minutes || 0,
-            stops: itineraries[0]?.stops || 0,
-            cabin: itineraries[0]?.segments?.[0]?.cabin || cabin || "",
-            baggage: baggageInfo,
-            passengers: totalPax,
-          };
-        });
+        return parseFlightOffers(data, totalPax, cabin);
       })(),
-      // Hotels per city
       ...allCities.map(city => searchHotelsGooglePlaces(city)),
     ]);
 
-    // ── Process results ──
     const flights = flightResult.status === "fulfilled" ? flightResult.value : [];
     if (flightResult.status === "rejected") console.error("Flight search failed:", flightResult.reason);
 
@@ -330,29 +349,13 @@ serve(async (req) => {
     console.log(`✈️ Found ${flights.length} flight options`);
     console.log(`🏨 Found hotels: ${Object.entries(hotelsByCity).map(([c, h]) => `${c}: ${h.length}`).join(", ")}`);
 
-    // ── AI Classification ──
-    const classification = await classifyWithAI(flights, hotelsByCity, body);
-
-    // Apply tags to flights
-    const taggedFlights = flights.map((f: any, i: number) => ({
-      ...f,
-      tags: classification.flight_tags?.[String(i)] || [],
-      is_recommended: classification.flight_recommendation === i,
-    }));
-
-    // Apply tags to hotels
-    const taggedHotels: Record<string, any[]> = {};
-    for (const [city, cityHotels] of Object.entries(hotelsByCity)) {
-      taggedHotels[city] = (cityHotels as any[]).map((h, i) => ({
-        ...h,
-        tags: classification.hotel_tags?.[`${city}_${i}`] || [],
-        is_recommended: classification.hotel_recommendations?.[city] === i,
-      }));
-    }
+    // ── AI builds 3-tier packages ──
+    const packages = await buildPackagesWithAI(flights, hotelsByCity, body);
 
     return new Response(JSON.stringify({
-      flights: taggedFlights,
-      hotels: taggedHotels,
+      flights,
+      hotels: hotelsByCity,
+      packages,
       search_params: { origin: originIATA, destination: destIATA, departure_date, return_date, cabin, passengers: totalPax },
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
