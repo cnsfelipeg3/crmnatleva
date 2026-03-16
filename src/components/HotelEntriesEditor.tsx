@@ -93,6 +93,7 @@ export default function HotelEntriesEditor({
   hotels, onChange, suppliers, getSupplierPrograms, autoFillMilesPrice,
 }: Props) {
   const [expandedHotels, setExpandedHotels] = useState<Set<string>>(new Set(hotels.map(h => h.id)));
+  const [fetchingTimes, setFetchingTimes] = useState<Set<string>>(new Set());
 
   const addHotel = () => {
     const entry = createEmptyHotelEntry();
