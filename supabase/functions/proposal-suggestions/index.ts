@@ -108,6 +108,41 @@ const cabinMap: Record<string, string> = {
   "primeira classe": "FIRST", "first": "FIRST",
 };
 
+// ── Fetch learned patterns for context ──
+async function fetchLearnedInsights(destination?: string, tripStyle?: string): Promise<string> {
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+    const { data: patterns } = await supabase
+      .from("ai_learned_patterns")
+      .select("detected_rule, confidence, category")
+      .eq("is_active", true)
+      .gte("confidence", 50)
+      .order("confidence", { ascending: false })
+      .limit(10);
+
+    if (!patterns || patterns.length === 0) return "";
+
+    const relevant = patterns.filter(p => {
+      if (!destination) return true;
+      return p.detected_rule.toLowerCase().includes(destination.toLowerCase()) ||
+             p.category === "estrategia_comercial" ||
+             p.category === "timing_comercial" ||
+             p.category === "analise_perdas";
+    });
+
+    if (relevant.length === 0) return "";
+
+    return "\n\nAPRENDIZADOS DA OPERAÇÃO (use como guia para priorização):\n" +
+      relevant.map(p => `- [${p.confidence}% confiança] ${p.detected_rule}`).join("\n");
+  } catch (e) {
+    console.warn("Failed to fetch learned patterns:", e);
+    return "";
+  }
+}
+
 // ── AI Package Builder ──
 async function buildPackagesWithAI(flights: any[], hotels: Record<string, any[]>, briefing: any): Promise<any> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -115,6 +150,8 @@ async function buildPackagesWithAI(flights: any[], hotels: Record<string, any[]>
     console.warn("No LOVABLE_API_KEY, building packages manually");
     return buildPackagesFallback(flights, hotels);
   }
+
+  const learnedInsights = await fetchLearnedInsights(briefing.destination, briefing.trip_style);
 
   const prompt = `Você é um consultor de viagens especializado. Analise as opções abaixo e monte EXATAMENTE 3 pacotes de viagem:
 
@@ -128,6 +165,7 @@ CONTEXTO DA VIAGEM:
 - Passageiros: ${briefing.adults || 1} adultos${briefing.children ? `, ${briefing.children} crianças` : ""}
 - Classe desejada: ${briefing.flight_preference || "não especificado"}
 - Hotel desejado: ${briefing.hotel_preference || "não especificado"}
+${learnedInsights}
 
 VOOS DISPONÍVEIS (escolha 1 por pacote):
 ${JSON.stringify(flights.map((f, i) => ({ index: i, airline: f.airline_name, stops: f.stops, duration: f.total_duration_minutes, price: f.price, cabin: f.cabin })), null, 2)}
