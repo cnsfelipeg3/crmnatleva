@@ -10,8 +10,13 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Plus, Trash2, ChevronDown, Hotel, MapPin } from "lucide-react";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Plus, Trash2, ChevronDown, Hotel, MapPin, Clock, Loader2, Search, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import HotelAutocomplete from "@/components/HotelAutocomplete";
 import HotelPhotosScraper from "@/components/HotelPhotosScraper";
 
@@ -31,6 +36,10 @@ export interface HotelEntry {
   hotel_reservation_code: string;
   hotel_checkin_date: string;
   hotel_checkout_date: string;
+  hotel_checkin_time: string;
+  hotel_checkout_time: string;
+  hotel_checkin_time_source: string;
+  hotel_checkin_time_notes: string;
   hotel_qty_rooms: string;
   // Cost
   emission_type: "milhas" | "pagante";
@@ -49,7 +58,10 @@ export function createEmptyHotelEntry(): HotelEntry {
     hotel_name: "", hotel_city: "", hotel_country: "", hotel_address: "",
     hotel_lat: 0, hotel_lng: 0, hotel_place_id: "",
     hotel_room: "", hotel_meal_plan: "", hotel_reservation_code: "",
-    hotel_checkin_date: "", hotel_checkout_date: "", hotel_qty_rooms: "1",
+    hotel_checkin_date: "", hotel_checkout_date: "",
+    hotel_checkin_time: "", hotel_checkout_time: "",
+    hotel_checkin_time_source: "", hotel_checkin_time_notes: "",
+    hotel_qty_rooms: "1",
     emission_type: "milhas", supplier_id: "", miles_program: "",
     miles_qty: "", miles_price: "", taxes: "", emission_source: "", cash_value: "",
   };
@@ -81,6 +93,7 @@ export default function HotelEntriesEditor({
   hotels, onChange, suppliers, getSupplierPrograms, autoFillMilesPrice,
 }: Props) {
   const [expandedHotels, setExpandedHotels] = useState<Set<string>>(new Set(hotels.map(h => h.id)));
+  const [fetchingTimes, setFetchingTimes] = useState<Set<string>>(new Set());
 
   const addHotel = () => {
     const entry = createEmptyHotelEntry();
@@ -115,6 +128,48 @@ export default function HotelEntriesEditor({
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+  };
+
+  const fetchCheckinTimes = async (hotel: HotelEntry) => {
+    if (!hotel.hotel_name) {
+      toast({ title: "Nome do hotel necessário", description: "Preencha o nome do hotel antes de buscar horários", variant: "destructive" });
+      return;
+    }
+    setFetchingTimes(prev => new Set([...prev, hotel.id]));
+    try {
+      const { data, error } = await supabase.functions.invoke("hotel-checkin-times", {
+        body: {
+          hotel_name: hotel.hotel_name,
+          hotel_city: hotel.hotel_city,
+          hotel_country: hotel.hotel_country,
+        },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        onChange(hotels.map(h => {
+          if (h.id !== hotel.id) return h;
+          return {
+            ...h,
+            hotel_checkin_time: data.checkin_time || h.hotel_checkin_time,
+            hotel_checkout_time: data.checkout_time || h.hotel_checkout_time,
+            hotel_checkin_time_source: data.source || "",
+            hotel_checkin_time_notes: data.notes || data.note || "",
+          };
+        }));
+        const conf = data.confidence === "high" ? "✅ alta" : data.confidence === "medium" ? "⚡ média" : "⚠️ baixa";
+        toast({
+          title: "Horários encontrados",
+          description: `Check-in: ${data.checkin_time} · Check-out: ${data.checkout_time} (confiança ${conf})`,
+        });
+      } else {
+        toast({ title: "Não foi possível buscar", description: data?.error || "Tente preencher manualmente", variant: "destructive" });
+      }
+    } catch (err: any) {
+      console.error("Fetch checkin times error:", err);
+      toast({ title: "Erro ao buscar horários", description: err.message, variant: "destructive" });
+    } finally {
+      setFetchingTimes(prev => { const n = new Set(prev); n.delete(hotel.id); return n; });
+    }
   };
 
   const totalCost = hotels.reduce((sum, h) => sum + calcHotelCost(h), 0);
@@ -197,8 +252,82 @@ export default function HotelEntriesEditor({
                       )}
                     </div>
                     <div className="space-y-1.5"><Label className="text-xs">Destino</Label><Input className="h-9 text-sm" value={hotel.hotel_city} onChange={e => updateHotel(hotel.id, "hotel_city", e.target.value)} /></div>
-                    <div className="space-y-1.5"><Label className="text-xs">Check-in</Label><Input type="date" className="h-9 text-sm" value={hotel.hotel_checkin_date} onChange={e => updateHotel(hotel.id, "hotel_checkin_date", e.target.value)} /></div>
-                    <div className="space-y-1.5"><Label className="text-xs">Check-out</Label><Input type="date" className="h-9 text-sm" value={hotel.hotel_checkout_date} onChange={e => updateHotel(hotel.id, "hotel_checkout_date", e.target.value)} /></div>
+
+                    {/* Check-in date + time */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Check-in (data)</Label>
+                      <Input type="date" className="h-9 text-sm" value={hotel.hotel_checkin_date} onChange={e => updateHotel(hotel.id, "hotel_checkin_date", e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Check-out (data)</Label>
+                      <Input type="date" className="h-9 text-sm" value={hotel.hotel_checkout_date} onChange={e => updateHotel(hotel.id, "hotel_checkout_date", e.target.value)} />
+                    </div>
+
+                    {/* Check-in/out times */}
+                    <div className="sm:col-span-2">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Label className="text-xs flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> Horários de check-in / check-out
+                        </Label>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-[10px] gap-1 px-2"
+                                disabled={!hotel.hotel_name || fetchingTimes.has(hotel.id)}
+                                onClick={() => fetchCheckinTimes(hotel)}
+                              >
+                                {fetchingTimes.has(hotel.id) ? (
+                                  <><Loader2 className="w-3 h-3 animate-spin" /> Buscando...</>
+                                ) : (
+                                  <><Search className="w-3 h-3" /> Buscar horários</>
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[250px] text-xs">
+                              Busca automática dos horários no site oficial do hotel, Booking, Decolar, TripAdvisor e outros portais
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-[10px] text-muted-foreground">Horário check-in</Label>
+                          <Input
+                            type="time"
+                            className="h-9 text-sm"
+                            value={hotel.hotel_checkin_time}
+                            onChange={e => updateHotel(hotel.id, "hotel_checkin_time", e.target.value)}
+                            placeholder="14:00"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] text-muted-foreground">Horário check-out</Label>
+                          <Input
+                            type="time"
+                            className="h-9 text-sm"
+                            value={hotel.hotel_checkout_time}
+                            onChange={e => updateHotel(hotel.id, "hotel_checkout_time", e.target.value)}
+                            placeholder="12:00"
+                          />
+                        </div>
+                      </div>
+                      {hotel.hotel_checkin_time_notes && (
+                        <p className="text-[10px] text-muted-foreground mt-1 flex items-start gap-1">
+                          <Info className="w-3 h-3 shrink-0 mt-0.5" />
+                          {hotel.hotel_checkin_time_notes}
+                        </p>
+                      )}
+                      {hotel.hotel_checkin_time_source && (
+                        <Badge variant="secondary" className="text-[8px] mt-1 h-4">
+                          Fonte: {hotel.hotel_checkin_time_source === "ai" ? "IA + Firecrawl" : hotel.hotel_checkin_time_source === "regex" ? "Extração automática" : hotel.hotel_checkin_time_source}
+                        </Badge>
+                      )}
+                    </div>
+
                     <div className="space-y-1.5"><Label className="text-xs">Qtd Quartos</Label><Input type="number" min={1} className="h-9 text-sm" value={hotel.hotel_qty_rooms} onChange={e => updateHotel(hotel.id, "hotel_qty_rooms", e.target.value)} /></div>
                     <div className="space-y-1.5"><Label className="text-xs">Tipo de Quarto</Label><Input className="h-9 text-sm" value={hotel.hotel_room} onChange={e => updateHotel(hotel.id, "hotel_room", e.target.value)} placeholder="Duplo, Suite..." /></div>
                     <div className="space-y-1.5">
