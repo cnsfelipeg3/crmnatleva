@@ -296,6 +296,7 @@ export default function ProposalEditor() {
         value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
         payment_conditions: form.payment_conditions,
         proposal_strategy: form.proposal_strategy || null,
+        proposal_outcome: form.proposal_outcome || "pending",
         slug,
         created_by: user?.id,
         updated_at: new Date().toISOString(),
