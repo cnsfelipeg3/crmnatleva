@@ -84,35 +84,39 @@ async function fetchImageCandidate(candidate: URL, refererUrl?: URL): Promise<Re
 
   for (const referer of referers) {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
       const response = await fetch(candidate.toString(), {
         method: "GET",
         redirect: "follow",
-        signal: AbortSignal.timeout(15000),
+        signal: controller.signal,
         headers: {
           Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
           ...(referer ? { Referer: referer, Origin: new URL(referer).origin } : {}),
         },
       });
+      clearTimeout(timeout);
 
       if (!response.ok || !response.body) {
-        await response.text().catch(() => {}); // consume body
+        console.warn(`[image-proxy] ${candidate} → ${response.status} (referer: ${referer || 'none'})`);
+        await response.text().catch(() => {});
         continue;
       }
 
       const contentType = response.headers.get("content-type") || "";
-      // Accept image types, octet-stream, or empty content-type (some CDNs)
       const isImageLike = contentType.toLowerCase().startsWith("image/") || 
                           contentType.includes("octet-stream") ||
                           !contentType;
       if (!isImageLike) {
-        await response.text().catch(() => {}); // consume body
+        console.warn(`[image-proxy] ${candidate} → non-image content-type: ${contentType}`);
+        await response.text().catch(() => {});
         continue;
       }
 
       return response;
-    } catch {
-      // try next
+    } catch (err) {
+      console.warn(`[image-proxy] fetch error for ${candidate}:`, err instanceof Error ? err.message : err);
     }
   }
   return null;
@@ -146,7 +150,9 @@ Deno.serve(async (req) => {
     }
 
     const targetUrl = getValidatedUrl(imageUrl);
+    console.log(`[image-proxy] Processing: ${imageUrl}`);
     const candidates = buildCandidateUrls(targetUrl, refererUrl);
+    console.log(`[image-proxy] Candidates: ${candidates.map(c => c.toString()).join(', ')}`);
 
     for (const candidate of candidates) {
       const upstreamResponse = await fetchImageCandidate(candidate, refererUrl);
