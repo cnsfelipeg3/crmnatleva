@@ -490,6 +490,7 @@ export type Database = {
           is_active: boolean
           priority: number
           rule: string
+          subcategory: string | null
           title: string
           updated_at: string
         }
@@ -503,6 +504,7 @@ export type Database = {
           is_active?: boolean
           priority?: number
           rule: string
+          subcategory?: string | null
           title: string
           updated_at?: string
         }
@@ -516,6 +518,7 @@ export type Database = {
           is_active?: boolean
           priority?: number
           rule?: string
+          subcategory?: string | null
           title?: string
           updated_at?: string
         }
