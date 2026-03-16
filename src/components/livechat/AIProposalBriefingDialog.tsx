@@ -5,7 +5,8 @@ import {
   Loader2, Sparkles, Check, AlertCircle, ArrowRight, Baby, User,
   Clock, Target, FileText, Route, ChevronDown, ChevronUp,
   Pencil, X, Shield, Zap, Star, History, Eye, EyeOff, Info,
-  Search, ArrowLeft, CheckCircle2, Timer, Luggage,
+  Search, ArrowLeft, CheckCircle2, Timer, Luggage, RefreshCw,
+  Crown, Gem, Wallet,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -78,6 +79,15 @@ interface AIProposalBriefingDialogProps {
   contactName: string;
 }
 
+interface PackageData {
+  tier: "essencial" | "conforto" | "premium";
+  flight_index: number;
+  hotel_selections: Record<string, number>;
+  flight_reason?: string;
+  hotel_reason?: string;
+  highlight?: string;
+}
+
 const CONFIDENCE_MAP: Record<string, { label: string; className: string }> = {
   high: { label: "Alta confiança", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
   medium: { label: "Média confiança", className: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
@@ -102,6 +112,33 @@ const URGENCY_MAP: Record<string, { label: string; className: string }> = {
   alta: { label: "Alta urgência", className: "text-red-500" },
   media: { label: "Urgência moderada", className: "text-amber-500" },
   baixa: { label: "Sem urgência", className: "text-muted-foreground" },
+};
+
+const TIER_CONFIG: Record<string, { label: string; emoji: string; icon: any; gradient: string; border: string; badgeBg: string }> = {
+  essencial: {
+    label: "Essencial",
+    emoji: "💰",
+    icon: Wallet,
+    gradient: "from-emerald-500/10 to-emerald-500/5",
+    border: "border-emerald-500/30 hover:border-emerald-500/50",
+    badgeBg: "bg-emerald-500/10 text-emerald-700 border-emerald-500/20",
+  },
+  conforto: {
+    label: "Conforto",
+    emoji: "⭐",
+    icon: Gem,
+    gradient: "from-blue-500/10 to-blue-500/5",
+    border: "border-blue-500/30 hover:border-blue-500/50",
+    badgeBg: "bg-blue-500/10 text-blue-700 border-blue-500/20",
+  },
+  premium: {
+    label: "Premium",
+    emoji: "✨",
+    icon: Crown,
+    gradient: "from-amber-500/10 to-amber-500/5",
+    border: "border-amber-500/30 hover:border-amber-500/50",
+    badgeBg: "bg-amber-500/10 text-amber-700 border-amber-500/20",
+  },
 };
 
 function EditableField({ label, value, onChange, icon: Icon, multiline }: {
@@ -162,225 +199,140 @@ function EditableField({ label, value, onChange, icon: Icon, multiline }: {
   );
 }
 
-// ── Flight Card ──
-function FlightCard({ flight, index, selected, onSelect }: { flight: any; index: number; selected: boolean; onSelect: () => void }) {
+// ── Flight Mini Card (inside package) ──
+function FlightMiniCard({ flight, reason }: { flight: any; reason?: string }) {
   const formatDuration = (min: number) => {
     const h = Math.floor(min / 60);
     const m = min % 60;
     return `${h}h${m > 0 ? `${m}min` : ""}`;
   };
-
-  const formatTime = (iso: string) => {
-    if (!iso) return "";
-    const t = iso.split("T")[1];
-    return t ? t.slice(0, 5) : iso;
-  };
-
-  const formatDate = (iso: string) => {
-    if (!iso) return "";
-    const d = iso.split("T")[0];
-    if (!d) return "";
-    const [y, m, day] = d.split("-");
-    return `${day}/${m}`;
-  };
+  const formatTime = (iso: string) => iso?.split("T")[1]?.slice(0, 5) || "";
 
   const ida = flight.itineraries?.[0];
   const volta = flight.itineraries?.[1];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      onClick={onSelect}
-      className={`relative border rounded-xl p-4 cursor-pointer transition-all hover:shadow-md ${
-        selected
-          ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm"
-          : "border-border/50 hover:border-primary/30"
-      }`}
-    >
-      {/* Tags */}
-      {(flight.tags?.length > 0 || flight.is_recommended) && (
-        <div className="flex flex-wrap gap-1 mb-2">
-          {flight.is_recommended && (
-            <Badge className="text-[9px] px-1.5 py-0 bg-primary text-primary-foreground">⭐ Recomendado</Badge>
-          )}
-          {flight.tags?.map((tag: string, i: number) => (
-            <Badge key={i} variant="outline" className="text-[9px] px-1.5 py-0 border-primary/30 text-primary">{tag}</Badge>
-          ))}
-        </div>
-      )}
-
-      {/* Airline + Price */}
-      <div className="flex items-center justify-between mb-3">
+    <div className="bg-background/50 rounded-lg p-3 border border-border/30">
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-secondary/50 flex items-center justify-center text-xs font-bold text-foreground">
+          <div className="h-6 w-6 rounded bg-secondary/50 flex items-center justify-center text-[10px] font-bold">
             {flight.airline || "?"}
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">{flight.airline_name || "Companhia"}</p>
-            <p className="text-[10px] text-muted-foreground">
-              {flight.cabin || "Economy"} · {flight.passengers} pax
-              {flight.baggage && ` · ${flight.baggage}`}
-            </p>
+            <p className="text-xs font-semibold">{flight.airline_name}</p>
+            <p className="text-[9px] text-muted-foreground">{flight.cabin || "Economy"} · {flight.passengers} pax{flight.baggage ? ` · ${flight.baggage}` : ""}</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-lg font-bold text-foreground">
-            R$ {Number(flight.price).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
-          </p>
-          <p className="text-[10px] text-muted-foreground">total</p>
-        </div>
+        <p className="text-sm font-bold">R$ {Number(flight.price).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}</p>
       </div>
-
-      {/* Itinerary Ida */}
       {ida && (
-        <div className="flex items-center gap-3 py-2 border-t border-border/30">
-          <div className="text-center min-w-[50px]">
-            <p className="text-sm font-semibold">{formatTime(ida.segments?.[0]?.departure_time)}</p>
-            <p className="text-[10px] text-muted-foreground">{ida.segments?.[0]?.origin_iata}</p>
-            <p className="text-[9px] text-muted-foreground/60">{formatDate(ida.segments?.[0]?.departure_time)}</p>
+        <div className="flex items-center gap-2 text-[10px]">
+          <span className="font-medium">{formatTime(ida.segments?.[0]?.departure_time)}</span>
+          <span className="text-muted-foreground">{ida.segments?.[0]?.origin_iata}</span>
+          <div className="flex-1 flex items-center gap-1">
+            <div className="h-px flex-1 bg-border" />
+            <span className={`px-1 py-0.5 rounded ${ida.stops === 0 ? "text-emerald-600 bg-emerald-500/10" : "text-amber-600 bg-amber-500/10"}`}>
+              {ida.stops === 0 ? "Direto" : `${ida.stops}x`}
+            </span>
+            <div className="h-px flex-1 bg-border" />
           </div>
-          <div className="flex-1 flex flex-col items-center">
-            <p className="text-[10px] text-muted-foreground">{formatDuration(ida.total_duration_minutes)}</p>
-            <div className="w-full flex items-center gap-1">
-              <div className="h-px flex-1 bg-border" />
-              {ida.stops > 0 && (
-                <span className="text-[9px] text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
-                  {ida.stops} escala{ida.stops > 1 ? "s" : ""}
-                </span>
-              )}
-              {ida.stops === 0 && (
-                <span className="text-[9px] text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">Direto</span>
-              )}
-              <div className="h-px flex-1 bg-border" />
-            </div>
-            <p className="text-[9px] text-muted-foreground/50">IDA</p>
-          </div>
-          <div className="text-center min-w-[50px]">
-            <p className="text-sm font-semibold">{formatTime(ida.segments?.[ida.segments.length - 1]?.arrival_time)}</p>
-            <p className="text-[10px] text-muted-foreground">{ida.segments?.[ida.segments.length - 1]?.destination_iata}</p>
-            <p className="text-[9px] text-muted-foreground/60">{formatDate(ida.segments?.[ida.segments.length - 1]?.arrival_time)}</p>
-          </div>
+          <span className="font-medium">{formatTime(ida.segments?.[ida.segments.length - 1]?.arrival_time)}</span>
+          <span className="text-muted-foreground">{ida.segments?.[ida.segments.length - 1]?.destination_iata}</span>
+          <span className="text-muted-foreground/60 ml-1">{formatDuration(ida.total_duration_minutes)}</span>
         </div>
       )}
-
-      {/* Itinerary Volta */}
       {volta && (
-        <div className="flex items-center gap-3 py-2 border-t border-border/20">
-          <div className="text-center min-w-[50px]">
-            <p className="text-sm font-semibold">{formatTime(volta.segments?.[0]?.departure_time)}</p>
-            <p className="text-[10px] text-muted-foreground">{volta.segments?.[0]?.origin_iata}</p>
+        <div className="flex items-center gap-2 text-[10px] mt-1">
+          <span className="font-medium">{formatTime(volta.segments?.[0]?.departure_time)}</span>
+          <span className="text-muted-foreground">{volta.segments?.[0]?.origin_iata}</span>
+          <div className="flex-1 flex items-center gap-1">
+            <div className="h-px flex-1 bg-border" />
+            <span className={`px-1 py-0.5 rounded ${volta.stops === 0 ? "text-emerald-600 bg-emerald-500/10" : "text-amber-600 bg-amber-500/10"}`}>
+              {volta.stops === 0 ? "Direto" : `${volta.stops}x`}
+            </span>
+            <div className="h-px flex-1 bg-border" />
           </div>
-          <div className="flex-1 flex flex-col items-center">
-            <p className="text-[10px] text-muted-foreground">{formatDuration(volta.total_duration_minutes)}</p>
-            <div className="w-full flex items-center gap-1">
-              <div className="h-px flex-1 bg-border" />
-              {volta.stops > 0 && (
-                <span className="text-[9px] text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
-                  {volta.stops} escala{volta.stops > 1 ? "s" : ""}
-                </span>
-              )}
-              {volta.stops === 0 && (
-                <span className="text-[9px] text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">Direto</span>
-              )}
-              <div className="h-px flex-1 bg-border" />
-            </div>
-            <p className="text-[9px] text-muted-foreground/50">VOLTA</p>
-          </div>
-          <div className="text-center min-w-[50px]">
-            <p className="text-sm font-semibold">{formatTime(volta.segments?.[volta.segments.length - 1]?.arrival_time)}</p>
-            <p className="text-[10px] text-muted-foreground">{volta.segments?.[volta.segments.length - 1]?.destination_iata}</p>
-          </div>
+          <span className="font-medium">{formatTime(volta.segments?.[volta.segments.length - 1]?.arrival_time)}</span>
+          <span className="text-muted-foreground">{volta.segments?.[volta.segments.length - 1]?.destination_iata}</span>
+          <span className="text-muted-foreground/60 ml-1">{formatDuration(volta.total_duration_minutes)}</span>
         </div>
       )}
-
-      {/* Selection indicator */}
-      {selected && (
-        <div className="absolute top-3 right-3">
-          <CheckCircle2 className="h-5 w-5 text-primary" />
-        </div>
-      )}
-    </motion.div>
+      {reason && <p className="text-[9px] text-muted-foreground/70 mt-1.5 italic">💡 {reason}</p>}
+    </div>
   );
 }
 
-// ── Hotel Card ──
-function HotelCard({ hotel, index, selected, onSelect }: { hotel: any; index: number; selected: boolean; onSelect: () => void }) {
-  const priceLevelLabels = ["Econômico", "Moderado", "Superior", "Luxo", "Ultra Luxo"];
-  
+// ── Hotel Mini Card (inside package) ──
+function HotelMiniCard({ hotel, reason }: { hotel: any; reason?: string }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05 }}
-      onClick={onSelect}
-      className={`relative border rounded-xl overflow-hidden cursor-pointer transition-all hover:shadow-md ${
-        selected
-          ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-sm"
-          : "border-border/50 hover:border-primary/30"
-      }`}
-    >
-      {/* Photo */}
-      {hotel.photo_url && (
-        <div className="h-28 w-full bg-secondary/30 overflow-hidden">
-          <img
-            src={hotel.photo_url}
-            alt={hotel.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        </div>
-      )}
-
-      <div className="p-3">
-        {/* Tags */}
-        {(hotel.tags?.length > 0 || hotel.is_recommended) && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            {hotel.is_recommended && (
-              <Badge className="text-[9px] px-1.5 py-0 bg-primary text-primary-foreground">⭐ Recomendado</Badge>
-            )}
-            {hotel.tags?.map((tag: string, i: number) => (
-              <Badge key={i} variant="outline" className="text-[9px] px-1.5 py-0 border-primary/30 text-primary">{tag}</Badge>
-            ))}
+    <div className="bg-background/50 rounded-lg overflow-hidden border border-border/30">
+      <div className="flex">
+        {hotel.photo_url && (
+          <div className="w-20 h-16 shrink-0 bg-secondary/30 overflow-hidden">
+            <img src={hotel.photo_url} alt={hotel.name} className="w-full h-full object-cover" loading="lazy" />
           </div>
         )}
-
-        <h4 className="text-sm font-semibold text-foreground leading-tight">{hotel.name}</h4>
-        
-        <div className="flex items-center gap-2 mt-1">
-          {hotel.rating && (
-            <div className="flex items-center gap-0.5">
-              <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-              <span className="text-xs font-medium">{hotel.rating}</span>
-              {hotel.user_ratings_total > 0 && (
-                <span className="text-[10px] text-muted-foreground">({hotel.user_ratings_total})</span>
-              )}
-            </div>
-          )}
-          {hotel.stars && (
-            <span className="text-[10px] text-muted-foreground">{hotel.stars}★</span>
-          )}
-          {hotel.price_level != null && (
-            <Badge variant="outline" className="text-[9px] px-1 py-0">
-              {priceLevelLabels[hotel.price_level] || "N/A"}
-            </Badge>
-          )}
+        <div className="p-2 flex-1 min-w-0">
+          <p className="text-xs font-semibold truncate">{hotel.name}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            {hotel.rating && (
+              <span className="text-[10px] flex items-center gap-0.5">
+                <Star className="h-2.5 w-2.5 text-amber-500 fill-amber-500" /> {hotel.rating}
+              </span>
+            )}
+            {hotel.stars && <span className="text-[9px] text-muted-foreground">{hotel.stars}★</span>}
+          </div>
+          <p className="text-[9px] text-muted-foreground truncate mt-0.5">{hotel.city}</p>
         </div>
-
-        {hotel.address && (
-          <p className="text-[10px] text-muted-foreground mt-1 line-clamp-1">
-            <MapPin className="h-2.5 w-2.5 inline mr-0.5" />
-            {hotel.address}
-          </p>
-        )}
       </div>
+      {reason && <p className="text-[9px] text-muted-foreground/70 px-2 pb-1.5 italic">💡 {reason}</p>}
+    </div>
+  );
+}
 
-      {selected && (
-        <div className="absolute top-2 right-2 bg-background/80 rounded-full p-0.5">
-          <CheckCircle2 className="h-5 w-5 text-primary" />
+// ── Swap Selector Modal ──
+function SwapSelector({ title, options, currentIndex, onSelect, onClose, renderOption }: {
+  title: string;
+  options: any[];
+  currentIndex: number;
+  onSelect: (idx: number) => void;
+  onClose: () => void;
+  renderOption: (item: any, idx: number) => React.ReactNode;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, y: 10 }}
+        animate={{ scale: 1, y: 0 }}
+        className="bg-background rounded-xl border shadow-xl max-w-lg w-full max-h-[70vh] overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="px-4 py-3 border-b flex items-center justify-between">
+          <h4 className="text-sm font-semibold">{title}</h4>
+          <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0"><X className="h-4 w-4" /></Button>
         </div>
-      )}
+        <ScrollArea className="max-h-[55vh]">
+          <div className="p-3 space-y-2">
+            {options.map((opt, i) => (
+              <div
+                key={i}
+                onClick={() => { onSelect(i); onClose(); }}
+                className={`cursor-pointer rounded-lg border p-2 transition-all ${
+                  i === currentIndex ? "border-primary bg-primary/5 ring-1 ring-primary/20" : "border-border/50 hover:border-primary/30"
+                }`}
+              >
+                {renderOption(opt, i)}
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+      </motion.div>
     </motion.div>
   );
 }
@@ -416,11 +368,15 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
 
   // ── Suggestions state ──
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
-  const [flightSuggestions, setFlightSuggestions] = useState<any[]>([]);
-  const [hotelSuggestions, setHotelSuggestions] = useState<Record<string, any[]>>({});
-  const [selectedFlightIdx, setSelectedFlightIdx] = useState<number | null>(null);
-  const [selectedHotels, setSelectedHotels] = useState<Record<string, number>>({});
+  const [allFlights, setAllFlights] = useState<any[]>([]);
+  const [allHotels, setAllHotels] = useState<Record<string, any[]>>({});
+  const [packages, setPackages] = useState<PackageData[]>([]);
+  const [selectedTier, setSelectedTier] = useState<string | null>(null);
+  // Custom overrides per tier
+  const [packageOverrides, setPackageOverrides] = useState<Record<string, { flight_index?: number; hotel_selections?: Record<string, number> }>>({});
   const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
+  // Swap modal
+  const [swapModal, setSwapModal] = useState<{ tier: string; type: "flight" | "hotel"; city?: string } | null>(null);
 
   useEffect(() => {
     if (open && conversationDbId) {
@@ -489,18 +445,16 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
     setSuggestionsLoading(true);
     setSuggestionsError(null);
     setStep("suggestions");
-    setFlightSuggestions([]);
-    setHotelSuggestions({});
-    setSelectedFlightIdx(null);
-    setSelectedHotels({});
+    setAllFlights([]);
+    setAllHotels({});
+    setPackages([]);
+    setSelectedTier(null);
+    setPackageOverrides({});
 
     try {
-      // Parse dates - try to convert DD/MM/YYYY to YYYY-MM-DD
       const parseDate = (d: string): string => {
         if (!d) return "";
-        // Already ISO format
         if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
-        // DD/MM/YYYY or DD/MM
         const parts = d.split("/");
         if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
         if (parts.length === 2) {
@@ -511,8 +465,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
       };
 
       const body = {
-        origin: origin,
-        destination: destination,
+        origin, destination,
         sub_destinations: subDests.split(",").map(s => s.trim()).filter(Boolean),
         departure_date: parseDate(departureDate),
         return_date: parseDate(returnDate),
@@ -527,8 +480,9 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
       const { data, error: fnErr } = await supabase.functions.invoke("proposal-suggestions", { body });
       if (fnErr) throw fnErr;
 
-      setFlightSuggestions(data?.flights || []);
-      setHotelSuggestions(data?.hotels || {});
+      setAllFlights(data?.flights || []);
+      setAllHotels(data?.hotels || {});
+      setPackages(data?.packages || []);
 
       if (!data?.flights?.length && !Object.keys(data?.hotels || {}).length) {
         setSuggestionsError("Nenhuma sugestão encontrada. Verifique datas e destinos.");
@@ -541,15 +495,31 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
     }
   };
 
-  const toggleHotelSelection = (city: string, index: number) => {
-    setSelectedHotels(prev => {
-      if (prev[city] === index) {
-        const next = { ...prev };
-        delete next[city];
-        return next;
-      }
-      return { ...prev, [city]: index };
-    });
+  // Get effective package data (with overrides applied)
+  const getEffectivePackage = (pkg: PackageData) => {
+    const overrides = packageOverrides[pkg.tier] || {};
+    return {
+      ...pkg,
+      flight_index: overrides.flight_index ?? pkg.flight_index,
+      hotel_selections: { ...pkg.hotel_selections, ...(overrides.hotel_selections || {}) },
+    };
+  };
+
+  const handleSwapFlight = (tier: string, newIndex: number) => {
+    setPackageOverrides(prev => ({
+      ...prev,
+      [tier]: { ...prev[tier], flight_index: newIndex },
+    }));
+  };
+
+  const handleSwapHotel = (tier: string, city: string, newIndex: number) => {
+    setPackageOverrides(prev => ({
+      ...prev,
+      [tier]: {
+        ...prev[tier],
+        hotel_selections: { ...(prev[tier]?.hotel_selections || {}), [city]: newIndex },
+      },
+    }));
   };
 
   const handleCreateProposal = () => {
@@ -571,45 +541,48 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
     const itinSummary = briefing?.itinerary_suggestion?.map(s => `${s.city}: ${s.nights} noites`).join(" → ") || "";
     if (itinSummary) params.set("itinerary", itinSummary);
 
-    // Build proposal_structure from briefing + selected suggestions
+    // Build proposal_structure from briefing + selected package
     const structure = briefing?.proposal_structure ? { ...briefing.proposal_structure } : { destinations: [], flights: [], hotels: [], experiences: [] };
 
-    // Add selected flight to structure
-    if (selectedFlightIdx !== null && flightSuggestions[selectedFlightIdx]) {
-      const f = flightSuggestions[selectedFlightIdx];
-      const ida = f.itineraries?.[0];
-      const volta = f.itineraries?.[1];
-      structure.flights = [{
-        origin: ida?.segments?.[0]?.origin_iata || origin,
-        destination: ida?.segments?.[ida.segments.length - 1]?.destination_iata || destination,
-        departure_date: ida?.segments?.[0]?.departure_time?.split("T")[0] || departureDate,
-        return_date: volta?.segments?.[0]?.departure_time?.split("T")[0] || returnDate,
-        cabin: f.cabin || flightPref || "",
-        airline: f.airline || "",
-        flight_number: ida?.segments?.map((s: any) => s.flight_number).join(", ") || "",
-        passengers: totalPax || undefined,
-        notes: `Preço: R$ ${Number(f.price).toLocaleString("pt-BR")} | ${f.airline_name} | ${f.stops === 0 ? "Direto" : `${f.stops} escala(s)`}`,
-      }];
-    }
+    if (selectedTier) {
+      const pkg = packages.find(p => p.tier === selectedTier);
+      if (pkg) {
+        const effective = getEffectivePackage(pkg);
+        const flight = allFlights[effective.flight_index];
 
-    // Add selected hotels to structure
-    const selectedHotelsList: any[] = [];
-    for (const [city, idx] of Object.entries(selectedHotels)) {
-      const hotel = hotelSuggestions[city]?.[idx];
-      if (hotel) {
-        selectedHotelsList.push({
-          city,
-          hotel_name: hotel.name,
-          rooms: 1,
-          notes: [
-            hotel.rating ? `Rating: ${hotel.rating}` : "",
-            hotel.address || "",
-          ].filter(Boolean).join(" | "),
-        });
+        // Save strategy
+        params.set("proposal_strategy", selectedTier.toUpperCase());
+
+        if (flight) {
+          const ida = flight.itineraries?.[0];
+          const volta = flight.itineraries?.[1];
+          structure.flights = [{
+            origin: ida?.segments?.[0]?.origin_iata || origin,
+            destination: ida?.segments?.[ida.segments.length - 1]?.destination_iata || destination,
+            departure_date: ida?.segments?.[0]?.departure_time?.split("T")[0] || departureDate,
+            return_date: volta?.segments?.[0]?.departure_time?.split("T")[0] || returnDate,
+            cabin: flight.cabin || flightPref || "",
+            airline: flight.airline || "",
+            flight_number: ida?.segments?.map((s: any) => s.flight_number).join(", ") || "",
+            passengers: totalPax || undefined,
+            notes: `Preço: R$ ${Number(flight.price).toLocaleString("pt-BR")} | ${flight.airline_name} | ${flight.stops === 0 ? "Direto" : `${flight.stops} escala(s)`}`,
+          }];
+        }
+
+        const selectedHotelsList: any[] = [];
+        for (const [city, idx] of Object.entries(effective.hotel_selections)) {
+          const hotel = allHotels[city]?.[idx];
+          if (hotel) {
+            selectedHotelsList.push({
+              city,
+              hotel_name: hotel.name,
+              rooms: 1,
+              notes: [hotel.rating ? `Rating: ${hotel.rating}` : "", hotel.address || ""].filter(Boolean).join(" | "),
+            });
+          }
+        }
+        if (selectedHotelsList.length > 0) structure.hotels = selectedHotelsList;
       }
-    }
-    if (selectedHotelsList.length > 0) {
-      structure.hotels = selectedHotelsList;
     }
 
     try {
@@ -624,9 +597,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
   };
 
   const confidence = CONFIDENCE_MAP[briefing?.confidence || "none"] || CONFIDENCE_MAP.none;
-  const demandConf = briefing?.current_demand_confidence
-    ? DEMAND_CONFIDENCE_MAP[briefing.current_demand_confidence]
-    : null;
+  const demandConf = briefing?.current_demand_confidence ? DEMAND_CONFIDENCE_MAP[briefing.current_demand_confidence] : null;
   const style = briefing?.trip_style ? STYLE_MAP[briefing.trip_style] : null;
   const urgency = briefing?.urgency_level ? URGENCY_MAP[briefing.urgency_level] : null;
   const hasAmbiguity = (briefing?.ambiguous_demands?.length || 0) > 1;
@@ -642,7 +613,6 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
   };
 
   const canSearchSuggestions = origin && destination && departureDate;
-  const hasSelections = selectedFlightIdx !== null || Object.keys(selectedHotels).length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -657,7 +627,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
               <h2 className="text-base font-semibold text-foreground">Criar Proposta com IA</h2>
               <p className="text-xs text-muted-foreground">
                 {step === "loading" ? "Analisando jornada completa do cliente..." :
-                 step === "suggestions" ? "Selecione voos e hotéis para a proposta" :
+                 step === "suggestions" ? "Escolha o pacote ideal para esta proposta" :
                  step === "creating" ? "Criando proposta..." :
                  "Revise o briefing antes de criar a proposta"}
               </p>
@@ -774,7 +744,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                     </div>
                   )}
 
-                  {/* ═══ CLIENT JOURNEY CONTEXT (collapsible) ═══ */}
+                  {/* ═══ CLIENT JOURNEY CONTEXT ═══ */}
                   {hasHistory && (
                     <div className="border border-border/30 rounded-lg overflow-hidden">
                       <button
@@ -842,7 +812,6 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                                   </div>
                                 </div>
                               )}
-
                               {briefing.client_history_summary && (
                                 <p className="text-xs text-foreground/70 leading-relaxed italic">
                                   "{briefing.client_history_summary}"
@@ -969,10 +938,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                   {/* Itinerary Suggestion */}
                   {briefing.itinerary_suggestion && briefing.itinerary_suggestion.length > 0 && (
                     <div>
-                      <button
-                        onClick={() => setShowItinerary(!showItinerary)}
-                        className="flex items-center gap-2 w-full text-left"
-                      >
+                      <button onClick={() => setShowItinerary(!showItinerary)} className="flex items-center gap-2 w-full text-left">
                         <Route className="h-3.5 w-3.5 text-primary" />
                         <span className="text-xs font-semibold text-foreground">Sugestão de Roteiro</span>
                         <Badge variant="secondary" className="text-[9px] px-1.5">{briefing.itinerary_suggestion.length} paradas</Badge>
@@ -980,12 +946,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                       </button>
                       <AnimatePresence>
                         {showItinerary && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden"
-                          >
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                             <div className="mt-2 space-y-1.5 pl-5">
                               {briefing.itinerary_suggestion.map((s, i) => (
                                 <div key={i} className="flex items-start gap-2 py-1.5 relative">
@@ -996,9 +957,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                                   <div>
                                     <span className="text-xs font-medium text-foreground">{s.city}</span>
                                     <span className="text-[10px] text-muted-foreground ml-1.5">· {s.nights} noite{s.nights > 1 ? "s" : ""}</span>
-                                    {s.highlights && (
-                                      <p className="text-[10px] text-muted-foreground/70 mt-0.5">{s.highlights}</p>
-                                    )}
+                                    {s.highlights && <p className="text-[10px] text-muted-foreground/70 mt-0.5">{s.highlights}</p>}
                                   </div>
                                 </div>
                               ))}
@@ -1012,22 +971,14 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                   {/* Next Steps */}
                   {briefing.next_steps && briefing.next_steps.length > 0 && (
                     <div>
-                      <button
-                        onClick={() => setShowNextSteps(!showNextSteps)}
-                        className="flex items-center gap-2 w-full text-left"
-                      >
+                      <button onClick={() => setShowNextSteps(!showNextSteps)} className="flex items-center gap-2 w-full text-left">
                         <Target className="h-3.5 w-3.5 text-primary" />
                         <span className="text-xs font-semibold text-foreground">Próximos Passos Sugeridos</span>
                         {showNextSteps ? <ChevronUp className="h-3 w-3 ml-auto text-muted-foreground" /> : <ChevronDown className="h-3 w-3 ml-auto text-muted-foreground" />}
                       </button>
                       <AnimatePresence>
                         {showNextSteps && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden"
-                          >
+                          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                             <div className="mt-2 space-y-1 pl-5">
                               {briefing.next_steps.map((s, i) => (
                                 <div key={i} className="flex items-start gap-2 py-1">
@@ -1072,7 +1023,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                 </motion.div>
               )}
 
-              {/* ═══ SUGGESTIONS STEP ═══ */}
+              {/* ═══ SUGGESTIONS STEP — PACKAGE CARDS ═══ */}
               {step === "suggestions" && (
                 <motion.div
                   key="suggestions"
@@ -1089,13 +1040,13 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                         <Loader2 className="h-5 w-5 animate-spin text-primary absolute -top-1 -right-1" />
                       </div>
                       <div className="text-center space-y-1.5">
-                        <p className="text-sm font-medium text-foreground">Buscando opções reais</p>
-                        <p className="text-xs text-muted-foreground">Consultando voos e hotéis disponíveis...</p>
+                        <p className="text-sm font-medium text-foreground">Montando pacotes inteligentes</p>
+                        <p className="text-xs text-muted-foreground">Buscando voos e hotéis reais e organizando em 3 opções...</p>
                       </div>
                       <div className="flex flex-wrap justify-center gap-4 mt-2 text-[10px] text-muted-foreground/60">
                         <span className="flex items-center gap-1"><Plane className="h-3 w-3" /> Voos Amadeus</span>
                         <span className="flex items-center gap-1"><Hotel className="h-3 w-3" /> Hotéis Google Places</span>
-                        <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> IA classificando</span>
+                        <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" /> IA montando pacotes</span>
                       </div>
                     </div>
                   )}
@@ -1107,73 +1058,129 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
                     </div>
                   )}
 
-                  {!suggestionsLoading && (
+                  {!suggestionsLoading && packages.length > 0 && (
                     <>
-                      {/* ── Flight Suggestions ── */}
-                      {flightSuggestions.length > 0 && (
-                        <div>
-                          <div className="flex items-center gap-2 mb-3">
-                            <Plane className="h-4 w-4 text-primary" />
-                            <h3 className="text-sm font-semibold text-foreground">Voos Sugeridos</h3>
-                            <Badge variant="outline" className="text-[9px] px-1.5">{flightSuggestions.length} opções</Badge>
-                            {selectedFlightIdx !== null && (
-                              <Badge className="text-[9px] px-1.5 bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                                <Check className="h-2.5 w-2.5 mr-0.5" /> 1 selecionado
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="space-y-3">
-                            {flightSuggestions.map((f, i) => (
-                              <FlightCard
-                                key={i}
-                                flight={f}
-                                index={i}
-                                selected={selectedFlightIdx === i}
-                                onSelect={() => setSelectedFlightIdx(prev => prev === i ? null : i)}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      <div className="text-center mb-2">
+                        <p className="text-xs text-muted-foreground">
+                          A IA organizou <strong>{allFlights.length} voos</strong> e <strong>{Object.values(allHotels).reduce((a, b) => a + b.length, 0)} hotéis</strong> em 3 pacotes.
+                          Escolha o pacote ideal ou ajuste os itens dentro de cada um.
+                        </p>
+                      </div>
 
-                      {/* ── Hotel Suggestions ── */}
-                      {Object.keys(hotelSuggestions).length > 0 && (
-                        <div>
-                          <div className="flex items-center gap-2 mb-3">
-                            <Hotel className="h-4 w-4 text-primary" />
-                            <h3 className="text-sm font-semibold text-foreground">Hotéis Sugeridos</h3>
-                            {Object.keys(selectedHotels).length > 0 && (
-                              <Badge className="text-[9px] px-1.5 bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                                <Check className="h-2.5 w-2.5 mr-0.5" /> {Object.keys(selectedHotels).length} selecionado(s)
-                              </Badge>
-                            )}
-                          </div>
+                      <div className="space-y-4">
+                        {packages.map((pkg, pkgIdx) => {
+                          const effective = getEffectivePackage(pkg);
+                          const tierCfg = TIER_CONFIG[pkg.tier] || TIER_CONFIG.conforto;
+                          const TierIcon = tierCfg.icon;
+                          const flight = allFlights[effective.flight_index];
+                          const isSelected = selectedTier === pkg.tier;
 
-                          {Object.entries(hotelSuggestions).map(([city, hotels]) => (
-                            <div key={city} className="mb-4">
-                              <div className="flex items-center gap-1.5 mb-2">
-                                <MapPin className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-xs font-semibold text-foreground">{city}</span>
-                                <Badge variant="outline" className="text-[9px] px-1.5">{hotels.length} opções</Badge>
+                          // Estimate total price
+                          const flightPrice = flight ? parseFloat(flight.price) || 0 : 0;
+
+                          return (
+                            <motion.div
+                              key={pkg.tier}
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: pkgIdx * 0.1 }}
+                              onClick={() => setSelectedTier(prev => prev === pkg.tier ? null : pkg.tier)}
+                              className={`relative rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                                isSelected
+                                  ? `${tierCfg.border} ring-2 ring-primary/20 shadow-lg`
+                                  : `border-border/40 hover:shadow-md ${tierCfg.border}`
+                              }`}
+                            >
+                              {/* Package Header */}
+                              <div className={`flex items-center justify-between mb-3 pb-3 border-b border-border/30`}>
+                                <div className="flex items-center gap-3">
+                                  <div className={`h-10 w-10 rounded-xl bg-gradient-to-br ${tierCfg.gradient} flex items-center justify-center`}>
+                                    <TierIcon className="h-5 w-5" />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h3 className="text-sm font-bold text-foreground">{tierCfg.emoji} {tierCfg.label}</h3>
+                                      {isSelected && <CheckCircle2 className="h-4 w-4 text-primary" />}
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground">{pkg.highlight || ""}</p>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-lg font-bold text-foreground">
+                                    R$ {flightPrice.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}
+                                  </p>
+                                  <p className="text-[9px] text-muted-foreground">voo total</p>
+                                </div>
                               </div>
-                              <div className="grid grid-cols-2 gap-3">
-                                {hotels.map((h: any, i: number) => (
-                                  <HotelCard
-                                    key={i}
-                                    hotel={h}
-                                    index={i}
-                                    selected={selectedHotels[city] === i}
-                                    onSelect={() => toggleHotelSelection(city, i)}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
 
-                      {/* No results info */}
-                      {flightSuggestions.length === 0 && Object.keys(hotelSuggestions).length === 0 && !suggestionsError && (
+                              {/* Flight */}
+                              <div className="mb-3">
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium flex items-center gap-1">
+                                    <Plane className="h-3 w-3" /> Voo
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 text-[9px] px-1.5 text-primary hover:text-primary"
+                                    onClick={(e) => { e.stopPropagation(); setSwapModal({ tier: pkg.tier, type: "flight" }); }}
+                                  >
+                                    <RefreshCw className="h-2.5 w-2.5 mr-0.5" /> Trocar
+                                  </Button>
+                                </div>
+                                {flight ? (
+                                  <FlightMiniCard flight={flight} reason={pkg.flight_reason} />
+                                ) : (
+                                  <p className="text-xs text-muted-foreground italic">Nenhum voo disponível</p>
+                                )}
+                              </div>
+
+                              {/* Hotels */}
+                              {Object.keys(effective.hotel_selections).length > 0 && (
+                                <div>
+                                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium flex items-center gap-1 mb-1.5">
+                                    <Hotel className="h-3 w-3" /> Hotéis
+                                  </span>
+                                  <div className="space-y-2">
+                                    {Object.entries(effective.hotel_selections).map(([city, hIdx]) => {
+                                      const hotel = allHotels[city]?.[hIdx];
+                                      if (!hotel) return null;
+                                      return (
+                                        <div key={city}>
+                                          <div className="flex items-center justify-between mb-1">
+                                            <span className="text-[9px] text-muted-foreground">{city}</span>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="h-5 text-[9px] px-1.5 text-primary hover:text-primary"
+                                              onClick={(e) => { e.stopPropagation(); setSwapModal({ tier: pkg.tier, type: "hotel", city }); }}
+                                            >
+                                              <RefreshCw className="h-2.5 w-2.5 mr-0.5" /> Trocar
+                                            </Button>
+                                          </div>
+                                          <HotelMiniCard hotel={hotel} reason={pkg.hotel_reason} />
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Selection overlay */}
+                              {isSelected && (
+                                <div className="absolute top-3 right-3">
+                                  <Badge className={`text-[10px] px-2 py-0.5 border ${tierCfg.badgeBg}`}>
+                                    ✓ Selecionado
+                                  </Badge>
+                                </div>
+                              )}
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+
+                      {/* No results fallback */}
+                      {allFlights.length === 0 && Object.keys(allHotels).length === 0 && !suggestionsError && (
                         <div className="text-center py-8">
                           <p className="text-sm text-muted-foreground">Nenhuma sugestão disponível para os parâmetros informados.</p>
                         </div>
@@ -1225,21 +1232,47 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
               <ArrowLeft className="h-3.5 w-3.5" /> Voltar ao briefing
             </Button>
             <div className="flex items-center gap-3">
-              {hasSelections && (
+              {selectedTier && (
                 <p className="text-[10px] text-emerald-600 flex items-center gap-1">
                   <CheckCircle2 className="h-3 w-3" />
-                  {selectedFlightIdx !== null ? "1 voo" : ""}
-                  {selectedFlightIdx !== null && Object.keys(selectedHotels).length > 0 ? " + " : ""}
-                  {Object.keys(selectedHotels).length > 0 ? `${Object.keys(selectedHotels).length} hotel(is)` : ""}
+                  Pacote {TIER_CONFIG[selectedTier]?.label} selecionado
                 </p>
               )}
               <Button onClick={handleCreateProposal} className="gap-2 h-9">
                 <ArrowRight className="h-4 w-4" />
-                {hasSelections ? "Criar com seleções" : "Criar sem sugestões"}
+                {selectedTier ? `Criar proposta ${TIER_CONFIG[selectedTier]?.label}` : "Criar sem pacote"}
               </Button>
             </div>
           </div>
         )}
+
+        {/* Swap Modal */}
+        <AnimatePresence>
+          {swapModal && swapModal.type === "flight" && (
+            <SwapSelector
+              title="Trocar voo"
+              options={allFlights}
+              currentIndex={getEffectivePackage(packages.find(p => p.tier === swapModal.tier)!).flight_index}
+              onSelect={(idx) => handleSwapFlight(swapModal.tier, idx)}
+              onClose={() => setSwapModal(null)}
+              renderOption={(f, idx) => (
+                <FlightMiniCard flight={f} />
+              )}
+            />
+          )}
+          {swapModal && swapModal.type === "hotel" && swapModal.city && (
+            <SwapSelector
+              title={`Trocar hotel em ${swapModal.city}`}
+              options={allHotels[swapModal.city] || []}
+              currentIndex={getEffectivePackage(packages.find(p => p.tier === swapModal.tier)!).hotel_selections[swapModal.city!] ?? -1}
+              onSelect={(idx) => handleSwapHotel(swapModal.tier, swapModal.city!, idx)}
+              onClose={() => setSwapModal(null)}
+              renderOption={(h) => (
+                <HotelMiniCard hotel={h} />
+              )}
+            />
+          )}
+        </AnimatePresence>
       </DialogContent>
     </Dialog>
   );
