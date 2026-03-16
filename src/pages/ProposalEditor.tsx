@@ -301,11 +301,11 @@ export default function ProposalEditor() {
 
       let proposalId = id;
       if (isNew) {
-        const { data, error } = await supabase.from("proposals").insert(payload).select("id").single();
+        const { data, error } = await supabase.from("proposals").insert(payload as any).select("id").single();
         if (error) throw error;
         proposalId = data.id;
       } else {
-        const { error } = await supabase.from("proposals").update(payload).eq("id", id);
+        const { error } = await supabase.from("proposals").update(payload as any).eq("id", id);
         if (error) throw error;
       }
 
