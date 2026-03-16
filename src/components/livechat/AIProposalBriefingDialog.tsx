@@ -271,6 +271,17 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
     if (consultantNotes) params.set("notes", consultantNotes);
     const itinSummary = briefing?.itinerary_suggestion?.map(s => `${s.city}: ${s.nights} noites`).join(" → ") || "";
     if (itinSummary) params.set("itinerary", itinSummary);
+
+    // Pass proposal_structure via sessionStorage (too large for URL)
+    if (briefing?.proposal_structure) {
+      try {
+        sessionStorage.setItem("ai_proposal_structure", JSON.stringify(briefing.proposal_structure));
+        params.set("has_structure", "1");
+      } catch (e) {
+        console.error("Failed to save proposal structure:", e);
+      }
+    }
+
     onOpenChange(false);
     navigate(`/propostas/nova?${params.toString()}`);
   };

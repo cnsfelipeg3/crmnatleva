@@ -489,6 +489,75 @@ ${transcript}`;
                   next_steps: { type: "array", items: { type: "string" } },
                   internal_notes: { type: "string" },
                   confidence: { type: "string", enum: ["high", "medium", "low", "none"] },
+
+                  // ─── Proposal Structure (auto-fill items) ───
+                  proposal_structure: {
+                    type: "object",
+                    description: "Structured items for auto-populating the proposal editor. Extract ALL mentioned flights, hotels, destinations, and experiences from the CURRENT DEMAND conversation.",
+                    properties: {
+                      destinations: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            name: { type: "string", description: "City or region name" },
+                            country: { type: "string" },
+                            nights: { type: "number", description: "Number of nights if mentioned" },
+                            highlights: { type: "string", description: "Key attractions or activities mentioned" }
+                          },
+                          required: ["name"]
+                        }
+                      },
+                      flights: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            origin: { type: "string" },
+                            destination: { type: "string" },
+                            departure_date: { type: "string" },
+                            return_date: { type: "string" },
+                            cabin: { type: "string", description: "Economy, Premium Economy, Business, First" },
+                            airline: { type: "string" },
+                            flight_number: { type: "string" },
+                            passengers: { type: "number" },
+                            notes: { type: "string" }
+                          },
+                          required: ["origin", "destination"]
+                        }
+                      },
+                      hotels: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            city: { type: "string" },
+                            hotel_name: { type: "string" },
+                            rooms: { type: "number" },
+                            checkin: { type: "string" },
+                            checkout: { type: "string" },
+                            room_type: { type: "string" },
+                            board: { type: "string", description: "Meal plan: café da manhã, meia pensão, all inclusive, etc." },
+                            notes: { type: "string" }
+                          },
+                          required: ["city"]
+                        }
+                      },
+                      experiences: {
+                        type: "array",
+                        items: {
+                          type: "object",
+                          properties: {
+                            name: { type: "string", description: "Activity or experience name" },
+                            city: { type: "string" },
+                            description: { type: "string" },
+                            duration: { type: "string" }
+                          },
+                          required: ["name"]
+                        }
+                      }
+                    }
+                  },
                 },
                 required: ["confidence", "briefing_summary", "current_demand_confidence", "detected_trip_cycles"],
                 additionalProperties: false,
