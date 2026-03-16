@@ -10,8 +10,13 @@ import {
 import {
   Collapsible, CollapsibleContent, CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Plus, Trash2, ChevronDown, Hotel, MapPin } from "lucide-react";
+import {
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Plus, Trash2, ChevronDown, Hotel, MapPin, Clock, Loader2, Search, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import HotelAutocomplete from "@/components/HotelAutocomplete";
 import HotelPhotosScraper from "@/components/HotelPhotosScraper";
 
