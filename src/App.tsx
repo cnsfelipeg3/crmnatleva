@@ -219,6 +219,7 @@ function AppRoutes() {
           <Route path="/implementacao/base-conhecimento" element={<BaseConhecimento />} />
           <Route path="/implementacao/estrategia-ia" element={<AIStrategyKnowledge />} />
           <Route path="/implementacao/aprendizados-ia" element={<AILearningDashboard />} />
+          <Route path="/implementacao/cerebro-natleva" element={<CerebroNatLeva />} />
 
           {/* Operação Diária */}
           <Route path="/operacao/inbox" element={<OperacaoInbox />} />
