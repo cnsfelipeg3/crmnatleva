@@ -252,8 +252,82 @@ export default function HotelEntriesEditor({
                       )}
                     </div>
                     <div className="space-y-1.5"><Label className="text-xs">Destino</Label><Input className="h-9 text-sm" value={hotel.hotel_city} onChange={e => updateHotel(hotel.id, "hotel_city", e.target.value)} /></div>
-                    <div className="space-y-1.5"><Label className="text-xs">Check-in</Label><Input type="date" className="h-9 text-sm" value={hotel.hotel_checkin_date} onChange={e => updateHotel(hotel.id, "hotel_checkin_date", e.target.value)} /></div>
-                    <div className="space-y-1.5"><Label className="text-xs">Check-out</Label><Input type="date" className="h-9 text-sm" value={hotel.hotel_checkout_date} onChange={e => updateHotel(hotel.id, "hotel_checkout_date", e.target.value)} /></div>
+
+                    {/* Check-in date + time */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Check-in (data)</Label>
+                      <Input type="date" className="h-9 text-sm" value={hotel.hotel_checkin_date} onChange={e => updateHotel(hotel.id, "hotel_checkin_date", e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Check-out (data)</Label>
+                      <Input type="date" className="h-9 text-sm" value={hotel.hotel_checkout_date} onChange={e => updateHotel(hotel.id, "hotel_checkout_date", e.target.value)} />
+                    </div>
+
+                    {/* Check-in/out times */}
+                    <div className="sm:col-span-2">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Label className="text-xs flex items-center gap-1">
+                          <Clock className="w-3 h-3" /> Horários de check-in / check-out
+                        </Label>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-[10px] gap-1 px-2"
+                                disabled={!hotel.hotel_name || fetchingTimes.has(hotel.id)}
+                                onClick={() => fetchCheckinTimes(hotel)}
+                              >
+                                {fetchingTimes.has(hotel.id) ? (
+                                  <><Loader2 className="w-3 h-3 animate-spin" /> Buscando...</>
+                                ) : (
+                                  <><Search className="w-3 h-3" /> Buscar horários</>
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="max-w-[250px] text-xs">
+                              Busca automática dos horários no site oficial do hotel, Booking, Decolar, TripAdvisor e outros portais
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-[10px] text-muted-foreground">Horário check-in</Label>
+                          <Input
+                            type="time"
+                            className="h-9 text-sm"
+                            value={hotel.hotel_checkin_time}
+                            onChange={e => updateHotel(hotel.id, "hotel_checkin_time", e.target.value)}
+                            placeholder="14:00"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[10px] text-muted-foreground">Horário check-out</Label>
+                          <Input
+                            type="time"
+                            className="h-9 text-sm"
+                            value={hotel.hotel_checkout_time}
+                            onChange={e => updateHotel(hotel.id, "hotel_checkout_time", e.target.value)}
+                            placeholder="12:00"
+                          />
+                        </div>
+                      </div>
+                      {hotel.hotel_checkin_time_notes && (
+                        <p className="text-[10px] text-muted-foreground mt-1 flex items-start gap-1">
+                          <Info className="w-3 h-3 shrink-0 mt-0.5" />
+                          {hotel.hotel_checkin_time_notes}
+                        </p>
+                      )}
+                      {hotel.hotel_checkin_time_source && (
+                        <Badge variant="secondary" className="text-[8px] mt-1 h-4">
+                          Fonte: {hotel.hotel_checkin_time_source === "ai" ? "IA + Firecrawl" : hotel.hotel_checkin_time_source === "regex" ? "Extração automática" : hotel.hotel_checkin_time_source}
+                        </Badge>
+                      )}
+                    </div>
+
                     <div className="space-y-1.5"><Label className="text-xs">Qtd Quartos</Label><Input type="number" min={1} className="h-9 text-sm" value={hotel.hotel_qty_rooms} onChange={e => updateHotel(hotel.id, "hotel_qty_rooms", e.target.value)} /></div>
                     <div className="space-y-1.5"><Label className="text-xs">Tipo de Quarto</Label><Input className="h-9 text-sm" value={hotel.hotel_room} onChange={e => updateHotel(hotel.id, "hotel_room", e.target.value)} placeholder="Duplo, Suite..." /></div>
                     <div className="space-y-1.5">
