@@ -725,10 +725,10 @@ export default function AIStrategyKnowledge() {
                 </div>
                 <div>
                   <Label>Impacto Estimado</Label>
-                  <Select value={editRule.estimated_impact || ""} onValueChange={(v) => setEditRule({ ...editRule, estimated_impact: v || null })}>
+                  <Select value={editRule.estimated_impact || "none"} onValueChange={(v) => setEditRule({ ...editRule, estimated_impact: v === "none" ? null : v })}>
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Não definido</SelectItem>
+                      <SelectItem value="none">Não definido</SelectItem>
                       {IMPACT_OPTIONS.map((i) => <SelectItem key={i.value} value={i.value}>{i.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
