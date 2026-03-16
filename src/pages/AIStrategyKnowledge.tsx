@@ -516,7 +516,7 @@ export default function AIStrategyKnowledge() {
               <SelectValue placeholder="Tag" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas tags</SelectItem>
+              <SelectItem value="all">Todas tags</SelectItem>
               {allTags.map((t) => (
                 <SelectItem key={t} value={t}>{t}</SelectItem>
               ))}
