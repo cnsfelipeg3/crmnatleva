@@ -41,6 +41,8 @@ serve(async (req) => {
         ]))
       : [];
 
+    let clientName = conv?.display_name || conv?.contact_name || "";
+
     // Resolve client from sister conversations when current conversation is not linked
     let clientId = conv?.client_id || null;
     if (!clientId && phoneCandidates.length > 0) {
@@ -79,7 +81,28 @@ serve(async (req) => {
     }
 
     // ─── LAYER 1: ALL conversation messages in scope (no limit) ───
-    // Fetch in pages to get everything
+    let allMessages: any[] = [];
+    let page = 0;
+    const PAGE_SIZE = 1000;
+    while (true) {
+      const { data: batch, error: batchErr } = await sb
+        .from("conversation_messages")
+        .select("content, sender_type, created_at, message_type, direction, conversation_id")
+        .in("conversation_id", scopedConversationIds)
+        .order("created_at", { ascending: true })
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      if (batchErr) throw batchErr;
+      if (!batch?.length) break;
+      allMessages = allMessages.concat(batch);
+      if (batch.length < PAGE_SIZE) break;
+      page++;
+    }
+
+    if (!allMessages.length) {
+      return new Response(JSON.stringify({ briefing: null, reason: "no_messages" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // ─── LAYER 2: Client commercial history ───
     let clientContext = "";
