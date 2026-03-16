@@ -3155,6 +3155,118 @@ export type Database = {
           },
         ]
       }
+      natleva_brain_insights: {
+        Row: {
+          action_suggested: string | null
+          action_taken: boolean | null
+          action_taken_at: string | null
+          category: string
+          client_profile: string | null
+          confidence: number
+          created_at: string
+          description: string | null
+          destination: string | null
+          expires_at: string | null
+          id: string
+          impact_level: string | null
+          insight_type: string
+          is_active: boolean
+          metadata: Json | null
+          probability_score: number | null
+          promoted_at: string | null
+          promoted_to_knowledge: boolean
+          related_client_id: string | null
+          related_proposal_id: string | null
+          related_sale_id: string | null
+          sample_size: number
+          strategy: string | null
+          subcategory: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          action_suggested?: string | null
+          action_taken?: boolean | null
+          action_taken_at?: string | null
+          category?: string
+          client_profile?: string | null
+          confidence?: number
+          created_at?: string
+          description?: string | null
+          destination?: string | null
+          expires_at?: string | null
+          id?: string
+          impact_level?: string | null
+          insight_type: string
+          is_active?: boolean
+          metadata?: Json | null
+          probability_score?: number | null
+          promoted_at?: string | null
+          promoted_to_knowledge?: boolean
+          related_client_id?: string | null
+          related_proposal_id?: string | null
+          related_sale_id?: string | null
+          sample_size?: number
+          strategy?: string | null
+          subcategory?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          action_suggested?: string | null
+          action_taken?: boolean | null
+          action_taken_at?: string | null
+          category?: string
+          client_profile?: string | null
+          confidence?: number
+          created_at?: string
+          description?: string | null
+          destination?: string | null
+          expires_at?: string | null
+          id?: string
+          impact_level?: string | null
+          insight_type?: string
+          is_active?: boolean
+          metadata?: Json | null
+          probability_score?: number | null
+          promoted_at?: string | null
+          promoted_to_knowledge?: boolean
+          related_client_id?: string | null
+          related_proposal_id?: string | null
+          related_sale_id?: string | null
+          sample_size?: number
+          strategy?: string | null
+          subcategory?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "natleva_brain_insights_related_client_id_fkey"
+            columns: ["related_client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "natleva_brain_insights_related_proposal_id_fkey"
+            columns: ["related_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "natleva_brain_insights_related_sale_id_fkey"
+            columns: ["related_sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       passengers: {
         Row: {
           address_cep: string | null
