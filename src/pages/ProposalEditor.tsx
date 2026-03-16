@@ -508,6 +508,18 @@ export default function ProposalEditor() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1.5">
+                <Label>Resultado</Label>
+                <Select value={form.proposal_outcome} onValueChange={(v) => setForm((f) => ({ ...f, proposal_outcome: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">Em aberto</SelectItem>
+                    <SelectItem value="won">✅ Ganha</SelectItem>
+                    <SelectItem value="lost">❌ Perdida</SelectItem>
+                    <SelectItem value="expired">⏰ Expirada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="md:col-span-2 space-y-1.5">
                 <Label>URL da imagem de capa</Label>
                 <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="https://images.unsplash.com/..." />
