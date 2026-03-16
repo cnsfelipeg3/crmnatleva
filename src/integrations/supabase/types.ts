@@ -1206,6 +1206,82 @@ export type Database = {
           },
         ]
       }
+      client_trip_memory: {
+        Row: {
+          client_id: string
+          confidence_score: string | null
+          conversation_id: string | null
+          conversation_period: string | null
+          detected_at: string
+          id: string
+          passengers: number | null
+          proposal_id: string | null
+          sale_id: string | null
+          source_summary: string | null
+          trip_dates: string | null
+          trip_destination: string
+          trip_status: string
+          trip_subdestinations: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          confidence_score?: string | null
+          conversation_id?: string | null
+          conversation_period?: string | null
+          detected_at?: string
+          id?: string
+          passengers?: number | null
+          proposal_id?: string | null
+          sale_id?: string | null
+          source_summary?: string | null
+          trip_dates?: string | null
+          trip_destination: string
+          trip_status?: string
+          trip_subdestinations?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          confidence_score?: string | null
+          conversation_id?: string | null
+          conversation_period?: string | null
+          detected_at?: string
+          id?: string
+          passengers?: number | null
+          proposal_id?: string | null
+          sale_id?: string | null
+          source_summary?: string | null
+          trip_dates?: string | null
+          trip_destination?: string
+          trip_status?: string
+          trip_subdestinations?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_trip_memory_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_trip_memory_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_trip_memory_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           city: string | null
