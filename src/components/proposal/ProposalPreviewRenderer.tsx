@@ -538,9 +538,11 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   const experiences = items.filter((i) => i.item_type === "experience");
   const paymentConditions = (proposal.payment_conditions as any[]) || [];
 
+  const startDate = parseLocalDate(proposal.travel_start_date);
+  const endDate = parseLocalDate(proposal.travel_end_date);
   const dateRange =
-    proposal.travel_start_date && proposal.travel_end_date
-      ? `${format(new Date(proposal.travel_start_date + "T00:00:00"), "dd", { locale: ptBR })} — ${format(new Date(proposal.travel_end_date + "T00:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`
+    startDate && endDate
+      ? `${format(startDate, "dd", { locale: ptBR })} — ${format(endDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`
       : proposal.travel_start_date
         ? fmtDate(proposal.travel_start_date)
         : "";
