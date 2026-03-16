@@ -711,51 +711,6 @@ function OperacaoInboxInner() {
           return Array.from(byId.values()).sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
         });
 
-        // Background: backfill ALL previews from actual message data (not just empty ones)
-        const allConvData = data;
-        if (allConvData.length > 0) {
-          const BATCH = 8;
-          for (let i = 0; i < allConvData.length; i += BATCH) {
-            const batch = allConvData.slice(i, i + BATCH);
-            await Promise.allSettled(batch.map(async (convRecord) => {
-              const convId = convRecord.id;
-              const phone = (convRecord.phone || "").replace(/\D/g, "");
-              const cleanPhone = phone;
-              const canonicalId = cleanPhone ? `wa_${cleanPhone}` : convId;
-
-              // Try chat_messages first
-              let { data: lastMsg } = await supabase.from("chat_messages").select("content, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).maybeSingle();
-
-              // Fallback to legacy messages table
-              if (!lastMsg) {
-                const { data: legacyMsg } = await supabase.from("messages").select("text, message_type, created_at").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(1).maybeSingle();
-                if (legacyMsg) lastMsg = { content: (legacyMsg as any).text, message_type: (legacyMsg as any).message_type, created_at: (legacyMsg as any).created_at };
-              }
-
-              // Fallback to zapi_messages by phone
-              if (!lastMsg && cleanPhone) {
-                const phoneCandidates = [cleanPhone, `${cleanPhone}@c.us`];
-                const { data: zapiMsg } = await supabase.from("zapi_messages" as any).select("text, type, timestamp, from_me").in("phone", phoneCandidates).order("timestamp", { ascending: false }).limit(1).maybeSingle();
-                if (zapiMsg) lastMsg = { content: (zapiMsg as any).text || `📎 ${(zapiMsg as any).type}`, message_type: (zapiMsg as any).type || "text", created_at: toIsoTimestamp((zapiMsg as any).timestamp) };
-              }
-
-              if (lastMsg) {
-                const preview = lastMsg.content || `📎 ${lastMsg.message_type}`;
-                const msgTime = lastMsg.created_at;
-                const currentPreview = convRecord.last_message_preview || "";
-                const currentTime = convRecord.last_message_at || "";
-                // Only update if we found a different/better preview or the current one is empty
-                const needsUpdate = !currentPreview || currentPreview !== preview || (msgTime && (!currentTime || new Date(msgTime) > new Date(currentTime)));
-                
-                setConversations(prev => prev.map(c => c.id === canonicalId ? { ...c, last_message_preview: preview, last_message_at: msgTime || c.last_message_at } : c));
-                
-                if (needsUpdate) {
-                  supabase.from("conversations").update({ last_message_preview: preview, last_message_at: msgTime || currentTime }).eq("id", convId).then(() => {});
-                }
-              }
-            }));
-          }
-        }
       }
     };
     loadDbConversations();
