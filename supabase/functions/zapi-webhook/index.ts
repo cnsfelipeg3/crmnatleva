@@ -121,6 +121,16 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── FILTER: Skip WhatsApp Status/Story events ──
+    const isStatusBroadcast = rawPhone === "status@broadcast" || rawPhone.includes("status@broadcast");
+    const isStatusReply = body.isStatusReply === true;
+    if (isStatusBroadcast || isStatusReply) {
+      console.log(`[Z-API Webhook] Ignorando evento de Status/Story: isStatusReply=${isStatusReply}, phone=${rawPhone}`);
+      return new Response(JSON.stringify({ success: true, type: "status_ignored" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Only process if there's a resolved phone and some content
     if (phone && (textContent || body.image || body.audio || body.video || body.document)) {
       const cleanPhone = phone.replace(/\D/g, "");
