@@ -479,6 +479,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_strategy_knowledge: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          example: string | null
+          id: string
+          is_active: boolean
+          priority: number
+          rule: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          example?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: number
+          rule: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          example?: string | null
+          id?: string
+          is_active?: boolean
+          priority?: number
+          rule?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_suggestions: {
         Row: {
           conversation_id: string | null
