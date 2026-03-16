@@ -215,6 +215,7 @@ function AppRoutes() {
 
           {/* Implementação */}
           <Route path="/implementacao/base-conhecimento" element={<BaseConhecimento />} />
+          <Route path="/implementacao/estrategia-ia" element={<AIStrategyKnowledge />} />
 
           {/* Operação Diária */}
           <Route path="/operacao/inbox" element={<OperacaoInbox />} />

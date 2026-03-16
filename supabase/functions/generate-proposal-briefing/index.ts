@@ -331,7 +331,7 @@ Analise a conversa inteira e identifique cada ciclo de viagem separadamente. Par
 
 Se houver memória de viagens existente, use-a para entender rapidamente o histórico sem depender só da conversa.
 
-Responda usando a ferramenta generate_briefing.`;
+Responda usando a ferramenta generate_briefing.${strategyContext}`;
 
     const userContent = `NOME DO CLIENTE: ${clientName}
 ${clientContext ? "\n" + clientContext : ""}
