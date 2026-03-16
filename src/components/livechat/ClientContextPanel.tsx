@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { QuoteSummaryCard } from "./QuoteSummaryCard";
+import { AIProposalBriefingDialog } from "./AIProposalBriefingDialog";
 
 // ─── Types ───
 type Stage = "novo_lead" | "qualificacao" | "proposta_preparacao" | "proposta_enviada" | "negociacao" | "fechado" | "pos_venda" | "perdido";
@@ -130,6 +131,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
   const [addingNote, setAddingNote] = useState(false);
   const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
+  const [showBriefingDialog, setShowBriefingDialog] = useState(false);
 
   const initials = conversation.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -374,6 +376,24 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
           {/* ─── AI Quote Summary ─── */}
           <QuoteSummaryCard conversationDbId={conversation.db_id || conversation.id} />
 
+          {/* ─── AI Proposal Button ─── */}
+          <div className="px-4 pb-2">
+            <Button
+              onClick={() => setShowBriefingDialog(true)}
+              className="w-full gap-2 h-9 text-xs font-semibold"
+              variant="default"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Criar proposta com IA
+            </Button>
+          </div>
+
+          <AIProposalBriefingDialog
+            open={showBriefingDialog}
+            onOpenChange={setShowBriefingDialog}
+            conversationDbId={conversation.db_id || conversation.id}
+            contactName={conversation.contact_name}
+          />
           {/* ─── Stage ─── */}
           <Section title="Etapa do Funil" icon={Tag} defaultOpen={true}>
             <div className="flex items-center gap-2">
