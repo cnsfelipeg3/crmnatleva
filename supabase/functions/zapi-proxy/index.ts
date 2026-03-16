@@ -294,8 +294,9 @@ async function rebuildHistory(payload: any) {
         }
 
         await supabase.from("conversations").update(updatePayload).eq("id", existingConv.id);
+        resolvedConvId = existingConv.id;
       } else {
-        await supabase.from("conversations").insert({
+        const { data: newConv } = await supabase.from("conversations").insert({
           phone: cleanPhone,
           contact_name: contactName,
           source: "whatsapp_api",
@@ -306,7 +307,51 @@ async function rebuildHistory(payload: any) {
           unread_count: 0,
           is_vip: false,
           external_conversation_id: convExternalId,
-        });
+        }).select("id").maybeSingle();
+        resolvedConvId = newConv?.id || null;
+      }
+
+      // --- Insert into conversation_messages (unified table) ---
+      if (resolvedConvId && rowsToInsert.length > 0) {
+        // First get existing external_message_ids to avoid duplicates
+        const { data: existingUnified } = await supabase
+          .from("conversation_messages")
+          .select("external_message_id")
+          .eq("conversation_id", resolvedConvId)
+          .not("external_message_id", "is", null);
+
+        const existingUnifiedIds = new Set((existingUnified || []).map((r: any) => r.external_message_id));
+
+        const unifiedRows = rowsToInsert
+          .filter(r => {
+            if (!r.message_id) return true; // no dedup key, insert anyway
+            return !existingUnifiedIds.has(r.message_id);
+          })
+          .map(r => ({
+            conversation_id: resolvedConvId,
+            external_message_id: r.message_id || null,
+            direction: r.from_me ? "outgoing" : "incoming",
+            sender_type: r.from_me ? "agent" : "customer",
+            content: r.text || "",
+            message_type: r.type || "text",
+            media_url: r.raw_data?.image?.imageUrl || r.raw_data?.audio?.audioUrl || r.raw_data?.video?.videoUrl || r.raw_data?.document?.documentUrl || null,
+            timestamp: r.timestamp ? new Date(r.timestamp * 1000).toISOString() : new Date().toISOString(),
+            created_at: r.timestamp ? new Date(r.timestamp * 1000).toISOString() : new Date().toISOString(),
+            status: r.from_me ? "sent" : "received",
+            metadata: { source: "zapi_rebuild", phone: cleanPhone },
+          }));
+
+        if (unifiedRows.length > 0) {
+          const chunkSize = 500;
+          for (let i = 0; i < unifiedRows.length; i += chunkSize) {
+            const chunk = unifiedRows.slice(i, i + chunkSize);
+            const { error: unifiedErr } = await supabase.from("conversation_messages").insert(chunk);
+            if (unifiedErr) {
+              console.error(`[Z-API] conversation_messages insert error for ${cleanPhone}:`, unifiedErr.message);
+            }
+          }
+          console.log(`[Z-API] Inserted ${unifiedRows.length} messages into conversation_messages for ${cleanPhone}`);
+        }
       }
 
       await supabase.from("zapi_contacts").upsert({
