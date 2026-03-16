@@ -119,3 +119,6 @@ verify_jwt = false
 
 [functions.ai-learn-patterns]
 verify_jwt = false
+
+[functions.natleva-brain]
+verify_jwt = false
