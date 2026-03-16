@@ -1,0 +1,1 @@
+ALTER TABLE public.ai_strategy_knowledge ADD COLUMN IF NOT EXISTS subcategory text DEFAULT '';
