@@ -89,6 +89,9 @@ serve(async (req) => {
         sample_size: totalSample,
         estimated_impact: "alto",
         data_source: "proposals",
+        function_area: "proposta_ia",
+        tags: [dest, best[0], "destino", "alta_conversao"],
+        origin_context: `destino ${dest}`,
       });
     }
 
