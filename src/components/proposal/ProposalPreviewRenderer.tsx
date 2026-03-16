@@ -525,13 +525,21 @@ function ExperienceCard({ exp, idx }: { exp: any; idx: number }) {
 }
 
 /* ═══ Main Renderer ═══ */
+interface ProposalTrackingAPI {
+  track: (eventType: string, sectionName?: string, eventData?: Record<string, any>) => void;
+  trackCTA: (ctaType: string, details?: Record<string, any>) => void;
+  trackExpand: (section: string, itemName?: string) => void;
+  trackGallery: (section: string, photoIndex?: number) => void;
+}
+
 interface ProposalPreviewRendererProps {
   proposal: any;
   items: any[];
   embedded?: boolean;
+  tracking?: ProposalTrackingAPI;
 }
 
-export default function ProposalPreviewRenderer({ proposal, items, embedded = false }: ProposalPreviewRendererProps) {
+export default function ProposalPreviewRenderer({ proposal, items, embedded = false, tracking }: ProposalPreviewRendererProps) {
   const destinations = items.filter((i) => i.item_type === "destination");
   const flights = items.filter((i) => i.item_type === "flight");
   const hotels = items.filter((i) => i.item_type === "hotel");
