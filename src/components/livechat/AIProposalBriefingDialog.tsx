@@ -46,13 +46,23 @@ export interface ProposalBriefing {
   confidence?: string | null;
   client_name?: string | null;
   client_id?: string | null;
-  // New journey-aware fields
+  // Journey-aware fields
   client_history_summary?: string | null;
   discarded_topics?: { topic: string; period?: string; reason?: string }[] | null;
   current_demand_confidence?: string | null;
   ambiguous_demands?: { destination: string; period?: string; evidence?: string }[] | null;
   client_profile_insights?: string | null;
   total_messages_analyzed?: number | null;
+  detected_trip_cycles?: {
+    destination: string;
+    subdestinations?: string[];
+    period?: string;
+    dates?: string;
+    passengers?: number;
+    status: string;
+    is_current_demand: boolean;
+    evidence?: string;
+  }[] | null;
 }
 
 interface AIProposalBriefingDialogProps {
