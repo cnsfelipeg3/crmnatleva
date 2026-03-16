@@ -79,6 +79,7 @@ export default function ProposalEditor() {
     value_per_person: "",
     payment_conditions: [] as { method: string; details: string }[],
     proposal_strategy: prefillStrategy,
+    proposal_outcome: "pending",
   });
 
   const [items, setItems] = useState<any[]>([]);
