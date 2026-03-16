@@ -525,13 +525,21 @@ function ExperienceCard({ exp, idx }: { exp: any; idx: number }) {
 }
 
 /* ═══ Main Renderer ═══ */
+interface ProposalTrackingAPI {
+  track: (eventType: string, sectionName?: string, eventData?: Record<string, any>) => void;
+  trackCTA: (ctaType: string, details?: Record<string, any>) => void;
+  trackExpand: (section: string, itemName?: string) => void;
+  trackGallery: (section: string, photoIndex?: number) => void;
+}
+
 interface ProposalPreviewRendererProps {
   proposal: any;
   items: any[];
   embedded?: boolean;
+  tracking?: ProposalTrackingAPI;
 }
 
-export default function ProposalPreviewRenderer({ proposal, items, embedded = false }: ProposalPreviewRendererProps) {
+export default function ProposalPreviewRenderer({ proposal, items, embedded = false, tracking }: ProposalPreviewRendererProps) {
   const destinations = items.filter((i) => i.item_type === "destination");
   const flights = items.filter((i) => i.item_type === "flight");
   const hotels = items.filter((i) => i.item_type === "hotel");
@@ -566,7 +574,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   return (
     <div className={`bg-background text-foreground ${embedded ? "rounded-xl border border-border overflow-hidden" : "min-h-screen"}`}>
       {/* ──── HERO COVER ──── */}
-      <section className={`relative ${embedded ? "h-[50vh] min-h-[320px]" : "h-screen"} flex items-end justify-center overflow-hidden`}>
+      <section data-track-section="hero" className={`relative ${embedded ? "h-[50vh] min-h-[320px]" : "h-screen"} flex items-end justify-center overflow-hidden`}>
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${proposal.cover_image_url || fallbackCover})` }} />
         {/* Emerald-tinted gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[hsl(158,50%,4%)] via-[hsl(158,30%,8%,0.5)] to-[hsl(160,20%,10%,0.15)]" />
@@ -619,7 +627,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── INTRO ──── */}
       {proposal.intro_text && (
-        <section className="max-w-3xl mx-auto py-16 sm:py-24 px-6">
+        <section data-track-section="intro" className="max-w-3xl mx-auto py-16 sm:py-24 px-6">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center">
             <div className="w-12 h-px bg-accent/40 mx-auto mb-8" />
             <p className="text-lg sm:text-xl leading-relaxed text-muted-foreground font-light italic">
@@ -632,7 +640,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── DESTINATIONS ──── */}
       {(destinations.length > 0 || (proposal.destinations?.length > 0 && destinations.length === 0)) && (
-        <section className="py-12 sm:py-20 px-6">
+        <section data-track-section="destinations" className="py-12 sm:py-20 px-6">
           <SectionTitle subtitle="Os lugares que você vai explorar">Seus Destinos</SectionTitle>
           <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {(destinations.length > 0 ? destinations : proposal.destinations.map((d: string, i: number) => ({ title: d, image_url: null, description: null, id: i }))).map((dest: any, idx: number) => (
@@ -651,7 +659,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── FLIGHTS ──── */}
       {flights.length > 0 && (
-        <section className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
+        <section data-track-section="flights" className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
           <SectionTitle subtitle="Seus voos com todos os detalhes">Voos</SectionTitle>
           <div className="max-w-3xl mx-auto space-y-8">
             {flights.map((f, idx) => <FlightCard key={f.id || idx} flight={f} idx={idx} />)}
@@ -661,7 +669,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── HOTELS ──── */}
       {hotels.length > 0 && (
-        <section className="py-12 sm:py-20 px-6">
+        <section data-track-section="hotels" className="py-12 sm:py-20 px-6">
           <SectionTitle subtitle="Clique para explorar fotos, quartos e avaliações">Hospedagens</SectionTitle>
           <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
             {hotels.map((h, idx) => <HotelCard key={h.id || idx} hotel={h} idx={idx} />)}
@@ -671,7 +679,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── EXPERIENCES ──── */}
       {experiences.length > 0 && (
-        <section className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
+        <section data-track-section="experiences" className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
           <SectionTitle subtitle="Momentos que farão sua viagem inesquecível">Experiências</SectionTitle>
           <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {experiences.map((exp, idx) => <ExperienceCard key={exp.id || idx} exp={exp} idx={idx} />)}
@@ -681,7 +689,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── FINANCIAL ──── */}
       {(proposal.total_value || proposal.value_per_person) && (
-        <section className="py-12 sm:py-20 px-6">
+        <section data-track-section="pricing" className="py-12 sm:py-20 px-6">
           <SectionTitle>Investimento</SectionTitle>
           <div className="max-w-2xl mx-auto">
             <div className="rounded-2xl border border-accent/15 bg-gradient-to-b from-card to-accent/[0.03] p-8 sm:p-10 text-center space-y-6 shadow-xl shadow-accent/5">
@@ -710,7 +718,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── PAYMENT ──── */}
       {paymentConditions.length > 0 && (
-        <section className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
+        <section data-track-section="payment" className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
           <SectionTitle>Condições de Pagamento</SectionTitle>
           <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
             {paymentConditions.map((pc: any, idx: number) => (
@@ -725,7 +733,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── CTA ──── */}
       {!embedded && (
-        <section className="py-20 sm:py-28 px-6">
+        <section data-track-section="cta" className="py-20 sm:py-28 px-6">
           <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true }} className="max-w-2xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Pronto para viver essa experiência?
@@ -735,6 +743,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
               href={`https://wa.me/?text=${encodeURIComponent(`Olá! Gostaria de reservar a viagem "${proposal.title}".`)}`}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => tracking?.trackCTA("whatsapp")}
               className="inline-flex items-center gap-2.5 bg-gradient-to-r from-accent to-accent/80 text-accent-foreground px-10 py-4 rounded-full text-lg font-semibold hover:scale-[1.02] transition-all duration-300 shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >

@@ -4226,6 +4226,51 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_interactions: {
+        Row: {
+          created_at: string
+          event_data: Json | null
+          event_type: string
+          id: string
+          proposal_id: string
+          section_name: string | null
+          viewer_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_data?: Json | null
+          event_type: string
+          id?: string
+          proposal_id: string
+          section_name?: string | null
+          viewer_id: string
+        }
+        Update: {
+          created_at?: string
+          event_data?: Json | null
+          event_type?: string
+          id?: string
+          proposal_id?: string
+          section_name?: string | null
+          viewer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_interactions_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_interactions_viewer_id_fkey"
+            columns: ["viewer_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_viewers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_items: {
         Row: {
           created_at: string
@@ -4263,6 +4308,77 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "proposal_items_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      proposal_viewers: {
+        Row: {
+          cta_clicked: boolean
+          device_type: string | null
+          email: string
+          engagement_score: number
+          first_viewed_at: string
+          id: string
+          ip_address: string | null
+          last_active_at: string
+          metadata: Json | null
+          name: string | null
+          phone: string | null
+          proposal_id: string
+          scroll_depth_max: number
+          sections_viewed: string[] | null
+          total_time_seconds: number
+          total_views: number
+          user_agent: string | null
+          whatsapp_clicked: boolean
+        }
+        Insert: {
+          cta_clicked?: boolean
+          device_type?: string | null
+          email: string
+          engagement_score?: number
+          first_viewed_at?: string
+          id?: string
+          ip_address?: string | null
+          last_active_at?: string
+          metadata?: Json | null
+          name?: string | null
+          phone?: string | null
+          proposal_id: string
+          scroll_depth_max?: number
+          sections_viewed?: string[] | null
+          total_time_seconds?: number
+          total_views?: number
+          user_agent?: string | null
+          whatsapp_clicked?: boolean
+        }
+        Update: {
+          cta_clicked?: boolean
+          device_type?: string | null
+          email?: string
+          engagement_score?: number
+          first_viewed_at?: string
+          id?: string
+          ip_address?: string | null
+          last_active_at?: string
+          metadata?: Json | null
+          name?: string | null
+          phone?: string | null
+          proposal_id?: string
+          scroll_depth_max?: number
+          sections_viewed?: string[] | null
+          total_time_seconds?: number
+          total_views?: number
+          user_agent?: string | null
+          whatsapp_clicked?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_viewers_proposal_id_fkey"
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals"
