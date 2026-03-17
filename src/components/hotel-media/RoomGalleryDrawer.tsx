@@ -131,6 +131,7 @@ export default function RoomGalleryDrawer({
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {photos.map((photo, i) => {
               const isSelected = selectedPhotos.has(photo.url);
+              const tag = getPhotoTag(photo, photos, name);
               return (
                 <div
                   key={photo.url + i}
