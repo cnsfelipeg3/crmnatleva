@@ -16,7 +16,7 @@ export interface NPCData {
   pos: Vec2;
   emoji: string;
   name: string;
-  status: 'idle' | 'analyzing' | 'suggesting';
+  status: string;
   taskCount: number;
 }
 

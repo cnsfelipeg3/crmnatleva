@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import type { Agent } from "./mockData";
 import { cn } from "@/lib/utils";
 
-const statusConfig: Record<Agent["status"], { label: string; dot: string }> = {
-  idle: { label: "Ocioso", dot: "bg-muted-foreground/40" },
+const statusConfig: Record<string, { label: string; dot: string }> = {
+  idle: { label: "Aguardando", dot: "bg-muted-foreground/40" },
   analyzing: { label: "Analisando", dot: "bg-blue-500 animate-pulse" },
   suggesting: { label: "Sugerindo", dot: "bg-emerald-500 animate-pulse" },
+  waiting: { label: "Aguardando decisão", dot: "bg-orange-400 animate-pulse" },
+  alert: { label: "Alerta", dot: "bg-red-500 animate-pulse" },
 };
 
 const levelLabels: Record<string, string> = {

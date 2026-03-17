@@ -1,10 +1,12 @@
 import type { Agent } from "./mockData";
 import { cn } from "@/lib/utils";
 
-const statusConfig: Record<Agent["status"], { label: string; color: string; animation: string }> = {
+const statusConfig: Record<string, { label: string; color: string; animation: string }> = {
   idle: { label: "Aguardando", color: "bg-muted-foreground/40", animation: "" },
   analyzing: { label: "Analisando", color: "bg-blue-500", animation: "animate-pulse" },
   suggesting: { label: "Sugerindo", color: "bg-emerald-500", animation: "animate-[pulse_3s_ease-in-out_infinite]" },
+  waiting: { label: "Aguardando decisão", color: "bg-orange-400", animation: "animate-[pulse_2s_ease-in-out_infinite]" },
+  alert: { label: "Alerta", color: "bg-red-500", animation: "animate-pulse" },
 };
 
 interface Props {

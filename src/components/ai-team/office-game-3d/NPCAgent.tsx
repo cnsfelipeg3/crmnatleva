@@ -7,7 +7,7 @@ interface Props {
   agentId: string;
   emoji: string;
   name: string;
-  status: 'idle' | 'analyzing' | 'suggesting';
+  status: string;
   taskCount: number;
   position: [number, number, number];
   isNearby: boolean;
