@@ -16,6 +16,8 @@ const statusConfig: Record<Task["status"], { label: string; className: string }>
   analyzing: { label: "Em análise", className: "bg-violet-500/10 text-violet-600 border-violet-500/20" },
   suggested: { label: "Sugerido", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
   pending: { label: "Aguardando decisão", className: "bg-orange-500/10 text-orange-600 border-orange-500/20" },
+  in_progress: { label: "Em execução", className: "bg-sky-500/10 text-sky-600 border-sky-500/20" },
+  done: { label: "Concluído", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
 };
 
 interface Props {
