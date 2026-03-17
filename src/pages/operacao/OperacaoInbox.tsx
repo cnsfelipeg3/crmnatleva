@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, Fragment, useMemo } from "react";
+import { InboxPipelineView } from "@/components/inbox/InboxPipelineView";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -9,7 +10,7 @@ import {
   ChevronRight, Bot,
   CheckCheck, Workflow, Brain, Loader2,
   Trash2, WifiOff, Pin, PinOff, Pencil, Wand2,
-  AlertTriangle, Link2,
+  AlertTriangle, Link2, LayoutGrid, List,
 } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
@@ -308,6 +309,7 @@ function OperacaoInboxInner() {
   const [activeFlowName, setActiveFlowName] = useState<string | null>(null);
   const flowNameCacheRef = useRef<Record<string, string | null>>({});
   const [waConnected, setWaConnected] = useState(false);
+  const [viewMode, setViewMode] = useState<"chat" | "pipeline">("chat");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -1833,6 +1835,36 @@ function OperacaoInboxInner() {
     >
       {/* Content */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
+        {viewMode === "pipeline" ? (
+          <div className="flex flex-col h-full w-full min-h-0">
+            {/* Pipeline header with back toggle */}
+            <div className="px-3 py-2 border-b border-border bg-card/50 flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <LayoutGrid className="h-3.5 w-3.5 text-primary" />
+                </div>
+                <span className="text-sm font-bold text-foreground">Pipeline de Atendimento</span>
+              </div>
+              <div className="flex-1" />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1.5"
+                onClick={() => setViewMode("chat")}
+              >
+                <List className="h-3.5 w-3.5" />
+                Voltar ao Chat
+              </Button>
+            </div>
+            <InboxPipelineView
+              conversations={conversations}
+              onSelectConversation={(id) => {
+                setSelectedId(id);
+              }}
+              onSwitchToChat={() => setViewMode("chat")}
+            />
+          </div>
+        ) : (
         <div className="flex h-full w-full min-h-0">
           {/* ─── Column 1: Conversations List ─── */}
           <div className={`md:w-[360px] w-full border-r border-border flex flex-col h-full overflow-hidden bg-card/20 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
@@ -1850,6 +1882,19 @@ function OperacaoInboxInner() {
                   {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0 h-4">{totalUnread}</Badge>}
                 </div>
                 <div className="flex items-center gap-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                        onClick={() => setViewMode("pipeline")}
+                      >
+                        <LayoutGrid className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p className="text-xs">Visão Pipeline</p></TooltipContent>
+                  </Tooltip>
                   <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
@@ -2520,6 +2565,7 @@ function OperacaoInboxInner() {
             />
           )}
         </div>
+        )}
       </div>
 
       {/* Lightbox */}
