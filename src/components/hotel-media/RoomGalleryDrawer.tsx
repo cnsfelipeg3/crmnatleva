@@ -236,7 +236,7 @@ export default function RoomGalleryDrawer({
                 key={currentPhoto.url}
                 src={getDisplayUrl(currentPhoto.url)}
                 alt={currentPhoto.description || name}
-                className="max-w-full max-h-full object-contain rounded-lg select-none"
+                className="max-w-full max-h-full object-contain rounded-lg select-none animate-in fade-in-50 duration-200"
                 draggable={false}
                 referrerPolicy="no-referrer"
                 onError={() => onImageError(currentPhoto.url)}

@@ -36,7 +36,7 @@ export default function HotelMediaBrowser({ hotelName, hotelCity, hotelCountry, 
   const handleConfirmSelection = () => {
     const selected = media.photos.filter(p => selectedPhotos.has(p.url));
     onSelectPhotos?.(selected);
-    toast.success(`${selected.length} fotos adicionadas à proposta`);
+    toast.success(`${selected.length} fotos adicionadas à proposta`, { duration: 2000 });
   };
 
   const handleUseSelection = (rooms: RoomBlock[], cover: HotelPhoto, areas: HotelPhoto[]) => {
@@ -45,18 +45,15 @@ export default function HotelMediaBrowser({ hotelName, hotelCity, hotelCountry, 
     if (rooms.length > 0 && onSelectRoomBlock) {
       rooms.forEach(r => onSelectRoomBlock(r));
     }
-    toast.success(`✨ ${allPhotos.length} mídias + bloco de quarto inseridos na proposta`);
   };
 
   const handleUseRoom = (block: RoomBlock) => {
     onSelectPhotos?.(block.photos);
     onSelectRoomBlock?.(block);
-    toast.success(`Quarto "${block.room_name}" adicionado à proposta`);
   };
 
   const handleAreaClick = (category: string) => {
     setActiveArea(prev => prev === category ? null : category);
-    // Open gallery for this area
     setGalleryName(`area:${category}`);
   };
 
@@ -100,7 +97,7 @@ export default function HotelMediaBrowser({ hotelName, hotelCity, hotelCountry, 
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* ZONA A — Status Bar */}
       <MediaStatusBar
         hotelName={hotelName}
@@ -134,16 +131,16 @@ export default function HotelMediaBrowser({ hotelName, hotelCity, hotelCountry, 
           <span className="text-xs font-medium text-accent">{selectedPhotos.size} foto(s) selecionada(s)</span>
           <div className="flex gap-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedPhotos(new Set())} className="text-xs h-7">Limpar</Button>
-            <Button type="button" size="sm" onClick={handleConfirmSelection} className="text-xs h-7">Usar na proposta</Button>
+            <Button type="button" size="sm" onClick={handleConfirmSelection} className="text-xs h-7">Adicionar à proposta</Button>
           </div>
         </div>
       )}
 
       {/* ZONA C — Exploração */}
       {roomNames.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 pb-2">Acomodações</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-4">
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider border-b border-border/30 pb-2">Acomodações</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {roomNames.map(name => (
               <RoomCard
                 key={name}
