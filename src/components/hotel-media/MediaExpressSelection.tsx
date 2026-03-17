@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Star, ChevronDown, Camera } from "lucide-react";
+import { Star, Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MediaSwapPopover from "./MediaSwapPopover";
 import type { HotelPhoto, SectionDetail, RoomBlock } from "./types";

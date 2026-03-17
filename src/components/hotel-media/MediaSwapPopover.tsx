@@ -1,5 +1,5 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { RefreshCw } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 import type { HotelPhoto } from "./types";
 
