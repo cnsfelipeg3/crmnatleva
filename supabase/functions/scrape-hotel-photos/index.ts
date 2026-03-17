@@ -796,7 +796,64 @@ async function scrapePageForPhotos(
 }
 
 /**
- * Extract images with rich HTML context for AI classification.
+ * Same as scrapePageForPhotos but also returns discovered internal links for second-pass crawling.
+ */
+async function scrapePageForPhotosWithLinks(
+  url: string,
+  inferredSection: string,
+  collection: ImageCollection,
+  apiKey: string,
+  hotelName: string,
+  source: "official" | "booking" | "google"
+): Promise<{ url: string; discoveredLinks: string[] } | null> {
+  try {
+    const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ url, formats: ["html", "markdown", "links"], onlyMainContent: false, waitFor: 3000 }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const html = data.data?.html || data.html || "";
+    const markdown = data.data?.markdown || data.markdown || "";
+    if (html.length < 300) return { url, discoveredLinks: [] };
+
+    extractImagesWithSectionContext(html, url, collection, hotelName, source);
+    extractSectionDescriptions(markdown, collection);
+
+    const photosBeforeOrphan = collection.photos.length;
+    extractHighResImages(html, url, collection, "", source);
+
+    if (inferredSection) {
+      for (let i = photosBeforeOrphan; i < collection.photos.length; i++) {
+        if (!collection.photos[i].section_name) {
+          collection.photos[i].section_name = inferredSection;
+          collection.photos[i].confidence = 0.7;
+        }
+      }
+    }
+
+    // Extract internal links for deeper discovery
+    const pageLinks: string[] = data.data?.links || data.links || [];
+    // Also extract href links from HTML for room/gallery pages
+    const hrefRegex = /href=["']([^"']+)["']/gi;
+    let hrefMatch;
+    while ((hrefMatch = hrefRegex.exec(html)) !== null) {
+      const href = hrefMatch[1];
+      if (href && !href.startsWith("#") && !href.startsWith("javascript")) {
+        try {
+          const absLink = href.startsWith("http") ? href : new URL(href, url).href;
+          pageLinks.push(absLink);
+        } catch { /* skip */ }
+      }
+    }
+
+    return { url, discoveredLinks: [...new Set(pageLinks)] };
+  } catch (e) {
+    console.warn(`Failed scraping ${url}:`, e);
+    return null;
+  }
+}
  * Captures: parent heading, alt text, surrounding captions, nearby text, CSS classes.
  */
 function extractImagesWithSectionContext(
