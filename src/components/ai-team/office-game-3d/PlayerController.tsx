@@ -12,9 +12,10 @@ const PLAYER_RADIUS = 0.22;
 interface Props {
   startPos: [number, number, number];
   onPositionChange: (x: number, z: number) => void;
+  joystickInput?: { x: number; z: number };
 }
 
-export default function PlayerController({ startPos, onPositionChange }: Props) {
+export default function PlayerController({ startPos, onPositionChange, joystickInput }: Props) {
   const groupRef = useRef<THREE.Group>(null);
   const posRef = useRef(new THREE.Vector3(startPos[0], 0, startPos[2]));
   const targetRef = useRef<THREE.Vector3 | null>(null);
@@ -37,7 +38,7 @@ export default function PlayerController({ startPos, onPositionChange }: Props) 
   }, []);
 
   // Click-to-move via floor raycast
-  const { raycaster, pointer, scene } = useThree();
+  const { raycaster, pointer } = useThree();
   const floorRef = useRef<THREE.Mesh>(null);
 
   const handleFloorClick = useCallback(() => {
@@ -54,12 +55,19 @@ export default function PlayerController({ startPos, onPositionChange }: Props) 
     const pos = posRef.current;
     const keys = keysRef.current;
 
-    // WASD
+    // WASD / arrow keys
     let vx = 0, vz = 0;
     if (keys.has('w') || keys.has('arrowup')) vz = -1;
     if (keys.has('s') || keys.has('arrowdown')) vz = 1;
     if (keys.has('a') || keys.has('arrowleft')) vx = -1;
     if (keys.has('d') || keys.has('arrowright')) vx = 1;
+
+    // Virtual joystick input
+    if (joystickInput && (Math.abs(joystickInput.x) > 0.05 || Math.abs(joystickInput.z) > 0.05)) {
+      vx = joystickInput.x;
+      vz = joystickInput.z;
+      targetRef.current = null;
+    }
 
     if (vx || vz) {
       targetRef.current = null;
@@ -107,10 +115,7 @@ export default function PlayerController({ startPos, onPositionChange }: Props) 
     // Camera follow
     const camTarget = new THREE.Vector3(pos.x, CAM_HEIGHT, pos.z + CAM_BACK);
     camera.position.lerp(camTarget, CAM_LERP);
-    const lookAt = new THREE.Vector3(pos.x, 0, pos.z);
-    const currentLook = new THREE.Vector3();
-    camera.getWorldDirection(currentLook);
-    camera.lookAt(lookAt);
+    camera.lookAt(new THREE.Vector3(pos.x, 0, pos.z));
 
     onPositionChange(pos.x, pos.z);
   });
@@ -132,41 +137,39 @@ export default function PlayerController({ startPos, onPositionChange }: Props) 
       <group ref={groupRef} position={[startPos[0], 0, startPos[2]]}>
         {/* Ground shadow */}
         <mesh rotation-x={-Math.PI / 2} position={[0, 0.005, 0]}>
-          <circleGeometry args={[0.3, 16]} />
-          <meshStandardMaterial color="#6c5ce7" transparent opacity={0.12} />
+          <circleGeometry args={[0.3, 24]} />
+          <meshStandardMaterial color="#6c5ce7" transparent opacity={0.15} />
         </mesh>
 
         {/* Pulsing ring */}
         <mesh rotation-x={-Math.PI / 2} position={[0, 0.008, 0]}>
-          <ringGeometry args={[0.3, 0.38, 24]} />
+          <ringGeometry args={[0.3, 0.38, 32]} />
           <meshStandardMaterial
             color="#6c5ce7"
             emissive="#6c5ce7"
-            emissiveIntensity={0.5}
+            emissiveIntensity={0.6}
             transparent
-            opacity={0.3}
+            opacity={0.35}
           />
         </mesh>
 
         {/* Body capsule */}
         <mesh position={[0, 0.4, 0]} castShadow>
-          <capsuleGeometry args={[0.15, 0.32, 4, 12]} />
-          <meshStandardMaterial color="#6c5ce7" roughness={0.35} metalness={0.15} emissive="#6c5ce7" emissiveIntensity={0.08} />
+          <capsuleGeometry args={[0.15, 0.32, 6, 16]} />
+          <meshStandardMaterial
+            color="#6c5ce7"
+            roughness={0.25}
+            metalness={0.2}
+            emissive="#6c5ce7"
+            emissiveIntensity={0.12}
+          />
         </mesh>
 
         {/* Head */}
         <mesh position={[0, 0.74, 0]} castShadow>
-          <sphereGeometry args={[0.13, 12, 8]} />
-          <meshStandardMaterial color="#f0ebe3" roughness={0.6} />
+          <sphereGeometry args={[0.13, 16, 12]} />
+          <meshStandardMaterial color="#f0ebe3" roughness={0.5} metalness={0.05} />
         </mesh>
-
-        {/* Target indicator */}
-        {targetRef.current && (
-          <mesh rotation-x={-Math.PI / 2} position={[targetRef.current.x - posRef.current.x, 0.01, targetRef.current.z - posRef.current.z]}>
-            <ringGeometry args={[0.08, 0.14, 12]} />
-            <meshStandardMaterial color="#6c5ce7" transparent opacity={0.4} />
-          </mesh>
-        )}
       </group>
     </>
   );

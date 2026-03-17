@@ -1,28 +1,28 @@
 import { useState, useCallback, useRef } from 'react';
+import { Environment } from '@react-three/drei';
 import OfficeFloor from './OfficeFloor';
 import OfficeFurniture from './OfficeFurniture';
 import PlayerController from './PlayerController';
 import NPCAgent from './NPCAgent';
 import { NPC_POSITIONS, PLAYER_SPAWN } from './mapData3d';
-import { INTERACTION_RADIUS } from '../office-game/types';
 import type { Agent, Task } from '../mockData';
 
 interface Props {
   agents: Agent[];
   tasks: Task[];
   onSelectAgent: (agent: Agent) => void;
+  joystickInput?: { x: number; z: number };
 }
 
-export default function OfficeScene({ agents, tasks, onSelectAgent }: Props) {
+export default function OfficeScene({ agents, tasks, onSelectAgent, joystickInput }: Props) {
   const [nearbyId, setNearbyId] = useState<string | null>(null);
   const playerPosRef = useRef({ x: PLAYER_SPAWN.x, z: PLAYER_SPAWN.z });
 
   const handlePositionChange = useCallback((x: number, z: number) => {
     playerPosRef.current = { x, z };
 
-    // Check proximity to NPCs
     let closest: string | null = null;
-    let minDist = 1.2; // 3D interaction radius
+    let minDist = 1.5;
     for (const agent of agents) {
       const npcPos = NPC_POSITIONS[agent.id];
       if (!npcPos) continue;
@@ -37,41 +37,48 @@ export default function OfficeScene({ agents, tasks, onSelectAgent }: Props) {
     setNearbyId(closest);
   }, [agents]);
 
-  const handleKeyInteract = useCallback(() => {
-    if (nearbyId) {
-      const agent = agents.find(a => a.id === nearbyId);
-      if (agent) onSelectAgent(agent);
-    }
-  }, [nearbyId, agents, onSelectAgent]);
-
-  // Listen for E key
-  const eHandled = useRef(false);
-  if (typeof window !== 'undefined') {
-    // Use effect-like approach in render for simplicity
-    // The actual E key handling is in a useEffect inside the component
-  }
-
   return (
     <>
-      {/* Lighting */}
-      <ambientLight intensity={0.6} color="#faf0e6" />
+      {/* Premium Lighting */}
+      <ambientLight intensity={0.4} color="#faf0e6" />
+
+      {/* Main key light — warm sun */}
       <directionalLight
-        position={[6, 10, 4]}
-        intensity={0.8}
-        color="#fff8f0"
+        position={[8, 14, 5]}
+        intensity={1.2}
+        color="#fff5e6"
         castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-        shadow-camera-left={-10}
-        shadow-camera-right={10}
-        shadow-camera-top={6}
-        shadow-camera-bottom={-6}
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
+        shadow-camera-left={-12}
+        shadow-camera-right={12}
+        shadow-camera-top={8}
+        shadow-camera-bottom={-8}
         shadow-camera-near={1}
-        shadow-camera-far={20}
-        shadow-bias={-0.002}
+        shadow-camera-far={30}
+        shadow-bias={-0.001}
+        shadow-normalBias={0.02}
       />
-      {/* Subtle fill light from opposite side */}
-      <directionalLight position={[-4, 6, -3]} intensity={0.2} color="#e0e8ff" />
+
+      {/* Fill light — cool blue */}
+      <directionalLight position={[-6, 8, -4]} intensity={0.35} color="#d0e0ff" />
+
+      {/* Rim light — accent from behind */}
+      <directionalLight position={[0, 5, -10]} intensity={0.2} color="#ffe0c0" />
+
+      {/* Subtle point lights for warmth */}
+      <pointLight position={[0, 3, 0]} intensity={0.3} color="#fff0d0" distance={12} decay={2} />
+      <pointLight position={[-5, 2, -3]} intensity={0.15} color="#ffe8d0" distance={6} decay={2} />
+      <pointLight position={[5, 2, 2]} intensity={0.15} color="#e0e8ff" distance={6} decay={2} />
+
+      {/* Hemisphere for softer ambient */}
+      <hemisphereLight args={['#e8e0d0', '#c0b8a8', 0.3]} />
+
+      {/* Fog for depth */}
+      <fog attach="fog" args={['#e8e4dc', 12, 28]} />
+
+      {/* Environment map for reflections */}
+      <Environment preset="apartment" environmentIntensity={0.15} />
 
       {/* Environment */}
       <OfficeFloor />
@@ -81,6 +88,7 @@ export default function OfficeScene({ agents, tasks, onSelectAgent }: Props) {
       <PlayerController
         startPos={[PLAYER_SPAWN.x, 0, PLAYER_SPAWN.z]}
         onPositionChange={handlePositionChange}
+        joystickInput={joystickInput}
       />
 
       {/* NPCs */}
