@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDashboardKpis } from "@/hooks/useDashboardKpis";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import KpiCards from "@/components/dashboard/KpiCards";
 import FinancialSection from "@/components/dashboard/FinancialSection";
@@ -52,17 +52,14 @@ interface LodgingTask {
   scheduled_at_utc: string | null; issue_type: string | null;
 }
 
+// Map UI period to RPC period param
+function toRpcPeriod(p: string): string {
+  if (p === "yesterday") return "all"; // RPC doesn't support yesterday — fallback
+  return p;
+}
+
 export default function Dashboard() {
   const { user, isLoading: authLoading } = useAuth();
-  const [sales, setSales] = useState<Sale[]>([]);
-  const [profiles, setProfiles] = useState<Profile[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [segments, setSegments] = useState<Segment[]>([]);
-  const [costItems, setCostItems] = useState<CostItem[]>([]);
-  const [checkinTasks, setCheckinTasks] = useState<CheckinTask[]>([]);
-  const [lodgingTasks, setLodgingTasks] = useState<LodgingTask[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [ceoMode, setCeoMode] = useState(false);
 
   // Filters
   const [period, setPeriod] = useState("all");
@@ -73,71 +70,74 @@ export default function Dashboard() {
   const [valueRange, setValueRange] = useState("all");
   const [marginRange, setMarginRange] = useState("all");
   const [region, setRegion] = useState("all");
+  const [ceoMode, setCeoMode] = useState(false);
+
+  // ── FAST PATH: Server-side aggregated KPIs ──
+  const rpcSellerId = seller !== "all" ? seller : null; // will be resolved below
+  const rpcDestination = destination !== "all" ? destination : null;
+  const rpcStatus = status !== "all" ? status : null;
+
+  // We need profiles to resolve seller name → id for RPC
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+
+  // Resolve seller name to id for RPC filter
+  const sellerIdForRpc = useMemo(() => {
+    if (seller === "all") return null;
+    return profiles.find(p => p.full_name === seller)?.id ?? null;
+  }, [seller, profiles]);
+
+  const { data: kpiData, loading: kpiLoading } = useDashboardKpis(
+    toRpcPeriod(period),
+    sellerIdForRpc,
+    rpcDestination,
+    rpcStatus,
+  );
+
+  // ── DEFERRED PATH: Raw data for chart sections ──
+  const [sales, setSales] = useState<Sale[]>([]);
+  const [segments, setSegments] = useState<Segment[]>([]);
+  const [costItems, setCostItems] = useState<CostItem[]>([]);
+  const [checkinTasks, setCheckinTasks] = useState<CheckinTask[]>([]);
+  const [lodgingTasks, setLodgingTasks] = useState<LodgingTask[]>([]);
+  const [detailLoading, setDetailLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      setLoading(false);
+    if (authLoading || !user) {
+      setDetailLoading(false);
       return;
     }
+    let alive = true;
+    setDetailLoading(true);
 
-    let isMounted = true;
-    setLoading(true);
-
-    const loadDashboard = async () => {
-      const [salesRes, profilesRes, clientsRes] = await Promise.allSettled([
-        fetchAllRows(
-          "sales",
-          "id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, airline, locators, created_at, close_date, emission_status, hotel_name, is_international, miles_program, seller_id, client_id",
-          { order: { column: "created_at", ascending: false }, maxRows: 5000 },
-        ),
-        fetchAllRows("profiles", "id, full_name", { cacheMs: 30000 }),
-        fetchAllRows("clients", "id, display_name, created_at", { maxRows: 15000 }),
-      ]);
-
-      if (!isMounted) return;
-
-      if (salesRes.status === "fulfilled") setSales(salesRes.value as Sale[]);
-      else console.error("Dashboard sales fetch error:", salesRes.reason);
-
-      if (profilesRes.status === "fulfilled") setProfiles(profilesRes.value as Profile[]);
-      else console.error("Dashboard profiles fetch error:", profilesRes.reason);
-
-      if (clientsRes.status === "fulfilled") setClients(clientsRes.value as Client[]);
-      else console.error("Dashboard clients fetch error:", clientsRes.reason);
-
-      setLoading(false);
-
-      const [segmentsRes, costsRes, checkinRes, lodgingRes] = await Promise.allSettled([
-        fetchAllRows("flight_segments", "sale_id, origin_iata, destination_iata", { maxRows: 10000 }),
-        fetchAllRows("cost_items", "sale_id, category, miles_quantity, miles_price_per_thousand, miles_program, cash_value, total_item_cost", { maxRows: 10000 }),
-        fetchAllRows("checkin_tasks", "status, checkin_open_datetime_utc, completed_at, created_at", { maxRows: 5000 }),
-        fetchAllRows("lodging_confirmation_tasks", "status, milestone, scheduled_at_utc, issue_type", { maxRows: 5000 }),
-      ]);
-
-      if (!isMounted) return;
-
-      if (segmentsRes.status === "fulfilled") setSegments(segmentsRes.value as Segment[]);
-      else console.error("Dashboard segments fetch error:", segmentsRes.reason);
-
-      if (costsRes.status === "fulfilled") setCostItems(costsRes.value as CostItem[]);
-      else console.error("Dashboard costs fetch error:", costsRes.reason);
-
-      if (checkinRes.status === "fulfilled") setCheckinTasks(checkinRes.value as CheckinTask[]);
-      else console.error("Dashboard checkin fetch error:", checkinRes.reason);
-
-      if (lodgingRes.status === "fulfilled") setLodgingTasks(lodgingRes.value as LodgingTask[]);
-      else console.error("Dashboard lodging fetch error:", lodgingRes.reason);
-    };
-
-    loadDashboard().catch((err) => {
-      console.error("Dashboard bootstrap error:", err);
-      if (isMounted) setLoading(false);
+    // Phase 1: lightweight metadata (profiles, clients)
+    Promise.all([
+      fetchAllRows("profiles", "id, full_name", { cacheMs: 60000 }),
+      fetchAllRows("clients", "id, display_name, created_at", { maxRows: 15000, cacheMs: 30000 }),
+    ]).then(([p, c]) => {
+      if (!alive) return;
+      setProfiles(p as Profile[]);
+      setClients(c as Client[]);
     });
 
-    return () => {
-      isMounted = false;
-    };
+    // Phase 2: sales + auxiliary tables (deferred, non-blocking for KPIs)
+    Promise.all([
+      fetchAllRows("sales", "id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, airline, locators, created_at, close_date, emission_status, hotel_name, is_international, miles_program, seller_id, client_id", { order: { column: "created_at", ascending: false }, maxRows: 5000 }),
+      fetchAllRows("flight_segments", "sale_id, origin_iata, destination_iata", { maxRows: 10000, cacheMs: 30000 }),
+      fetchAllRows("cost_items", "sale_id, category, miles_quantity, miles_price_per_thousand, miles_program, cash_value, total_item_cost", { maxRows: 10000, cacheMs: 30000 }),
+      fetchAllRows("checkin_tasks", "status, checkin_open_datetime_utc, completed_at, created_at", { maxRows: 5000, cacheMs: 30000 }),
+      fetchAllRows("lodging_confirmation_tasks", "status, milestone, scheduled_at_utc, issue_type", { maxRows: 5000, cacheMs: 30000 }),
+    ]).then(([s, seg, ci, ct, lt]) => {
+      if (!alive) return;
+      setSales(s as Sale[]);
+      setSegments(seg as Segment[]);
+      setCostItems(ci as CostItem[]);
+      setCheckinTasks(ct as CheckinTask[]);
+      setLodgingTasks(lt as LodgingTask[]);
+      setDetailLoading(false);
+    }).catch(() => { if (alive) setDetailLoading(false); });
+
+    return () => { alive = false; };
   }, [user, authLoading]);
 
   const sellerNames = useMemo(() => {
@@ -162,7 +162,6 @@ export default function Dashboard() {
     return Array.from(s).sort();
   }, [sales]);
 
-  // Region classifier
   const getRegion = useCallback((iata: string | null) => {
     if (!iata) return "Desconhecido";
     const europeAirports = ["LIS","CDG","FCO","BCN","MAD","LHR","AMS","FRA","MUC","ZRH","VIE","PRG","DUB","CPH","OSL","ARN","HEL","WAW","BUD","ATH","IST","MXP","NAP","VCE","GVA","BRU","LUX","EDI"];
@@ -182,14 +181,13 @@ export default function Dashboard() {
     return "Outros";
   }, []);
 
+  // Client-side filtering for chart sections (raw data)
   const periodCutoff = useMemo(() => {
     if (period === "all") return null;
     const now = new Date();
-    const daysMap: Record<string, number> = {
-      "today": 0, "yesterday": 1, "7d": 7, "30d": 30, "90d": 90, "this_month": 0, "last_month": 0, "12m": 365,
-    };
     if (period === "this_month") return new Date(now.getFullYear(), now.getMonth(), 1);
     if (period === "last_month") return new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const daysMap: Record<string, number> = { "today": 0, "yesterday": 1, "7d": 7, "30d": 30, "90d": 90, "12m": 365 };
     const days = daysMap[period] ?? 30;
     return new Date(now.getTime() - days * 86400000);
   }, [period]);
@@ -211,8 +209,8 @@ export default function Dashboard() {
     if (periodCutoff) result = result.filter(s => new Date(s.created_at) >= periodCutoff);
     if (periodEnd) result = result.filter(s => new Date(s.created_at) <= periodEnd);
     if (seller !== "all") {
-      const sellerId = profiles.find(p => p.full_name === seller)?.id;
-      if (sellerId) result = result.filter(s => s.seller_id === sellerId);
+      const sid = profiles.find(p => p.full_name === seller)?.id;
+      if (sid) result = result.filter(s => s.seller_id === sid);
     }
     if (destination !== "all") result = result.filter(s => s.destination_iata === destination);
     if (product !== "all") result = result.filter(s => (s.products || []).includes(product));
@@ -264,7 +262,8 @@ export default function Dashboard() {
     setStatus("all"); setValueRange("all"); setMarginRange("all"); setRegion("all");
   }, []);
 
-  if (loading) {
+  // Show skeleton only while KPIs are loading (fast path)
+  if (kpiLoading && !kpiData) {
     return (
       <div className="p-4 md:p-6 space-y-6">
         <Skeleton className="h-10 w-60" />
@@ -278,6 +277,10 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  // Use RPC data for KPI cards when simple filters are active, fall back when complex client-side filters are used
+  const hasClientOnlyFilters = product !== "all" || valueRange !== "all" || marginRange !== "all" || region !== "all" || period === "yesterday";
+  const useRpcForKpis = !hasClientOnlyFilters && kpiData;
 
   return (
     <div className="p-4 md:p-6 space-y-5 md:space-y-6 animate-fade-in relative">
@@ -295,80 +298,69 @@ export default function Dashboard() {
         sellers={sellersList} destinations={destinationsList} statuses={statusList}
         activeFilterCount={activeFilterCount}
         onClearAll={clearAllFilters}
-        totalSales={sales.length}
-        filteredCount={filtered.length}
+        totalSales={kpiData?.total_sales ?? sales.length}
+        filteredCount={useRpcForKpis ? (kpiData?.total_sales ?? 0) : filtered.length}
         ceoMode={ceoMode}
         onToggleCeoMode={() => setCeoMode(!ceoMode)}
       />
 
-      <KpiCards filtered={filtered} previous={previous} clients={clients} ceoMode={ceoMode} />
+      <KpiCards
+        kpiData={useRpcForKpis ? kpiData : undefined}
+        filtered={filtered}
+        previous={previous}
+        clients={clients}
+        ceoMode={ceoMode}
+      />
 
-      {/* CEO Mode: Show only strategic sections */}
-      {ceoMode ? (
-        <>
-          <GoalProjectionSection filtered={filtered} allSales={sales} />
-          <div className="glow-line" />
-          <FinancialSection filtered={filtered} sellerNames={sellerNames} />
-          <div className="glow-line" />
-          <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
-          <div className="glow-line" />
-          <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
-        </>
+      {/* Detail sections: show skeleton while raw data loads */}
+      {detailLoading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-72 rounded-xl" />
+          <Skeleton className="h-72 rounded-xl" />
+        </div>
       ) : (
         <>
-          <div className="glow-line" />
-
-          {/* Financeiro + Margem */}
-          <FinancialSection filtered={filtered} sellerNames={sellerNames} />
-          <MarginAnalysisSection filtered={filtered} sellerNames={sellerNames} getRegion={getRegion} />
-
-          <div className="glow-line" />
-
-          {/* Comercial + Funil */}
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            <FunnelSection filtered={filtered} />
-            <ValueRangeSection filtered={filtered} />
-          </div>
-
-          <CommercialSection filtered={filtered} segments={segments} sellerNames={sellerNames} />
-          <RegionSection filtered={filtered} getRegion={getRegion} />
-
-          <div className="glow-line" />
-
-          {/* Origens */}
-          <OriginSection filtered={filtered} sellerNames={sellerNames} />
-
-          <div className="glow-line" />
-
-          {/* Vendedores */}
-          <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
-
-          <div className="glow-line" />
-
-          {/* Sazonalidade */}
-          <SeasonalitySection filtered={filtered} allSales={sales} />
-
-          <div className="glow-line" />
-
-          {/* Projeção de Meta */}
-          <GoalProjectionSection filtered={filtered} allSales={sales} />
-
-          <div className="glow-line" />
-
-          {/* Heatmaps */}
-          <HeatmapSection filtered={filtered} />
-
-          <div className="glow-line" />
-
-          {/* Operacional + Clientes */}
-          <OperationalSection checkinTasks={checkinTasks} lodgingTasks={lodgingTasks} />
-          <ClientsSection clients={clients} filtered={filtered} periodStart={periodCutoff} />
-          <GeographicSection filtered={filtered} />
-          <MilesSection filtered={filtered} costItems={costItems} />
-
-          <div className="glow-line" />
-
-          <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+          {ceoMode ? (
+            <>
+              <GoalProjectionSection filtered={filtered} allSales={sales} />
+              <div className="glow-line" />
+              <FinancialSection filtered={filtered} sellerNames={sellerNames} />
+              <div className="glow-line" />
+              <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
+              <div className="glow-line" />
+              <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+            </>
+          ) : (
+            <>
+              <div className="glow-line" />
+              <FinancialSection filtered={filtered} sellerNames={sellerNames} />
+              <MarginAnalysisSection filtered={filtered} sellerNames={sellerNames} getRegion={getRegion} />
+              <div className="glow-line" />
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <FunnelSection filtered={filtered} />
+                <ValueRangeSection filtered={filtered} />
+              </div>
+              <CommercialSection filtered={filtered} segments={segments} sellerNames={sellerNames} />
+              <RegionSection filtered={filtered} getRegion={getRegion} />
+              <div className="glow-line" />
+              <OriginSection filtered={filtered} sellerNames={sellerNames} />
+              <div className="glow-line" />
+              <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
+              <div className="glow-line" />
+              <SeasonalitySection filtered={filtered} allSales={sales} />
+              <div className="glow-line" />
+              <GoalProjectionSection filtered={filtered} allSales={sales} />
+              <div className="glow-line" />
+              <HeatmapSection filtered={filtered} />
+              <div className="glow-line" />
+              <OperationalSection checkinTasks={checkinTasks} lodgingTasks={lodgingTasks} />
+              <ClientsSection clients={clients} filtered={filtered} periodStart={periodCutoff} />
+              <GeographicSection filtered={filtered} />
+              <MilesSection filtered={filtered} costItems={costItems} />
+              <div className="glow-line" />
+              <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+            </>
+          )}
         </>
       )}
     </div>
