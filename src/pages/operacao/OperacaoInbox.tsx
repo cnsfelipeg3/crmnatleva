@@ -908,7 +908,8 @@ function OperacaoInboxInner() {
       .from("conversation_messages" as any)
       .select("*")
       .in("conversation_id", allConversationIds)
-      .lt("created_at", cursor)
+      .lt("timestamp", cursor)
+      .order("timestamp", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(MESSAGE_PAGE_SIZE) as any);
 
@@ -931,7 +932,7 @@ function OperacaoInboxInner() {
       return "sent";
     };
 
-    const olderMsgs: Message[] = olderRows.reverse().map((m: any) => ({
+    const olderMsgs: Message[] = dedupeUiMessages(olderRows.map((m: any) => ({
       id: m.id,
       conversation_id: selectedId,
       sender_type: (m.sender_type || "cliente") as "cliente" | "atendente" | "sistema",
@@ -939,17 +940,19 @@ function OperacaoInboxInner() {
       text: stripQuotes(m.content ?? ""),
       media_url: m.media_url || undefined,
       status: normalizeDbStatus(m.status),
-      created_at: toIsoTimestamp(m.created_at || m.timestamp),
-    }));
+      created_at: toIsoTimestamp(m.timestamp || m.created_at),
+      external_message_id: m.external_message_id || undefined,
+    })));
 
     setMessages(prev => ({
       ...prev,
-      [selectedId]: [...olderMsgs, ...(prev[selectedId] || [])],
+      [selectedId]: dedupeUiMessages([...olderMsgs, ...(prev[selectedId] || [])]),
     }));
 
+    const oldestRow = olderRows[olderRows.length - 1];
     setOldestLoadedTimestamp(prev => ({
       ...prev,
-      [selectedId]: olderRows[olderRows.length - 1]?.created_at || cursor,
+      [selectedId]: toIsoTimestamp(oldestRow?.timestamp || oldestRow?.created_at || cursor),
     }));
 
     setHasOlderMessages(prev => ({
