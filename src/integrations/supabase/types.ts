@@ -6042,6 +6042,48 @@ export type Database = {
           },
         ]
       }
+      whatsapp_events_raw: {
+        Row: {
+          conversation_id: string | null
+          error: string | null
+          event_type: string
+          external_message_id: string | null
+          from_me: boolean | null
+          id: string
+          payload: Json
+          phone: string | null
+          processed: boolean | null
+          processed_at: string | null
+          received_at: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          error?: string | null
+          event_type?: string
+          external_message_id?: string | null
+          from_me?: boolean | null
+          id?: string
+          payload: Json
+          phone?: string | null
+          processed?: boolean | null
+          processed_at?: string | null
+          received_at?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          error?: string | null
+          event_type?: string
+          external_message_id?: string | null
+          from_me?: boolean | null
+          id?: string
+          payload?: Json
+          phone?: string | null
+          processed?: boolean | null
+          processed_at?: string | null
+          received_at?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_qr_sessions: {
         Row: {
           connected_phone: string | null
@@ -6142,6 +6184,8 @@ export type Database = {
           message_type: string | null
           phone: string
           raw_data: Json | null
+          sender_name: string | null
+          sender_photo: string | null
           status: string | null
           text: string | null
           timestamp: number | null
@@ -6156,6 +6200,8 @@ export type Database = {
           message_type?: string | null
           phone: string
           raw_data?: Json | null
+          sender_name?: string | null
+          sender_photo?: string | null
           status?: string | null
           text?: string | null
           timestamp?: number | null
@@ -6170,6 +6216,8 @@ export type Database = {
           message_type?: string | null
           phone?: string
           raw_data?: Json | null
+          sender_name?: string | null
+          sender_photo?: string | null
           status?: string | null
           text?: string | null
           timestamp?: number | null
