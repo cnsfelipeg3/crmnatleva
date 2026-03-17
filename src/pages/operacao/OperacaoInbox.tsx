@@ -766,7 +766,7 @@ function OperacaoInboxInner() {
   // Load messages for selected conversation — UNIFIED from conversation_messages
   const [oldestLoadedTimestamp, setOldestLoadedTimestamp] = useState<Record<string, string | null>>({});
   const [hasOlderMessages, setHasOlderMessages] = useState<Record<string, boolean>>({});
-  const MESSAGE_PAGE_SIZE = 500;
+  const MESSAGE_PAGE_SIZE = 80;
 
   useEffect(() => {
     if (!selectedId) return;
