@@ -69,34 +69,10 @@ function Linkify({ text }: { text: string }) {
 }
 
 
-function getStageInfo(stage: Stage) {
-  return STAGES.find(s => s.key === stage) || STAGES[0];
-}
-
 function getStatusIcon(status: MsgStatus) {
   if (status === "read") return <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" style={{ filter: 'drop-shadow(0 0 1px rgba(83,189,235,0.5))' }} />;
   if (status === "delivered") return <CheckCheck className="h-3 w-3 text-white" />;
   return <Check className="h-3 w-3 text-white" />;
-}
-
-function mapZapiStatus(zapiStatus: string | null | undefined, fromMe: boolean): MsgStatus {
-  if (!fromMe) return "delivered";
-  const s = (zapiStatus || "").toUpperCase();
-  if (s === "READ" || s === "PLAYED") return "read";
-  if (s === "RECEIVED" || s === "DELIVERED" || s === "DELIVERY_ACK") return "delivered";
-  return "sent";
-}
-
-function formatPhoneDisplay(number: string): string {
-  const clean = number.replace(/\D/g, "");
-  if (clean.startsWith("55") && clean.length >= 12) {
-    const ddd = clean.slice(2, 4);
-    const rest = clean.slice(4);
-    if (rest.length === 9) return `+55 (${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
-    if (rest.length === 8) return `+55 (${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
-  }
-  if (clean.length >= 10) return `+${clean}`;
-  return number;
 }
 
 // Z-API helper
