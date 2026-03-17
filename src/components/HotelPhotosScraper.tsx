@@ -384,9 +384,8 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       if (resolvedPhotos.length > 0) {
         const parts = fromCache
           ? [`📦 ${resolvedPhotos.length} fotos (cache ${cacheAge ? Math.round(cacheAge) + "h" : ""})`]
-          : [`📸 ${resolvedPhotos.length} fotos HD em ${pagesScraped} páginas`];
-        if (bookingCount > 0) parts.push(`${bookingCount} do Booking.com`);
-        if (bookingRoomsFound > 0) parts.push(`${bookingRoomsFound} tipos de quarto validados`);
+          : [`📸 ${resolvedPhotos.length} fotos HD em ${pagesScraped} páginas oficiais`];
+        if (bookingCount > 0) parts.push(`+ ${bookingCount} fallback Booking`);
         parts.push(`${uniqueEnvNames} ambientes`);
         toast.success(parts.join(" — "), { duration: 5000 });
 
