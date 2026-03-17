@@ -251,6 +251,16 @@ Deno.serve(async (req) => {
     const bookingCountMerged = collection.photos.filter(p => p.source === "booking").length;
     console.log(`📸 Final merged: ${collection.photos.length} photos (${officialPhotoCount} official, ${bookingCountMerged} booking fallback)`);
 
+    // ═══════════════════════════════════════════════
+    // PHASE 2: Re-assign images to the room registry (structure-first, then images)
+    // ═══════════════════════════════════════════════
+    if (roomRegistry.length > 0) {
+      const beforeOrphans = collection.photos.filter(p => !p.section_name || p.section_name === "").length;
+      collection.photos = assignPhotosToRegistry(collection.photos, roomRegistry);
+      const afterOrphans = collection.photos.filter(p => !p.section_name || p.section_name === "").length;
+      console.log(`🏷️ PHASE 2 — Registry assignment: ${beforeOrphans - afterOrphans} orphan photos matched to rooms`);
+    }
+
     // ── Filter, deduplicate, maximize quality, and return ──
     const photos = collection.photos
       .filter(img => {
