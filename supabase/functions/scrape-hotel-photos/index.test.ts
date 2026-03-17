@@ -705,7 +705,7 @@ Deno.test({ name: "INTEGRATION-002: Edge function rejects missing hotel_name", s
   });
   const body = await response.text();
   assertEquals(response.status, 400);
-}, { sanitizeResources: false, sanitizeOps: false });
+}});
 
 // ===========================================
 // SUMMARY
