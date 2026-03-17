@@ -2552,6 +2552,7 @@ function OperacaoInboxInner() {
             />
           )}
         </div>
+        )}
       </div>
 
       {/* Lightbox */}
