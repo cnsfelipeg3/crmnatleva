@@ -10,7 +10,7 @@ import type { SectionDetail } from "@/components/hotel-media/types";
 
 // Mock photo factory
 const makePhoto = (overrides: Record<string, any> = {}) => ({
-  url: "https://example.com/photo.jpg",
+  alt: "",
   category: "quarto",
   source: "official" as const,
   confidence: 0.85,
