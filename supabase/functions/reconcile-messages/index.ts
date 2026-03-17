@@ -72,7 +72,7 @@ async function fetchZapiMessages(phone: string): Promise<any[]> {
       label: "POST /get-messages-chat with amount",
       url: `${BASE_URL}/get-messages-chat/${encodeURIComponent(phone)}`,
       method: "POST",
-      body: JSON.stringify({ amount: 200 }),
+      body: JSON.stringify({ amount: 50 }),
     },
     {
       label: "GET /chat-messages with query params",
