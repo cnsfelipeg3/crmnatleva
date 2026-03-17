@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { hotel_name, hotel_city, hotel_country } = await req.json();
+    const { hotel_name, hotel_city, hotel_country, force_refresh } = await req.json();
 
     if (!hotel_name) {
       return new Response(JSON.stringify({ success: false, error: "hotel_name é obrigatório" }), {
@@ -76,6 +76,34 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: false, error: "Firecrawl não configurado" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    const normalizedName = normalizeHotelNameForCache(hotel_name);
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // ── CHECK CACHE (unless force_refresh) ──
+    if (!force_refresh) {
+      const { data: cached } = await supabaseAdmin
+        .from("hotel_media_cache")
+        .select("*")
+        .eq("hotel_name_normalized", normalizedName)
+        .maybeSingle();
+
+      if (cached && cached.scrape_result) {
+        const ageHours = (Date.now() - new Date(cached.updated_at).getTime()) / (1000 * 60 * 60);
+        // Cache valid for 72 hours
+        if (ageHours < 72) {
+          console.log(`📦 Cache hit for "${hotel_name}" (${ageHours.toFixed(1)}h old, ${cached.photos_count} photos)`);
+          const result = cached.scrape_result as any;
+          return new Response(JSON.stringify({
+            ...result,
+            success: true,
+            from_cache: true,
+            cache_age_hours: Math.round(ageHours * 10) / 10,
+          }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        console.log(`📦 Cache expired for "${hotel_name}" (${ageHours.toFixed(1)}h old), re-scraping...`);
+      }
     }
 
     const locationStr = [hotel_city, hotel_country].filter(Boolean).join(", ");
