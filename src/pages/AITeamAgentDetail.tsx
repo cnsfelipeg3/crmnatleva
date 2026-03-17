@@ -161,6 +161,11 @@ export default function AITeamAgentDetail() {
           </div>
         </div>
 
+        {/* Row 3b: Intelligence / Memory */}
+        {agent.memory && (agent.memory.learnedPatterns.length > 0 || Object.keys(agent.memory.preferences).length > 0 || agent.memory.shortTerm.length > 0) && (
+          <IntelligenceSection memory={agent.memory} />
+        )}
+
         {/* Row 4: Diretiva + Comando */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {agent.behaviorPrompt && (
