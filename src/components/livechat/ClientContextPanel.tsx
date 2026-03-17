@@ -20,7 +20,7 @@ import { QuoteSummaryCard } from "./QuoteSummaryCard";
 import { AIProposalBriefingDialog } from "./AIProposalBriefingDialog";
 
 // ─── Types ───
-type Stage = "novo_lead" | "qualificacao" | "proposta_preparacao" | "proposta_enviada" | "negociacao" | "fechado" | "pos_venda" | "perdido";
+type Stage = "novo_lead" | "contato_inicial" | "qualificacao" | "diagnostico" | "proposta_preparacao" | "proposta_enviada" | "proposta_visualizada" | "ajustes" | "negociacao" | "fechamento_andamento" | "fechado" | "pos_venda" | "perdido";
 
 interface ClientContextPanelProps {
   conversation: {
