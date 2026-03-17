@@ -24,6 +24,7 @@ function classifyEvent(body: any): string {
 // ─── Helper: extract media URL ───
 function extractMediaUrl(body: any): string | null {
   return body.image?.imageUrl || body.image?.thumbnailUrl ||
+    body.sticker?.stickerUrl ||
     body.audio?.audioUrl ||
     body.video?.videoUrl ||
     body.document?.documentUrl || null;
