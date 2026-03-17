@@ -6,6 +6,15 @@
  */
 
 import type { Agent, Task, AgentStatus, TaskPriority } from "./mockData";
+import {
+  type AgentMemory,
+  createEmptyMemory,
+  addMemory,
+  decayPreferences,
+  computeRelevance,
+  getPreferenceWeight,
+  shouldUseMemoryThought,
+} from "./agentMemory";
 
 /* ═══════════════════════════════════════════
    Types
@@ -21,16 +30,17 @@ export interface AgentEvent {
 }
 
 export interface EngineAgent extends Agent {
-  nextTickAt: number;       // when this agent should next transition
+  nextTickAt: number;
   eventHistory: AgentEvent[];
+  memory: AgentMemory;
 }
 
 export interface EngineState {
   agents: EngineAgent[];
   tasks: Task[];
-  events: AgentEvent[];      // global event log (most recent first)
-  lastTaskCreatedAt: number; // throttle global task creation
-  lastAlertAt: number;       // throttle alerts
+  events: AgentEvent[];
+  lastTaskCreatedAt: number;
+  lastAlertAt: number;
   tickCount: number;
 }
 
@@ -41,11 +51,11 @@ export interface EngineState {
 const MAX_TASKS_PER_AGENT = 15;
 const MAX_EVENTS_PER_AGENT = 20;
 const MAX_GLOBAL_EVENTS = 50;
-const MIN_TASK_INTERVAL_MS = 15_000;   // max 1 new task every 15s globally
-const MIN_ALERT_INTERVAL_MS = 25_000;  // max 1 alert every 25s
+const MIN_TASK_INTERVAL_MS = 15_000;
+const MIN_ALERT_INTERVAL_MS = 25_000;
 const MAX_ONE_TRANSITION_PER_TICK = true;
+const DECAY_EVERY_N_TICKS = 30; // decay preferences every ~30s
 
-/** Duration range (ms) each status lasts before transitioning */
 const statusDuration: Record<AgentStatus, [number, number]> = {
   idle:       [8_000,  15_000],
   analyzing:  [10_000, 20_000],
@@ -54,7 +64,6 @@ const statusDuration: Record<AgentStatus, [number, number]> = {
   alert:      [5_000,  10_000],
 };
 
-/** Weighted transitions — only target states with non-zero weight need to be listed */
 type Weights = Record<string, number>;
 type TransitionMap = Partial<Record<AgentStatus, Weights>>;
 
@@ -82,7 +91,6 @@ const transitionWeights: Record<string, TransitionMap> = {
   },
 };
 
-/* Default weights for custom agents */
 const defaultWeights: TransitionMap = {
   idle:       { analyzing: 0.6, idle: 0.4 },
   analyzing:  { suggesting: 0.5, alert: 0.2, idle: 0.3 },
@@ -164,21 +172,40 @@ const thoughtBank: Record<string, Partial<Record<AgentStatus, string[]>>> = {
   },
 };
 
-const taskTemplates: Record<string, Array<{ title: string; description: string; priority: TaskPriority }>> = {
+/** Memory-aware thoughts — used sparingly when shouldUseMemoryThought is true */
+const memoryThoughts: Record<string, string[]> = {
   gerente: [
-    { title: "Reorganizar prioridades do backlog", description: "Redistribuir tarefas com base na capacidade atual e impacto estimado.", priority: "medium" },
-    { title: "Revisar SLA de atendimento ao cliente", description: "Tempo médio de resposta subiu 12%. Recomendar melhorias.", priority: "high" },
-    { title: "Criar relatório semanal de performance", description: "Consolidar métricas de vendas, conversão e tempo de montagem.", priority: "low" },
+    "Com base nas suas últimas decisões, ajustei as prioridades do backlog.",
+    "Notei que você tem aprovado tarefas de organização — reforçando essa linha.",
+    "Suas decisões recentes indicam preferência por ações rápidas. Priorizando.",
   ],
   auditor: [
-    { title: "Auditar propostas sem resposta há 7+ dias", description: "Identificar propostas abandonadas e recomendar recontato.", priority: "high" },
-    { title: "Mapear fornecedores com SLA irregular", description: "Listar fornecedores com confirmações acima de 48h recorrentes.", priority: "medium" },
-    { title: "Verificar consistência de dados de hospedagem", description: "Cruzar nomes de quartos entre propostas do mesmo hotel.", priority: "low" },
+    "Com base no histórico, estou focando em inconsistências que você costuma aprovar.",
+    "Ajustei minhas análises com base nas suas decisões anteriores.",
+    "Suas aprovações recentes indicam foco em qualidade de mídia.",
   ],
   estrategista: [
-    { title: "Propor pacote experiencial Q2", description: "Criar sugestão de pacote temático baseado nas tendências de busca.", priority: "medium" },
-    { title: "Análise de elasticidade de preço", description: "Testar se aumento de 5% na margem impacta conversão.", priority: "high" },
-    { title: "Identificar destinos emergentes", description: "Mapear destinos com crescimento de busca acima de 20% no mês.", priority: "low" },
+    "Notei que sugestões de upsell não têm sido aceitas. Ajustando estratégia.",
+    "Com base nas suas decisões, priorizei abordagens mais diretas.",
+    "Suas aprovações indicam interesse em destinos nacionais premium.",
+  ],
+};
+
+const taskTemplates: Record<string, Array<{ title: string; description: string; priority: TaskPriority; context: string }>> = {
+  gerente: [
+    { title: "Reorganizar prioridades do backlog", description: "Redistribuir tarefas com base na capacidade atual e impacto estimado.", priority: "medium", context: "backlog" },
+    { title: "Revisar SLA de atendimento ao cliente", description: "Tempo médio de resposta subiu 12%. Recomendar melhorias.", priority: "high", context: "sla" },
+    { title: "Criar relatório semanal de performance", description: "Consolidar métricas de vendas, conversão e tempo de montagem.", priority: "low", context: "operacional" },
+  ],
+  auditor: [
+    { title: "Auditar propostas sem resposta há 7+ dias", description: "Identificar propostas abandonadas e recomendar recontato.", priority: "high", context: "follow-up" },
+    { title: "Mapear fornecedores com SLA irregular", description: "Listar fornecedores com confirmações acima de 48h recorrentes.", priority: "medium", context: "fornecedores" },
+    { title: "Verificar consistência de dados de hospedagem", description: "Cruzar nomes de quartos entre propostas do mesmo hotel.", priority: "low", context: "propostas" },
+  ],
+  estrategista: [
+    { title: "Propor pacote experiencial Q2", description: "Criar sugestão de pacote temático baseado nas tendências de busca.", priority: "medium", context: "estratégia" },
+    { title: "Análise de elasticidade de preço", description: "Testar se aumento de 5% na margem impacta conversão.", priority: "high", context: "pricing" },
+    { title: "Identificar destinos emergentes", description: "Mapear destinos com crescimento de busca acima de 20% no mês.", priority: "low", context: "estratégia" },
   ],
 };
 
@@ -202,7 +229,7 @@ function pickWeighted(weights: Record<string, number>, seed: number): AgentStatu
 
 function randRange(min: number, max: number, seed: number): number {
   const t = (seed % 10000) / 10000;
-  const jitter = 0.7 + t * 0.6; // 0.7–1.3 multiplier
+  const jitter = 0.7 + t * 0.6;
   return Math.round((min + (max - min) * t) * jitter);
 }
 
@@ -210,8 +237,18 @@ function pickRandom<T>(arr: T[], seed: number): T {
   return arr[Math.abs(seed) % arr.length];
 }
 
-function getThought(agentId: string, status: AgentStatus, seed: number): string {
-  const bank = thoughtBank[agentId]?.[status] ?? [`Operando em modo ${status}.`];
+function getThought(agent: EngineAgent, status: AgentStatus, seed: number): string {
+  // Sparingly use memory-aware thoughts
+  if (
+    (status === "suggesting" || status === "analyzing") &&
+    shouldUseMemoryThought(agent.memory) &&
+    seed % 5 === 0 // ~20% chance when conditions are met
+  ) {
+    const mThoughts = memoryThoughts[agent.id];
+    if (mThoughts?.length) return pickRandom(mThoughts, seed + 99);
+  }
+
+  const bank = thoughtBank[agent.id]?.[status] ?? [`Operando em modo ${status}.`];
   return pickRandom(bank, seed);
 }
 
@@ -235,6 +272,7 @@ export function createInitialState(baseAgents: Agent[], baseTasks: Task[], now: 
     ...a,
     nextTickAt: now + randRange(5_000, 12_000, i * 137),
     eventHistory: [],
+    memory: createEmptyMemory(),
   }));
 
   return {
@@ -258,21 +296,30 @@ export function tick(state: EngineState, now: number): EngineState {
 
   const seed = now ^ (tickCount * 7919);
 
+  // Periodic preference decay
+  const shouldDecay = tickCount > 0 && tickCount % DECAY_EVERY_N_TICKS === 0;
+
   const newAgents = agents.map((agent, idx) => {
+    let currentAgent = agent;
+
+    // Apply decay if needed
+    if (shouldDecay) {
+      currentAgent = { ...currentAgent, memory: decayPreferences(currentAgent.memory) };
+      changed = true;
+    }
+
     // Not time yet
-    if (now < agent.nextTickAt) return agent;
-    // Only 1 transition per tick
-    if (MAX_ONE_TRANSITION_PER_TICK && transitionedThisTick) return agent;
+    if (now < currentAgent.nextTickAt) return currentAgent;
+    if (MAX_ONE_TRANSITION_PER_TICK && transitionedThisTick) return currentAgent;
 
     const agentSeed = seed ^ (idx * 3571);
-    const weights = transitionWeights[agent.id]?.[agent.status] ?? defaultWeights[agent.status] ?? { idle: 1 };
+    const weights = transitionWeights[currentAgent.id]?.[currentAgent.status] ?? defaultWeights[currentAgent.status] ?? { idle: 1 };
 
     // Check alert throttle
     let filteredWeights = { ...weights };
     if (now - lastAlertAt < MIN_ALERT_INTERVAL_MS && "alert" in filteredWeights) {
       const alertW = (filteredWeights as Record<string, number>)["alert"] ?? 0;
       delete (filteredWeights as Record<string, number>)["alert"];
-      // redistribute
       const keys = Object.keys(filteredWeights);
       if (keys.length > 0) {
         const share = alertW / keys.length;
@@ -284,13 +331,13 @@ export function tick(state: EngineState, now: number): EngineState {
     const [minDur, maxDur] = statusDuration[nextStatus] ?? [10_000, 15_000];
     const duration = randRange(minDur, maxDur, agentSeed + 1);
 
-    const thought = getThought(agent.id, nextStatus, agentSeed + 2);
+    const thought = getThought(currentAgent, nextStatus, agentSeed + 2);
     const actionLabel = getActionLabel(nextStatus);
 
     // Create status change event
     const evt: AgentEvent = {
       id: uid(),
-      agentId: agent.id,
+      agentId: currentAgent.id,
       type: nextStatus === "alert" ? "alert" : nextStatus === "suggesting" ? "insight" : "status_change",
       message: thought,
       timestamp: now,
@@ -299,18 +346,35 @@ export function tick(state: EngineState, now: number): EngineState {
 
     events = [evt, ...events].slice(0, MAX_GLOBAL_EVENTS);
 
+    // Record interaction in memory
+    let agentMemory = addMemory(currentAgent.memory, {
+      type: nextStatus === "alert" ? "alert" : "interaction",
+      content: thought,
+      timestamp: now,
+      relevanceScore: computeRelevance({ type: nextStatus === "alert" ? "alert" : "interaction" }),
+      agentId: currentAgent.id,
+      context: nextStatus === "alert" ? "alerta" : nextStatus,
+    });
+
     // Maybe generate task (on suggesting or alert)
     if ((nextStatus === "suggesting" || nextStatus === "alert") && now - lastTaskCreatedAt >= MIN_TASK_INTERVAL_MS) {
-      const templates = taskTemplates[agent.id];
+      const templates = taskTemplates[currentAgent.id];
       if (templates && Math.abs(agentSeed) % 100 < (nextStatus === "suggesting" ? 60 : 80)) {
-        const tmpl = pickRandom(templates, agentSeed + 3);
-        const agentTaskCount = tasks.filter(t => t.sourceAgentId === agent.id).length;
+        // Filter templates based on memory preferences
+        const filtered = templates.filter(tmpl => {
+          const prefWeight = getPreferenceWeight(agentMemory, tmpl.context);
+          // Skip templates the user strongly dislikes
+          return prefWeight > -0.5;
+        });
+        const pool = filtered.length > 0 ? filtered : templates;
+        const tmpl = pickRandom(pool, agentSeed + 3);
+        const agentTaskCount = tasks.filter(t => t.sourceAgentId === currentAgent.id).length;
         if (agentTaskCount < MAX_TASKS_PER_AGENT) {
           const newTask: Task = {
             id: uid(),
             title: tmpl.title,
             description: tmpl.description,
-            sourceAgentId: agent.id,
+            sourceAgentId: currentAgent.id,
             status: "suggested",
             priority: tmpl.priority,
             createdAt: new Date(now).toISOString(),
@@ -328,15 +392,16 @@ export function tick(state: EngineState, now: number): EngineState {
     transitionedThisTick = true;
     changed = true;
 
-    const newHistory = [evt, ...agent.eventHistory].slice(0, MAX_EVENTS_PER_AGENT);
+    const newHistory = [evt, ...currentAgent.eventHistory].slice(0, MAX_EVENTS_PER_AGENT);
 
     return {
-      ...agent,
+      ...currentAgent,
       status: nextStatus,
       currentThought: thought,
       lastAction: actionLabel,
       nextTickAt: now + duration,
       eventHistory: newHistory,
+      memory: agentMemory,
     };
   });
 
