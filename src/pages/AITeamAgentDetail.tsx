@@ -3,10 +3,12 @@ import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import {
   ArrowLeft, Send, Zap, Shield, Target, Brain, CheckCircle2, Clock,
   Loader2, Activity, AlertTriangle, Eye, Pause, ChevronDown, ChevronUp,
+  Cpu, TrendingUp, TrendingDown,
 } from "lucide-react";
 import { agents as mockAgents, initialTasks, simulatedResponses, type Task } from "@/components/ai-team/mockData";
 import { useAgentEngine } from "@/components/ai-team/useAgentEngine";
 import type { AgentEvent } from "@/components/ai-team/agentEngine";
+import type { AgentMemory } from "@/components/ai-team/agentMemory";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
