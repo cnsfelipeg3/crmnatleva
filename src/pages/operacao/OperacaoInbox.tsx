@@ -72,6 +72,7 @@ interface Message {
   media_url?: string;
   status: MsgStatus;
   created_at: string;
+  external_message_id?: string;
   raw_message?: any;
   quoted_msg?: { text: string; sender_type: "cliente" | "atendente" | "sistema"; message_type: MsgType };
   edited?: boolean;
