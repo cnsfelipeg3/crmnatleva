@@ -856,6 +856,9 @@ async function scrapePageForPhotosWithLinks(
     return null;
   }
 }
+
+/**
+ * Extract images with rich HTML context for AI classification.
  * Captures: parent heading, alt text, surrounding captions, nearby text, CSS classes.
  */
 function extractImagesWithSectionContext(
