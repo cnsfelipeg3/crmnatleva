@@ -1185,27 +1185,18 @@ function OperacaoInboxInner() {
       } catch (err) { console.error("Error loading chats:", err); }
     }
 
-    async function pollWhatsAppMessages() {
-      // Canonical source of truth is conversation_messages; polling zapi_messages here
-      // caused duplicates, order drift and optimistic-state races in the inbox.
-      return;
-    }
-
     async function checkAndStartPolling() {
       try {
         const data = await callZapiProxy("check-status");
         if (data?.connected) {
           setWaConnected(true);
           await loadChats();
-          pollWhatsAppMessages();
-          whatsappPollRef.current = setInterval(pollWhatsAppMessages, POLL_MS);
         } else { setWaConnected(false); }
       } catch { setWaConnected(false); }
     }
 
     checkAndStartPolling();
-    return () => { if (whatsappPollRef.current) clearInterval(whatsappPollRef.current); };
-  }, [selectedId, extractMediaFromRawData, getZapiPhoneCandidates, chatSyncVersion]);
+  }, [chatSyncVersion]);
 
   const filteredConversations = useMemo(() => {
     const filtered = conversations.filter(c => {
