@@ -95,7 +95,7 @@ const defaultWeights: TransitionMap = {
    Message banks
    ═══════════════════════════════════════════ */
 
-const thoughtBank: Record<string, Record<AgentStatus, string[]>> = {
+const thoughtBank: Record<string, Partial<Record<AgentStatus, string[]>>> = {
   gerente: {
     idle: ["Aguardando novas demandas do time.", "Revisando status geral dos projetos."],
     analyzing: [
