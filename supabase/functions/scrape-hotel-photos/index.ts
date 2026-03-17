@@ -664,7 +664,7 @@ async function mapEntireSite(mainUrl: string | undefined, apiKey: string): Promi
     const resp = await fetch("https://api.firecrawl.dev/v1/map", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ url: mainUrl, limit: 200, includeSubdomains: false }),
+      body: JSON.stringify({ url: mainUrl, limit: 500, includeSubdomains: false }),
     });
     if (!resp.ok) return [mainUrl];
     const data = await resp.json();
