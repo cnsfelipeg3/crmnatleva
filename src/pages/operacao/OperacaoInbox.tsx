@@ -96,7 +96,6 @@ function OperacaoInboxInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedIdRef = useRef<string | null>(null);
   useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
-  const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [inputText, setInputText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
@@ -105,7 +104,6 @@ function OperacaoInboxInner() {
   const [showLinkClient, setShowLinkClient] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [chatSyncVersion, setChatSyncVersion] = useState(0);
-  const [reloadingMessages, setReloadingMessages] = useState(false);
   const [rebuildingHistoryAll, setRebuildingHistoryAll] = useState(false);
   const [flowRunning, setFlowRunning] = useState(false);
   const [botActive, setBotActive] = useState(true);
@@ -120,7 +118,18 @@ function OperacaoInboxInner() {
   const lastAutoReconcileRef = useRef(0);
 
   const selected = conversations.find(c => c.id === selectedId);
-  const currentMessages = selectedId ? (messages[selectedId] || []) : [];
+
+  // ─── Extracted hooks: messages + realtime ───
+  const {
+    messages, setMessages, currentMessages,
+    loadingMessages, setLoadingMessages, reloadingMessages, setReloadingMessages,
+    loadOlderMessages, hasOlderMessages, lastMsgIdsRef,
+  } = useInboxMessages(selectedId, selected, reloadVersion);
+
+  const conversationsRef = useRef(conversations);
+  useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+
+  useInboxRealtime(setMessages, setConversations, setSelectedId, lastMsgIdsRef, selectedIdRef, conversationsRef);
 
   const getZapiPhoneCandidates = useCallback((conversationId: string) => {
     const phone = conversationId.replace("wa_", "").replace(/\D/g, "").trim();
