@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
-  X, ChevronLeft, ChevronRight, Check, Camera, Bed, Maximize2, Users, Eye,
-  Sparkles, Wifi, Wind, Tv, LockKeyhole, Wine, Coffee, Droplets, Shirt, Info,
+  X, ChevronLeft, ChevronRight, Check,
+  Wifi, Wind, Tv, LockKeyhole, Wine, Coffee, Droplets, Shirt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPhotoTag, PHOTO_TAG_CONFIG } from "./types";
