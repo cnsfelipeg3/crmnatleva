@@ -53,7 +53,7 @@ async function resolveLidPhone(
 ): Promise<string | null> {
   const lid = rawPhone.replace("@lid", "");
 
-  // Check local cache first
+  // Strategy 1: Direct lookup in zapi_contacts by LID
   const { data: contact } = await supabase
     .from("zapi_contacts")
     .select("phone")
@@ -65,7 +65,38 @@ async function resolveLidPhone(
     return contact.phone;
   }
 
-  // Try Z-API get-chats as fallback
+  // Strategy 2: Check if we have a recent INBOUND message from this LID's chat
+  // The Z-API often sends inbound messages with the real phone, and outbound with LID.
+  // We can correlate by matching the messageId prefix or by checking recent conversations.
+  const messageId = body.messageId || "";
+  if (messageId) {
+    // Check if a recent inbound message from same chat was processed (they share chatLid patterns)
+    const { data: recentRaw } = await supabase
+      .from("whatsapp_events_raw")
+      .select("phone, conversation_id")
+      .eq("from_me", false)
+      .not("phone", "like", "%@lid%")
+      .not("conversation_id", "is", null)
+      .order("received_at", { ascending: false })
+      .limit(200);
+
+    if (recentRaw?.length) {
+      // Check if any of these phones have a matching LID in zapi_contacts
+      for (const raw of recentRaw) {
+        const cleanPhone = normalizePhone(raw.phone);
+        if (!cleanPhone) continue;
+        const { data: contactMatch } = await supabase
+          .from("zapi_contacts")
+          .select("lid")
+          .eq("phone", cleanPhone)
+          .maybeSingle();
+        // Skip - no lid stored for this contact
+        if (!contactMatch?.lid) continue;
+      }
+    }
+  }
+
+  // Strategy 3: Try Z-API get-chats to find LID mapping
   try {
     const zapiInstanceId = Deno.env.get("ZAPI_INSTANCE_ID") || "";
     const zapiToken = Deno.env.get("ZAPI_TOKEN") || "";
@@ -97,6 +128,35 @@ async function resolveLidPhone(
   } catch (err: any) {
     console.error(`[Webhook] LID resolve error: ${err.message}`);
   }
+
+  // Strategy 4: Try Z-API contact endpoint directly by LID
+  try {
+    const zapiInstanceId = Deno.env.get("ZAPI_INSTANCE_ID") || "";
+    const zapiToken = Deno.env.get("ZAPI_TOKEN") || "";
+    const zapiClientToken = Deno.env.get("ZAPI_CLIENT_TOKEN") || "";
+    const contactUrl = `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/contacts/${lid}`;
+    const contactRes = await fetch(contactUrl, {
+      headers: { "Client-Token": zapiClientToken },
+    });
+    if (contactRes.ok) {
+      const contactData = await contactRes.json();
+      if (contactData?.phone) {
+        const resolved = normalizePhone(String(contactData.phone));
+        await supabase.from("zapi_contacts").upsert({
+          phone: resolved, lid,
+          name: contactData.name || body.chatName || null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "phone" });
+        console.log(`[Webhook] LID ${lid} → resolved via contacts API to ${resolved}`);
+        return resolved;
+      }
+    } else {
+      await contactRes.text();
+    }
+  } catch (err: any) {
+    console.error(`[Webhook] LID contacts API error: ${err.message}`);
+  }
+
   return null;
 }
 
