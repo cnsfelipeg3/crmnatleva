@@ -1239,6 +1239,130 @@ function normalizeUrlForDedup(url: string): string {
 }
 
 // ═══════════════════════════════════════════════
+// PHASE 1: Build Room Registry from textual evidence
+// ═══════════════════════════════════════════════
+
+function buildRoomRegistry(
+  collection: ImageCollection,
+  hotelName: string
+): RoomRegistryEntry[] {
+  const registry: RoomRegistryEntry[] = [];
+  const seen = new Set<string>();
+  const hotelNorm = normalizeStr(hotelName);
+
+  // Source 1: Collection sections (have descriptions, amenities — strongest signal)
+  for (const [name, info] of collection.sections) {
+    const norm = normalizeStr(name);
+    if (seen.has(norm)) continue;
+    if (norm === hotelNorm) continue;
+    if (!isLikelyRoomOrFacilityName(name)) continue;
+    seen.add(norm);
+
+    registry.push({
+      name, normalized: norm, source_url: "",
+      text_evidence: {
+        heading: name,
+        description: info.description || undefined,
+        amenities: info.amenities.length > 0 ? info.amenities : undefined,
+      },
+      confidence: info.description ? 0.95 : 0.85,
+      category: inferCategory(name, ""),
+    });
+  }
+
+  // Source 2: Section names from photos (headings found near images)
+  const sectionCounts = new Map<string, number>();
+  for (const photo of collection.photos) {
+    if (!photo.section_name) continue;
+    const norm = normalizeStr(photo.section_name);
+    sectionCounts.set(norm, (sectionCounts.get(norm) || 0) + 1);
+  }
+
+  for (const [norm, count] of sectionCounts) {
+    if (seen.has(norm)) continue;
+    if (norm === hotelNorm) continue;
+    const original = collection.photos.find(p => normalizeStr(p.section_name) === norm)?.section_name || "";
+    if (!original || !isLikelyRoomOrFacilityName(original)) continue;
+    seen.add(norm);
+
+    registry.push({
+      name: original, normalized: norm, source_url: "",
+      text_evidence: { heading: original },
+      confidence: count >= 3 ? 0.85 : 0.7,
+      category: inferCategory(original, ""),
+    });
+  }
+
+  return registry;
+}
+
+// ═══════════════════════════════════════════════
+// PHASE 2: Assign photos to room registry entries
+// ═══════════════════════════════════════════════
+
+function assignPhotosToRegistry(photos: ScrapedPhoto[], registry: RoomRegistryEntry[]): ScrapedPhoto[] {
+  return photos.map(photo => {
+    // Already has a confident assignment that matches registry — keep it
+    if (photo.section_name && photo.confidence >= 0.9) {
+      const norm = normalizeStr(photo.section_name);
+      if (registry.some(r => r.normalized === norm)) return photo;
+    }
+
+    // Skip booking-tagged photos (they have their own naming)
+    if (photo.section_name?.startsWith("[Booking]")) return photo;
+
+    // Score each registry entry
+    let bestScore = 0;
+    let bestEntry: RoomRegistryEntry | null = null;
+
+    const ctx = (photo.html_context || "").toLowerCase();
+    const alt = (photo.alt || "").toLowerCase();
+    const sec = (photo.section_name || "").toLowerCase();
+    const url = photo.url.toLowerCase();
+
+    for (const entry of registry) {
+      let score = 0;
+      const words = entry.normalized.split(/\s+/).filter(w => w.length > 2);
+
+      // Section name overlap
+      if (sec && (sec.includes(entry.normalized) || entry.normalized.includes(sec))) score += 4;
+
+      // Alt text contains entry words
+      const altHits = words.filter(w => alt.includes(w)).length;
+      if (altHits > 0) score += altHits * 2;
+
+      // HTML context contains entry words
+      const ctxHits = words.filter(w => ctx.includes(w)).length;
+      if (ctxHits > 0) score += ctxHits * 1.5;
+
+      // URL/filename contains entry words
+      const urlHits = words.filter(w => url.includes(w)).length;
+      if (urlHits > 0) score += urlHits * 1.5;
+
+      // Category alignment (weak)
+      if (photo.category === entry.category && photo.category !== "outro") score += 1;
+
+      if (score > bestScore) { bestScore = score; bestEntry = entry; }
+    }
+
+    // Only reassign with strong enough evidence (≥3 points)
+    if (bestEntry && bestScore >= 3) {
+      return {
+        ...photo,
+        section_name: bestEntry.name,
+        category: bestEntry.category,
+        confidence: Math.min(0.95, photo.confidence + 0.1),
+        html_context: photo.html_context
+          ? `${photo.html_context} | Registry: "${bestEntry.name}" (${bestScore.toFixed(1)})`
+          : `Registry: "${bestEntry.name}" (${bestScore.toFixed(1)})`,
+      };
+    }
+
+    return photo;
+  });
+}
+
+// ═══════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════
 
