@@ -48,6 +48,8 @@ import {
 } from "@/components/inbox/helpers";
 import { VirtualConversationList } from "@/components/inbox/VirtualConversationList";
 import { MessageBubble } from "@/components/inbox/MessageBubble";
+import { useInboxMessages } from "@/components/inbox/useInboxMessages";
+import { useInboxRealtime } from "@/components/inbox/useInboxRealtime";
 
 // (All helpers, types, constants now imported from @/components/inbox/*)
 
