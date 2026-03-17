@@ -96,7 +96,7 @@ function OperacaoInboxInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedIdRef = useRef<string | null>(null);
   useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
-  const [messages, setMessages] = useState<Record<string, Message[]>>({});
+  // Messages managed by extracted hook — removes ~300 lines of inline logic
   const [inputText, setInputText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
