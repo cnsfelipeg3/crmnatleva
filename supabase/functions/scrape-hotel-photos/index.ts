@@ -157,6 +157,12 @@ Deno.serve(async (req) => {
 
     console.log(`📸 Official site: ${officialPhotoCount} photos, ${officialRoomNames.length} rooms identified`);
 
+    // ═══════════════════════════════════════════════
+    // PHASE 1: Build Room Registry from textual evidence (before any image assignment)
+    // ═══════════════════════════════════════════════
+    const roomRegistry = buildRoomRegistry(collection, hotelName);
+    console.log(`🏷️ PHASE 1 — Room Registry: ${roomRegistry.length} entries: ${roomRegistry.map(r => r.name).join(", ")}`);
+
     // 2. Extract room names with AI if official data is sparse
     let validatedRoomNames = [...officialRoomNames];
     if (validatedRoomNames.length < 3 && official && official.photos.length > 3) {
@@ -164,6 +170,17 @@ Deno.serve(async (req) => {
       if (aiRoomNames.length > 0) {
         validatedRoomNames = [...new Set([...validatedRoomNames, ...aiRoomNames])];
         console.log(`🤖 AI extracted room names: ${aiRoomNames.join(", ")}`);
+        // Merge AI-discovered names into registry
+        for (const aiName of aiRoomNames) {
+          const norm = normalizeStr(aiName);
+          if (!roomRegistry.some(r => r.normalized === norm)) {
+            roomRegistry.push({
+              name: aiName, normalized: norm, source_url: "",
+              text_evidence: { heading: aiName },
+              confidence: 0.75, category: inferCategory(aiName, ""),
+            });
+          }
+        }
       }
     }
 
