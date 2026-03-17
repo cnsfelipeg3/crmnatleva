@@ -59,9 +59,10 @@ export function isPhotoFaithfulToRoom(photo: HotelPhoto, roomName: string): bool
   if (normEnv && (normEnv.includes(normRoom) || normRoom.includes(normEnv))) return true;
   const normRoomName = normalize(photo.room_name || "");
   if (normRoomName && (normRoomName.includes(normRoom) || normRoom.includes(normRoomName))) return true;
-  // Check html_context evidence
-  const ctx = (photo.html_context || "").toLowerCase();
-  if (ctx && ctx.includes(roomName.toLowerCase().slice(0, Math.max(6, roomName.length * 0.6)))) return true;
+  // Check html_context evidence (normalize both sides for comparison)
+  const ctxNorm = normalize(photo.html_context || "");
+  const roomPrefix = normRoom.slice(0, Math.max(5, Math.floor(normRoom.length * 0.6)));
+  if (ctxNorm && ctxNorm.includes(roomPrefix)) return true;
   return false;
 }
 
