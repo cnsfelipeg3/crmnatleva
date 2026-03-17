@@ -8,6 +8,7 @@ import {
   Sparkles, Wifi, Wind, Tv, LockKeyhole, Wine, Coffee, Droplets, Shirt, Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getPhotoTag, PHOTO_TAG_CONFIG } from "./types";
 import type { HotelPhoto, SectionDetail } from "./types";
 
 interface Props {
