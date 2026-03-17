@@ -99,6 +99,7 @@ export function useAgentEngine(baseAgents: Agent[], baseTasks: Task[]): UseAgent
     tasks: snapshot?.tasks ?? [],
     events: snapshot?.events ?? [],
     addAgent,
+    updateAgent,
     removeTask,
   };
 }
