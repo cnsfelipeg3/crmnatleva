@@ -217,8 +217,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    const bookingCount = collection.photos.filter(p => p.source === "booking").length;
-    console.log(`📸 Final merged: ${collection.photos.length} photos (${officialPhotoCount} official, ${bookingCount} booking fallback)`);
+    const bookingCountMerged = collection.photos.filter(p => p.source === "booking").length;
+    console.log(`📸 Final merged: ${collection.photos.length} photos (${officialPhotoCount} official, ${bookingCountMerged} booking fallback)`);
 
     // ── Filter, deduplicate, maximize quality, and return ──
     const photos = collection.photos
