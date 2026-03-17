@@ -1760,27 +1760,36 @@ export type Database = {
       conversations: {
         Row: {
           assigned_to: string | null
+          auto_tags: string[] | null
           client_id: string | null
+          close_score: number | null
           contact_name: string | null
           created_at: string
           display_name: string | null
+          engagement_level: string | null
+          estimated_margin: number | null
           external_conversation_id: string | null
           external_id: string | null
           funnel_stage: string | null
           id: string
+          interaction_count: number | null
           is_pinned: boolean | null
           is_vip: boolean | null
           last_message_at: string | null
           last_message_preview: string | null
+          last_response_at: string | null
           lead_id: string | null
           payment_method: string | null
           phone: string | null
           price_range: string | null
+          proposal_value: number | null
+          proposal_viewed_at: string | null
           reconciled_at: string | null
           score_potential: number | null
           score_risk: number | null
           source: string | null
           stage: string | null
+          stage_entered_at: string | null
           status: string
           tags: string[] | null
           unread_count: number | null
@@ -1789,27 +1798,36 @@ export type Database = {
         }
         Insert: {
           assigned_to?: string | null
+          auto_tags?: string[] | null
           client_id?: string | null
+          close_score?: number | null
           contact_name?: string | null
           created_at?: string
           display_name?: string | null
+          engagement_level?: string | null
+          estimated_margin?: number | null
           external_conversation_id?: string | null
           external_id?: string | null
           funnel_stage?: string | null
           id?: string
+          interaction_count?: number | null
           is_pinned?: boolean | null
           is_vip?: boolean | null
           last_message_at?: string | null
           last_message_preview?: string | null
+          last_response_at?: string | null
           lead_id?: string | null
           payment_method?: string | null
           phone?: string | null
           price_range?: string | null
+          proposal_value?: number | null
+          proposal_viewed_at?: string | null
           reconciled_at?: string | null
           score_potential?: number | null
           score_risk?: number | null
           source?: string | null
           stage?: string | null
+          stage_entered_at?: string | null
           status?: string
           tags?: string[] | null
           unread_count?: number | null
@@ -1818,27 +1836,36 @@ export type Database = {
         }
         Update: {
           assigned_to?: string | null
+          auto_tags?: string[] | null
           client_id?: string | null
+          close_score?: number | null
           contact_name?: string | null
           created_at?: string
           display_name?: string | null
+          engagement_level?: string | null
+          estimated_margin?: number | null
           external_conversation_id?: string | null
           external_id?: string | null
           funnel_stage?: string | null
           id?: string
+          interaction_count?: number | null
           is_pinned?: boolean | null
           is_vip?: boolean | null
           last_message_at?: string | null
           last_message_preview?: string | null
+          last_response_at?: string | null
           lead_id?: string | null
           payment_method?: string | null
           phone?: string | null
           price_range?: string | null
+          proposal_value?: number | null
+          proposal_viewed_at?: string | null
           reconciled_at?: string | null
           score_potential?: number | null
           score_risk?: number | null
           source?: string | null
           stage?: string | null
+          stage_entered_at?: string | null
           status?: string
           tags?: string[] | null
           unread_count?: number | null
