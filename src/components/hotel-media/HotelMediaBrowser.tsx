@@ -142,7 +142,7 @@ export default function HotelMediaBrowser({ hotelName, hotelCity, hotelCountry, 
       {/* ZONA C — Exploração */}
       {roomNames.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Acomodações</h3>
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 pb-2">Acomodações</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {roomNames.map(name => (
               <RoomCard
