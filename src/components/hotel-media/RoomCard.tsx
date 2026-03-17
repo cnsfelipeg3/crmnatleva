@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Camera, Maximize2, Bed, Users, Eye, Sparkles } from "lucide-react";
+import { Camera, Maximize2, Bed, Users, Eye, Sparkles, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getConfidenceLevel, buildCommercialSummary, getHighlightAmenity } from "./types";
 import type { HotelPhoto, SectionDetail, RoomBlock } from "./types";
