@@ -54,8 +54,11 @@ const statusDuration: Record<AgentStatus, [number, number]> = {
   alert:      [5_000,  10_000],
 };
 
-/** Weighted transitions per agent role */
-const transitionWeights: Record<string, Partial<Record<AgentStatus, Record<AgentStatus, number>>>> = {
+/** Weighted transitions — only target states with non-zero weight need to be listed */
+type Weights = Record<string, number>;
+type TransitionMap = Partial<Record<AgentStatus, Weights>>;
+
+const transitionWeights: Record<string, TransitionMap> = {
   gerente: {
     idle:       { analyzing: 0.6, idle: 0.4 },
     analyzing:  { suggesting: 0.45, waiting: 0.3, alert: 0.15, analyzing: 0.1 },
