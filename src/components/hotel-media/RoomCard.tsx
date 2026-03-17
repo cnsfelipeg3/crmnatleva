@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Camera, Bed, Maximize2, Users, Eye, Globe, Paperclip } from "lucide-react";
+import { Camera, Bed, Maximize2, Users, Eye, Globe, Paperclip, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getConfidenceLevel } from "./types";
+import { getConfidenceLevel, buildCommercialSummary, getHighlightAmenity, getPhotoTag, PHOTO_TAG_CONFIG } from "./types";
 import type { HotelPhoto, SectionDetail, RoomBlock } from "./types";
 
 interface Props {
@@ -27,12 +27,16 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
   const avgConfidence = photos.reduce((s, p) => s + (p.confidence || 0.5), 0) / photos.length;
   const confidenceLevel = getConfidenceLevel(avgConfidence);
   const isOfficial = photos.filter(p => p.source === "official").length > photos.length / 2;
+  const summary = buildCommercialSummary(detail);
+  const highlight = detail ? getHighlightAmenity(detail.amenities) : null;
+  const coverTag = coverPhoto ? getPhotoTag(coverPhoto, photos, name) : null;
 
   const handleUse = (e: React.MouseEvent) => {
     e.stopPropagation();
+    const autoDescription = [summary.line1, summary.line2].filter(Boolean).join(" · ");
     onUseRoom({
       room_name: name,
-      description: detail?.description || "",
+      description: detail?.description || autoDescription,
       amenities: detail?.amenities || [],
       photos: photos.slice(0, 5),
       source: isOfficial ? "official" : "booking",
@@ -48,6 +52,7 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
       <div className="flex h-40 sm:h-44">
         <div className="flex-[2] overflow-hidden bg-muted relative">
           {coverPhoto && (
+            <>
             <img
               src={getDisplayUrl(coverPhoto.url)}
               alt={name}
@@ -56,6 +61,12 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
               referrerPolicy="no-referrer"
               onError={() => onImageError(coverPhoto.url)}
             />
+            {coverTag && (
+              <div className={cn("absolute bottom-1.5 left-1.5 text-[7px] font-bold px-1.5 py-0.5 rounded-sm", PHOTO_TAG_CONFIG[coverTag].className)}>
+                {PHOTO_TAG_CONFIG[coverTag].label}
+              </div>
+            )}
+            </>
           )}
         </div>
         {secondPhoto && (
@@ -91,8 +102,12 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
           </div>
         </div>
 
-        {detail?.description && (
-          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">{detail.description}</p>
+        {/* Commercial summary — max 2 lines, truncated */}
+        {(summary.line1 || detail?.description) && (
+          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+            {summary.line1 || detail?.description}
+            {summary.line2 && <><br />{summary.line2}</>}
+          </p>
         )}
 
         <div className="flex flex-wrap items-center gap-1.5">
@@ -114,6 +129,11 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
           {detail?.details?.["Vista"] && (
             <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/50 rounded-md px-1.5 py-0.5">
               <Eye className="w-2.5 h-2.5" /> {detail.details["Vista"]}
+            </span>
+          )}
+          {highlight && !detail?.details?.["Vista"]?.toLowerCase().includes(highlight.toLowerCase()) && (
+            <span className="inline-flex items-center gap-1 text-[10px] text-primary bg-primary/10 rounded-md px-1.5 py-0.5 font-medium">
+              <Sparkles className="w-2.5 h-2.5" /> {highlight}
             </span>
           )}
         </div>

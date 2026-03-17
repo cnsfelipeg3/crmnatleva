@@ -8,6 +8,7 @@ import {
   Sparkles, Wifi, Wind, Tv, LockKeyhole, Wine, Coffee, Droplets, Shirt, Info,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getPhotoTag, PHOTO_TAG_CONFIG } from "./types";
 import type { HotelPhoto, SectionDetail } from "./types";
 
 interface Props {
@@ -130,6 +131,7 @@ export default function RoomGalleryDrawer({
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
             {photos.map((photo, i) => {
               const isSelected = selectedPhotos.has(photo.url);
+              const tag = getPhotoTag(photo, photos, name);
               return (
                 <div
                   key={photo.url + i}
@@ -159,7 +161,12 @@ export default function RoomGalleryDrawer({
                   >
                     <Check className="w-3 h-3" />
                   </button>
-                  {photo.source !== "official" && (
+                  {tag && (
+                    <div className={cn("absolute top-1 left-1 text-[7px] font-bold px-1.5 py-0.5 rounded-sm", PHOTO_TAG_CONFIG[tag].className)}>
+                      {PHOTO_TAG_CONFIG[tag].label}
+                    </div>
+                  )}
+                  {!tag && photo.source !== "official" && (
                     <div className="absolute bottom-1 left-1 text-[7px] font-bold bg-info/80 text-info-foreground px-1 py-0.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity">
                       Compl.
                     </div>
