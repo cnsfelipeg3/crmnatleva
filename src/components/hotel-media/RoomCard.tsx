@@ -138,6 +138,18 @@ export default function RoomCard({ name, photos, detail, sourceUrl, getDisplayUr
           {isOfficial && (
             <span className="text-[9px] text-success font-medium ml-auto">Oficial</span>
           )}
+          {sourceUrl && (
+            <a
+              href={sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="ml-auto text-muted-foreground/50 hover:text-accent transition-colors duration-150 p-0.5"
+              title="Ver fonte original"
+            >
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
         </div>
 
         {/* Actions */}
