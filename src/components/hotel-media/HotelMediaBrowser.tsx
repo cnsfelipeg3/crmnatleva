@@ -150,6 +150,7 @@ export default function HotelMediaBrowser({ hotelName, hotelCity, hotelCountry, 
                 name={name}
                 photos={media.roomGroups[name]}
                 detail={media.sectionDetails[name]}
+                sourceUrl={media.sourceUrl}
                 getDisplayUrl={media.getDisplayUrl}
                 onImageError={media.handleImageError}
                 onViewGallery={setGalleryName}

@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Camera, Maximize2, Bed, Users, Eye, Sparkles } from "lucide-react";
+import { Camera, Maximize2, Bed, Users, Eye, Sparkles, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getConfidenceLevel, buildCommercialSummary, getHighlightAmenity } from "./types";
 import type { HotelPhoto, SectionDetail, RoomBlock } from "./types";
@@ -9,6 +9,7 @@ interface Props {
   name: string;
   photos: HotelPhoto[];
   detail?: SectionDetail;
+  sourceUrl?: string;
   getDisplayUrl: (url: string) => string;
   onImageError: (url: string) => void;
   onViewGallery: (name: string) => void;
@@ -21,7 +22,7 @@ const CONFIDENCE_COLORS: Record<string, string> = {
   revisar: "border-destructive/30 text-destructive bg-destructive/10",
 };
 
-export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageError, onViewGallery, onUseRoom }: Props) {
+export default function RoomCard({ name, photos, detail, sourceUrl, getDisplayUrl, onImageError, onViewGallery, onUseRoom }: Props) {
   const coverPhoto = photos[0];
   const secondPhoto = photos[1];
   const avgConfidence = photos.reduce((s, p) => s + (p.confidence || 0.5), 0) / photos.length;
@@ -136,6 +137,18 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
           )}
           {isOfficial && (
             <span className="text-[9px] text-success font-medium ml-auto">Oficial</span>
+          )}
+          {sourceUrl && (
+            <a
+              href={sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="ml-auto text-muted-foreground/50 hover:text-accent transition-colors duration-150 p-0.5"
+              title="Ver fonte original"
+            >
+              <ExternalLink className="w-3 h-3" />
+            </a>
           )}
         </div>
 
