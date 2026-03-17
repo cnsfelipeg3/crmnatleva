@@ -533,6 +533,7 @@ function NatLevaBranding() {
   );
 }
 
+function Cafeteria() {
   const cx = 6.5, cz = -3.5;
   return (
     <group>
