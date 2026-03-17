@@ -89,7 +89,7 @@ async function fetchZapiMessages(phone: string): Promise<any[]> {
   for (const strategy of strategies) {
     try {
       console.log(`[Reconcile] Trying: ${strategy.label} for ${phone}`);
-      const opts: RequestInit = { method: strategy.method, headers };
+      const opts: RequestInit = { method: strategy.method, headers, signal: AbortSignal.timeout(25000) };
       if (strategy.body) opts.body = strategy.body;
       
       const resp = await fetch(strategy.url, opts);
