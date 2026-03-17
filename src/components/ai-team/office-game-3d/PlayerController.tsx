@@ -188,15 +188,19 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
       }
     }
 
-    // Camera — third-person with zoom
+    // Camera — third-person with orbit + zoom
     const zoom = zoomRef.current;
+    const orbitAngle = orbitAngleRef.current;
+    const orbitPitch = orbitPitchRef.current;
+    const camDist = CAM_BACK_DEFAULT * zoom;
+    const camHeight = CAM_HEIGHT_DEFAULT * zoom + orbitPitch * 4;
     const camTarget = new THREE.Vector3(
-      pos.x + CAM_ANGLE_X,
-      CAM_HEIGHT_DEFAULT * zoom,
-      pos.z + CAM_BACK_DEFAULT * zoom
+      pos.x + Math.sin(orbitAngle) * camDist,
+      camHeight,
+      pos.z + Math.cos(orbitAngle) * camDist
     );
     camera.position.lerp(camTarget, CAM_LERP);
-    camera.lookAt(new THREE.Vector3(pos.x, 0.5, pos.z - 1));
+    camera.lookAt(new THREE.Vector3(pos.x, 0.5, pos.z));
 
     onPositionChange(pos.x, pos.z);
   });
