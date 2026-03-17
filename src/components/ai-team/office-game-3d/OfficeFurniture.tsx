@@ -183,26 +183,7 @@ function ReceptionDesk() {
   );
 }
 
-/* ── Whiteboard ────────────────────────────────── */
-function Whiteboard() {
-  const { x, z, w, h } = WHITEBOARD;
-  return (
-    <group position={[x, 1.1, z]}>
-      <mesh castShadow>
-        <boxGeometry args={[w + 0.08, h + 0.08, 0.04]} />
-        <meshStandardMaterial color="#c0c0c0" roughness={0.4} metalness={0.2} />
-      </mesh>
-      <mesh position={[0, 0, 0.021]}>
-        <planeGeometry args={[w, h]} />
-        <meshStandardMaterial color="#f8f8f8" roughness={0.3} metalness={0.02} />
-      </mesh>
-      <mesh position={[0, -h / 2 - 0.04, 0.03]}>
-        <boxGeometry args={[w * 0.6, 0.03, 0.04]} />
-        <meshStandardMaterial color="#b0b0b0" roughness={0.4} metalness={0.3} />
-      </mesh>
-    </group>
-  );
-}
+/* ── Whiteboard removed — NatLeva branding replaces it ── */
 
 /* ── Conference Table ─────────────────────────── */
 function ConferenceTable() {
