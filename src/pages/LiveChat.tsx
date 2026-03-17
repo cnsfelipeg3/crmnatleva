@@ -655,6 +655,7 @@ export default function LiveChat() {
     const normalizeDbMessageType = (value: string | null | undefined): MsgType => {
       const raw = (value || "text").toLowerCase();
       if (raw === "ptt") return "audio";
+      if (raw === "sticker") return "image";
       if (raw === "image" || raw === "audio" || raw === "video" || raw === "document") return raw;
       return "text";
     };
