@@ -6,7 +6,7 @@ import AITeamAgentCard from "@/components/ai-team/AITeamAgentCard";
 import AITeamTaskList from "@/components/ai-team/AITeamTaskList";
 import AITeamAgentDrawer from "@/components/ai-team/AITeamAgentDrawer";
 import AITeamCreateAgentDialog from "@/components/ai-team/AITeamCreateAgentDialog";
-import AITeamOffice from "@/components/ai-team/AITeamOffice";
+import OfficeGameView from "@/components/ai-team/office-game/OfficeGameView";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
@@ -100,7 +100,7 @@ export default function AITeam() {
           </section>
         </>
       ) : (
-        <AITeamOffice
+        <OfficeGameView
           agents={agents}
           tasks={tasks}
           onBack={() => setView("dashboard")}
