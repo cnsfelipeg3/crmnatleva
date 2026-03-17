@@ -21,17 +21,17 @@ interface PipelineConversation {
   db_id?: string;
   phone: string;
   contact_name: string;
-  stage: Stage;
+  stage: string;
   tags: string[];
-  source: string;
+  source?: string;
   last_message_at: string;
   last_message_preview: string;
   unread_count: number;
   is_vip: boolean;
   assigned_to: string;
-  score_potential: number;
-  score_risk: number;
-  // New pipeline fields
+  score_potential?: number;
+  score_risk?: number;
+  // Pipeline fields
   stage_entered_at?: string;
   engagement_level?: string;
   close_score?: number;
@@ -42,6 +42,7 @@ interface PipelineConversation {
   auto_tags?: string[];
   proposal_viewed_at?: string;
   created_at?: string;
+  [key: string]: any;
 }
 
 // ─── Pipeline Columns ───
