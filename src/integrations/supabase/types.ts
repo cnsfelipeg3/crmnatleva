@@ -6347,6 +6347,15 @@ export type Database = {
     }
     Functions: {
       cleanup_client_names: { Args: never; Returns: Json }
+      dashboard_kpis: {
+        Args: {
+          p_destination?: string
+          p_period?: string
+          p_seller_id?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
       deduplicate_passengers: { Args: never; Returns: Json }
       deduplicate_sales: { Args: never; Returns: Json }
       extract_person_name: { Args: { raw_name: string }; Returns: string }
