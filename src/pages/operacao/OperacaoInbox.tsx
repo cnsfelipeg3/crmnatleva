@@ -1695,135 +1695,16 @@ function OperacaoInboxInner() {
               </ScrollArea>
             </div>
 
-            {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-              <div className="py-1">
-                {filteredConversations.map(conv => {
-                  const stageInfo = getStageInfo(conv.stage);
-                  const isSelected = conv.id === selectedId;
-                  const _previewRaw = stripQuotes((conv.last_message_preview || "").replace(/\n/g, " "));
-                  const _contactName = conv.contact_name || "Sem nome";
-                  const lastMsgTime = new Date(conv.last_message_at).getTime();
-                  const hoursAgo = (Date.now() - lastMsgTime) / 3600000;
-                  const isUrgent = conv.unread_count > 3 || (conv.unread_count > 0 && hoursAgo > 24);
-                  const hasUnread = conv.unread_count > 0;
-
-                  // Build preview text with media type detection
-                  const previewContent = (() => {
-                    if (!_previewRaw) return { icon: null, text: "Sem mensagens", italic: true };
-                    const lower = _previewRaw.toLowerCase();
-                    if (lower === "📎 audio" || lower.includes("mensagem de voz") || lower === "audio" || lower === "🎤 áudio")
-                      return { icon: <Mic className="h-3 w-3 text-primary shrink-0" />, text: "Mensagem de voz", italic: false };
-                    if (lower === "📎 image" || lower.includes("📷"))
-                      return { icon: <Image className="h-3 w-3 shrink-0 text-muted-foreground" />, text: "Foto", italic: false };
-                    if (lower === "📎 video")
-                      return { icon: <Video className="h-3 w-3 shrink-0 text-muted-foreground" />, text: "Vídeo", italic: false };
-                    if (lower === "📎 document")
-                      return { icon: <File className="h-3 w-3 shrink-0 text-muted-foreground" />, text: "Documento", italic: false };
-                    const displayText = _previewRaw.length > 50 ? _previewRaw.slice(0, 50) + "…" : _previewRaw;
-                    return { icon: null, text: displayText, italic: false };
-                  })();
-
-                  return (
-                    <motion.div
-                      key={conv.id}
-                      onClick={() => handleSelectConversation(conv.id)}
-                      className={`group px-3 py-2.5 cursor-pointer transition-all border-l-2 ${
-                        isSelected
-                          ? "bg-primary/5 border-l-primary"
-                          : isUrgent
-                            ? "border-l-destructive/60 hover:bg-destructive/5"
-                            : "border-l-transparent hover:bg-secondary/40"
-                      }`}
-                      whileTap={{ scale: 0.99 }}
-                    >
-                      <div className="flex items-start gap-2.5">
-                        {/* Avatar */}
-                        <div className="relative shrink-0 mt-0.5">
-                          {profilePicsRef.current.get(conv.id) ? (
-                            <img src={profilePicsRef.current.get(conv.id)} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-border/30" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
-                          ) : null}
-                          <div className={`h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-xs font-bold text-primary ring-1 ring-border/30 ${profilePicsRef.current.get(conv.id) ? 'hidden' : ''}`}>
-                            {_contactName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
-                          </div>
-                          {conv.is_vip && (
-                            <div className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-amber-500 flex items-center justify-center ring-2 ring-card">
-                              <Star className="h-2.5 w-2.5 text-white fill-white" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          {/* Row 1: Name + Time */}
-                          <div className="flex items-center justify-between gap-2">
-                            <span className={`text-[13px] truncate leading-tight ${hasUnread ? "font-bold text-foreground" : "font-semibold text-foreground/90"}`}>
-                              {/^\d{10,}$/.test(_contactName) ? formatPhoneDisplay(_contactName) : _contactName}
-                            </span>
-                            <span className={`text-[10px] shrink-0 tabular-nums ${hasUnread ? "text-primary font-semibold" : "text-muted-foreground"}`}>
-                              {formatTimestamp(conv.last_message_at)}
-                            </span>
-                          </div>
-
-                          {/* Row 2: Preview + Unread */}
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <div className={`flex items-center gap-1 flex-1 min-w-0 text-xs leading-tight ${hasUnread ? "text-foreground/80 font-medium" : "text-muted-foreground"}`}>
-                              {previewContent.icon}
-                              <span className={`truncate ${previewContent.italic ? "italic text-muted-foreground/40" : ""}`}>
-                                {previewContent.text}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              {conv.is_pinned && <Pin className="h-3 w-3 text-muted-foreground/50 rotate-45" />}
-                              {hasUnread && (
-                                <span className="h-[18px] min-w-[18px] rounded-full bg-primary flex items-center justify-center text-[9px] font-bold text-primary-foreground px-1">
-                                  {conv.unread_count > 99 ? "99+" : conv.unread_count}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Row 3: Metadata - Stage + Tags + Assigned */}
-                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${stageInfo.color}/10`}>
-                              <div className={`h-1.5 w-1.5 rounded-full ${stageInfo.color}`} />
-                              <span className="text-muted-foreground">{stageInfo.label}</span>
-                            </div>
-                            {conv.tags?.slice(0, 1).map(tag => (
-                              <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-secondary/60 text-muted-foreground/70">{tag}</span>
-                            ))}
-                            {isUrgent && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium flex items-center gap-0.5">
-                                <AlertTriangle className="h-2.5 w-2.5" />
-                                Atenção
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-                {filteredConversations.length === 0 && (
-                  <div className="flex flex-col items-center justify-center min-h-[300px] h-full text-center px-4">
-                    {!chatsLoadedRef.current ? (
-                      <>
-                        <Loader2 className="h-8 w-8 text-muted-foreground/30 mb-3 animate-spin" />
-                        <p className="text-sm text-muted-foreground">Carregando conversas...</p>
-                      </>
-                    ) : (
-                      <>
-                        <div className="h-14 w-14 rounded-2xl bg-secondary/50 flex items-center justify-center mb-3">
-                          <MessageSquare className="h-6 w-6 text-muted-foreground/30" />
-                        </div>
-                        <p className="text-sm font-medium text-muted-foreground">{searchQuery ? "Nenhuma conversa encontrada" : "Nenhuma conversa ainda"}</p>
-                        <p className="text-xs text-muted-foreground/60 mt-1">{searchQuery ? "Tente buscar por outro termo" : "As mensagens recebidas aparecerão aqui"}</p>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Conversations List — Virtualized */}
+            <VirtualConversationList
+              conversations={filteredConversations}
+              selectedId={selectedId}
+              profilePics={profilePicsRef.current}
+              onSelect={handleSelectConversation}
+              onTogglePin={handleTogglePin}
+              isLoading={!chatsLoadedRef.current}
+              searchQuery={searchQuery}
+            />
           </div>
 
           {/* ─── Column 2: Chat ─── */}
