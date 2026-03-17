@@ -655,6 +655,7 @@ export default function LiveChat() {
     const normalizeDbMessageType = (value: string | null | undefined): MsgType => {
       const raw = (value || "text").toLowerCase();
       if (raw === "ptt") return "audio";
+      if (raw === "sticker") return "image";
       if (raw === "image" || raw === "audio" || raw === "video" || raw === "document") return raw;
       return "text";
     };
@@ -667,16 +668,22 @@ export default function LiveChat() {
     };
 
     const mapDbMessages = (rows: any[], conversationKey: string): Message[] => (
-      (rows || []).map((m: any) => ({
-        id: m.id,
-        conversation_id: conversationKey,
-        sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
-        message_type: normalizeDbMessageType(m.message_type),
-        text: m.text ?? m.content ?? "",
-        media_url: m.media_url || undefined,
-        status: normalizeDbStatus(m.status ?? m.read_status),
-        created_at: String(m.created_at),
-      }))
+      (rows || []).map((m: any) => {
+        const rawText = m.text ?? m.content ?? "";
+        const msgType = normalizeDbMessageType(m.message_type);
+        // Clean up [MÍDIA: xxx] placeholders
+        const cleanText = /^\[MÍDIA:\s*\w+\]$/.test(rawText) ? "" : rawText;
+        return {
+          id: m.id,
+          conversation_id: conversationKey,
+          sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
+          message_type: msgType,
+          text: cleanText,
+          media_url: m.media_url || undefined,
+          status: normalizeDbStatus(m.status ?? m.read_status),
+          created_at: String(m.created_at),
+        };
+      })
     );
 
     const loadMessages = async () => {
@@ -2361,36 +2368,43 @@ export default function LiveChat() {
                                 </div>
                               )}
                               {/* Image message */}
-                              {msg.message_type === "image" && (
-                                <div>
-                                  {msg.media_url ? (
-                                    <>
-                                      <img
-                                        src={msg.media_url}
-                                        alt="Imagem"
-                                        className="rounded-lg w-full max-w-[220px] sm:max-w-[280px] lg:max-w-[340px] max-h-[320px] object-cover cursor-pointer mb-1"
-                                        onClick={() => setLightboxUrl(msg.media_url!)}
-                                      />
-                                      <div className="flex items-center gap-2 mt-1">
-                                        <a
-                                          href={msg.media_url}
-                                          download={`imagem_${msg.id}.jpg`}
-                                          className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5"
-                                          onClick={e => e.stopPropagation()}
-                                        >
-                                          <File className="h-2.5 w-2.5" /> Baixar
-                                        </a>
+                              {msg.message_type === "image" && (() => {
+                                const imgSrc = msg.media_url || (msg.text && msg.text.startsWith("/9j/") ? `data:image/jpeg;base64,${msg.text}` : null);
+                                return (
+                                  <div>
+                                    {imgSrc ? (
+                                      <>
+                                        <img
+                                          src={imgSrc}
+                                          alt="Imagem"
+                                          className="rounded-lg w-full max-w-[220px] sm:max-w-[280px] lg:max-w-[340px] max-h-[320px] object-cover cursor-pointer mb-1"
+                                          onClick={() => setLightboxUrl(imgSrc)}
+                                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                        />
+                                        {msg.media_url && (
+                                          <div className="flex items-center gap-2 mt-1">
+                                            <a
+                                              href={msg.media_url}
+                                              download={`imagem_${msg.id}.jpg`}
+                                              className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5"
+                                              onClick={e => e.stopPropagation()}
+                                            >
+                                              <File className="h-2.5 w-2.5" /> Baixar
+                                            </a>
+                                          </div>
+                                        )}
+                                        {!msg.media_url && <p className="text-[9px] opacity-40 mt-0.5">miniatura</p>}
+                                      </>
+                                    ) : (
+                                      <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2">
+                                        <Image className="h-4 w-4" />
+                                        <span>📷 Imagem</span>
                                       </div>
-                                    </>
-                                  ) : (
-                                    <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2">
-                                      <Image className="h-4 w-4" />
-                                      <span>📷 Imagem indisponível</span>
-                                    </div>
-                                  )}
-                                  {msg.text && <p className="text-sm leading-relaxed mt-1">{msg.text}</p>}
-                                </div>
-                              )}
+                                    )}
+                                    {msg.text && !msg.text.startsWith("/9j/") && <p className="text-sm leading-relaxed mt-1">{msg.text}</p>}
+                                  </div>
+                                );
+                              })()}
                               {/* Video message */}
                               {msg.message_type === "video" && (
                                 <div>
@@ -2421,14 +2435,24 @@ export default function LiveChat() {
                               )}
                               {/* Document message */}
                               {msg.message_type === "document" && (
-                                <div className="flex items-center gap-2 py-1">
+                                <div className="flex items-center gap-2 py-1 min-w-[180px]">
                                   <FileText className="h-5 w-5 shrink-0" />
                                   {msg.media_url ? (
-                                    <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="text-sm underline hover:opacity-80">
-                                      {msg.text || "📄 Documento"}
-                                    </a>
+                                    <div className="flex flex-col gap-1">
+                                      <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="text-sm underline hover:opacity-80">
+                                        {msg.text?.replace(/^📄\s*/, '') || "Documento"}
+                                      </a>
+                                      <a
+                                        href={msg.media_url}
+                                        download
+                                        className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5"
+                                        onClick={e => e.stopPropagation()}
+                                      >
+                                        <File className="h-2.5 w-2.5" /> Baixar
+                                      </a>
+                                    </div>
                                   ) : (
-                                    <span className="text-sm">{msg.text || "📄 Documento"}</span>
+                                    <span className="text-sm opacity-70">{msg.text?.replace(/^\[MÍDIA: document\]$/, '📄 Documento') || "📄 Documento"}</span>
                                   )}
                                 </div>
                               )}

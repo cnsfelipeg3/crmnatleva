@@ -24,6 +24,7 @@ function classifyEvent(body: any): string {
 // ─── Helper: extract media URL ───
 function extractMediaUrl(body: any): string | null {
   return body.image?.imageUrl || body.image?.thumbnailUrl ||
+    body.sticker?.stickerUrl ||
     body.audio?.audioUrl ||
     body.video?.videoUrl ||
     body.document?.documentUrl || null;
@@ -32,11 +33,14 @@ function extractMediaUrl(body: any): string | null {
 // ─── Helper: extract message type ───
 function extractMsgType(body: any): string {
   if (body.image) return "image";
-  if (body.audio) return "audio";
+  if (body.sticker) return "image"; // sticker → image
+  if (body.audio) return "audio"; // includes ptt
   if (body.video) return "video";
   if (body.document) return "document";
   return "text";
 }
+
+// ─── Helper: extract media URL (including sticker) ───
 
 // ─── Helper: extract text content ───
 function extractTextContent(body: any): string {
