@@ -4,7 +4,7 @@ import { agents as mockAgents, initialTasks, type Agent, type Task } from "@/com
 import AITeamStatusCards from "@/components/ai-team/AITeamStatusCards";
 import AITeamAgentCard from "@/components/ai-team/AITeamAgentCard";
 import AITeamTaskList from "@/components/ai-team/AITeamTaskList";
-import AITeamAgentDrawer from "@/components/ai-team/AITeamAgentDrawer";
+import AITeamAgentPanel from "@/components/ai-team/AITeamAgentPanel";
 import AITeamCreateAgentDialog from "@/components/ai-team/AITeamCreateAgentDialog";
 import OfficeGameView from "@/components/ai-team/office-game/OfficeGameView";
 import { Button } from "@/components/ui/button";
