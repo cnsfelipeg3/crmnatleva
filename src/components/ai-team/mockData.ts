@@ -17,7 +17,7 @@ export interface Agent {
   currentThought: string;
 }
 
-export type TaskStatus = 'detected' | 'analyzing' | 'suggested' | 'pending';
+export type TaskStatus = 'detected' | 'analyzing' | 'suggested' | 'pending' | 'in_progress' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high';
 
 export interface Task {
