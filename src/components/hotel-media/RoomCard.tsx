@@ -22,7 +22,7 @@ const CONFIDENCE_COLORS: Record<string, string> = {
   revisar: "border-destructive/30 text-destructive bg-destructive/10",
 };
 
-export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageError, onViewGallery, onUseRoom }: Props) {
+export default function RoomCard({ name, photos, detail, sourceUrl, getDisplayUrl, onImageError, onViewGallery, onUseRoom }: Props) {
   const coverPhoto = photos[0];
   const secondPhoto = photos[1];
   const avgConfidence = photos.reduce((s, p) => s + (p.confidence || 0.5), 0) / photos.length;
