@@ -20,7 +20,7 @@ import { QuoteSummaryCard } from "./QuoteSummaryCard";
 import { AIProposalBriefingDialog } from "./AIProposalBriefingDialog";
 
 // ─── Types ───
-type Stage = "novo_lead" | "qualificacao" | "proposta_preparacao" | "proposta_enviada" | "negociacao" | "fechado" | "pos_venda" | "perdido";
+type Stage = "novo_lead" | "contato_inicial" | "qualificacao" | "diagnostico" | "proposta_preparacao" | "proposta_enviada" | "proposta_visualizada" | "ajustes" | "negociacao" | "fechamento_andamento" | "fechado" | "pos_venda" | "perdido";
 
 interface ClientContextPanelProps {
   conversation: {
@@ -44,10 +44,15 @@ interface ClientContextPanelProps {
 
 const STAGES: { key: Stage; label: string; color: string }[] = [
   { key: "novo_lead", label: "Novo Lead", color: "bg-blue-500" },
-  { key: "qualificacao", label: "Em qualificação", color: "bg-amber-500" },
-  { key: "proposta_preparacao", label: "Prep. Proposta", color: "bg-orange-500" },
+  { key: "contato_inicial", label: "Contato Inicial", color: "bg-sky-500" },
+  { key: "qualificacao", label: "Qualificação", color: "bg-amber-500" },
+  { key: "diagnostico", label: "Diagnóstico", color: "bg-yellow-500" },
+  { key: "proposta_preparacao", label: "Estruturação", color: "bg-orange-500" },
   { key: "proposta_enviada", label: "Proposta Enviada", color: "bg-purple-500" },
+  { key: "proposta_visualizada", label: "Visualizada", color: "bg-violet-500" },
+  { key: "ajustes", label: "Ajustes", color: "bg-pink-500" },
   { key: "negociacao", label: "Negociação", color: "bg-primary" },
+  { key: "fechamento_andamento", label: "Fechando", color: "bg-rose-500" },
   { key: "fechado", label: "Viagem Confirmada", color: "bg-emerald-500" },
   { key: "pos_venda", label: "Pós-venda", color: "bg-teal-500" },
   { key: "perdido", label: "Perdido", color: "bg-muted-foreground" },

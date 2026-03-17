@@ -47,7 +47,7 @@ import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 
 // ─── Types ───
-type Stage = "novo_lead" | "qualificacao" | "proposta_preparacao" | "proposta_enviada" | "negociacao" | "fechado" | "pos_venda" | "perdido";
+type Stage = "novo_lead" | "contato_inicial" | "qualificacao" | "diagnostico" | "proposta_preparacao" | "proposta_enviada" | "proposta_visualizada" | "ajustes" | "negociacao" | "fechamento_andamento" | "fechado" | "pos_venda" | "perdido";
 type MsgType = "text" | "image" | "audio" | "video" | "document";
 type MsgStatus = "sent" | "delivered" | "read";
 
