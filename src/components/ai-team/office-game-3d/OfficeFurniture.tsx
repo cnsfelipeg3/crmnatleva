@@ -699,7 +699,7 @@ export default function OfficeFurniture() {
       <NatLevaBranding />
       <ReceptionDesk />
       <ConferenceTable />
-      <Whiteboard />
+      {/* Whiteboard removed */}
       <Cafeteria />
 
       {DESKS.map((d, i) => (
