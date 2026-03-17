@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createInitialState, tick, type EngineState, type EngineAgent, type AgentEvent } from "./agentEngine";
-import { addMemory, createDecisionMemory } from "./agentMemory";
+import { addMemory, createDecisionMemory, createEmptyMemory } from "./agentMemory";
 import type { Agent, Task } from "./mockData";
 
 interface UseAgentEngineReturn {
