@@ -280,7 +280,7 @@ export function tick(state: EngineState, now: number): EngineState {
       }
     }
 
-    const nextStatus = pickWeighted(filteredWeights as Record<AgentStatus, number>, agentSeed);
+    const nextStatus = pickWeighted(filteredWeights as Record<string, number>, agentSeed);
     const [minDur, maxDur] = statusDuration[nextStatus] ?? [10_000, 15_000];
     const duration = randRange(minDur, maxDur, agentSeed + 1);
 
