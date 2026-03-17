@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  X, ChevronLeft, ChevronRight, Check,
+  X, ChevronLeft, ChevronRight, Check, ExternalLink,
   Wifi, Wind, Tv, LockKeyhole, Wine, Coffee, Droplets, Shirt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
