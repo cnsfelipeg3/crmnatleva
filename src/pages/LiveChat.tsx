@@ -668,16 +668,22 @@ export default function LiveChat() {
     };
 
     const mapDbMessages = (rows: any[], conversationKey: string): Message[] => (
-      (rows || []).map((m: any) => ({
-        id: m.id,
-        conversation_id: conversationKey,
-        sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
-        message_type: normalizeDbMessageType(m.message_type),
-        text: m.text ?? m.content ?? "",
-        media_url: m.media_url || undefined,
-        status: normalizeDbStatus(m.status ?? m.read_status),
-        created_at: String(m.created_at),
-      }))
+      (rows || []).map((m: any) => {
+        const rawText = m.text ?? m.content ?? "";
+        const msgType = normalizeDbMessageType(m.message_type);
+        // Clean up [MÍDIA: xxx] placeholders
+        const cleanText = /^\[MÍDIA:\s*\w+\]$/.test(rawText) ? "" : rawText;
+        return {
+          id: m.id,
+          conversation_id: conversationKey,
+          sender_type: m.sender_type as "cliente" | "atendente" | "sistema",
+          message_type: msgType,
+          text: cleanText,
+          media_url: m.media_url || undefined,
+          status: normalizeDbStatus(m.status ?? m.read_status),
+          created_at: String(m.created_at),
+        };
+      })
     );
 
     const loadMessages = async () => {
