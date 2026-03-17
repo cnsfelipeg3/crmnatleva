@@ -83,7 +83,7 @@ const transitionWeights: Record<string, TransitionMap> = {
 };
 
 /* Default weights for custom agents */
-const defaultWeights: Record<AgentStatus, Record<AgentStatus, number>> = {
+const defaultWeights: TransitionMap = {
   idle:       { analyzing: 0.6, idle: 0.4 },
   analyzing:  { suggesting: 0.5, alert: 0.2, idle: 0.3 },
   suggesting: { waiting: 0.5, idle: 0.5 },
