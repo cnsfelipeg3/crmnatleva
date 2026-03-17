@@ -398,7 +398,6 @@ function OperacaoInboxInner() {
 
   // WhatsApp state
   const whatsappPollRef = useRef<ReturnType<typeof setInterval>>();
-  const lastMsgIdsRef = useRef<Set<string>>(new Set());
   const chatsLoadedRef = useRef(false);
   const clearedAtRef = useRef<number | null>(null);
   const profilePicsRef = useRef<Map<string, string>>(new Map());
