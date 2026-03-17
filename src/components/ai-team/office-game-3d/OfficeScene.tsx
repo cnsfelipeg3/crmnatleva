@@ -16,6 +16,7 @@ interface Props {
 
 export default function OfficeScene({ agents, tasks, onSelectAgent, joystickInput }: Props) {
   const [nearbyId, setNearbyId] = useState<string | null>(null);
+  const [bubbleAgentId, setBubbleAgentId] = useState<string | null>(null);
   const playerPosRef = useRef({ x: PLAYER_SPAWN.x, z: PLAYER_SPAWN.z });
 
   const handlePositionChange = useCallback((x: number, z: number) => {
@@ -35,14 +36,16 @@ export default function OfficeScene({ agents, tasks, onSelectAgent, joystickInpu
       }
     }
     setNearbyId(closest);
-  }, [agents]);
+    // Close bubble if player walks away
+    if (bubbleAgentId && closest !== bubbleAgentId) {
+      setBubbleAgentId(null);
+    }
+  }, [agents, bubbleAgentId]);
 
   return (
     <>
       {/* Premium Lighting */}
       <ambientLight intensity={0.35} color="#faf0e6" />
-
-      {/* Main key light — warm sun from high angle */}
       <directionalLight
         position={[6, 16, 8]}
         intensity={1.4}
@@ -59,25 +62,14 @@ export default function OfficeScene({ agents, tasks, onSelectAgent, joystickInpu
         shadow-bias={-0.0008}
         shadow-normalBias={0.02}
       />
-
-      {/* Fill light — cool blue from left */}
       <directionalLight position={[-8, 10, -4]} intensity={0.3} color="#d0e0ff" />
-
-      {/* Rim light — warm accent from behind */}
       <directionalLight position={[2, 6, -12]} intensity={0.25} color="#ffe0c0" />
-
-      {/* Accent lights */}
       <pointLight position={[0, 3, 0]} intensity={0.3} color="#fff0d0" distance={14} decay={2} />
       <pointLight position={[-6, 2, -3]} intensity={0.15} color="#ffe8d0" distance={8} decay={2} />
       <pointLight position={[6, 2, 2]} intensity={0.15} color="#e0e8ff" distance={8} decay={2} />
-      
-      {/* NatLeva brand accent light on logo */}
       <spotLight position={[-3.5, 2.5, -4.5]} target-position={[-3.5, 1.3, -5.3]} angle={0.4} penumbra={0.6} intensity={0.5} color="#c9a96e" distance={5} />
-
       <hemisphereLight args={['#e8e0d0', '#c0b8a8', 0.25]} />
-
       <fog attach="fog" args={['#e8e4dc', 14, 32]} />
-
       <Environment preset="apartment" environmentIntensity={0.2} />
 
       <OfficeFloor />
@@ -103,6 +95,8 @@ export default function OfficeScene({ agents, tasks, onSelectAgent, joystickInpu
             position={[npcPos.x, npcPos.y, npcPos.z]}
             isNearby={nearbyId === agent.id}
             onClick={() => onSelectAgent(agent)}
+            showBubble={bubbleAgentId === agent.id}
+            onBubbleToggle={() => setBubbleAgentId(prev => prev === agent.id ? null : agent.id)}
           />
         );
       })}
