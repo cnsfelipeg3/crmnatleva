@@ -100,7 +100,7 @@ export default function AITeam() {
           </section>
         </>
       ) : (
-        <AITeamOffice
+        <OfficeGameView
           agents={agents}
           tasks={tasks}
           onBack={() => setView("dashboard")}
