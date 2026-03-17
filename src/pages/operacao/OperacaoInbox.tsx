@@ -963,16 +963,18 @@ function OperacaoInboxInner() {
     }));
   }, [selectedId, hasOlderMessages, oldestLoadedTimestamp, selected?.db_id]);
 
-  // Realtime subscription
+  // Realtime subscription — stable ref to avoid re-creating channel on every conversation update
+  const conversationsRef = useRef(conversations);
+  useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+
   useEffect(() => {
     const channel = supabase
       .channel('livechat-realtime')
-      // Listen only to the canonical message table to avoid visual duplication/races
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_messages' }, (payload) => {
         const n = payload.new as any;
         if (!n.conversation_id) return;
 
-        const conv = conversations.find(c => c.db_id === n.conversation_id || c.id === n.conversation_id);
+        const conv = conversationsRef.current.find(c => c.db_id === n.conversation_id || c.id === n.conversation_id);
         const waKey = conv?.id || n.conversation_id;
         const msgId = n.id;
 
@@ -993,10 +995,20 @@ function OperacaoInboxInner() {
           external_message_id: n.external_message_id || undefined,
         };
 
-        setMessages(prev => ({
-          ...prev,
-          [waKey]: dedupeUiMessages([...(prev[waKey] || []), msg]),
-        }));
+        setMessages(prev => {
+          const existing = prev[waKey] || [];
+          if (existing.find(m => m.id === msgId)) return prev;
+          // Replace temp message if matching
+          if (n.direction === "outgoing" && n.external_message_id) {
+            const tempIdx = existing.findIndex(m => m.id.startsWith("temp_") && m.text === msg.text && m.sender_type === "atendente");
+            if (tempIdx >= 0) {
+              const updated = [...existing];
+              updated[tempIdx] = { ...updated[tempIdx], id: msgId, media_url: msg.media_url || updated[tempIdx].media_url };
+              return { ...prev, [waKey]: updated };
+            }
+          }
+          return { ...prev, [waKey]: dedupeUiMessages([...existing, msg]) };
+        });
 
         if (n.direction === "incoming") {
           setConversations(prev => prev.map(c => {
@@ -1081,58 +1093,10 @@ function OperacaoInboxInner() {
           }, ...prev];
         });
       })
-      // Listen to unified conversation_messages for realtime updates
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_messages' }, (payload) => {
-        const n = payload.new as any;
-        if (!n.conversation_id) return;
-
-        // Find which wa_ key this conversation maps to
-        const conv = conversations.find(c => c.db_id === n.conversation_id || c.id === n.conversation_id);
-        const waKey = conv?.id || n.conversation_id;
-        const msgId = n.id;
-
-        if (lastMsgIdsRef.current.has(msgId)) return;
-        if (n.external_message_id && lastMsgIdsRef.current.has(n.external_message_id)) return;
-        lastMsgIdsRef.current.add(msgId);
-        if (n.external_message_id) lastMsgIdsRef.current.add(n.external_message_id);
-
-        const msg: Message = {
-          id: msgId,
-          conversation_id: waKey,
-          sender_type: (n.sender_type || (n.direction === "outgoing" ? "atendente" : "cliente")) as "cliente" | "atendente" | "sistema",
-          message_type: (n.message_type || "text") as MsgType,
-          text: stripQuotes(n.content || ""),
-          media_url: n.media_url || undefined,
-          status: (n.status || "sent") as MsgStatus,
-          created_at: toIsoTimestamp(n.created_at || n.timestamp),
-        };
-
-        setMessages(prev => {
-          const existing = prev[waKey] || [];
-          if (existing.find(m => m.id === msgId)) return prev;
-          // Replace temp message if matching
-          if (n.direction === "outgoing" && n.external_message_id) {
-            const tempIdx = existing.findIndex(m => m.id.startsWith("temp_") && m.text === msg.text && m.sender_type === "atendente");
-            if (tempIdx >= 0) {
-              const updated = [...existing];
-              updated[tempIdx] = { ...updated[tempIdx], id: msgId, media_url: msg.media_url || updated[tempIdx].media_url };
-              return { ...prev, [waKey]: updated };
-            }
-          }
-          return { ...prev, [waKey]: [...existing, msg].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) };
-        });
-
-        if (n.direction === "incoming") {
-          setConversations(prev => prev.map(c => {
-            if (c.id !== waKey && c.db_id !== n.conversation_id) return c;
-            const isOpen = waKey === selectedIdRef.current;
-            return { ...c, last_message_preview: n.content || `📎 ${n.message_type || "media"}`, last_message_at: toIsoTimestamp(n.created_at), unread_count: isOpen ? 0 : c.unread_count + 1 };
-          }));
-        }
-      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [extractMediaFromRawData, conversations]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Z-API WhatsApp polling
   useEffect(() => {
