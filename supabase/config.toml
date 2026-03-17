@@ -122,3 +122,6 @@ verify_jwt = false
 
 [functions.natleva-brain]
 verify_jwt = false
+
+[functions.reconcile-messages]
+verify_jwt = false
