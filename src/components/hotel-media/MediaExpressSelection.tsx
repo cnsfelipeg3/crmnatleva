@@ -94,9 +94,15 @@ export default function MediaExpressSelection({
   const handleUse = () => {
     if (!effectiveCover) return;
     const roomDetail = primaryRoomName ? sectionDetails[primaryRoomName] : undefined;
+    // Build auto description from structured data (same logic as RoomCard)
+    const parts: string[] = [];
+    if (roomDetail?.details?.["Tamanho"]) parts.push(roomDetail.details["Tamanho"]);
+    if (roomDetail?.details?.["Cama"]) parts.push(roomDetail.details["Cama"]);
+    if (roomDetail?.details?.["Capacidade"]) parts.push(roomDetail.details["Capacidade"]);
+    const autoDesc = parts.join(" · ").slice(0, 60);
     const roomBlock: RoomBlock = {
       room_name: primaryRoomName || "Quarto",
-      description: roomDetail?.description || "",
+      description: roomDetail?.description || autoDesc,
       amenities: roomDetail?.amenities || [],
       photos: primaryRoomPhotos,
       source: primaryRoomPhotos[0]?.source || "official",

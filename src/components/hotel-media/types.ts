@@ -59,9 +59,10 @@ export function isPhotoFaithfulToRoom(photo: HotelPhoto, roomName: string): bool
   if (normEnv && (normEnv.includes(normRoom) || normRoom.includes(normEnv))) return true;
   const normRoomName = normalize(photo.room_name || "");
   if (normRoomName && (normRoomName.includes(normRoom) || normRoom.includes(normRoomName))) return true;
-  // Check html_context evidence
-  const ctx = (photo.html_context || "").toLowerCase();
-  if (ctx && ctx.includes(roomName.toLowerCase().slice(0, Math.max(6, roomName.length * 0.6)))) return true;
+  // Check html_context evidence (normalize both sides for comparison)
+  const ctxNorm = normalize(photo.html_context || "");
+  const roomPrefix = normRoom.slice(0, Math.max(5, Math.floor(normRoom.length * 0.6)));
+  if (ctxNorm && ctxNorm.includes(roomPrefix)) return true;
   return false;
 }
 
@@ -82,9 +83,15 @@ export function getPhotoTag(photo: HotelPhoto, allPhotos: HotelPhoto[], roomName
   if ((photo.confidence || 0) >= 0.9 && photo.source === "official") {
     return "destaque";
   }
-  // Priority 3: Fiel ao quarto (fuzzy match)
-  if (roomName && isPhotoFaithfulToRoom(photo, roomName)) {
-    return "fiel_ao_quarto";
+  // Priority 3: Fiel ao quarto — only tag photos that have strong textual evidence
+  // (html_context match or source=official), to avoid tagging every photo in the group
+  if (roomName && photo.source === "official" && (photo.confidence || 0) >= 0.7) {
+    const ctx = (photo.html_context || "").toLowerCase();
+    const roomLower = roomName.toLowerCase();
+    const matchLen = Math.max(6, Math.floor(roomLower.length * 0.6));
+    if (ctx && ctx.includes(roomLower.slice(0, matchLen))) {
+      return "fiel_ao_quarto";
+    }
   }
   return null;
 }
