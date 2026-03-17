@@ -3,7 +3,7 @@ import { Environment } from '@react-three/drei';
 import OfficeFloor from './OfficeFloor';
 import OfficeFurniture from './OfficeFurniture';
 import PlayerController from './PlayerController';
-import NPCAgent from './NPCAgent';
+import HumanNPC from './HumanNPC';
 import { NPC_POSITIONS, PLAYER_SPAWN } from './mapData3d';
 import type { Agent, Task } from '../mockData';
 
@@ -40,63 +40,60 @@ export default function OfficeScene({ agents, tasks, onSelectAgent, joystickInpu
   return (
     <>
       {/* Premium Lighting */}
-      <ambientLight intensity={0.4} color="#faf0e6" />
+      <ambientLight intensity={0.35} color="#faf0e6" />
 
-      {/* Main key light — warm sun */}
+      {/* Main key light — warm sun from high angle */}
       <directionalLight
-        position={[8, 14, 5]}
-        intensity={1.2}
+        position={[6, 16, 8]}
+        intensity={1.4}
         color="#fff5e6"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-left={-12}
-        shadow-camera-right={12}
-        shadow-camera-top={8}
-        shadow-camera-bottom={-8}
+        shadow-camera-left={-14}
+        shadow-camera-right={14}
+        shadow-camera-top={10}
+        shadow-camera-bottom={-10}
         shadow-camera-near={1}
-        shadow-camera-far={30}
-        shadow-bias={-0.001}
+        shadow-camera-far={35}
+        shadow-bias={-0.0008}
         shadow-normalBias={0.02}
       />
 
-      {/* Fill light — cool blue */}
-      <directionalLight position={[-6, 8, -4]} intensity={0.35} color="#d0e0ff" />
+      {/* Fill light — cool blue from left */}
+      <directionalLight position={[-8, 10, -4]} intensity={0.3} color="#d0e0ff" />
 
-      {/* Rim light — accent from behind */}
-      <directionalLight position={[0, 5, -10]} intensity={0.2} color="#ffe0c0" />
+      {/* Rim light — warm accent from behind */}
+      <directionalLight position={[2, 6, -12]} intensity={0.25} color="#ffe0c0" />
 
-      {/* Subtle point lights for warmth */}
-      <pointLight position={[0, 3, 0]} intensity={0.3} color="#fff0d0" distance={12} decay={2} />
-      <pointLight position={[-5, 2, -3]} intensity={0.15} color="#ffe8d0" distance={6} decay={2} />
-      <pointLight position={[5, 2, 2]} intensity={0.15} color="#e0e8ff" distance={6} decay={2} />
+      {/* Accent lights */}
+      <pointLight position={[0, 3, 0]} intensity={0.3} color="#fff0d0" distance={14} decay={2} />
+      <pointLight position={[-6, 2, -3]} intensity={0.15} color="#ffe8d0" distance={8} decay={2} />
+      <pointLight position={[6, 2, 2]} intensity={0.15} color="#e0e8ff" distance={8} decay={2} />
+      
+      {/* NatLeva brand accent light on logo */}
+      <spotLight position={[-3.5, 2.5, -4.5]} target-position={[-3.5, 1.3, -5.3]} angle={0.4} penumbra={0.6} intensity={0.5} color="#c9a96e" distance={5} />
 
-      {/* Hemisphere for softer ambient */}
-      <hemisphereLight args={['#e8e0d0', '#c0b8a8', 0.3]} />
+      <hemisphereLight args={['#e8e0d0', '#c0b8a8', 0.25]} />
 
-      {/* Fog for depth */}
-      <fog attach="fog" args={['#e8e4dc', 12, 28]} />
+      <fog attach="fog" args={['#e8e4dc', 14, 32]} />
 
-      {/* Environment map for reflections */}
-      <Environment preset="apartment" environmentIntensity={0.15} />
+      <Environment preset="apartment" environmentIntensity={0.2} />
 
-      {/* Environment */}
       <OfficeFloor />
       <OfficeFurniture />
 
-      {/* Player */}
       <PlayerController
         startPos={[PLAYER_SPAWN.x, 0, PLAYER_SPAWN.z]}
         onPositionChange={handlePositionChange}
         joystickInput={joystickInput}
       />
 
-      {/* NPCs */}
       {agents.map((agent) => {
         const npcPos = NPC_POSITIONS[agent.id];
         if (!npcPos) return null;
         return (
-          <NPCAgent
+          <HumanNPC
             key={agent.id}
             agentId={agent.id}
             emoji={agent.emoji}
