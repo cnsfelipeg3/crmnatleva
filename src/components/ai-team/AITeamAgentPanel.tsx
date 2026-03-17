@@ -112,6 +112,7 @@ export default function AITeamAgentPanel({ agent, tasks, events = [], open, onOp
   if (!open && phase === "closed") return null;
 
   const agentTasks = tasks.filter((t) => t.sourceAgentId === agent.id);
+  const agentEvents = events.filter((e) => e.agentId === agent.id).slice(0, 5);
   const responses = simulatedResponses[agent.id] ?? ["Processando.", "Analisando."];
   const sc = statusConfig[agent.status] ?? statusConfig.idle;
 
