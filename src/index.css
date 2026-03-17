@@ -252,7 +252,7 @@
 
 /* AI Team Agent Panel animations */
 @keyframes scan-line {
-  0% { top: 0; opacity: 0; }
+  0% { top: -2px; opacity: 0; }
   10% { opacity: 1; }
   90% { opacity: 1; }
   100% { top: 100%; opacity: 0; }
@@ -261,14 +261,30 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
 }
-@keyframes pulse-slow {
-  0%, 100% { box-shadow: 0 0 20px rgba(16,185,129,0.15); }
-  50% { box-shadow: 0 0 35px rgba(16,185,129,0.25); }
+@keyframes neural-breathe {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.02); opacity: 0.9; }
 }
-.animate-scan-line { animation: scan-line 4s linear infinite; }
+@keyframes neural-ring {
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.05; transform: scale(1.06); }
+}
+@keyframes neural-glow-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+@keyframes neural-block-scan-kf {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(200%); }
+}
+.neural-scan-line { animation: scan-line 5s linear infinite; }
 .animate-blink { animation: blink 1s step-end infinite; }
-.animate-pulse-slow { animation: pulse-slow 3s ease-in-out infinite; }
+.neural-avatar-breathe { animation: neural-breathe 3s ease-in-out infinite; }
+.neural-ring-pulse { animation: neural-ring 3s ease-in-out infinite; }
+.neural-glow-bar { animation: neural-glow-slide 3s ease-in-out infinite; }
+.neural-block-scan { animation: neural-block-scan-kf 4s ease-in-out infinite; }
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
