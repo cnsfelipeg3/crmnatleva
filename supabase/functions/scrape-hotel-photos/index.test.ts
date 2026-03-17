@@ -641,7 +641,7 @@ Deno.test("EDGE-010: Bathroom with view", () => {
 // TEST SUITE 9: Integration Test (Real API)
 // ===========================================
 
-Deno.test("INTEGRATION-001: Edge function responds to valid hotel", async () => {
+Deno.test({ name: "INTEGRATION-001: Edge function responds to valid hotel", sanitizeResources: false, sanitizeOps: false, fn: async () => {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/scrape-hotel-photos`, {
     method: "POST",
     headers: {
