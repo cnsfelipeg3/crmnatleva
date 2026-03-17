@@ -143,11 +143,12 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
       }
     }
 
-    // Camera — third-person over-the-shoulder feel
+    // Camera — third-person with zoom
+    const zoom = zoomRef.current;
     const camTarget = new THREE.Vector3(
       pos.x + CAM_ANGLE_X,
-      CAM_HEIGHT,
-      pos.z + CAM_BACK
+      CAM_HEIGHT_DEFAULT * zoom,
+      pos.z + CAM_BACK_DEFAULT * zoom
     );
     camera.position.lerp(camTarget, CAM_LERP);
     camera.lookAt(new THREE.Vector3(pos.x, 0.5, pos.z - 1));
