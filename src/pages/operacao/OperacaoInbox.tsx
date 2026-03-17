@@ -1220,47 +1220,9 @@ function OperacaoInboxInner() {
     }
 
     async function pollWhatsAppMessages() {
-      if (!selectedId?.startsWith("wa_")) return;
-      try {
-        const phoneCandidates = getZapiPhoneCandidates(selectedId);
-        if (phoneCandidates.length === 0) return;
-        const { data: zapiData } = await supabase.from("zapi_messages" as any).select("*").in("phone", phoneCandidates).order("timestamp", { ascending: false }).limit(200);
-        const rawMsgs = zapiData || [];
-        const newMsgs: Message[] = [];
-        for (const m of rawMsgs) {
-          const msgId = (m as any).message_id || (m as any).id;
-          if (lastMsgIdsRef.current.has(msgId)) continue;
-          lastMsgIdsRef.current.add(msgId);
-          const mediaInfo3 = extractMediaFromRawData((m as any).raw_data, (m as any).type || "text");
-          newMsgs.push({
-            id: msgId, conversation_id: selectedId,
-            sender_type: ((m as any).from_me ? "atendente" : "cliente") as "cliente" | "atendente",
-            message_type: ((m as any).type || "text") as MsgType,
-            text: (m as any).text || mediaInfo3.caption || "",
-            media_url: mediaInfo3.mediaUrl,
-            status: mapZapiStatus((m as any).status, (m as any).from_me),
-            created_at: toIsoTimestamp((m as any).timestamp || (m as any).created_at),
-          });
-        }
-        if (newMsgs.length > 0) {
-          setMessages(prev => {
-            const existing = prev[selectedId] || [];
-            const existingIds = new Set(existing.map(m => m.id));
-            let updated = [...existing];
-            for (const nm of newMsgs) {
-              if (existingIds.has(nm.id)) continue;
-              if (nm.sender_type === "atendente") {
-                const tempIdx = updated.findIndex(m => m.id.startsWith("temp_") && m.text === nm.text);
-                if (tempIdx >= 0) { updated[tempIdx] = { ...updated[tempIdx], id: nm.id, media_url: nm.media_url || updated[tempIdx].media_url }; continue; }
-              }
-              updated.push(nm);
-            }
-            updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-            return { ...prev, [selectedId]: updated };
-          });
-          scrollToBottom();
-        }
-      } catch (err) { console.error("WhatsApp polling error:", err); }
+      // Canonical source of truth is conversation_messages; polling zapi_messages here
+      // caused duplicates, order drift and optimistic-state races in the inbox.
+      return;
     }
 
     async function checkAndStartPolling() {
