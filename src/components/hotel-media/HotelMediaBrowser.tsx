@@ -100,7 +100,7 @@ export default function HotelMediaBrowser({ hotelName, hotelCity, hotelCountry, 
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* ZONA A — Status Bar */}
       <MediaStatusBar
         hotelName={hotelName}
@@ -130,8 +130,8 @@ export default function HotelMediaBrowser({ hotelName, hotelCity, hotelCountry, 
 
       {/* Selection bar */}
       {selectedPhotos.size > 0 && (
-        <div className="flex items-center justify-between bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
-          <span className="text-xs font-medium text-primary">{selectedPhotos.size} foto(s) selecionada(s)</span>
+        <div className="flex items-center justify-between bg-accent/5 border border-accent/20 rounded-lg px-3 py-2">
+          <span className="text-xs font-medium text-accent">{selectedPhotos.size} foto(s) selecionada(s)</span>
           <div className="flex gap-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedPhotos(new Set())} className="text-xs h-7">Limpar</Button>
             <Button type="button" size="sm" onClick={handleConfirmSelection} className="text-xs h-7">Usar na proposta</Button>
@@ -142,7 +142,7 @@ export default function HotelMediaBrowser({ hotelName, hotelCity, hotelCountry, 
       {/* ZONA C — Exploração */}
       {roomNames.length > 0 && (
         <div className="space-y-3">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Acomodações</h3>
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 pb-2">Acomodações</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {roomNames.map(name => (
               <RoomCard

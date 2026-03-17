@@ -42,28 +42,31 @@ export default function AreaChips({ areaGroups, onSelectArea, activeArea }: Prop
 
   return (
     <div className="space-y-2">
-      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Áreas do Hotel</h3>
+      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border/30 pb-2">Áreas do Hotel</h3>
       <div className="flex flex-wrap gap-1.5">
         {visible.map(({ cat, photos, config }) => (
           <button
             key={cat}
             onClick={() => onSelectArea(cat)}
             className={cn(
-              "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs border transition-all",
+              "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs border transition-colors duration-150",
               activeArea === cat
-                ? "border-primary bg-primary/10 text-primary font-medium"
-                : "border-border/50 bg-card hover:border-primary/30 text-foreground"
+                ? "border-accent bg-accent/10 text-accent font-medium"
+                : "border-border/50 bg-card hover:border-accent/30 text-foreground"
             )}
           >
             <span>{config.icon}</span>
             <span>{config.label}</span>
-            <Badge variant="secondary" className="text-[9px] h-4 px-1 min-w-0">{photos.length}</Badge>
+            <Badge variant="secondary" className={cn(
+              "text-[9px] h-4 px-1 min-w-0 rounded-full",
+              activeArea === cat ? "bg-accent/10 text-accent" : ""
+            )}>{photos.length}</Badge>
           </button>
         ))}
         {hasMore && !expanded && (
           <button
             onClick={() => setExpanded(true)}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs border border-border/50 bg-card hover:border-primary/30 text-muted-foreground"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs border border-border/50 bg-card hover:border-accent/30 text-muted-foreground transition-colors duration-150"
           >
             + Mais áreas
             <ChevronDown className="w-3 h-3" />

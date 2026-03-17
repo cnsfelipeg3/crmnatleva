@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Camera, Bed, Maximize2, Users, Eye, Globe, Paperclip, Sparkles } from "lucide-react";
+import { Camera, Maximize2, Bed, Users, Eye, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getConfidenceLevel, buildCommercialSummary, getHighlightAmenity, getPhotoTag, PHOTO_TAG_CONFIG } from "./types";
+import { getConfidenceLevel, buildCommercialSummary, getHighlightAmenity } from "./types";
 import type { HotelPhoto, SectionDetail, RoomBlock } from "./types";
 
 interface Props {
@@ -29,7 +29,6 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
   const isOfficial = photos.filter(p => p.source === "official").length > photos.length / 2;
   const summary = buildCommercialSummary(detail);
   const highlight = detail ? getHighlightAmenity(detail.amenities) : null;
-  const coverTag = coverPhoto ? getPhotoTag(coverPhoto, photos, name) : null;
 
   const handleUse = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -46,27 +45,20 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
   return (
     <div
       onClick={() => onViewGallery(name)}
-      className="group relative rounded-xl overflow-hidden border border-border/40 hover:border-primary/30 hover:shadow-lg transition-all bg-card cursor-pointer"
+      className="group relative rounded-xl overflow-hidden border border-border/40 hover:border-accent/30 hover:shadow-md transition-all duration-200 bg-card cursor-pointer"
     >
       {/* Photo strip */}
-      <div className="flex h-40 sm:h-44">
+      <div className="flex h-44 sm:h-48 relative">
         <div className="flex-[2] overflow-hidden bg-muted relative">
           {coverPhoto && (
-            <>
             <img
               src={getDisplayUrl(coverPhoto.url)}
               alt={name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
               loading="lazy"
               referrerPolicy="no-referrer"
               onError={() => onImageError(coverPhoto.url)}
             />
-            {coverTag && (
-              <div className={cn("absolute bottom-1.5 left-1.5 text-[7px] font-bold px-1.5 py-0.5 rounded-sm", PHOTO_TAG_CONFIG[coverTag].className)}>
-                {PHOTO_TAG_CONFIG[coverTag].label}
-              </div>
-            )}
-            </>
           )}
         </div>
         {secondPhoto && (
@@ -74,35 +66,41 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
             <img
               src={getDisplayUrl(secondPhoto.url)}
               alt={name}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
               loading="lazy"
               referrerPolicy="no-referrer"
               onError={() => onImageError(secondPhoto.url)}
             />
           </div>
         )}
-        <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
+
+        {/* Gradient overlay for name */}
+        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/60 via-black/25 to-transparent pointer-events-none" />
+
+        {/* Room name over photo */}
+        <h4 className="absolute bottom-2.5 left-3 text-sm font-bold text-white drop-shadow-sm truncate max-w-[70%] leading-tight">
+          {name}
+        </h4>
+
+        {/* Photo count */}
+        <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full flex items-center gap-1">
           <Camera className="w-2.5 h-2.5" /> {photos.length}
         </div>
+
+        {/* Confidence badge on image */}
+        <Badge variant="outline" className={cn(
+          "absolute top-2 left-2 text-[8px] px-1.5 py-0 rounded-full border bg-black/40 backdrop-blur-[2px]",
+          confidenceLevel === "alta" ? "border-success/50 text-success" :
+          confidenceLevel === "media" ? "border-warning/50 text-warning" :
+          "border-destructive/50 text-destructive"
+        )}>
+          {confidenceLevel === "alta" ? "Alta" : confidenceLevel === "media" ? "Média" : "Revisar"}
+        </Badge>
       </div>
 
       {/* Info */}
       <div className="p-3 space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <h4 className="text-sm font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1">{name}</h4>
-          <div className="flex items-center gap-1 shrink-0">
-            <Badge variant="outline" className={cn("text-[9px] px-1.5 py-0", CONFIDENCE_COLORS[confidenceLevel])}>
-              {confidenceLevel === "alta" ? "Alta" : confidenceLevel === "media" ? "Média" : "Revisar"}
-            </Badge>
-            {isOfficial ? (
-              <span className="text-[9px] text-success flex items-center gap-0.5"><Globe className="w-2.5 h-2.5" /> Oficial</span>
-            ) : (
-              <span className="text-[9px] text-info flex items-center gap-0.5"><Paperclip className="w-2.5 h-2.5" /> Compl.</span>
-            )}
-          </div>
-        </div>
-
-        {/* Commercial summary — max 2 lines, truncated */}
+        {/* Commercial summary */}
         {(summary.line1 || detail?.description) && (
           <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
             {summary.line1 || detail?.description}
@@ -132,18 +130,26 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
             </span>
           )}
           {highlight && !detail?.details?.["Vista"]?.toLowerCase().includes(highlight.toLowerCase()) && (
-            <span className="inline-flex items-center gap-1 text-[10px] text-primary bg-primary/10 rounded-md px-1.5 py-0.5 font-medium">
+            <span className="inline-flex items-center gap-1 text-[10px] text-accent bg-accent/10 rounded-md px-1.5 py-0.5 font-medium">
               <Sparkles className="w-2.5 h-2.5" /> {highlight}
             </span>
+          )}
+          {isOfficial && (
+            <span className="text-[9px] text-success font-medium ml-auto">Oficial</span>
           )}
         </div>
 
         {/* Actions */}
         <div className="flex gap-2 pt-1">
-          <Button type="button" variant="outline" size="sm" className="flex-1 text-[10px] h-7" onClick={(e) => { e.stopPropagation(); onViewGallery(name); }}>
+          <Button type="button" variant="outline" size="sm" className="flex-1 text-[10px] h-7 hover:bg-muted/50 transition-colors duration-150" onClick={(e) => { e.stopPropagation(); onViewGallery(name); }}>
             Ver galeria
           </Button>
-          <Button type="button" size="sm" className="flex-1 text-[10px] h-7 gap-1" onClick={handleUse}>
+          <Button
+            type="button"
+            size="sm"
+            className="flex-1 text-[10px] h-7 gap-1 bg-gradient-to-r from-accent to-accent/80 text-accent-foreground hover:scale-[1.01] active:scale-[0.99] transition-transform duration-150 shadow-[0_1px_8px_-2px_hsl(var(--accent)/0.3)]"
+            onClick={handleUse}
+          >
             Usar ▶
           </Button>
         </div>
