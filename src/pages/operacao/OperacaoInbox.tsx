@@ -638,7 +638,7 @@ function OperacaoInboxInner() {
 
         const { data: unifiedRows, error: unifiedErr } = await (supabase
           .from("conversation_messages" as any)
-          .select("*")
+          .select("id, conversation_id, sender_type, direction, message_type, content, text, media_url, status, read_status, timestamp, created_at, external_message_id")
           .in("conversation_id", allConversationIds)
           .order("timestamp", { ascending: false, nullsFirst: false })
           .order("created_at", { ascending: false })
