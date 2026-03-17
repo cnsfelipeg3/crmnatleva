@@ -8,6 +8,7 @@ interface UseAgentEngineReturn {
   tasks: Task[];
   events: AgentEvent[];
   addAgent: (agent: Agent) => void;
+  updateAgent: (agentId: string, updates: Partial<Agent>) => void;
   removeTask: (taskId: string, action: "approve" | "ignore") => void;
 }
 
