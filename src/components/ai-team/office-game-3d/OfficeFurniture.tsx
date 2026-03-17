@@ -384,60 +384,108 @@ function CyclingTV({ position, rotationY, offset }: {
   );
 }
 
-/* ── Logo Wall Panel ──────────────────────────── */
-function LogoPanel({ position, rotationY, width, height }: {
+/* ── Logo Texture Panel — uses real texture for visibility ─ */
+function LogoTexturePanel({ position, rotationY, width, height }: {
   position: [number, number, number];
   rotationY: number;
   width: number;
   height: number;
 }) {
-  const logoScale = width * 0.045;
+  const texture = useLoader(THREE.TextureLoader, logoNatleva);
+  const logoAspect = 3.2; // approximate aspect ratio of the logo
+  const logoH = height * 0.55;
+  const logoW = logoH * logoAspect;
+  const fitW = Math.min(logoW, width * 0.85);
+  const fitH = fitW / logoAspect;
+
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {/* Dark panel */}
+      {/* Dark backdrop panel */}
       <mesh>
         <boxGeometry args={[width, height, 0.03]} />
-        <meshStandardMaterial color="#0a1420" roughness={0.2} metalness={0.25} />
+        <meshStandardMaterial color="#0a1420" roughness={0.15} metalness={0.3} />
       </mesh>
-      {/* Gold border lines */}
-      <mesh position={[0, height / 2 - 0.02, 0.016]}>
-        <boxGeometry args={[width - 0.2, 0.006, 0.001]} />
-        <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.5} metalness={0.6} roughness={0.2} />
+      {/* Gold accent border top */}
+      <mesh position={[0, height / 2 - 0.015, 0.016]}>
+        <boxGeometry args={[width - 0.1, 0.012, 0.001]} />
+        <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.8} metalness={0.7} roughness={0.15} />
       </mesh>
-      <mesh position={[0, -height / 2 + 0.02, 0.016]}>
-        <boxGeometry args={[width - 0.2, 0.006, 0.001]} />
-        <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.5} metalness={0.6} roughness={0.2} />
+      {/* Gold accent border bottom */}
+      <mesh position={[0, -height / 2 + 0.015, 0.016]}>
+        <boxGeometry args={[width - 0.1, 0.012, 0.001]} />
+        <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.8} metalness={0.7} roughness={0.15} />
       </mesh>
-      {/* Logo image */}
-      <Html
-        position={[0, 0.05, 0.02]}
-        center
-        transform
-        scale={logoScale}
-        style={{ pointerEvents: 'none' }}
-      >
-        <img
-          src={logoNatleva}
-          alt="NatLeva"
-          style={{ width: '200px', filter: 'drop-shadow(0 0 20px rgba(30,80,50,0.5))' }}
+      {/* Logo as textured plane — always visible */}
+      <mesh position={[0, 0.06, 0.018]}>
+        <planeGeometry args={[fitW, fitH]} />
+        <meshStandardMaterial
+          map={texture}
+          transparent
+          emissive="#ffffff"
+          emissiveIntensity={0.15}
+          emissiveMap={texture}
+          roughness={0.3}
+          metalness={0.1}
+          side={THREE.FrontSide}
         />
-      </Html>
+      </mesh>
+      {/* Spotlight illuminating the logo */}
+      <pointLight position={[0, 0.3, 0.5]} intensity={0.6} color="#fff5e0" distance={3} decay={2} />
       {/* Tagline */}
       <Html
-        position={[0, -height / 2 + 0.12, 0.02]}
+        position={[0, -height / 2 + 0.1, 0.02]}
         center
         transform
-        scale={logoScale * 0.8}
+        scale={width * 0.04}
         style={{ pointerEvents: 'none' }}
       >
         <div style={{
-          fontSize: '10px', fontWeight: 500, letterSpacing: '5px',
+          fontSize: '11px', fontWeight: 600, letterSpacing: '6px',
           color: '#c9a96e', fontFamily: 'Space Grotesk, sans-serif',
           whiteSpace: 'nowrap', textTransform: 'uppercase',
+          textShadow: '0 0 12px rgba(201,169,110,0.7)',
         }}>
           Viagens Exclusivas
         </div>
       </Html>
+    </group>
+  );
+}
+
+/* ── Floor Logo — large emblem on ground ─────── */
+function FloorLogo({ position }: { position: [number, number, number] }) {
+  const texture = useLoader(THREE.TextureLoader, logoNatleva);
+  const size = 2.8;
+  const logoAspect = 3.2;
+
+  return (
+    <group position={position}>
+      {/* Decorative ring */}
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.006, 0]}>
+        <ringGeometry args={[size * 0.48, size * 0.52, 48]} />
+        <meshStandardMaterial color="#c9a96e" transparent opacity={0.25} roughness={0.4} metalness={0.5} />
+      </mesh>
+      {/* Inner circle background */}
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.007, 0]}>
+        <circleGeometry args={[size * 0.47, 48]} />
+        <meshStandardMaterial color="#0a1420" transparent opacity={0.12} roughness={0.9} />
+      </mesh>
+      {/* Logo texture on floor */}
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.009, 0]}>
+        <planeGeometry args={[size * 0.7, size * 0.7 / logoAspect]} />
+        <meshStandardMaterial
+          map={texture}
+          transparent
+          opacity={0.35}
+          roughness={0.8}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      {/* Outer decorative ring */}
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.005, 0]}>
+        <ringGeometry args={[size * 0.53, size * 0.56, 48]} />
+        <meshStandardMaterial color="#c9a96e" transparent opacity={0.12} roughness={0.5} metalness={0.4} />
+      </mesh>
     </group>
   );
 }
@@ -448,23 +496,29 @@ function NatLevaBranding() {
 
   return (
     <group>
-      {/* ═══ NORTH WALL ═══ */}
-      <LogoPanel position={[0, 1.3, -hh + 0.08]} rotationY={0} width={5.0} height={1.6} />
-      <CyclingTV position={[-6.5, 1.2, -hh + 0.09]} rotationY={0} offset={0} />
-      <CyclingTV position={[6.5, 1.2, -hh + 0.09]} rotationY={0} offset={3} />
+      {/* ═══ NORTH WALL — Main hero logo, big and centered ═══ */}
+      <LogoTexturePanel position={[0, 1.3, -hh + 0.08]} rotationY={0} width={6.0} height={1.8} />
+      <CyclingTV position={[-7.2, 1.2, -hh + 0.09]} rotationY={0} offset={0} />
+      <CyclingTV position={[7.2, 1.2, -hh + 0.09]} rotationY={0} offset={3} />
 
       {/* ═══ SOUTH WALL ═══ */}
-      <LogoPanel position={[0, 1.3, hh - 0.08]} rotationY={Math.PI} width={3.5} height={1.2} />
+      <LogoTexturePanel position={[0, 1.3, hh - 0.08]} rotationY={Math.PI} width={4.5} height={1.4} />
       <CyclingTV position={[-6, 1.2, hh - 0.09]} rotationY={Math.PI} offset={1} />
       <CyclingTV position={[6, 1.2, hh - 0.09]} rotationY={Math.PI} offset={4} />
 
       {/* ═══ EAST WALL ═══ */}
-      <LogoPanel position={[hw - 0.08, 1.3, 0]} rotationY={-Math.PI / 2} width={3.0} height={1.0} />
-      <CyclingTV position={[hw - 0.09, 1.2, -3.5]} rotationY={-Math.PI / 2} offset={2} />
+      <LogoTexturePanel position={[hw - 0.08, 1.3, -1]} rotationY={-Math.PI / 2} width={3.5} height={1.2} />
+      <CyclingTV position={[hw - 0.09, 1.2, 2.5]} rotationY={-Math.PI / 2} offset={2} />
 
       {/* ═══ WEST WALL ═══ */}
-      <LogoPanel position={[-hw + 0.08, 1.3, 0]} rotationY={Math.PI / 2} width={3.0} height={1.0} />
-      <CyclingTV position={[-hw + 0.09, 1.2, -3.5]} rotationY={Math.PI / 2} offset={5} />
+      <LogoTexturePanel position={[-hw + 0.08, 1.3, -1]} rotationY={Math.PI / 2} width={3.5} height={1.2} />
+      <CyclingTV position={[-hw + 0.09, 1.2, 2.5]} rotationY={Math.PI / 2} offset={5} />
+
+      {/* ═══ FLOOR LOGOS ═══ */}
+      {/* Main entrance floor logo */}
+      <FloorLogo position={[0, 0, 3.2]} />
+      {/* Center of office */}
+      <FloorLogo position={[0, 0, -1.0]} />
 
       {/* ═══ DECORATIONS ═══ */}
       {/* Globe */}
@@ -504,16 +558,6 @@ function NatLevaBranding() {
           <meshStandardMaterial color="#2c5f7a" roughness={0.6} metalness={0.08} />
         </mesh>
       </group>
-
-      {/* Floor logo emblem */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.012, 3.5]}>
-        <circleGeometry args={[0.8, 32]} />
-        <meshStandardMaterial color="#1a5a30" transparent opacity={0.1} roughness={0.9} />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.013, 3.5]}>
-        <ringGeometry args={[0.7, 0.8, 32]} />
-        <meshStandardMaterial color="#1a5a30" transparent opacity={0.15} roughness={0.8} />
-      </mesh>
 
       {/* Airplane on reception */}
       <group position={[RECEPTION.pos.x - 0.6, RECEPTION.pos.y + 0.15, RECEPTION.pos.z]}>
