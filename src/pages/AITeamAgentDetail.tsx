@@ -372,3 +372,98 @@ function CommandTerminal({ agentName, agentId }: { agentName: string; agentId: s
     </div>
   );
 }
+
+/* ═══════════════════════════════════════════
+   Intelligence Section
+   ═══════════════════════════════════════════ */
+
+function IntelligenceSection({ memory }: { memory: AgentMemory }) {
+  const hasPatterns = memory.learnedPatterns.length > 0;
+  const prefs = Object.entries(memory.preferences).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+  const hasPrefs = prefs.length > 0;
+  const recentMemory = memory.shortTerm.filter(m => m.type === "decision").slice(0, 5);
+  const hasRecent = recentMemory.length > 0;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Patterns */}
+      <SectionCard title="Padrões Detectados" icon={Cpu}>
+        {hasPatterns ? (
+          <div className="space-y-2">
+            {memory.learnedPatterns.map((p, i) => (
+              <div key={i} className="flex items-start gap-2 py-1.5">
+                <Brain className="w-3.5 h-3.5 shrink-0 text-primary/50 mt-0.5" />
+                <span className="text-sm text-foreground/70">{p}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground/40 py-4">Nenhum padrão detectado ainda.</p>
+        )}
+      </SectionCard>
+
+      {/* Preferences */}
+      <SectionCard title="Preferências Inferidas" icon={Target}>
+        {hasPrefs ? (
+          <div className="space-y-3">
+            {prefs.slice(0, 6).map(([key, val]) => {
+              const isPositive = val > 0;
+              const width = Math.abs(val) * 100;
+              return (
+                <div key={key}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm text-foreground/60 capitalize">{key}</span>
+                    <div className="flex items-center gap-1">
+                      {isPositive
+                        ? <TrendingUp className="w-3 h-3 text-emerald-400" />
+                        : <TrendingDown className="w-3 h-3 text-red-400" />
+                      }
+                      <span className={cn("text-xs font-mono", isPositive ? "text-emerald-400" : "text-red-400")}>
+                        {isPositive ? "+" : ""}{val.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
+                    <div
+                      className={cn("h-full rounded-full transition-all", isPositive ? "bg-emerald-500/60" : "bg-red-500/60")}
+                      style={{ width: `${Math.max(4, width)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground/40 py-4">Sem preferências registradas.</p>
+        )}
+      </SectionCard>
+
+      {/* Recent memory */}
+      <SectionCard title="Memória Recente" icon={Clock}>
+        {hasRecent ? (
+          <div className="space-y-1">
+            {recentMemory.map((m, i) => {
+              const time = new Date(m.timestamp);
+              const hh = String(time.getHours()).padStart(2, "0");
+              const mm = String(time.getMinutes()).padStart(2, "0");
+              const isFirst = i === 0;
+              return (
+                <div key={m.id} className={cn(
+                  "flex items-start gap-2 py-1.5 px-2 rounded font-mono text-xs",
+                  isFirst && "bg-muted/40"
+                )}>
+                  <span className="text-muted-foreground/40 shrink-0">[{hh}:{mm}]</span>
+                  <span className={cn(isFirst ? "text-foreground/60" : "text-muted-foreground/50")}>
+                    {m.content}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground/40 py-4">Nenhuma decisão registrada.</p>
+        )}
+      </SectionCard>
+    </div>
+  );
+}
