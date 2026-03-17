@@ -249,18 +249,30 @@ export default function RoomGalleryDrawer({
                 <ChevronRight className="w-5 h-5" />
               </button>
 
-              {/* Select button overlay */}
-              <button
-                onClick={() => toggleSelect(currentPhoto.url)}
-                className={cn(
-                  "absolute top-3 right-3 sm:right-16 z-10 w-8 h-8 rounded-full flex items-center justify-center border transition-all duration-150",
-                  selectedPhotos.has(currentPhoto.url)
-                    ? "bg-accent text-accent-foreground border-accent"
-                    : "bg-black/40 text-white border-white/30 hover:bg-black/60"
-                )}
-              >
-                <Check className="w-4 h-4" />
-              </button>
+              {/* Select + source link buttons */}
+              <div className="absolute top-3 right-3 sm:right-16 z-10 flex items-center gap-2">
+                <a
+                  href={currentPhoto.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-8 h-8 rounded-full flex items-center justify-center bg-black/40 text-white/60 border border-white/20 hover:bg-black/60 hover:text-white transition-colors duration-150"
+                  title="Ver imagem original"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+                <button
+                  onClick={() => toggleSelect(currentPhoto.url)}
+                  className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center border transition-all duration-150",
+                    selectedPhotos.has(currentPhoto.url)
+                      ? "bg-accent text-accent-foreground border-accent"
+                      : "bg-black/40 text-white border-white/30 hover:bg-black/60"
+                  )}
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
             {/* Thumbnail strip */}
