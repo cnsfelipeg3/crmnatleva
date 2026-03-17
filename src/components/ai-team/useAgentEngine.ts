@@ -51,7 +51,17 @@ export function useAgentEngine(baseAgents: Agent[], baseTasks: Task[]): UseAgent
     setSnapshot(stateRef.current);
   }, []);
 
-  const removeTask = useCallback((taskId: string, action: "approve" | "ignore") => {
+  const updateAgent = useCallback((agentId: string, updates: Partial<Agent>) => {
+    if (!stateRef.current) return;
+    const s = stateRef.current;
+    stateRef.current = {
+      ...s,
+      agents: s.agents.map(a => a.id === agentId ? { ...a, ...updates } : a),
+    };
+    setSnapshot(stateRef.current);
+  }, []);
+
+
     if (!stateRef.current) return;
     const s = stateRef.current;
     const task = s.tasks.find(t => t.id === taskId);
