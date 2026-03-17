@@ -102,8 +102,12 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
           </div>
         </div>
 
-        {detail?.description && (
-          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">{detail.description}</p>
+        {/* Commercial summary — max 2 lines, truncated */}
+        {(summary.line1 || detail?.description) && (
+          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+            {summary.line1 || detail?.description}
+            {summary.line2 && <><br />{summary.line2}</>}
+          </p>
         )}
 
         <div className="flex flex-wrap items-center gap-1.5">
