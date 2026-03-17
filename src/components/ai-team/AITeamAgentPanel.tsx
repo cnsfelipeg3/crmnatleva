@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 interface Props {
   agent: Agent | null;
   tasks: Task[];
+  events?: AgentEvent[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
