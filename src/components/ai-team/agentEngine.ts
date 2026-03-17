@@ -1,8 +1,6 @@
 /**
  * Agent Engine — pure simulation logic, zero React dependencies.
- *
  * Every function is pure: receives state + time, returns new state.
- * No Date.now() inside — caller passes `now` for determinism.
  */
 
 import type { Agent, Task, AgentStatus, TaskPriority } from "./mockData";
@@ -50,162 +48,188 @@ export interface EngineState {
 
 const MAX_TASKS_PER_AGENT = 15;
 const MAX_EVENTS_PER_AGENT = 20;
-const MAX_GLOBAL_EVENTS = 50;
-const MIN_TASK_INTERVAL_MS = 15_000;
-const MIN_ALERT_INTERVAL_MS = 25_000;
-const MAX_ONE_TRANSITION_PER_TICK = true;
-const DECAY_EVERY_N_TICKS = 30; // decay preferences every ~30s
+const MAX_GLOBAL_EVENTS = 80;
+const MIN_TASK_INTERVAL_MS = 12_000;
+const MIN_ALERT_INTERVAL_MS = 20_000;
+const DECAY_EVERY_N_TICKS = 30;
 
 const statusDuration: Record<AgentStatus, [number, number]> = {
-  idle:       [8_000,  15_000],
-  analyzing:  [10_000, 20_000],
-  suggesting: [6_000,  12_000],
-  waiting:    [12_000, 25_000],
-  alert:      [5_000,  10_000],
+  idle:       [6_000,  12_000],
+  analyzing:  [8_000,  16_000],
+  suggesting: [5_000,  10_000],
+  waiting:    [10_000, 20_000],
+  alert:      [4_000,  8_000],
 };
 
 type Weights = Record<string, number>;
 type TransitionMap = Partial<Record<AgentStatus, Weights>>;
 
-const transitionWeights: Record<string, TransitionMap> = {
-  gerente: {
-    idle:       { analyzing: 0.6, idle: 0.4 },
-    analyzing:  { suggesting: 0.45, waiting: 0.3, alert: 0.15, analyzing: 0.1 },
-    suggesting: { waiting: 0.55, idle: 0.45 },
-    waiting:    { idle: 0.65, analyzing: 0.35 },
-    alert:      { waiting: 0.5, suggesting: 0.5 },
-  },
-  auditor: {
-    idle:       { analyzing: 0.7, idle: 0.3 },
-    analyzing:  { alert: 0.35, suggesting: 0.4, analyzing: 0.15, idle: 0.1 },
-    suggesting: { waiting: 0.5, idle: 0.5 },
-    waiting:    { idle: 0.6, analyzing: 0.4 },
-    alert:      { suggesting: 0.6, waiting: 0.4 },
-  },
-  estrategista: {
-    idle:       { analyzing: 0.55, idle: 0.45 },
-    analyzing:  { suggesting: 0.55, analyzing: 0.2, alert: 0.15, idle: 0.1 },
-    suggesting: { waiting: 0.5, idle: 0.5 },
-    waiting:    { idle: 0.55, analyzing: 0.45 },
-    alert:      { suggesting: 0.6, waiting: 0.4 },
-  },
-};
-
 const defaultWeights: TransitionMap = {
   idle:       { analyzing: 0.6, idle: 0.4 },
-  analyzing:  { suggesting: 0.5, alert: 0.2, idle: 0.3 },
+  analyzing:  { suggesting: 0.5, alert: 0.15, idle: 0.2, analyzing: 0.15 },
   suggesting: { waiting: 0.5, idle: 0.5 },
   waiting:    { idle: 0.6, analyzing: 0.4 },
   alert:      { suggesting: 0.5, waiting: 0.5 },
 };
 
+/* Agent-specific weights for the original 3 (others use default) */
+const transitionWeights: Record<string, TransitionMap> = {
+  gerente: {
+    idle: { analyzing: 0.6, idle: 0.4 },
+    analyzing: { suggesting: 0.45, waiting: 0.3, alert: 0.15, analyzing: 0.1 },
+    suggesting: { waiting: 0.55, idle: 0.45 },
+    waiting: { idle: 0.65, analyzing: 0.35 },
+    alert: { waiting: 0.5, suggesting: 0.5 },
+  },
+  auditor: {
+    idle: { analyzing: 0.7, idle: 0.3 },
+    analyzing: { alert: 0.3, suggesting: 0.4, analyzing: 0.15, idle: 0.15 },
+    suggesting: { waiting: 0.5, idle: 0.5 },
+    waiting: { idle: 0.6, analyzing: 0.4 },
+    alert: { suggesting: 0.6, waiting: 0.4 },
+  },
+};
+
 /* ═══════════════════════════════════════════
-   Message banks
+   Message banks — all 10 agents
    ═══════════════════════════════════════════ */
 
 const thoughtBank: Record<string, Partial<Record<AgentStatus, string[]>>> = {
   gerente: {
-    idle: ["Aguardando novas demandas do time.", "Revisando status geral dos projetos."],
-    analyzing: [
-      "Revisando prioridades do backlog de tarefas...",
-      "Avaliando performance da equipe esta semana...",
-      "Cruzando métricas de conversão com capacidade operacional...",
-    ],
-    suggesting: [
-      "Recomendo reorganizar as prioridades do módulo de propostas.",
-      "Sugiro acelerar a entrega dos templates por perfil de cliente.",
-      "Proposta de redistribuição de tarefas entre os agentes.",
-    ],
-    waiting: [
-      "Aguardando sua aprovação para prosseguir com a reorganização.",
-      "Esperando decisão sobre priorização do backlog.",
-    ],
-    alert: [
-      "Detectei acúmulo de tarefas sem decisão há mais de 48h.",
-      "Atenção: capacidade operacional próxima do limite esta semana.",
-    ],
+    idle: ["Aguardando novas demandas do time.", "Revisando status geral."],
+    analyzing: ["Revisando prioridades do backlog...", "Avaliando performance da equipe...", "Cruzando métricas de conversão..."],
+    suggesting: ["Reorganizar prioridades do módulo de propostas.", "Acelerar entrega dos templates por perfil.", "Redistribuir tarefas entre os agentes."],
+    waiting: ["Aguardando aprovação para reorganização.", "Esperando decisão sobre priorização."],
+    alert: ["Acúmulo de tarefas sem decisão há 48h.", "Capacidade operacional no limite."],
   },
   auditor: {
-    idle: ["Monitorando processos em modo passivo.", "Aguardando novos dados para análise."],
-    analyzing: [
-      "Escaneando inconsistências no fluxo de propostas...",
-      "Verificando padrões de uso da biblioteca de mídia...",
-      "Analisando SLA dos fornecedores ativos...",
-      "Comparando margens entre destinos nacionais e internacionais...",
-    ],
-    suggesting: [
-      "Identifiquei oportunidade de otimização na curadoria de mídia.",
-      "Recomendo padronizar descrições de quartos entre propostas.",
-      "Detectei padrão recorrente que pode ser automatizado.",
-    ],
-    waiting: [
-      "Aguardando validação do insight sobre fornecedores.",
-      "Esperando decisão sobre alerta de inconsistência.",
-    ],
-    alert: [
-      "Fornecedor com 3 confirmações pendentes acima de 48h.",
-      "Detectada queda de 15% na reutilização de mídias.",
-      "Inconsistência crítica encontrada em precificação.",
-    ],
+    idle: ["Monitorando processos.", "Aguardando novos dados."],
+    analyzing: ["Escaneando inconsistências em propostas...", "Verificando uso da biblioteca de mídia...", "Analisando SLA de fornecedores...", "Comparando margens entre destinos..."],
+    suggesting: ["Otimização na curadoria de mídia.", "Padronizar descrições de quartos.", "Padrão automatizável detectado."],
+    waiting: ["Aguardando validação sobre fornecedores.", "Esperando decisão sobre inconsistência."],
+    alert: ["Fornecedor com 3 confirmações >48h.", "Queda de 15% na reutilização de mídias.", "Inconsistência em precificação."],
   },
   estrategista: {
-    idle: ["Monitorando tendências de mercado.", "Consolidando padrões dos últimos 30 dias."],
-    analyzing: [
-      "Detectando padrões de vendas por sazonalidade...",
-      "Analisando correlação entre qualidade de mídia e conversão...",
-      "Mapeando oportunidades de upsell por perfil de cliente...",
-      "Comparando margem por categoria de destino...",
-    ],
-    suggesting: [
-      "Recomendo reforçar propostas nacionais premium — margem 18% superior.",
-      "Clientes de lua de mel aceitam 40% mais upgrades. Oportunidade clara.",
-      "Sugiro criar pacotes experienciais para o próximo trimestre.",
-    ],
-    waiting: [
-      "Aguardando aprovação para priorizar destinos nacionais.",
-      "Esperando decisão sobre estratégia de upsell.",
-    ],
-    alert: [
-      "Concentração excessiva em destinos europeus detectada.",
-      "Margem média em queda: requer atenção estratégica.",
-    ],
+    idle: ["Monitorando tendências.", "Consolidando padrões dos últimos 30 dias."],
+    analyzing: ["Padrões de vendas por sazonalidade...", "Correlação mídia vs. conversão...", "Oportunidades de upsell...", "Margem por categoria de destino..."],
+    suggesting: ["Reforçar propostas nacionais premium.", "Lua de mel aceita 40% mais upgrades.", "Pacotes experienciais para Q2."],
+    waiting: ["Aguardando aprovação para destinos nacionais.", "Esperando decisão sobre upsell."],
+    alert: ["Concentração excessiva em destinos europeus.", "Margem média em queda."],
+  },
+  analista: {
+    idle: ["Consolidando dados para relatório.", "Monitorando anomalias nos KPIs."],
+    analyzing: ["Cruzando conversão com tempo de resposta...", "Funil de vendas por etapa...", "Performance semanal...", "Outliers em dados de venda..."],
+    suggesting: ["Painel de conversão por etapa do funil.", "Fotos de qualidade → +25% conversão.", "Segmento premium cresceu 12%."],
+    waiting: ["Aguardando validação do relatório.", "Esperando aprovação do dashboard."],
+    alert: ["Conversão caiu 8% vs. semana anterior.", "Anomalia em dados de vendas."],
+  },
+  financeiro: {
+    idle: ["Monitorando fluxo de caixa.", "Aguardando fechamento mensal."],
+    analyzing: ["Margens por destino e fornecedor...", "Projeção de fluxo de caixa...", "Custos fixos vs. variáveis...", "DRE do período..."],
+    suggesting: ["Revisar markups com margem <8%.", "Renegociação com 3 fornecedores.", "Ajuste em custos operacionais."],
+    waiting: ["Aguardando aprovação de markups.", "Esperando decisão sobre renegociação."],
+    alert: ["Margem abaixo da meta de 15%.", "Caixa negativo projetado em 15 dias."],
+  },
+  marketing: {
+    idle: ["Monitorando engajamento de leads.", "Analisando campanhas anteriores."],
+    analyzing: ["Segmentando leads inativos...", "Destinos mais buscados...", "Perfis com potencial...", "ROI de campanhas..."],
+    suggesting: ["Reativação de 340 leads premium.", "Maldivas trending (+45%).", "Remarketing: até R$180k."],
+    waiting: ["Aguardando aprovação de campanha.", "Esperando decisão sobre segmentação."],
+    alert: ["Pipeline de leads caiu 20%.", "Email marketing em queda."],
+  },
+  comercial: {
+    idle: ["Monitorando pipeline.", "Aguardando propostas."],
+    analyzing: ["Probabilidade de fechamento...", "Tempo de decisão dos clientes...", "Objeções mais comuns...", "Taxas de follow-up..."],
+    suggesting: ["5 propostas com score >80%.", "Follow-up em 24h triplica fechamento.", "Cliente premium sem contato há 48h."],
+    waiting: ["Aguardando retorno de propostas.", "Esperando decisão comercial."],
+    alert: ["3 propostas perdendo timing.", "Pipeline de fechamento em queda."],
+  },
+  atendimento: {
+    idle: ["Monitorando chamados.", "Verificando SLA."],
+    analyzing: ["Tempo médio de resposta...", "Satisfação dos atendimentos...", "Chamados pendentes...", "Padrões de reclamação..."],
+    suggesting: ["3 clientes sem retorno 48h.", "Template reduz 30% do tempo.", "Pesquisa NPS pós-viagem."],
+    waiting: ["Aguardando resolução de chamados.", "Esperando feedback de SLA."],
+    alert: ["Resposta acima do SLA (6.5h vs 4h).", "NPS caiu 5 pontos."],
+  },
+  operacional: {
+    idle: ["Monitorando fluxos.", "Verificando eficiência."],
+    analyzing: ["Gargalos no fluxo de propostas...", "Tempo por etapa...", "Etapas automatizáveis...", "Eficiência entre times..."],
+    suggesting: ["Automatizar briefing (-18min).", "3 etapas redundantes.", "Templates: -35% tempo."],
+    waiting: ["Aguardando aprovação de otimização.", "Esperando decisão sobre automação."],
+    alert: ["Gargalo: aprovação fornecedor (18h).", "Montagem subiu 20%."],
+  },
+  inovacao: {
+    idle: ["Explorando travel tech.", "Monitorando concorrentes."],
+    analyzing: ["Viabilidade de itinerário IA...", "Portais interativos...", "IA generativa no turismo...", "Tecnologias emergentes..."],
+    suggesting: ["Itinerário IA: -80% tempo.", "Portal interativo: diferencial.", "Galeria imersiva aumenta conversão."],
+    waiting: ["Aguardando aprovação de protótipo.", "Esperando decisão sobre portal."],
+    alert: ["Concorrente lançou IA generativa.", "Gap tecnológico detectado."],
   },
 };
 
-/** Memory-aware thoughts — used sparingly when shouldUseMemoryThought is true */
 const memoryThoughts: Record<string, string[]> = {
-  gerente: [
-    "Com base nas suas últimas decisões, ajustei as prioridades do backlog.",
-    "Notei que você tem aprovado tarefas de organização — reforçando essa linha.",
-    "Suas decisões recentes indicam preferência por ações rápidas. Priorizando.",
-  ],
-  auditor: [
-    "Com base no histórico, estou focando em inconsistências que você costuma aprovar.",
-    "Ajustei minhas análises com base nas suas decisões anteriores.",
-    "Suas aprovações recentes indicam foco em qualidade de mídia.",
-  ],
-  estrategista: [
-    "Notei que sugestões de upsell não têm sido aceitas. Ajustando estratégia.",
-    "Com base nas suas decisões, priorizei abordagens mais diretas.",
-    "Suas aprovações indicam interesse em destinos nacionais premium.",
-  ],
+  gerente: ["Ajustei prioridades com base nas suas decisões.", "Você aprova organização — reforçando.", "Preferência por ações rápidas detectada."],
+  auditor: ["Focando em inconsistências que você aprova.", "Análises ajustadas por suas decisões."],
+  estrategista: ["Upsell não aceito — ajustando.", "Priorizei abordagens diretas."],
+  analista: ["Priorizando métricas que você aprova."],
+  financeiro: ["Alertas financeiros ajustados por suas aprovações."],
+  marketing: ["Foco em campanhas por suas aprovações."],
+  comercial: ["Propostas alinhadas ao seu padrão."],
+  atendimento: ["Priorizando SLA por suas decisões."],
+  operacional: ["Automação ajustada por suas aprovações."],
+  inovacao: ["Inovações alinhadas com suas aprovações."],
 };
 
 const taskTemplates: Record<string, Array<{ title: string; description: string; priority: TaskPriority; context: string }>> = {
   gerente: [
-    { title: "Reorganizar prioridades do backlog", description: "Redistribuir tarefas com base na capacidade atual e impacto estimado.", priority: "medium", context: "backlog" },
-    { title: "Revisar SLA de atendimento ao cliente", description: "Tempo médio de resposta subiu 12%. Recomendar melhorias.", priority: "high", context: "sla" },
-    { title: "Criar relatório semanal de performance", description: "Consolidar métricas de vendas, conversão e tempo de montagem.", priority: "low", context: "operacional" },
+    { title: "Reorganizar prioridades do backlog", description: "Redistribuir tarefas com base na capacidade e impacto.", priority: "medium", context: "backlog" },
+    { title: "Revisar SLA de atendimento", description: "Tempo de resposta subiu 12%.", priority: "high", context: "sla" },
+    { title: "Relatório semanal de performance", description: "Consolidar métricas de vendas e conversão.", priority: "low", context: "operacional" },
   ],
   auditor: [
-    { title: "Auditar propostas sem resposta há 7+ dias", description: "Identificar propostas abandonadas e recomendar recontato.", priority: "high", context: "follow-up" },
-    { title: "Mapear fornecedores com SLA irregular", description: "Listar fornecedores com confirmações acima de 48h recorrentes.", priority: "medium", context: "fornecedores" },
-    { title: "Verificar consistência de dados de hospedagem", description: "Cruzar nomes de quartos entre propostas do mesmo hotel.", priority: "low", context: "propostas" },
+    { title: "Auditar propostas sem resposta 7+ dias", description: "Propostas abandonadas — recontato.", priority: "high", context: "follow-up" },
+    { title: "Mapear fornecedores com SLA irregular", description: "Confirmações >48h recorrentes.", priority: "medium", context: "fornecedores" },
+    { title: "Consistência de dados de hospedagem", description: "Cruzar nomes de quartos.", priority: "low", context: "propostas" },
   ],
   estrategista: [
-    { title: "Propor pacote experiencial Q2", description: "Criar sugestão de pacote temático baseado nas tendências de busca.", priority: "medium", context: "estratégia" },
-    { title: "Análise de elasticidade de preço", description: "Testar se aumento de 5% na margem impacta conversão.", priority: "high", context: "pricing" },
-    { title: "Identificar destinos emergentes", description: "Mapear destinos com crescimento de busca acima de 20% no mês.", priority: "low", context: "estratégia" },
+    { title: "Pacote experiencial Q2", description: "Pacote temático baseado em tendências.", priority: "medium", context: "estratégia" },
+    { title: "Elasticidade de preço", description: "Impacto de 5% na margem.", priority: "high", context: "pricing" },
+    { title: "Destinos emergentes", description: "Crescimento >20%.", priority: "low", context: "estratégia" },
+  ],
+  analista: [
+    { title: "Dashboard de conversão por etapa", description: "Funil de vendas detalhado.", priority: "medium", context: "métricas" },
+    { title: "Relatório de anomalias", description: "Outliers em vendas e margens.", priority: "high", context: "métricas" },
+    { title: "Correlação mídia vs. conversão", description: "Impacto de fotos.", priority: "low", context: "métricas" },
+  ],
+  financeiro: [
+    { title: "Revisar markups abaixo da meta", description: "Margem <8%.", priority: "high", context: "pricing" },
+    { title: "Projeção de fluxo de caixa", description: "Próximos 30 dias.", priority: "medium", context: "financeiro" },
+    { title: "Renegociar fornecedores caros", description: "Acima do benchmark.", priority: "medium", context: "fornecedores" },
+  ],
+  marketing: [
+    { title: "Campanha de reativação de leads", description: "340 leads inativos premium.", priority: "medium", context: "marketing" },
+    { title: "Destaque destino trending", description: "Destino em alta.", priority: "low", context: "marketing" },
+    { title: "Remarketing propostas abertas", description: "Propostas sem resposta.", priority: "high", context: "marketing" },
+  ],
+  comercial: [
+    { title: "Propostas para fechamento", description: "Score >80%.", priority: "high", context: "vendas" },
+    { title: "Follow-up urgente", description: "Sem contato há 48h.", priority: "high", context: "follow-up" },
+    { title: "Objeções recorrentes", description: "Padrões comuns.", priority: "medium", context: "vendas" },
+  ],
+  atendimento: [
+    { title: "Clientes sem resposta 48h", description: "Chamados abertos.", priority: "high", context: "sla" },
+    { title: "Pesquisa NPS pós-viagem", description: "Enviar para clientes.", priority: "low", context: "atendimento" },
+    { title: "Template de resposta rápida", description: "Reduzir 30% do tempo.", priority: "medium", context: "atendimento" },
+  ],
+  operacional: [
+    { title: "Automatizar briefing", description: "Consome 18min.", priority: "medium", context: "automação" },
+    { title: "Eliminar etapas redundantes", description: "3 etapas duplicadas.", priority: "high", context: "processos" },
+    { title: "Benchmark tempo por etapa", description: "Comparar com meta.", priority: "low", context: "processos" },
+  ],
+  inovacao: [
+    { title: "Prototipar itinerário por IA", description: "Geração baseada no perfil.", priority: "medium", context: "inovação" },
+    { title: "Portal do viajante interativo", description: "Tracking em tempo real.", priority: "low", context: "inovação" },
+    { title: "Galeria imersiva em propostas", description: "Fotos 360° e vídeos.", priority: "medium", context: "inovação" },
   ],
 };
 
@@ -238,16 +262,14 @@ function pickRandom<T>(arr: T[], seed: number): T {
 }
 
 function getThought(agent: EngineAgent, status: AgentStatus, seed: number): string {
-  // Sparingly use memory-aware thoughts
   if (
     (status === "suggesting" || status === "analyzing") &&
     shouldUseMemoryThought(agent.memory) &&
-    seed % 5 === 0 // ~20% chance when conditions are met
+    seed % 5 === 0
   ) {
     const mThoughts = memoryThoughts[agent.id];
     if (mThoughts?.length) return pickRandom(mThoughts, seed + 99);
   }
-
   const bank = thoughtBank[agent.id]?.[status] ?? [`Operando em modo ${status}.`];
   return pickRandom(bank, seed);
 }
@@ -270,7 +292,7 @@ function getActionLabel(status: AgentStatus): string {
 export function createInitialState(baseAgents: Agent[], baseTasks: Task[], now: number): EngineState {
   const agents: EngineAgent[] = baseAgents.map((a, i) => ({
     ...a,
-    nextTickAt: now + randRange(5_000, 12_000, i * 137),
+    nextTickAt: now + randRange(3_000, 10_000, i * 137),
     eventHistory: [],
     memory: createEmptyMemory(),
   }));
@@ -286,36 +308,33 @@ export function createInitialState(baseAgents: Agent[], baseTasks: Task[], now: 
 }
 
 /* ═══════════════════════════════════════════
-   TICK — main simulation step
+   TICK — allow up to 2 transitions per tick for 10 agents
    ═══════════════════════════════════════════ */
+
+const MAX_TRANSITIONS_PER_TICK = 2;
 
 export function tick(state: EngineState, now: number): EngineState {
   let { agents, tasks, events, lastTaskCreatedAt, lastAlertAt, tickCount } = state;
   let changed = false;
-  let transitionedThisTick = false;
+  let transitionsThisTick = 0;
 
   const seed = now ^ (tickCount * 7919);
-
-  // Periodic preference decay
   const shouldDecay = tickCount > 0 && tickCount % DECAY_EVERY_N_TICKS === 0;
 
   const newAgents = agents.map((agent, idx) => {
     let currentAgent = agent;
 
-    // Apply decay if needed
     if (shouldDecay) {
       currentAgent = { ...currentAgent, memory: decayPreferences(currentAgent.memory) };
       changed = true;
     }
 
-    // Not time yet
     if (now < currentAgent.nextTickAt) return currentAgent;
-    if (MAX_ONE_TRANSITION_PER_TICK && transitionedThisTick) return currentAgent;
+    if (transitionsThisTick >= MAX_TRANSITIONS_PER_TICK) return currentAgent;
 
     const agentSeed = seed ^ (idx * 3571);
     const weights = transitionWeights[currentAgent.id]?.[currentAgent.status] ?? defaultWeights[currentAgent.status] ?? { idle: 1 };
 
-    // Check alert throttle
     let filteredWeights = { ...weights };
     if (now - lastAlertAt < MIN_ALERT_INTERVAL_MS && "alert" in filteredWeights) {
       const alertW = (filteredWeights as Record<string, number>)["alert"] ?? 0;
@@ -334,7 +353,6 @@ export function tick(state: EngineState, now: number): EngineState {
     const thought = getThought(currentAgent, nextStatus, agentSeed + 2);
     const actionLabel = getActionLabel(nextStatus);
 
-    // Create status change event
     const evt: AgentEvent = {
       id: uid(),
       agentId: currentAgent.id,
@@ -346,7 +364,6 @@ export function tick(state: EngineState, now: number): EngineState {
 
     events = [evt, ...events].slice(0, MAX_GLOBAL_EVENTS);
 
-    // Record interaction in memory
     let agentMemory = addMemory(currentAgent.memory, {
       type: nextStatus === "alert" ? "alert" : "interaction",
       content: thought,
@@ -356,16 +373,10 @@ export function tick(state: EngineState, now: number): EngineState {
       context: nextStatus === "alert" ? "alerta" : nextStatus,
     });
 
-    // Maybe generate task (on suggesting or alert)
     if ((nextStatus === "suggesting" || nextStatus === "alert") && now - lastTaskCreatedAt >= MIN_TASK_INTERVAL_MS) {
       const templates = taskTemplates[currentAgent.id];
-      if (templates && Math.abs(agentSeed) % 100 < (nextStatus === "suggesting" ? 60 : 80)) {
-        // Filter templates based on memory preferences
-        const filtered = templates.filter(tmpl => {
-          const prefWeight = getPreferenceWeight(agentMemory, tmpl.context);
-          // Skip templates the user strongly dislikes
-          return prefWeight > -0.5;
-        });
+      if (templates && Math.abs(agentSeed) % 100 < (nextStatus === "suggesting" ? 55 : 75)) {
+        const filtered = templates.filter(tmpl => getPreferenceWeight(agentMemory, tmpl.context) > -0.5);
         const pool = filtered.length > 0 ? filtered : templates;
         const tmpl = pickRandom(pool, agentSeed + 3);
         const agentTaskCount = tasks.filter(t => t.sourceAgentId === currentAgent.id).length;
@@ -385,11 +396,9 @@ export function tick(state: EngineState, now: number): EngineState {
       }
     }
 
-    if (nextStatus === "alert") {
-      lastAlertAt = now;
-    }
+    if (nextStatus === "alert") lastAlertAt = now;
 
-    transitionedThisTick = true;
+    transitionsThisTick++;
     changed = true;
 
     const newHistory = [evt, ...currentAgent.eventHistory].slice(0, MAX_EVENTS_PER_AGENT);
