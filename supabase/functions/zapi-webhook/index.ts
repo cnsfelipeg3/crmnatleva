@@ -32,11 +32,14 @@ function extractMediaUrl(body: any): string | null {
 // ─── Helper: extract message type ───
 function extractMsgType(body: any): string {
   if (body.image) return "image";
-  if (body.audio) return "audio";
+  if (body.sticker) return "image"; // sticker → image
+  if (body.audio) return "audio"; // includes ptt
   if (body.video) return "video";
   if (body.document) return "document";
   return "text";
 }
+
+// ─── Helper: extract media URL (including sticker) ───
 
 // ─── Helper: extract text content ───
 function extractTextContent(body: any): string {
