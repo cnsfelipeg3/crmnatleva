@@ -329,7 +329,7 @@ Deno.serve(async (req) => {
 
       const direction = fromMe ? "outgoing" : "incoming";
       const senderType = fromMe ? "atendente" : "cliente";
-      const msgStatus = fromMe ? "sent" : "delivered";
+      const resolvedMsgStatus = fromMe ? "sent" : "delivered";
 
       // PRIMARY: conversation_messages (unified)
       const { error: unifiedErr } = await supabase.from("conversation_messages").insert({
@@ -340,7 +340,7 @@ Deno.serve(async (req) => {
         content: textContent || "",
         message_type: msgType,
         media_url: mediaUrl,
-        status: msgStatus,
+        status: resolvedMsgStatus,
         timestamp: timestampIso,
         created_at: timestampIso,
       });
@@ -358,7 +358,7 @@ Deno.serve(async (req) => {
         message_type: msgType,
         text: textContent || null,
         media_url: mediaUrl,
-        status: msgStatus,
+        status: resolvedMsgStatus,
         external_message_id: messageId,
         created_at: timestampIso,
       });
