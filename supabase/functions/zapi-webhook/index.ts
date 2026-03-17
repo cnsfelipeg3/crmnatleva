@@ -329,7 +329,7 @@ Deno.serve(async (req) => {
 
       const direction = fromMe ? "outgoing" : "incoming";
       const senderType = fromMe ? "atendente" : "cliente";
-      const msgStatus = fromMe ? "sent" : "delivered";
+      const resolvedMsgStatus = fromMe ? "sent" : "delivered";
 
       // PRIMARY: conversation_messages (unified)
       const { error: unifiedErr } = await supabase.from("conversation_messages").insert({
