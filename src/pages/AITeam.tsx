@@ -1,6 +1,7 @@
-import { useState, lazy, Suspense } from "react";
+import { useState, lazy, Suspense, useCallback } from "react";
 import { Brain, Plus, Building2, LayoutDashboard, Box } from "lucide-react";
-import { agents as mockAgents, initialTasks, type Agent, type Task } from "@/components/ai-team/mockData";
+import { agents as mockAgents, initialTasks, type Agent } from "@/components/ai-team/mockData";
+import { useAgentEngine } from "@/components/ai-team/useAgentEngine";
 import AITeamStatusCards from "@/components/ai-team/AITeamStatusCards";
 import AITeamAgentCard from "@/components/ai-team/AITeamAgentCard";
 import AITeamTaskList from "@/components/ai-team/AITeamTaskList";
@@ -10,33 +11,38 @@ import OfficeGameView from "@/components/ai-team/office-game/OfficeGameView";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
-// Lazy load 3D view — Three.js only loads when user chooses 3D mode
 const OfficeGame3DView = lazy(() => import("@/components/ai-team/office-game-3d/OfficeGame3DView"));
 
 type ViewMode = "dashboard" | "office" | "office3d";
 
 export default function AITeam() {
-  const [agents, setAgents] = useState<Agent[]>(mockAgents);
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const { agents, tasks, events, addAgent, removeTask } = useAgentEngine(mockAgents, initialTasks);
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [view, setView] = useState<ViewMode>("dashboard");
   const { toast } = useToast();
 
-  const handleApprove = (id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+  // Derive selected agent from live engine state so it stays fresh
+  const selectedAgent = selectedAgentId ? agents.find(a => a.id === selectedAgentId) ?? null : null;
+
+  const handleApprove = useCallback((id: string) => {
+    removeTask(id);
     toast({ title: "Tarefa aprovada", description: "A sugestão foi aceita e será aplicada." });
-  };
+  }, [removeTask, toast]);
 
-  const handleIgnore = (id: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+  const handleIgnore = useCallback((id: string) => {
+    removeTask(id);
     toast({ title: "Tarefa ignorada", description: "A sugestão foi descartada." });
-  };
+  }, [removeTask, toast]);
 
-  const handleCreateAgent = (agent: Agent) => {
-    setAgents((prev) => [...prev, agent]);
+  const handleCreateAgent = useCallback((agent: Agent) => {
+    addAgent(agent);
     toast({ title: "Agente criado", description: `${agent.name} foi adicionado ao time.` });
-  };
+  }, [addAgent, toast]);
+
+  const handleSelectAgent = useCallback((agent: Agent) => {
+    setSelectedAgentId(agent.id);
+  }, []);
 
   return (
     <div className="space-y-8 p-6 max-w-7xl mx-auto">
@@ -76,10 +82,8 @@ export default function AITeam() {
 
       {view === "dashboard" ? (
         <>
-          {/* Status */}
           <AITeamStatusCards tasks={tasks} />
 
-          {/* Agents */}
           <section className="space-y-3">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Agentes ({agents.length})</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -88,13 +92,12 @@ export default function AITeam() {
                   key={agent.id}
                   agent={agent}
                   taskCount={tasks.filter((t) => t.sourceAgentId === agent.id).length}
-                  onViewDetails={() => setSelectedAgent(agent)}
+                  onViewDetails={() => handleSelectAgent(agent)}
                 />
               ))}
             </div>
           </section>
 
-          {/* Tasks */}
           <section className="space-y-3">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Tarefas ({tasks.length})
@@ -112,7 +115,7 @@ export default function AITeam() {
           agents={agents}
           tasks={tasks}
           onBack={() => setView("dashboard")}
-          onSelectAgent={setSelectedAgent}
+          onSelectAgent={handleSelectAgent}
         />
       ) : (
         <Suspense fallback={
@@ -124,7 +127,7 @@ export default function AITeam() {
             agents={agents}
             tasks={tasks}
             onBack={() => setView("dashboard")}
-            onSelectAgent={setSelectedAgent}
+            onSelectAgent={handleSelectAgent}
           />
         </Suspense>
       )}
@@ -133,11 +136,11 @@ export default function AITeam() {
       <AITeamAgentPanel
         agent={selectedAgent}
         tasks={tasks}
+        events={events}
         open={!!selectedAgent}
-        onOpenChange={(open) => { if (!open) setSelectedAgent(null); }}
+        onOpenChange={(open) => { if (!open) setSelectedAgentId(null); }}
       />
 
-      {/* Create dialog */}
       <AITeamCreateAgentDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
