@@ -1284,6 +1284,10 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
     "skyscanner.com", "momondo.com", "orbitz.com", "travelocity.com",
     "ctrip.com", "trip.com", "traveloka.com", "klook.com", "viator.com",
     "airbnb.com", "jalan.net", "ikyu.com", "rakuten.co.jp", "yelp.com",
+    "lonelyplanet.com", "fodors.com", "frommers.com", "timeout.com",
+    "pinterest.com", "twitter.com", "x.com", "linkedin.com", "youtube.com",
+    "tiktok.com", "wego.com", "trivago.com.br", "melhordestino.com.br",
+    "panrotas.com.br", "hotelurbano.com", "submarino.com.br",
   ];
   const chainDomains: Record<string, string[]> = {
     "aman": ["aman.com"], "four seasons": ["fourseasons.com"], "ritz carlton": ["ritzcarlton.com"],
@@ -1294,7 +1298,12 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
     "sofitel": ["sofitel.com", "all.accor.com"], "hilton": ["hilton.com"],
     "marriott": ["marriott.com"], "hyatt": ["hyatt.com"], "intercontinental": ["ihg.com"],
     "hassler": ["hotelhasslerroma.com"], "waldorf astoria": ["hilton.com"],
-    "hoshinoya": ["hoshinoresorts.com"],
+    "hoshinoya": ["hoshinoresorts.com"], "peninsula": ["peninsula.com"],
+    "shangri-la": ["shangri-la.com"], "oberoi": ["oberoihotels.com"],
+    "taj": ["tajhotels.com"], "anantara": ["anantara.com"],
+    "kempinski": ["kempinski.com"], "banyan tree": ["banyantree.com"],
+    "one&only": ["oneandonlyresorts.com"], "como": ["comohotels.com"],
+    "fasano": ["fasano.com.br"], "emiliano": ["emiliano.com.br"],
   };
 
   let bestScore = -1, bestResult: any = null;
@@ -1303,13 +1312,29 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
     const domain = extractDomain(result.url);
     if (aggregators.some(a => domain.includes(a))) continue;
     let score = 0;
+
+    // Chain/brand domain match (very strong signal)
     for (const [brand, domains] of Object.entries(chainDomains)) {
-      if (nameNorm.includes(brand) && domains.some(d => domain.includes(d))) score += 15;
+      if (nameNorm.includes(brand) && domains.some(d => domain.includes(d))) score += 20;
     }
+
+    // Domain contains hotel name words
     const domainNorm = normalizeStr(domain);
-    score += nameWords.filter(w => domainNorm.includes(w)).length * 3;
+    const wordMatches = nameWords.filter(w => domainNorm.includes(w)).length;
+    score += wordMatches * 4;
+
+    // Title matches hotel name (strong signal)
     const title = normalizeStr(result.title || "");
-    if (title.includes(nameNorm)) score += 5;
+    if (title.includes(nameNorm)) score += 8;
+    else if (nameWords.length > 0 && nameWords.every(w => title.includes(w))) score += 5;
+
+    // URL path hints (rooms page = definitely hotel site)
+    const path = new URL(result.url).pathname.toLowerCase();
+    if (/\/(rooms|accommodation|suites|gallery)/.test(path)) score += 3;
+
+    // Penalize very generic domains
+    if (/\.(gov|edu|org)$/.test(domain)) score -= 5;
+
     if (score > bestScore) { bestScore = score; bestResult = result; }
   }
   return bestResult;
