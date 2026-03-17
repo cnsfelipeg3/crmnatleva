@@ -309,6 +309,7 @@ function OperacaoInboxInner() {
   const [activeFlowName, setActiveFlowName] = useState<string | null>(null);
   const flowNameCacheRef = useRef<Record<string, string | null>>({});
   const [waConnected, setWaConnected] = useState(false);
+  const [viewMode, setViewMode] = useState<"chat" | "pipeline">("chat");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
