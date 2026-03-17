@@ -6,12 +6,12 @@ import { collides3D, FLOOR_SIZE } from './mapData3d';
 const SPEED = 4;
 const CAM_HEIGHT_DEFAULT = 5.5;
 const CAM_BACK_DEFAULT = 4.5;
-const CAM_ANGLE_X = -0.15;
 const CAM_LERP = 0.06;
 const PLAYER_RADIUS = 0.22;
 const ZOOM_MIN = 0.4;
 const ZOOM_MAX = 2.5;
 const ZOOM_SPEED = 0.1;
+const ORBIT_SPEED = 0.005;
 
 interface Props {
   startPos: [number, number, number];
