@@ -54,18 +54,101 @@ function parseChatMessagesPayload(data: any): any[] {
   return [];
 }
 
-async function callZapi(path: string, method = "GET") {
-  const url = `${BASE_URL}${path}`;
-  const response = await fetch(url, {
-    method,
-    headers: { "Content-Type": "application/json", "Client-Token": CLIENT_TOKEN },
-  });
-  const text = await response.text();
-  if (!response.ok) throw new Error(`Z-API ${path} (${response.status}): ${text.slice(0, 300)}`);
-  try { return JSON.parse(text); } catch { return { raw: text }; }
+// Try multiple Z-API endpoints for fetching chat messages (multi-device compatible)
+async function fetchZapiMessages(phone: string): Promise<any[]> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Client-Token": CLIENT_TOKEN,
+  };
+
+  const allMessages: any[] = [];
+
+  // Strategy 1: GET /chat-messages/{phone} (legacy - may fail on multi-device)
+  // Strategy 2: POST /get-messages-chat/{phone} with amount (multi-device)
+  // Strategy 3: GET /chat-messages/{phone}?amount=100 (query param variant)
+
+  const strategies = [
+    { 
+      label: "POST /get-messages-chat with amount",
+      url: `${BASE_URL}/get-messages-chat/${encodeURIComponent(phone)}`,
+      method: "POST",
+      body: JSON.stringify({ amount: 200 }),
+    },
+    {
+      label: "GET /chat-messages with query params",
+      url: `${BASE_URL}/chat-messages/${encodeURIComponent(phone)}?amount=200`,
+      method: "GET",
+    },
+    {
+      label: "GET /chat-messages basic",
+      url: `${BASE_URL}/chat-messages/${encodeURIComponent(phone)}`,
+      method: "GET",
+    },
+  ];
+
+  for (const strategy of strategies) {
+    try {
+      console.log(`[Reconcile] Trying: ${strategy.label} for ${phone}`);
+      const opts: RequestInit = { method: strategy.method, headers };
+      if (strategy.body) opts.body = strategy.body;
+      
+      const resp = await fetch(strategy.url, opts);
+      const text = await resp.text();
+      
+      if (!resp.ok) {
+        console.log(`[Reconcile] ${strategy.label} failed (${resp.status}): ${text.slice(0, 200)}`);
+        continue;
+      }
+
+      let data: any;
+      try { data = JSON.parse(text); } catch { continue; }
+      
+      const msgs = parseChatMessagesPayload(data);
+      if (msgs.length > 0) {
+        console.log(`[Reconcile] ${strategy.label} returned ${msgs.length} messages`);
+        
+        // If strategy supports pagination, paginate to get all
+        if (strategy.label.includes("POST") && msgs.length >= 190) {
+          allMessages.push(...msgs);
+          // Paginate: get older messages using lastMessageId
+          let lastMsgId = msgs[msgs.length - 1]?.messageId || msgs[msgs.length - 1]?.id;
+          let pageCount = 1;
+          const MAX_PAGES = 50; // safety limit (50 * 200 = 10k messages max)
+          
+          while (lastMsgId && pageCount < MAX_PAGES) {
+            try {
+              const pageResp = await fetch(strategy.url, {
+                method: "POST",
+                headers,
+                body: JSON.stringify({ amount: 200, lastMessageId: lastMsgId }),
+              });
+              if (!pageResp.ok) break;
+              const pageData = await pageResp.json();
+              const pageMsgs = parseChatMessagesPayload(pageData);
+              if (pageMsgs.length === 0) break;
+              
+              allMessages.push(...pageMsgs);
+              lastMsgId = pageMsgs[pageMsgs.length - 1]?.messageId || pageMsgs[pageMsgs.length - 1]?.id;
+              pageCount++;
+              
+              if (pageMsgs.length < 190) break; // last page
+            } catch { break; }
+          }
+          
+          console.log(`[Reconcile] Total fetched with pagination: ${allMessages.length} msgs in ${pageCount + 1} pages`);
+          return allMessages;
+        }
+        
+        return msgs;
+      }
+    } catch (err: any) {
+      console.log(`[Reconcile] ${strategy.label} error: ${err.message}`);
+    }
+  }
+
+  return allMessages;
 }
 
-// Delay helper
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 serve(async (req) => {
@@ -78,6 +161,25 @@ serve(async (req) => {
 
   let body: any = {};
   try { body = await req.json(); } catch {}
+
+  // Special mode: just test Z-API connectivity
+  if (body.test_zapi) {
+    const phone = normalizePhone(body.phone || "5521994352690");
+    try {
+      const msgs = await fetchZapiMessages(phone);
+      return new Response(JSON.stringify({
+        success: true,
+        phone,
+        messages_found: msgs.length,
+        sample: msgs.slice(0, 3),
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    } catch (err: any) {
+      return new Response(JSON.stringify({ error: err.message }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
 
   const batchSize = Math.min(body.batch_size || 20, 100);
   const offset = body.offset || 0;
@@ -99,7 +201,6 @@ serve(async (req) => {
   };
 
   try {
-    // Fetch batch of conversations
     let query = supabase
       .from("conversations")
       .select("id, phone, contact_name, external_conversation_id, reconciled_at")
@@ -149,20 +250,8 @@ serve(async (req) => {
           .eq("conversation_id", conv.id);
         detail.messages_before = beforeCount || 0;
 
-        // 2. Fetch from Z-API
-        let zapiMessages: any[] = [];
-        try {
-          const data = await callZapi(`/chat-messages/${encodeURIComponent(cleanPhone)}`, "GET");
-          zapiMessages = parseChatMessagesPayload(data);
-        } catch (zapiErr: any) {
-          // Try with @c.us suffix
-          try {
-            const data = await callZapi(`/chat-messages/${encodeURIComponent(cleanPhone + "@c.us")}`, "GET");
-            zapiMessages = parseChatMessagesPayload(data);
-          } catch {
-            throw new Error(`Z-API fetch failed: ${zapiErr.message}`);
-          }
-        }
+        // 2. Fetch from Z-API (multi-device compatible)
+        const zapiMessages = await fetchZapiMessages(cleanPhone);
 
         detail.zapi_found = zapiMessages.length;
         stats.total_zapi_messages_found += zapiMessages.length;
@@ -184,52 +273,38 @@ serve(async (req) => {
           }
 
           stats.details.push(detail);
-          await delay(200); // rate limit
+          await delay(300);
           continue;
         }
 
         // 3. Get existing external_message_ids for dedup
         const { data: existingMsgs } = await supabase
           .from("conversation_messages")
-          .select("external_message_id, timestamp")
-          .eq("conversation_id", conv.id);
+          .select("external_message_id")
+          .eq("conversation_id", conv.id)
+          .not("external_message_id", "is", null);
 
-        const existingIds = new Set<string>();
-        const existingSignatures = new Set<string>();
-        for (const em of (existingMsgs || [])) {
-          if (em.external_message_id) existingIds.add(em.external_message_id);
-          // Signature-based dedup for messages without external_message_id
-          const ts = em.timestamp ? new Date(em.timestamp).getTime() : 0;
-          existingSignatures.add(`${Math.floor(ts / 1000)}`);
-        }
+        const existingIds = new Set<string>(
+          (existingMsgs || []).map((em: any) => em.external_message_id).filter(Boolean)
+        );
 
         // 4. Build insert rows
         const rowsToInsert: any[] = [];
         for (const msg of zapiMessages) {
           const messageId = msg?.messageId ? String(msg.messageId) : (msg?.id ? String(msg.id) : null);
+          if (!messageId) continue; // skip messages without ID - can't dedup safely
+          
+          if (existingIds.has(messageId)) {
+            stats.total_already_existed++;
+            continue;
+          }
+          existingIds.add(messageId); // prevent within-batch dupes
+
           const fromMe = Boolean(msg?.fromMe ?? msg?.from_me);
           const msgType = detectMessageType(msg);
           const textContent = extractTextContent(msg, msgType);
           const timestamp = parseTimestampSeconds(msg);
           const mediaUrl = extractMediaUrl(msg);
-
-          // Dedup: skip if messageId already exists
-          if (messageId && existingIds.has(messageId)) {
-            stats.total_already_existed++;
-            continue;
-          }
-
-          // Signature dedup for messages without ID
-          if (!messageId) {
-            const sig = `${timestamp}`;
-            if (existingSignatures.has(sig)) {
-              stats.total_already_existed++;
-              continue;
-            }
-            existingSignatures.add(sig);
-          } else {
-            existingIds.add(messageId);
-          }
 
           rowsToInsert.push({
             conversation_id: conv.id,
@@ -242,7 +317,7 @@ serve(async (req) => {
             timestamp: new Date(timestamp * 1000).toISOString(),
             created_at: new Date(timestamp * 1000).toISOString(),
             status: fromMe ? "sent" : "delivered",
-            metadata: { source: "reconciliation", original_msg_id: messageId },
+            metadata: { source: "reconciliation" },
           });
         }
 
@@ -259,18 +334,15 @@ serve(async (req) => {
               .insert(chunk);
 
             if (insertErr) {
-              // If unique constraint violation, try one-by-one
               if (insertErr.code === "23505" || insertErr.message?.includes("duplicate")) {
                 let singleInserted = 0;
                 for (const row of chunk) {
-                  const { error: singleErr } = await supabase
-                    .from("conversation_messages")
-                    .insert(row);
+                  const { error: singleErr } = await supabase.from("conversation_messages").insert(row);
                   if (!singleErr) singleInserted++;
                 }
-                console.log(`[Reconcile] ${cleanPhone}: chunk had dupes, inserted ${singleInserted}/${chunk.length} individually`);
+                console.log(`[Reconcile] ${cleanPhone}: dupes in chunk, inserted ${singleInserted}/${chunk.length}`);
               } else {
-                console.error(`[Reconcile] ${cleanPhone}: insert error: ${insertErr.message}`);
+                console.error(`[Reconcile] ${cleanPhone}: ${insertErr.message}`);
                 detail.error = insertErr.message;
               }
             }
@@ -290,10 +362,8 @@ serve(async (req) => {
             .eq("conversation_id", conv.id);
           detail.messages_after = afterCount || 0;
 
-          // Mark as reconciled
           await supabase.from("conversations").update({ reconciled_at: new Date().toISOString() }).eq("id", conv.id);
 
-          // Log
           await supabase.from("conversation_reconciliation_log").insert({
             conversation_id: conv.id,
             phone: cleanPhone,
@@ -328,8 +398,7 @@ serve(async (req) => {
       }
 
       stats.details.push(detail);
-      // Rate limit: 300ms between conversations to avoid Z-API throttle
-      await delay(300);
+      await delay(500);
     }
 
     return new Response(JSON.stringify({ success: true, ...stats }), {
