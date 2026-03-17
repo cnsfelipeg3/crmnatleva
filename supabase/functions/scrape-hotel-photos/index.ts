@@ -321,6 +321,10 @@ Deno.serve(async (req) => {
       photos,
       source_url: official?.sourceUrl || "",
       room_names: roomNames,
+      room_registry: roomRegistry.map(r => ({
+        name: r.name, source_url: r.source_url, category: r.category,
+        confidence: r.confidence, text_evidence: r.text_evidence,
+      })),
       section_details: sectionDetails,
       pages_scraped: official?.pagesScraped || 0,
       total_site_pages: official?.totalPages || 0,
