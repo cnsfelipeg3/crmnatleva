@@ -129,8 +129,8 @@ export default function AITeam() {
         </Suspense>
       )}
 
-      {/* Drawer */}
-      <AITeamAgentDrawer
+      {/* Immersive Agent Panel */}
+      <AITeamAgentPanel
         agent={selectedAgent}
         tasks={tasks}
         open={!!selectedAgent}
