@@ -2362,36 +2362,43 @@ export default function LiveChat() {
                                 </div>
                               )}
                               {/* Image message */}
-                              {msg.message_type === "image" && (
-                                <div>
-                                  {msg.media_url ? (
-                                    <>
-                                      <img
-                                        src={msg.media_url}
-                                        alt="Imagem"
-                                        className="rounded-lg w-full max-w-[220px] sm:max-w-[280px] lg:max-w-[340px] max-h-[320px] object-cover cursor-pointer mb-1"
-                                        onClick={() => setLightboxUrl(msg.media_url!)}
-                                      />
-                                      <div className="flex items-center gap-2 mt-1">
-                                        <a
-                                          href={msg.media_url}
-                                          download={`imagem_${msg.id}.jpg`}
-                                          className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5"
-                                          onClick={e => e.stopPropagation()}
-                                        >
-                                          <File className="h-2.5 w-2.5" /> Baixar
-                                        </a>
+                              {msg.message_type === "image" && (() => {
+                                const imgSrc = msg.media_url || (msg.text && msg.text.startsWith("/9j/") ? `data:image/jpeg;base64,${msg.text}` : null);
+                                return (
+                                  <div>
+                                    {imgSrc ? (
+                                      <>
+                                        <img
+                                          src={imgSrc}
+                                          alt="Imagem"
+                                          className="rounded-lg w-full max-w-[220px] sm:max-w-[280px] lg:max-w-[340px] max-h-[320px] object-cover cursor-pointer mb-1"
+                                          onClick={() => setLightboxUrl(imgSrc)}
+                                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                        />
+                                        {msg.media_url && (
+                                          <div className="flex items-center gap-2 mt-1">
+                                            <a
+                                              href={msg.media_url}
+                                              download={`imagem_${msg.id}.jpg`}
+                                              className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5"
+                                              onClick={e => e.stopPropagation()}
+                                            >
+                                              <File className="h-2.5 w-2.5" /> Baixar
+                                            </a>
+                                          </div>
+                                        )}
+                                        {!msg.media_url && <p className="text-[9px] opacity-40 mt-0.5">miniatura</p>}
+                                      </>
+                                    ) : (
+                                      <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2">
+                                        <Image className="h-4 w-4" />
+                                        <span>📷 Imagem</span>
                                       </div>
-                                    </>
-                                  ) : (
-                                    <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2">
-                                      <Image className="h-4 w-4" />
-                                      <span>📷 Imagem indisponível</span>
-                                    </div>
-                                  )}
-                                  {msg.text && <p className="text-sm leading-relaxed mt-1">{msg.text}</p>}
-                                </div>
-                              )}
+                                    )}
+                                    {msg.text && !msg.text.startsWith("/9j/") && <p className="text-sm leading-relaxed mt-1">{msg.text}</p>}
+                                  </div>
+                                );
+                              })()}
                               {/* Video message */}
                               {msg.message_type === "video" && (
                                 <div>
