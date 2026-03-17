@@ -758,7 +758,7 @@ export default function ProposalEditor() {
                           {/* Hotel Photos Scraper */}
                           {item.item_type === "hotel" && item.title && (
                             <div className="md:col-span-2">
-                              <HotelPhotosScraper
+                              <HotelMediaBrowser
                                 hotelName={item.title}
                                 hotelCity={item.data?.location || ""}
                                 hotelCountry=""
@@ -768,6 +768,9 @@ export default function ProposalEditor() {
                                   }
                                   const existingPhotos = item.data?.official_photos || [];
                                   updateItemData(idx, "official_photos", [...existingPhotos, ...photos]);
+                                }}
+                                onSelectRoomBlock={(block) => {
+                                  updateItemData(idx, "room_block", block);
                                 }}
                               />
                             </div>

@@ -243,7 +243,7 @@ export default function HotelEntriesEditor({
                       )}
                       {hotel.hotel_name && (
                         <div className="mt-2">
-                          <HotelPhotosScraper
+                          <HotelMediaBrowser
                             hotelName={hotel.hotel_name}
                             hotelCity={hotel.hotel_city}
                             hotelCountry={hotel.hotel_country}
