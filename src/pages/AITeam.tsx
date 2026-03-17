@@ -1,11 +1,11 @@
 import { useState, lazy, Suspense, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Brain, Plus, Building2, LayoutDashboard, Box } from "lucide-react";
 import { agents as mockAgents, initialTasks, type Agent } from "@/components/ai-team/mockData";
 import { useAgentEngine } from "@/components/ai-team/useAgentEngine";
 import AITeamStatusCards from "@/components/ai-team/AITeamStatusCards";
 import AITeamAgentCard from "@/components/ai-team/AITeamAgentCard";
 import AITeamTaskList from "@/components/ai-team/AITeamTaskList";
-import AITeamAgentPanel from "@/components/ai-team/AITeamAgentPanel";
 import AITeamCreateAgentDialog from "@/components/ai-team/AITeamCreateAgentDialog";
 import OfficeGameView from "@/components/ai-team/office-game/OfficeGameView";
 import { Button } from "@/components/ui/button";
@@ -17,13 +17,10 @@ type ViewMode = "dashboard" | "office" | "office3d";
 
 export default function AITeam() {
   const { agents, tasks, events, addAgent, removeTask } = useAgentEngine(mockAgents, initialTasks);
-  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [view, setView] = useState<ViewMode>("dashboard");
   const { toast } = useToast();
-
-  // Derive selected agent from live engine state so it stays fresh
-  const selectedAgent = selectedAgentId ? agents.find(a => a.id === selectedAgentId) ?? null : null;
+  const navigate = useNavigate();
 
   const handleApprove = useCallback((id: string) => {
     removeTask(id);
@@ -41,8 +38,8 @@ export default function AITeam() {
   }, [addAgent, toast]);
 
   const handleSelectAgent = useCallback((agent: Agent) => {
-    setSelectedAgentId(agent.id);
-  }, []);
+    navigate(`/ai-team/agent/${agent.id}`);
+  }, [navigate]);
 
   return (
     <div className="space-y-8 p-6 max-w-7xl mx-auto">
@@ -131,15 +128,6 @@ export default function AITeam() {
           />
         </Suspense>
       )}
-
-      {/* Immersive Agent Panel */}
-      <AITeamAgentPanel
-        agent={selectedAgent}
-        tasks={tasks}
-        events={events}
-        open={!!selectedAgent}
-        onOpenChange={(open) => { if (!open) setSelectedAgentId(null); }}
-      />
 
       <AITeamCreateAgentDialog
         open={createOpen}

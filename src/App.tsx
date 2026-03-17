@@ -225,6 +225,7 @@ function AppRoutes() {
 
           {/* AI Team */}
           <Route path="/ai-team" element={<AITeam />} />
+          <Route path="/ai-team/agent/:agentId" element={<AITeamAgentDetail />} />
 
           {/* Operação Diária */}
           <Route path="/operacao/inbox" element={<OperacaoInbox />} />
