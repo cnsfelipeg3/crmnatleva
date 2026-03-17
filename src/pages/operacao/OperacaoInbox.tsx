@@ -48,6 +48,8 @@ import {
 } from "@/components/inbox/helpers";
 import { VirtualConversationList } from "@/components/inbox/VirtualConversationList";
 import { MessageBubble } from "@/components/inbox/MessageBubble";
+import { useInboxMessages } from "@/components/inbox/useInboxMessages";
+import { useInboxRealtime } from "@/components/inbox/useInboxRealtime";
 
 // (All helpers, types, constants now imported from @/components/inbox/*)
 
@@ -502,7 +504,7 @@ function OperacaoInboxInner() {
   useEffect(() => {
     const loadDbConversations = async () => {
       await initPersistence();
-      const data = await fetchAllRows("conversations", "*", {
+      const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned", {
         order: { column: "last_message_at", ascending: false },
         cacheMs: 0,
         bypassCache: true,
@@ -636,7 +638,7 @@ function OperacaoInboxInner() {
 
         const { data: unifiedRows, error: unifiedErr } = await (supabase
           .from("conversation_messages" as any)
-          .select("*")
+          .select("id, conversation_id, sender_type, direction, message_type, content, text, media_url, status, read_status, timestamp, created_at, external_message_id")
           .in("conversation_id", allConversationIds)
           .order("timestamp", { ascending: false, nullsFirst: false })
           .order("created_at", { ascending: false })
@@ -709,7 +711,7 @@ function OperacaoInboxInner() {
 
     const { data: olderRows } = await (supabase
       .from("conversation_messages" as any)
-      .select("*")
+      .select("id, conversation_id, sender_type, direction, message_type, content, media_url, status, timestamp, created_at, external_message_id")
       .in("conversation_id", allConversationIds)
       .lt("timestamp", cursor)
       .order("timestamp", { ascending: false, nullsFirst: false })
