@@ -79,7 +79,7 @@ function useNeuralTyping(agent: Agent | null, open: boolean) {
   return { lines, cursorLine, cursorChar, totalLines: 3 };
 }
 
-export default function AITeamAgentPanel({ agent, tasks, open, onOpenChange }: Props) {
+export default function AITeamAgentPanel({ agent, tasks, events = [], open, onOpenChange }: Props) {
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [phase, setPhase] = useState<"closed" | "connecting" | "open">("closed");
