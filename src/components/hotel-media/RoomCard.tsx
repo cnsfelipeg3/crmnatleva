@@ -131,6 +131,11 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
               <Eye className="w-2.5 h-2.5" /> {detail.details["Vista"]}
             </span>
           )}
+          {highlight && !detail?.details?.["Vista"]?.toLowerCase().includes(highlight.toLowerCase()) && (
+            <span className="inline-flex items-center gap-1 text-[10px] text-primary bg-primary/10 rounded-md px-1.5 py-0.5 font-medium">
+              <Sparkles className="w-2.5 h-2.5" /> {highlight}
+            </span>
+          )}
         </div>
 
         {/* Actions */}
