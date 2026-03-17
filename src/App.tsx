@@ -92,6 +92,7 @@ const AIStrategyKnowledge = lazy(() => import("@/pages/AIStrategyKnowledge"));
 const AILearningDashboard = lazy(() => import("@/pages/AILearningDashboard"));
 const CerebroNatLeva = lazy(() => import("@/pages/CerebroNatLeva"));
 const AITeam = lazy(() => import("@/pages/AITeam"));
+const AITeamAgentDetail = lazy(() => import("@/pages/AITeamAgentDetail"));
 
 // Portal do Cliente
 const PortalLogin = lazy(() => import("@/pages/portal/PortalLogin"));
