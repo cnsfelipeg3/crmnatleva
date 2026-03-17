@@ -1,4 +1,5 @@
 export type AgentStatus = 'idle' | 'analyzing' | 'suggesting';
+export type AgentLevel = 'basic' | 'intermediate' | 'advanced';
 
 export interface Agent {
   id: string;
@@ -6,10 +7,14 @@ export interface Agent {
   emoji: string;
   role: string;
   sector: string;
+  level: AgentLevel;
+  skills: string[];
+  scope: string[];
+  restrictions: string[];
+  behaviorPrompt: string;
   status: AgentStatus;
   lastAction: string;
   currentThought: string;
-  skills: string[];
 }
 
 export type TaskStatus = 'detected' | 'analyzing' | 'suggested' | 'pending';
@@ -25,6 +30,41 @@ export interface Task {
   createdAt: string;
 }
 
+export const defaultSkills = [
+  'Detectar problemas',
+  'Sugerir melhorias',
+  'Analisar métricas',
+  'Otimizar UX',
+  'Revisar processos',
+  'Gerar ideias',
+  'Priorizar tarefas',
+];
+
+export const defaultScopes = [
+  'Propostas',
+  'Biblioteca de mídia',
+  'CRM',
+  'Financeiro',
+  'Vendas',
+  'Sistema geral',
+];
+
+export const defaultRestrictions = [
+  'Não executar automaticamente',
+  'Apenas sugerir',
+  'Não alterar dados sensíveis',
+  'Requer aprovação',
+];
+
+export const sectorOptions = [
+  'Vendas',
+  'Operações',
+  'Financeiro',
+  'Marketing',
+  'Produto',
+  'Gestão',
+];
+
 export const agents: Agent[] = [
   {
     id: 'gerente',
@@ -32,11 +72,15 @@ export const agents: Agent[] = [
     emoji: '👨‍💼',
     role: 'Coordena os demais agentes e prioriza tarefas estratégicas',
     sector: 'Gestão',
+    level: 'advanced',
+    skills: ['Priorização', 'Delegação', 'Visão sistêmica'],
+    scope: ['Sistema geral'],
+    restrictions: ['Requer aprovação'],
+    behaviorPrompt: 'Seja estratégico e focado em resultados. Priorize tarefas de maior impacto.',
     status: 'analyzing',
     lastAction: 'Priorizou 3 melhorias para o módulo de propostas',
     currentThought:
       'Estou avaliando as sugestões do Auditor e do Estrategista para definir a ordem de execução. Atualmente, a área de propostas apresenta maior potencial de ganho imediato.',
-    skills: ['Priorização', 'Delegação', 'Visão sistêmica'],
   },
   {
     id: 'auditor',
@@ -44,11 +88,15 @@ export const agents: Agent[] = [
     emoji: '🔍',
     role: 'Analisa processos, identifica gargalos e inconsistências',
     sector: 'Operações',
+    level: 'advanced',
+    skills: ['Análise de dados', 'Detecção de padrões', 'Qualidade'],
+    scope: ['Propostas', 'Biblioteca de mídia', 'CRM'],
+    restrictions: ['Apenas sugerir', 'Não alterar dados sensíveis'],
+    behaviorPrompt: 'Seja meticuloso e orientado por dados. Identifique inconsistências e oportunidades.',
     status: 'suggesting',
     lastAction: 'Detectou oportunidade na biblioteca de mídia',
     currentThought:
       'Identifiquei que a taxa de reutilização de mídias entre propostas é baixa — apenas 22% das fotos são reaproveitadas. Isso indica oportunidade de criar pacotes de mídia por destino.',
-    skills: ['Análise de dados', 'Detecção de padrões', 'Qualidade'],
   },
   {
     id: 'estrategista',
@@ -56,11 +104,15 @@ export const agents: Agent[] = [
     emoji: '🧠',
     role: 'Sugere melhorias de longo prazo e identifica tendências',
     sector: 'Produto',
+    level: 'advanced',
+    skills: ['Tendências', 'Estratégia comercial', 'Inovação'],
+    scope: ['Vendas', 'Propostas', 'Financeiro'],
+    restrictions: ['Apenas sugerir', 'Requer aprovação'],
+    behaviorPrompt: 'Pense a longo prazo. Identifique tendências e proponha inovações de alto impacto.',
     status: 'analyzing',
     lastAction: 'Analisando padrões de vendas dos últimos 30 dias',
     currentThought:
       'Percebo uma concentração de vendas em destinos europeus nos últimos 30 dias, porém a margem em destinos nacionais tem sido 18% maior. Recomendo reforçar propostas nacionais premium.',
-    skills: ['Tendências', 'Estratégia comercial', 'Inovação'],
   },
 ];
 

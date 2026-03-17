@@ -10,6 +10,12 @@ const statusConfig: Record<Agent["status"], { label: string; dot: string }> = {
   suggesting: { label: "Sugerindo", dot: "bg-emerald-500 animate-pulse" },
 };
 
+const levelLabels: Record<string, string> = {
+  basic: "Básico",
+  intermediate: "Intermediário",
+  advanced: "Avançado",
+};
+
 interface Props {
   agent: Agent;
   taskCount: number;
@@ -20,13 +26,18 @@ export default function AITeamAgentCard({ agent, taskCount, onViewDetails }: Pro
   const st = statusConfig[agent.status];
 
   return (
-    <Card className="p-5 flex flex-col gap-3 hover:shadow-md transition-shadow">
+    <Card className="p-5 flex flex-col gap-3 hover:shadow-md transition-all duration-200 ease-out">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
           <span className="text-2xl">{agent.emoji}</span>
           <div>
             <h3 className="font-semibold text-sm">{agent.name}</h3>
-            <Badge variant="secondary" className="text-[10px] mt-0.5">{agent.sector}</Badge>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <Badge variant="secondary" className="text-[10px]">{agent.sector}</Badge>
+              {agent.level && (
+                <Badge variant="outline" className="text-[10px]">{levelLabels[agent.level] ?? agent.level}</Badge>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -36,6 +47,18 @@ export default function AITeamAgentCard({ agent, taskCount, onViewDetails }: Pro
       </div>
 
       <p className="text-xs text-muted-foreground leading-relaxed">{agent.role}</p>
+
+      {/* Skills tags — show max 3 */}
+      {agent.skills.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {agent.skills.slice(0, 3).map((s) => (
+            <Badge key={s} variant="outline" className="text-[10px] font-normal bg-muted/30">{s}</Badge>
+          ))}
+          {agent.skills.length > 3 && (
+            <span className="text-[10px] text-muted-foreground self-center">+{agent.skills.length - 3}</span>
+          )}
+        </div>
+      )}
 
       <div className="text-xs bg-muted/50 rounded-md p-2 border border-border/50">
         <span className="text-muted-foreground">Última ação:</span>{" "}
