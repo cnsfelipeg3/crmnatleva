@@ -1,6 +1,8 @@
+import { useRef, useState } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { DESKS, RECEPTION, SOFAS, PLANTS, WHITEBOARD, WALLS, FLOOR_SIZE, CONFERENCE_TABLE } from './mapData3d';
 import { Html } from '@react-three/drei';
-import logoNatleva from '@/assets/logo-natleva-clean.png';
+import logoNatleva from '@/assets/logo-natleva-wall.png';
 
 /* ── Desk ──────────────────────────────────────── */
 function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; label?: string }) {
