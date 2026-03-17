@@ -23,9 +23,11 @@ const levelLabels: Record<string, string> = {
 };
 
 const statusConfig: Record<string, { color: string; rgb: string; label: string }> = {
-  idle: { color: "rgba(120,120,140,0.8)", rgb: "120,120,140", label: "STANDBY" },
+  idle: { color: "rgba(120,120,140,0.8)", rgb: "120,120,140", label: "AGUARDANDO" },
   analyzing: { color: "rgba(60,180,255,0.8)", rgb: "60,180,255", label: "ANALISANDO" },
   suggesting: { color: "rgba(16,185,129,0.8)", rgb: "16,185,129", label: "SUGERINDO" },
+  waiting: { color: "rgba(245,158,11,0.8)", rgb: "245,158,11", label: "AGUARDANDO DECISÃO" },
+  alert: { color: "rgba(239,68,68,0.8)", rgb: "239,68,68", label: "ALERTA" },
 };
 
 const priorityConfig: Record<string, { label: string; dot: string; glow: string }> = {

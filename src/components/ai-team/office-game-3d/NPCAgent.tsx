@@ -18,6 +18,8 @@ const STATUS_COLORS: Record<string, string> = {
   idle: '#9ca3af',
   analyzing: '#3b82f6',
   suggesting: '#10b981',
+  waiting: '#f59e0b',
+  alert: '#ef4444',
 };
 
 const STATUS_LABELS: Record<string, string> = {
