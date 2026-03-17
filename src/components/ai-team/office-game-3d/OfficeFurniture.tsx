@@ -1,6 +1,8 @@
+import { useRef, useState } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { DESKS, RECEPTION, SOFAS, PLANTS, WHITEBOARD, WALLS, FLOOR_SIZE, CONFERENCE_TABLE } from './mapData3d';
 import { Html } from '@react-three/drei';
-import logoNatleva from '@/assets/logo-natleva-clean.png';
+import logoNatleva from '@/assets/logo-natleva-wall.png';
 
 /* ── Desk ──────────────────────────────────────── */
 function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; label?: string }) {
@@ -280,134 +282,192 @@ function CeilingLights() {
 }
 
 /* ── NatLeva Wall Branding + TVs + Travel Agency ─ */
+const TV_CONTENT = [
+  { img: 'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=800&h=500&fit=crop&q=80', label: 'Maldivas · Águas Cristalinas' },
+  { img: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&h=500&fit=crop&q=80', label: 'Paris · Cidade Luz' },
+  { img: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=800&h=500&fit=crop&q=80', label: 'Veneza · Romance Italiano' },
+  { img: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&h=500&fit=crop&q=80', label: 'Suíça · Alpes Majestosos' },
+  { img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=500&fit=crop&q=80', label: 'Caribe · Paraíso Tropical' },
+  { img: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&h=500&fit=crop&q=80', label: 'Japão · Tradição e Futuro' },
+  { img: 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=800&h=500&fit=crop&q=80', label: 'Santorini · Grécia Mágica' },
+  { img: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=800&h=500&fit=crop&q=80', label: 'Itália · Costa Amalfitana' },
+];
+
+/* ── Cycling TV ───────────────────────────────── */
+function CyclingTV({ position, rotationY, offset }: {
+  position: [number, number, number];
+  rotationY: number;
+  offset: number;
+}) {
+  const [idx, setIdx] = useState(offset % TV_CONTENT.length);
+  const timerRef = useRef(0);
+
+  useFrame((_, delta) => {
+    timerRef.current += delta;
+    if (timerRef.current > 6) {
+      timerRef.current = 0;
+      setIdx(prev => (prev + 1) % TV_CONTENT.length);
+    }
+  });
+
+  const content = TV_CONTENT[idx];
+  const tvW = 2.0;
+  const tvH = 1.2;
+
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      {/* TV bezel */}
+      <mesh castShadow>
+        <boxGeometry args={[tvW + 0.06, tvH + 0.06, 0.05]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={0.12} metalness={0.7} />
+      </mesh>
+      {/* Screen surface (emissive for glow) */}
+      <mesh position={[0, 0, 0.026]}>
+        <planeGeometry args={[tvW - 0.04, tvH - 0.04]} />
+        <meshStandardMaterial color="#111822" emissive="#2a4060" emissiveIntensity={0.3} roughness={0.1} />
+      </mesh>
+      {/* Content overlay via Html transform */}
+      <Html
+        position={[0, 0, 0.03]}
+        center
+        transform
+        scale={0.22}
+        style={{ pointerEvents: 'none' }}
+      >
+        <div style={{
+          width: '400px', height: '250px', position: 'relative',
+          overflow: 'hidden', background: '#000', borderRadius: '2px',
+        }}>
+          <img
+            src={content.img}
+            alt={content.label}
+            style={{
+              width: '100%', height: '100%', objectFit: 'cover',
+              filter: 'brightness(0.95) saturate(1.15)',
+              transition: 'opacity 0.8s ease',
+            }}
+          />
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0, height: '45%',
+            background: 'linear-gradient(transparent, rgba(0,0,0,0.75))',
+          }} />
+          <div style={{ position: 'absolute', top: '10px', left: '12px' }}>
+            <img src={logoNatleva} alt="" style={{ width: '60px', opacity: 0.85 }} />
+          </div>
+          <div style={{ position: 'absolute', bottom: '14px', left: '14px', right: '14px' }}>
+            <div style={{
+              fontSize: '18px', fontWeight: 700, color: '#fff',
+              fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '1px',
+              textShadow: '0 2px 8px rgba(0,0,0,0.9)',
+            }}>
+              {content.label}
+            </div>
+            <div style={{
+              fontSize: '9px', fontWeight: 500, color: '#c9a96e',
+              fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '3px',
+              marginTop: '4px',
+            }}>
+              NATLEVA TRAVEL
+            </div>
+          </div>
+        </div>
+      </Html>
+      {/* Screen glow light */}
+      <pointLight position={[0, 0, 0.4]} intensity={0.2} color="#6090c0" distance={2.5} decay={2} />
+      {/* Wall bracket */}
+      <mesh position={[0, 0, -0.04]}>
+        <boxGeometry args={[0.3, 0.12, 0.04]} />
+        <meshStandardMaterial color="#2a2a2a" roughness={0.4} metalness={0.5} />
+      </mesh>
+    </group>
+  );
+}
+
+/* ── Logo Wall Panel ──────────────────────────── */
+function LogoPanel({ position, rotationY, width, height }: {
+  position: [number, number, number];
+  rotationY: number;
+  width: number;
+  height: number;
+}) {
+  const logoScale = width * 0.045;
+  return (
+    <group position={position} rotation={[0, rotationY, 0]}>
+      {/* Dark panel */}
+      <mesh>
+        <boxGeometry args={[width, height, 0.03]} />
+        <meshStandardMaterial color="#0a1420" roughness={0.2} metalness={0.25} />
+      </mesh>
+      {/* Gold border lines */}
+      <mesh position={[0, height / 2 - 0.02, 0.016]}>
+        <boxGeometry args={[width - 0.2, 0.006, 0.001]} />
+        <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.5} metalness={0.6} roughness={0.2} />
+      </mesh>
+      <mesh position={[0, -height / 2 + 0.02, 0.016]}>
+        <boxGeometry args={[width - 0.2, 0.006, 0.001]} />
+        <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.5} metalness={0.6} roughness={0.2} />
+      </mesh>
+      {/* Logo image */}
+      <Html
+        position={[0, 0.05, 0.02]}
+        center
+        transform
+        scale={logoScale}
+        style={{ pointerEvents: 'none' }}
+      >
+        <img
+          src={logoNatleva}
+          alt="NatLeva"
+          style={{ width: '200px', filter: 'drop-shadow(0 0 20px rgba(30,80,50,0.5))' }}
+        />
+      </Html>
+      {/* Tagline */}
+      <Html
+        position={[0, -height / 2 + 0.12, 0.02]}
+        center
+        transform
+        scale={logoScale * 0.8}
+        style={{ pointerEvents: 'none' }}
+      >
+        <div style={{
+          fontSize: '10px', fontWeight: 500, letterSpacing: '5px',
+          color: '#c9a96e', fontFamily: 'Space Grotesk, sans-serif',
+          whiteSpace: 'nowrap', textTransform: 'uppercase',
+        }}>
+          Viagens Exclusivas
+        </div>
+      </Html>
+    </group>
+  );
+}
+
 function NatLevaBranding() {
-  const tvContent = [
-    { img: 'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=800&h=500&fit=crop&q=80', label: 'Maldivas · Águas Cristalinas' },
-    { img: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&h=500&fit=crop&q=80', label: 'Paris · Cidade Luz' },
-    { img: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=800&h=500&fit=crop&q=80', label: 'Veneza · Romance Italiano' },
-    { img: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&h=500&fit=crop&q=80', label: 'Suíça · Alpes Majestosos' },
-    { img: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=500&fit=crop&q=80', label: 'Caribe · Paraíso Tropical' },
-    { img: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&h=500&fit=crop&q=80', label: 'Japão · Tradição e Futuro' },
-  ];
+  const hw = FLOOR_SIZE.w / 2;
+  const hh = FLOOR_SIZE.h / 2;
 
   return (
     <group>
-      {/* ═══ NORTH WALL — Giant NatLeva Logo + 2 TVs ═══ */}
+      {/* ═══ NORTH WALL ═══ */}
+      <LogoPanel position={[0, 1.3, -hh + 0.08]} rotationY={0} width={5.0} height={1.6} />
+      <CyclingTV position={[-6.5, 1.2, -hh + 0.09]} rotationY={0} offset={0} />
+      <CyclingTV position={[6.5, 1.2, -hh + 0.09]} rotationY={0} offset={3} />
 
-      {/* BIG LOGO — center of north wall */}
-      <group position={[0, 1.3, -FLOOR_SIZE.h / 2 + 0.08]}>
-        <mesh>
-          <boxGeometry args={[5.0, 1.6, 0.03]} />
-          <meshStandardMaterial color="#0a1420" roughness={0.2} metalness={0.25} />
-        </mesh>
-        <Html position={[0, 0.1, 0.02]} center distanceFactor={3.5} style={{ pointerEvents: 'none' }}>
-          <img
-            src={logoNatleva}
-            alt="NatLeva"
-            style={{ width: '360px', filter: 'drop-shadow(0 0 30px rgba(201,169,110,0.6))' }}
-          />
-        </Html>
-        {/* Gold lines */}
-        <mesh position={[0, -0.65, 0.016]}>
-          <boxGeometry args={[4.4, 0.008, 0.001]} />
-          <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.5} metalness={0.6} roughness={0.2} />
-        </mesh>
-        <mesh position={[0, 0.68, 0.016]}>
-          <boxGeometry args={[4.4, 0.008, 0.001]} />
-          <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.5} metalness={0.6} roughness={0.2} />
-        </mesh>
-        <Html position={[0, -0.55, 0.02]} center distanceFactor={4} style={{ pointerEvents: 'none' }}>
-          <div style={{
-            fontSize: '11px', fontWeight: 500, letterSpacing: '6px',
-            color: '#c9a96e', fontFamily: 'Space Grotesk, sans-serif',
-            whiteSpace: 'nowrap', textTransform: 'uppercase', opacity: 0.9,
-          }}>
-            Viagens Exclusivas · Experiências Únicas
-          </div>
-        </Html>
-      </group>
+      {/* ═══ SOUTH WALL ═══ */}
+      <LogoPanel position={[0, 1.3, hh - 0.08]} rotationY={Math.PI} width={3.5} height={1.2} />
+      <CyclingTV position={[-6, 1.2, hh - 0.09]} rotationY={Math.PI} offset={1} />
+      <CyclingTV position={[6, 1.2, hh - 0.09]} rotationY={Math.PI} offset={4} />
 
-      {/* TV 1 — left of north wall */}
-      <WallTV position={[-6.5, 1.2, -FLOOR_SIZE.h / 2 + 0.09]} rotation={[0, 0, 0]} content={tvContent[0]} />
+      {/* ═══ EAST WALL ═══ */}
+      <LogoPanel position={[hw - 0.08, 1.3, 0]} rotationY={-Math.PI / 2} width={3.0} height={1.0} />
+      <CyclingTV position={[hw - 0.09, 1.2, -3.5]} rotationY={-Math.PI / 2} offset={2} />
 
-      {/* TV 2 — right of north wall */}
-      <WallTV position={[6.5, 1.2, -FLOOR_SIZE.h / 2 + 0.09]} rotation={[0, 0, 0]} content={tvContent[1]} />
-
-      {/* ═══ SOUTH WALL — Logo mirror + 2 TVs ═══ */}
-
-      {/* Logo on south wall */}
-      <group position={[0, 1.3, FLOOR_SIZE.h / 2 - 0.08]}>
-        <mesh rotation-y={Math.PI}>
-          <boxGeometry args={[3.5, 1.2, 0.03]} />
-          <meshStandardMaterial color="#0a1420" roughness={0.2} metalness={0.25} />
-        </mesh>
-        <Html position={[0, 0.05, -0.02]} center distanceFactor={4} style={{ pointerEvents: 'none', transform: 'scaleX(-1)' }}>
-          <img
-            src={logoNatleva}
-            alt="NatLeva"
-            style={{ width: '240px', filter: 'drop-shadow(0 0 20px rgba(201,169,110,0.5))', transform: 'scaleX(-1)' }}
-          />
-        </Html>
-        <mesh position={[0, -0.5, -0.016]} rotation-y={Math.PI}>
-          <boxGeometry args={[3.0, 0.006, 0.001]} />
-          <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.4} metalness={0.5} roughness={0.3} />
-        </mesh>
-      </group>
-
-      {/* TV 3 — left of south wall */}
-      <WallTV position={[-6, 1.2, FLOOR_SIZE.h / 2 - 0.09]} rotation={[0, Math.PI, 0]} content={tvContent[2]} />
-
-      {/* TV 4 — right of south wall */}
-      <WallTV position={[6, 1.2, FLOOR_SIZE.h / 2 - 0.09]} rotation={[0, Math.PI, 0]} content={tvContent[3]} />
-
-      {/* ═══ EAST WALL — Logo + TV ═══ */}
-      <group position={[FLOOR_SIZE.w / 2 - 0.08, 1.3, 0]}>
-        <mesh rotation-y={-Math.PI / 2}>
-          <boxGeometry args={[3.0, 1.0, 0.03]} />
-          <meshStandardMaterial color="#0a1420" roughness={0.2} metalness={0.25} />
-        </mesh>
-        <Html position={[0, 0.05, 0]} center distanceFactor={4.5} style={{ pointerEvents: 'none' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <img src={logoNatleva} alt="NatLeva" style={{ width: '140px', filter: 'drop-shadow(0 0 12px rgba(201,169,110,0.4))' }} />
-            <div style={{
-              fontSize: '8px', fontWeight: 600, letterSpacing: '3px',
-              color: '#c9a96e', fontFamily: 'Space Grotesk, sans-serif',
-            }}>
-              ✈ AI TEAM · CENTRO DE OPERAÇÕES
-            </div>
-          </div>
-        </Html>
-      </group>
-
-      {/* TV on east wall */}
-      <WallTV position={[FLOOR_SIZE.w / 2 - 0.09, 1.2, -3.5]} rotation={[0, -Math.PI / 2, 0]} content={tvContent[4]} />
-
-      {/* ═══ WEST WALL — Logo + TV ═══ */}
-      <group position={[-FLOOR_SIZE.w / 2 + 0.08, 1.3, 0]}>
-        <mesh rotation-y={Math.PI / 2}>
-          <boxGeometry args={[3.0, 1.0, 0.03]} />
-          <meshStandardMaterial color="#0a1420" roughness={0.2} metalness={0.25} />
-        </mesh>
-        <Html position={[0, 0.05, 0]} center distanceFactor={4.5} style={{ pointerEvents: 'none' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-            <img src={logoNatleva} alt="NatLeva" style={{ width: '140px', filter: 'drop-shadow(0 0 12px rgba(201,169,110,0.4))' }} />
-            <div style={{
-              fontSize: '8px', fontWeight: 600, letterSpacing: '3px',
-              color: '#c9a96e', fontFamily: 'Space Grotesk, sans-serif',
-            }}>
-              VIAGENS PREMIUM
-            </div>
-          </div>
-        </Html>
-      </group>
-
-      {/* TV on west wall */}
-      <WallTV position={[-FLOOR_SIZE.w / 2 + 0.09, 1.2, -3.5]} rotation={[0, Math.PI / 2, 0]} content={tvContent[5]} />
+      {/* ═══ WEST WALL ═══ */}
+      <LogoPanel position={[-hw + 0.08, 1.3, 0]} rotationY={Math.PI / 2} width={3.0} height={1.0} />
+      <CyclingTV position={[-hw + 0.09, 1.2, -3.5]} rotationY={Math.PI / 2} offset={5} />
 
       {/* ═══ DECORATIONS ═══ */}
-
-      {/* Globe decoration */}
-      <group position={[-FLOOR_SIZE.w / 2 + 0.3, 0.7, -2]}>
+      {/* Globe */}
+      <group position={[-hw + 0.3, 0.7, -2]}>
         <mesh castShadow>
           <sphereGeometry args={[0.18, 16, 12]} />
           <meshStandardMaterial color="#2a5a8a" roughness={0.6} metalness={0.1} />
@@ -427,42 +487,34 @@ function NatLevaBranding() {
       </group>
 
       {/* Luggage */}
-      <group position={[-FLOOR_SIZE.w / 2 + 0.35, 0, 1]}>
+      <group position={[-hw + 0.35, 0, 1]}>
         <mesh position={[0, 0.18, 0]} castShadow>
           <boxGeometry args={[0.28, 0.35, 0.14]} />
           <meshStandardMaterial color="#8b4513" roughness={0.7} metalness={0.05} />
-        </mesh>
-        <mesh position={[0, 0.18, 0.071]}>
-          <boxGeometry args={[0.22, 0.01, 0.001]} />
-          <meshStandardMaterial color="#c9a96e" roughness={0.4} metalness={0.3} />
         </mesh>
         <mesh position={[0, 0.38, 0]}>
           <boxGeometry args={[0.08, 0.03, 0.04]} />
           <meshStandardMaterial color="#5a3a1a" roughness={0.5} metalness={0.2} />
         </mesh>
       </group>
-      <group position={[-FLOOR_SIZE.w / 2 + 0.55, 0, 1.1]}>
+      <group position={[-hw + 0.55, 0, 1.1]}>
         <mesh position={[0, 0.12, 0]} castShadow>
           <boxGeometry args={[0.22, 0.24, 0.12]} />
           <meshStandardMaterial color="#2c5f7a" roughness={0.6} metalness={0.08} />
-        </mesh>
-        <mesh position={[0, 0.26, 0]}>
-          <boxGeometry args={[0.06, 0.025, 0.035]} />
-          <meshStandardMaterial color="#3a3a3a" roughness={0.4} metalness={0.3} />
         </mesh>
       </group>
 
       {/* Floor logo emblem */}
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.012, 3.5]}>
         <circleGeometry args={[0.8, 32]} />
-        <meshStandardMaterial color="#c9a96e" transparent opacity={0.12} roughness={0.9} />
+        <meshStandardMaterial color="#1a5a30" transparent opacity={0.1} roughness={0.9} />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.013, 3.5]}>
         <ringGeometry args={[0.7, 0.8, 32]} />
-        <meshStandardMaterial color="#c9a96e" transparent opacity={0.2} roughness={0.8} />
+        <meshStandardMaterial color="#1a5a30" transparent opacity={0.15} roughness={0.8} />
       </mesh>
 
-      {/* Airplane model on reception */}
+      {/* Airplane on reception */}
       <group position={[RECEPTION.pos.x - 0.6, RECEPTION.pos.y + 0.15, RECEPTION.pos.z]}>
         <mesh castShadow>
           <capsuleGeometry args={[0.02, 0.12, 4, 8]} />
@@ -474,80 +526,13 @@ function NatLevaBranding() {
         </mesh>
         <mesh position={[0, 0.07, 0]} rotation-z={Math.PI / 2}>
           <boxGeometry args={[0.005, 0.04, 0.02]} />
-          <meshStandardMaterial color="#c9a96e" roughness={0.3} metalness={0.3} />
+          <meshStandardMaterial color="#1a5a30" roughness={0.3} metalness={0.3} />
         </mesh>
       </group>
     </group>
   );
 }
 
-/* ── Wall-mounted TV Component ────────────────── */
-function WallTV({ position, rotation, content }: {
-  position: [number, number, number];
-  rotation: [number, number, number];
-  content: { img: string; label: string };
-}) {
-  const tvW = 2.0;
-  const tvH = 1.2;
-  return (
-    <group position={position} rotation={rotation}>
-      {/* TV Frame — slim bezel */}
-      <mesh castShadow>
-        <boxGeometry args={[tvW + 0.08, tvH + 0.08, 0.04]} />
-        <meshStandardMaterial color="#0a0a0a" roughness={0.15} metalness={0.6} />
-      </mesh>
-      {/* Screen with image */}
-      <Html position={[0, 0, 0.025]} center distanceFactor={3.5} style={{ pointerEvents: 'none' }}>
-        <div style={{
-          width: '240px', height: '150px', position: 'relative',
-          overflow: 'hidden', borderRadius: '2px', background: '#000',
-        }}>
-          <img src={content.img} alt={content.label} style={{
-            width: '100%', height: '100%', objectFit: 'cover',
-            filter: 'brightness(0.9) saturate(1.2)',
-          }} />
-          {/* Gradient overlay */}
-          <div style={{
-            position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%',
-            background: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
-          }} />
-          {/* NatLeva watermark */}
-          <div style={{
-            position: 'absolute', top: '6px', left: '8px',
-          }}>
-            <img src={logoNatleva} alt="" style={{ width: '40px', opacity: 0.8 }} />
-          </div>
-          {/* Destination label */}
-          <div style={{
-            position: 'absolute', bottom: '8px', left: '10px', right: '10px',
-          }}>
-            <div style={{
-              fontSize: '10px', fontWeight: 700, color: '#fff',
-              fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '1px',
-              textShadow: '0 1px 6px rgba(0,0,0,0.8)',
-            }}>
-              {content.label}
-            </div>
-            <div style={{
-              fontSize: '6px', fontWeight: 500, color: '#c9a96e',
-              fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '2px',
-              marginTop: '2px',
-            }}>
-              NATLEVA TRAVEL
-            </div>
-          </div>
-        </div>
-      </Html>
-      {/* Screen glow effect */}
-      <pointLight position={[0, 0, 0.3]} intensity={0.15} color="#8ab4f8" distance={2} decay={2} />
-      {/* Wall mount bracket */}
-      <mesh position={[0, 0, -0.03]}>
-        <boxGeometry args={[0.3, 0.15, 0.03]} />
-        <meshStandardMaterial color="#2a2a2a" roughness={0.4} metalness={0.5} />
-      </mesh>
-    </group>
-  );
-}
 function Cafeteria() {
   const cx = 6.5, cz = -3.5;
   return (
