@@ -91,6 +91,7 @@ const BaseConhecimento = lazy(() => import("@/pages/implementacao/BaseConhecimen
 const AIStrategyKnowledge = lazy(() => import("@/pages/AIStrategyKnowledge"));
 const AILearningDashboard = lazy(() => import("@/pages/AILearningDashboard"));
 const CerebroNatLeva = lazy(() => import("@/pages/CerebroNatLeva"));
+const AITeam = lazy(() => import("@/pages/AITeam"));
 
 // Portal do Cliente
 const PortalLogin = lazy(() => import("@/pages/portal/PortalLogin"));
@@ -220,6 +221,9 @@ function AppRoutes() {
           <Route path="/implementacao/estrategia-ia" element={<AIStrategyKnowledge />} />
           <Route path="/implementacao/aprendizados-ia" element={<AILearningDashboard />} />
           <Route path="/implementacao/cerebro-natleva" element={<CerebroNatLeva />} />
+
+          {/* AI Team */}
+          <Route path="/ai-team" element={<AITeam />} />
 
           {/* Operação Diária */}
           <Route path="/operacao/inbox" element={<OperacaoInbox />} />

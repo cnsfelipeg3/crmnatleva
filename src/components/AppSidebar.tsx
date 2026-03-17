@@ -31,6 +31,7 @@ const navItems = [
   { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações Portal" },
   { to: "/propostas", icon: Presentation, label: "Propostas" },
   { to: "/midias", icon: ImageIcon, label: "Mídias" },
+  { to: "/ai-team", icon: Brain, label: "🧠 AI Team" },
 ];
 
 const financeItems = [
