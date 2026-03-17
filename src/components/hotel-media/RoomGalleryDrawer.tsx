@@ -210,8 +210,8 @@ export default function RoomGalleryDrawer({
                       key={p.url + i}
                       onClick={() => setLightboxIdx(i)}
                       className={cn(
-                        "shrink-0 w-14 h-10 rounded overflow-hidden border-2 transition-all",
-                        i === lightboxIdx ? "border-primary opacity-100 scale-110" : "border-transparent opacity-40 hover:opacity-70"
+                        "shrink-0 w-16 h-11 rounded overflow-hidden border-2 transition-all duration-150",
+                        i === lightboxIdx ? "border-accent opacity-100 scale-110" : "border-transparent opacity-40 hover:opacity-70"
                       )}
                     >
                       <img src={getDisplayUrl(p.url)} alt="" className="w-full h-full object-cover" loading="lazy" referrerPolicy="no-referrer" />
