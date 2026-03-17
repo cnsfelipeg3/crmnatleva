@@ -396,22 +396,24 @@ function LogoTexturePanel({ position, rotationY, width, height }: {
         <boxGeometry args={[width - 0.1, 0.012, 0.001]} />
         <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.8} metalness={0.7} roughness={0.15} />
       </mesh>
-      {/* Logo as textured plane — always visible */}
+      {/* Logo as textured plane — bright and illuminated */}
       <mesh position={[0, 0.06, 0.018]}>
         <planeGeometry args={[fitW, fitH]} />
         <meshStandardMaterial
           map={texture}
           transparent
           emissive="#ffffff"
-          emissiveIntensity={0.15}
+          emissiveIntensity={0.6}
           emissiveMap={texture}
-          roughness={0.3}
-          metalness={0.1}
+          roughness={0.2}
+          metalness={0.05}
           side={THREE.FrontSide}
         />
       </mesh>
-      {/* Spotlight illuminating the logo */}
-      <pointLight position={[0, 0.3, 0.5]} intensity={0.6} color="#fff5e0" distance={3} decay={2} />
+      {/* Strong spotlights illuminating the logo */}
+      <pointLight position={[0, 0.4, 0.8]} intensity={1.2} color="#fff5e0" distance={4} decay={2} />
+      <pointLight position={[-1, 0, 0.5]} intensity={0.4} color="#c9a96e" distance={3} decay={2} />
+      <pointLight position={[1, 0, 0.5]} intensity={0.4} color="#c9a96e" distance={3} decay={2} />
       {/* Tagline */}
       <Html
         position={[0, -height / 2 + 0.1, 0.02]}
