@@ -90,7 +90,7 @@ serve(async (req) => {
         .order("updated_at", { ascending: false });
 
       scopedConversationIds = Array.from(new Set([
-        conversationId,
+        resolvedConvId,
         ...(relatedConversations || []).map((c) => c.id),
       ]));
     }
