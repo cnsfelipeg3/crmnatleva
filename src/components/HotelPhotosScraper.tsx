@@ -965,7 +965,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
             {loadingSource === "google" ? <Loader2 className="w-3 h-3 animate-spin" /> : <MapPin className="w-3 h-3" />}
             Google
           </Button>
-          <Button type="button" variant={activeSource === "official" ? "default" : "outline"} size="sm" onClick={scrapePhotos} disabled={loading} className="text-[10px] h-6 px-2 gap-1">
+          <Button type="button" variant={activeSource === "official" ? "default" : "outline"} size="sm" onClick={() => scrapePhotos()} disabled={loading} className="text-[10px] h-6 px-2 gap-1">
             {loadingSource === "official" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Globe className="w-3 h-3" />}
             Site Oficial
           </Button>
