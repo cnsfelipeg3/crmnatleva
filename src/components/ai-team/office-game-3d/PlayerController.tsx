@@ -26,18 +26,63 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
   const keysRef = useRef(new Set<string>());
   const velRef = useRef({ x: 0, z: 0 });
   const zoomRef = useRef(1.0);
+  const orbitAngleRef = useRef(0); // horizontal orbit angle around player
+  const orbitPitchRef = useRef(0); // vertical pitch offset
+  const isDraggingRef = useRef(false);
+  const lastMouseRef = useRef({ x: 0, y: 0 });
   const { camera } = useThree();
 
-  // Mouse wheel zoom
+  // Mouse wheel zoom + drag orbit
   useEffect(() => {
+    const canvas = document.querySelector('canvas');
+    if (!canvas) return;
+
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       const delta = e.deltaY > 0 ? ZOOM_SPEED : -ZOOM_SPEED;
       zoomRef.current = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomRef.current + delta));
     };
-    const canvas = document.querySelector('canvas');
-    canvas?.addEventListener('wheel', onWheel, { passive: false });
-    return () => canvas?.removeEventListener('wheel', onWheel);
+
+    const onPointerDown = (e: PointerEvent) => {
+      // Right-click or middle-click, or left-click with no floor hit (we'll use right/middle)
+      if (e.button === 2 || e.button === 1) {
+        e.preventDefault();
+        isDraggingRef.current = true;
+        lastMouseRef.current = { x: e.clientX, y: e.clientY };
+        canvas.style.cursor = 'grabbing';
+      }
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!isDraggingRef.current) return;
+      const dx = e.clientX - lastMouseRef.current.x;
+      const dy = e.clientY - lastMouseRef.current.y;
+      lastMouseRef.current = { x: e.clientX, y: e.clientY };
+      orbitAngleRef.current -= dx * ORBIT_SPEED;
+      orbitPitchRef.current = Math.max(-0.3, Math.min(0.5, orbitPitchRef.current + dy * ORBIT_SPEED * 0.5));
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (e.button === 2 || e.button === 1) {
+        isDraggingRef.current = false;
+        canvas.style.cursor = '';
+      }
+    };
+
+    const onContextMenu = (e: Event) => e.preventDefault();
+
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointermove', onPointerMove);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('contextmenu', onContextMenu);
+    return () => {
+      canvas.removeEventListener('wheel', onWheel);
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointermove', onPointerMove);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('contextmenu', onContextMenu);
+    };
   }, []);
 
   useEffect(() => {
