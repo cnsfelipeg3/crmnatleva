@@ -2734,6 +2734,48 @@ export type Database = {
         }
         Relationships: []
       }
+      hotel_media_cache: {
+        Row: {
+          created_at: string
+          domain_confidence: number | null
+          hotel_name: string
+          hotel_name_normalized: string
+          id: string
+          official_domain: string | null
+          photos_count: number | null
+          rooms_found: number | null
+          scrape_result: Json
+          source_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          domain_confidence?: number | null
+          hotel_name: string
+          hotel_name_normalized: string
+          id?: string
+          official_domain?: string | null
+          photos_count?: number | null
+          rooms_found?: number | null
+          scrape_result?: Json
+          source_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          domain_confidence?: number | null
+          hotel_name?: string
+          hotel_name_normalized?: string
+          id?: string
+          official_domain?: string | null
+          photos_count?: number | null
+          rooms_found?: number | null
+          scrape_result?: Json
+          source_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hr_access_log: {
         Row: {
           action: string

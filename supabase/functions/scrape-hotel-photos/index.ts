@@ -1,8 +1,25 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+function normalizeHotelNameForCache(name: string): string {
+  return name
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().trim()
+    .replace(/\s+/g, " ")
+    .replace(/[^a-z0-9 ]/g, "");
+}
+
+function getSupabaseAdmin() {
+  return createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+}
 
 // ═══════════════════════════════════════════════
 // Types
@@ -46,7 +63,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { hotel_name, hotel_city, hotel_country } = await req.json();
+    const { hotel_name, hotel_city, hotel_country, force_refresh } = await req.json();
 
     if (!hotel_name) {
       return new Response(JSON.stringify({ success: false, error: "hotel_name é obrigatório" }), {
@@ -59,6 +76,34 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: false, error: "Firecrawl não configurado" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    const normalizedName = normalizeHotelNameForCache(hotel_name);
+    const supabaseAdmin = getSupabaseAdmin();
+
+    // ── CHECK CACHE (unless force_refresh) ──
+    if (!force_refresh) {
+      const { data: cached } = await supabaseAdmin
+        .from("hotel_media_cache")
+        .select("*")
+        .eq("hotel_name_normalized", normalizedName)
+        .maybeSingle();
+
+      if (cached && cached.scrape_result) {
+        const ageHours = (Date.now() - new Date(cached.updated_at).getTime()) / (1000 * 60 * 60);
+        // Cache valid for 72 hours
+        if (ageHours < 72) {
+          console.log(`📦 Cache hit for "${hotel_name}" (${ageHours.toFixed(1)}h old, ${cached.photos_count} photos)`);
+          const result = cached.scrape_result as any;
+          return new Response(JSON.stringify({
+            ...result,
+            success: true,
+            from_cache: true,
+            cache_age_hours: Math.round(ageHours * 10) / 10,
+          }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        console.log(`📦 Cache expired for "${hotel_name}" (${ageHours.toFixed(1)}h old), re-scraping...`);
+      }
     }
 
     const locationStr = [hotel_city, hotel_country].filter(Boolean).join(", ");
@@ -179,15 +224,24 @@ Deno.serve(async (req) => {
         return (b.confidence || 0) - (a.confidence || 0);
       })
       .slice(0, 80)
-      .map(img => ({
-        url: standardizeImageUrl(img.url),
-        alt: img.alt || `${hotel_name} foto`,
-        section_name: img.section_name,
-        category: inferCategory(img.section_name, img.alt),
-        confidence: img.section_name ? 0.95 : 0.5,
-        source: img.source,
-        html_context: img.html_context,
-      }));
+      .map(img => {
+        // Sanitize section_name: strip hotel name if it leaked as section
+        let sectionName = img.section_name || "";
+        const hotelLower = hotel_name.toLowerCase().trim();
+        const sectionLower = sectionName.toLowerCase().trim();
+        if (sectionLower === hotelLower || sectionLower === cleanHotelName.toLowerCase().trim()) {
+          sectionName = "";
+        }
+        return {
+          url: standardizeImageUrl(img.url),
+          alt: img.alt || `${hotel_name} foto`,
+          section_name: sectionName,
+          category: inferCategory(sectionName, img.alt),
+          confidence: sectionName ? 0.95 : 0.5,
+          source: img.source,
+          html_context: img.html_context,
+        };
+      });
 
     const roomNames = validatedRoomNames.length > 0 ? validatedRoomNames : [...new Set(photos.map(p => p.section_name).filter(Boolean))];
 
@@ -203,21 +257,44 @@ Deno.serve(async (req) => {
     const bookingCount = photos.filter(p => p.source === "booking").length;
     console.log(`✅ Returning ${photos.length} photos (${officialCount} official, ${bookingCount} booking) with ${roomNames.length} rooms`);
 
+    const officialDomain = official?.sourceUrl ? extractDomain(official.sourceUrl) : null;
+
+    const responsePayload = {
+      success: true,
+      photos,
+      source_url: official?.sourceUrl || "",
+      room_names: roomNames,
+      section_details: sectionDetails,
+      pages_scraped: official?.pagesScraped || 0,
+      total_site_pages: official?.totalPages || 0,
+      booking_rooms_found: booking?.rooms.length || 0,
+      sources_used: {
+        official: (official?.photos.length || 0) > 0,
+        booking: bookingCount > 0,
+      },
+    };
+
+    // ── PERSIST TO CACHE (fire-and-forget) ──
+    supabaseAdmin
+      .from("hotel_media_cache")
+      .upsert({
+        hotel_name: hotel_name,
+        hotel_name_normalized: normalizedName,
+        official_domain: officialDomain,
+        domain_confidence: officialDomain ? 80 : 0,
+        scrape_result: responsePayload,
+        photos_count: photos.length,
+        rooms_found: roomNames.length,
+        source_url: official?.sourceUrl || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "hotel_name_normalized" })
+      .then(({ error: cacheErr }) => {
+        if (cacheErr) console.warn("Cache write failed:", cacheErr.message);
+        else console.log(`💾 Cached "${hotel_name}" (${photos.length} photos, ${roomNames.length} rooms)`);
+      });
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        photos,
-        source_url: official?.sourceUrl || "",
-        room_names: roomNames,
-        section_details: sectionDetails,
-        pages_scraped: official?.pagesScraped || 0,
-        total_site_pages: official?.totalPages || 0,
-        booking_rooms_found: booking?.rooms.length || 0,
-        sources_used: {
-          official: (official?.photos.length || 0) > 0,
-          booking: bookingCount > 0,
-        },
-      }),
+      JSON.stringify({ ...responsePayload, from_cache: false }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
@@ -1106,9 +1183,12 @@ function inferCategory(sectionName: string, alt: string): string {
   const text = `${sectionName} ${alt}`.toLowerCase();
   if (/fachada|exterior|facade|building|entrada|外観/i.test(text)) return "fachada";
   if (/lobby|recep[çc]|ロビー|フロント/i.test(text)) return "lobby";
-  if (/suite|suíte|penthouse|presidential|royal|スイート/i.test(text)) return "suite";
-  if (/room|quarto|camera|chambre|zimmer|deluxe|superior|standard|classic|double|twin|single|king|queen|客室|和室|洋室|和洋室|ルーム|お部屋/i.test(text)) return "quarto";
+  // Check banheiro/bathroom BEFORE room (avoids "bathroom" matching "room")
   if (/banheiro|bathroom|bagno|salle de bain/i.test(text)) return "banheiro";
+  // Check events/meetings BEFORE room (avoids "meeting room" matching "room")
+  if (/event|meeting|conferenc|sala de event|宴会|会議|ウェディング|ballroom|banquet/i.test(text)) return "eventos";
+  if (/suite|suíte|penthouse|presidential|royal|スイート/i.test(text)) return "suite";
+  if (/\b(?:room|quarto|camera|chambre|zimmer|deluxe|superior|standard|classic|double|twin|single|king|queen)\b|客室|和室|洋室|和洋室|ルーム|お部屋/i.test(text)) return "quarto";
   if (/piscina|pool|swimming|プール/i.test(text)) return "piscina";
   if (/praia|beach|spiaggia|ビーチ/i.test(text)) return "praia";
   if (/restaurante|restaurant|ristorante|dining|レストラン|ダイニング|朝食|食事/i.test(text)) return "restaurante";
@@ -1117,7 +1197,6 @@ function inferCategory(sectionName: string, alt: string): string {
   if (/academia|gym|fitness|palestra|フィットネス|ジム/i.test(text)) return "academia";
   if (/jardim|garden|giardino|庭園|庭/i.test(text)) return "jardim";
   if (/vista|view|panoram|眺望|景色/i.test(text)) return "vista";
-  if (/event|meeting|conferenc|sala|宴会|会議|ウェディング/i.test(text)) return "eventos";
   if (/area.?comum|common|terrace|terrazzo|rooftop|施設|館内|テラス/i.test(text)) return "area_comum";
   return "outro";
 }
@@ -1237,6 +1316,10 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
     "skyscanner.com", "momondo.com", "orbitz.com", "travelocity.com",
     "ctrip.com", "trip.com", "traveloka.com", "klook.com", "viator.com",
     "airbnb.com", "jalan.net", "ikyu.com", "rakuten.co.jp", "yelp.com",
+    "lonelyplanet.com", "fodors.com", "frommers.com", "timeout.com",
+    "pinterest.com", "twitter.com", "x.com", "linkedin.com", "youtube.com",
+    "tiktok.com", "wego.com", "trivago.com.br", "melhordestino.com.br",
+    "panrotas.com.br", "hotelurbano.com", "submarino.com.br",
   ];
   const chainDomains: Record<string, string[]> = {
     "aman": ["aman.com"], "four seasons": ["fourseasons.com"], "ritz carlton": ["ritzcarlton.com"],
@@ -1247,7 +1330,12 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
     "sofitel": ["sofitel.com", "all.accor.com"], "hilton": ["hilton.com"],
     "marriott": ["marriott.com"], "hyatt": ["hyatt.com"], "intercontinental": ["ihg.com"],
     "hassler": ["hotelhasslerroma.com"], "waldorf astoria": ["hilton.com"],
-    "hoshinoya": ["hoshinoresorts.com"],
+    "hoshinoya": ["hoshinoresorts.com"], "peninsula": ["peninsula.com"],
+    "shangri-la": ["shangri-la.com"], "oberoi": ["oberoihotels.com"],
+    "taj": ["tajhotels.com"], "anantara": ["anantara.com"],
+    "kempinski": ["kempinski.com"], "banyan tree": ["banyantree.com"],
+    "one&only": ["oneandonlyresorts.com"], "como": ["comohotels.com"],
+    "fasano": ["fasano.com.br"], "emiliano": ["emiliano.com.br"],
   };
 
   let bestScore = -1, bestResult: any = null;
@@ -1256,13 +1344,29 @@ function findOfficialSite(results: any[], hotelName: string): any | null {
     const domain = extractDomain(result.url);
     if (aggregators.some(a => domain.includes(a))) continue;
     let score = 0;
+
+    // Chain/brand domain match (very strong signal)
     for (const [brand, domains] of Object.entries(chainDomains)) {
-      if (nameNorm.includes(brand) && domains.some(d => domain.includes(d))) score += 15;
+      if (nameNorm.includes(brand) && domains.some(d => domain.includes(d))) score += 20;
     }
+
+    // Domain contains hotel name words
     const domainNorm = normalizeStr(domain);
-    score += nameWords.filter(w => domainNorm.includes(w)).length * 3;
+    const wordMatches = nameWords.filter(w => domainNorm.includes(w)).length;
+    score += wordMatches * 4;
+
+    // Title matches hotel name (strong signal)
     const title = normalizeStr(result.title || "");
-    if (title.includes(nameNorm)) score += 5;
+    if (title.includes(nameNorm)) score += 8;
+    else if (nameWords.length > 0 && nameWords.every(w => title.includes(w))) score += 5;
+
+    // URL path hints (rooms page = definitely hotel site)
+    const path = new URL(result.url).pathname.toLowerCase();
+    if (/\/(rooms|accommodation|suites|gallery)/.test(path)) score += 3;
+
+    // Penalize very generic domains
+    if (/\.(gov|edu|org)$/.test(domain)) score -= 5;
+
     if (score > bestScore) { bestScore = score; bestResult = result; }
   }
   return bestResult;
