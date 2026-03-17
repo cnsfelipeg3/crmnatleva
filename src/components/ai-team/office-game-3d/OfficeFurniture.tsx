@@ -279,62 +279,186 @@ function CeilingLights() {
   );
 }
 
-/* ── NatLeva Wall Branding ────────────────────── */
+/* ── NatLeva Wall Branding + Travel Agency Decor ─ */
 function NatLevaBranding() {
+  const destImages = [
+    'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=400&h=250&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&h=250&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=400&h=250&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=400&h=250&fit=crop&q=80',
+  ];
+  const destLabels = ['Maldivas', 'Paris', 'Veneza', 'Suíça'];
+
   return (
     <group>
-      {/* Large logo panel on north wall */}
-      <group position={[-3.5, 1.3, -FLOOR_SIZE.h / 2 + 0.09]}>
-        {/* Background panel */}
+      {/* ─── MAIN LOGO on north wall (real image) ─── */}
+      <group position={[0, 1.4, -FLOOR_SIZE.h / 2 + 0.09]}>
+        {/* Dark background panel */}
         <mesh>
-          <boxGeometry args={[2.4, 0.8, 0.02]} />
-          <meshStandardMaterial color="#1a2332" roughness={0.3} metalness={0.15} />
+          <boxGeometry args={[3.0, 1.0, 0.02]} />
+          <meshStandardMaterial color="#0f1a28" roughness={0.25} metalness={0.2} />
         </mesh>
-        {/* NatLeva text via HTML */}
-        <Html position={[0, 0, 0.02]} center distanceFactor={5} style={{ pointerEvents: 'none' }}>
+        {/* Actual logo image */}
+        <Html position={[0, 0.05, 0.02]} center distanceFactor={4.5} style={{ pointerEvents: 'none' }}>
+          <img
+            src={logoNatleva}
+            alt="NatLeva"
+            style={{ width: '180px', filter: 'drop-shadow(0 0 15px rgba(201,169,110,0.5))' }}
+          />
+        </Html>
+        {/* Gold accent line below */}
+        <mesh position={[0, -0.42, 0.011]}>
+          <boxGeometry args={[2.6, 0.006, 0.001]} />
+          <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.4} metalness={0.5} roughness={0.3} />
+        </mesh>
+        {/* Tagline */}
+        <Html position={[0, -0.38, 0.02]} center distanceFactor={5} style={{ pointerEvents: 'none' }}>
           <div style={{
-            fontSize: '28px', fontWeight: 800, letterSpacing: '4px',
+            fontSize: '8px', fontWeight: 500, letterSpacing: '4px',
             color: '#c9a96e', fontFamily: 'Space Grotesk, sans-serif',
-            textShadow: '0 0 20px rgba(201,169,110,0.4)',
-            whiteSpace: 'nowrap',
+            whiteSpace: 'nowrap', textTransform: 'uppercase', opacity: 0.8,
           }}>
-            NATLEVA
-          </div>
-        </Html>
-        {/* Gold accent line */}
-        <mesh position={[0, -0.32, 0.011]}>
-          <boxGeometry args={[2.0, 0.008, 0.001]} />
-          <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.3} metalness={0.5} roughness={0.3} />
-        </mesh>
-      </group>
-
-      {/* Subtitle */}
-      <group position={[-3.5, 0.85, -FLOOR_SIZE.h / 2 + 0.09]}>
-        <Html position={[0, 0, 0.02]} center distanceFactor={5} style={{ pointerEvents: 'none' }}>
-          <div style={{
-            fontSize: '9px', fontWeight: 500, letterSpacing: '3px',
-            color: '#8a8580', fontFamily: 'Space Grotesk, sans-serif',
-            whiteSpace: 'nowrap', textTransform: 'uppercase',
-          }}>
-            Viagens Exclusivas
+            Viagens Exclusivas · Experiências Únicas
           </div>
         </Html>
       </group>
 
-      {/* Decorative wall accent on east wall */}
-      <group position={[FLOOR_SIZE.w / 2 - 0.09, 1.2, -1]}>
-        <mesh rotation-y={-Math.PI / 2}>
-          <planeGeometry args={[1.2, 0.6]} />
+      {/* ─── DESTINATION POSTERS on north wall ─── */}
+      {destImages.map((img, i) => {
+        const xPos = -7.5 + i * 2.2 + (i >= 2 ? 5.4 : 0);
+        return (
+          <group key={`poster-${i}`} position={[xPos, 1.2, -FLOOR_SIZE.h / 2 + 0.09]}>
+            {/* Frame */}
+            <mesh>
+              <boxGeometry args={[1.0, 0.7, 0.015]} />
+              <meshStandardMaterial color="#1a1a1a" roughness={0.3} metalness={0.3} />
+            </mesh>
+            <Html position={[0, 0.03, 0.01]} center distanceFactor={5} style={{ pointerEvents: 'none' }}>
+              <div style={{ position: 'relative' }}>
+                <img src={img} alt={destLabels[i]} style={{
+                  width: '110px', height: '68px', objectFit: 'cover', borderRadius: '2px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }} />
+                <div style={{
+                  position: 'absolute', bottom: '2px', left: '0', right: '0',
+                  textAlign: 'center', fontSize: '7px', fontWeight: 700,
+                  color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,0.8)',
+                  fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '1px',
+                }}>
+                  {destLabels[i]}
+                </div>
+              </div>
+            </Html>
+          </group>
+        );
+      })}
+
+      {/* ─── WORLD MAP on south wall ─── */}
+      <group position={[0, 1.2, FLOOR_SIZE.h / 2 - 0.09]}>
+        <mesh rotation-y={Math.PI}>
+          <boxGeometry args={[3.5, 1.3, 0.02]} />
           <meshStandardMaterial color="#1a2332" roughness={0.3} metalness={0.15} />
         </mesh>
-        <Html position={[0, 0, 0]} center distanceFactor={6} style={{ pointerEvents: 'none' }}>
+        <Html position={[0, 0, -0.02]} center distanceFactor={4} style={{ pointerEvents: 'none', transform: 'scaleX(-1)' }}>
           <div style={{
-            fontSize: '14px', fontWeight: 700, color: '#c9a96e',
-            fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '2px',
+            width: '280px', height: '140px',
+            background: 'linear-gradient(135deg, #0f1a28 0%, #1a2a40 100%)',
+            borderRadius: '4px', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: '6px',
+            border: '1px solid rgba(201,169,110,0.2)',
           }}>
-            ✈ AI TEAM
+            <div style={{ fontSize: '28px' }}>🌍</div>
+            <div style={{
+              fontSize: '9px', fontWeight: 600, color: '#c9a96e',
+              letterSpacing: '3px', fontFamily: 'Space Grotesk, sans-serif',
+            }}>
+              DESTINOS GLOBAIS
+            </div>
+            <div style={{
+              fontSize: '7px', color: '#8a9ab5',
+              fontFamily: 'Space Grotesk, sans-serif',
+            }}>
+              +50 países · +200 destinos
+            </div>
           </div>
         </Html>
+      </group>
+
+      {/* ─── AI TEAM sign on east wall ─── */}
+      <group position={[FLOOR_SIZE.w / 2 - 0.09, 1.3, -1]}>
+        <mesh rotation-y={-Math.PI / 2}>
+          <boxGeometry args={[1.4, 0.6, 0.02]} />
+          <meshStandardMaterial color="#0f1a28" roughness={0.3} metalness={0.15} />
+        </mesh>
+        <Html position={[0, 0, 0]} center distanceFactor={5} style={{ pointerEvents: 'none' }}>
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
+          }}>
+            <div style={{
+              fontSize: '14px', fontWeight: 700, color: '#c9a96e',
+              fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '3px',
+            }}>
+              ✈ AI TEAM
+            </div>
+            <div style={{
+              fontSize: '6px', color: '#8a9ab5', letterSpacing: '2px',
+              fontFamily: 'Space Grotesk, sans-serif',
+            }}>
+              CENTRO DE OPERAÇÕES
+            </div>
+          </div>
+        </Html>
+      </group>
+
+      {/* ─── Travel shelves on west wall ─── */}
+      {/* Globe decoration */}
+      <group position={[-FLOOR_SIZE.w / 2 + 0.3, 0.7, -2]}>
+        <mesh castShadow>
+          <sphereGeometry args={[0.18, 16, 12]} />
+          <meshStandardMaterial color="#2a5a8a" roughness={0.6} metalness={0.1} />
+        </mesh>
+        {/* Equator ring */}
+        <mesh rotation-x={Math.PI / 2}>
+          <torusGeometry args={[0.19, 0.008, 8, 24]} />
+          <meshStandardMaterial color="#c9a96e" roughness={0.3} metalness={0.4} />
+        </mesh>
+        {/* Stand */}
+        <mesh position={[0, -0.22, 0]}>
+          <cylinderGeometry args={[0.015, 0.04, 0.08, 8]} />
+          <meshStandardMaterial color="#4a4a4a" roughness={0.4} metalness={0.4} />
+        </mesh>
+        <mesh position={[0, -0.26, 0]}>
+          <cylinderGeometry args={[0.06, 0.06, 0.01, 10]} />
+          <meshStandardMaterial color="#3a3a3a" roughness={0.4} metalness={0.4} />
+        </mesh>
+      </group>
+
+      {/* Luggage / suitcase decoration */}
+      <group position={[-FLOOR_SIZE.w / 2 + 0.35, 0, 1]}>
+        <mesh position={[0, 0.18, 0]} castShadow>
+          <boxGeometry args={[0.28, 0.35, 0.14]} />
+          <meshStandardMaterial color="#8b4513" roughness={0.7} metalness={0.05} />
+        </mesh>
+        <mesh position={[0, 0.18, 0.071]}>
+          <boxGeometry args={[0.22, 0.01, 0.001]} />
+          <meshStandardMaterial color="#c9a96e" roughness={0.4} metalness={0.3} />
+        </mesh>
+        {/* Handle */}
+        <mesh position={[0, 0.38, 0]}>
+          <boxGeometry args={[0.08, 0.03, 0.04]} />
+          <meshStandardMaterial color="#5a3a1a" roughness={0.5} metalness={0.2} />
+        </mesh>
+      </group>
+      {/* Smaller suitcase */}
+      <group position={[-FLOOR_SIZE.w / 2 + 0.55, 0, 1.1]}>
+        <mesh position={[0, 0.12, 0]} castShadow>
+          <boxGeometry args={[0.22, 0.24, 0.12]} />
+          <meshStandardMaterial color="#2c5f7a" roughness={0.6} metalness={0.08} />
+        </mesh>
+        <mesh position={[0, 0.26, 0]}>
+          <boxGeometry args={[0.06, 0.025, 0.035]} />
+          <meshStandardMaterial color="#3a3a3a" roughness={0.4} metalness={0.3} />
+        </mesh>
       </group>
 
       {/* Floor logo emblem at entrance */}
@@ -346,6 +470,25 @@ function NatLevaBranding() {
         <ringGeometry args={[0.7, 0.8, 32]} />
         <meshStandardMaterial color="#c9a96e" transparent opacity={0.2} roughness={0.8} />
       </mesh>
+
+      {/* Airplane model on reception desk */}
+      <group position={[RECEPTION.pos.x - 0.6, RECEPTION.pos.y + 0.15, RECEPTION.pos.z]}>
+        {/* Fuselage */}
+        <mesh rotation-z={0} castShadow>
+          <capsuleGeometry args={[0.02, 0.12, 4, 8]} />
+          <meshStandardMaterial color="#e8e0d8" roughness={0.3} metalness={0.3} />
+        </mesh>
+        {/* Wings */}
+        <mesh position={[0, 0, 0]} rotation-z={Math.PI / 2}>
+          <boxGeometry args={[0.005, 0.12, 0.03]} />
+          <meshStandardMaterial color="#c0c0c0" roughness={0.3} metalness={0.4} />
+        </mesh>
+        {/* Tail */}
+        <mesh position={[0, 0.07, 0]} rotation-z={Math.PI / 2}>
+          <boxGeometry args={[0.005, 0.04, 0.02]} />
+          <meshStandardMaterial color="#c9a96e" roughness={0.3} metalness={0.3} />
+        </mesh>
+      </group>
     </group>
   );
 }
