@@ -37,199 +37,19 @@ import { LinkClientDialog } from "@/components/livechat/LinkClientDialog";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 
-// ─── Types ───
-type Stage = "novo_lead" | "contato_inicial" | "qualificacao" | "diagnostico" | "proposta_preparacao" | "proposta_enviada" | "proposta_visualizada" | "ajustes" | "negociacao" | "fechamento_andamento" | "fechado" | "pos_venda" | "perdido";
-type MsgType = "text" | "image" | "audio" | "video" | "document";
-type MsgStatus = "sent" | "delivered" | "read";
+// ─── Extracted shared modules ───
+import type { Stage, MsgType, MsgStatus, Conversation, Message } from "@/components/inbox/types";
+import { STAGES, FILTERS } from "@/components/inbox/types";
+import {
+  normalizeTimestamp, toIsoTimestamp, getMessageTimestamp, compareMessagesChronologically,
+  getMessageStableKey, dedupeUiMessages, formatTimestamp, formatMsgTime, formatDateSeparator,
+  shouldShowDateSeparator, stripQuotes, formatPhoneDisplay, getStageInfo, mapZapiStatus,
+  normalizeDbMessageType, normalizeDbStatus,
+} from "@/components/inbox/helpers";
+import { VirtualConversationList } from "@/components/inbox/VirtualConversationList";
+import { MessageBubble } from "@/components/inbox/MessageBubble";
 
-interface Conversation {
-  id: string;
-  db_id?: string;
-  phone: string;
-  contact_name: string;
-  stage: Stage;
-  tags: string[];
-  source: string;
-  last_message_at: string;
-  last_message_preview: string;
-  unread_count: number;
-  is_vip: boolean;
-  assigned_to: string;
-  score_potential: number;
-  score_risk: number;
-  vehicle_interest?: string;
-  price_range?: string;
-  payment_method?: string;
-  lead_id?: string;
-  is_pinned?: boolean;
-}
-
-interface Message {
-  id: string;
-  conversation_id: string;
-  sender_type: "cliente" | "atendente" | "sistema";
-  message_type: MsgType;
-  text: string;
-  media_url?: string;
-  status: MsgStatus;
-  created_at: string;
-  external_message_id?: string;
-  raw_message?: any;
-  quoted_msg?: { text: string; sender_type: "cliente" | "atendente" | "sistema"; message_type: MsgType };
-  edited?: boolean;
-}
-
-// ─── Constants ───
-const STAGES: { key: Stage; label: string; color: string }[] = [
-  { key: "novo_lead", label: "Novo Lead", color: "bg-blue-500" },
-  { key: "contato_inicial", label: "Contato Inicial", color: "bg-sky-500" },
-  { key: "qualificacao", label: "Qualificação", color: "bg-amber-500" },
-  { key: "diagnostico", label: "Diagnóstico", color: "bg-yellow-500" },
-  { key: "proposta_preparacao", label: "Estruturação", color: "bg-orange-500" },
-  { key: "proposta_enviada", label: "Proposta Enviada", color: "bg-purple-500" },
-  { key: "proposta_visualizada", label: "Visualizada", color: "bg-violet-500" },
-  { key: "ajustes", label: "Ajustes", color: "bg-pink-500" },
-  { key: "negociacao", label: "Negociação", color: "bg-primary" },
-  { key: "fechamento_andamento", label: "Fechando", color: "bg-rose-500" },
-  { key: "fechado", label: "Fechado ✓", color: "bg-emerald-500" },
-  { key: "pos_venda", label: "Pós-venda", color: "bg-teal-500" },
-  { key: "perdido", label: "Perdido", color: "bg-muted-foreground" },
-];
-
-const FILTERS = [
-  { key: "all", label: "Todas" },
-  { key: "unread", label: "Não lidas" },
-  { key: "mine", label: "Minhas" },
-  { key: "vip", label: "VIP" },
-  { key: "qualificacao", label: "Qualificação" },
-  { key: "proposta_enviada", label: "Proposta" },
-  { key: "fechado", label: "Clientes" },
-  { key: "pos_venda", label: "Pós-venda" },
-  { key: "no_reply", label: "Sem resposta" },
-  { key: "urgent", label: "Urgentes" },
-];
-
-// ─── Helpers ───
-function normalizeTimestamp(dateStr: string | number): Date {
-  if (!dateStr && dateStr !== 0) return new Date(0);
-  try {
-    // Handle epoch numbers (seconds or milliseconds)
-    const num = typeof dateStr === "number" ? dateStr : Number(dateStr);
-    if (Number.isFinite(num) && num > 1_000_000_000) {
-      const ms = num > 1_000_000_000_000 ? num : num * 1000;
-      const d = new Date(ms);
-      if (!isNaN(d.getTime()) && d.getTime() > 0) return d;
-    }
-    const str = String(dateStr);
-    const direct = new Date(str);
-    if (!isNaN(direct.getTime()) && direct.getTime() > 0) return direct;
-    let normalized = str;
-    if (normalized.includes(" ") && !normalized.includes("T")) normalized = normalized.replace(" ", "T");
-    if (/[+-]\d{2}$/.test(normalized)) normalized += ":00";
-    const date = new Date(normalized);
-    return isNaN(date.getTime()) ? new Date(0) : date;
-  } catch { return new Date(0); }
-}
-
-/** Convert any timestamp value (epoch int, epoch string, ISO string) to a valid ISO string */
-function toIsoTimestamp(value: any): string {
-  if (!value && value !== 0) return new Date(0).toISOString();
-  const num = Number(value);
-  if (Number.isFinite(num) && num > 1_000_000_000) {
-    const ms = num > 1_000_000_000_000 ? num : num * 1000;
-    return new Date(ms).toISOString();
-  }
-  const d = new Date(String(value));
-  return isNaN(d.getTime()) ? new Date(0).toISOString() : d.toISOString();
-}
-
-function getMessageTimestamp(message: Pick<Message, "created_at" | "external_message_id"> & { timestamp?: string | null } | any): string {
-  return toIsoTimestamp(message?.timestamp ?? message?.created_at);
-}
-
-function compareMessagesChronologically(a: Pick<Message, "created_at"> & { timestamp?: string | null }, b: Pick<Message, "created_at"> & { timestamp?: string | null }): number {
-  return new Date(getMessageTimestamp(a)).getTime() - new Date(getMessageTimestamp(b)).getTime();
-}
-
-function getMessageStableKey(message: Pick<Message, "id" | "external_message_id" | "created_at" | "message_type" | "sender_type" | "text"> & { timestamp?: string | null }): string {
-  return message.external_message_id || message.id || `${getMessageTimestamp(message)}_${message.sender_type}_${message.message_type}_${message.text}`;
-}
-
-function dedupeUiMessages(messages: Message[]): Message[] {
-  const deduped = new Map<string, Message>();
-
-  for (const message of messages) {
-    const key = getMessageStableKey(message);
-    const existing = deduped.get(key);
-
-    if (!existing) {
-      deduped.set(key, message);
-      continue;
-    }
-
-    const existingHasDbId = !existing.id.startsWith("temp_");
-    const nextHasDbId = !message.id.startsWith("temp_");
-
-    if (nextHasDbId && !existingHasDbId) {
-      deduped.set(key, message);
-      continue;
-    }
-
-    if (compareMessagesChronologically(message, existing) >= 0) {
-      deduped.set(key, message);
-    }
-  }
-
-  return Array.from(deduped.values()).sort(compareMessagesChronologically);
-}
-
-function formatTimestamp(dateStr: string): string {
-  if (!dateStr) return "";
-  const date = normalizeTimestamp(dateStr);
-  if (date.getTime() === 0) return "";
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const diffDays = Math.floor((today.getTime() - msgDay.getTime()) / 86400000);
-  if (diffDays === 0) return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-  if (diffDays === 1) return "Ontem";
-  if (diffDays < 7) return ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][date.getDay()];
-  return `${date.getDate().toString().padStart(2, "0")}/${(date.getMonth() + 1).toString().padStart(2, "0")}`;
-}
-
-function formatMsgTime(dateStr: string): string {
-  const date = normalizeTimestamp(dateStr);
-  if (date.getTime() === 0) return "";
-  return date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatDateSeparator(dateStr: string): string {
-  const date = normalizeTimestamp(dateStr);
-  if (date.getTime() === 0) return "";
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const diffDays = Math.floor((today.getTime() - msgDay.getTime()) / 86400000);
-  if (diffDays === 0) return "Hoje";
-  if (diffDays === 1) return "Ontem";
-  return date.toLocaleDateString("pt-BR", { day: "numeric", month: "long", year: "numeric" });
-}
-
-function shouldShowDateSeparator(msgs: Message[], index: number): boolean {
-  if (index === 0) return true;
-  const prev = normalizeTimestamp(msgs[index - 1].created_at);
-  const curr = normalizeTimestamp(msgs[index].created_at);
-  return prev.getDate() !== curr.getDate() || prev.getMonth() !== curr.getMonth() || prev.getFullYear() !== curr.getFullYear();
-}
-
-function stripQuotes(text: string): string {
-  if (!text) return text;
-  const trimmed = text.trim();
-  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed;
-}
+// (All helpers, types, constants now imported from @/components/inbox/*)
 
 const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
 function Linkify({ text }: { text: string }) {
@@ -249,34 +69,10 @@ function Linkify({ text }: { text: string }) {
 }
 
 
-function getStageInfo(stage: Stage) {
-  return STAGES.find(s => s.key === stage) || STAGES[0];
-}
-
 function getStatusIcon(status: MsgStatus) {
   if (status === "read") return <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" style={{ filter: 'drop-shadow(0 0 1px rgba(83,189,235,0.5))' }} />;
   if (status === "delivered") return <CheckCheck className="h-3 w-3 text-white" />;
   return <Check className="h-3 w-3 text-white" />;
-}
-
-function mapZapiStatus(zapiStatus: string | null | undefined, fromMe: boolean): MsgStatus {
-  if (!fromMe) return "delivered";
-  const s = (zapiStatus || "").toUpperCase();
-  if (s === "READ" || s === "PLAYED") return "read";
-  if (s === "RECEIVED" || s === "DELIVERED" || s === "DELIVERY_ACK") return "delivered";
-  return "sent";
-}
-
-function formatPhoneDisplay(number: string): string {
-  const clean = number.replace(/\D/g, "");
-  if (clean.startsWith("55") && clean.length >= 12) {
-    const ddd = clean.slice(2, 4);
-    const rest = clean.slice(4);
-    if (rest.length === 9) return `+55 (${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
-    if (rest.length === 8) return `+55 (${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
-  }
-  if (clean.length >= 10) return `+${clean}`;
-  return number;
 }
 
 // Z-API helper
@@ -1899,135 +1695,16 @@ function OperacaoInboxInner() {
               </ScrollArea>
             </div>
 
-            {/* Conversations List */}
-            <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
-              <div className="py-1">
-                {filteredConversations.map(conv => {
-                  const stageInfo = getStageInfo(conv.stage);
-                  const isSelected = conv.id === selectedId;
-                  const _previewRaw = stripQuotes((conv.last_message_preview || "").replace(/\n/g, " "));
-                  const _contactName = conv.contact_name || "Sem nome";
-                  const lastMsgTime = new Date(conv.last_message_at).getTime();
-                  const hoursAgo = (Date.now() - lastMsgTime) / 3600000;
-                  const isUrgent = conv.unread_count > 3 || (conv.unread_count > 0 && hoursAgo > 24);
-                  const hasUnread = conv.unread_count > 0;
-
-                  // Build preview text with media type detection
-                  const previewContent = (() => {
-                    if (!_previewRaw) return { icon: null, text: "Sem mensagens", italic: true };
-                    const lower = _previewRaw.toLowerCase();
-                    if (lower === "📎 audio" || lower.includes("mensagem de voz") || lower === "audio" || lower === "🎤 áudio")
-                      return { icon: <Mic className="h-3 w-3 text-primary shrink-0" />, text: "Mensagem de voz", italic: false };
-                    if (lower === "📎 image" || lower.includes("📷"))
-                      return { icon: <Image className="h-3 w-3 shrink-0 text-muted-foreground" />, text: "Foto", italic: false };
-                    if (lower === "📎 video")
-                      return { icon: <Video className="h-3 w-3 shrink-0 text-muted-foreground" />, text: "Vídeo", italic: false };
-                    if (lower === "📎 document")
-                      return { icon: <File className="h-3 w-3 shrink-0 text-muted-foreground" />, text: "Documento", italic: false };
-                    const displayText = _previewRaw.length > 50 ? _previewRaw.slice(0, 50) + "…" : _previewRaw;
-                    return { icon: null, text: displayText, italic: false };
-                  })();
-
-                  return (
-                    <motion.div
-                      key={conv.id}
-                      onClick={() => handleSelectConversation(conv.id)}
-                      className={`group px-3 py-2.5 cursor-pointer transition-all border-l-2 ${
-                        isSelected
-                          ? "bg-primary/5 border-l-primary"
-                          : isUrgent
-                            ? "border-l-destructive/60 hover:bg-destructive/5"
-                            : "border-l-transparent hover:bg-secondary/40"
-                      }`}
-                      whileTap={{ scale: 0.99 }}
-                    >
-                      <div className="flex items-start gap-2.5">
-                        {/* Avatar */}
-                        <div className="relative shrink-0 mt-0.5">
-                          {profilePicsRef.current.get(conv.id) ? (
-                            <img src={profilePicsRef.current.get(conv.id)} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-border/30" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
-                          ) : null}
-                          <div className={`h-10 w-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-xs font-bold text-primary ring-1 ring-border/30 ${profilePicsRef.current.get(conv.id) ? 'hidden' : ''}`}>
-                            {_contactName.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
-                          </div>
-                          {conv.is_vip && (
-                            <div className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-amber-500 flex items-center justify-center ring-2 ring-card">
-                              <Star className="h-2.5 w-2.5 text-white fill-white" />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-1 min-w-0">
-                          {/* Row 1: Name + Time */}
-                          <div className="flex items-center justify-between gap-2">
-                            <span className={`text-[13px] truncate leading-tight ${hasUnread ? "font-bold text-foreground" : "font-semibold text-foreground/90"}`}>
-                              {/^\d{10,}$/.test(_contactName) ? formatPhoneDisplay(_contactName) : _contactName}
-                            </span>
-                            <span className={`text-[10px] shrink-0 tabular-nums ${hasUnread ? "text-primary font-semibold" : "text-muted-foreground"}`}>
-                              {formatTimestamp(conv.last_message_at)}
-                            </span>
-                          </div>
-
-                          {/* Row 2: Preview + Unread */}
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <div className={`flex items-center gap-1 flex-1 min-w-0 text-xs leading-tight ${hasUnread ? "text-foreground/80 font-medium" : "text-muted-foreground"}`}>
-                              {previewContent.icon}
-                              <span className={`truncate ${previewContent.italic ? "italic text-muted-foreground/40" : ""}`}>
-                                {previewContent.text}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              {conv.is_pinned && <Pin className="h-3 w-3 text-muted-foreground/50 rotate-45" />}
-                              {hasUnread && (
-                                <span className="h-[18px] min-w-[18px] rounded-full bg-primary flex items-center justify-center text-[9px] font-bold text-primary-foreground px-1">
-                                  {conv.unread_count > 99 ? "99+" : conv.unread_count}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Row 3: Metadata - Stage + Tags + Assigned */}
-                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                            <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium ${stageInfo.color}/10`}>
-                              <div className={`h-1.5 w-1.5 rounded-full ${stageInfo.color}`} />
-                              <span className="text-muted-foreground">{stageInfo.label}</span>
-                            </div>
-                            {conv.tags?.slice(0, 1).map(tag => (
-                              <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded bg-secondary/60 text-muted-foreground/70">{tag}</span>
-                            ))}
-                            {isUrgent && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium flex items-center gap-0.5">
-                                <AlertTriangle className="h-2.5 w-2.5" />
-                                Atenção
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-                {filteredConversations.length === 0 && (
-                  <div className="flex flex-col items-center justify-center min-h-[300px] h-full text-center px-4">
-                    {!chatsLoadedRef.current ? (
-                      <>
-                        <Loader2 className="h-8 w-8 text-muted-foreground/30 mb-3 animate-spin" />
-                        <p className="text-sm text-muted-foreground">Carregando conversas...</p>
-                      </>
-                    ) : (
-                      <>
-                        <div className="h-14 w-14 rounded-2xl bg-secondary/50 flex items-center justify-center mb-3">
-                          <MessageSquare className="h-6 w-6 text-muted-foreground/30" />
-                        </div>
-                        <p className="text-sm font-medium text-muted-foreground">{searchQuery ? "Nenhuma conversa encontrada" : "Nenhuma conversa ainda"}</p>
-                        <p className="text-xs text-muted-foreground/60 mt-1">{searchQuery ? "Tente buscar por outro termo" : "As mensagens recebidas aparecerão aqui"}</p>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
+            {/* Conversations List — Virtualized */}
+            <VirtualConversationList
+              conversations={filteredConversations}
+              selectedId={selectedId}
+              profilePics={profilePicsRef.current}
+              onSelect={handleSelectConversation}
+              onTogglePin={handleTogglePin}
+              isLoading={!chatsLoadedRef.current}
+              searchQuery={searchQuery}
+            />
           </div>
 
           {/* ─── Column 2: Chat ─── */}
