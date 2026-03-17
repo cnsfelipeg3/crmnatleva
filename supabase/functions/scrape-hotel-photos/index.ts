@@ -224,15 +224,24 @@ Deno.serve(async (req) => {
         return (b.confidence || 0) - (a.confidence || 0);
       })
       .slice(0, 80)
-      .map(img => ({
-        url: standardizeImageUrl(img.url),
-        alt: img.alt || `${hotel_name} foto`,
-        section_name: img.section_name,
-        category: inferCategory(img.section_name, img.alt),
-        confidence: img.section_name ? 0.95 : 0.5,
-        source: img.source,
-        html_context: img.html_context,
-      }));
+      .map(img => {
+        // Sanitize section_name: strip hotel name if it leaked as section
+        let sectionName = img.section_name || "";
+        const hotelLower = hotel_name.toLowerCase().trim();
+        const sectionLower = sectionName.toLowerCase().trim();
+        if (sectionLower === hotelLower || sectionLower === cleanHotelName.toLowerCase().trim()) {
+          sectionName = "";
+        }
+        return {
+          url: standardizeImageUrl(img.url),
+          alt: img.alt || `${hotel_name} foto`,
+          section_name: sectionName,
+          category: inferCategory(sectionName, img.alt),
+          confidence: sectionName ? 0.95 : 0.5,
+          source: img.source,
+          html_context: img.html_context,
+        };
+      });
 
     const roomNames = validatedRoomNames.length > 0 ? validatedRoomNames : [...new Set(photos.map(p => p.section_name).filter(Boolean))];
 
@@ -248,21 +257,44 @@ Deno.serve(async (req) => {
     const bookingCount = photos.filter(p => p.source === "booking").length;
     console.log(`✅ Returning ${photos.length} photos (${officialCount} official, ${bookingCount} booking) with ${roomNames.length} rooms`);
 
+    const officialDomain = official?.sourceUrl ? extractDomain(official.sourceUrl) : null;
+
+    const responsePayload = {
+      success: true,
+      photos,
+      source_url: official?.sourceUrl || "",
+      room_names: roomNames,
+      section_details: sectionDetails,
+      pages_scraped: official?.pagesScraped || 0,
+      total_site_pages: official?.totalPages || 0,
+      booking_rooms_found: booking?.rooms.length || 0,
+      sources_used: {
+        official: (official?.photos.length || 0) > 0,
+        booking: bookingCount > 0,
+      },
+    };
+
+    // ── PERSIST TO CACHE (fire-and-forget) ──
+    supabaseAdmin
+      .from("hotel_media_cache")
+      .upsert({
+        hotel_name: hotel_name,
+        hotel_name_normalized: normalizedName,
+        official_domain: officialDomain,
+        domain_confidence: officialDomain ? 80 : 0,
+        scrape_result: responsePayload,
+        photos_count: photos.length,
+        rooms_found: roomNames.length,
+        source_url: official?.sourceUrl || null,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "hotel_name_normalized" })
+      .then(({ error: cacheErr }) => {
+        if (cacheErr) console.warn("Cache write failed:", cacheErr.message);
+        else console.log(`💾 Cached "${hotel_name}" (${photos.length} photos, ${roomNames.length} rooms)`);
+      });
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        photos,
-        source_url: official?.sourceUrl || "",
-        room_names: roomNames,
-        section_details: sectionDetails,
-        pages_scraped: official?.pagesScraped || 0,
-        total_site_pages: official?.totalPages || 0,
-        booking_rooms_found: booking?.rooms.length || 0,
-        sources_used: {
-          official: (official?.photos.length || 0) > 0,
-          booking: bookingCount > 0,
-        },
-      }),
+      JSON.stringify({ ...responsePayload, from_cache: false }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
