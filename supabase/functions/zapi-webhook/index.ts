@@ -340,7 +340,7 @@ Deno.serve(async (req) => {
         content: textContent || "",
         message_type: msgType,
         media_url: mediaUrl,
-        status: msgStatus,
+        status: resolvedMsgStatus,
         timestamp: timestampIso,
         created_at: timestampIso,
       });
