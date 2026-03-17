@@ -131,7 +131,7 @@ export default function HotelMediaBrowser({ hotelName, hotelCity, hotelCountry, 
       {/* Selection bar */}
       {selectedPhotos.size > 0 && (
         <div className="flex items-center justify-between bg-accent/5 border border-accent/20 rounded-lg px-3 py-2">
-          <span className="text-xs font-medium text-primary">{selectedPhotos.size} foto(s) selecionada(s)</span>
+          <span className="text-xs font-medium text-accent">{selectedPhotos.size} foto(s) selecionada(s)</span>
           <div className="flex gap-2">
             <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedPhotos(new Set())} className="text-xs h-7">Limpar</Button>
             <Button type="button" size="sm" onClick={handleConfirmSelection} className="text-xs h-7">Usar na proposta</Button>
