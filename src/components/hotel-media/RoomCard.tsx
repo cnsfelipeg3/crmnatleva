@@ -27,12 +27,16 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
   const avgConfidence = photos.reduce((s, p) => s + (p.confidence || 0.5), 0) / photos.length;
   const confidenceLevel = getConfidenceLevel(avgConfidence);
   const isOfficial = photos.filter(p => p.source === "official").length > photos.length / 2;
+  const summary = buildCommercialSummary(detail);
+  const highlight = detail ? getHighlightAmenity(detail.amenities) : null;
+  const coverTag = coverPhoto ? getPhotoTag(coverPhoto, photos, name) : null;
 
   const handleUse = (e: React.MouseEvent) => {
     e.stopPropagation();
+    const autoDescription = [summary.line1, summary.line2].filter(Boolean).join(" · ");
     onUseRoom({
       room_name: name,
-      description: detail?.description || "",
+      description: detail?.description || autoDescription,
       amenities: detail?.amenities || [],
       photos: photos.slice(0, 5),
       source: isOfficial ? "official" : "booking",
