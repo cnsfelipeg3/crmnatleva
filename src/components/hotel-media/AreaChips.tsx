@@ -49,10 +49,10 @@ export default function AreaChips({ areaGroups, onSelectArea, activeArea }: Prop
             key={cat}
             onClick={() => onSelectArea(cat)}
             className={cn(
-              "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs border transition-colors duration-150",
+              "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs border transition-all duration-200",
               activeArea === cat
-                ? "border-accent bg-accent/10 text-accent font-medium"
-                : "border-border/50 bg-card hover:border-accent/30 text-foreground"
+                ? "border-accent bg-accent/10 text-accent font-medium scale-[1.02]"
+                : "border-border/50 bg-card hover:border-accent/30 hover:scale-[1.02] text-foreground"
             )}
           >
             <span>{config.icon}</span>

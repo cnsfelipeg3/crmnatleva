@@ -2,8 +2,9 @@ import { useState, useMemo, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Star, Camera } from "lucide-react";
+import { Star, Camera, Check, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import MediaSwapPopover from "./MediaSwapPopover";
 import type { HotelPhoto, SectionDetail, RoomBlock } from "./types";
 
@@ -29,6 +30,8 @@ export default function MediaExpressSelection({
   photos, roomGroups, areaGroups, sectionDetails,
   getDisplayUrl, onImageError, onUseSelection,
 }: Props) {
+  const [used, setUsed] = useState(false);
+
   const pickCover = useCallback((): HotelPhoto | null => {
     const sorted = (arr: HotelPhoto[]) => [...arr].sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
     for (const [cat, src] of [["fachada", "official"], ["vista", "official"], ["fachada", null], ["vista", null], ["piscina", "official"]] as const) {
@@ -80,6 +83,13 @@ export default function MediaExpressSelection({
     return slots;
   }, [effectiveCover, primaryRoomPhotos, effectiveAreaSlots, primaryRoomName]);
 
+  // Target: cover + 3 room + 3 area = 7
+  const targetCount = 1 + 3 + 3;
+  const currentCount = allSlots.length;
+  const progressLabel = currentCount >= targetCount
+    ? "Proposta pronta"
+    : `${currentCount} de ${targetCount} mídias`;
+
   const handleUse = () => {
     if (!effectiveCover) return;
     const roomDetail = primaryRoomName ? sectionDetails[primaryRoomName] : undefined;
@@ -96,6 +106,9 @@ export default function MediaExpressSelection({
       source: primaryRoomPhotos[0]?.source || "official",
     };
     onUseSelection([roomBlock], effectiveCover, effectiveAreaSlots.map(a => a.photo));
+    setUsed(true);
+    toast.success("Seleção adicionada à proposta", { duration: 2000 });
+    setTimeout(() => setUsed(false), 1500);
   };
 
   const coverAlternatives = photos.filter(p => ["fachada", "vista", "piscina", "lobby"].includes(p.category));
@@ -103,12 +116,15 @@ export default function MediaExpressSelection({
   if (allSlots.length === 0) return null;
 
   return (
-    <div className="space-y-3 rounded-xl border border-accent/20 bg-gradient-to-b from-accent/[0.03] to-transparent p-4">
+    <div className={cn(
+      "space-y-3 rounded-xl border bg-gradient-to-b from-accent/[0.03] to-transparent p-4 transition-all duration-300",
+      used ? "border-accent/40 shadow-[0_0_20px_-5px_hsl(var(--accent)/0.2)]" : "border-accent/20"
+    )}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Star className="w-4 h-4 text-accent" />
-          <span className="text-sm font-bold text-foreground">Pronto para proposta</span>
-          <Badge variant="secondary" className="text-[10px] rounded-full">{allSlots.length} mídias</Badge>
+          <Sparkles className="w-4 h-4 text-accent" />
+          <span className="text-sm font-bold text-foreground">Sugestão pronta para proposta</span>
+          <span className="text-[10px] text-muted-foreground font-medium">{progressLabel}</span>
         </div>
 
         {sortedRoomNames.length > 1 && (
@@ -168,11 +184,6 @@ export default function MediaExpressSelection({
                   )}>
                     {slot.label}
                   </div>
-                  {slot.photo.source !== "official" && (
-                    <div className="absolute bottom-1 right-1 text-[7px] font-bold bg-info/80 text-info-foreground px-1 py-0.5 rounded-full">
-                      Compl.
-                    </div>
-                  )}
                 </div>
               </button>
             </MediaSwapPopover>
@@ -185,10 +196,23 @@ export default function MediaExpressSelection({
         type="button"
         size="sm"
         onClick={handleUse}
-        className="w-full gap-2 text-xs font-semibold bg-gradient-to-r from-accent to-accent/80 text-accent-foreground hover:scale-[1.01] active:scale-[0.99] transition-transform duration-150 shadow-[0_2px_12px_-3px_hsl(var(--accent)/0.35)]"
+        disabled={used}
+        className={cn(
+          "w-full gap-2 text-xs font-semibold bg-gradient-to-r from-accent to-accent/80 text-accent-foreground hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 shadow-[0_2px_12px_-3px_hsl(var(--accent)/0.35)]",
+          used && "opacity-80"
+        )}
       >
-        <Star className="w-3.5 h-3.5" />
-        Usar seleção na proposta
+        {used ? (
+          <>
+            <Check className="w-3.5 h-3.5" />
+            Adicionado à proposta
+          </>
+        ) : (
+          <>
+            <Sparkles className="w-3.5 h-3.5" />
+            Adicionar seleção à proposta
+          </>
+        )}
       </Button>
     </div>
   );
