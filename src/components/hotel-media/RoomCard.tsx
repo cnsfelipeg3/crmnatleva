@@ -52,6 +52,7 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
       <div className="flex h-40 sm:h-44">
         <div className="flex-[2] overflow-hidden bg-muted relative">
           {coverPhoto && (
+            <>
             <img
               src={getDisplayUrl(coverPhoto.url)}
               alt={name}
