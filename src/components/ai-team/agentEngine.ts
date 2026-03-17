@@ -190,7 +190,7 @@ let _idCounter = 100;
 function uid(): string { return `gen_${++_idCounter}_${Math.random().toString(36).slice(2, 6)}`; }
 
 function pickWeighted(weights: Record<string, number>, seed: number): AgentStatus {
-  const entries = Object.entries(weights) as [T, number][];
+  const entries = Object.entries(weights);
   const total = entries.reduce((s, [, w]) => s + (w as number), 0);
   let r = (seed % 1000) / 1000 * total;
   for (const [key, w] of entries) {
