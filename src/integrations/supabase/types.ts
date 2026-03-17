@@ -1672,6 +1672,56 @@ export type Database = {
           },
         ]
       }
+      conversation_reconciliation_log: {
+        Row: {
+          conversation_id: string
+          error: string | null
+          id: string
+          messages_after: number | null
+          messages_before: number | null
+          messages_inserted: number | null
+          metadata: Json | null
+          phone: string | null
+          processed_at: string | null
+          status: string
+          zapi_messages_found: number | null
+        }
+        Insert: {
+          conversation_id: string
+          error?: string | null
+          id?: string
+          messages_after?: number | null
+          messages_before?: number | null
+          messages_inserted?: number | null
+          metadata?: Json | null
+          phone?: string | null
+          processed_at?: string | null
+          status?: string
+          zapi_messages_found?: number | null
+        }
+        Update: {
+          conversation_id?: string
+          error?: string | null
+          id?: string
+          messages_after?: number | null
+          messages_before?: number | null
+          messages_inserted?: number | null
+          metadata?: Json | null
+          phone?: string | null
+          processed_at?: string | null
+          status?: string
+          zapi_messages_found?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_reconciliation_log_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_transfers: {
         Row: {
           conversation_id: string
@@ -1726,6 +1776,7 @@ export type Database = {
           payment_method: string | null
           phone: string | null
           price_range: string | null
+          reconciled_at: string | null
           score_potential: number | null
           score_risk: number | null
           source: string | null
@@ -1754,6 +1805,7 @@ export type Database = {
           payment_method?: string | null
           phone?: string | null
           price_range?: string | null
+          reconciled_at?: string | null
           score_potential?: number | null
           score_risk?: number | null
           source?: string | null
@@ -1782,6 +1834,7 @@ export type Database = {
           payment_method?: string | null
           phone?: string | null
           price_range?: string | null
+          reconciled_at?: string | null
           score_potential?: number | null
           score_risk?: number | null
           source?: string | null
