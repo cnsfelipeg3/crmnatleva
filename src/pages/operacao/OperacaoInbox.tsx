@@ -1436,7 +1436,12 @@ function OperacaoInboxInner() {
 
         if (realId) {
           lastMsgIdsRef.current.add(realId);
-          setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m => m.id === tempId ? { ...m, id: realId } : m) }));
+          setMessages(prev => ({
+            ...prev,
+            [selectedId]: dedupeUiMessages((prev[selectedId] || []).map(m =>
+              m.id === tempId ? { ...m, id: realId, external_message_id: realId } : m
+            )),
+          }));
         }
       } catch (err: any) {
         // Send failed - remove temp message
