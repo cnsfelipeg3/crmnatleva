@@ -3618,6 +3618,42 @@ export type Database = {
           },
         ]
       }
+      pipeline_rebuild_log: {
+        Row: {
+          batch_number: number
+          detail: Json | null
+          finished_at: string | null
+          id: string
+          notes: string | null
+          started_at: string | null
+          total_errors: number | null
+          total_processed: number | null
+          total_updated: number | null
+        }
+        Insert: {
+          batch_number: number
+          detail?: Json | null
+          finished_at?: string | null
+          id?: string
+          notes?: string | null
+          started_at?: string | null
+          total_errors?: number | null
+          total_processed?: number | null
+          total_updated?: number | null
+        }
+        Update: {
+          batch_number?: number
+          detail?: Json | null
+          finished_at?: string | null
+          id?: string
+          notes?: string | null
+          started_at?: string | null
+          total_errors?: number | null
+          total_processed?: number | null
+          total_updated?: number | null
+        }
+        Relationships: []
+      }
       portal_access: {
         Row: {
           client_id: string
