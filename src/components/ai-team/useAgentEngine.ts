@@ -61,7 +61,7 @@ export function useAgentEngine(baseAgents: Agent[], baseTasks: Task[]): UseAgent
     setSnapshot(stateRef.current);
   }, []);
 
-
+  const removeTask = useCallback((taskId: string, action: "approve" | "ignore") => {
     if (!stateRef.current) return;
     const s = stateRef.current;
     const task = s.tasks.find(t => t.id === taskId);
