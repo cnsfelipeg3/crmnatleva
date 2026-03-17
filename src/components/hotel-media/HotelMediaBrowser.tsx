@@ -100,7 +100,7 @@ export default function HotelMediaBrowser({ hotelName, hotelCity, hotelCountry, 
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* ZONA A — Status Bar */}
       <MediaStatusBar
         hotelName={hotelName}
