@@ -160,7 +160,7 @@ Deno.serve(async (req) => {
     // ═══════════════════════════════════════════════
     // PHASE 1: Build Room Registry from textual evidence (before any image assignment)
     // ═══════════════════════════════════════════════
-    const roomRegistry = buildRoomRegistry(collection, hotelName);
+    const roomRegistry = buildRoomRegistry(collection, hotel_name);
     console.log(`🏷️ PHASE 1 — Room Registry: ${roomRegistry.length} entries: ${roomRegistry.map(r => r.name).join(", ")}`);
 
     // 2. Extract room names with AI if official data is sparse
