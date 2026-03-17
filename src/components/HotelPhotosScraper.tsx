@@ -969,6 +969,9 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
             {loadingSource === "official" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Globe className="w-3 h-3" />}
             Site Oficial
           </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => scrapePhotos(true)} disabled={loading} className="text-[10px] h-6 px-2 gap-1 text-muted-foreground" title="Forçar nova busca ignorando cache">
+            🔄 Re-buscar
+          </Button>
         </div>
       </div>
 
