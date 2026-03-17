@@ -25,7 +25,20 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
   const targetRef = useRef<THREE.Vector3 | null>(null);
   const keysRef = useRef(new Set<string>());
   const velRef = useRef({ x: 0, z: 0 });
+  const zoomRef = useRef(1.0);
   const { camera } = useThree();
+
+  // Mouse wheel zoom
+  useEffect(() => {
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? ZOOM_SPEED : -ZOOM_SPEED;
+      zoomRef.current = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomRef.current + delta));
+    };
+    const canvas = document.querySelector('canvas');
+    canvas?.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas?.removeEventListener('wheel', onWheel);
+  }, []);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
