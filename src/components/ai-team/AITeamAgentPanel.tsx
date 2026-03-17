@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Send, Zap, Shield, Target, Brain, Radio, Crosshair, Activity, Wifi } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { X, Send, Zap, Shield, Target, Brain, Radio, Crosshair, Activity, Wifi, CheckCircle2, Clock, Loader2 } from "lucide-react";
 import type { Agent, Task } from "./mockData";
 import { simulatedResponses } from "./mockData";
 import { cn } from "@/lib/utils";
@@ -333,36 +333,8 @@ export default function AITeamAgentPanel({ agent, tasks, open, onOpenChange }: P
                 </div>
               )}
 
-              {/* ── MISSIONS ── */}
-              <div>
-                <SectionLabel icon={Crosshair} label={`MISSÕES ATIVAS · ${agentTasks.length}`} color={sc.rgb} />
-                {agentTasks.length === 0 ? (
-                  <p className="text-xs font-mono text-white/15 pl-1">Nenhuma missão atribuída ao agente.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {agentTasks.map((t) => {
-                      const pri = priorityConfig[t.priority] ?? priorityConfig.low;
-                      return (
-                        <div key={t.id}
-                          className="rounded-xl p-3.5 transition-all duration-300 group cursor-default hover:translate-x-0.5"
-                          style={{
-                            background: "rgba(255,255,255,0.02)",
-                            border: "1px solid rgba(255,255,255,0.04)",
-                          }}>
-                          <div className="flex items-center gap-2.5 mb-1.5">
-                            <div className={cn("w-2 h-2 rounded-full shrink-0", pri.dot, pri.glow)} />
-                            <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-white/25">{pri.label}</span>
-                          </div>
-                          <p className="text-[13px] text-white/65 font-medium group-hover:text-white/85 transition-colors leading-snug">
-                            {t.title}
-                          </p>
-                          <p className="text-[11px] text-white/25 mt-1 leading-relaxed">{t.description}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              {/* ── MISSION KANBAN ── */}
+              <MissionKanban tasks={agentTasks} statusColor={sc} />
 
               {/* ── CONSOLE ── */}
               <div>
@@ -477,6 +449,89 @@ export default function AITeamAgentPanel({ agent, tasks, open, onOpenChange }: P
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Kanban columns config ── */
+type KanbanColumn = { key: string; label: string; icon: React.ElementType; statuses: string[]; dotColor: string; glowColor: string };
+
+const kanbanColumns: KanbanColumn[] = [
+  { key: "todo", label: "A FAZER", icon: Clock, statuses: ["detected", "suggested", "pending"], dotColor: "bg-amber-400", glowColor: "251,191,36" },
+  { key: "doing", label: "EM PROGRESSO", icon: Loader2, statuses: ["analyzing", "in_progress"], dotColor: "bg-sky-400", glowColor: "56,189,248" },
+  { key: "done", label: "CONCLUÍDAS", icon: CheckCircle2, statuses: ["done"], dotColor: "bg-emerald-400", glowColor: "52,211,153" },
+];
+
+const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+
+function MissionKanban({ tasks, statusColor }: { tasks: Task[]; statusColor: { color: string; rgb: string; label: string } }) {
+  const columns = useMemo(() => kanbanColumns.map((col) => ({
+    ...col,
+    tasks: tasks
+      .filter((t) => col.statuses.includes(t.status))
+      .sort((a, b) => (priorityOrder[a.priority] ?? 9) - (priorityOrder[b.priority] ?? 9)),
+  })), [tasks]);
+
+  const total = tasks.length;
+
+  return (
+    <div>
+      <SectionLabel icon={Crosshair} label={`MISSÕES · ${total}`} color={statusColor.rgb} />
+      <div className="grid grid-cols-3 gap-3">
+        {columns.map((col) => (
+          <div key={col.key} className="min-h-[120px]">
+            {/* Column header */}
+            <div className="flex items-center gap-2 mb-2.5 pb-2" style={{
+              borderBottom: `1px solid rgba(${col.glowColor},0.12)`,
+            }}>
+              <col.icon className="w-3.5 h-3.5" style={{ color: `rgba(${col.glowColor},0.6)` }} />
+              <span className="text-[9px] font-mono font-bold tracking-[0.2em]" style={{ color: `rgba(${col.glowColor},0.5)` }}>
+                {col.label}
+              </span>
+              <span className="text-[9px] font-mono ml-auto" style={{ color: `rgba(${col.glowColor},0.3)` }}>
+                {col.tasks.length}
+              </span>
+            </div>
+
+            {/* Cards */}
+            <div className="space-y-2">
+              {col.tasks.map((t) => {
+                const pri = priorityConfig[t.priority] ?? priorityConfig.low;
+                const isDone = col.key === "done";
+                return (
+                  <div key={t.id}
+                    className={cn(
+                      "rounded-lg p-2.5 transition-all duration-200 group cursor-default",
+                      isDone ? "opacity-60" : "hover:translate-y-[-1px]"
+                    )}
+                    style={{
+                      background: `rgba(${col.glowColor},0.03)`,
+                      border: `1px solid rgba(${col.glowColor},0.07)`,
+                    }}>
+                    {/* Priority + label */}
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", pri.dot)} />
+                      <span className={cn("text-[8px] font-mono font-bold tracking-[0.15em]", pri.glow ? "text-white/30" : "text-white/20")}>
+                        {pri.label}
+                      </span>
+                    </div>
+                    <p className={cn(
+                      "text-[11px] font-medium leading-snug transition-colors",
+                      isDone ? "text-white/35 line-through" : "text-white/60 group-hover:text-white/80"
+                    )}>
+                      {t.title}
+                    </p>
+                    <p className="text-[10px] text-white/20 mt-1 leading-relaxed line-clamp-2">{t.description}</p>
+                  </div>
+                );
+              })}
+              {col.tasks.length === 0 && (
+                <p className="text-[10px] font-mono text-white/10 text-center py-4">—</p>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
