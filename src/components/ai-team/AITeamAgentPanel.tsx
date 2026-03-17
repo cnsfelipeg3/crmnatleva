@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { X, Send, Zap, Shield, Target, Brain, Radio, Crosshair, Activity, Wifi } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { X, Send, Zap, Shield, Target, Brain, Radio, Crosshair, Activity, Wifi, CheckCircle2, Clock, Loader2 } from "lucide-react";
 import type { Agent, Task } from "./mockData";
 import { simulatedResponses } from "./mockData";
 import { cn } from "@/lib/utils";
