@@ -96,7 +96,6 @@ function OperacaoInboxInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedIdRef = useRef<string | null>(null);
   useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
-  const [messages, setMessages] = useState<Record<string, Message[]>>({});
   const [inputText, setInputText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
@@ -105,7 +104,6 @@ function OperacaoInboxInner() {
   const [showLinkClient, setShowLinkClient] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [chatSyncVersion, setChatSyncVersion] = useState(0);
-  const [reloadingMessages, setReloadingMessages] = useState(false);
   const [rebuildingHistoryAll, setRebuildingHistoryAll] = useState(false);
   const [flowRunning, setFlowRunning] = useState(false);
   const [botActive, setBotActive] = useState(true);
@@ -120,7 +118,18 @@ function OperacaoInboxInner() {
   const lastAutoReconcileRef = useRef(0);
 
   const selected = conversations.find(c => c.id === selectedId);
-  const currentMessages = selectedId ? (messages[selectedId] || []) : [];
+
+  // ─── Extracted hooks: messages + realtime ───
+  const {
+    messages, setMessages, currentMessages,
+    loadingMessages, setLoadingMessages, reloadingMessages, setReloadingMessages,
+    loadOlderMessages, hasOlderMessages, lastMsgIdsRef,
+  } = useInboxMessages(selectedId, selected, reloadVersion);
+
+  const conversationsRef = useRef(conversations);
+  useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+
+  useInboxRealtime(setMessages, setConversations, setSelectedId, lastMsgIdsRef, selectedIdRef, conversationsRef);
 
   const getZapiPhoneCandidates = useCallback((conversationId: string) => {
     const phone = conversationId.replace("wa_", "").replace(/\D/g, "").trim();
@@ -389,7 +398,6 @@ function OperacaoInboxInner() {
 
   // WhatsApp state
   const whatsappPollRef = useRef<ReturnType<typeof setInterval>>();
-  const lastMsgIdsRef = useRef<Set<string>>(new Set());
   const chatsLoadedRef = useRef(false);
   const clearedAtRef = useRef<number | null>(null);
   const profilePicsRef = useRef<Map<string, string>>(new Map());
@@ -437,7 +445,7 @@ function OperacaoInboxInner() {
   const [fileInputAccept, setFileInputAccept] = useState("*/*");
   const [fileInputMediaType, setFileInputMediaType] = useState("document");
   const [isSending, setIsSending] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  
   const [showContactProfile, setShowContactProfile] = useState(false);
   const [showClientContext, setShowClientContext] = useState(true);
   const [showFlowMenu, setShowFlowMenu] = useState(false);
@@ -566,340 +574,7 @@ function OperacaoInboxInner() {
     loadDbConversations();
   }, []);
 
-  // Load messages for selected conversation — UNIFIED from conversation_messages
-  const [oldestLoadedTimestamp, setOldestLoadedTimestamp] = useState<Record<string, string | null>>({});
-  const [hasOlderMessages, setHasOlderMessages] = useState<Record<string, boolean>>({});
-  const MESSAGE_PAGE_SIZE = 80;
-
-  useEffect(() => {
-    if (!selectedId) return;
-    let cancelled = false;
-
-    const normalizeDbMessageType = (value: string | null | undefined): MsgType => {
-      const raw = (value || "text").toLowerCase();
-      if (raw === "ptt") return "audio";
-      if (raw === "image" || raw === "audio" || raw === "video" || raw === "document") return raw;
-      return "text";
-    };
-
-    const normalizeDbStatus = (value: string | null | undefined): MsgStatus => {
-      const raw = (value || "sent").toLowerCase();
-      if (["read", "lido", "seen", "played"].includes(raw)) return "read";
-      if (["delivered", "entregue", "received", "delivery_ack"].includes(raw)) return "delivered";
-      return "sent";
-    };
-
-    const mapUnifiedMessages = (rows: any[], conversationKey: string): Message[] => (
-      (rows || []).map((m: any) => ({
-        id: m.id,
-        conversation_id: conversationKey,
-        sender_type: (m.sender_type || (m.direction === "outgoing" ? "atendente" : m.direction === "system" ? "sistema" : "cliente")) as "cliente" | "atendente" | "sistema",
-        message_type: normalizeDbMessageType(m.message_type),
-        text: stripQuotes(m.content ?? m.text ?? ""),
-        media_url: m.media_url || undefined,
-        status: normalizeDbStatus(m.status ?? m.read_status),
-        created_at: toIsoTimestamp(m.timestamp || m.created_at),
-        external_message_id: m.external_message_id || undefined,
-      }))
-    );
-
-    const hasCached = (messages[selectedId] || []).length > 0;
-    if (!hasCached) setLoadingMessages(true);
-
-    const loadMessages = async () => {
-      try {
-        let allConversationIds: string[] = [];
-
-        if (selectedId.startsWith("wa_")) {
-          const phone = selectedId.replace("wa_", "").trim();
-          const dbPhoneCandidates = Array.from(new Set([phone, `+${phone}`, `${phone}@c.us`, `${phone}@g.us`, `${phone}-group`]));
-
-          const [byPhoneResp, byExternalResp] = await Promise.all([
-            supabase.from("conversations").select("id, updated_at").in("phone", dbPhoneCandidates).order("updated_at", { ascending: false }),
-            supabase.from("conversations").select("id, updated_at").eq("external_conversation_id", selectedId).order("updated_at", { ascending: false }),
-          ]);
-
-          if (cancelled) return;
-
-          const candidates = [...(byPhoneResp.data || []), ...(byExternalResp.data || [])]
-            .filter(c => !!c.id);
-          allConversationIds = Array.from(new Set([
-            ...(selected?.db_id ? [selected.db_id] : []),
-            ...candidates.map(c => c.id),
-          ]));
-        } else if (selectedId.length > 10) {
-          allConversationIds = [selectedId];
-        }
-
-        if (allConversationIds.length === 0) {
-          if (!cancelled) setMessages(prev => ({ ...prev, [selectedId]: [] }));
-          return;
-        }
-
-        const { data: unifiedRows, error: unifiedErr } = await (supabase
-          .from("conversation_messages" as any)
-          .select("id, conversation_id, sender_type, direction, message_type, content, text, media_url, status, read_status, timestamp, created_at, external_message_id")
-          .in("conversation_id", allConversationIds)
-          .order("timestamp", { ascending: false, nullsFirst: false })
-          .order("created_at", { ascending: false })
-          .limit(MESSAGE_PAGE_SIZE) as any);
-
-        let allMsgs: Message[] = [];
-
-        if (!unifiedErr && unifiedRows) {
-          allMsgs = dedupeUiMessages(mapUnifiedMessages(unifiedRows, selectedId));
-          if (!cancelled) {
-            setHasOlderMessages(prev => ({ ...prev, [selectedId]: unifiedRows.length >= MESSAGE_PAGE_SIZE }));
-            const oldestRow = unifiedRows[unifiedRows.length - 1];
-            setOldestLoadedTimestamp(prev => ({ ...prev, [selectedId]: toIsoTimestamp(oldestRow?.timestamp || oldestRow?.created_at || null) }));
-          }
-        }
-
-        for (const m of allMsgs) {
-          if (m.id) lastMsgIdsRef.current.add(m.id);
-          if (m.external_message_id) lastMsgIdsRef.current.add(m.external_message_id);
-        }
-
-        if (!cancelled) {
-          setMessages(prev => ({ ...prev, [selectedId]: dedupeUiMessages(allMsgs) }));
-          if (allMsgs.length > 0) {
-            const lastMsg = allMsgs[allMsgs.length - 1];
-            const lastPreview = lastMsg.text || `📎 ${lastMsg.message_type}`;
-            setConversations(prev => prev.map(c => {
-              if (c.id !== selectedId) return c;
-              const currentTime = new Date(c.last_message_at || 0).getTime();
-              const msgTime = new Date(getMessageTimestamp(lastMsg)).getTime();
-              if (!c.last_message_preview || msgTime >= currentTime) {
-                return { ...c, last_message_preview: lastPreview, last_message_at: getMessageTimestamp(lastMsg) };
-              }
-              return c;
-            }));
-          }
-        }
-      } catch (error) {
-        console.error("Erro ao carregar histórico da conversa:", error);
-      } finally {
-        if (!cancelled) {
-          setLoadingMessages(false);
-          setReloadingMessages(false);
-        }
-      }
-    };
-
-    loadMessages();
-    return () => { cancelled = true; };
-  }, [selectedId, selected?.db_id, extractMediaFromRawData, getZapiPhoneCandidates, reloadVersion]);
-
-  // Load older messages (cursor-based pagination)
-  const loadOlderMessages = useCallback(async () => {
-    if (!selectedId || !hasOlderMessages[selectedId]) return;
-    const cursor = oldestLoadedTimestamp[selectedId];
-    if (!cursor) return;
-
-    const allConversationIds: string[] = [];
-    if (selectedId.startsWith("wa_")) {
-      const phone = selectedId.replace("wa_", "").trim();
-      const candidates = [phone, `+${phone}`];
-      const { data: convs } = await supabase.from("conversations").select("id").in("phone", candidates);
-      if (convs) allConversationIds.push(...convs.map(c => c.id));
-      if (selected?.db_id && !allConversationIds.includes(selected.db_id)) allConversationIds.push(selected.db_id);
-    } else {
-      allConversationIds.push(selectedId);
-    }
-
-    if (allConversationIds.length === 0) return;
-
-    const { data: olderRows } = await (supabase
-      .from("conversation_messages" as any)
-      .select("id, conversation_id, sender_type, direction, message_type, content, media_url, status, timestamp, created_at, external_message_id")
-      .in("conversation_id", allConversationIds)
-      .lt("timestamp", cursor)
-      .order("timestamp", { ascending: false, nullsFirst: false })
-      .order("created_at", { ascending: false })
-      .limit(MESSAGE_PAGE_SIZE) as any);
-
-    if (!olderRows || olderRows.length === 0) {
-      setHasOlderMessages(prev => ({ ...prev, [selectedId]: false }));
-      return;
-    }
-
-    const normalizeDbMessageType = (value: string | null | undefined): MsgType => {
-      const raw = (value || "text").toLowerCase();
-      if (raw === "ptt") return "audio";
-      if (["image", "audio", "video", "document"].includes(raw)) return raw as MsgType;
-      return "text";
-    };
-
-    const normalizeDbStatus = (value: string | null | undefined): MsgStatus => {
-      const raw = (value || "sent").toLowerCase();
-      if (["read", "lido", "seen", "played"].includes(raw)) return "read";
-      if (["delivered", "entregue", "received", "delivery_ack"].includes(raw)) return "delivered";
-      return "sent";
-    };
-
-    const olderMsgs: Message[] = dedupeUiMessages(olderRows.map((m: any) => ({
-      id: m.id,
-      conversation_id: selectedId,
-      sender_type: (m.sender_type || "cliente") as "cliente" | "atendente" | "sistema",
-      message_type: normalizeDbMessageType(m.message_type),
-      text: stripQuotes(m.content ?? ""),
-      media_url: m.media_url || undefined,
-      status: normalizeDbStatus(m.status),
-      created_at: toIsoTimestamp(m.timestamp || m.created_at),
-      external_message_id: m.external_message_id || undefined,
-    })));
-
-    setMessages(prev => ({
-      ...prev,
-      [selectedId]: dedupeUiMessages([...olderMsgs, ...(prev[selectedId] || [])]),
-    }));
-
-    const oldestRow = olderRows[olderRows.length - 1];
-    setOldestLoadedTimestamp(prev => ({
-      ...prev,
-      [selectedId]: toIsoTimestamp(oldestRow?.timestamp || oldestRow?.created_at || cursor),
-    }));
-
-    setHasOlderMessages(prev => ({
-      ...prev,
-      [selectedId]: olderRows.length >= MESSAGE_PAGE_SIZE,
-    }));
-  }, [selectedId, hasOlderMessages, oldestLoadedTimestamp, selected?.db_id]);
-
-  // Realtime subscription — stable ref to avoid re-creating channel on every conversation update
-  const conversationsRef = useRef(conversations);
-  useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
-
-  useEffect(() => {
-    const channel = supabase
-      .channel('livechat-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_messages' }, (payload) => {
-        const n = payload.new as any;
-        if (!n.conversation_id) return;
-
-        const conv = conversationsRef.current.find(c => c.db_id === n.conversation_id || c.id === n.conversation_id);
-        const waKey = conv?.id || n.conversation_id;
-        const msgId = n.id;
-
-        if (lastMsgIdsRef.current.has(msgId)) return;
-        if (n.external_message_id && lastMsgIdsRef.current.has(n.external_message_id)) return;
-        lastMsgIdsRef.current.add(msgId);
-        if (n.external_message_id) lastMsgIdsRef.current.add(n.external_message_id);
-
-        const msg: Message = {
-          id: msgId,
-          conversation_id: waKey,
-          sender_type: (n.sender_type || (n.direction === "outgoing" ? "atendente" : "cliente")) as "cliente" | "atendente" | "sistema",
-          message_type: (n.message_type || "text") as MsgType,
-          text: stripQuotes(n.content || ""),
-          media_url: n.media_url || undefined,
-          status: (n.status || "sent") as MsgStatus,
-          created_at: toIsoTimestamp(n.timestamp || n.created_at),
-          external_message_id: n.external_message_id || undefined,
-        };
-
-        setMessages(prev => {
-          const existing = prev[waKey] || [];
-          if (existing.find(m => m.id === msgId)) return prev;
-          // Replace temp message if matching
-          if (n.direction === "outgoing" && n.external_message_id) {
-            const tempIdx = existing.findIndex(m => m.id.startsWith("temp_") && m.text === msg.text && m.sender_type === "atendente");
-            if (tempIdx >= 0) {
-              const updated = [...existing];
-              updated[tempIdx] = { ...updated[tempIdx], id: msgId, media_url: msg.media_url || updated[tempIdx].media_url };
-              return { ...prev, [waKey]: updated };
-            }
-          }
-          return { ...prev, [waKey]: dedupeUiMessages([...existing, msg]) };
-        });
-
-        if (n.direction === "incoming") {
-          setConversations(prev => prev.map(c => {
-            if (c.id !== waKey && c.db_id !== n.conversation_id) return c;
-            const isOpen = waKey === selectedIdRef.current;
-            return {
-              ...c,
-              last_message_preview: n.content || `📎 ${n.message_type || "media"}`,
-              last_message_at: toIsoTimestamp(n.timestamp || n.created_at),
-              unread_count: isOpen ? 0 : c.unread_count + 1,
-            };
-          }));
-        }
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, (payload) => {
-        if (payload.eventType === 'DELETE') {
-          const old = payload.old as any;
-          if (!old?.id) return;
-          const cleanPhone = old.phone ? String(old.phone).replace(/\D/g, "") : "";
-          const waKey = cleanPhone ? `wa_${cleanPhone}` : old.id;
-          setConversations(prev => prev.filter(c => c.id !== waKey && c.id !== old.id));
-          setMessages(prev => { const next = { ...prev }; delete next[waKey]; delete next[old.id]; return next; });
-          if (selectedIdRef.current === waKey || selectedIdRef.current === old.id) setSelectedId(null);
-          return;
-        }
-        const u = payload.new as any;
-        if (!u?.id || !u?.phone) return;
-        const cleanPhone = String(u.phone).replace(/\D/g, "");
-        const waKey = cleanPhone ? `wa_${cleanPhone}` : u.id;
-
-        if (u.last_message_preview === "__CONTACT_EXCLUDED__" || u.unread_count === -1) {
-          setConversations(prev => prev.filter(c => c.id !== waKey && c.id !== u.id));
-          setMessages(prev => { const next = { ...prev }; delete next[waKey]; delete next[u.id]; return next; });
-          if (selectedIdRef.current === waKey || selectedIdRef.current === u.id) setSelectedId(null);
-          return;
-        }
-
-        setConversations(prev => {
-          const existsWa = prev.find(c => c.id === waKey);
-          const existsUuid = prev.find(c => c.id === u.id);
-          const target = existsWa || existsUuid;
-          if (target) {
-            const isOpen = target.id === selectedIdRef.current || waKey === selectedIdRef.current;
-            const existingTime = new Date(target.last_message_at).getTime();
-            const incomingTime = new Date(u.last_message_at || 0).getTime();
-            const bestTime = incomingTime > existingTime ? u.last_message_at : target.last_message_at;
-            const bestPreview = (incomingTime > existingTime && u.last_message_preview) ? u.last_message_preview : (target.last_message_preview || u.last_message_preview);
-            const updated = prev.map(c => (c.id === target.id) ? {
-              ...c,
-              id: waKey,
-              db_id: c.db_id || u.id,
-              phone: cleanPhone || c.phone,
-              last_message_preview: bestPreview,
-              last_message_at: bestTime,
-              unread_count: isOpen ? 0 : Math.max(c.unread_count, u.unread_count ?? 0),
-              stage: (u.stage as Stage) || c.stage,
-              tags: u.tags || c.tags,
-              contact_name: c.contact_name || u.contact_name,
-              source: u.source || c.source,
-            } : c).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
-            return updated.sort((a, b) => {
-              if (a.is_pinned && !b.is_pinned) return -1;
-              if (!a.is_pinned && b.is_pinned) return 1;
-              return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
-            });
-          }
-          return [{
-            id: waKey,
-            db_id: u.id,
-            phone: cleanPhone || u.phone,
-            contact_name: u.contact_name || u.display_name || u.phone || "Sem nome",
-            stage: (u.stage || u.funnel_stage || "novo_lead") as Stage,
-            tags: u.tags || [],
-            source: u.source || "",
-            last_message_at: u.last_message_at || "",
-            last_message_preview: u.last_message_preview || "",
-            unread_count: u.unread_count || 0,
-            is_vip: u.is_vip || false,
-            assigned_to: u.assigned_to || "",
-            score_potential: u.score_potential || 0,
-            score_risk: u.score_risk || 0,
-          }, ...prev];
-        });
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Message loading + pagination + realtime are now handled by useInboxMessages + useInboxRealtime hooks
 
   // Z-API WhatsApp polling
   useEffect(() => {
