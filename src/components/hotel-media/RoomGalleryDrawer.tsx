@@ -161,7 +161,12 @@ export default function RoomGalleryDrawer({
                   >
                     <Check className="w-3 h-3" />
                   </button>
-                  {photo.source !== "official" && (
+                  {tag && (
+                    <div className={cn("absolute top-1 left-1 text-[7px] font-bold px-1.5 py-0.5 rounded-sm", PHOTO_TAG_CONFIG[tag].className)}>
+                      {PHOTO_TAG_CONFIG[tag].label}
+                    </div>
+                  )}
+                  {!tag && photo.source !== "official" && (
                     <div className="absolute bottom-1 left-1 text-[7px] font-bold bg-info/80 text-info-foreground px-1 py-0.5 rounded-sm opacity-0 group-hover:opacity-100 transition-opacity">
                       Compl.
                     </div>
