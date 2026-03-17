@@ -1207,7 +1207,7 @@ function OperacaoInboxInner() {
     return () => { if (whatsappPollRef.current) clearInterval(whatsappPollRef.current); };
   }, [selectedId, extractMediaFromRawData, getZapiPhoneCandidates, chatSyncVersion]);
 
-  const filteredConversations = (() => {
+  const filteredConversations = useMemo(() => {
     const filtered = conversations.filter(c => {
       const contactName = c.contact_name || "";
       const phone = c.phone || "";
@@ -1223,7 +1223,6 @@ function OperacaoInboxInner() {
       if (activeFilter === "pos_venda") return c.stage === "pos_venda";
       if (activeFilter === "no_reply") return c.unread_count > 0;
       if (activeFilter === "urgent") {
-        // Urgent = unread > 3 or last message > 24h ago with unread
         const lastMsgTime = new Date(c.last_message_at).getTime();
         const hoursAgo = (Date.now() - lastMsgTime) / 3600000;
         return c.unread_count > 3 || (c.unread_count > 0 && hoursAgo > 24);
@@ -1242,7 +1241,7 @@ function OperacaoInboxInner() {
       seen.add(norm);
       return true;
     });
-  })();
+  }, [conversations, searchQuery, activeFilter]);
 
   // Execute flow engine
   const executeFlow = useCallback(async (conversationId: string, messageText: string) => {
