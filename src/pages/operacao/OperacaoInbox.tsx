@@ -127,14 +127,54 @@ function normalizeTimestamp(dateStr: string | number): Date {
 
 /** Convert any timestamp value (epoch int, epoch string, ISO string) to a valid ISO string */
 function toIsoTimestamp(value: any): string {
-  if (!value && value !== 0) return new Date().toISOString();
+  if (!value && value !== 0) return new Date(0).toISOString();
   const num = Number(value);
   if (Number.isFinite(num) && num > 1_000_000_000) {
     const ms = num > 1_000_000_000_000 ? num : num * 1000;
     return new Date(ms).toISOString();
   }
   const d = new Date(String(value));
-  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  return isNaN(d.getTime()) ? new Date(0).toISOString() : d.toISOString();
+}
+
+function getMessageTimestamp(message: Pick<Message, "created_at" | "external_message_id"> & { timestamp?: string | null } | any): string {
+  return toIsoTimestamp(message?.timestamp ?? message?.created_at);
+}
+
+function compareMessagesChronologically(a: Pick<Message, "created_at"> & { timestamp?: string | null }, b: Pick<Message, "created_at"> & { timestamp?: string | null }): number {
+  return new Date(getMessageTimestamp(a)).getTime() - new Date(getMessageTimestamp(b)).getTime();
+}
+
+function getMessageStableKey(message: Pick<Message, "id" | "external_message_id" | "created_at" | "message_type" | "sender_type" | "text"> & { timestamp?: string | null }): string {
+  return message.external_message_id || message.id || `${getMessageTimestamp(message)}_${message.sender_type}_${message.message_type}_${message.text}`;
+}
+
+function dedupeUiMessages(messages: Message[]): Message[] {
+  const deduped = new Map<string, Message>();
+
+  for (const message of messages) {
+    const key = getMessageStableKey(message);
+    const existing = deduped.get(key);
+
+    if (!existing) {
+      deduped.set(key, message);
+      continue;
+    }
+
+    const existingHasDbId = !existing.id.startsWith("temp_");
+    const nextHasDbId = !message.id.startsWith("temp_");
+
+    if (nextHasDbId && !existingHasDbId) {
+      deduped.set(key, message);
+      continue;
+    }
+
+    if (compareMessagesChronologically(message, existing) >= 0) {
+      deduped.set(key, message);
+    }
+  }
+
+  return Array.from(deduped.values()).sort(compareMessagesChronologically);
 }
 
 function formatTimestamp(dateStr: string): string {
