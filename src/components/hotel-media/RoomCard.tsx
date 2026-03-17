@@ -9,6 +9,7 @@ interface Props {
   name: string;
   photos: HotelPhoto[];
   detail?: SectionDetail;
+  sourceUrl?: string;
   getDisplayUrl: (url: string) => string;
   onImageError: (url: string) => void;
   onViewGallery: (name: string) => void;
