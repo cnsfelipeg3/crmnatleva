@@ -82,9 +82,15 @@ export function getPhotoTag(photo: HotelPhoto, allPhotos: HotelPhoto[], roomName
   if ((photo.confidence || 0) >= 0.9 && photo.source === "official") {
     return "destaque";
   }
-  // Priority 3: Fiel ao quarto (fuzzy match)
-  if (roomName && isPhotoFaithfulToRoom(photo, roomName)) {
-    return "fiel_ao_quarto";
+  // Priority 3: Fiel ao quarto — only tag photos that have strong textual evidence
+  // (html_context match or source=official), to avoid tagging every photo in the group
+  if (roomName && photo.source === "official" && (photo.confidence || 0) >= 0.7) {
+    const ctx = (photo.html_context || "").toLowerCase();
+    const roomLower = roomName.toLowerCase();
+    const matchLen = Math.max(6, Math.floor(roomLower.length * 0.6));
+    if (ctx && ctx.includes(roomLower.slice(0, matchLen))) {
+      return "fiel_ao_quarto";
+    }
   }
   return null;
 }

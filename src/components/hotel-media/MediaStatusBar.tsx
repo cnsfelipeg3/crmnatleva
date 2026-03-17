@@ -20,7 +20,8 @@ export default function MediaStatusBar({
   hotelName, sourceUrl, totalPhotos, roomCount, coverage,
   fromCache, cacheAgeHours, loading, classifying, onRefresh,
 }: Props) {
-  const domain = sourceUrl ? new URL(sourceUrl).hostname.replace("www.", "") : "";
+  let domain = "";
+  try { if (sourceUrl) domain = new URL(sourceUrl).hostname.replace("www.", ""); } catch { /* malformed URL */ }
 
   return (
     <div className="flex flex-wrap items-center gap-2 px-3 py-2 rounded-lg border border-border/60 bg-card text-xs">
