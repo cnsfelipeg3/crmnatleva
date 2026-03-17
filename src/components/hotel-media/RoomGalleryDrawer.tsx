@@ -144,7 +144,7 @@ export default function RoomGalleryDrawer({
                   <img
                     src={getDisplayUrl(photo.url)}
                     alt={photo.description || name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                    className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200"
                     loading="lazy"
                     referrerPolicy="no-referrer"
                     onError={() => onImageError(photo.url)}
