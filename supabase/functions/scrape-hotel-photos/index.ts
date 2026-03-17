@@ -109,24 +109,21 @@ Deno.serve(async (req) => {
     const locationStr = [hotel_city, hotel_country].filter(Boolean).join(", ");
     const cleanHotelName = hotel_name.replace(/\s*[-–—]\s*(Rod\.|Acesso|Av\.|Rua|R\.).*$/i, "").trim();
 
-    // ── Run OFFICIAL SITE + BOOKING.COM scraping in PARALLEL ──
-    console.log("🚀 Starting parallel scraping: Official Site + Booking.com");
+    // ═══════════════════════════════════════════════
+    // OFFICIAL-SITE-FIRST: scrape official, evaluate, then booking ONLY if needed
+    // ═══════════════════════════════════════════════
+    console.log("🚀 STEP 1: Scraping OFFICIAL SITE first (primary source)...");
 
-    const [officialResult, bookingResult] = await Promise.allSettled([
-      scrapeOfficialSite(cleanHotelName, locationStr, hotel_name, FIRECRAWL_API_KEY),
-      scrapeBookingCom(cleanHotelName, locationStr, hotel_name, FIRECRAWL_API_KEY),
-    ]);
+    let official: Awaited<ReturnType<typeof scrapeOfficialSite>> | null = null;
+    try {
+      official = await scrapeOfficialSite(cleanHotelName, locationStr, hotel_name, FIRECRAWL_API_KEY);
+    } catch (e) {
+      console.warn("Official scrape failed:", e);
+    }
 
-    const official = officialResult.status === "fulfilled" ? officialResult.value : null;
-    const booking = bookingResult.status === "fulfilled" ? bookingResult.value : null;
-
-    if (officialResult.status === "rejected") console.warn("Official scrape failed:", officialResult.reason);
-    if (bookingResult.status === "rejected") console.warn("Booking scrape failed:", bookingResult.reason);
-
-    // ── Merge results ──
     const collection: ImageCollection = { photos: [], seen: new Set(), sections: new Map() };
 
-    // 1. Add official photos first (higher priority)
+    // 1. Add ALL official photos (this is the structural backbone)
     if (official) {
       for (const photo of official.photos) {
         if (!collection.seen.has(normalizeUrlForDedup(photo.url))) {
@@ -139,60 +136,77 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2. Cross-reference room names from Booking
-    const bookingRoomNames = booking?.rooms.map(r => r.name) || [];
-    const officialRoomNames = official ? [...new Set(official.photos.map(p => p.section_name).filter(Boolean).filter(isLikelyRoomOrFacilityName))] : [];
-    
-    // Merge validated room names
-    let validatedRoomNames = [...new Set([...officialRoomNames, ...bookingRoomNames])];
+    const officialPhotoCount = collection.photos.length;
+    const officialRoomNames = official
+      ? [...new Set(official.photos.map(p => p.section_name).filter(Boolean).filter(isLikelyRoomOrFacilityName))]
+      : [];
 
-    // If we have very few validated names, try AI extraction from scraped content
-    if (validatedRoomNames.length < 3 && official && official.photos.length > 5) {
+    console.log(`📸 Official site: ${officialPhotoCount} photos, ${officialRoomNames.length} rooms identified`);
+
+    // 2. Extract room names with AI if official data is sparse
+    let validatedRoomNames = [...officialRoomNames];
+    if (validatedRoomNames.length < 3 && official && official.photos.length > 3) {
       const aiRoomNames = await extractRoomNamesWithAI(cleanHotelName, official.photos, collection);
       if (aiRoomNames.length > 0) {
         validatedRoomNames = [...new Set([...validatedRoomNames, ...aiRoomNames])];
         console.log(`🤖 AI extracted room names: ${aiRoomNames.join(", ")}`);
       }
     }
-    
-    console.log(`📋 Validated room names: ${validatedRoomNames.join(", ")}`);
 
-    // 3. Add Booking photos as FALLBACK (only for room types not well-covered by official)
-    if (booking) {
+    // 3. BOOKING AS STRICT FALLBACK — only when official is truly insufficient
+    const OFFICIAL_MINIMUM_PHOTOS = 15;
+    const needsBookingFallback = officialPhotoCount < OFFICIAL_MINIMUM_PHOTOS;
+    let booking: Awaited<ReturnType<typeof scrapeBookingCom>> | null = null;
+
+    if (needsBookingFallback) {
+      console.log(`⚠️ Official site yielded only ${officialPhotoCount} photos (< ${OFFICIAL_MINIMUM_PHOTOS}). Running Booking.com as FALLBACK...`);
+      try {
+        booking = await scrapeBookingCom(cleanHotelName, locationStr, hotel_name, FIRECRAWL_API_KEY);
+      } catch (e) {
+        console.warn("Booking fallback failed:", e);
+      }
+    } else {
+      console.log(`✅ Official site sufficient (${officialPhotoCount} photos). Skipping Booking.com.`);
+    }
+
+    // 4. Add Booking data ONLY as labeled supplement (never override official structure)
+    if (booking && booking.rooms.length > 0) {
+      // Add room names from Booking as supplementary validation only
+      const bookingRoomNames = booking.rooms.map(r => r.name);
+      validatedRoomNames = [...new Set([...validatedRoomNames, ...bookingRoomNames])];
+
       const officialCategoryCount: Record<string, number> = {};
       for (const p of collection.photos) {
-        const cat = p.category || "outro";
-        officialCategoryCount[cat] = (officialCategoryCount[cat] || 0) + 1;
+        officialCategoryCount[p.category || "outro"] = (officialCategoryCount[p.category || "outro"] || 0) + 1;
       }
 
       for (const room of booking.rooms) {
-        // Check if we already have enough photos for this room type
         const cat = inferCategory(room.name, "");
-        const existingCount = officialCategoryCount[cat] || 0;
+        const officialHasEnough = (officialCategoryCount[cat] || 0) >= 3;
 
-        // Add Booking photos if official has < 3 for this category, or if total < 20
-        const shouldAdd = existingCount < 3 || collection.photos.length < 20;
-        
+        // Only add Booking photos for categories the official site doesn't cover well
+        if (officialHasEnough && collection.photos.length >= 30) continue;
+
         for (const photoUrl of room.photos) {
           const dedupKey = normalizeUrlForDedup(photoUrl);
           if (collection.seen.has(dedupKey)) continue;
-          if (!shouldAdd && collection.photos.length > 60) continue;
+          if (collection.photos.length > 80) break;
 
           collection.seen.add(dedupKey);
           collection.photos.push({
             url: photoUrl,
             alt: room.name,
-            section_name: room.name,
+            section_name: `[Booking] ${room.name}`,
             category: cat,
-            confidence: 0.85,
+            confidence: 0.7,
             source: "booking",
-            html_context: `Booking.com room listing: "${room.name}". ${Object.entries(room.details).map(([k,v]) => `${k}: ${v}`).join(", ")}`,
+            html_context: `[FALLBACK] Booking.com: "${room.name}". ${Object.entries(room.details).map(([k,v]) => `${k}: ${v}`).join(", ")}`,
           });
           officialCategoryCount[cat] = (officialCategoryCount[cat] || 0) + 1;
         }
 
-        // Add section details from Booking if missing
-        if (!collection.sections.has(room.name) && (room.details || room.amenities.length > 0)) {
+        // Add section details from Booking only if official doesn't have them
+        if (!collection.sections.has(room.name) && (Object.keys(room.details).length > 0 || room.amenities.length > 0)) {
           collection.sections.set(room.name, {
             name: room.name,
             description: "",
@@ -203,7 +217,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`📸 Total merged photos: ${collection.photos.length} (Official: ${official?.photos.length || 0}, Booking fallback added)`);
+    const bookingCount = collection.photos.filter(p => p.source === "booking").length;
+    console.log(`📸 Final merged: ${collection.photos.length} photos (${officialPhotoCount} official, ${bookingCount} booking fallback)`);
 
     // ── Filter, deduplicate, maximize quality, and return ──
     const photos = collection.photos
