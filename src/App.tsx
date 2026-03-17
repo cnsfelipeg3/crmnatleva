@@ -222,6 +222,9 @@ function AppRoutes() {
           <Route path="/implementacao/aprendizados-ia" element={<AILearningDashboard />} />
           <Route path="/implementacao/cerebro-natleva" element={<CerebroNatLeva />} />
 
+          {/* AI Team */}
+          <Route path="/ai-team" element={<AITeam />} />
+
           {/* Operação Diária */}
           <Route path="/operacao/inbox" element={<OperacaoInbox />} />
           <Route path="/operacao/flows" element={<OperacaoFlowBuilder />} />
