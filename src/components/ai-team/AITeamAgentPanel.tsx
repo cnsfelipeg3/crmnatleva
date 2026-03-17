@@ -333,36 +333,8 @@ export default function AITeamAgentPanel({ agent, tasks, open, onOpenChange }: P
                 </div>
               )}
 
-              {/* ── MISSIONS ── */}
-              <div>
-                <SectionLabel icon={Crosshair} label={`MISSÕES ATIVAS · ${agentTasks.length}`} color={sc.rgb} />
-                {agentTasks.length === 0 ? (
-                  <p className="text-xs font-mono text-white/15 pl-1">Nenhuma missão atribuída ao agente.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {agentTasks.map((t) => {
-                      const pri = priorityConfig[t.priority] ?? priorityConfig.low;
-                      return (
-                        <div key={t.id}
-                          className="rounded-xl p-3.5 transition-all duration-300 group cursor-default hover:translate-x-0.5"
-                          style={{
-                            background: "rgba(255,255,255,0.02)",
-                            border: "1px solid rgba(255,255,255,0.04)",
-                          }}>
-                          <div className="flex items-center gap-2.5 mb-1.5">
-                            <div className={cn("w-2 h-2 rounded-full shrink-0", pri.dot, pri.glow)} />
-                            <span className="text-[9px] font-mono font-bold tracking-[0.2em] text-white/25">{pri.label}</span>
-                          </div>
-                          <p className="text-[13px] text-white/65 font-medium group-hover:text-white/85 transition-colors leading-snug">
-                            {t.title}
-                          </p>
-                          <p className="text-[11px] text-white/25 mt-1 leading-relaxed">{t.description}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              {/* ── MISSION KANBAN ── */}
+              <MissionKanban tasks={agentTasks} statusColor={sc} />
 
               {/* ── CONSOLE ── */}
               <div>
