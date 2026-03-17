@@ -691,7 +691,7 @@ Deno.test({ name: "INTEGRATION-001: Edge function responds to valid hotel", sani
   if (badSections.length > 0) {
     console.log(`   ⚠️ BUG: ${badSections.length} photos use hotel name as section_name`);
   }
-}, { sanitizeResources: false, sanitizeOps: false });
+}});
 
 Deno.test("INTEGRATION-002: Edge function rejects missing hotel_name", async () => {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/scrape-hotel-photos`, {
