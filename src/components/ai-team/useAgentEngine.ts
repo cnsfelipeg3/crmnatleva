@@ -39,7 +39,6 @@ export function useAgentEngine(baseAgents: Agent[], baseTasks: Task[]): UseAgent
   const addAgent = useCallback((agent: Agent) => {
     if (!stateRef.current) return;
     const now = Date.now();
-    const { createEmptyMemory } = require("./agentMemory");
     const engineAgent: EngineAgent = {
       ...agent,
       nextTickAt: now + 5_000 + Math.random() * 7_000,
