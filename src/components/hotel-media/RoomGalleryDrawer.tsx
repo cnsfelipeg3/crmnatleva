@@ -87,7 +87,7 @@ export default function RoomGalleryDrawer({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-border/50">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border/40 bg-card/95 backdrop-blur-[2px]">
           <div className="flex items-center gap-2 min-w-0">
             <h3 className="text-base font-bold text-foreground truncate">{name}</h3>
             <Badge variant="secondary" className="text-[10px] shrink-0">{photos.length} fotos</Badge>
