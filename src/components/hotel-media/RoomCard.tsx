@@ -61,6 +61,12 @@ export default function RoomCard({ name, photos, detail, getDisplayUrl, onImageE
               referrerPolicy="no-referrer"
               onError={() => onImageError(coverPhoto.url)}
             />
+            {coverTag && (
+              <div className={cn("absolute bottom-1.5 left-1.5 text-[7px] font-bold px-1.5 py-0.5 rounded-sm", PHOTO_TAG_CONFIG[coverTag].className)}>
+                {PHOTO_TAG_CONFIG[coverTag].label}
+              </div>
+            )}
+            </>
           )}
         </div>
         {secondPhoto && (
