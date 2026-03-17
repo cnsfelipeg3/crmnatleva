@@ -1151,9 +1151,12 @@ function inferCategory(sectionName: string, alt: string): string {
   const text = `${sectionName} ${alt}`.toLowerCase();
   if (/fachada|exterior|facade|building|entrada|外観/i.test(text)) return "fachada";
   if (/lobby|recep[çc]|ロビー|フロント/i.test(text)) return "lobby";
-  if (/suite|suíte|penthouse|presidential|royal|スイート/i.test(text)) return "suite";
-  if (/room|quarto|camera|chambre|zimmer|deluxe|superior|standard|classic|double|twin|single|king|queen|客室|和室|洋室|和洋室|ルーム|お部屋/i.test(text)) return "quarto";
+  // Check banheiro/bathroom BEFORE room (avoids "bathroom" matching "room")
   if (/banheiro|bathroom|bagno|salle de bain/i.test(text)) return "banheiro";
+  // Check events/meetings BEFORE room (avoids "meeting room" matching "room")
+  if (/event|meeting|conferenc|sala de event|宴会|会議|ウェディング|ballroom|banquet/i.test(text)) return "eventos";
+  if (/suite|suíte|penthouse|presidential|royal|スイート/i.test(text)) return "suite";
+  if (/\b(?:room|quarto|camera|chambre|zimmer|deluxe|superior|standard|classic|double|twin|single|king|queen)\b|客室|和室|洋室|和洋室|ルーム|お部屋/i.test(text)) return "quarto";
   if (/piscina|pool|swimming|プール/i.test(text)) return "piscina";
   if (/praia|beach|spiaggia|ビーチ/i.test(text)) return "praia";
   if (/restaurante|restaurant|ristorante|dining|レストラン|ダイニング|朝食|食事/i.test(text)) return "restaurante";
@@ -1162,7 +1165,6 @@ function inferCategory(sectionName: string, alt: string): string {
   if (/academia|gym|fitness|palestra|フィットネス|ジム/i.test(text)) return "academia";
   if (/jardim|garden|giardino|庭園|庭/i.test(text)) return "jardim";
   if (/vista|view|panoram|眺望|景色/i.test(text)) return "vista";
-  if (/event|meeting|conferenc|sala|宴会|会議|ウェディング/i.test(text)) return "eventos";
   if (/area.?comum|common|terrace|terrazzo|rooftop|施設|館内|テラス/i.test(text)) return "area_comum";
   return "outro";
 }
