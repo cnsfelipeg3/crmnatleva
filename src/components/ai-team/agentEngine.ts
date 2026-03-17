@@ -192,12 +192,12 @@ function uid(): string { return `gen_${++_idCounter}_${Math.random().toString(36
 function pickWeighted(weights: Record<string, number>, seed: number): AgentStatus {
   const entries = Object.entries(weights);
   const total = entries.reduce((s, [, w]) => s + (w as number), 0);
-  let r = (seed % 1000) / 1000 * total;
+  let r = (Math.abs(seed) % 1000) / 1000 * total;
   for (const [key, w] of entries) {
     r -= w as number;
-    if (r <= 0) return key;
+    if (r <= 0) return key as AgentStatus;
   }
-  return entries[entries.length - 1][0];
+  return entries[entries.length - 1][0] as AgentStatus;
 }
 
 function randRange(min: number, max: number, seed: number): number {
