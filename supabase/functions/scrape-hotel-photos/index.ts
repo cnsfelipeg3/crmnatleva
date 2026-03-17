@@ -274,6 +274,7 @@ Deno.serve(async (req) => {
 
     const officialDomain = official?.sourceUrl ? extractDomain(official.sourceUrl) : null;
 
+    const finalBookingCount = photos.filter(p => p.source === "booking").length;
     const responsePayload = {
       success: true,
       photos,
@@ -283,9 +284,10 @@ Deno.serve(async (req) => {
       pages_scraped: official?.pagesScraped || 0,
       total_site_pages: official?.totalPages || 0,
       booking_rooms_found: booking?.rooms.length || 0,
+      booking_used_as_fallback: needsBookingFallback && finalBookingCount > 0,
       sources_used: {
         official: (official?.photos.length || 0) > 0,
-        booking: bookingCount > 0,
+        booking: finalBookingCount > 0,
       },
     };
 
