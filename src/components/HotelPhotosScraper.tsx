@@ -337,17 +337,20 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     }
   };
 
-  const scrapePhotos = async () => {
+  const scrapePhotos = async (forceRefresh = false) => {
     if (!hotelName) { toast.error("Selecione um hotel primeiro"); return; }
     setLoading(true);
     setLoadingSource("official");
     try {
-      toast.info("🕷️ Buscando fotos: Site Oficial + Booking.com em paralelo...", { duration: 5000 });
+      toast.info(forceRefresh ? "🔄 Re-buscando fotos do site oficial..." : "🕷️ Buscando fotos: Site Oficial + Booking.com...", { duration: 5000 });
       const { data, error } = await supabase.functions.invoke("scrape-hotel-photos", {
-        body: { hotel_name: hotelName, hotel_city: hotelCity, hotel_country: hotelCountry },
+        body: { hotel_name: hotelName, hotel_city: hotelCity, hotel_country: hotelCountry, force_refresh: forceRefresh },
       });
       if (error) throw error;
       if (!data.success) throw new Error(data.error);
+
+      const fromCache = data.from_cache === true;
+      const cacheAge = data.cache_age_hours;
 
       const rawPhotos: HotelPhoto[] = (data.photos || []).map((p: any) => ({
         ...p,
@@ -379,16 +382,20 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       const bookingCount = resolvedPhotos.filter(p => p.source === "booking").length;
 
       if (resolvedPhotos.length > 0) {
-        const parts = [`📸 ${resolvedPhotos.length} fotos HD em ${pagesScraped} páginas`];
+        const parts = fromCache
+          ? [`📦 ${resolvedPhotos.length} fotos (cache ${cacheAge ? Math.round(cacheAge) + "h" : ""})`]
+          : [`📸 ${resolvedPhotos.length} fotos HD em ${pagesScraped} páginas`];
         if (bookingCount > 0) parts.push(`${bookingCount} do Booking.com`);
         if (bookingRoomsFound > 0) parts.push(`${bookingRoomsFound} tipos de quarto validados`);
         parts.push(`${uniqueEnvNames} ambientes`);
         toast.success(parts.join(" — "), { duration: 5000 });
 
         preloadViaProxy(resolvedPhotos, data.source_url || undefined);
-        const needsClassification = sectionRatio < 0.7 || uniqueEnvNames < 3 || (uniqueEnvNames === 1 && resolvedPhotos.length > 5);
-        if (needsClassification) {
-          await runClassification(resolvedPhotos, scraperRoomNames);
+        if (!fromCache) {
+          const needsClassification = sectionRatio < 0.7 || uniqueEnvNames < 3 || (uniqueEnvNames === 1 && resolvedPhotos.length > 5);
+          if (needsClassification) {
+            await runClassification(resolvedPhotos, scraperRoomNames);
+          }
         }
       } else {
         toast.info("Nenhuma foto encontrada. Tente Google Places.");
