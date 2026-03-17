@@ -1882,6 +1882,19 @@ function OperacaoInboxInner() {
                   {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0 h-4">{totalUnread}</Badge>}
                 </div>
                 <div className="flex items-center gap-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                        onClick={() => setViewMode("pipeline")}
+                      >
+                        <LayoutGrid className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p className="text-xs">Visão Pipeline</p></TooltipContent>
+                  </Tooltip>
                   <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
                     <AlertDialogTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
