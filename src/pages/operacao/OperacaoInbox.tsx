@@ -72,6 +72,7 @@ interface Message {
   media_url?: string;
   status: MsgStatus;
   created_at: string;
+  external_message_id?: string;
   raw_message?: any;
   quoted_msg?: { text: string; sender_type: "cliente" | "atendente" | "sistema"; message_type: MsgType };
   edited?: boolean;
@@ -126,14 +127,54 @@ function normalizeTimestamp(dateStr: string | number): Date {
 
 /** Convert any timestamp value (epoch int, epoch string, ISO string) to a valid ISO string */
 function toIsoTimestamp(value: any): string {
-  if (!value && value !== 0) return new Date().toISOString();
+  if (!value && value !== 0) return new Date(0).toISOString();
   const num = Number(value);
   if (Number.isFinite(num) && num > 1_000_000_000) {
     const ms = num > 1_000_000_000_000 ? num : num * 1000;
     return new Date(ms).toISOString();
   }
   const d = new Date(String(value));
-  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  return isNaN(d.getTime()) ? new Date(0).toISOString() : d.toISOString();
+}
+
+function getMessageTimestamp(message: Pick<Message, "created_at" | "external_message_id"> & { timestamp?: string | null } | any): string {
+  return toIsoTimestamp(message?.timestamp ?? message?.created_at);
+}
+
+function compareMessagesChronologically(a: Pick<Message, "created_at"> & { timestamp?: string | null }, b: Pick<Message, "created_at"> & { timestamp?: string | null }): number {
+  return new Date(getMessageTimestamp(a)).getTime() - new Date(getMessageTimestamp(b)).getTime();
+}
+
+function getMessageStableKey(message: Pick<Message, "id" | "external_message_id" | "created_at" | "message_type" | "sender_type" | "text"> & { timestamp?: string | null }): string {
+  return message.external_message_id || message.id || `${getMessageTimestamp(message)}_${message.sender_type}_${message.message_type}_${message.text}`;
+}
+
+function dedupeUiMessages(messages: Message[]): Message[] {
+  const deduped = new Map<string, Message>();
+
+  for (const message of messages) {
+    const key = getMessageStableKey(message);
+    const existing = deduped.get(key);
+
+    if (!existing) {
+      deduped.set(key, message);
+      continue;
+    }
+
+    const existingHasDbId = !existing.id.startsWith("temp_");
+    const nextHasDbId = !message.id.startsWith("temp_");
+
+    if (nextHasDbId && !existingHasDbId) {
+      deduped.set(key, message);
+      continue;
+    }
+
+    if (compareMessagesChronologically(message, existing) >= 0) {
+      deduped.set(key, message);
+    }
+  }
+
+  return Array.from(deduped.values()).sort(compareMessagesChronologically);
 }
 
 function formatTimestamp(dateStr: string): string {
@@ -752,7 +793,7 @@ function OperacaoInboxInner() {
         text: stripQuotes(m.content ?? m.text ?? ""),
         media_url: m.media_url || undefined,
         status: normalizeDbStatus(m.status ?? m.read_status),
-        created_at: toIsoTimestamp(m.created_at || m.timestamp),
+        created_at: toIsoTimestamp(m.timestamp || m.created_at),
         external_message_id: m.external_message_id || undefined,
       }))
     );
@@ -762,7 +803,6 @@ function OperacaoInboxInner() {
 
     const loadMessages = async () => {
       try {
-        // Resolve all conversation IDs for this phone/conversation
         let allConversationIds: string[] = [];
 
         if (selectedId.startsWith("wa_")) {
@@ -791,107 +831,41 @@ function OperacaoInboxInner() {
           return;
         }
 
-        // PRIMARY: Load from unified conversation_messages table (cursor-based, newest first)
         const { data: unifiedRows, error: unifiedErr } = await (supabase
           .from("conversation_messages" as any)
           .select("*")
           .in("conversation_id", allConversationIds)
+          .order("timestamp", { ascending: false, nullsFirst: false })
           .order("created_at", { ascending: false })
           .limit(MESSAGE_PAGE_SIZE) as any);
 
         let allMsgs: Message[] = [];
 
-        if (!unifiedErr && unifiedRows && unifiedRows.length > 0) {
-          // Reverse to chronological order for display
-          allMsgs = mapUnifiedMessages(unifiedRows.reverse(), selectedId);
-          // Track if there are older messages
+        if (!unifiedErr && unifiedRows) {
+          allMsgs = dedupeUiMessages(mapUnifiedMessages(unifiedRows, selectedId));
           if (!cancelled) {
             setHasOlderMessages(prev => ({ ...prev, [selectedId]: unifiedRows.length >= MESSAGE_PAGE_SIZE }));
-            setOldestLoadedTimestamp(prev => ({ ...prev, [selectedId]: unifiedRows[unifiedRows.length - 1]?.created_at || null }));
-          }
-        } else {
-          // FALLBACK: If unified table is empty, try legacy tables (pre-migration)
-          const [legacyResp, modernResp] = await Promise.all([
-            supabase.from("messages").select("*").in("conversation_id", allConversationIds).order("created_at", { ascending: false }).limit(MESSAGE_PAGE_SIZE),
-            supabase.from("chat_messages").select("*").in("conversation_id", allConversationIds).order("created_at", { ascending: false }).limit(MESSAGE_PAGE_SIZE),
-          ]);
-
-          const mergedRows = [...(legacyResp.data || []), ...(modernResp.data || [])];
-          const dedupMap = new Map<string, any>();
-          for (const row of mergedRows) {
-            const r = row as any;
-            const key = r.external_message_id || r.id || `${r.created_at}_${r.sender_type}_${r.text || r.content || ""}`;
-            if (!dedupMap.has(key)) dedupMap.set(key, row);
-          }
-          const dedupedRows = Array.from(dedupMap.values())
-            .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-
-          allMsgs = (dedupedRows || []).map((m: any) => ({
-            id: m.id,
-            conversation_id: selectedId,
-            sender_type: (m.sender_type as "cliente" | "atendente" | "sistema"),
-            message_type: normalizeDbMessageType(m.message_type),
-            text: stripQuotes(m.text ?? m.content ?? ""),
-            media_url: m.media_url || undefined,
-            status: normalizeDbStatus(m.status ?? m.read_status),
-            created_at: toIsoTimestamp(m.created_at),
-          }));
-
-          if (!cancelled) {
-            setHasOlderMessages(prev => ({ ...prev, [selectedId]: mergedRows.length >= MESSAGE_PAGE_SIZE }));
-          }
-        }
-
-        // Also check zapi_messages for any not-yet-migrated real-time data
-        if (selectedId.startsWith("wa_")) {
-          const phoneCandidates = getZapiPhoneCandidates(selectedId);
-          if (phoneCandidates.length > 0) {
-            const { data: zapiData } = await supabase
-              .from("zapi_messages" as any)
-              .select("*")
-              .in("phone", phoneCandidates)
-              .order("timestamp", { ascending: false })
-              .limit(200);
-
-            if (zapiData && zapiData.length > 0) {
-              const existingIds = new Set(allMsgs.map(m => (m as any).external_message_id || m.id));
-              for (const m of zapiData as any[]) {
-                const msgId = m.message_id || m.id;
-                if (existingIds.has(msgId)) continue;
-                const mediaInfo = extractMediaFromRawData(m.raw_data, m.type || "text");
-                allMsgs.push({
-                  id: msgId,
-                  conversation_id: selectedId,
-                  sender_type: (m.from_me ? "atendente" : "cliente") as "cliente" | "atendente",
-                  message_type: (m.type || "text") as MsgType,
-                  text: stripQuotes(m.text || mediaInfo.caption || ""),
-                  media_url: mediaInfo.mediaUrl,
-                  status: mapZapiStatus(m.status, m.from_me),
-                  created_at: toIsoTimestamp(m.timestamp || m.created_at),
-                });
-                existingIds.add(msgId);
-              }
-              allMsgs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-            }
+            const oldestRow = unifiedRows[unifiedRows.length - 1];
+            setOldestLoadedTimestamp(prev => ({ ...prev, [selectedId]: toIsoTimestamp(oldestRow?.timestamp || oldestRow?.created_at || null) }));
           }
         }
 
         for (const m of allMsgs) {
           if (m.id) lastMsgIdsRef.current.add(m.id);
+          if (m.external_message_id) lastMsgIdsRef.current.add(m.external_message_id);
         }
 
         if (!cancelled) {
-          setMessages(prev => ({ ...prev, [selectedId]: allMsgs }));
-          // Sync sidebar preview
+          setMessages(prev => ({ ...prev, [selectedId]: dedupeUiMessages(allMsgs) }));
           if (allMsgs.length > 0) {
             const lastMsg = allMsgs[allMsgs.length - 1];
             const lastPreview = lastMsg.text || `📎 ${lastMsg.message_type}`;
             setConversations(prev => prev.map(c => {
               if (c.id !== selectedId) return c;
               const currentTime = new Date(c.last_message_at || 0).getTime();
-              const msgTime = new Date(lastMsg.created_at).getTime();
+              const msgTime = new Date(getMessageTimestamp(lastMsg)).getTime();
               if (!c.last_message_preview || msgTime >= currentTime) {
-                return { ...c, last_message_preview: lastPreview, last_message_at: lastMsg.created_at };
+                return { ...c, last_message_preview: lastPreview, last_message_at: getMessageTimestamp(lastMsg) };
               }
               return c;
             }));
@@ -934,7 +908,8 @@ function OperacaoInboxInner() {
       .from("conversation_messages" as any)
       .select("*")
       .in("conversation_id", allConversationIds)
-      .lt("created_at", cursor)
+      .lt("timestamp", cursor)
+      .order("timestamp", { ascending: false, nullsFirst: false })
       .order("created_at", { ascending: false })
       .limit(MESSAGE_PAGE_SIZE) as any);
 
@@ -957,7 +932,7 @@ function OperacaoInboxInner() {
       return "sent";
     };
 
-    const olderMsgs: Message[] = olderRows.reverse().map((m: any) => ({
+    const olderMsgs: Message[] = dedupeUiMessages(olderRows.map((m: any) => ({
       id: m.id,
       conversation_id: selectedId,
       sender_type: (m.sender_type || "cliente") as "cliente" | "atendente" | "sistema",
@@ -965,17 +940,19 @@ function OperacaoInboxInner() {
       text: stripQuotes(m.content ?? ""),
       media_url: m.media_url || undefined,
       status: normalizeDbStatus(m.status),
-      created_at: toIsoTimestamp(m.created_at || m.timestamp),
-    }));
+      created_at: toIsoTimestamp(m.timestamp || m.created_at),
+      external_message_id: m.external_message_id || undefined,
+    })));
 
     setMessages(prev => ({
       ...prev,
-      [selectedId]: [...olderMsgs, ...(prev[selectedId] || [])],
+      [selectedId]: dedupeUiMessages([...olderMsgs, ...(prev[selectedId] || [])]),
     }));
 
+    const oldestRow = olderRows[olderRows.length - 1];
     setOldestLoadedTimestamp(prev => ({
       ...prev,
-      [selectedId]: olderRows[olderRows.length - 1]?.created_at || cursor,
+      [selectedId]: toIsoTimestamp(oldestRow?.timestamp || oldestRow?.created_at || cursor),
     }));
 
     setHasOlderMessages(prev => ({
@@ -988,61 +965,49 @@ function OperacaoInboxInner() {
   useEffect(() => {
     const channel = supabase
       .channel('livechat-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'zapi_messages' }, (payload) => {
+      // Listen only to the canonical message table to avoid visual duplication/races
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_messages' }, (payload) => {
         const n = payload.new as any;
-        if (!n.phone) return;
-        const cleanPhone = String(n.phone).replace(/\D/g, "");
-        const waKey = `wa_${cleanPhone}`;
-        const msgId = n.message_id || n.id;
+        if (!n.conversation_id) return;
+
+        const conv = conversations.find(c => c.db_id === n.conversation_id || c.id === n.conversation_id);
+        const waKey = conv?.id || n.conversation_id;
+        const msgId = n.id;
+
         if (lastMsgIdsRef.current.has(msgId)) return;
+        if (n.external_message_id && lastMsgIdsRef.current.has(n.external_message_id)) return;
         lastMsgIdsRef.current.add(msgId);
-        const mediaInfo2 = extractMediaFromRawData(n.raw_data, n.type || "text");
+        if (n.external_message_id) lastMsgIdsRef.current.add(n.external_message_id);
+
         const msg: Message = {
-          id: msgId, conversation_id: waKey,
-          sender_type: (n.from_me ? "atendente" : "cliente") as "cliente" | "atendente",
-          message_type: (n.type || "text") as MsgType,
-          text: stripQuotes(n.text || mediaInfo2.caption || ""),
-          media_url: mediaInfo2.mediaUrl,
-          status: mapZapiStatus(n.status, n.from_me),
+          id: msgId,
+          conversation_id: waKey,
+          sender_type: (n.sender_type || (n.direction === "outgoing" ? "atendente" : "cliente")) as "cliente" | "atendente" | "sistema",
+          message_type: (n.message_type || "text") as MsgType,
+          text: stripQuotes(n.content || ""),
+          media_url: n.media_url || undefined,
+          status: (n.status || "sent") as MsgStatus,
           created_at: toIsoTimestamp(n.timestamp || n.created_at),
+          external_message_id: n.external_message_id || undefined,
         };
-        setMessages(prev => {
-          const existing = prev[waKey] || [];
-          if (existing.find(m => m.id === msg.id)) return prev;
-          if (n.from_me) {
-            const tempIdx = existing.findIndex(m => m.id.startsWith("temp_") && m.text === msg.text && m.sender_type === "atendente");
-            if (tempIdx >= 0) {
-              const updated = [...existing];
-              updated[tempIdx] = { ...updated[tempIdx], id: msg.id, media_url: msg.media_url || updated[tempIdx].media_url };
-              return { ...prev, [waKey]: updated };
-            }
-          }
-          return { ...prev, [waKey]: [...existing, msg].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) };
-        });
-        if (!n.from_me) {
+
+        setMessages(prev => ({
+          ...prev,
+          [waKey]: dedupeUiMessages([...(prev[waKey] || []), msg]),
+        }));
+
+        if (n.direction === "incoming") {
           setConversations(prev => prev.map(c => {
-            if (c.id !== waKey) return c;
+            if (c.id !== waKey && c.db_id !== n.conversation_id) return c;
             const isOpen = waKey === selectedIdRef.current;
-            return { ...c, last_message_preview: n.text || `📎 ${n.type || "media"}`, last_message_at: toIsoTimestamp(n.timestamp || n.created_at), unread_count: isOpen ? 0 : c.unread_count + 1 };
+            return {
+              ...c,
+              last_message_preview: n.content || `📎 ${n.message_type || "media"}`,
+              last_message_at: toIsoTimestamp(n.timestamp || n.created_at),
+              unread_count: isOpen ? 0 : c.unread_count + 1,
+            };
           }));
         }
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'zapi_messages' }, (payload) => {
-        const n = payload.new as any;
-        if (!n.phone || !n.message_id) return;
-        const cleanPhone = String(n.phone).replace(/\D/g, "");
-        const waKey = `wa_${cleanPhone}`;
-        const newStatus = mapZapiStatus(n.status, n.from_me);
-        setMessages(prev => {
-          const existing = prev[waKey];
-          if (!existing) return prev;
-          const idx = existing.findIndex(m => m.id === n.message_id);
-          if (idx < 0) return prev;
-          if (existing[idx].status === newStatus) return prev;
-          const updated = [...existing];
-          updated[idx] = { ...updated[idx], status: newStatus };
-          return { ...prev, [waKey]: updated };
-        });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, (payload) => {
         if (payload.eventType === 'DELETE') {
@@ -1255,47 +1220,9 @@ function OperacaoInboxInner() {
     }
 
     async function pollWhatsAppMessages() {
-      if (!selectedId?.startsWith("wa_")) return;
-      try {
-        const phoneCandidates = getZapiPhoneCandidates(selectedId);
-        if (phoneCandidates.length === 0) return;
-        const { data: zapiData } = await supabase.from("zapi_messages" as any).select("*").in("phone", phoneCandidates).order("timestamp", { ascending: false }).limit(200);
-        const rawMsgs = zapiData || [];
-        const newMsgs: Message[] = [];
-        for (const m of rawMsgs) {
-          const msgId = (m as any).message_id || (m as any).id;
-          if (lastMsgIdsRef.current.has(msgId)) continue;
-          lastMsgIdsRef.current.add(msgId);
-          const mediaInfo3 = extractMediaFromRawData((m as any).raw_data, (m as any).type || "text");
-          newMsgs.push({
-            id: msgId, conversation_id: selectedId,
-            sender_type: ((m as any).from_me ? "atendente" : "cliente") as "cliente" | "atendente",
-            message_type: ((m as any).type || "text") as MsgType,
-            text: (m as any).text || mediaInfo3.caption || "",
-            media_url: mediaInfo3.mediaUrl,
-            status: mapZapiStatus((m as any).status, (m as any).from_me),
-            created_at: toIsoTimestamp((m as any).timestamp || (m as any).created_at),
-          });
-        }
-        if (newMsgs.length > 0) {
-          setMessages(prev => {
-            const existing = prev[selectedId] || [];
-            const existingIds = new Set(existing.map(m => m.id));
-            let updated = [...existing];
-            for (const nm of newMsgs) {
-              if (existingIds.has(nm.id)) continue;
-              if (nm.sender_type === "atendente") {
-                const tempIdx = updated.findIndex(m => m.id.startsWith("temp_") && m.text === nm.text);
-                if (tempIdx >= 0) { updated[tempIdx] = { ...updated[tempIdx], id: nm.id, media_url: nm.media_url || updated[tempIdx].media_url }; continue; }
-              }
-              updated.push(nm);
-            }
-            updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-            return { ...prev, [selectedId]: updated };
-          });
-          scrollToBottom();
-        }
-      } catch (err) { console.error("WhatsApp polling error:", err); }
+      // Canonical source of truth is conversation_messages; polling zapi_messages here
+      // caused duplicates, order drift and optimistic-state races in the inbox.
+      return;
     }
 
     async function checkAndStartPolling() {
@@ -1509,7 +1436,12 @@ function OperacaoInboxInner() {
 
         if (realId) {
           lastMsgIdsRef.current.add(realId);
-          setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m => m.id === tempId ? { ...m, id: realId } : m) }));
+          setMessages(prev => ({
+            ...prev,
+            [selectedId]: dedupeUiMessages((prev[selectedId] || []).map(m =>
+              m.id === tempId ? { ...m, id: realId, external_message_id: realId } : m
+            )),
+          }));
         }
       } catch (err: any) {
         // Send failed - remove temp message
