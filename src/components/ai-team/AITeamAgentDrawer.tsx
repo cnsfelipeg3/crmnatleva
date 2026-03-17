@@ -22,6 +22,12 @@ interface ChatMsg {
   text: string;
 }
 
+const levelLabels: Record<string, string> = {
+  basic: "Básico",
+  intermediate: "Intermediário",
+  advanced: "Avançado",
+};
+
 export default function AITeamAgentDrawer({ agent, tasks, open, onOpenChange }: Props) {
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<ChatMsg[]>([]);
@@ -29,12 +35,16 @@ export default function AITeamAgentDrawer({ agent, tasks, open, onOpenChange }: 
   if (!agent) return null;
 
   const agentTasks = tasks.filter((t) => t.sourceAgentId === agent.id);
-  const responses = simulatedResponses[agent.id] ?? [];
+  const responses = simulatedResponses[agent.id] ?? [
+    "Estou processando essa informação.",
+    "Vou analisar isso com base no meu escopo de atuação.",
+    "Entendido. Vou trabalhar nisso dentro das minhas restrições.",
+  ];
 
   const handleSend = () => {
     if (!input.trim()) return;
     const userMsg: ChatMsg = { role: "user", text: input.trim() };
-    const reply = responses[Math.floor(Math.random() * responses.length)] ?? "Estou processando essa informação.";
+    const reply = responses[Math.floor(Math.random() * responses.length)];
     setChat((prev) => [...prev, userMsg, { role: "agent", text: reply }]);
     setInput("");
   };
@@ -46,6 +56,9 @@ export default function AITeamAgentDrawer({ agent, tasks, open, onOpenChange }: 
           <DrawerTitle className="flex items-center gap-2">
             <span className="text-2xl">{agent.emoji}</span> {agent.name}
             <Badge variant="secondary" className="text-[10px]">{agent.sector}</Badge>
+            {agent.level && (
+              <Badge variant="outline" className="text-[10px]">{levelLabels[agent.level] ?? agent.level}</Badge>
+            )}
           </DrawerTitle>
           <DrawerDescription>{agent.role}</DrawerDescription>
         </DrawerHeader>
@@ -56,6 +69,52 @@ export default function AITeamAgentDrawer({ agent, tasks, open, onOpenChange }: 
             <p className="text-xs font-medium text-muted-foreground">💭 Pensamento atual</p>
             <p className="text-sm leading-relaxed">{agent.currentThought}</p>
           </div>
+
+          {/* Skills */}
+          {agent.skills.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Habilidades</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {agent.skills.map((s) => (
+                  <Badge key={s} variant="outline" className="text-xs font-normal">{s}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Scope */}
+          {agent.scope.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Escopo de atuação</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {agent.scope.map((s) => (
+                  <Badge key={s} variant="secondary" className="text-xs font-normal">{s}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Restrictions */}
+          {agent.restrictions.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Restrições</h4>
+              <div className="flex flex-wrap gap-1.5">
+                {agent.restrictions.map((r) => (
+                  <Badge key={r} variant="outline" className="text-xs font-normal text-muted-foreground border-muted-foreground/30">{r}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Behavior */}
+          {agent.behaviorPrompt && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Comportamento</h4>
+              <p className="text-sm text-muted-foreground bg-muted/30 rounded-lg p-3 border border-border/50 italic">
+                "{agent.behaviorPrompt}"
+              </p>
+            </div>
+          )}
 
           {/* Related tasks */}
           <div className="space-y-2">
