@@ -965,61 +965,49 @@ function OperacaoInboxInner() {
   useEffect(() => {
     const channel = supabase
       .channel('livechat-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'zapi_messages' }, (payload) => {
+      // Listen only to the canonical message table to avoid visual duplication/races
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_messages' }, (payload) => {
         const n = payload.new as any;
-        if (!n.phone) return;
-        const cleanPhone = String(n.phone).replace(/\D/g, "");
-        const waKey = `wa_${cleanPhone}`;
-        const msgId = n.message_id || n.id;
+        if (!n.conversation_id) return;
+
+        const conv = conversations.find(c => c.db_id === n.conversation_id || c.id === n.conversation_id);
+        const waKey = conv?.id || n.conversation_id;
+        const msgId = n.id;
+
         if (lastMsgIdsRef.current.has(msgId)) return;
+        if (n.external_message_id && lastMsgIdsRef.current.has(n.external_message_id)) return;
         lastMsgIdsRef.current.add(msgId);
-        const mediaInfo2 = extractMediaFromRawData(n.raw_data, n.type || "text");
+        if (n.external_message_id) lastMsgIdsRef.current.add(n.external_message_id);
+
         const msg: Message = {
-          id: msgId, conversation_id: waKey,
-          sender_type: (n.from_me ? "atendente" : "cliente") as "cliente" | "atendente",
-          message_type: (n.type || "text") as MsgType,
-          text: stripQuotes(n.text || mediaInfo2.caption || ""),
-          media_url: mediaInfo2.mediaUrl,
-          status: mapZapiStatus(n.status, n.from_me),
+          id: msgId,
+          conversation_id: waKey,
+          sender_type: (n.sender_type || (n.direction === "outgoing" ? "atendente" : "cliente")) as "cliente" | "atendente" | "sistema",
+          message_type: (n.message_type || "text") as MsgType,
+          text: stripQuotes(n.content || ""),
+          media_url: n.media_url || undefined,
+          status: (n.status || "sent") as MsgStatus,
           created_at: toIsoTimestamp(n.timestamp || n.created_at),
+          external_message_id: n.external_message_id || undefined,
         };
-        setMessages(prev => {
-          const existing = prev[waKey] || [];
-          if (existing.find(m => m.id === msg.id)) return prev;
-          if (n.from_me) {
-            const tempIdx = existing.findIndex(m => m.id.startsWith("temp_") && m.text === msg.text && m.sender_type === "atendente");
-            if (tempIdx >= 0) {
-              const updated = [...existing];
-              updated[tempIdx] = { ...updated[tempIdx], id: msg.id, media_url: msg.media_url || updated[tempIdx].media_url };
-              return { ...prev, [waKey]: updated };
-            }
-          }
-          return { ...prev, [waKey]: [...existing, msg].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) };
-        });
-        if (!n.from_me) {
+
+        setMessages(prev => ({
+          ...prev,
+          [waKey]: dedupeUiMessages([...(prev[waKey] || []), msg]),
+        }));
+
+        if (n.direction === "incoming") {
           setConversations(prev => prev.map(c => {
-            if (c.id !== waKey) return c;
+            if (c.id !== waKey && c.db_id !== n.conversation_id) return c;
             const isOpen = waKey === selectedIdRef.current;
-            return { ...c, last_message_preview: n.text || `📎 ${n.type || "media"}`, last_message_at: toIsoTimestamp(n.timestamp || n.created_at), unread_count: isOpen ? 0 : c.unread_count + 1 };
+            return {
+              ...c,
+              last_message_preview: n.content || `📎 ${n.message_type || "media"}`,
+              last_message_at: toIsoTimestamp(n.timestamp || n.created_at),
+              unread_count: isOpen ? 0 : c.unread_count + 1,
+            };
           }));
         }
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'zapi_messages' }, (payload) => {
-        const n = payload.new as any;
-        if (!n.phone || !n.message_id) return;
-        const cleanPhone = String(n.phone).replace(/\D/g, "");
-        const waKey = `wa_${cleanPhone}`;
-        const newStatus = mapZapiStatus(n.status, n.from_me);
-        setMessages(prev => {
-          const existing = prev[waKey];
-          if (!existing) return prev;
-          const idx = existing.findIndex(m => m.id === n.message_id);
-          if (idx < 0) return prev;
-          if (existing[idx].status === newStatus) return prev;
-          const updated = [...existing];
-          updated[idx] = { ...updated[idx], status: newStatus };
-          return { ...prev, [waKey]: updated };
-        });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, (payload) => {
         if (payload.eventType === 'DELETE') {
