@@ -23,12 +23,12 @@ export default function AITeam() {
   const navigate = useNavigate();
 
   const handleApprove = useCallback((id: string) => {
-    removeTask(id);
+    removeTask(id, "approve");
     toast({ title: "Tarefa aprovada", description: "A sugestão foi aceita e será aplicada." });
   }, [removeTask, toast]);
 
   const handleIgnore = useCallback((id: string) => {
-    removeTask(id);
+    removeTask(id, "ignore");
     toast({ title: "Tarefa ignorada", description: "A sugestão foi descartada." });
   }, [removeTask, toast]);
 
