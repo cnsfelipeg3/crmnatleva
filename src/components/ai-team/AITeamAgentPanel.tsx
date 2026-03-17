@@ -310,7 +310,7 @@ function MissionBoard({ tasks }: { tasks: Task[] }) {
 
   const columns = useMemo(() => KANBAN_COLS.map(col => {
     const colTasks = tasks
-      .filter(t => col.statuses.includes(t.status))
+      .filter(t => (col.statuses as readonly string[]).includes(t.status))
       .sort((a, b) => (priorityOrder[a.priority] ?? 9) - (priorityOrder[b.priority] ?? 9));
     return { ...col, tasks: colTasks };
   }), [tasks]);
