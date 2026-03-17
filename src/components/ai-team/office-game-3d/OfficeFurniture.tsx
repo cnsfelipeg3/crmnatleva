@@ -1,6 +1,6 @@
 import { useRef, useState, useMemo } from 'react';
 import { useFrame, useLoader } from '@react-three/fiber';
-import { DESKS, RECEPTION, SOFAS, PLANTS, WHITEBOARD, WALLS, FLOOR_SIZE, CONFERENCE_TABLE } from './mapData3d';
+import { DESKS, RECEPTION, SOFAS, PLANTS, WALLS, FLOOR_SIZE, CONFERENCE_TABLE } from './mapData3d';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import logoNatleva from '@/assets/logo-natleva-wall.png';
@@ -183,26 +183,7 @@ function ReceptionDesk() {
   );
 }
 
-/* ── Whiteboard ────────────────────────────────── */
-function Whiteboard() {
-  const { x, z, w, h } = WHITEBOARD;
-  return (
-    <group position={[x, 1.1, z]}>
-      <mesh castShadow>
-        <boxGeometry args={[w + 0.08, h + 0.08, 0.04]} />
-        <meshStandardMaterial color="#c0c0c0" roughness={0.4} metalness={0.2} />
-      </mesh>
-      <mesh position={[0, 0, 0.021]}>
-        <planeGeometry args={[w, h]} />
-        <meshStandardMaterial color="#f8f8f8" roughness={0.3} metalness={0.02} />
-      </mesh>
-      <mesh position={[0, -h / 2 - 0.04, 0.03]}>
-        <boxGeometry args={[w * 0.6, 0.03, 0.04]} />
-        <meshStandardMaterial color="#b0b0b0" roughness={0.4} metalness={0.3} />
-      </mesh>
-    </group>
-  );
-}
+/* ── Whiteboard removed — NatLeva branding replaces it ── */
 
 /* ── Conference Table ─────────────────────────── */
 function ConferenceTable() {
@@ -415,22 +396,24 @@ function LogoTexturePanel({ position, rotationY, width, height }: {
         <boxGeometry args={[width - 0.1, 0.012, 0.001]} />
         <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.8} metalness={0.7} roughness={0.15} />
       </mesh>
-      {/* Logo as textured plane — always visible */}
+      {/* Logo as textured plane — bright and illuminated */}
       <mesh position={[0, 0.06, 0.018]}>
         <planeGeometry args={[fitW, fitH]} />
         <meshStandardMaterial
           map={texture}
           transparent
           emissive="#ffffff"
-          emissiveIntensity={0.15}
+          emissiveIntensity={0.6}
           emissiveMap={texture}
-          roughness={0.3}
-          metalness={0.1}
+          roughness={0.2}
+          metalness={0.05}
           side={THREE.FrontSide}
         />
       </mesh>
-      {/* Spotlight illuminating the logo */}
-      <pointLight position={[0, 0.3, 0.5]} intensity={0.6} color="#fff5e0" distance={3} decay={2} />
+      {/* Strong spotlights illuminating the logo */}
+      <pointLight position={[0, 0.4, 0.8]} intensity={1.2} color="#fff5e0" distance={4} decay={2} />
+      <pointLight position={[-1, 0, 0.5]} intensity={0.4} color="#c9a96e" distance={3} decay={2} />
+      <pointLight position={[1, 0, 0.5]} intensity={0.4} color="#c9a96e" distance={3} decay={2} />
       {/* Tagline */}
       <Html
         position={[0, -height / 2 + 0.1, 0.02]}
@@ -716,7 +699,7 @@ export default function OfficeFurniture() {
       <NatLevaBranding />
       <ReceptionDesk />
       <ConferenceTable />
-      <Whiteboard />
+      {/* Whiteboard removed */}
       <Cafeteria />
 
       {DESKS.map((d, i) => (
