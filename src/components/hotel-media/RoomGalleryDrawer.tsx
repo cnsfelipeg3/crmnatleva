@@ -81,7 +81,7 @@ export default function RoomGalleryDrawer({
   const hasDetail = detail && (detail.description || Object.keys(detail.details).length > 0 || detail.amenities.length > 0);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={onClose}>
       <div
         className="relative bg-card w-full sm:w-[90vw] sm:max-w-3xl max-h-[90vh] rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
