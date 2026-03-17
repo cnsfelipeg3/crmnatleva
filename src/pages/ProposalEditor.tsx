@@ -15,7 +15,7 @@ import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane,
 import { emitLearningEvent, emitProposalOutcome } from "@/lib/learningEvents";
 import ProposalPreviewRenderer from "@/components/proposal/ProposalPreviewRenderer";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
-import HotelPhotosScraper from "@/components/HotelPhotosScraper";
+import HotelMediaBrowser from "@/components/hotel-media/HotelMediaBrowser";
 import ProposalFlightSearch, { type FlightSegmentData } from "@/components/proposal/ProposalFlightSearch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -758,7 +758,7 @@ export default function ProposalEditor() {
                           {/* Hotel Photos Scraper */}
                           {item.item_type === "hotel" && item.title && (
                             <div className="md:col-span-2">
-                              <HotelPhotosScraper
+                              <HotelMediaBrowser
                                 hotelName={item.title}
                                 hotelCity={item.data?.location || ""}
                                 hotelCountry=""
@@ -768,6 +768,9 @@ export default function ProposalEditor() {
                                   }
                                   const existingPhotos = item.data?.official_photos || [];
                                   updateItemData(idx, "official_photos", [...existingPhotos, ...photos]);
+                                }}
+                                onSelectRoomBlock={(block) => {
+                                  updateItemData(idx, "room_block", block);
                                 }}
                               />
                             </div>

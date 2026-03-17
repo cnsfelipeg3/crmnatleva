@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import HotelAutocomplete from "@/components/HotelAutocomplete";
-import HotelPhotosScraper from "@/components/HotelPhotosScraper";
+import HotelMediaBrowser from "@/components/hotel-media/HotelMediaBrowser";
 
 /* ─── Types ─────────────────────────────────── */
 
@@ -243,7 +243,7 @@ export default function HotelEntriesEditor({
                       )}
                       {hotel.hotel_name && (
                         <div className="mt-2">
-                          <HotelPhotosScraper
+                          <HotelMediaBrowser
                             hotelName={hotel.hotel_name}
                             hotelCity={hotel.hotel_city}
                             hotelCountry={hotel.hotel_country}
