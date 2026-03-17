@@ -109,24 +109,21 @@ Deno.serve(async (req) => {
     const locationStr = [hotel_city, hotel_country].filter(Boolean).join(", ");
     const cleanHotelName = hotel_name.replace(/\s*[-–—]\s*(Rod\.|Acesso|Av\.|Rua|R\.).*$/i, "").trim();
 
-    // ── Run OFFICIAL SITE + BOOKING.COM scraping in PARALLEL ──
-    console.log("🚀 Starting parallel scraping: Official Site + Booking.com");
+    // ═══════════════════════════════════════════════
+    // OFFICIAL-SITE-FIRST: scrape official, evaluate, then booking ONLY if needed
+    // ═══════════════════════════════════════════════
+    console.log("🚀 STEP 1: Scraping OFFICIAL SITE first (primary source)...");
 
-    const [officialResult, bookingResult] = await Promise.allSettled([
-      scrapeOfficialSite(cleanHotelName, locationStr, hotel_name, FIRECRAWL_API_KEY),
-      scrapeBookingCom(cleanHotelName, locationStr, hotel_name, FIRECRAWL_API_KEY),
-    ]);
+    let official: Awaited<ReturnType<typeof scrapeOfficialSite>> | null = null;
+    try {
+      official = await scrapeOfficialSite(cleanHotelName, locationStr, hotel_name, FIRECRAWL_API_KEY);
+    } catch (e) {
+      console.warn("Official scrape failed:", e);
+    }
 
-    const official = officialResult.status === "fulfilled" ? officialResult.value : null;
-    const booking = bookingResult.status === "fulfilled" ? bookingResult.value : null;
-
-    if (officialResult.status === "rejected") console.warn("Official scrape failed:", officialResult.reason);
-    if (bookingResult.status === "rejected") console.warn("Booking scrape failed:", bookingResult.reason);
-
-    // ── Merge results ──
     const collection: ImageCollection = { photos: [], seen: new Set(), sections: new Map() };
 
-    // 1. Add official photos first (higher priority)
+    // 1. Add ALL official photos (this is the structural backbone)
     if (official) {
       for (const photo of official.photos) {
         if (!collection.seen.has(normalizeUrlForDedup(photo.url))) {
@@ -139,60 +136,77 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 2. Cross-reference room names from Booking
-    const bookingRoomNames = booking?.rooms.map(r => r.name) || [];
-    const officialRoomNames = official ? [...new Set(official.photos.map(p => p.section_name).filter(Boolean).filter(isLikelyRoomOrFacilityName))] : [];
-    
-    // Merge validated room names
-    let validatedRoomNames = [...new Set([...officialRoomNames, ...bookingRoomNames])];
+    const officialPhotoCount = collection.photos.length;
+    const officialRoomNames = official
+      ? [...new Set(official.photos.map(p => p.section_name).filter(Boolean).filter(isLikelyRoomOrFacilityName))]
+      : [];
 
-    // If we have very few validated names, try AI extraction from scraped content
-    if (validatedRoomNames.length < 3 && official && official.photos.length > 5) {
+    console.log(`📸 Official site: ${officialPhotoCount} photos, ${officialRoomNames.length} rooms identified`);
+
+    // 2. Extract room names with AI if official data is sparse
+    let validatedRoomNames = [...officialRoomNames];
+    if (validatedRoomNames.length < 3 && official && official.photos.length > 3) {
       const aiRoomNames = await extractRoomNamesWithAI(cleanHotelName, official.photos, collection);
       if (aiRoomNames.length > 0) {
         validatedRoomNames = [...new Set([...validatedRoomNames, ...aiRoomNames])];
         console.log(`🤖 AI extracted room names: ${aiRoomNames.join(", ")}`);
       }
     }
-    
-    console.log(`📋 Validated room names: ${validatedRoomNames.join(", ")}`);
 
-    // 3. Add Booking photos as FALLBACK (only for room types not well-covered by official)
-    if (booking) {
+    // 3. BOOKING AS STRICT FALLBACK — only when official is truly insufficient
+    const OFFICIAL_MINIMUM_PHOTOS = 15;
+    const needsBookingFallback = officialPhotoCount < OFFICIAL_MINIMUM_PHOTOS;
+    let booking: Awaited<ReturnType<typeof scrapeBookingCom>> | null = null;
+
+    if (needsBookingFallback) {
+      console.log(`⚠️ Official site yielded only ${officialPhotoCount} photos (< ${OFFICIAL_MINIMUM_PHOTOS}). Running Booking.com as FALLBACK...`);
+      try {
+        booking = await scrapeBookingCom(cleanHotelName, locationStr, hotel_name, FIRECRAWL_API_KEY);
+      } catch (e) {
+        console.warn("Booking fallback failed:", e);
+      }
+    } else {
+      console.log(`✅ Official site sufficient (${officialPhotoCount} photos). Skipping Booking.com.`);
+    }
+
+    // 4. Add Booking data ONLY as labeled supplement (never override official structure)
+    if (booking && booking.rooms.length > 0) {
+      // Add room names from Booking as supplementary validation only
+      const bookingRoomNames = booking.rooms.map(r => r.name);
+      validatedRoomNames = [...new Set([...validatedRoomNames, ...bookingRoomNames])];
+
       const officialCategoryCount: Record<string, number> = {};
       for (const p of collection.photos) {
-        const cat = p.category || "outro";
-        officialCategoryCount[cat] = (officialCategoryCount[cat] || 0) + 1;
+        officialCategoryCount[p.category || "outro"] = (officialCategoryCount[p.category || "outro"] || 0) + 1;
       }
 
       for (const room of booking.rooms) {
-        // Check if we already have enough photos for this room type
         const cat = inferCategory(room.name, "");
-        const existingCount = officialCategoryCount[cat] || 0;
+        const officialHasEnough = (officialCategoryCount[cat] || 0) >= 3;
 
-        // Add Booking photos if official has < 3 for this category, or if total < 20
-        const shouldAdd = existingCount < 3 || collection.photos.length < 20;
-        
+        // Only add Booking photos for categories the official site doesn't cover well
+        if (officialHasEnough && collection.photos.length >= 30) continue;
+
         for (const photoUrl of room.photos) {
           const dedupKey = normalizeUrlForDedup(photoUrl);
           if (collection.seen.has(dedupKey)) continue;
-          if (!shouldAdd && collection.photos.length > 60) continue;
+          if (collection.photos.length > 80) break;
 
           collection.seen.add(dedupKey);
           collection.photos.push({
             url: photoUrl,
             alt: room.name,
-            section_name: room.name,
+            section_name: `[Booking] ${room.name}`,
             category: cat,
-            confidence: 0.85,
+            confidence: 0.7,
             source: "booking",
-            html_context: `Booking.com room listing: "${room.name}". ${Object.entries(room.details).map(([k,v]) => `${k}: ${v}`).join(", ")}`,
+            html_context: `[FALLBACK] Booking.com: "${room.name}". ${Object.entries(room.details).map(([k,v]) => `${k}: ${v}`).join(", ")}`,
           });
           officialCategoryCount[cat] = (officialCategoryCount[cat] || 0) + 1;
         }
 
-        // Add section details from Booking if missing
-        if (!collection.sections.has(room.name) && (room.details || room.amenities.length > 0)) {
+        // Add section details from Booking only if official doesn't have them
+        if (!collection.sections.has(room.name) && (Object.keys(room.details).length > 0 || room.amenities.length > 0)) {
           collection.sections.set(room.name, {
             name: room.name,
             description: "",
@@ -203,7 +217,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`📸 Total merged photos: ${collection.photos.length} (Official: ${official?.photos.length || 0}, Booking fallback added)`);
+    const bookingCount = collection.photos.filter(p => p.source === "booking").length;
+    console.log(`📸 Final merged: ${collection.photos.length} photos (${officialPhotoCount} official, ${bookingCount} booking fallback)`);
 
     // ── Filter, deduplicate, maximize quality, and return ──
     const photos = collection.photos
@@ -259,6 +274,7 @@ Deno.serve(async (req) => {
 
     const officialDomain = official?.sourceUrl ? extractDomain(official.sourceUrl) : null;
 
+    const finalBookingCount = photos.filter(p => p.source === "booking").length;
     const responsePayload = {
       success: true,
       photos,
@@ -268,9 +284,10 @@ Deno.serve(async (req) => {
       pages_scraped: official?.pagesScraped || 0,
       total_site_pages: official?.totalPages || 0,
       booking_rooms_found: booking?.rooms.length || 0,
+      booking_used_as_fallback: needsBookingFallback && finalBookingCount > 0,
       sources_used: {
         official: (official?.photos.length || 0) > 0,
-        booking: bookingCount > 0,
+        booking: finalBookingCount > 0,
       },
     };
 
@@ -338,9 +355,10 @@ async function scrapeOfficialSite(
 
   const collection: ImageCollection = { photos: [], seen: new Set(), sections: new Map() };
 
-  // Map the entire site
+  // ── STEP A: Map the entire official site AGGRESSIVELY ──
   let allSiteUrls = await mapEntireSite(mainUrl, apiKey);
-  if (allSiteUrls.length === 0 && mainUrl) {
+  if (allSiteUrls.length < 5 && mainUrl) {
+    console.log("⚠️ Map returned few URLs, generating common paths...");
     allSiteUrls = await generateCommonUrls(mainUrl);
   }
 
@@ -349,28 +367,68 @@ async function scrapeOfficialSite(
     ...categorizedPages.priority,
     ...categorizedPages.gallery,
     ...categorizedPages.other,
-  ].slice(0, 30);
+  ].slice(0, 50); // Up from 30 → 50 for deeper coverage
 
   if (pagesToScrape.length === 0 && mainUrl) {
     pagesToScrape.push({ url: mainUrl, inferredSection: "" });
   }
 
-  console.log(`🕷️ Scraping ${pagesToScrape.length} official pages...`);
+  console.log(`🕷️ Scraping ${pagesToScrape.length} official pages (${categorizedPages.priority.length} room pages, ${categorizedPages.gallery.length} gallery, ${categorizedPages.other.length} facility)...`);
 
-  const batchSize = 3;
+  // ── STEP B: Scrape pages in batches of 4 ──
+  const batchSize = 4;
+  const discoveredLinks = new Set<string>();
+  const scrapedUrls = new Set<string>();
+
   for (let i = 0; i < pagesToScrape.length; i += batchSize) {
     const batch = pagesToScrape.slice(i, i + batchSize);
-    await Promise.allSettled(
-      batch.map(page => scrapePageForPhotos(page.url, page.inferredSection, collection, apiKey, hotelName, "official"))
+    const batchResults = await Promise.allSettled(
+      batch.map(page => scrapePageForPhotosWithLinks(page.url, page.inferredSection, collection, apiKey, hotelName, "official"))
     );
+    for (const r of batchResults) {
+      if (r.status === "fulfilled" && r.value) {
+        scrapedUrls.add(r.value.url);
+        for (const link of r.value.discoveredLinks) discoveredLinks.add(link);
+      }
+    }
   }
 
-  if (mainUrl && !pagesToScrape.some(p => p.url === mainUrl)) {
+  // ── STEP C: SECOND PASS — follow discovered links to room/gallery pages not yet scraped ──
+  const officialDomainForLinks = mainUrl ? new URL(mainUrl).hostname : "";
+  const secondPassPages: CategorizedPage[] = [];
+  for (const link of discoveredLinks) {
+    if (scrapedUrls.has(link)) continue;
+    if (pagesToScrape.some(p => p.url === link)) continue;
+    try {
+      const linkDomain = new URL(link).hostname;
+      if (linkDomain !== officialDomainForLinks) continue;
+    } catch { continue; }
+    const lower = link.toLowerCase();
+    if (/room|suite|villa|accommodation|gallery|photo|camera|chambre|zimmer|客室|お部屋/i.test(lower)) {
+      const seg = new URL(link).pathname.split("/").filter(Boolean).pop() || "";
+      secondPassPages.push({ url: link, inferredSection: seg.replace(/[-_]/g, " ").replace(/\.\w+$/, "").split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") });
+    }
+  }
+
+  if (secondPassPages.length > 0) {
+    const extraPages = secondPassPages.slice(0, 20);
+    console.log(`🔍 SECOND PASS: Found ${secondPassPages.length} new room/gallery links, scraping ${extraPages.length}...`);
+    for (let i = 0; i < extraPages.length; i += batchSize) {
+      const batch = extraPages.slice(i, i + batchSize);
+      await Promise.allSettled(
+        batch.map(page => scrapePageForPhotos(page.url, page.inferredSection, collection, apiKey, hotelName, "official"))
+      );
+    }
+  }
+
+  // ── STEP D: Scrape main URL if not already done ──
+  if (mainUrl && !scrapedUrls.has(mainUrl) && !pagesToScrape.some(p => p.url === mainUrl)) {
     await scrapePageForPhotos(mainUrl, "", collection, apiKey, hotelName, "official");
   }
 
-  // Fallback from search results
+  // ── STEP E: Fallback from search results if still sparse ──
   if (collection.photos.length < 10) {
+    console.log("⚠️ Very few photos from official pages, extracting from search results...");
     if (officialResult) collectImagesFromMarkdown(officialResult.markdown || "", officialResult.url || "", collection, officialDomain, "official");
     for (const result of results) {
       if (result === officialResult) continue;
@@ -378,12 +436,13 @@ async function scrapeOfficialSite(
     }
   }
 
+  const totalScraped = pagesToScrape.length + secondPassPages.filter((_, i) => i < 20).length;
   return {
     photos: collection.photos,
     sections: collection.sections,
     sourceUrl: mainUrl || "",
-    pagesScraped: pagesToScrape.length,
-    totalPages: allSiteUrls.length,
+    pagesScraped: totalScraped,
+    totalPages: allSiteUrls.length + discoveredLinks.size,
   };
 }
 
@@ -607,7 +666,7 @@ async function mapEntireSite(mainUrl: string | undefined, apiKey: string): Promi
     const resp = await fetch("https://api.firecrawl.dev/v1/map", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ url: mainUrl, limit: 200, includeSubdomains: false }),
+      body: JSON.stringify({ url: mainUrl, limit: 500, includeSubdomains: false }),
     });
     if (!resp.ok) return [mainUrl];
     const data = await resp.json();
@@ -735,6 +794,66 @@ async function scrapePageForPhotos(
     }
   } catch (e) {
     console.warn(`Failed scraping ${url}:`, e);
+  }
+}
+
+/**
+ * Same as scrapePageForPhotos but also returns discovered internal links for second-pass crawling.
+ */
+async function scrapePageForPhotosWithLinks(
+  url: string,
+  inferredSection: string,
+  collection: ImageCollection,
+  apiKey: string,
+  hotelName: string,
+  source: "official" | "booking" | "google"
+): Promise<{ url: string; discoveredLinks: string[] } | null> {
+  try {
+    const resp = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ url, formats: ["html", "markdown", "links"], onlyMainContent: false, waitFor: 3000 }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const html = data.data?.html || data.html || "";
+    const markdown = data.data?.markdown || data.markdown || "";
+    if (html.length < 300) return { url, discoveredLinks: [] };
+
+    extractImagesWithSectionContext(html, url, collection, hotelName, source);
+    extractSectionDescriptions(markdown, collection);
+
+    const photosBeforeOrphan = collection.photos.length;
+    extractHighResImages(html, url, collection, "", source);
+
+    if (inferredSection) {
+      for (let i = photosBeforeOrphan; i < collection.photos.length; i++) {
+        if (!collection.photos[i].section_name) {
+          collection.photos[i].section_name = inferredSection;
+          collection.photos[i].confidence = 0.7;
+        }
+      }
+    }
+
+    // Extract internal links for deeper discovery
+    const pageLinks: string[] = data.data?.links || data.links || [];
+    // Also extract href links from HTML for room/gallery pages
+    const hrefRegex = /href=["']([^"']+)["']/gi;
+    let hrefMatch;
+    while ((hrefMatch = hrefRegex.exec(html)) !== null) {
+      const href = hrefMatch[1];
+      if (href && !href.startsWith("#") && !href.startsWith("javascript")) {
+        try {
+          const absLink = href.startsWith("http") ? href : new URL(href, url).href;
+          pageLinks.push(absLink);
+        } catch { /* skip */ }
+      }
+    }
+
+    return { url, discoveredLinks: [...new Set(pageLinks)] };
+  } catch (e) {
+    console.warn(`Failed scraping ${url}:`, e);
+    return null;
   }
 }
 

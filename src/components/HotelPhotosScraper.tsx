@@ -342,7 +342,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     setLoading(true);
     setLoadingSource("official");
     try {
-      toast.info(forceRefresh ? "🔄 Re-buscando fotos do site oficial..." : "🕷️ Buscando fotos: Site Oficial + Booking.com...", { duration: 5000 });
+      toast.info(forceRefresh ? "🔄 Re-buscando fotos do site oficial..." : "🕷️ Buscando fotos do site oficial do hotel...", { duration: 5000 });
       const { data, error } = await supabase.functions.invoke("scrape-hotel-photos", {
         body: { hotel_name: hotelName, hotel_city: hotelCity, hotel_country: hotelCountry, force_refresh: forceRefresh },
       });
@@ -384,9 +384,8 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
       if (resolvedPhotos.length > 0) {
         const parts = fromCache
           ? [`📦 ${resolvedPhotos.length} fotos (cache ${cacheAge ? Math.round(cacheAge) + "h" : ""})`]
-          : [`📸 ${resolvedPhotos.length} fotos HD em ${pagesScraped} páginas`];
-        if (bookingCount > 0) parts.push(`${bookingCount} do Booking.com`);
-        if (bookingRoomsFound > 0) parts.push(`${bookingRoomsFound} tipos de quarto validados`);
+          : [`📸 ${resolvedPhotos.length} fotos HD em ${pagesScraped} páginas oficiais`];
+        if (bookingCount > 0) parts.push(`+ ${bookingCount} fallback Booking`);
         parts.push(`${uniqueEnvNames} ambientes`);
         toast.success(parts.join(" — "), { duration: 5000 });
 
