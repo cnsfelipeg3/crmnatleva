@@ -693,7 +693,7 @@ Deno.test({ name: "INTEGRATION-001: Edge function responds to valid hotel", sani
   }
 }});
 
-Deno.test("INTEGRATION-002: Edge function rejects missing hotel_name", async () => {
+Deno.test({ name: "INTEGRATION-002: Edge function rejects missing hotel_name", sanitizeResources: false, sanitizeOps: false, fn: async () => {
   const response = await fetch(`${SUPABASE_URL}/functions/v1/scrape-hotel-photos`, {
     method: "POST",
     headers: {
