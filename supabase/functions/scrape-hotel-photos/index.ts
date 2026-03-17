@@ -55,6 +55,20 @@ interface BookingRoomData {
   amenities: string[];
 }
 
+interface RoomRegistryEntry {
+  name: string;
+  normalized: string;
+  source_url: string;
+  text_evidence: {
+    heading?: string;
+    description?: string;
+    amenities?: string[];
+    slug?: string;
+  };
+  confidence: number;
+  category: string;
+}
+
 // ═══════════════════════════════════════════════
 // Main handler
 // ═══════════════════════════════════════════════
