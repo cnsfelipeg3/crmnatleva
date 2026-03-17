@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Camera, Bed, Maximize2, Users, Eye, Globe, Paperclip } from "lucide-react";
+import { Camera, Bed, Maximize2, Users, Eye, Globe, Paperclip, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getConfidenceLevel } from "./types";
+import { getConfidenceLevel, buildCommercialSummary, getHighlightAmenity, getPhotoTag, PHOTO_TAG_CONFIG } from "./types";
 import type { HotelPhoto, SectionDetail, RoomBlock } from "./types";
 
 interface Props {
