@@ -2429,14 +2429,24 @@ export default function LiveChat() {
                               )}
                               {/* Document message */}
                               {msg.message_type === "document" && (
-                                <div className="flex items-center gap-2 py-1">
+                                <div className="flex items-center gap-2 py-1 min-w-[180px]">
                                   <FileText className="h-5 w-5 shrink-0" />
                                   {msg.media_url ? (
-                                    <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="text-sm underline hover:opacity-80">
-                                      {msg.text || "📄 Documento"}
-                                    </a>
+                                    <div className="flex flex-col gap-1">
+                                      <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="text-sm underline hover:opacity-80">
+                                        {msg.text?.replace(/^📄\s*/, '') || "Documento"}
+                                      </a>
+                                      <a
+                                        href={msg.media_url}
+                                        download
+                                        className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5"
+                                        onClick={e => e.stopPropagation()}
+                                      >
+                                        <File className="h-2.5 w-2.5" /> Baixar
+                                      </a>
+                                    </div>
                                   ) : (
-                                    <span className="text-sm">{msg.text || "📄 Documento"}</span>
+                                    <span className="text-sm opacity-70">{msg.text?.replace(/^\[MÍDIA: document\]$/, '📄 Documento') || "📄 Documento"}</span>
                                   )}
                                 </div>
                               )}
