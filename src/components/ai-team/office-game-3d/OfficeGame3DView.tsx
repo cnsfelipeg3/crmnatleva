@@ -61,8 +61,8 @@ export default function OfficeGame3DView({ agents, tasks, onBack, onSelectAgent 
         <Canvas
           shadows
           camera={{
-            position: [0, 8, 10],
-            fov: isMobile ? 58 : 50,
+            position: [0, 6, 8],
+            fov: isMobile ? 55 : 45,
             near: 0.1,
             far: 60,
           }}

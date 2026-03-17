@@ -4,9 +4,10 @@ import * as THREE from 'three';
 import { collides3D, FLOOR_SIZE } from './mapData3d';
 
 const SPEED = 4;
-const CAM_HEIGHT = 8;
-const CAM_BACK = 6;
-const CAM_LERP = 0.08;
+const CAM_HEIGHT = 5.5;
+const CAM_BACK = 4.5;
+const CAM_ANGLE_X = -0.15; // slight tilt for more immersive angle
+const CAM_LERP = 0.06;
 const PLAYER_RADIUS = 0.22;
 
 interface Props {
@@ -20,9 +21,9 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
   const posRef = useRef(new THREE.Vector3(startPos[0], 0, startPos[2]));
   const targetRef = useRef<THREE.Vector3 | null>(null);
   const keysRef = useRef(new Set<string>());
+  const velRef = useRef({ x: 0, z: 0 });
   const { camera } = useThree();
 
-  // Keyboard
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
@@ -37,7 +38,6 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
   }, []);
 
-  // Click-to-move via floor raycast
   const { raycaster, pointer } = useThree();
   const floorRef = useRef<THREE.Mesh>(null);
 
@@ -54,51 +54,57 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
     const dt = Math.min(delta, 0.05);
     const pos = posRef.current;
     const keys = keysRef.current;
+    const vel = velRef.current;
 
-    // WASD / arrow keys
-    let vx = 0, vz = 0;
-    if (keys.has('w') || keys.has('arrowup')) vz = -1;
-    if (keys.has('s') || keys.has('arrowdown')) vz = 1;
-    if (keys.has('a') || keys.has('arrowleft')) vx = -1;
-    if (keys.has('d') || keys.has('arrowright')) vx = 1;
+    let inputX = 0, inputZ = 0;
+    if (keys.has('w') || keys.has('arrowup')) inputZ = -1;
+    if (keys.has('s') || keys.has('arrowdown')) inputZ = 1;
+    if (keys.has('a') || keys.has('arrowleft')) inputX = -1;
+    if (keys.has('d') || keys.has('arrowright')) inputX = 1;
 
-    // Virtual joystick input
     if (joystickInput && (Math.abs(joystickInput.x) > 0.05 || Math.abs(joystickInput.z) > 0.05)) {
-      vx = joystickInput.x;
-      vz = joystickInput.z;
+      inputX = joystickInput.x;
+      inputZ = joystickInput.z;
       targetRef.current = null;
     }
 
-    if (vx || vz) {
+    const accel = 12;
+    const friction = 8;
+
+    if (inputX || inputZ) {
       targetRef.current = null;
-      const len = Math.sqrt(vx * vx + vz * vz);
-      const mx = (vx / len) * SPEED * dt;
-      const mz = (vz / len) * SPEED * dt;
-
-      const nx = pos.x + mx;
-      if (!collides3D(nx, pos.z, PLAYER_RADIUS)) pos.x = nx;
-      const nz = pos.z + mz;
-      if (!collides3D(pos.x, nz, PLAYER_RADIUS)) pos.z = nz;
-    }
-
-    // Click-to-move
-    if (targetRef.current) {
+      const len = Math.sqrt(inputX * inputX + inputZ * inputZ);
+      vel.x += (inputX / len) * accel * dt;
+      vel.z += (inputZ / len) * accel * dt;
+    } else if (targetRef.current) {
       const dx = targetRef.current.x - pos.x;
       const dz = targetRef.current.z - pos.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
       if (dist < 0.08) {
         targetRef.current = null;
       } else {
-        const step = SPEED * dt;
-        const r = Math.min(step / dist, 1);
-        const mx = dx * r;
-        const mz = dz * r;
-        const nx = pos.x + mx;
-        if (!collides3D(nx, pos.z, PLAYER_RADIUS)) pos.x = nx;
-        const nz = pos.z + mz;
-        if (!collides3D(pos.x, nz, PLAYER_RADIUS)) pos.z = nz;
+        vel.x += (dx / dist) * accel * dt;
+        vel.z += (dz / dist) * accel * dt;
       }
     }
+
+    // Friction
+    vel.x -= vel.x * friction * dt;
+    vel.z -= vel.z * friction * dt;
+
+    // Clamp speed
+    const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
+    if (speed > SPEED) {
+      vel.x = (vel.x / speed) * SPEED;
+      vel.z = (vel.z / speed) * SPEED;
+    }
+
+    const mx = vel.x * dt;
+    const mz = vel.z * dt;
+    const nx = pos.x + mx;
+    if (!collides3D(nx, pos.z, PLAYER_RADIUS)) pos.x = nx; else vel.x = 0;
+    const nz = pos.z + mz;
+    if (!collides3D(pos.x, nz, PLAYER_RADIUS)) pos.z = nz; else vel.z = 0;
 
     // Clamp to floor
     const hw = FLOOR_SIZE.w / 2 - 0.3;
@@ -106,23 +112,35 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
     pos.x = Math.max(-hw, Math.min(hw, pos.x));
     pos.z = Math.max(-hh, Math.min(hh, pos.z));
 
-    // Update mesh
     if (groupRef.current) {
       groupRef.current.position.x = pos.x;
       groupRef.current.position.z = pos.z;
+
+      // Rotate body toward movement
+      if (speed > 0.3) {
+        const targetAngle = Math.atan2(vel.x, vel.z);
+        const cur = groupRef.current.rotation.y;
+        let diff = targetAngle - cur;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        groupRef.current.rotation.y += diff * 0.15;
+      }
     }
 
-    // Camera follow
-    const camTarget = new THREE.Vector3(pos.x, CAM_HEIGHT, pos.z + CAM_BACK);
+    // Camera — third-person over-the-shoulder feel
+    const camTarget = new THREE.Vector3(
+      pos.x + CAM_ANGLE_X,
+      CAM_HEIGHT,
+      pos.z + CAM_BACK
+    );
     camera.position.lerp(camTarget, CAM_LERP);
-    camera.lookAt(new THREE.Vector3(pos.x, 0, pos.z));
+    camera.lookAt(new THREE.Vector3(pos.x, 0.5, pos.z - 1));
 
     onPositionChange(pos.x, pos.z);
   });
 
   return (
     <>
-      {/* Invisible floor for raycasting clicks */}
       <mesh
         ref={floorRef}
         rotation-x={-Math.PI / 2}
@@ -130,45 +148,72 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
         onClick={handleFloorClick}
         visible={false}
       >
-        <planeGeometry args={[FLOOR_SIZE.w, FLOOR_SIZE.h]} />
+        <planeGeometry args={[FLOOR_SIZE.w * 1.5, FLOOR_SIZE.h * 1.5]} />
         <meshBasicMaterial />
       </mesh>
 
       <group ref={groupRef} position={[startPos[0], 0, startPos[2]]}>
-        {/* Ground shadow */}
+        {/* Shadow disc */}
         <mesh rotation-x={-Math.PI / 2} position={[0, 0.005, 0]}>
-          <circleGeometry args={[0.3, 24]} />
-          <meshStandardMaterial color="#6c5ce7" transparent opacity={0.15} />
+          <circleGeometry args={[0.25, 24]} />
+          <meshStandardMaterial color="#000" transparent opacity={0.12} />
         </mesh>
 
-        {/* Pulsing ring */}
-        <mesh rotation-x={-Math.PI / 2} position={[0, 0.008, 0]}>
-          <ringGeometry args={[0.3, 0.38, 32]} />
-          <meshStandardMaterial
-            color="#6c5ce7"
-            emissive="#6c5ce7"
-            emissiveIntensity={0.6}
-            transparent
-            opacity={0.35}
-          />
+        {/* Player body — humanoid */}
+        {/* Legs */}
+        <mesh position={[-0.06, 0.2, 0]} castShadow>
+          <capsuleGeometry args={[0.04, 0.2, 4, 8]} />
+          <meshStandardMaterial color="#2c3e50" roughness={0.7} />
         </mesh>
-
-        {/* Body capsule */}
-        <mesh position={[0, 0.4, 0]} castShadow>
-          <capsuleGeometry args={[0.15, 0.32, 6, 16]} />
-          <meshStandardMaterial
-            color="#6c5ce7"
-            roughness={0.25}
-            metalness={0.2}
-            emissive="#6c5ce7"
-            emissiveIntensity={0.12}
-          />
+        <mesh position={[0.06, 0.2, 0]} castShadow>
+          <capsuleGeometry args={[0.04, 0.2, 4, 8]} />
+          <meshStandardMaterial color="#2c3e50" roughness={0.7} />
         </mesh>
-
+        {/* Torso */}
+        <mesh position={[0, 0.48, 0]} castShadow>
+          <capsuleGeometry args={[0.1, 0.18, 6, 12]} />
+          <meshStandardMaterial color="#6c5ce7" roughness={0.35} metalness={0.15} emissive="#6c5ce7" emissiveIntensity={0.08} />
+        </mesh>
+        {/* Arms */}
+        <mesh position={[-0.15, 0.45, 0]} castShadow>
+          <capsuleGeometry args={[0.03, 0.18, 4, 8]} />
+          <meshStandardMaterial color="#6c5ce7" roughness={0.4} />
+        </mesh>
+        <mesh position={[0.15, 0.45, 0]} castShadow>
+          <capsuleGeometry args={[0.03, 0.18, 4, 8]} />
+          <meshStandardMaterial color="#6c5ce7" roughness={0.4} />
+        </mesh>
+        {/* Neck */}
+        <mesh position={[0, 0.62, 0]} castShadow>
+          <cylinderGeometry args={[0.035, 0.04, 0.06, 8]} />
+          <meshStandardMaterial color="#deb887" roughness={0.6} />
+        </mesh>
         {/* Head */}
-        <mesh position={[0, 0.74, 0]} castShadow>
-          <sphereGeometry args={[0.13, 16, 12]} />
-          <meshStandardMaterial color="#f0ebe3" roughness={0.5} metalness={0.05} />
+        <mesh position={[0, 0.72, 0]} castShadow>
+          <sphereGeometry args={[0.09, 16, 12]} />
+          <meshStandardMaterial color="#deb887" roughness={0.55} metalness={0.02} />
+        </mesh>
+        {/* Hair */}
+        <mesh position={[0, 0.78, -0.01]} castShadow>
+          <sphereGeometry args={[0.08, 12, 8]} />
+          <meshStandardMaterial color="#2c1810" roughness={0.9} />
+        </mesh>
+        {/* Eyes */}
+        <mesh position={[-0.025, 0.73, 0.08]}>
+          <sphereGeometry args={[0.012, 8, 6]} />
+          <meshStandardMaterial color="#fff" roughness={0.2} />
+        </mesh>
+        <mesh position={[0.025, 0.73, 0.08]}>
+          <sphereGeometry args={[0.012, 8, 6]} />
+          <meshStandardMaterial color="#fff" roughness={0.2} />
+        </mesh>
+        <mesh position={[-0.025, 0.73, 0.09]}>
+          <sphereGeometry args={[0.006, 6, 4]} />
+          <meshStandardMaterial color="#1a1a2e" roughness={0.1} />
+        </mesh>
+        <mesh position={[0.025, 0.73, 0.09]}>
+          <sphereGeometry args={[0.006, 6, 4]} />
+          <meshStandardMaterial color="#1a1a2e" roughness={0.1} />
         </mesh>
       </group>
     </>
