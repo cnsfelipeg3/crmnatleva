@@ -353,9 +353,10 @@ async function scrapeOfficialSite(
 
   const collection: ImageCollection = { photos: [], seen: new Set(), sections: new Map() };
 
-  // Map the entire site
+  // ── STEP A: Map the entire official site AGGRESSIVELY ──
   let allSiteUrls = await mapEntireSite(mainUrl, apiKey);
-  if (allSiteUrls.length === 0 && mainUrl) {
+  if (allSiteUrls.length < 5 && mainUrl) {
+    console.log("⚠️ Map returned few URLs, generating common paths...");
     allSiteUrls = await generateCommonUrls(mainUrl);
   }
 
@@ -364,28 +365,68 @@ async function scrapeOfficialSite(
     ...categorizedPages.priority,
     ...categorizedPages.gallery,
     ...categorizedPages.other,
-  ].slice(0, 30);
+  ].slice(0, 50); // Up from 30 → 50 for deeper coverage
 
   if (pagesToScrape.length === 0 && mainUrl) {
     pagesToScrape.push({ url: mainUrl, inferredSection: "" });
   }
 
-  console.log(`🕷️ Scraping ${pagesToScrape.length} official pages...`);
+  console.log(`🕷️ Scraping ${pagesToScrape.length} official pages (${categorizedPages.priority.length} room pages, ${categorizedPages.gallery.length} gallery, ${categorizedPages.other.length} facility)...`);
 
-  const batchSize = 3;
+  // ── STEP B: Scrape pages in batches of 4 ──
+  const batchSize = 4;
+  const discoveredLinks = new Set<string>();
+  const scrapedUrls = new Set<string>();
+
   for (let i = 0; i < pagesToScrape.length; i += batchSize) {
     const batch = pagesToScrape.slice(i, i + batchSize);
-    await Promise.allSettled(
-      batch.map(page => scrapePageForPhotos(page.url, page.inferredSection, collection, apiKey, hotelName, "official"))
+    const batchResults = await Promise.allSettled(
+      batch.map(page => scrapePageForPhotosWithLinks(page.url, page.inferredSection, collection, apiKey, hotelName, "official"))
     );
+    for (const r of batchResults) {
+      if (r.status === "fulfilled" && r.value) {
+        scrapedUrls.add(r.value.url);
+        for (const link of r.value.discoveredLinks) discoveredLinks.add(link);
+      }
+    }
   }
 
-  if (mainUrl && !pagesToScrape.some(p => p.url === mainUrl)) {
+  // ── STEP C: SECOND PASS — follow discovered links to room/gallery pages not yet scraped ──
+  const officialDomainForLinks = mainUrl ? new URL(mainUrl).hostname : "";
+  const secondPassPages: CategorizedPage[] = [];
+  for (const link of discoveredLinks) {
+    if (scrapedUrls.has(link)) continue;
+    if (pagesToScrape.some(p => p.url === link)) continue;
+    try {
+      const linkDomain = new URL(link).hostname;
+      if (linkDomain !== officialDomainForLinks) continue;
+    } catch { continue; }
+    const lower = link.toLowerCase();
+    if (/room|suite|villa|accommodation|gallery|photo|camera|chambre|zimmer|客室|お部屋/i.test(lower)) {
+      const seg = new URL(link).pathname.split("/").filter(Boolean).pop() || "";
+      secondPassPages.push({ url: link, inferredSection: seg.replace(/[-_]/g, " ").replace(/\.\w+$/, "").split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") });
+    }
+  }
+
+  if (secondPassPages.length > 0) {
+    const extraPages = secondPassPages.slice(0, 20);
+    console.log(`🔍 SECOND PASS: Found ${secondPassPages.length} new room/gallery links, scraping ${extraPages.length}...`);
+    for (let i = 0; i < extraPages.length; i += batchSize) {
+      const batch = extraPages.slice(i, i + batchSize);
+      await Promise.allSettled(
+        batch.map(page => scrapePageForPhotos(page.url, page.inferredSection, collection, apiKey, hotelName, "official"))
+      );
+    }
+  }
+
+  // ── STEP D: Scrape main URL if not already done ──
+  if (mainUrl && !scrapedUrls.has(mainUrl) && !pagesToScrape.some(p => p.url === mainUrl)) {
     await scrapePageForPhotos(mainUrl, "", collection, apiKey, hotelName, "official");
   }
 
-  // Fallback from search results
+  // ── STEP E: Fallback from search results if still sparse ──
   if (collection.photos.length < 10) {
+    console.log("⚠️ Very few photos from official pages, extracting from search results...");
     if (officialResult) collectImagesFromMarkdown(officialResult.markdown || "", officialResult.url || "", collection, officialDomain, "official");
     for (const result of results) {
       if (result === officialResult) continue;
@@ -393,12 +434,13 @@ async function scrapeOfficialSite(
     }
   }
 
+  const totalScraped = pagesToScrape.length + secondPassPages.filter((_, i) => i < 20).length;
   return {
     photos: collection.photos,
     sections: collection.sections,
     sourceUrl: mainUrl || "",
-    pagesScraped: pagesToScrape.length,
-    totalPages: allSiteUrls.length,
+    pagesScraped: totalScraped,
+    totalPages: allSiteUrls.length + discoveredLinks.size,
   };
 }
 
