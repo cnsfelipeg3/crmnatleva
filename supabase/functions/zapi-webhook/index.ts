@@ -358,7 +358,7 @@ Deno.serve(async (req) => {
         message_type: msgType,
         text: textContent || null,
         media_url: mediaUrl,
-        status: msgStatus,
+        status: resolvedMsgStatus,
         external_message_id: messageId,
         created_at: timestampIso,
       });
