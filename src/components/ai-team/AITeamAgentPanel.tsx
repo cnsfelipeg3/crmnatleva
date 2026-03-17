@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { X, Send, Zap, Shield, Target, Brain, Radio, Crosshair, Activity, Wifi, CheckCircle2, Clock, Loader2 } from "lucide-react";
+import { X, Send, Zap, Shield, Target, Brain, Radio, Crosshair, Activity, Wifi, CheckCircle2, Clock, Loader2, History } from "lucide-react";
 import type { Agent, Task } from "./mockData";
+import type { AgentEvent } from "./agentEngine";
 import { simulatedResponses } from "./mockData";
 import { cn } from "@/lib/utils";
 
 interface Props {
   agent: Agent | null;
   tasks: Task[];
+  events?: AgentEvent[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -23,9 +25,11 @@ const levelLabels: Record<string, string> = {
 };
 
 const statusConfig: Record<string, { color: string; rgb: string; label: string }> = {
-  idle: { color: "rgba(120,120,140,0.8)", rgb: "120,120,140", label: "STANDBY" },
+  idle: { color: "rgba(120,120,140,0.8)", rgb: "120,120,140", label: "AGUARDANDO" },
   analyzing: { color: "rgba(60,180,255,0.8)", rgb: "60,180,255", label: "ANALISANDO" },
   suggesting: { color: "rgba(16,185,129,0.8)", rgb: "16,185,129", label: "SUGERINDO" },
+  waiting: { color: "rgba(245,158,11,0.8)", rgb: "245,158,11", label: "AGUARDANDO DECISÃO" },
+  alert: { color: "rgba(239,68,68,0.8)", rgb: "239,68,68", label: "ALERTA" },
 };
 
 const priorityConfig: Record<string, { label: string; dot: string; glow: string }> = {
@@ -75,7 +79,7 @@ function useNeuralTyping(agent: Agent | null, open: boolean) {
   return { lines, cursorLine, cursorChar, totalLines: 3 };
 }
 
-export default function AITeamAgentPanel({ agent, tasks, open, onOpenChange }: Props) {
+export default function AITeamAgentPanel({ agent, tasks, events = [], open, onOpenChange }: Props) {
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [phase, setPhase] = useState<"closed" | "connecting" | "open">("closed");
@@ -108,6 +112,7 @@ export default function AITeamAgentPanel({ agent, tasks, open, onOpenChange }: P
   if (!open && phase === "closed") return null;
 
   const agentTasks = tasks.filter((t) => t.sourceAgentId === agent.id);
+  const agentEvents = events.filter((e) => e.agentId === agent.id).slice(0, 5);
   const responses = simulatedResponses[agent.id] ?? ["Processando.", "Analisando."];
   const sc = statusConfig[agent.status] ?? statusConfig.idle;
 

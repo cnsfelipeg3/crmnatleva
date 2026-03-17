@@ -1,4 +1,4 @@
-export type AgentStatus = 'idle' | 'analyzing' | 'suggesting';
+export type AgentStatus = 'idle' | 'analyzing' | 'suggesting' | 'waiting' | 'alert';
 export type AgentLevel = 'basic' | 'intermediate' | 'advanced';
 
 export interface Agent {
