@@ -342,7 +342,7 @@ export default function HotelPhotosScraper({ hotelName, hotelCity, hotelCountry,
     setLoading(true);
     setLoadingSource("official");
     try {
-      toast.info(forceRefresh ? "🔄 Re-buscando fotos do site oficial..." : "🕷️ Buscando fotos: Site Oficial + Booking.com...", { duration: 5000 });
+      toast.info(forceRefresh ? "🔄 Re-buscando fotos do site oficial..." : "🕷️ Buscando fotos do site oficial do hotel...", { duration: 5000 });
       const { data, error } = await supabase.functions.invoke("scrape-hotel-photos", {
         body: { hotel_name: hotelName, hotel_city: hotelCity, hotel_country: hotelCountry, force_refresh: forceRefresh },
       });
