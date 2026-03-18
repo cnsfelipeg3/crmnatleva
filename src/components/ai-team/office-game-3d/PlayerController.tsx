@@ -123,6 +123,10 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
+      // Skip movement capture when typing in an input/textarea (e.g. NPC chat)
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
       const k = e.key.toLowerCase();
       if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) {
         e.preventDefault();
