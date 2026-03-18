@@ -9,16 +9,28 @@ const MONITOR_GLB_PATH = '/models/samsung_odyssey_oled_g9.glb';
 // Preload for performance
 useGLTF.preload(MONITOR_GLB_PATH);
 
-/* ── Desk with Samsung Odyssey G9 49" Ultrawide ── */
-function Desk({ pos, size, label, screenTex, rgbTex }: { pos: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; label?: string; screenTex?: THREE.Texture; rgbTex?: THREE.Texture }) {
+/* ── Samsung Odyssey G9 — Real 3D Model ── */
+function MonitorModel({ scale = 0.003 }: { scale?: number }) {
+  const { scene } = useGLTF(MONITOR_GLB_PATH);
+  const cloned = useMemo(() => scene.clone(true), [scene]);
+  return (
+    <primitive
+      object={cloned}
+      scale={[scale, scale, scale]}
+      rotation={[0, Math.PI, 0]}
+    />
+  );
+}
+
+/* ── Desk with real Samsung Odyssey G9 49" ── */
+function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; label?: string }) {
   const legH = pos.y - 0.02;
   const legR = 0.025;
   const legOffX = size.x / 2 - 0.08;
   const legOffZ = size.z / 2 - 0.06;
 
-  // Monitor takes most of the desk width
-  const monW = size.x * 0.85;
-  const monH = monW * 0.28; // 32:9 ultrawide ratio
+  // Scale monitor to fit ~85% of desk width; model bounding box is ~120 units wide
+  const monitorScale = (size.x * 0.85) / 120;
 
   return (
     <group position={[pos.x, 0, pos.z]}>
@@ -39,102 +51,28 @@ function Desk({ pos, size, label, screenTex, rgbTex }: { pos: { x: number; y: nu
         </mesh>
       ))}
 
-      {/* ═══ Samsung Odyssey OLED G9 49" Curved Ultrawide ═══ */}
-      <group position={[0, pos.y + monH / 2 + 0.06, -size.z / 2 + 0.2]}>
-        {/* Stand base — V-shape */}
-        <mesh position={[0, -monH / 2 - 0.02, 0.06]}>
-          <boxGeometry args={[0.28, 0.008, 0.16]} />
-          <meshStandardMaterial color="#1a1a1a" roughness={0.1} metalness={0.9} />
-        </mesh>
-        {/* Stand neck — thin metal */}
-        <mesh position={[0, -monH / 2 + 0.04, 0.06]}>
-          <cylinderGeometry args={[0.012, 0.018, 0.1, 6]} />
-          <meshStandardMaterial color="#2a2a2a" roughness={0.1} metalness={0.9} />
-        </mesh>
-
-        {/* Curved monitor body — matte black 1000R arc */}
-        <mesh castShadow rotation={[0, Math.PI, 0]}>
-          <cylinderGeometry args={[monW * 0.7, monW * 0.7, monH, 24, 1, true, -Math.PI * 0.38, Math.PI * 0.76]} />
-          <meshStandardMaterial color="#1a1a1a" roughness={0.08} metalness={0.85} side={THREE.DoubleSide} />
-        </mesh>
-
-        {/* Thin bezel frame */}
-        <mesh rotation={[0, Math.PI, 0]}>
-          <cylinderGeometry args={[monW * 0.7 + 0.001, monW * 0.7 + 0.001, monH + 0.006, 24, 1, true, -Math.PI * 0.382, Math.PI * 0.764]} />
-          <meshStandardMaterial color="#0a0a0a" roughness={0.05} metalness={0.9} side={THREE.DoubleSide} />
-        </mesh>
-
-        {/* Curved OLED Screen — with wallpaper texture */}
-        <mesh rotation={[0, Math.PI, 0]}>
-          <cylinderGeometry args={[monW * 0.7 - 0.002, monW * 0.7 - 0.002, monH - 0.008, 24, 1, true, -Math.PI * 0.375, Math.PI * 0.75]} />
-          {screenTex ? (
-            <meshStandardMaterial
-              map={screenTex}
-              emissiveMap={screenTex}
-              emissive="#ffffff"
-              emissiveIntensity={0.35}
-              roughness={0.02}
-              metalness={0.05}
-              side={THREE.BackSide}
-            />
-          ) : (
-            <meshStandardMaterial
-              color="#020208"
-              emissive="#1a3a6a"
-              emissiveIntensity={0.6}
-              roughness={0.02}
-              metalness={0.05}
-              side={THREE.BackSide}
-            />
-          )}
-        </mesh>
-
-        {/* RGB back-glow (outer face) */}
-        <mesh rotation={[0, Math.PI, 0]}>
-          <cylinderGeometry args={[monW * 0.7 + 0.005, monW * 0.7 + 0.005, monH * 0.6, 16, 1, true, -Math.PI * 0.35, Math.PI * 0.7]} />
-          {rgbTex ? (
-            <meshStandardMaterial
-              map={rgbTex}
-              emissiveMap={rgbTex}
-              emissive="#ffffff"
-              emissiveIntensity={0.4}
-              transparent
-              opacity={0.5}
-              roughness={0.1}
-              side={THREE.FrontSide}
-            />
-          ) : (
-            <meshStandardMaterial
-              color="#6c5ce7"
-              emissive="#6c5ce7"
-              emissiveIntensity={0.3}
-              transparent
-              opacity={0.3}
-              side={THREE.FrontSide}
-            />
-          )}
-        </mesh>
+      {/* ═══ Samsung Odyssey OLED G9 — Real 3D Model ═══ */}
+      <group position={[0, pos.y + 0.02, -size.z / 2 + 0.25]}>
+        <MonitorModel scale={monitorScale} />
       </group>
 
-      {/* Keyboard — compact, in front of monitor */}
+      {/* Keyboard */}
       <mesh position={[0, pos.y + 0.03, size.z / 2 - 0.2]} castShadow>
         <boxGeometry args={[0.24, 0.01, 0.08]} />
         <meshStandardMaterial color="#2a2a2a" roughness={0.5} metalness={0.3} />
       </mesh>
-      {/* Mouse — right side */}
+      {/* Mouse */}
       <mesh position={[0.2, pos.y + 0.025, size.z / 2 - 0.2]} castShadow>
         <boxGeometry args={[0.04, 0.015, 0.06]} />
         <meshStandardMaterial color="#2a2a2a" roughness={0.5} metalness={0.2} />
       </mesh>
 
-      {/* ═══ File/Folder Holder — right side of desk ═══ */}
+      {/* File/Folder Holder */}
       <group position={[size.x / 2 - 0.12, pos.y, size.z / 2 - 0.08]}>
-        {/* Base */}
         <mesh position={[0, 0.04, 0]} castShadow>
           <boxGeometry args={[0.1, 0.08, 0.1]} />
           <meshStandardMaterial color="#3a3a3a" roughness={0.4} metalness={0.5} />
         </mesh>
-        {/* Folder tabs sticking out */}
         {[0, 1, 2].map(i => (
           <mesh key={i} position={[0, 0.06 + i * 0.018, -0.01]} castShadow>
             <boxGeometry args={[0.08, 0.014, 0.08]} />
