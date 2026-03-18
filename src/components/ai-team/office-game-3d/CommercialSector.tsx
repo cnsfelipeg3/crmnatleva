@@ -57,27 +57,52 @@ function ZoneSign({ label, emoji, color, position }: { label: string; emoji: str
   );
 }
 
+/* ────────────────────── Single Odyssey G9 Monitor ─── */
+function OdysseyMonitor({ monW, monH, tint, offsetX = 0, offsetY = 0 }: {
+  monW: number; monH: number; tint: string; offsetX?: number; offsetY?: number;
+}) {
+  return (
+    <group position={[offsetX, offsetY, 0]}>
+      <mesh position={[0, -monH / 2 - 0.02, 0.05]}>
+        <boxGeometry args={[0.2, 0.008, 0.12]} />
+        <meshStandardMaterial color="#c0c0c0" roughness={0.15} metalness={0.85} />
+      </mesh>
+      <mesh position={[0, -monH / 2 + 0.03, 0.05]}>
+        <cylinderGeometry args={[0.012, 0.016, 0.08, 6]} />
+        <meshStandardMaterial color="#b0b0b0" roughness={0.15} metalness={0.85} />
+      </mesh>
+      <mesh castShadow rotation={[0, Math.PI, 0]}>
+        <cylinderGeometry args={[monW * 0.7, monW * 0.7, monH, 16, 1, true, -Math.PI * 0.38, Math.PI * 0.76]} />
+        <meshStandardMaterial color="#c8c8c8" roughness={0.12} metalness={0.8} side={2} />
+      </mesh>
+      <mesh rotation={[0, Math.PI, 0]}>
+        <cylinderGeometry args={[monW * 0.7 - 0.002, monW * 0.7 - 0.002, monH - 0.006, 16, 1, true, -Math.PI * 0.375, Math.PI * 0.75]} />
+        <meshStandardMaterial color="#020208" emissive={tint} emissiveIntensity={0.4} roughness={0.02} metalness={0.05} side={1} />
+      </mesh>
+    </group>
+  );
+}
+
 /* ────────────────────────── Commercial Desk with Odyssey G9 ─── */
 function CommDesk({ pos, size, zone }: { pos: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; zone: string }) {
   const zoneData = COMMERCIAL_ZONES.find(z => z.key === zone);
   const tint = zoneData?.color || '#6d5d48';
   const legH = pos.y - 0.02;
-  const monW = size.x * 0.85;
+  const isHead = zone === 'lider';
+  const monW = isHead ? size.x * 0.42 : size.x * 0.85;
   const monH = monW * 0.28;
+  const gap = 0.03;
 
   return (
     <group position={[pos.x, 0, pos.z]}>
-      {/* Desktop */}
       <mesh position={[0, pos.y, 0]} castShadow receiveShadow>
         <boxGeometry args={[size.x, size.y, size.z]} />
         <meshStandardMaterial color="#5a4a3a" roughness={0.5} metalness={0.1} />
       </mesh>
-      {/* Accent strip */}
       <mesh position={[0, pos.y + size.y / 2 + 0.002, 0]}>
         <boxGeometry args={[size.x + 0.01, 0.004, size.z + 0.01]} />
         <meshStandardMaterial color={tint} roughness={0.3} metalness={0.3} emissive={tint} emissiveIntensity={0.15} />
       </mesh>
-      {/* Legs */}
       {[[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([fx, fz], i) => (
         <mesh key={i} position={[fx * (size.x / 2 - 0.08), legH / 2, fz * (size.z / 2 - 0.06)]}>
           <cylinderGeometry args={[0.02, 0.02, legH, 6]} />
@@ -85,41 +110,29 @@ function CommDesk({ pos, size, zone }: { pos: { x: number; y: number; z: number 
         </mesh>
       ))}
 
-      {/* ═══ Samsung Odyssey OLED G9 49" Curved — Simplified ═══ */}
+      {/* ═══ Samsung Odyssey OLED G9 49" Curved ═══ */}
       <group position={[0, pos.y + monH / 2 + 0.06, -size.z / 2 + 0.12]}>
-        {/* Stand base */}
-        <mesh position={[0, -monH / 2 - 0.02, 0.05]}>
-          <boxGeometry args={[0.2, 0.008, 0.12]} />
-          <meshStandardMaterial color="#c0c0c0" roughness={0.15} metalness={0.85} />
-        </mesh>
-        <mesh position={[0, -monH / 2 + 0.03, 0.05]}>
-          <cylinderGeometry args={[0.012, 0.016, 0.08, 6]} />
-          <meshStandardMaterial color="#b0b0b0" roughness={0.15} metalness={0.85} />
-        </mesh>
-        {/* Curved monitor body — silver 1000R */}
-        <mesh castShadow rotation={[0, Math.PI, 0]}>
-          <cylinderGeometry args={[monW * 0.7, monW * 0.7, monH, 16, 1, true, -Math.PI * 0.38, Math.PI * 0.76]} />
-          <meshStandardMaterial color="#c8c8c8" roughness={0.12} metalness={0.8} side={2} />
-        </mesh>
-        {/* Curved OLED Screen */}
-        <mesh rotation={[0, Math.PI, 0]}>
-          <cylinderGeometry args={[monW * 0.7 - 0.002, monW * 0.7 - 0.002, monH - 0.006, 16, 1, true, -Math.PI * 0.375, Math.PI * 0.75]} />
-          <meshStandardMaterial color="#020208" emissive={tint} emissiveIntensity={0.4} roughness={0.02} metalness={0.05} side={1} />
-        </mesh>
+        {isHead ? (
+          <>
+            <OdysseyMonitor monW={monW} monH={monH} tint={tint} offsetX={-(monW / 2 + gap / 2)} offsetY={0} />
+            <OdysseyMonitor monW={monW} monH={monH} tint={tint} offsetX={monW / 2 + gap / 2} offsetY={0} />
+            <OdysseyMonitor monW={monW} monH={monH} tint={tint} offsetX={-(monW / 2 + gap / 2)} offsetY={monH + gap} />
+            <OdysseyMonitor monW={monW} monH={monH} tint={tint} offsetX={monW / 2 + gap / 2} offsetY={monH + gap} />
+          </>
+        ) : (
+          <OdysseyMonitor monW={monW} monH={monH} tint={tint} />
+        )}
       </group>
 
-      {/* Keyboard */}
       <mesh position={[0, pos.y + 0.025, size.z / 2 - 0.16]} castShadow>
         <boxGeometry args={[0.2, 0.01, 0.07]} />
         <meshStandardMaterial color="#2a2a2a" roughness={0.5} metalness={0.3} />
       </mesh>
-      {/* Mouse */}
       <mesh position={[0.16, pos.y + 0.02, size.z / 2 - 0.16]} castShadow>
         <boxGeometry args={[0.035, 0.012, 0.05]} />
         <meshStandardMaterial color="#2a2a2a" roughness={0.5} metalness={0.2} />
       </mesh>
 
-      {/* File holder */}
       <group position={[size.x / 2 - 0.1, pos.y, size.z / 2 - 0.06]}>
         <mesh position={[0, 0.035, 0]} castShadow>
           <boxGeometry args={[0.08, 0.07, 0.08]} />
