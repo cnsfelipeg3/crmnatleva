@@ -9,23 +9,27 @@ const MONITOR_GLB_PATH = '/models/samsung_odyssey_oled_g9.glb';
 useGLTF.preload(MONITOR_GLB_PATH);
 
 /* ── Samsung Odyssey G9 — Real 3D Model ── */
-function MonitorModel({ scale = 0.003 }: { scale?: number }) {
+function MonitorModel({ targetWidth = 0.9 }: { targetWidth?: number }) {
   const { scene } = useGLTF(MONITOR_GLB_PATH);
   const group = useMemo(() => {
     const cloned = scene.clone(true);
-    // Center the model — GLB origin is offset (~194, 80, 110)
+    // Center the model and compute scale
     const box = new THREE.Box3().setFromObject(cloned);
     const center = box.getCenter(new THREE.Vector3());
-    const size = box.getSize(new THREE.Vector3());
+    const modelSize = box.getSize(new THREE.Vector3());
+    // Center horizontally and on Z, sit on bottom (Y=0)
     cloned.position.set(-center.x, -box.min.y, -center.z);
-    console.log('[MonitorGLB] size:', size.x.toFixed(1), size.y.toFixed(1), size.z.toFixed(1), 'center:', center.x.toFixed(1), center.y.toFixed(1), center.z.toFixed(1));
+    // Attach model width for scale computation
+    (cloned as any).__modelWidth = modelSize.x;
     return cloned;
   }, [scene]);
+
+  const s = targetWidth / ((group as any).__modelWidth || 1.2);
 
   return (
     <primitive
       object={group}
-      scale={[scale, scale, scale]}
+      scale={[s, s, s]}
       rotation={[0, Math.PI, 0]}
     />
   );
@@ -38,8 +42,8 @@ function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; 
   const legOffX = size.x / 2 - 0.08;
   const legOffZ = size.z / 2 - 0.06;
 
-  // Scale monitor to fit ~85% of desk width; model bounding box is ~120 units wide
-  const monitorScale = (size.x * 0.85) / 120;
+  // Monitor should be ~85% of desk width
+  const monitorTargetWidth = size.x * 0.85;
 
   return (
     <group position={[pos.x, 0, pos.z]}>
