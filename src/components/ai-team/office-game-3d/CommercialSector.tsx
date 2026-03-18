@@ -16,6 +16,7 @@ import {
 import { checkProximityGreeting, pickCommercialGreeting } from './greetingSystem';
 import { generateRandomHandoff, type HandoffEvent } from './taskHandoffSystem';
 import HandoffAgent from './HandoffAgent';
+import MonitorModel from './MonitorModel';
 
 /* ────────────────────────── helpers ─────────────── */
 const fmt = (v: number) => v >= 1000 ? `R$${(v / 1000).toFixed(0)}k` : `R$${v}`;
@@ -57,40 +58,17 @@ function ZoneSign({ label, emoji, color, position }: { label: string; emoji: str
   );
 }
 
-/* ────────────────────── Single Odyssey G9 Monitor ─── */
-function OdysseyMonitor({ monW, monH, tint, offsetX = 0, offsetY = 0 }: {
-  monW: number; monH: number; tint: string; offsetX?: number; offsetY?: number;
-}) {
-  return (
-    <group position={[offsetX, offsetY, 0]}>
-      <mesh position={[0, -monH / 2 - 0.02, 0.05]}>
-        <boxGeometry args={[0.2, 0.008, 0.12]} />
-        <meshStandardMaterial color="#c0c0c0" roughness={0.15} metalness={0.85} />
-      </mesh>
-      <mesh position={[0, -monH / 2 + 0.03, 0.05]}>
-        <cylinderGeometry args={[0.012, 0.016, 0.08, 6]} />
-        <meshStandardMaterial color="#b0b0b0" roughness={0.15} metalness={0.85} />
-      </mesh>
-      <mesh castShadow rotation={[0, Math.PI, 0]}>
-        <cylinderGeometry args={[monW * 0.7, monW * 0.7, monH, 16, 1, true, -Math.PI * 0.38, Math.PI * 0.76]} />
-        <meshStandardMaterial color="#c8c8c8" roughness={0.12} metalness={0.8} side={2} />
-      </mesh>
-      <mesh rotation={[0, Math.PI, 0]}>
-        <cylinderGeometry args={[monW * 0.7 - 0.002, monW * 0.7 - 0.002, monH - 0.006, 16, 1, true, -Math.PI * 0.375, Math.PI * 0.75]} />
-        <meshStandardMaterial color="#020208" emissive={tint} emissiveIntensity={0.4} roughness={0.02} metalness={0.05} side={1} />
-      </mesh>
-    </group>
-  );
-}
-
-/* ────────────────────────── Commercial Desk with Odyssey G9 ─── */
+/* ────────────────────────── Commercial Desk with Real GLB Monitor ─── */
 function CommDesk({ pos, size, zone }: { pos: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; zone: string }) {
   const zoneData = COMMERCIAL_ZONES.find(z => z.key === zone);
   const tint = zoneData?.color || '#6d5d48';
   const legH = pos.y - 0.02;
   const isHead = zone === 'lider';
-  const monW = isHead ? size.x * 0.42 : size.x * 0.85;
-  const monH = monW * 0.28;
+  const deskTopY = pos.y + size.y / 2;
+
+  // Monitor sizing — use real GLB model
+  const singleMonitorWidth = size.x * 0.85;
+  const headMonitorWidth = size.x * 0.42;
   const gap = 0.03;
 
   return (
@@ -99,7 +77,7 @@ function CommDesk({ pos, size, zone }: { pos: { x: number; y: number; z: number 
         <boxGeometry args={[size.x, size.y, size.z]} />
         <meshStandardMaterial color="#5a4a3a" roughness={0.5} metalness={0.1} />
       </mesh>
-      <mesh position={[0, pos.y + size.y / 2 + 0.002, 0]}>
+      <mesh position={[0, deskTopY + 0.002, 0]}>
         <boxGeometry args={[size.x + 0.01, 0.004, size.z + 0.01]} />
         <meshStandardMaterial color={tint} roughness={0.3} metalness={0.3} emissive={tint} emissiveIntensity={0.15} />
       </mesh>
@@ -110,17 +88,27 @@ function CommDesk({ pos, size, zone }: { pos: { x: number; y: number; z: number 
         </mesh>
       ))}
 
-      {/* ═══ Samsung Odyssey OLED G9 49" Curved ═══ */}
-      <group position={[0, pos.y + monH / 2 + 0.06, -size.z / 2 + 0.12]}>
+      {/* ═══ Samsung Odyssey OLED G9 — Real 3D Model ═══ */}
+      <group position={[0, deskTopY, 0]}>
         {isHead ? (
           <>
-            <OdysseyMonitor monW={monW} monH={monH} tint={tint} offsetX={-(monW / 2 + gap / 2)} offsetY={0} />
-            <OdysseyMonitor monW={monW} monH={monH} tint={tint} offsetX={monW / 2 + gap / 2} offsetY={0} />
-            <OdysseyMonitor monW={monW} monH={monH} tint={tint} offsetX={-(monW / 2 + gap / 2)} offsetY={monH + gap} />
-            <OdysseyMonitor monW={monW} monH={monH} tint={tint} offsetX={monW / 2 + gap / 2} offsetY={monH + gap} />
+            {/* Bottom row */}
+            <group position={[-(headMonitorWidth / 2 + gap / 2), 0, 0]}>
+              <MonitorModel targetWidth={headMonitorWidth} />
+            </group>
+            <group position={[headMonitorWidth / 2 + gap / 2, 0, 0]}>
+              <MonitorModel targetWidth={headMonitorWidth} />
+            </group>
+            {/* Top row — estimate height from width ratio */}
+            <group position={[-(headMonitorWidth / 2 + gap / 2), headMonitorWidth * 0.32 + gap, 0]}>
+              <MonitorModel targetWidth={headMonitorWidth} />
+            </group>
+            <group position={[headMonitorWidth / 2 + gap / 2, headMonitorWidth * 0.32 + gap, 0]}>
+              <MonitorModel targetWidth={headMonitorWidth} />
+            </group>
           </>
         ) : (
-          <OdysseyMonitor monW={monW} monH={monH} tint={tint} />
+          <MonitorModel targetWidth={singleMonitorWidth} />
         )}
       </group>
 

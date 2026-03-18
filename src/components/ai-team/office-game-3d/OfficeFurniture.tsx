@@ -1,51 +1,9 @@
 import { useMemo } from 'react';
 import { DESKS, RECEPTION, SOFAS, PLANTS, WALLS, FLOOR_SIZE, CONFERENCE_TABLE } from './mapData3d';
-import { useGLTF, useTexture } from '@react-three/drei';
+import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import natLevaLogo from '@/assets/logo-natleva-wall.png';
-
-const MONITOR_GLB_PATH = '/models/samsung_odyssey_oled_g9.glb';
-
-// Preload for performance
-useGLTF.preload(MONITOR_GLB_PATH);
-
-/* ── Samsung Odyssey G9 — Real 3D Model ── */
-function MonitorModel({ targetWidth = 0.9 }: { targetWidth?: number }) {
-  const { scene } = useGLTF(MONITOR_GLB_PATH);
-  const group = useMemo(() => {
-    const cloned = scene.clone(true);
-    // Get original bounds
-    const box = new THREE.Box3().setFromObject(cloned);
-    const center = box.getCenter(new THREE.Vector3());
-    const modelSize = box.getSize(new THREE.Vector3());
-
-    // Center on X/Z, place bottom at Y=0
-    cloned.position.set(-center.x, -box.min.y, -center.z);
-
-    // Wrap in group for rotation
-    const wrapper = new THREE.Group();
-    wrapper.add(cloned);
-    wrapper.rotation.y = Math.PI;
-
-    // Force matrix update so we can recompute bounds after rotation
-    wrapper.updateMatrixWorld(true);
-    const rotatedBox = new THREE.Box3().setFromObject(wrapper);
-    // Shift wrapper so bottom sits exactly at Y=0 after rotation
-    wrapper.position.y = -rotatedBox.min.y;
-
-    (wrapper as any).__modelWidth = modelSize.x;
-    return wrapper;
-  }, [scene]);
-
-  const s = targetWidth / ((group as any).__modelWidth || 1.2);
-
-  return (
-    <primitive
-      object={group}
-      scale={[s, s, s]}
-    />
-  );
-}
+import MonitorModel from './MonitorModel';
 
 /* ── Desk with real Samsung Odyssey G9 49" ── */
 function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; label?: string }) {
