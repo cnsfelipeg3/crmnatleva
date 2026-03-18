@@ -42,7 +42,7 @@ export default function PortalAdminDashboard() {
       setClients(c);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [user, authLoading]);
+  }, [authLoading]);
 
   const stats = useMemo(() => {
     const now = new Date();

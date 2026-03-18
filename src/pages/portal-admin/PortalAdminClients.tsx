@@ -34,7 +34,7 @@ export default function PortalAdminClients() {
       setSales(s);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [user, authLoading]);
+  }, [authLoading]);
 
   const clientStats = useMemo(() => {
     const map: Record<string, { tripCount: number; lastTrip: string | null }> = {};

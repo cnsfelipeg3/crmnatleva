@@ -76,7 +76,7 @@ export default function PortalAdminTrips() {
       setProfiles(p);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [user, authLoading]);
+  }, [authLoading]);
 
   const clientMap = useMemo(() => {
     const map: Record<string, string> = {};

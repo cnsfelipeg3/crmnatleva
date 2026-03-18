@@ -120,7 +120,7 @@ export default function Viagens() {
       console.error("Viagens fetch error:", err);
       setLoading(false);
     });
-  }, [user, authLoading]);
+  }, [authLoading]);
 
   const sellerNames = useMemo(() => {
     const m: Record<string, string> = {};

@@ -50,7 +50,7 @@ export default function Sales() {
       setSales(data as SaleRow[]);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
-  }, [user, authLoading]);
+  }, [authLoading]);
 
   const statuses = useMemo(() => [...new Set(sales.map(s => s.status))], [sales]);
   const destinations = useMemo(() => [...new Set(sales.map(s => s.destination_iata).filter(Boolean))].sort(), [sales]);

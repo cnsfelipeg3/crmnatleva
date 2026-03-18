@@ -87,7 +87,7 @@ export default function ClientIntelligence() {
         console.error("ClientIntelligence fetch error:", err);
         setLoading(false);
       });
-  }, [user, authLoading]);
+  }, [authLoading]);
 
   const analysisData = useMemo(() => analyzeClients(sales), [sales]);
 
