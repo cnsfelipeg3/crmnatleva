@@ -41,7 +41,7 @@ interface MessageBubbleProps {
   onRetry?: (msg: Message) => void;
 }
 
-function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit, onLightbox }: MessageBubbleProps) {
+function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit, onLightbox, onRetry }: MessageBubbleProps) {
   const showDate = shouldShowDateSeparator(messages, index);
 
   return (
