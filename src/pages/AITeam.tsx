@@ -8,7 +8,7 @@ import { agents as mockAgents, initialTasks, type Agent, type Task } from "@/com
 import { useAgentEngine } from "@/components/ai-team/useAgentEngine";
 import type { AgentEvent } from "@/components/ai-team/agentEngine";
 import AITeamCreateAgentDialog from "@/components/ai-team/AITeamCreateAgentDialog";
-import OfficeGameView from "@/components/ai-team/office-game/OfficeGameView";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
