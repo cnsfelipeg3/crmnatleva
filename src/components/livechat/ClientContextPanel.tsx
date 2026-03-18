@@ -237,10 +237,109 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
     return () => { cancelled = true; };
   }, [conversation.id, conversation.phone, conversation.contact_name]);
 
+  // ─── Conversation-level timeline data ───
+  const [convTimelineData, setConvTimelineData] = useState<{
+    firstMsgAt: string | null;
+    lastMsgAt: string | null;
+    totalMessages: number;
+    proposals: any[];
+    stageChanges: any[];
+  }>({ firstMsgAt: null, lastMsgAt: null, totalMessages: 0, proposals: [], stageChanges: [] });
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const phone = conversation.phone?.replace(/\D/g, "") || "";
+      const phoneCandidates = [phone, `+${phone}`, `${phone}@c.us`, `${phone}@s.whatsapp.net`].filter(Boolean);
+
+      // Find all conversation IDs for this contact
+      const { data: convRows } = await supabase
+        .from("conversations")
+        .select("id")
+        .or(phoneCandidates.map(p => `phone.eq.${p}`).join(","));
+
+      const convIds = (convRows || []).map(c => c.id);
+      if (convIds.length === 0 || cancelled) return;
+
+      // Fetch first msg, last msg, total count, and proposals in parallel
+      const [firstMsg, lastMsg, countRes, proposalsRes] = await Promise.all([
+        supabase.from("conversation_messages" as any).select("created_at").in("conversation_id", convIds).order("created_at", { ascending: true }).limit(1),
+        supabase.from("conversation_messages" as any).select("created_at").in("conversation_id", convIds).order("created_at", { ascending: false }).limit(1),
+        supabase.from("conversation_messages" as any).select("id", { count: "exact", head: true }).in("conversation_id", convIds),
+        supabase.from("proposals").select("id, title, status, created_at, total_value").or(convIds.map(id => `conversation_id.eq.${id}`).join(",")).order("created_at", { ascending: false }).limit(10),
+      ]);
+
+      if (!cancelled) {
+        setConvTimelineData({
+          firstMsgAt: (firstMsg.data as any)?.[0]?.created_at || null,
+          lastMsgAt: (lastMsg.data as any)?.[0]?.created_at || null,
+          totalMessages: countRes.count || 0,
+          proposals: proposalsRes.data || [],
+          stageChanges: [],
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [conversation.id, conversation.phone]);
+
   // Build timeline events
   const timeline = useMemo(() => {
     const events: any[] = [];
 
+    // ─── Conversation-level events (always available) ───
+    if (convTimelineData.firstMsgAt) {
+      events.push({
+        icon: MessageSquare,
+        iconColor: "text-primary",
+        title: "Primeira mensagem recebida",
+        description: `${convTimelineData.totalMessages} mensagens no total`,
+        time: fmtDateTime(convTimelineData.firstMsgAt),
+        ts: new Date(convTimelineData.firstMsgAt).getTime(),
+      });
+    }
+
+    if (convTimelineData.lastMsgAt && convTimelineData.lastMsgAt !== convTimelineData.firstMsgAt) {
+      events.push({
+        icon: MessageSquare,
+        iconColor: "text-muted-foreground",
+        title: "Última mensagem",
+        time: fmtDateTime(convTimelineData.lastMsgAt),
+        ts: new Date(convTimelineData.lastMsgAt).getTime(),
+      });
+    }
+
+    // Proposals from conversation
+    convTimelineData.proposals.forEach(p => {
+      const statusLabel = p.status === "sent" ? "Enviada" : p.status === "viewed" ? "Visualizada" : p.status === "accepted" ? "Aceita" : p.status === "rejected" ? "Recusada" : p.status || "Rascunho";
+      events.push({
+        icon: FileText,
+        iconColor: p.status === "accepted" ? "text-emerald-500" : p.status === "rejected" ? "text-destructive" : "text-amber-500",
+        title: `Proposta: ${p.title || "Sem título"} — ${statusLabel}`,
+        description: p.total_value ? fmt(p.total_value) : undefined,
+        time: fmtDate(p.created_at),
+        ts: new Date(p.created_at).getTime(),
+      });
+    });
+
+    // Stage info
+    const stage = conversation.stage;
+    if (stage && stage !== "novo_lead") {
+      const stageLabels: Record<string, string> = {
+        contato_inicial: "Contato Inicial", qualificacao: "Qualificação", diagnostico: "Diagnóstico",
+        proposta_preparacao: "Preparando Proposta", proposta_enviada: "Proposta Enviada",
+        proposta_visualizada: "Proposta Visualizada", ajustes: "Ajustes", negociacao: "Negociação",
+        fechamento_andamento: "Fechamento em Andamento", fechado: "Fechado", pos_venda: "Pós-Venda", perdido: "Perdido",
+      };
+      events.push({
+        icon: Tag,
+        iconColor: stage === "fechado" ? "text-emerald-500" : stage === "perdido" ? "text-destructive" : "text-primary",
+        title: `Etapa atual: ${stageLabels[stage] || stage}`,
+        time: "Agora",
+        ts: Date.now(),
+      });
+    }
+
+    // ─── Client-level events (when linked) ───
     sales.forEach(s => {
       events.push({
         icon: Plane,
@@ -278,7 +377,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
 
     events.sort((a, b) => b.ts - a.ts);
     return events.slice(0, 30);
-  }, [sales, receivables, notes]);
+  }, [sales, receivables, notes, convTimelineData, conversation.stage]);
 
   // Computed metrics
   const totalRevenue = useMemo(() => sales.reduce((s, sale) => s + (sale.received_value || 0), 0), [sales]);
