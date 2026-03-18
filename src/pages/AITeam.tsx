@@ -91,9 +91,6 @@ export default function AITeam() {
     return events.filter(e => e.agentId === workLogAgent).slice(0, 15);
   }, [events, workLogAgent]);
 
-  if (view === "office") {
-    return <OfficeGameView agents={agents} tasks={tasks} onBack={() => setView("dashboard")} onSelectAgent={handleSelectAgent} />;
-  }
   if (view === "office3d") {
     return (
       <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-6 h-6 animate-spin" /></div>}>
