@@ -137,6 +137,9 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
   const [timelineEvents, setTimelineEvents] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [showBriefingDialog, setShowBriefingDialog] = useState(false);
+  const [lastAgentMsgAt, setLastAgentMsgAt] = useState<string | null>(null);
+  const [lastClientMsgAt, setLastClientMsgAt] = useState<string | null>(null);
+  const [agentHasReplied, setAgentHasReplied] = useState(false);
 
   const initials = conversation.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
