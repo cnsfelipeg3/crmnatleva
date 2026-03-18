@@ -239,12 +239,24 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
 
   // ─── Conversation-level timeline data ───
   const [convTimelineData, setConvTimelineData] = useState<{
-    firstMsgAt: string | null;
+    firstClientMsg: { content: string; created_at: string } | null;
+    firstAgentReply: { created_at: string } | null;
     lastMsgAt: string | null;
     totalMessages: number;
+    mediaCount: number;
+    audioCount: number;
+    docCount: number;
     proposals: any[];
-    stageChanges: any[];
-  }>({ firstMsgAt: null, lastMsgAt: null, totalMessages: 0, proposals: [], stageChanges: [] });
+    aiSuggestions: any[];
+    keyMilestones: { content: string; created_at: string; direction: string; message_type: string }[];
+    inactivityGaps: { from: string; to: string; hours: number }[];
+    conversationCreatedAt: string | null;
+  }>({
+    firstClientMsg: null, firstAgentReply: null, lastMsgAt: null,
+    totalMessages: 0, mediaCount: 0, audioCount: 0, docCount: 0,
+    proposals: [], aiSuggestions: [], keyMilestones: [], inactivityGaps: [],
+    conversationCreatedAt: null,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -252,32 +264,109 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
       const phone = conversation.phone?.replace(/\D/g, "") || "";
       const phoneCandidates = [phone, `+${phone}`, `${phone}@c.us`, `${phone}@s.whatsapp.net`].filter(Boolean);
 
-      // Find all conversation IDs for this contact
       const { data: convRows } = await supabase
         .from("conversations")
-        .select("id")
+        .select("id, created_at")
         .or(phoneCandidates.map(p => `phone.eq.${p}`).join(","));
 
       const convIds = (convRows || []).map(c => c.id);
       if (convIds.length === 0 || cancelled) return;
 
-      // Fetch first msg, last msg, total count, and proposals in parallel
-      const [firstMsg, lastMsg, countRes, proposalsRes] = await Promise.all([
-        supabase.from("conversation_messages" as any).select("created_at").in("conversation_id", convIds).order("created_at", { ascending: true }).limit(1),
-        supabase.from("conversation_messages" as any).select("created_at").in("conversation_id", convIds).order("created_at", { ascending: false }).limit(1),
-        supabase.from("conversation_messages" as any).select("id", { count: "exact", head: true }).in("conversation_id", convIds),
-        supabase.from("proposals").select("id, title, status, created_at, total_value").or(convIds.map(id => `conversation_id.eq.${id}`).join(",")).order("created_at", { ascending: false }).limit(10),
+      const convCreated = convRows?.[0]?.created_at || null;
+
+      // Parallel fetch: first client msg, first agent reply, counts, proposals, AI suggestions, recent key messages
+      const [
+        firstClientRes, firstAgentRes, countRes, mediaCountRes, audioCountRes, docCountRes,
+        lastMsgRes, proposalsRes, aiSuggestionsRes, recentMsgsRes,
+      ] = await Promise.all([
+        // First inbound client message (what they wanted)
+        supabase.from("conversation_messages" as any)
+          .select("content, created_at")
+          .in("conversation_id", convIds).eq("direction", "incoming")
+          .order("created_at", { ascending: true }).limit(1),
+        // First agent reply
+        supabase.from("conversation_messages" as any)
+          .select("created_at")
+          .in("conversation_id", convIds).eq("direction", "outgoing")
+          .order("created_at", { ascending: true }).limit(1),
+        // Total count
+        supabase.from("conversation_messages" as any)
+          .select("id", { count: "exact", head: true }).in("conversation_id", convIds),
+        // Media count (images/videos)
+        supabase.from("conversation_messages" as any)
+          .select("id", { count: "exact", head: true }).in("conversation_id", convIds)
+          .in("message_type", ["image", "video"]),
+        // Audio count
+        supabase.from("conversation_messages" as any)
+          .select("id", { count: "exact", head: true }).in("conversation_id", convIds)
+          .eq("message_type", "audio"),
+        // Document count
+        supabase.from("conversation_messages" as any)
+          .select("id", { count: "exact", head: true }).in("conversation_id", convIds)
+          .eq("message_type", "document"),
+        // Last message
+        supabase.from("conversation_messages" as any)
+          .select("created_at")
+          .in("conversation_id", convIds).order("created_at", { ascending: false }).limit(1),
+        // Proposals
+        supabase.from("proposals")
+          .select("id, title, status, created_at, total_value")
+          .or(convIds.map(id => `conversation_id.eq.${id}`).join(","))
+          .order("created_at", { ascending: false }).limit(10),
+        // AI suggestions used
+        supabase.from("ai_chat_suggestions")
+          .select("suggestion_text, action_taken, intent_detected, destination_detected, created_at")
+          .in("conversation_id", convIds)
+          .not("action_taken", "is", null)
+          .order("created_at", { ascending: false }).limit(5),
+        // Sample of messages to detect inactivity gaps (timestamps only, last 200)
+        supabase.from("conversation_messages" as any)
+          .select("created_at, direction, message_type, content")
+          .in("conversation_id", convIds)
+          .order("created_at", { ascending: true }).limit(200),
       ]);
 
-      if (!cancelled) {
-        setConvTimelineData({
-          firstMsgAt: (firstMsg.data as any)?.[0]?.created_at || null,
-          lastMsgAt: (lastMsg.data as any)?.[0]?.created_at || null,
-          totalMessages: countRes.count || 0,
-          proposals: proposalsRes.data || [],
-          stageChanges: [],
-        });
+      if (cancelled) return;
+
+      // Detect inactivity gaps > 48h
+      const allMsgTimestamps = ((recentMsgsRes.data || []) as any[]);
+      const gaps: { from: string; to: string; hours: number }[] = [];
+      for (let i = 1; i < allMsgTimestamps.length; i++) {
+        const prev = new Date(allMsgTimestamps[i - 1].created_at).getTime();
+        const curr = new Date(allMsgTimestamps[i].created_at).getTime();
+        const diffH = (curr - prev) / 3600000;
+        if (diffH > 48) {
+          gaps.push({ from: allMsgTimestamps[i - 1].created_at, to: allMsgTimestamps[i].created_at, hours: Math.round(diffH) });
+        }
       }
+
+      // Extract key milestones: first image sent by client, first doc, etc
+      const milestones: any[] = [];
+      const seenTypes = new Set<string>();
+      for (const m of allMsgTimestamps) {
+        const key = `${m.direction}_${m.message_type}`;
+        if (!seenTypes.has(key) && m.message_type !== "text") {
+          seenTypes.add(key);
+          milestones.push(m);
+        }
+      }
+
+      const firstClient = (firstClientRes.data as any)?.[0] || null;
+
+      setConvTimelineData({
+        firstClientMsg: firstClient ? { content: firstClient.content || "", created_at: firstClient.created_at } : null,
+        firstAgentReply: (firstAgentRes.data as any)?.[0] || null,
+        lastMsgAt: (lastMsgRes.data as any)?.[0]?.created_at || null,
+        totalMessages: countRes.count || 0,
+        mediaCount: mediaCountRes.count || 0,
+        audioCount: audioCountRes.count || 0,
+        docCount: docCountRes.count || 0,
+        proposals: proposalsRes.data || [],
+        aiSuggestions: (aiSuggestionsRes.data || []) as any[],
+        keyMilestones: milestones,
+        inactivityGaps: gaps.slice(0, 5),
+        conversationCreatedAt: convCreated,
+      });
     })();
     return () => { cancelled = true; };
   }, [conversation.id, conversation.phone]);
@@ -285,31 +374,87 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
   // Build timeline events
   const timeline = useMemo(() => {
     const events: any[] = [];
+    const td = convTimelineData;
 
-    // ─── Conversation-level events (always available) ───
-    if (convTimelineData.firstMsgAt) {
+    // ─── Conversation created ───
+    if (td.conversationCreatedAt) {
       events.push({
-        icon: MessageSquare,
-        iconColor: "text-primary",
-        title: "Primeira mensagem recebida",
-        description: `${convTimelineData.totalMessages} mensagens no total`,
-        time: fmtDateTime(convTimelineData.firstMsgAt),
-        ts: new Date(convTimelineData.firstMsgAt).getTime(),
+        icon: MessageSquare, iconColor: "text-primary",
+        title: "Conversa iniciada",
+        description: `${td.totalMessages} mensagens no total`,
+        time: fmtDateTime(td.conversationCreatedAt),
+        ts: new Date(td.conversationCreatedAt).getTime(),
       });
     }
 
-    if (convTimelineData.lastMsgAt && convTimelineData.lastMsgAt !== convTimelineData.firstMsgAt) {
+    // ─── First client message with context ───
+    if (td.firstClientMsg) {
+      const preview = td.firstClientMsg.content?.slice(0, 100) || "";
       events.push({
-        icon: MessageSquare,
-        iconColor: "text-muted-foreground",
-        title: "Última mensagem",
-        time: fmtDateTime(convTimelineData.lastMsgAt),
-        ts: new Date(convTimelineData.lastMsgAt).getTime(),
+        icon: MessageSquare, iconColor: "text-primary",
+        title: "Primeiro contato do cliente",
+        description: preview ? `"${preview}${preview.length >= 100 ? "…" : ""}"` : undefined,
+        time: fmtDateTime(td.firstClientMsg.created_at),
+        ts: new Date(td.firstClientMsg.created_at).getTime(),
       });
     }
 
-    // Proposals from conversation
-    convTimelineData.proposals.forEach(p => {
+    // ─── First agent reply ───
+    if (td.firstAgentReply) {
+      const responseTime = td.firstClientMsg
+        ? Math.round((new Date(td.firstAgentReply.created_at).getTime() - new Date(td.firstClientMsg.created_at).getTime()) / 60000)
+        : null;
+      events.push({
+        icon: Send, iconColor: "text-emerald-500",
+        title: "Primeira resposta do agente",
+        description: responseTime !== null
+          ? responseTime < 60 ? `Tempo de resposta: ${responseTime}min` : `Tempo de resposta: ${Math.round(responseTime / 60)}h`
+          : undefined,
+        time: fmtDateTime(td.firstAgentReply.created_at),
+        ts: new Date(td.firstAgentReply.created_at).getTime(),
+      });
+    }
+
+    // ─── Media milestones ───
+    if (td.mediaCount > 0) {
+      const firstMedia = td.keyMilestones.find(m => m.message_type === "image" || m.message_type === "video");
+      if (firstMedia) {
+        events.push({
+          icon: Eye, iconColor: "text-blue-500",
+          title: `${td.mediaCount} foto${td.mediaCount > 1 ? "s" : ""}/vídeo${td.mediaCount > 1 ? "s" : ""} trocado${td.mediaCount > 1 ? "s" : ""}`,
+          description: firstMedia.direction === "incoming" ? "Cliente enviou mídia" : "Agente enviou mídia",
+          time: fmtDateTime(firstMedia.created_at),
+          ts: new Date(firstMedia.created_at).getTime(),
+        });
+      }
+    }
+
+    if (td.audioCount > 0) {
+      const firstAudio = td.keyMilestones.find(m => m.message_type === "audio");
+      if (firstAudio) {
+        events.push({
+          icon: MessageSquare, iconColor: "text-violet-500",
+          title: `${td.audioCount} áudio${td.audioCount > 1 ? "s" : ""} na conversa`,
+          time: fmtDateTime(firstAudio.created_at),
+          ts: new Date(firstAudio.created_at).getTime(),
+        });
+      }
+    }
+
+    if (td.docCount > 0) {
+      const firstDoc = td.keyMilestones.find(m => m.message_type === "document");
+      if (firstDoc) {
+        events.push({
+          icon: FileText, iconColor: "text-orange-500",
+          title: `${td.docCount} documento${td.docCount > 1 ? "s" : ""} compartilhado${td.docCount > 1 ? "s" : ""}`,
+          time: fmtDateTime(firstDoc.created_at),
+          ts: new Date(firstDoc.created_at).getTime(),
+        });
+      }
+    }
+
+    // ─── Proposals ───
+    td.proposals.forEach(p => {
       const statusLabel = p.status === "sent" ? "Enviada" : p.status === "viewed" ? "Visualizada" : p.status === "accepted" ? "Aceita" : p.status === "rejected" ? "Recusada" : p.status || "Rascunho";
       events.push({
         icon: FileText,
@@ -321,7 +466,32 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
       });
     });
 
-    // Stage info
+    // ─── AI suggestions used ───
+    td.aiSuggestions.forEach(s => {
+      const parts = [s.intent_detected, s.destination_detected].filter(Boolean);
+      events.push({
+        icon: Sparkles, iconColor: "text-primary",
+        title: `IA detectou: ${parts.join(", ") || s.suggestion_text?.slice(0, 60) || "sugestão"}`,
+        description: s.action_taken ? `Ação: ${s.action_taken}` : undefined,
+        time: fmtDateTime(s.created_at),
+        ts: new Date(s.created_at).getTime(),
+      });
+    });
+
+    // ─── Inactivity gaps ───
+    td.inactivityGaps.forEach(gap => {
+      const days = Math.round(gap.hours / 24);
+      events.push({
+        icon: Clock, iconColor: "text-amber-500",
+        title: `${days > 1 ? `${days} dias` : `${gap.hours}h`} sem interação`,
+        description: "Período de inatividade na conversa",
+        time: fmtDate(gap.to),
+        ts: new Date(gap.to).getTime(),
+        alert: gap.hours > 168, // > 1 week
+      });
+    });
+
+    // ─── Current stage ───
     const stage = conversation.stage;
     if (stage && stage !== "novo_lead") {
       const stageLabels: Record<string, string> = {
@@ -339,11 +509,21 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
       });
     }
 
+    // ─── Last message ───
+    if (td.lastMsgAt) {
+      const hoursSince = (Date.now() - new Date(td.lastMsgAt).getTime()) / 3600000;
+      events.push({
+        icon: MessageSquare, iconColor: hoursSince > 48 ? "text-amber-500" : "text-muted-foreground",
+        title: hoursSince > 48 ? `Última mensagem (há ${Math.round(hoursSince / 24)}d)` : "Última mensagem",
+        time: fmtDateTime(td.lastMsgAt),
+        ts: new Date(td.lastMsgAt).getTime(),
+      });
+    }
+
     // ─── Client-level events (when linked) ───
     sales.forEach(s => {
       events.push({
-        icon: Plane,
-        iconColor: "text-blue-500",
+        icon: Plane, iconColor: "text-blue-500",
         title: `Viagem ${s.destination_iata || ""} — ${s.name || ""}`,
         description: s.received_value ? fmt(s.received_value) : undefined,
         time: fmtDate(s.created_at),
@@ -367,8 +547,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
 
     notes.forEach(n => {
       events.push({
-        icon: StickyNote,
-        iconColor: "text-muted-foreground",
+        icon: StickyNote, iconColor: "text-muted-foreground",
         title: n.content.slice(0, 80),
         time: fmtDateTime(n.created_at),
         ts: new Date(n.created_at).getTime(),
