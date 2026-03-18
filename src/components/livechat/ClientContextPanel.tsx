@@ -165,19 +165,25 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
         const convId = dbConv?.id;
         const clientId = dbConv?.client_id;
 
-        // Fetch last agent and client messages to determine reply status
+        // Fetch last agent/client messages + stats for smart actions
         if (convId) {
-          const [agentMsg, clientMsg] = await Promise.all([
-            supabase.from("conversation_messages").select("created_at").eq("conversation_id", convId).in("sender_type", ["agent", "atendente", "system"]).eq("direction", "outbound").order("created_at", { ascending: false }).limit(1),
-            supabase.from("conversation_messages").select("created_at").eq("conversation_id", convId).in("sender_type", ["client", "cliente", "contact"]).eq("direction", "inbound").order("created_at", { ascending: false }).limit(1),
+          const [agentMsg, clientMsg, agentCount, clientCount] = await Promise.all([
+            supabase.from("conversation_messages").select("created_at").eq("conversation_id", convId).eq("sender_type", "atendente").eq("direction", "outgoing").order("created_at", { ascending: false }).limit(1),
+            supabase.from("conversation_messages").select("created_at").eq("conversation_id", convId).eq("sender_type", "cliente").eq("direction", "incoming").order("created_at", { ascending: false }).limit(1),
+            supabase.from("conversation_messages").select("id", { count: "exact", head: true }).eq("conversation_id", convId).eq("sender_type", "atendente"),
+            supabase.from("conversation_messages").select("id", { count: "exact", head: true }).eq("conversation_id", convId).eq("sender_type", "cliente"),
           ]);
           if (!cancelled) {
             const agentAt = agentMsg.data?.[0]?.created_at || null;
             const clientAt = clientMsg.data?.[0]?.created_at || null;
             setLastAgentMsgAt(agentAt);
             setLastClientMsgAt(clientAt);
-            // Agent has replied if their last message is after the client's last message
             setAgentHasReplied(!!(agentAt && (!clientAt || new Date(agentAt) >= new Date(clientAt))));
+            setMsgStats({
+              totalClient: clientCount.count || 0,
+              totalAgent: agentCount.count || 0,
+              avgResponseHours: null,
+            });
           }
         }
 
