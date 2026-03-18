@@ -121,6 +121,10 @@ function OperacaoInboxInner() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isUserScrolledUpRef = useRef(false);
   const lastAutoReconcileRef = useRef(0);
+  const prevWaConnectedRef = useRef(false);
+
+  // ─── Message Queue for offline sends ───
+  const { enqueue, getPendingCount, retryMessage, processQueue, queue } = useMessageQueue();
 
   const selected = conversations.find(c => c.id === selectedId);
 
