@@ -76,7 +76,7 @@ export default function ClientIntelligence() {
   }, []);
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading) return;
     setLoading(true);
     fetchAllRows("sales", "*", { order: { column: "created_at", ascending: false } })
       .then((data) => {
@@ -87,7 +87,7 @@ export default function ClientIntelligence() {
         console.error("ClientIntelligence fetch error:", err);
         setLoading(false);
       });
-  }, [user, authLoading]);
+  }, [authLoading]);
 
   const analysisData = useMemo(() => analyzeClients(sales), [sales]);
 

@@ -103,7 +103,7 @@ export default function Dashboard() {
   const [detailLoading, setDetailLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading || !user) {
+    if (authLoading) {
       setDetailLoading(false);
       return;
     }
@@ -138,7 +138,7 @@ export default function Dashboard() {
     }).catch(() => { if (alive) setDetailLoading(false); });
 
     return () => { alive = false; };
-  }, [user, authLoading]);
+  }, [authLoading]);
 
   const sellerNames = useMemo(() => {
     const map: Record<string, string> = {};

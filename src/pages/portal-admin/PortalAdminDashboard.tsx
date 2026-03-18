@@ -33,7 +33,7 @@ export default function PortalAdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading) return;
     Promise.all([
       fetchAllRows("sales", "id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, received_value, total_cost, margin, seller_id, client_id, hotel_name, airline, adults, children, created_at, emission_status", { order: { column: "departure_date", ascending: false } }),
       fetchAllRows("clients", "id, display_name, email, phone, created_at"),
@@ -42,7 +42,7 @@ export default function PortalAdminDashboard() {
       setClients(c);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [user, authLoading]);
+  }, [authLoading]);
 
   const stats = useMemo(() => {
     const now = new Date();

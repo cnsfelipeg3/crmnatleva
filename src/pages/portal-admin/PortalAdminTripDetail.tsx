@@ -62,7 +62,7 @@ export default function PortalAdminTripDetail() {
   const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    if (authLoading || !user || !id) return;
+    if (authLoading || !id) return;
 
     Promise.all([
       supabase.from("sales").select("*").eq("id", id).maybeSingle(),
