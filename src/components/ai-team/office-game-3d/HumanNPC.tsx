@@ -207,7 +207,7 @@ function SpeechBubble({ agentId, status }: { agentId: string; status: string }) 
   );
 }
 
-export default function HumanNPC({ agentId, emoji, name, status, taskCount, position, isNearby, onClick, showBubble, onBubbleToggle }: Props) {
+export default function HumanNPC({ agentId, emoji, name, status, taskCount, position, isNearby, onClick, showBubble, onBubbleToggle, greetingMessage, playerPos }: Props) {
   const groupRef = useRef<Group>(null);
   const ringRef = useRef<Mesh>(null);
   const color = STATUS_COLORS[status] || '#9ca3af';
@@ -228,7 +228,17 @@ export default function HumanNPC({ agentId, emoji, name, status, taskCount, posi
 
     groupRef.current.position.y = Math.sin(t * 1.5 + offset) * 0.01;
 
-    if (status === 'idle') {
+    // Turn toward boss when greeting
+    if (greetingMessage && playerPos) {
+      const dx = playerPos.x - position[0];
+      const dz = playerPos.z - position[2];
+      const targetAngle = Math.atan2(dx, dz);
+      const cur = groupRef.current.rotation.y;
+      let diff = targetAngle - cur;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      groupRef.current.rotation.y += diff * 0.08;
+    } else if (status === 'idle') {
       groupRef.current.rotation.y = Math.sin(t * 0.3 + offset) * 0.05;
     } else {
       groupRef.current.rotation.y = Math.sin(t * 0.8 + offset) * 0.15;
