@@ -13,26 +13,28 @@ function MonitorModel({ targetWidth = 0.9 }: { targetWidth?: number }) {
   const { scene } = useGLTF(MONITOR_GLB_PATH);
   const group = useMemo(() => {
     const cloned = scene.clone(true);
-    // Center the model and compute scale
+    // Center the model
     const box = new THREE.Box3().setFromObject(cloned);
     const center = box.getCenter(new THREE.Vector3());
     const modelSize = box.getSize(new THREE.Vector3());
-    // Center horizontally and on Z, sit on bottom (Y=0)
+    // Create a wrapper to center + rotate
+    const wrapper = new THREE.Group();
     cloned.position.set(-center.x, -box.min.y, -center.z);
-    // Attach model width for scale computation
-    (cloned as any).__modelWidth = modelSize.x;
-    return cloned;
+    wrapper.add(cloned);
+    // Rotate 180° so screen faces +Z (towards the NPC)
+    wrapper.rotation.y = Math.PI;
+    // Recompute bounds after rotation for correct width
+    (wrapper as any).__modelWidth = modelSize.x;
+    return wrapper;
   }, [scene]);
 
   const s = targetWidth / ((group as any).__modelWidth || 1.2);
 
   return (
-    <group rotation={[0, 0, 0]}>
-      <primitive
-        object={group}
-        scale={[s, s, s]}
-      />
-    </group>
+    <primitive
+      object={group}
+      scale={[s, s, s]}
+    />
   );
 }
 
