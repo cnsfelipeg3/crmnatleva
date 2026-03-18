@@ -628,10 +628,15 @@ export default function HumanNPC({ agentId, emoji, name, role, status, taskCount
           )}
         </group>
 
-        {/* Speech Bubble (click-triggered) */}
+        {/* Chat Bubble (click-triggered) */}
         {showBubble && !greetingMessage && (
-          <Html position={[0, 1.35, 0]} center distanceFactor={4} style={{ pointerEvents: 'auto' }}>
-            <SpeechBubble agentId={agentId} status={status} />
+          <Html position={[0, 1.6, 0]} center distanceFactor={4} style={{ pointerEvents: 'auto' }}>
+            <NPCChatBubble
+              agentName={name}
+              agentId={agentId}
+              agentRole={role}
+              onClose={() => onBubbleToggle?.()}
+            />
           </Html>
         )}
 
