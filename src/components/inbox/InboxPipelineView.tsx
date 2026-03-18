@@ -285,7 +285,7 @@ export function InboxPipelineView({ conversations, onSelectConversation, onSwitc
       </div>
 
       {/* ═══ PIPELINE KANBAN ═══ */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-x-auto overflow-y-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="flex gap-2 p-3 min-w-max">
           {columns.map(col => (
             <div
@@ -337,7 +337,7 @@ export function InboxPipelineView({ conversations, onSelectConversation, onSwitc
             </div>
           ))}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
