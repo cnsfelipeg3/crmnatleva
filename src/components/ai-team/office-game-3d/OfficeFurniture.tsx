@@ -365,7 +365,7 @@ function CyclingTV({ position, rotationY, offset }: {
   );
 }
 
-/* ── LED Screen Panel — animated NatLeva logo scrolling ─ */
+/* ── LED Screen Panel — Ultra-bright 4K LED display ─ */
 function LogoTexturePanel({ position, rotationY, width, height }: {
   position: [number, number, number];
   rotationY: number;
@@ -375,36 +375,64 @@ function LogoTexturePanel({ position, rotationY, width, height }: {
   const texture = useLoader(THREE.TextureLoader, logoNatleva);
   const screenRef = useRef<THREE.Mesh>(null);
   const glowRef = useRef<THREE.PointLight>(null);
+  const glowRef2 = useRef<THREE.PointLight>(null);
 
-  // Animate LED glow pulse
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime();
     if (glowRef.current) {
-      glowRef.current.intensity = 0.8 + Math.sin(t * 1.2) * 0.3;
+      glowRef.current.intensity = 2.0 + Math.sin(t * 1.5) * 0.6;
+    }
+    if (glowRef2.current) {
+      glowRef2.current.intensity = 1.2 + Math.sin(t * 0.8 + 1) * 0.4;
+    }
+    // Subtle screen flicker for realism
+    if (screenRef.current) {
+      const mat = screenRef.current.material as THREE.MeshStandardMaterial;
+      mat.emissiveIntensity = 1.8 + Math.sin(t * 30) * 0.02 + Math.sin(t * 1.2) * 0.15;
     }
   });
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {/* LED screen bezel — dark metallic frame */}
+      {/* Outer bezel — thick dark metal frame */}
       <mesh>
-        <boxGeometry args={[width + 0.08, height + 0.08, 0.05]} />
-        <meshStandardMaterial color="#0a0a0a" roughness={0.12} metalness={0.8} />
+        <boxGeometry args={[width + 0.12, height + 0.12, 0.06]} />
+        <meshStandardMaterial color="#050505" roughness={0.08} metalness={0.9} />
       </mesh>
-      {/* Inner LED panel — emissive dark surface */}
-      <mesh position={[0, 0, 0.026]}>
-        <boxGeometry args={[width, height, 0.005]} />
-        <meshStandardMaterial color="#050a10" roughness={0.05} metalness={0.2} emissive="#0a1830" emissiveIntensity={0.3} />
-      </mesh>
-      {/* LED pixel grid overlay (subtle) */}
-      <mesh position={[0, 0, 0.029]}>
-        <planeGeometry args={[width, height]} />
-        <meshStandardMaterial color="#101820" transparent opacity={0.15} roughness={0.1} />
+      {/* Inner bezel rim — subtle silver edge */}
+      <mesh position={[0, 0, 0.02]}>
+        <boxGeometry args={[width + 0.04, height + 0.04, 0.02]} />
+        <meshStandardMaterial color="#1a1a1a" roughness={0.1} metalness={0.85} />
       </mesh>
 
-      {/* Animated logo via Html — CSS animation for scrolling */}
+      {/* ═══ MAIN LED SURFACE — bright emissive ═══ */}
+      <mesh ref={screenRef} position={[0, 0, 0.031]}>
+        <boxGeometry args={[width, height, 0.004]} />
+        <meshStandardMaterial
+          color="#0d1a0d"
+          emissive="#1a4a20"
+          emissiveIntensity={1.8}
+          roughness={0.02}
+          metalness={0.05}
+        />
+      </mesh>
+
+      {/* LED backlight bloom layer */}
+      <mesh position={[0, 0, 0.033]}>
+        <planeGeometry args={[width * 0.98, height * 0.98]} />
+        <meshStandardMaterial
+          color="#000"
+          emissive="#2a6030"
+          emissiveIntensity={0.8}
+          transparent
+          opacity={0.4}
+          roughness={0}
+        />
+      </mesh>
+
+      {/* Scrolling logo — high brightness, sharp rendering */}
       <Html
-        position={[0, 0.05, 0.031]}
+        position={[0, 0.05, 0.036]}
         center
         transform
         scale={width * 0.035}
@@ -418,15 +446,38 @@ function LogoTexturePanel({ position, rotationY, width, height }: {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'transparent',
+          background: 'radial-gradient(ellipse at center, rgba(30,80,40,0.6) 0%, rgba(5,15,8,0.95) 70%)',
+          borderRadius: '2px',
         }}>
-          {/* Scrolling logo container */}
+          {/* Pixel grid overlay for LED texture */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none',
+            backgroundImage: `
+              linear-gradient(0deg, rgba(0,0,0,0.06) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px)
+            `,
+            backgroundSize: '3px 3px',
+            mixBlendMode: 'multiply',
+          }} />
+          {/* Scan line effect */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none',
+            background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.015) 2px, rgba(255,255,255,0.015) 4px)',
+          }} />
+          {/* Bright vignette glow */}
+          <div style={{
+            position: 'absolute', inset: 0, zIndex: 1, pointerEvents: 'none',
+            background: 'radial-gradient(ellipse at center, rgba(120,220,100,0.15) 0%, transparent 60%)',
+          }} />
+
+          {/* Scrolling logo */}
           <div style={{
             display: 'flex',
-            gap: `${Math.round(width * 10)}px`,
+            gap: `${Math.round(width * 12)}px`,
             alignItems: 'center',
-            animation: 'led-scroll 12s linear infinite',
+            animation: 'led-scroll 14s linear infinite',
             whiteSpace: 'nowrap',
+            zIndex: 4,
           }}>
             {[0, 1, 2].map(i => (
               <img
@@ -434,10 +485,11 @@ function LogoTexturePanel({ position, rotationY, width, height }: {
                 src={logoNatleva}
                 alt=""
                 style={{
-                  height: `${Math.round(height * 14)}px`,
+                  height: `${Math.round(height * 16)}px`,
                   objectFit: 'contain',
-                  filter: 'brightness(1.6) drop-shadow(0 0 18px rgba(120,180,80,0.7)) drop-shadow(0 0 40px rgba(201,169,110,0.4))',
+                  filter: 'brightness(2.5) contrast(1.1) drop-shadow(0 0 30px rgba(120,220,100,0.9)) drop-shadow(0 0 60px rgba(100,200,80,0.6)) drop-shadow(0 0 100px rgba(201,169,110,0.5))',
                   flexShrink: 0,
+                  imageRendering: 'auto',
                 }}
               />
             ))}
@@ -451,45 +503,74 @@ function LogoTexturePanel({ position, rotationY, width, height }: {
         </div>
       </Html>
 
-      {/* "Viagens Exclusivas" tagline — glowing on LED */}
+      {/* "Viagens Exclusivas" tagline — ultra bright neon */}
       <Html
-        position={[0, -height / 2 + 0.12, 0.031]}
+        position={[0, -height / 2 + 0.15, 0.036]}
         center
         transform
         scale={width * 0.04}
         style={{ pointerEvents: 'none' }}
       >
         <div style={{
-          fontSize: '11px', fontWeight: 600, letterSpacing: '6px',
-          color: '#c9a96e', fontFamily: 'Space Grotesk, sans-serif',
+          fontSize: '12px', fontWeight: 700, letterSpacing: '8px',
+          color: '#ffd700', fontFamily: 'Space Grotesk, sans-serif',
           whiteSpace: 'nowrap', textTransform: 'uppercase',
-          textShadow: '0 0 20px rgba(201,169,110,0.9), 0 0 40px rgba(201,169,110,0.4)',
-          animation: 'led-tagline-pulse 3s ease-in-out infinite',
+          textShadow: `
+            0 0 10px rgba(255,215,0,1),
+            0 0 25px rgba(255,215,0,0.8),
+            0 0 50px rgba(201,169,110,0.6),
+            0 0 80px rgba(201,169,110,0.3)
+          `,
+          animation: 'led-tagline-glow 2.5s ease-in-out infinite',
         }}>
           Viagens Exclusivas
         </div>
         <style>{`
-          @keyframes led-tagline-pulse {
-            0%, 100% { opacity: 0.8; }
-            50%      { opacity: 1; text-shadow: 0 0 25px rgba(201,169,110,1), 0 0 50px rgba(201,169,110,0.6); }
+          @keyframes led-tagline-glow {
+            0%, 100% { opacity: 0.9; filter: brightness(1); }
+            50%      { opacity: 1; filter: brightness(1.3); }
           }
         `}</style>
       </Html>
 
-      {/* LED accent lights — top & bottom strips */}
-      <mesh position={[0, height / 2 + 0.01, 0.03]}>
-        <boxGeometry args={[width, 0.015, 0.01]} />
-        <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={1.2} metalness={0.5} roughness={0.1} />
+      {/* ═══ LED EDGE LIGHTING — bright accent strips ═══ */}
+      {/* Top strip */}
+      <mesh position={[0, height / 2 + 0.015, 0.035]}>
+        <boxGeometry args={[width + 0.02, 0.025, 0.012]} />
+        <meshStandardMaterial color="#c9a96e" emissive="#ffd700" emissiveIntensity={2.5} metalness={0.6} roughness={0.05} />
       </mesh>
-      <mesh position={[0, -height / 2 - 0.01, 0.03]}>
-        <boxGeometry args={[width, 0.015, 0.01]} />
-        <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={1.2} metalness={0.5} roughness={0.1} />
+      {/* Bottom strip */}
+      <mesh position={[0, -height / 2 - 0.015, 0.035]}>
+        <boxGeometry args={[width + 0.02, 0.025, 0.012]} />
+        <meshStandardMaterial color="#c9a96e" emissive="#ffd700" emissiveIntensity={2.5} metalness={0.6} roughness={0.05} />
+      </mesh>
+      {/* Left strip */}
+      <mesh position={[-width / 2 - 0.015, 0, 0.035]}>
+        <boxGeometry args={[0.025, height + 0.02, 0.012]} />
+        <meshStandardMaterial color="#4a8a4a" emissive="#4aff4a" emissiveIntensity={1.5} metalness={0.5} roughness={0.05} />
+      </mesh>
+      {/* Right strip */}
+      <mesh position={[width / 2 + 0.015, 0, 0.035]}>
+        <boxGeometry args={[0.025, height + 0.02, 0.012]} />
+        <meshStandardMaterial color="#4a8a4a" emissive="#4aff4a" emissiveIntensity={1.5} metalness={0.5} roughness={0.05} />
       </mesh>
 
-      {/* Strong LED glow lighting */}
-      <pointLight ref={glowRef} position={[0, 0, 1.2]} intensity={0.8} color="#4a6a30" distance={5} decay={2} />
-      <pointLight position={[-width / 3, 0, 0.6]} intensity={0.3} color="#c9a96e" distance={3} decay={2} />
-      <pointLight position={[width / 3, 0, 0.6]} intensity={0.3} color="#c9a96e" distance={3} decay={2} />
+      {/* ═══ POWERFUL SCREEN GLOW LIGHTS ═══ */}
+      <pointLight ref={glowRef} position={[0, 0, 2.0]} intensity={2.0} color="#3a7a3a" distance={7} decay={2} />
+      <pointLight ref={glowRef2} position={[0, 0.3, 1.5]} intensity={1.2} color="#50aa50" distance={5} decay={2} />
+      <pointLight position={[-width / 3, -0.2, 0.8]} intensity={0.6} color="#c9a96e" distance={3.5} decay={2} />
+      <pointLight position={[width / 3, -0.2, 0.8]} intensity={0.6} color="#c9a96e" distance={3.5} decay={2} />
+      {/* Center bloom light */}
+      <spotLight
+        position={[0, 0, 1.0]}
+        target-position={[0, 0, -1]}
+        angle={0.6}
+        penumbra={0.8}
+        intensity={1.5}
+        color="#2a5a2a"
+        distance={6}
+        decay={2}
+      />
     </group>
   );
 }
