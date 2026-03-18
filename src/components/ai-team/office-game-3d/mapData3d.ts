@@ -76,6 +76,9 @@ export const CONFERENCE_TABLE: Box3D = {
 // Collision boxes (AABB on XZ plane)
 export interface CollisionRect { x: number; z: number; hw: number; hd: number }
 
+// Import commercial collisions lazily to avoid circular deps
+import { COMMERCIAL_COLLISION_BOXES } from './commercialMapData';
+
 export const COLLISION_BOXES: CollisionRect[] = [
   // Desks
   ...DESKS.map(d => ({ x: d.pos.x, z: d.pos.z, hw: d.size.x / 2 + 0.15, hd: d.size.z / 2 + 0.15 })),
@@ -85,6 +88,10 @@ export const COLLISION_BOXES: CollisionRect[] = [
   ...SOFAS.map(s => ({ x: s.pos.x, z: s.pos.z, hw: s.size.x / 2 + 0.1, hd: s.size.z / 2 + 0.1 })),
   // Conference table
   { x: CONFERENCE_TABLE.pos.x, z: CONFERENCE_TABLE.pos.z, hw: CONFERENCE_TABLE.size.x / 2 + 0.1, hd: CONFERENCE_TABLE.size.z / 2 + 0.1 },
+  // Glass divider
+  { x: 0, z: 6.2, hw: 8, hd: 0.15 },
+  // Commercial desks
+  ...COMMERCIAL_COLLISION_BOXES,
   // Walls
   { x: 0, z: -FLOOR_SIZE.h / 2, hw: FLOOR_SIZE.w / 2, hd: 0.15 },
   { x: 0, z: FLOOR_SIZE.h / 2, hw: FLOOR_SIZE.w / 2, hd: 0.15 },
