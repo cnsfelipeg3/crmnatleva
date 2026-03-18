@@ -103,7 +103,7 @@ export default function Dashboard() {
   const [detailLoading, setDetailLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading || !user) {
+    if (authLoading) {
       setDetailLoading(false);
       return;
     }
