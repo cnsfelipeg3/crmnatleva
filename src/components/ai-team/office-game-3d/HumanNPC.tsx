@@ -222,8 +222,8 @@ export default function HumanNPC({ agentId, emoji, name, status, taskCount, posi
     }
   }, [isNearby, onBubbleToggle, onClick]);
 
-  // Get the facing angle from NPC_POSITIONS (default Math.PI = face desk)
-  const facingAngle = (position as any).facingY ?? Math.PI;
+  // Get the facing angle (default Math.PI = face desk/monitor)
+  const facingAngle = facingAngleProp ?? Math.PI;
 
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
