@@ -27,11 +27,12 @@ function MonitorModel({ targetWidth = 0.9 }: { targetWidth?: number }) {
   const s = targetWidth / ((group as any).__modelWidth || 1.2);
 
   return (
-    <primitive
-      object={group}
-      scale={[s, s, s]}
-      rotation={[0, Math.PI, 0]}
-    />
+    <group rotation={[0, Math.PI, 0]}>
+      <primitive
+        object={group}
+        scale={[s, s, s]}
+      />
+    </group>
   );
 }
 
@@ -65,8 +66,8 @@ function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; 
       ))}
 
       {/* ═══ Samsung Odyssey OLED G9 — on desk surface, centered, facing front ═══ */}
-      <group position={[0, deskTopY, -size.z * 0.15]}>
-        <MonitorModel targetWidth={0.9} />
+      <group position={[0, deskTopY, -size.z * 0.1]}>
+        <MonitorModel targetWidth={0.7} />
       </group>
 
       {/* Keyboard */}
