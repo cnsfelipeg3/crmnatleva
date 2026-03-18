@@ -4,6 +4,7 @@ import OfficeFloor from './OfficeFloor';
 import OfficeFurniture from './OfficeFurniture';
 import PlayerController from './PlayerController';
 import HumanNPC from './HumanNPC';
+import CommercialSector from './CommercialSector';
 import { NPC_POSITIONS, PLAYER_SPAWN } from './mapData3d';
 import type { Agent, Task } from '../mockData';
 
@@ -100,6 +101,9 @@ export default function OfficeScene({ agents, tasks, onSelectAgent, joystickInpu
           />
         );
       })}
+
+      {/* Commercial Sector */}
+      <CommercialSector playerPos={playerPosRef.current} />
     </>
   );
 }

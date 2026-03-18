@@ -4,7 +4,7 @@
 export interface Vec3 { x: number; y: number; z: number }
 export interface Box3D { pos: Vec3; size: Vec3 }
 
-export const FLOOR_SIZE = { w: 18, h: 11 };
+export const FLOOR_SIZE = { w: 18, h: 20 };
 
 export const DESKS: { pos: Vec3; size: Vec3; label?: string }[] = [
   // Row 1 (north) — 5 desks
@@ -35,7 +35,7 @@ export const NPC_POSITIONS: Record<string, Vec3> = {
   gerente:       { x: 2.4, y: 0, z: -0.1 },
 };
 
-export const PLAYER_SPAWN: Vec3 = { x: 0, y: 0, z: 4.0 };
+export const PLAYER_SPAWN: Vec3 = { x: 0, y: 0, z: 5.5 };
 
 export const WALLS = {
   thickness: 0.15,
@@ -76,6 +76,9 @@ export const CONFERENCE_TABLE: Box3D = {
 // Collision boxes (AABB on XZ plane)
 export interface CollisionRect { x: number; z: number; hw: number; hd: number }
 
+// Import commercial collisions lazily to avoid circular deps
+import { COMMERCIAL_COLLISION_BOXES } from './commercialMapData';
+
 export const COLLISION_BOXES: CollisionRect[] = [
   // Desks
   ...DESKS.map(d => ({ x: d.pos.x, z: d.pos.z, hw: d.size.x / 2 + 0.15, hd: d.size.z / 2 + 0.15 })),
@@ -85,6 +88,10 @@ export const COLLISION_BOXES: CollisionRect[] = [
   ...SOFAS.map(s => ({ x: s.pos.x, z: s.pos.z, hw: s.size.x / 2 + 0.1, hd: s.size.z / 2 + 0.1 })),
   // Conference table
   { x: CONFERENCE_TABLE.pos.x, z: CONFERENCE_TABLE.pos.z, hw: CONFERENCE_TABLE.size.x / 2 + 0.1, hd: CONFERENCE_TABLE.size.z / 2 + 0.1 },
+  // Glass divider
+  { x: 0, z: 6.2, hw: 8, hd: 0.15 },
+  // Commercial desks
+  ...COMMERCIAL_COLLISION_BOXES,
   // Walls
   { x: 0, z: -FLOOR_SIZE.h / 2, hw: FLOOR_SIZE.w / 2, hd: 0.15 },
   { x: 0, z: FLOOR_SIZE.h / 2, hw: FLOOR_SIZE.w / 2, hd: 0.15 },
