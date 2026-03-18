@@ -2,11 +2,13 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import type { Group, Mesh } from 'three';
+import NPCChatBubble from './NPCChatBubble';
 
 interface Props {
   agentId: string;
   emoji: string;
   name: string;
+  role: string;
   status: string;
   taskCount: number;
   position: [number, number, number];
