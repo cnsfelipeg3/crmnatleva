@@ -114,11 +114,8 @@ export default function AITeam() {
           <Button variant={view === "dashboard" ? "default" : "outline"} size="sm" className="gap-1.5" onClick={() => setView("dashboard")}>
             <LayoutDashboard className="w-4 h-4" /> Dashboard
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setView("office")}>
-            <Building2 className="w-4 h-4" /> Escritório 2D
-          </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setView("office3d")}>
-            <Box className="w-4 h-4" /> Escritório 3D
+            <Building2 className="w-4 h-4" /> Escritório 3D
           </Button>
           <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
             <Plus className="w-4 h-4" /> Novo agente
