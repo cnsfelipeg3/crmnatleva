@@ -34,7 +34,7 @@ export function useInboxMessages(
       message_type: normalizeDbMessageType(m.message_type),
       text: stripQuotes(m.content ?? ""),
       media_url: m.media_url || undefined,
-      status: normalizeDbStatus(m.status ?? m.read_status),
+      status: normalizeDbStatus(m.status),
       created_at: toIsoTimestamp(m.timestamp || m.created_at),
       external_message_id: m.external_message_id || undefined,
     }))
