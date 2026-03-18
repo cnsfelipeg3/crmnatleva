@@ -347,6 +347,21 @@ function OperacaoInboxInner() {
     }
   }, [selectedId, scrollToBottom]);
 
+  // Scroll to bottom after messages finish loading
+  const prevLoadingRef = useRef(false);
+  useEffect(() => {
+    if (prevLoadingRef.current && !loadingMessages && selectedId) {
+      isUserScrolledUpRef.current = false;
+      // Use double rAF to ensure DOM has rendered the messages
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scrollToBottom("instant" as ScrollBehavior);
+        });
+      });
+    }
+    prevLoadingRef.current = loadingMessages;
+  }, [loadingMessages, selectedId, scrollToBottom]);
+
   // Track user scroll position
   useEffect(() => {
     const viewport = getMessagesViewport();
