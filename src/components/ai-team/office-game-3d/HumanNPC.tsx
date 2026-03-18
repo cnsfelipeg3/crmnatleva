@@ -724,7 +724,7 @@ export default function HumanNPC({ agentId, emoji, name, role, status, taskCount
         </Html>
 
         {/* Interaction prompt */}
-        {isNearby && !showBubble && (
+        {isNearby && !showBubble && !greetingMessage && (
           <Html position={[0, 1.3, 0]} center style={{ pointerEvents: 'none' }}>
             <div style={{
               fontSize: '10px', fontWeight: 600, color: '#fff',
