@@ -4,7 +4,7 @@
 export interface Vec3 { x: number; y: number; z: number }
 export interface Box3D { pos: Vec3; size: Vec3 }
 
-export const FLOOR_SIZE = { w: 18, h: 11 };
+export const FLOOR_SIZE = { w: 18, h: 20 };
 
 export const DESKS: { pos: Vec3; size: Vec3; label?: string }[] = [
   // Row 1 (north) — 5 desks
