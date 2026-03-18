@@ -323,9 +323,9 @@ function SimpleWallScreen({ position, rotationY, width, height, emissiveColor, s
       <mesh position={[0, 0, 0.021]}>
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial
-          color={showLogo ? "#040a06" : "#050810"}
-          emissive={showLogo ? "#0a2a12" : (emissiveColor || "#1a3a20")}
-          emissiveIntensity={showLogo ? 0.15 : 0.5}
+          color={showLogo ? "#000000" : "#050810"}
+          emissive={showLogo ? "#000000" : (emissiveColor || "#1a3a20")}
+          emissiveIntensity={showLogo ? 0 : 0.5}
           roughness={0.05}
         />
       </mesh>
@@ -333,13 +333,9 @@ function SimpleWallScreen({ position, rotationY, width, height, emissiveColor, s
       {showLogo && logoTexture && (
         <mesh position={[0, 0, 0.023]}>
           <planeGeometry args={[width * 0.7, height * 0.7]} />
-          <meshStandardMaterial
+          <meshBasicMaterial
             map={logoTexture}
             transparent
-            emissive="#ffffff"
-            emissiveIntensity={0.3}
-            emissiveMap={logoTexture}
-            roughness={0.1}
             toneMapped={false}
           />
         </mesh>
