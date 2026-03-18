@@ -640,8 +640,8 @@ export default function HumanNPC({ agentId, emoji, name, role, status, taskCount
           </Html>
         )}
 
-        {/* Greeting Bubble (auto-triggered on boss proximity) */}
-        {greetingMessage && (
+        {/* Greeting Bubble (auto-triggered on boss proximity, hidden when chat is open) */}
+        {greetingMessage && !showBubble && (
           <Html position={[0, 1.35, 0]} center distanceFactor={4} style={{ pointerEvents: 'none' }}>
             <div
               style={{
