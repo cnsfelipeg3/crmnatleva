@@ -295,13 +295,23 @@ function WallSet() {
 /* Replaced heavy LogoTexturePanel (5 lights + Html each) and CyclingTV (Html+img each)
    with simple emissive meshes. This removes ~30 pointLights and ~12 Html overlays. */
 
-function SimpleWallScreen({ position, rotationY, width, height, emissiveColor }: {
+function SimpleWallScreen({ position, rotationY, width, height, emissiveColor, showLogo }: {
   position: [number, number, number];
   rotationY: number;
   width: number;
   height: number;
   emissiveColor?: string;
+  showLogo?: boolean;
 }) {
+  const logoTexture = useTexture(natLevaLogo);
+
+  // Configure logo texture
+  useMemo(() => {
+    if (logoTexture) {
+      logoTexture.colorSpace = THREE.SRGBColorSpace;
+    }
+  }, [logoTexture]);
+
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
       {/* Bezel */}
@@ -309,16 +319,31 @@ function SimpleWallScreen({ position, rotationY, width, height, emissiveColor }:
         <boxGeometry args={[width + 0.08, height + 0.08, 0.04]} />
         <meshStandardMaterial color="#0a0a0a" roughness={0.1} metalness={0.7} />
       </mesh>
-      {/* Screen */}
-      <mesh position={[0, 0, 0.022]}>
+      {/* Screen background */}
+      <mesh position={[0, 0, 0.021]}>
         <planeGeometry args={[width, height]} />
         <meshStandardMaterial
-          color="#050810"
-          emissive={emissiveColor || "#1a3a20"}
-          emissiveIntensity={0.5}
+          color={showLogo ? "#040a06" : "#050810"}
+          emissive={showLogo ? "#0a2a12" : (emissiveColor || "#1a3a20")}
+          emissiveIntensity={showLogo ? 0.15 : 0.5}
           roughness={0.05}
         />
       </mesh>
+      {/* Logo on screen */}
+      {showLogo && logoTexture && (
+        <mesh position={[0, 0, 0.023]}>
+          <planeGeometry args={[width * 0.7, height * 0.7]} />
+          <meshStandardMaterial
+            map={logoTexture}
+            transparent
+            emissive="#ffffff"
+            emissiveIntensity={0.3}
+            emissiveMap={logoTexture}
+            roughness={0.1}
+            toneMapped={false}
+          />
+        </mesh>
+      )}
     </group>
   );
 }
