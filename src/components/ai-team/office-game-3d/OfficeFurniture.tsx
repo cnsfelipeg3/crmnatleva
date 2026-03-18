@@ -1,7 +1,7 @@
-import { useRef, useState, useMemo } from 'react';
-import { useFrame, useLoader } from '@react-three/fiber';
+import { useMemo } from 'react';
 import { DESKS, RECEPTION, SOFAS, PLANTS, WALLS, FLOOR_SIZE, CONFERENCE_TABLE } from './mapData3d';
-import { Html, useGLTF } from '@react-three/drei';
+import { useGLTF } from '@react-three/drei';
+import * as THREE from 'three';
 import * as THREE from 'three';
 
 const MONITOR_GLB_PATH = '/models/samsung_odyssey_oled_g9.glb';
