@@ -8,7 +8,7 @@ import { agents as mockAgents, initialTasks, type Agent, type Task } from "@/com
 import { useAgentEngine } from "@/components/ai-team/useAgentEngine";
 import type { AgentEvent } from "@/components/ai-team/agentEngine";
 import AITeamCreateAgentDialog from "@/components/ai-team/AITeamCreateAgentDialog";
-import OfficeGameView from "@/components/ai-team/office-game/OfficeGameView";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 const OfficeGame3DView = lazy(() => import("@/components/ai-team/office-game-3d/OfficeGame3DView"));
 
-type ViewMode = "dashboard" | "office" | "office3d";
+type ViewMode = "dashboard" | "office3d";
 type FeedFilter = "all" | "alert" | "insight" | "status_change";
 
 const STATUS_BADGE: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
@@ -91,9 +91,6 @@ export default function AITeam() {
     return events.filter(e => e.agentId === workLogAgent).slice(0, 15);
   }, [events, workLogAgent]);
 
-  if (view === "office") {
-    return <OfficeGameView agents={agents} tasks={tasks} onBack={() => setView("dashboard")} onSelectAgent={handleSelectAgent} />;
-  }
   if (view === "office3d") {
     return (
       <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-6 h-6 animate-spin" /></div>}>
@@ -117,11 +114,8 @@ export default function AITeam() {
           <Button variant={view === "dashboard" ? "default" : "outline"} size="sm" className="gap-1.5" onClick={() => setView("dashboard")}>
             <LayoutDashboard className="w-4 h-4" /> Dashboard
           </Button>
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setView("office")}>
-            <Building2 className="w-4 h-4" /> Escritório 2D
-          </Button>
           <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setView("office3d")}>
-            <Box className="w-4 h-4" /> Escritório 3D
+            <Building2 className="w-4 h-4" /> Escritório 3D
           </Button>
           <Button size="sm" className="gap-1.5" onClick={() => setCreateOpen(true)}>
             <Plus className="w-4 h-4" /> Novo agente
