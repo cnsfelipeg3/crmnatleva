@@ -14,6 +14,8 @@ interface Props {
   onClick: () => void;
   showBubble?: boolean;
   onBubbleToggle?: () => void;
+  greetingMessage?: string;
+  playerPos?: { x: number; z: number };
 }
 
 const STATUS_COLORS: Record<string, string> = {
