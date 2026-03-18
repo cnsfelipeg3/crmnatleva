@@ -419,23 +419,6 @@ function Cafeteria() {
 
 /* ── Main export ───────────────────────────────── */
 export default function OfficeFurniture() {
-  const screenTex = useLoader(THREE.TextureLoader, monitorWallpaper);
-  const rgbTex = useLoader(THREE.TextureLoader, monitorRgbLight);
-
-  // Configure textures once
-  useMemo(() => {
-    if (screenTex) {
-      screenTex.wrapS = THREE.ClampToEdgeWrapping;
-      screenTex.wrapT = THREE.ClampToEdgeWrapping;
-      screenTex.minFilter = THREE.LinearFilter;
-    }
-    if (rgbTex) {
-      rgbTex.wrapS = THREE.ClampToEdgeWrapping;
-      rgbTex.wrapT = THREE.ClampToEdgeWrapping;
-      rgbTex.minFilter = THREE.LinearFilter;
-    }
-  }, [screenTex, rgbTex]);
-
   return (
     <group>
       <WallSet />
@@ -445,7 +428,7 @@ export default function OfficeFurniture() {
       <Cafeteria />
 
       {DESKS.map((d, i) => (
-        <Desk key={i} pos={d.pos} size={d.size} label={d.label} screenTex={screenTex} rgbTex={rgbTex} />
+        <Desk key={i} pos={d.pos} size={d.size} label={d.label} />
       ))}
       {DESKS.map((d, i) => (
         <Chair key={`ch-${i}`} x={d.pos.x} z={d.pos.z + d.size.z / 2 + 0.35} />
