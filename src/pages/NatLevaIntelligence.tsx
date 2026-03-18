@@ -154,7 +154,7 @@ export default function NatLevaIntelligence() {
 
   // Load conversations
   useEffect(() => {
-    if (!user) return;
+    // if (!user) return; // TEMP: bypass auth
     supabase.from("ai_chat_history")
       .select("*")
       .eq("user_id", user.id)
