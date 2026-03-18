@@ -140,6 +140,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
   const [lastAgentMsgAt, setLastAgentMsgAt] = useState<string | null>(null);
   const [lastClientMsgAt, setLastClientMsgAt] = useState<string | null>(null);
   const [agentHasReplied, setAgentHasReplied] = useState(false);
+  const [msgStats, setMsgStats] = useState<{ totalClient: number; totalAgent: number; avgResponseHours: number | null }>({ totalClient: 0, totalAgent: 0, avgResponseHours: null });
 
   const initials = conversation.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
