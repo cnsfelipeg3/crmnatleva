@@ -11,10 +11,20 @@ useGLTF.preload(MONITOR_GLB_PATH);
 /* ── Samsung Odyssey G9 — Real 3D Model ── */
 function MonitorModel({ scale = 0.003 }: { scale?: number }) {
   const { scene } = useGLTF(MONITOR_GLB_PATH);
-  const cloned = useMemo(() => scene.clone(true), [scene]);
+  const group = useMemo(() => {
+    const cloned = scene.clone(true);
+    // Center the model — GLB origin is offset (~194, 80, 110)
+    const box = new THREE.Box3().setFromObject(cloned);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    cloned.position.set(-center.x, -box.min.y, -center.z);
+    console.log('[MonitorGLB] size:', size.x.toFixed(1), size.y.toFixed(1), size.z.toFixed(1), 'center:', center.x.toFixed(1), center.y.toFixed(1), center.z.toFixed(1));
+    return cloned;
+  }, [scene]);
+
   return (
     <primitive
-      object={cloned}
+      object={group}
       scale={[scale, scale, scale]}
       rotation={[0, Math.PI, 0]}
     />
