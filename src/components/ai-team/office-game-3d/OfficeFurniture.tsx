@@ -8,7 +8,7 @@ import monitorWallpaper from '@/assets/monitor-wallpaper.jpg';
 import monitorRgbLight from '@/assets/monitor-rgb-light.jpg';
 
 /* ── Desk with Samsung Odyssey G9 49" Ultrawide ── */
-function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; label?: string }) {
+function Desk({ pos, size, label, screenTex, rgbTex }: { pos: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; label?: string; screenTex?: THREE.Texture; rgbTex?: THREE.Texture }) {
   const legH = pos.y - 0.02;
   const legR = 0.025;
   const legOffX = size.x / 2 - 0.08;
@@ -17,7 +17,6 @@ function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; 
   // Monitor takes most of the desk width
   const monW = size.x * 0.85;
   const monH = monW * 0.28; // 32:9 ultrawide ratio
-  const monCurveSegments = 24;
 
   return (
     <group position={[pos.x, 0, pos.z]}>
@@ -40,32 +39,78 @@ function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; 
 
       {/* ═══ Samsung Odyssey OLED G9 49" Curved Ultrawide ═══ */}
       <group position={[0, pos.y + monH / 2 + 0.06, -size.z / 2 + 0.2]}>
-        {/* Stand base */}
+        {/* Stand base — V-shape */}
         <mesh position={[0, -monH / 2 - 0.02, 0.06]}>
-          <boxGeometry args={[0.25, 0.01, 0.15]} />
-          <meshStandardMaterial color="#c0c0c0" roughness={0.15} metalness={0.85} />
+          <boxGeometry args={[0.28, 0.008, 0.16]} />
+          <meshStandardMaterial color="#1a1a1a" roughness={0.1} metalness={0.9} />
         </mesh>
-        {/* Stand neck */}
+        {/* Stand neck — thin metal */}
         <mesh position={[0, -monH / 2 + 0.04, 0.06]}>
-          <cylinderGeometry args={[0.015, 0.02, 0.1, 6]} />
-          <meshStandardMaterial color="#b0b0b0" roughness={0.15} metalness={0.85} />
+          <cylinderGeometry args={[0.012, 0.018, 0.1, 6]} />
+          <meshStandardMaterial color="#2a2a2a" roughness={0.1} metalness={0.9} />
         </mesh>
-        {/* Curved monitor body — silver 1000R arc */}
+
+        {/* Curved monitor body — matte black 1000R arc */}
         <mesh castShadow rotation={[0, Math.PI, 0]}>
-          <cylinderGeometry args={[monW * 0.7, monW * 0.7, monH, 16, 1, true, -Math.PI * 0.38, Math.PI * 0.76]} />
-          <meshStandardMaterial color="#c8c8c8" roughness={0.12} metalness={0.8} side={THREE.DoubleSide} />
+          <cylinderGeometry args={[monW * 0.7, monW * 0.7, monH, 24, 1, true, -Math.PI * 0.38, Math.PI * 0.76]} />
+          <meshStandardMaterial color="#1a1a1a" roughness={0.08} metalness={0.85} side={THREE.DoubleSide} />
         </mesh>
-        {/* Curved OLED Screen — inner face */}
+
+        {/* Thin bezel frame */}
         <mesh rotation={[0, Math.PI, 0]}>
-          <cylinderGeometry args={[monW * 0.7 - 0.002, monW * 0.7 - 0.002, monH - 0.008, 16, 1, true, -Math.PI * 0.375, Math.PI * 0.75]} />
-          <meshStandardMaterial
-            color="#020208"
-            emissive="#1a3a6a"
-            emissiveIntensity={0.6}
-            roughness={0.02}
-            metalness={0.05}
-            side={THREE.BackSide}
-          />
+          <cylinderGeometry args={[monW * 0.7 + 0.001, monW * 0.7 + 0.001, monH + 0.006, 24, 1, true, -Math.PI * 0.382, Math.PI * 0.764]} />
+          <meshStandardMaterial color="#0a0a0a" roughness={0.05} metalness={0.9} side={THREE.DoubleSide} />
+        </mesh>
+
+        {/* Curved OLED Screen — with wallpaper texture */}
+        <mesh rotation={[0, Math.PI, 0]}>
+          <cylinderGeometry args={[monW * 0.7 - 0.002, monW * 0.7 - 0.002, monH - 0.008, 24, 1, true, -Math.PI * 0.375, Math.PI * 0.75]} />
+          {screenTex ? (
+            <meshStandardMaterial
+              map={screenTex}
+              emissiveMap={screenTex}
+              emissive="#ffffff"
+              emissiveIntensity={0.35}
+              roughness={0.02}
+              metalness={0.05}
+              side={THREE.BackSide}
+            />
+          ) : (
+            <meshStandardMaterial
+              color="#020208"
+              emissive="#1a3a6a"
+              emissiveIntensity={0.6}
+              roughness={0.02}
+              metalness={0.05}
+              side={THREE.BackSide}
+            />
+          )}
+        </mesh>
+
+        {/* RGB back-glow (outer face) */}
+        <mesh rotation={[0, Math.PI, 0]}>
+          <cylinderGeometry args={[monW * 0.7 + 0.005, monW * 0.7 + 0.005, monH * 0.6, 16, 1, true, -Math.PI * 0.35, Math.PI * 0.7]} />
+          {rgbTex ? (
+            <meshStandardMaterial
+              map={rgbTex}
+              emissiveMap={rgbTex}
+              emissive="#ffffff"
+              emissiveIntensity={0.4}
+              transparent
+              opacity={0.5}
+              roughness={0.1}
+              side={THREE.FrontSide}
+            />
+          ) : (
+            <meshStandardMaterial
+              color="#6c5ce7"
+              emissive="#6c5ce7"
+              emissiveIntensity={0.3}
+              transparent
+              opacity={0.3}
+              side={THREE.FrontSide}
+            />
+          )}
         </mesh>
       </group>
 
