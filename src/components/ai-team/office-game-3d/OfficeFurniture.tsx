@@ -395,7 +395,7 @@ function NatLevaBranding() {
   return (
     <group>
       {/* North wall — main screen + 2 TVs */}
-      <SimpleWallScreen position={[0, 1.3, -hh + 0.08]} rotationY={0} width={5.5} height={1.6} emissiveColor="#1a4a20" />
+      <SimpleWallScreen position={[0, 1.3, -hh + 0.08]} rotationY={0} width={5.5} height={1.6} emissiveColor="#1a4a20" showLogo />
       <SimpleTVScreen position={[-7.2, 1.2, -hh + 0.09]} rotationY={0} offset={0} />
       <SimpleTVScreen position={[7.2, 1.2, -hh + 0.09]} rotationY={0} offset={3} />
 
