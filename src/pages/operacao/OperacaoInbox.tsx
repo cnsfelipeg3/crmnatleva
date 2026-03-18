@@ -1050,7 +1050,60 @@ function OperacaoInboxInner() {
     isUserScrolledUpRef.current = false;
     scrollToBottom();
     setIsSending(false);
-  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, scrollToBottom, persistOutgoingMessage]);
+  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, waConnected, scrollToBottom, persistOutgoingMessage, enqueue]);
+
+  // ─── Retry failed/queued message ───
+  const handleRetryMessage = useCallback((msg: Message) => {
+    if (!msg.id) return;
+    retryMessage(msg.id);
+    setMessages(prev => ({
+      ...prev,
+      [msg.conversation_id]: (prev[msg.conversation_id] || []).map(m =>
+        m.id === msg.id ? { ...m, status: "queued" as MsgStatus } : m
+      ),
+    }));
+    toast({ title: "Mensagem reenfileirada", description: "Será enviada quando o WhatsApp conectar." });
+  }, [retryMessage, setMessages]);
+
+  // ─── Process queue when WhatsApp reconnects ───
+  useEffect(() => {
+    if (waConnected && !prevWaConnectedRef.current) {
+      const pendingCount = getPendingCount();
+      if (pendingCount > 0) {
+        console.log(`[QUEUE] WhatsApp reconectado! Processando ${pendingCount} mensagens pendentes...`);
+        toast({ title: "🔄 WhatsApp reconectado", description: `Enviando ${pendingCount} mensagem(ns) pendente(s)...` });
+        processQueue(
+          async (queuedMsg: QueuedMessage) => {
+            try {
+              const sendPayload: any = { phone: queuedMsg.phone, message: queuedMsg.text };
+              if (queuedMsg.replyTo?.id && !queuedMsg.replyTo.id.startsWith("temp_")) sendPayload.messageId = queuedMsg.replyTo.id;
+              const sendResult = await callZapiProxy("send-text", sendPayload);
+              const realId = sendResult?.messageId || sendResult?.id;
+              return { success: true, realId };
+            } catch (err: any) {
+              return { success: false, error: err?.message || "Falha no envio" };
+            }
+          },
+          (queuedMsg: QueuedMessage, status: string, realId?: string) => {
+            const convId = queuedMsg.conversationId;
+            setMessages(prev => ({
+              ...prev,
+              [convId]: (prev[convId] || []).map(m => {
+                if (m.id !== queuedMsg.id) return m;
+                if (status === "sent" && realId) {
+                  lastMsgIdsRef.current.add(realId);
+                  persistOutgoingMessage({ conversationId: convId, messageType: queuedMsg.messageType as MsgType, text: queuedMsg.text, externalMessageId: realId, createdAt: queuedMsg.createdAt, mediaUrl: queuedMsg.mediaUrl }).catch(err => console.error("[QUEUE] Persist failed:", err));
+                  return { ...m, id: realId, external_message_id: realId, status: "sent" as MsgStatus };
+                }
+                return { ...m, status: status as MsgStatus };
+              }),
+            }));
+          },
+        );
+      }
+    }
+    prevWaConnectedRef.current = waConnected;
+  }, [waConnected, getPendingCount, processQueue, persistOutgoingMessage, setMessages]);
 
   const handleStartEdit = useCallback((msg: Message) => {
     if (msg.sender_type !== "atendente" || msg.message_type !== "text") return;
