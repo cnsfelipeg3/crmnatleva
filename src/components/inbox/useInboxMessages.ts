@@ -32,7 +32,7 @@ export function useInboxMessages(
       conversation_id: conversationKey,
       sender_type: (m.sender_type || (m.direction === "outgoing" ? "atendente" : m.direction === "system" ? "sistema" : "cliente")) as "cliente" | "atendente" | "sistema",
       message_type: normalizeDbMessageType(m.message_type),
-      text: stripQuotes(m.content ?? m.text ?? ""),
+      text: stripQuotes(m.content ?? ""),
       media_url: m.media_url || undefined,
       status: normalizeDbStatus(m.status ?? m.read_status),
       created_at: toIsoTimestamp(m.timestamp || m.created_at),
