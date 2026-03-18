@@ -27,11 +27,12 @@ function MonitorModel({ targetWidth = 0.9 }: { targetWidth?: number }) {
   const s = targetWidth / ((group as any).__modelWidth || 1.2);
 
   return (
-    <primitive
-      object={group}
-      scale={[s, s, s]}
-      rotation={[0, Math.PI, 0]}
-    />
+    <group rotation={[0, Math.PI, 0]}>
+      <primitive
+        object={group}
+        scale={[s, s, s]}
+      />
+    </group>
   );
 }
 
