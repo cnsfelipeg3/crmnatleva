@@ -66,8 +66,8 @@ function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; 
       ))}
 
       {/* ═══ Samsung Odyssey OLED G9 — on desk surface, centered, facing front ═══ */}
-      <group position={[0, deskTopY, -size.z * 0.15]}>
-        <MonitorModel targetWidth={0.9} />
+      <group position={[0, deskTopY, -size.z * 0.25]}>
+        <MonitorModel targetWidth={0.7} />
       </group>
 
       {/* Keyboard */}
