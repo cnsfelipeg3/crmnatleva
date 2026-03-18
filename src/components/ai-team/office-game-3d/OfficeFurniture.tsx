@@ -13,17 +13,25 @@ function MonitorModel({ targetWidth = 0.9 }: { targetWidth?: number }) {
   const { scene } = useGLTF(MONITOR_GLB_PATH);
   const group = useMemo(() => {
     const cloned = scene.clone(true);
-    // Center the model
+    // Get original bounds
     const box = new THREE.Box3().setFromObject(cloned);
     const center = box.getCenter(new THREE.Vector3());
     const modelSize = box.getSize(new THREE.Vector3());
-    // Create a wrapper to center + rotate
-    const wrapper = new THREE.Group();
+
+    // Center on X/Z, place bottom at Y=0
     cloned.position.set(-center.x, -box.min.y, -center.z);
+
+    // Wrap in group for rotation
+    const wrapper = new THREE.Group();
     wrapper.add(cloned);
-    // Rotate 180° so screen faces +Z (towards the NPC)
     wrapper.rotation.y = Math.PI;
-    // Recompute bounds after rotation for correct width
+
+    // Force matrix update so we can recompute bounds after rotation
+    wrapper.updateMatrixWorld(true);
+    const rotatedBox = new THREE.Box3().setFromObject(wrapper);
+    // Shift wrapper so bottom sits exactly at Y=0 after rotation
+    wrapper.position.y = -rotatedBox.min.y;
+
     (wrapper as any).__modelWidth = modelSize.x;
     return wrapper;
   }, [scene]);
