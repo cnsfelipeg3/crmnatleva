@@ -10,6 +10,7 @@ interface Props {
   status: string;
   taskCount: number;
   position: [number, number, number];
+  facingAngle?: number;
   isNearby: boolean;
   onClick: () => void;
   showBubble?: boolean;
