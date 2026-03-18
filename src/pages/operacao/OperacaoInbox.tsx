@@ -50,6 +50,8 @@ import { VirtualConversationList } from "@/components/inbox/VirtualConversationL
 import { MessageBubble } from "@/components/inbox/MessageBubble";
 import { useInboxMessages } from "@/components/inbox/useInboxMessages";
 import { useInboxRealtime } from "@/components/inbox/useInboxRealtime";
+import { useMessageQueue } from "@/hooks/useMessageQueue";
+import type { QueuedMessage } from "@/hooks/useMessageQueue";
 
 // (All helpers, types, constants now imported from @/components/inbox/*)
 
