@@ -388,6 +388,28 @@ export function InboxPipelineView({ conversations, onSelectConversation, onSwitc
                       <div className="flex items-center gap-1.5 flex-1 min-w-0">
                         <span className="text-sm">{col.emoji}</span>
                         <span className="text-xs font-bold text-foreground truncate">{col.label}</span>
+                        <Popover>
+                          <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <button className="shrink-0 p-0.5 rounded-full hover:bg-accent/60 transition-colors focus:outline-none focus:ring-1 focus:ring-ring">
+                              <Info className="w-3 h-3 text-muted-foreground hover:text-foreground transition-colors" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent side="bottom" align="start" className="w-64 p-0 overflow-hidden shadow-lg border-border/50" onClick={(e) => e.stopPropagation()}>
+                            <div className={cn("px-3 py-2 border-b border-border/30 bg-gradient-to-r", col.gradient)}>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-base">{col.emoji}</span>
+                                <span className="text-sm font-bold text-foreground">{STAGE_DESCRIPTIONS[col.key]?.title}</span>
+                              </div>
+                            </div>
+                            <div className="px-3 py-2.5 space-y-2">
+                              <p className="text-xs text-foreground/80 leading-relaxed">{STAGE_DESCRIPTIONS[col.key]?.desc}</p>
+                              <div className="flex items-start gap-1.5 bg-accent/40 rounded-md px-2 py-1.5">
+                                <Zap className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
+                                <span className="text-[10px] text-muted-foreground leading-relaxed">{STAGE_DESCRIPTIONS[col.key]?.tip}</span>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <Badge variant="secondary" className="text-[10px] h-5 font-bold px-1.5">
