@@ -248,7 +248,7 @@ async function callZapiProxy(action: string, payload?: any) {
 
 // ─── Submenu items ───
 const SUBMENU_ITEMS = [
-  { key: "inbox", label: "Inbox", icon: MessageSquare },
+  { key: "inbox", label: "WhatsApp", icon: MessageSquare },
   { key: "flowbuilder", label: "Flow Builder", icon: Workflow },
   { key: "integrations", label: "Integrações", icon: Link },
   { key: "ai_agents", label: "Agentes IA", icon: Brain },
