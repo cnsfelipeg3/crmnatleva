@@ -870,9 +870,41 @@ function OperacaoInboxInner() {
       const phone = selectedId.replace("wa_", "");
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const msgCreatedAt = new Date().toISOString();
+
+      // ─── OFFLINE: Queue message if WhatsApp disconnected ───
+      if (!waConnected) {
+        const newMsg: Message = {
+          id: tempId, conversation_id: selectedId, sender_type: "atendente", message_type: "text",
+          text, status: "queued" as MsgStatus, created_at: msgCreatedAt,
+          quoted_msg: replyRef ? { text: replyRef.text || "📎 Mídia", sender_type: replyRef.sender_type, message_type: replyRef.message_type } : undefined,
+        };
+        setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), newMsg] }));
+        lastMsgIdsRef.current.add(tempId);
+        isUserScrolledUpRef.current = false;
+        scrollToBottom();
+
+        enqueue({
+          id: tempId,
+          conversationId: selectedId,
+          phone,
+          text,
+          messageType: "text",
+          createdAt: msgCreatedAt,
+          replyTo: replyRef ? { id: replyRef.id, text: replyRef.text || "", sender_type: replyRef.sender_type, message_type: replyRef.message_type } : undefined,
+        });
+
+        toast({
+          title: "📨 Mensagem na fila",
+          description: "WhatsApp desconectado. A mensagem será enviada automaticamente quando a conexão voltar.",
+        });
+        setIsSending(false);
+        return;
+      }
+
+      // ─── ONLINE: Normal send flow ───
       const newMsg: Message = {
         id: tempId, conversation_id: selectedId, sender_type: "atendente", message_type: "text",
-        text, status: "sent", created_at: msgCreatedAt,
+        text, status: "sending" as MsgStatus, created_at: msgCreatedAt,
         quoted_msg: replyRef ? { text: replyRef.text || "📎 Mídia", sender_type: replyRef.sender_type, message_type: replyRef.message_type } : undefined,
       };
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), newMsg] }));
@@ -897,14 +929,39 @@ function OperacaoInboxInner() {
           setMessages(prev => ({
             ...prev,
             [selectedId]: dedupeUiMessages((prev[selectedId] || []).map(m =>
-              m.id === tempId ? { ...m, id: realId, external_message_id: realId } : m
+              m.id === tempId ? { ...m, id: realId, external_message_id: realId, status: "sent" as MsgStatus } : m
             )),
+          }));
+        } else {
+          // No realId but success - update to sent
+          setMessages(prev => ({
+            ...prev,
+            [selectedId]: (prev[selectedId] || []).map(m =>
+              m.id === tempId ? { ...m, status: "sent" as MsgStatus } : m
+            ),
           }));
         }
       } catch (err: any) {
-        // Send failed - remove temp message
-        setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).filter(m => m.id !== tempId) }));
-        toast({ title: "Erro ao enviar", description: err?.message || "Falha na comunicação com WhatsApp", variant: "destructive" });
+        // Send failed - mark as failed, don't remove
+        setMessages(prev => ({
+          ...prev,
+          [selectedId]: (prev[selectedId] || []).map(m =>
+            m.id === tempId ? { ...m, status: "failed" as MsgStatus } : m
+          ),
+        }));
+
+        // Queue for retry
+        enqueue({
+          id: tempId,
+          conversationId: selectedId,
+          phone,
+          text,
+          messageType: "text",
+          createdAt: msgCreatedAt,
+          replyTo: replyRef ? { id: replyRef.id, text: replyRef.text || "", sender_type: replyRef.sender_type, message_type: replyRef.message_type } : undefined,
+        });
+
+        toast({ title: "Erro ao enviar", description: "Mensagem na fila — será reenviada ao reconectar.", variant: "destructive" });
         setIsSending(false);
         return;
       }
