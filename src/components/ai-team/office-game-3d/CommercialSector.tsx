@@ -57,11 +57,13 @@ function ZoneSign({ label, emoji, color, position }: { label: string; emoji: str
   );
 }
 
-/* ────────────────────────── Commercial Desk ─────── */
+/* ────────────────────────── Commercial Desk with Odyssey G9 ─── */
 function CommDesk({ pos, size, zone }: { pos: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; zone: string }) {
   const zoneData = COMMERCIAL_ZONES.find(z => z.key === zone);
   const tint = zoneData?.color || '#6d5d48';
   const legH = pos.y - 0.02;
+  const monW = size.x * 0.85;
+  const monH = monW * 0.28;
 
   return (
     <group position={[pos.x, 0, pos.z]}>
@@ -82,22 +84,60 @@ function CommDesk({ pos, size, zone }: { pos: { x: number; y: number; z: number 
           <meshStandardMaterial color="#3a3a3a" roughness={0.4} metalness={0.5} />
         </mesh>
       ))}
-      {/* Monitor */}
-      <group position={[0, pos.y + 0.2, -size.z / 2 + 0.12]}>
+
+      {/* ═══ Samsung Odyssey OLED G9 49" Ultrawide ═══ */}
+      <group position={[0, pos.y + monH / 2 + 0.06, -size.z / 2 + 0.12]}>
+        {/* Stand base */}
+        <mesh position={[0, -monH / 2 - 0.02, 0.05]}>
+          <boxGeometry args={[0.2, 0.008, 0.12]} />
+          <meshStandardMaterial color="#c0c0c0" roughness={0.15} metalness={0.85} />
+        </mesh>
+        <mesh position={[0, -monH / 2 + 0.03, 0.05]}>
+          <cylinderGeometry args={[0.012, 0.016, 0.08, 8]} />
+          <meshStandardMaterial color="#b0b0b0" roughness={0.15} metalness={0.85} />
+        </mesh>
+        {/* Monitor body — silver */}
         <mesh castShadow>
-          <boxGeometry args={[0.32, 0.22, 0.012]} />
-          <meshStandardMaterial color="#1a1a1a" roughness={0.15} metalness={0.6} />
+          <boxGeometry args={[monW, monH, 0.02]} />
+          <meshStandardMaterial color="#c8c8c8" roughness={0.12} metalness={0.8} />
         </mesh>
-        <mesh position={[0, 0, 0.007]}>
-          <planeGeometry args={[0.28, 0.17]} />
-          <meshStandardMaterial color="#0a0a1a" emissive={tint} emissiveIntensity={0.35} roughness={0.1} />
+        {/* Bezel */}
+        <mesh position={[0, 0, 0.011]}>
+          <boxGeometry args={[monW + 0.006, monH + 0.006, 0.002]} />
+          <meshStandardMaterial color="#0a0a0a" roughness={0.1} metalness={0.7} />
         </mesh>
+        {/* OLED Screen */}
+        <mesh position={[0, 0, 0.012]}>
+          <planeGeometry args={[monW - 0.008, monH - 0.008]} />
+          <meshStandardMaterial color="#020208" emissive={tint} emissiveIntensity={0.5} roughness={0.02} metalness={0.05} />
+        </mesh>
+        <pointLight position={[0, 0, 0.12]} intensity={0.08} color={tint} distance={1} decay={2} />
       </group>
+
       {/* Keyboard */}
       <mesh position={[0, pos.y + 0.025, size.z / 2 - 0.16]} castShadow>
         <boxGeometry args={[0.2, 0.01, 0.07]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.5} metalness={0.3} />
+        <meshStandardMaterial color="#2a2a2a" roughness={0.5} metalness={0.3} />
       </mesh>
+      {/* Mouse */}
+      <mesh position={[0.16, pos.y + 0.02, size.z / 2 - 0.16]} castShadow>
+        <boxGeometry args={[0.035, 0.012, 0.05]} />
+        <meshStandardMaterial color="#2a2a2a" roughness={0.5} metalness={0.2} />
+      </mesh>
+
+      {/* File holder */}
+      <group position={[size.x / 2 - 0.1, pos.y, size.z / 2 - 0.06]}>
+        <mesh position={[0, 0.035, 0]} castShadow>
+          <boxGeometry args={[0.08, 0.07, 0.08]} />
+          <meshStandardMaterial color="#3a3a3a" roughness={0.4} metalness={0.5} />
+        </mesh>
+        {[0, 1].map(i => (
+          <mesh key={i} position={[0, 0.05 + i * 0.016, -0.008]} castShadow>
+            <boxGeometry args={[0.065, 0.012, 0.065]} />
+            <meshStandardMaterial color={tint} roughness={0.6} metalness={0.1} emissive={tint} emissiveIntensity={0.1} />
+          </mesh>
+        ))}
+      </group>
     </group>
   );
 }
