@@ -208,7 +208,7 @@ function SpeechBubble({ agentId, status }: { agentId: string; status: string }) 
   );
 }
 
-export default function HumanNPC({ agentId, emoji, name, status, taskCount, position, isNearby, onClick, showBubble, onBubbleToggle, greetingMessage, playerPos }: Props) {
+export default function HumanNPC({ agentId, emoji, name, status, taskCount, position, facingAngle: facingAngleProp, isNearby, onClick, showBubble, onBubbleToggle, greetingMessage, playerPos }: Props) {
   const groupRef = useRef<Group>(null);
   const ringRef = useRef<Mesh>(null);
   const color = STATUS_COLORS[status] || '#9ca3af';
