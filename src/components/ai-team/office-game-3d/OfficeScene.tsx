@@ -6,6 +6,7 @@ import PlayerController from './PlayerController';
 import HumanNPC from './HumanNPC';
 import CommercialSector from './CommercialSector';
 import { NPC_POSITIONS, PLAYER_SPAWN } from './mapData3d';
+import { checkProximityGreeting } from './greetingSystem';
 import type { Agent, Task } from '../mockData';
 
 interface Props {
@@ -15,16 +16,26 @@ interface Props {
   joystickInput?: { x: number; z: number };
 }
 
+// Active greeting state per NPC
+interface ActiveGreeting {
+  message: string;
+  expiresAt: number;
+}
+
 export default function OfficeScene({ agents, tasks, onSelectAgent, joystickInput }: Props) {
   const [nearbyId, setNearbyId] = useState<string | null>(null);
   const [bubbleAgentId, setBubbleAgentId] = useState<string | null>(null);
+  const [greetings, setGreetings] = useState<Record<string, ActiveGreeting>>({});
   const playerPosRef = useRef({ x: PLAYER_SPAWN.x, z: PLAYER_SPAWN.z });
+  const greetingsRef = useRef<Record<string, ActiveGreeting>>({});
 
   const handlePositionChange = useCallback((x: number, z: number) => {
     playerPosRef.current = { x, z };
 
     let closest: string | null = null;
     let minDist = 1.5;
+    let newGreetings = false;
+
     for (const agent of agents) {
       const npcPos = NPC_POSITIONS[agent.id];
       if (!npcPos) continue;
@@ -35,9 +46,35 @@ export default function OfficeScene({ agents, tasks, onSelectAgent, joystickInpu
         minDist = d;
         closest = agent.id;
       }
+
+      // Check proximity greeting
+      const event = checkProximityGreeting(
+        agent.id, npcPos.x, npcPos.z, x, z, agent.status
+      );
+      if (event) {
+        greetingsRef.current[agent.id] = {
+          message: event.message,
+          expiresAt: Date.now() + 4500, // show for 4.5s
+        };
+        newGreetings = true;
+      }
     }
+
+    // Clean expired greetings
+    const now = Date.now();
+    let cleaned = false;
+    for (const [id, g] of Object.entries(greetingsRef.current)) {
+      if (now > g.expiresAt) {
+        delete greetingsRef.current[id];
+        cleaned = true;
+      }
+    }
+
+    if (newGreetings || cleaned) {
+      setGreetings({ ...greetingsRef.current });
+    }
+
     setNearbyId(closest);
-    // Close bubble if player walks away
     if (bubbleAgentId && closest !== bubbleAgentId) {
       setBubbleAgentId(null);
     }
@@ -85,6 +122,7 @@ export default function OfficeScene({ agents, tasks, onSelectAgent, joystickInpu
       {agents.map((agent) => {
         const npcPos = NPC_POSITIONS[agent.id];
         if (!npcPos) return null;
+        const greeting = greetings[agent.id];
         return (
           <HumanNPC
             key={agent.id}
@@ -98,6 +136,8 @@ export default function OfficeScene({ agents, tasks, onSelectAgent, joystickInpu
             onClick={() => onSelectAgent(agent)}
             showBubble={bubbleAgentId === agent.id}
             onBubbleToggle={() => setBubbleAgentId(prev => prev === agent.id ? null : agent.id)}
+            greetingMessage={greeting?.message}
+            playerPos={playerPosRef.current}
           />
         );
       })}
