@@ -337,7 +337,7 @@ export function InboxPipelineView({ conversations, onSelectConversation, onSwitc
             </div>
           ))}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
