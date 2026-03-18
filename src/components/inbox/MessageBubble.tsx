@@ -1,5 +1,5 @@
 import { memo, Fragment } from "react";
-import { Check, CheckCheck, Bot, ChevronRight, Pencil, Mic, Image, Video, FileText, File } from "lucide-react";
+import { Check, CheckCheck, Bot, ChevronRight, Pencil, Mic, Image, Video, FileText, File, Clock, AlertCircle, RotateCcw } from "lucide-react";
 import { AudioWaveformPlayer } from "@/components/livechat/AudioWaveformPlayer";
 import type { Message, MsgStatus } from "./types";
 import { formatMsgTime, formatDateSeparator, shouldShowDateSeparator, stripQuotes } from "./helpers";
@@ -22,6 +22,9 @@ function Linkify({ text }: { text: string }) {
 }
 
 function getStatusIcon(status: MsgStatus) {
+  if (status === "queued") return <Clock className="h-3 w-3 text-muted-foreground animate-pulse" />;
+  if (status === "sending") return <Clock className="h-3 w-3 text-muted-foreground" />;
+  if (status === "failed") return <AlertCircle className="h-3 w-3 text-destructive" />;
   if (status === "read") return <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" style={{ filter: 'drop-shadow(0 0 1px rgba(83,189,235,0.5))' }} />;
   if (status === "delivered") return <CheckCheck className="h-3 w-3 text-white" />;
   return <Check className="h-3 w-3 text-white" />;
@@ -35,9 +38,10 @@ interface MessageBubbleProps {
   onReply: (msg: Message) => void;
   onEdit: (msg: Message) => void;
   onLightbox: (url: string) => void;
+  onRetry?: (msg: Message) => void;
 }
 
-function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit, onLightbox }: MessageBubbleProps) {
+function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit, onLightbox, onRetry }: MessageBubbleProps) {
   const showDate = shouldShowDateSeparator(messages, index);
 
   return (
@@ -69,7 +73,7 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
                 </button>
               )}
             </div>
-            <div className={`rounded-2xl px-4 py-2.5 ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"}`}>
+            <div className={`rounded-2xl px-4 py-2.5 ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"} ${msg.status === "queued" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "failed" ? "opacity-80 ring-1 ring-destructive/30" : ""}`}>
               {msg.quoted_msg && (
                 <div className={`rounded-lg px-3 py-1.5 mb-2 border-l-2 ${msg.sender_type === "atendente" ? "bg-primary-foreground/10 border-primary-foreground/40" : "bg-foreground/5 border-primary/40"}`}>
                   <p className={`text-[10px] font-bold ${msg.sender_type === "atendente" ? "text-primary-foreground/70" : "text-primary"}`}>
@@ -139,6 +143,12 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
               {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(msg.text)} /></p>}
               <div className="flex items-center justify-end gap-1 mt-1">
                 {msg.edited && <span className="text-[8px] opacity-50 italic">editada</span>}
+                {msg.status === "failed" && onRetry && (
+                  <button onClick={() => onRetry(msg)} className="text-[9px] text-destructive hover:underline flex items-center gap-0.5 mr-1" title="Reenviar">
+                    <RotateCcw className="h-2.5 w-2.5" /> Reenviar
+                  </button>
+                )}
+                {msg.status === "queued" && <span className="text-[8px] text-muted-foreground italic mr-1">na fila</span>}
                 <span className="text-[9px] opacity-60">{formatMsgTime(msg.created_at)}</span>
                 {msg.sender_type === "atendente" && getStatusIcon(msg.status)}
               </div>

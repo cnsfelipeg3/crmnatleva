@@ -50,6 +50,8 @@ import { VirtualConversationList } from "@/components/inbox/VirtualConversationL
 import { MessageBubble } from "@/components/inbox/MessageBubble";
 import { useInboxMessages } from "@/components/inbox/useInboxMessages";
 import { useInboxRealtime } from "@/components/inbox/useInboxRealtime";
+import { useMessageQueue } from "@/hooks/useMessageQueue";
+import type { QueuedMessage } from "@/hooks/useMessageQueue";
 
 // (All helpers, types, constants now imported from @/components/inbox/*)
 
@@ -72,6 +74,9 @@ function Linkify({ text }: { text: string }) {
 
 
 function getStatusIcon(status: MsgStatus) {
+  if (status === "queued") return <Clock className="h-3 w-3 text-muted-foreground animate-pulse" />;
+  if (status === "sending") return <Clock className="h-3 w-3 text-muted-foreground" />;
+  if (status === "failed") return <AlertTriangle className="h-3 w-3 text-destructive" />;
   if (status === "read") return <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" style={{ filter: 'drop-shadow(0 0 1px rgba(83,189,235,0.5))' }} />;
   if (status === "delivered") return <CheckCheck className="h-3 w-3 text-white" />;
   return <Check className="h-3 w-3 text-white" />;
@@ -116,6 +121,10 @@ function OperacaoInboxInner() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isUserScrolledUpRef = useRef(false);
   const lastAutoReconcileRef = useRef(0);
+  const prevWaConnectedRef = useRef(false);
+
+  // ─── Message Queue for offline sends ───
+  const { enqueue, getPendingCount, retryMessage, processQueue, queue } = useMessageQueue();
 
   const selected = conversations.find(c => c.id === selectedId);
 
@@ -861,9 +870,41 @@ function OperacaoInboxInner() {
       const phone = selectedId.replace("wa_", "");
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const msgCreatedAt = new Date().toISOString();
+
+      // ─── OFFLINE: Queue message if WhatsApp disconnected ───
+      if (!waConnected) {
+        const newMsg: Message = {
+          id: tempId, conversation_id: selectedId, sender_type: "atendente", message_type: "text",
+          text, status: "queued" as MsgStatus, created_at: msgCreatedAt,
+          quoted_msg: replyRef ? { text: replyRef.text || "📎 Mídia", sender_type: replyRef.sender_type, message_type: replyRef.message_type } : undefined,
+        };
+        setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), newMsg] }));
+        lastMsgIdsRef.current.add(tempId);
+        isUserScrolledUpRef.current = false;
+        scrollToBottom();
+
+        enqueue({
+          id: tempId,
+          conversationId: selectedId,
+          phone,
+          text,
+          messageType: "text",
+          createdAt: msgCreatedAt,
+          replyTo: replyRef ? { id: replyRef.id, text: replyRef.text || "", sender_type: replyRef.sender_type, message_type: replyRef.message_type } : undefined,
+        });
+
+        toast({
+          title: "📨 Mensagem na fila",
+          description: "WhatsApp desconectado. A mensagem será enviada automaticamente quando a conexão voltar.",
+        });
+        setIsSending(false);
+        return;
+      }
+
+      // ─── ONLINE: Normal send flow ───
       const newMsg: Message = {
         id: tempId, conversation_id: selectedId, sender_type: "atendente", message_type: "text",
-        text, status: "sent", created_at: msgCreatedAt,
+        text, status: "sending" as MsgStatus, created_at: msgCreatedAt,
         quoted_msg: replyRef ? { text: replyRef.text || "📎 Mídia", sender_type: replyRef.sender_type, message_type: replyRef.message_type } : undefined,
       };
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), newMsg] }));
@@ -888,14 +929,39 @@ function OperacaoInboxInner() {
           setMessages(prev => ({
             ...prev,
             [selectedId]: dedupeUiMessages((prev[selectedId] || []).map(m =>
-              m.id === tempId ? { ...m, id: realId, external_message_id: realId } : m
+              m.id === tempId ? { ...m, id: realId, external_message_id: realId, status: "sent" as MsgStatus } : m
             )),
+          }));
+        } else {
+          // No realId but success - update to sent
+          setMessages(prev => ({
+            ...prev,
+            [selectedId]: (prev[selectedId] || []).map(m =>
+              m.id === tempId ? { ...m, status: "sent" as MsgStatus } : m
+            ),
           }));
         }
       } catch (err: any) {
-        // Send failed - remove temp message
-        setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).filter(m => m.id !== tempId) }));
-        toast({ title: "Erro ao enviar", description: err?.message || "Falha na comunicação com WhatsApp", variant: "destructive" });
+        // Send failed - mark as failed, don't remove
+        setMessages(prev => ({
+          ...prev,
+          [selectedId]: (prev[selectedId] || []).map(m =>
+            m.id === tempId ? { ...m, status: "failed" as MsgStatus } : m
+          ),
+        }));
+
+        // Queue for retry
+        enqueue({
+          id: tempId,
+          conversationId: selectedId,
+          phone,
+          text,
+          messageType: "text",
+          createdAt: msgCreatedAt,
+          replyTo: replyRef ? { id: replyRef.id, text: replyRef.text || "", sender_type: replyRef.sender_type, message_type: replyRef.message_type } : undefined,
+        });
+
+        toast({ title: "Erro ao enviar", description: "Mensagem na fila — será reenviada ao reconectar.", variant: "destructive" });
         setIsSending(false);
         return;
       }
@@ -984,7 +1050,60 @@ function OperacaoInboxInner() {
     isUserScrolledUpRef.current = false;
     scrollToBottom();
     setIsSending(false);
-  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, scrollToBottom, persistOutgoingMessage]);
+  }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, waConnected, scrollToBottom, persistOutgoingMessage, enqueue]);
+
+  // ─── Retry failed/queued message ───
+  const handleRetryMessage = useCallback((msg: Message) => {
+    if (!msg.id) return;
+    retryMessage(msg.id);
+    setMessages(prev => ({
+      ...prev,
+      [msg.conversation_id]: (prev[msg.conversation_id] || []).map(m =>
+        m.id === msg.id ? { ...m, status: "queued" as MsgStatus } : m
+      ),
+    }));
+    toast({ title: "Mensagem reenfileirada", description: "Será enviada quando o WhatsApp conectar." });
+  }, [retryMessage, setMessages]);
+
+  // ─── Process queue when WhatsApp reconnects ───
+  useEffect(() => {
+    if (waConnected && !prevWaConnectedRef.current) {
+      const pendingCount = getPendingCount();
+      if (pendingCount > 0) {
+        console.log(`[QUEUE] WhatsApp reconectado! Processando ${pendingCount} mensagens pendentes...`);
+        toast({ title: "🔄 WhatsApp reconectado", description: `Enviando ${pendingCount} mensagem(ns) pendente(s)...` });
+        processQueue(
+          async (queuedMsg: QueuedMessage) => {
+            try {
+              const sendPayload: any = { phone: queuedMsg.phone, message: queuedMsg.text };
+              if (queuedMsg.replyTo?.id && !queuedMsg.replyTo.id.startsWith("temp_")) sendPayload.messageId = queuedMsg.replyTo.id;
+              const sendResult = await callZapiProxy("send-text", sendPayload);
+              const realId = sendResult?.messageId || sendResult?.id;
+              return { success: true, realId };
+            } catch (err: any) {
+              return { success: false, error: err?.message || "Falha no envio" };
+            }
+          },
+          (queuedMsg: QueuedMessage, status: string, realId?: string) => {
+            const convId = queuedMsg.conversationId;
+            setMessages(prev => ({
+              ...prev,
+              [convId]: (prev[convId] || []).map(m => {
+                if (m.id !== queuedMsg.id) return m;
+                if (status === "sent" && realId) {
+                  lastMsgIdsRef.current.add(realId);
+                  persistOutgoingMessage({ conversationId: convId, messageType: queuedMsg.messageType as MsgType, text: queuedMsg.text, externalMessageId: realId, createdAt: queuedMsg.createdAt, mediaUrl: queuedMsg.mediaUrl }).catch(err => console.error("[QUEUE] Persist failed:", err));
+                  return { ...m, id: realId, external_message_id: realId, status: "sent" as MsgStatus };
+                }
+                return { ...m, status: status as MsgStatus };
+              }),
+            }));
+          },
+        );
+      }
+    }
+    prevWaConnectedRef.current = waConnected;
+  }, [waConnected, getPendingCount, processQueue, persistOutgoingMessage, setMessages]);
 
   const handleStartEdit = useCallback((msg: Message) => {
     if (msg.sender_type !== "atendente" || msg.message_type !== "text") return;
@@ -1549,7 +1668,7 @@ function OperacaoInboxInner() {
                                   </button>
                                 )}
                               </div>
-                              <div className={`rounded-2xl px-4 py-2.5 ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"}`}>
+                              <div className={`rounded-2xl px-4 py-2.5 ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"} ${msg.status === "queued" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "failed" ? "opacity-80 ring-1 ring-destructive/30" : ""}`}>
                                 {msg.quoted_msg && (
                                   <div className={`rounded-lg px-3 py-1.5 mb-2 border-l-2 ${msg.sender_type === "atendente" ? "bg-primary-foreground/10 border-primary-foreground/40" : "bg-foreground/5 border-primary/40"}`}>
                                     <p className={`text-[10px] font-bold ${msg.sender_type === "atendente" ? "text-primary-foreground/70" : "text-primary"}`}>
@@ -1619,6 +1738,12 @@ function OperacaoInboxInner() {
                                 {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(msg.text)} /></p>}
                                 <div className="flex items-center justify-end gap-1 mt-1">
                                   {msg.edited && <span className="text-[8px] opacity-50 italic">editada</span>}
+                                  {msg.status === "failed" && (
+                                    <button onClick={() => handleRetryMessage(msg)} className="text-[9px] text-destructive hover:underline flex items-center gap-0.5 mr-1" title="Reenviar">
+                                      <RefreshCw className="h-2.5 w-2.5" /> Reenviar
+                                    </button>
+                                  )}
+                                  {msg.status === "queued" && <span className="text-[8px] text-primary-foreground/50 italic mr-1">na fila</span>}
                                   <span className="text-[9px] opacity-60">{formatMsgTime(msg.created_at)}</span>
                                   {msg.sender_type === "atendente" && getStatusIcon(msg.status)}
                                 </div>
@@ -1711,11 +1836,18 @@ function OperacaoInboxInner() {
                   />
                 )}
 
-                {/* Disconnected warning */}
+                {/* Disconnected warning with queue info */}
                 {!waConnected && selectedId?.startsWith("wa_") && (
                   <div className="px-4 py-2 border-t border-destructive/20 bg-destructive/5 flex items-center gap-2">
                     <WifiOff className="h-4 w-4 text-destructive shrink-0" />
-                    <p className="text-xs text-destructive">WhatsApp desconectado. Conecte na aba Integrações.</p>
+                    <div className="flex-1">
+                      <p className="text-xs text-destructive font-medium">WhatsApp desconectado</p>
+                      <p className="text-[10px] text-destructive/70">
+                        {getPendingCount() > 0
+                          ? `${getPendingCount()} mensagem(ns) na fila — serão enviadas ao reconectar.`
+                          : "Você pode enviar mensagens — ficarão na fila até reconectar."}
+                      </p>
+                    </div>
                   </div>
                 )}
 

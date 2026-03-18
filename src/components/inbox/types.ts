@@ -2,7 +2,7 @@
 
 export type Stage = "novo_lead" | "contato_inicial" | "qualificacao" | "diagnostico" | "proposta_preparacao" | "proposta_enviada" | "proposta_visualizada" | "ajustes" | "negociacao" | "fechamento_andamento" | "fechado" | "pos_venda" | "perdido";
 export type MsgType = "text" | "image" | "audio" | "video" | "document";
-export type MsgStatus = "sent" | "delivered" | "read";
+export type MsgStatus = "queued" | "sending" | "sent" | "delivered" | "read" | "failed";
 
 export interface Conversation {
   id: string;
