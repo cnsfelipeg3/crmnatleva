@@ -13,6 +13,7 @@ import {
   PERF_COLORS,
   type CommercialAgent,
 } from './commercialMapData';
+import { checkProximityGreeting, pickCommercialGreeting } from './greetingSystem';
 
 /* ────────────────────────── helpers ─────────────── */
 const fmt = (v: number) => v >= 1000 ? `R$${(v / 1000).toFixed(0)}k` : `R$${v}`;
