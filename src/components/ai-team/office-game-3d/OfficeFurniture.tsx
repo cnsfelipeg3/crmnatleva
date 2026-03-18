@@ -66,7 +66,7 @@ function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; 
 
       {/* ═══ Samsung Odyssey OLED G9 — Real 3D Model ═══ */}
       <group position={[0, pos.y + 0.02, -size.z / 2 + 0.25]}>
-        <MonitorModel scale={monitorScale} />
+        <MonitorModel targetWidth={monitorTargetWidth} />
       </group>
 
       {/* Keyboard */}
