@@ -725,6 +725,11 @@ export default function CommercialSector({ playerPos }: CommercialSectorProps) {
         />
       ))}
 
+      {/* ═══ HANDOFF AGENTS ═══ */}
+      {handoffs.filter(h => h.phase !== 'done').map(h => (
+        <HandoffAgent key={h.id} event={h} onDone={handleHandoffDone} onUpdate={handleHandoffUpdate} />
+      ))}
+
       {/* Floating KPIs for Head Comercial zone */}
       <FloatingKPI position={[-2.5, 1.8, 17]} title="LEADS ATIVOS" value="85" subtitle="esta semana" color="#3b82f6" />
       <FloatingKPI position={[2.5, 1.8, 17]} title="CONVERSÃO" value="23%" subtitle="vs 19% anterior" color="#10b981" />
