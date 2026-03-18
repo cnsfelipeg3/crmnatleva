@@ -267,24 +267,81 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
 
   const assignedName = conversation.assigned_to ? (profiles[conversation.assigned_to] || "—") : "Sem responsável";
 
-  // Next best action
+  // Next best action — stage-aware + data-aware
   const nextActions = useMemo(() => {
     const actions: { text: string; alert: boolean }[] = [];
     const lastMsgDate = new Date(conversation.last_message_at);
     const hoursSince = (Date.now() - lastMsgDate.getTime()) / 3600000;
+    const stage = conversation.stage || "novo_lead";
 
-    if (hoursSince > 48) actions.push({ text: `Sem resposta há ${Math.floor(hoursSince / 24)} dias`, alert: true });
-    if (overdueCount > 0) actions.push({ text: `${overdueCount} pagamento(s) vencido(s)`, alert: true });
+    // ─── Stage-specific actions ───
+    if (stage === "novo_lead") {
+      if (hoursSince > 0.5) actions.push({ text: "Lead novo sem resposta — responda agora!", alert: true });
+      else actions.push({ text: "Apresente-se e entenda a demanda", alert: false });
+    }
+    if (stage === "contato_inicial") {
+      actions.push({ text: "Pergunte destino, datas e nº de passageiros", alert: hoursSince > 12 });
+    }
+    if (stage === "qualificacao") {
+      if (!clientData) actions.push({ text: "Vincule este contato a um cliente no CRM", alert: true });
+      actions.push({ text: "Confirme orçamento e preferências do viajante", alert: hoursSince > 24 });
+    }
+    if (stage === "diagnostico") {
+      actions.push({ text: "Mapeie estilo de viagem e experiências desejadas", alert: false });
+    }
+    if (stage === "proposta_preparacao") {
+      actions.push({ text: "Monte o roteiro e envie atualização ao cliente", alert: hoursSince > 24 });
+    }
+    if (stage === "proposta_enviada") {
+      if (hoursSince > 48) actions.push({ text: "Follow-up — proposta sem retorno há 2+ dias", alert: true });
+      else if (hoursSince > 24) actions.push({ text: "Considere fazer follow-up da proposta", alert: false });
+      else actions.push({ text: "Aguardando retorno do cliente sobre a proposta", alert: false });
+    }
+    if (stage === "proposta_visualizada") {
+      actions.push({ text: "Cliente viu a proposta — entre em contato agora!", alert: true });
+    }
+    if (stage === "ajustes") {
+      actions.push({ text: "Aplique os ajustes solicitados e reenvie", alert: hoursSince > 12 });
+    }
+    if (stage === "negociacao") {
+      actions.push({ text: "Negocie condições e busque o fechamento", alert: hoursSince > 24 });
+    }
+    if (stage === "fechamento_andamento") {
+      actions.push({ text: "Finalize contrato e confirme pagamento", alert: true });
+    }
+    if (stage === "fechado") {
+      actions.push({ text: "Envie boas-vindas e documentos da viagem", alert: false });
+    }
+    if (stage === "pos_venda") {
+      actions.push({ text: "Peça feedback e ofereça a próxima viagem", alert: false });
+    }
+    if (stage === "perdido") {
+      actions.push({ text: "Registre o motivo da perda para aprendizado", alert: false });
+    }
+
+    // ─── Data-driven alerts (override/complement stage actions) ───
+    if (hoursSince > 72) actions.unshift({ text: `⚠️ Sem contato há ${Math.floor(hoursSince / 24)} dias!`, alert: true });
+    else if (hoursSince > 48 && stage !== "proposta_enviada") actions.unshift({ text: `Sem resposta há ${Math.floor(hoursSince / 24)} dias`, alert: true });
+
+    if (overdueCount > 0) actions.unshift({ text: `${overdueCount} pagamento(s) vencido(s)!`, alert: true });
+
     if (futureSales.length > 0) {
       const next = futureSales[0];
       const daysUntil = Math.ceil((new Date(next.departure_date).getTime() - Date.now()) / 86400000);
-      if (daysUntil <= 30) actions.push({ text: `Viagem em ${daysUntil} dias — enviar checklist`, alert: daysUntil <= 7 });
+      if (daysUntil <= 7) actions.unshift({ text: `Viagem em ${daysUntil} dias — urgente!`, alert: true });
+      else if (daysUntil <= 30) actions.push({ text: `Viagem em ${daysUntil} dias — enviar checklist`, alert: false });
     }
-    if (conversation.is_vip && hoursSince > 24) actions.push({ text: "Cliente VIP aguardando resposta", alert: true });
+
+    if (conversation.is_vip && hoursSince > 12) actions.unshift({ text: "Cliente VIP aguardando resposta", alert: true });
+
+    if ((conversation as any).unread_count > 3) actions.push({ text: `${(conversation as any).unread_count} mensagens não lidas`, alert: true });
+
     if (totalPending > 0 && !overdueCount) actions.push({ text: `${fmt(totalPending)} em parcelas futuras`, alert: false });
-    if (actions.length === 0) actions.push({ text: "Tudo em dia ✓", alert: false });
-    return actions;
-  }, [conversation, overdueCount, futureSales, totalPending]);
+
+    // Deduplicate
+    const seen = new Set<string>();
+    return actions.filter(a => { if (seen.has(a.text)) return false; seen.add(a.text); return true; });
+  }, [conversation, overdueCount, futureSales, totalPending, clientData]);
 
   const handleAddNote = useCallback(async () => {
     if (!newNote.trim() || !clientData?.id) return;
