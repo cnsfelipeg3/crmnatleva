@@ -36,44 +36,50 @@ function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; 
         </mesh>
       ))}
 
-      {/* ═══ Samsung Odyssey OLED G9 49" Ultrawide ═══ */}
+      {/* ═══ Samsung Odyssey OLED G9 49" Curved Ultrawide ═══ */}
       <group position={[0, pos.y + monH / 2 + 0.06, -size.z / 2 + 0.2]}>
-        {/* Monitor stand — V-shaped base */}
+        {/* Stand base — rectangular plate */}
         <mesh position={[0, -monH / 2 - 0.02, 0.06]}>
           <boxGeometry args={[0.25, 0.01, 0.15]} />
           <meshStandardMaterial color="#c0c0c0" roughness={0.15} metalness={0.85} />
         </mesh>
-        {/* Stand neck */}
+        {/* Stand neck — cylindrical pillar */}
         <mesh position={[0, -monH / 2 + 0.04, 0.06]}>
           <cylinderGeometry args={[0.015, 0.02, 0.1, 8]} />
           <meshStandardMaterial color="#b0b0b0" roughness={0.15} metalness={0.85} />
         </mesh>
+        {/* RGB ring on stand (like the Odyssey core lighting) */}
+        <mesh position={[0, -monH / 2 + 0.04, 0.06]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.025, 0.004, 8, 24]} />
+          <meshStandardMaterial color="#ff44ff" emissive="#ff44ff" emissiveIntensity={1.2} roughness={0.1} metalness={0.3} />
+        </mesh>
 
-        {/* Monitor shell — silver curved body */}
-        <mesh castShadow>
-          <boxGeometry args={[monW, monH, 0.025]} />
-          <meshStandardMaterial color="#c8c8c8" roughness={0.12} metalness={0.8} />
+        {/* Curved monitor body — silver 1000R arc */}
+        <mesh castShadow rotation={[0, Math.PI, 0]}>
+          <cylinderGeometry args={[monW * 0.7, monW * 0.7, monH, 32, 1, true, -Math.PI * 0.38, Math.PI * 0.76]} />
+          <meshStandardMaterial color="#c8c8c8" roughness={0.12} metalness={0.8} side={THREE.DoubleSide} />
         </mesh>
-        {/* Thin bezels — dark frame */}
-        <mesh position={[0, 0, 0.013]}>
-          <boxGeometry args={[monW + 0.008, monH + 0.008, 0.002]} />
-          <meshStandardMaterial color="#0a0a0a" roughness={0.1} metalness={0.7} />
+        {/* Curved bezel — dark frame */}
+        <mesh rotation={[0, Math.PI, 0]} position={[0, 0, 0]}>
+          <cylinderGeometry args={[monW * 0.7 + 0.003, monW * 0.7 + 0.003, monH + 0.008, 32, 1, true, -Math.PI * 0.385, Math.PI * 0.77]} />
+          <meshStandardMaterial color="#0a0a0a" roughness={0.1} metalness={0.7} side={THREE.DoubleSide} />
         </mesh>
-        {/* OLED Screen — deep blacks, bright emissive */}
-        <mesh position={[0, 0, 0.014]}>
-          <planeGeometry args={[monW - 0.01, monH - 0.01]} />
+        {/* Curved OLED Screen — inner face */}
+        <mesh rotation={[0, Math.PI, 0]}>
+          <cylinderGeometry args={[monW * 0.7 - 0.002, monW * 0.7 - 0.002, monH - 0.008, 32, 1, true, -Math.PI * 0.375, Math.PI * 0.75]} />
           <meshStandardMaterial
             color="#020208"
             emissive="#1a3a6a"
             emissiveIntensity={0.8}
             roughness={0.02}
             metalness={0.05}
+            side={THREE.BackSide}
           />
         </mesh>
         {/* Screen glow */}
         <pointLight position={[0, 0, 0.15]} intensity={0.12} color="#4070c0" distance={1.2} decay={2} />
         {/* Samsung logo — tiny silver bar at bottom center */}
-        <mesh position={[0, -monH / 2 + 0.012, 0.014]}>
+        <mesh position={[0, -monH / 2 + 0.012, monW * 0.7 * 0.02]}>
           <boxGeometry args={[0.06, 0.004, 0.002]} />
           <meshStandardMaterial color="#aaa" roughness={0.1} metalness={0.9} />
         </mesh>

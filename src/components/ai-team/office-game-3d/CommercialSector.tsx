@@ -85,7 +85,7 @@ function CommDesk({ pos, size, zone }: { pos: { x: number; y: number; z: number 
         </mesh>
       ))}
 
-      {/* ═══ Samsung Odyssey OLED G9 49" Ultrawide ═══ */}
+      {/* ═══ Samsung Odyssey OLED G9 49" Curved Ultrawide ═══ */}
       <group position={[0, pos.y + monH / 2 + 0.06, -size.z / 2 + 0.12]}>
         {/* Stand base */}
         <mesh position={[0, -monH / 2 - 0.02, 0.05]}>
@@ -96,20 +96,25 @@ function CommDesk({ pos, size, zone }: { pos: { x: number; y: number; z: number 
           <cylinderGeometry args={[0.012, 0.016, 0.08, 8]} />
           <meshStandardMaterial color="#b0b0b0" roughness={0.15} metalness={0.85} />
         </mesh>
-        {/* Monitor body — silver */}
-        <mesh castShadow>
-          <boxGeometry args={[monW, monH, 0.02]} />
-          <meshStandardMaterial color="#c8c8c8" roughness={0.12} metalness={0.8} />
+        {/* RGB ring */}
+        <mesh position={[0, -monH / 2 + 0.03, 0.05]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.02, 0.003, 8, 24]} />
+          <meshStandardMaterial color="#ff44ff" emissive="#ff44ff" emissiveIntensity={1.2} roughness={0.1} metalness={0.3} />
         </mesh>
-        {/* Bezel */}
-        <mesh position={[0, 0, 0.011]}>
-          <boxGeometry args={[monW + 0.006, monH + 0.006, 0.002]} />
-          <meshStandardMaterial color="#0a0a0a" roughness={0.1} metalness={0.7} />
+        {/* Curved monitor body — silver 1000R */}
+        <mesh castShadow rotation={[0, Math.PI, 0]}>
+          <cylinderGeometry args={[monW * 0.7, monW * 0.7, monH, 32, 1, true, -Math.PI * 0.38, Math.PI * 0.76]} />
+          <meshStandardMaterial color="#c8c8c8" roughness={0.12} metalness={0.8} side={2} />
         </mesh>
-        {/* OLED Screen */}
-        <mesh position={[0, 0, 0.012]}>
-          <planeGeometry args={[monW - 0.008, monH - 0.008]} />
-          <meshStandardMaterial color="#020208" emissive={tint} emissiveIntensity={0.5} roughness={0.02} metalness={0.05} />
+        {/* Curved bezel */}
+        <mesh rotation={[0, Math.PI, 0]}>
+          <cylinderGeometry args={[monW * 0.7 + 0.003, monW * 0.7 + 0.003, monH + 0.006, 32, 1, true, -Math.PI * 0.385, Math.PI * 0.77]} />
+          <meshStandardMaterial color="#0a0a0a" roughness={0.1} metalness={0.7} side={2} />
+        </mesh>
+        {/* Curved OLED Screen */}
+        <mesh rotation={[0, Math.PI, 0]}>
+          <cylinderGeometry args={[monW * 0.7 - 0.002, monW * 0.7 - 0.002, monH - 0.006, 32, 1, true, -Math.PI * 0.375, Math.PI * 0.75]} />
+          <meshStandardMaterial color="#020208" emissive={tint} emissiveIntensity={0.5} roughness={0.02} metalness={0.05} side={1} />
         </mesh>
         <pointLight position={[0, 0, 0.12]} intensity={0.08} color={tint} distance={1} decay={2} />
       </group>
