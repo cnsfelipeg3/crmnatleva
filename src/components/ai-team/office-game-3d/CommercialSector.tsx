@@ -609,15 +609,36 @@ export default function CommercialSector({ playerPos }: CommercialSectorProps) {
   const [greetings, setGreetings] = useState<Record<string, { message: string; expiresAt: number }>>({});
   const greetingsRef = useRef<Record<string, { message: string; expiresAt: number }>>({});
 
+  // ── Handoff queue ────────────────────────────────
+  const [handoffs, setHandoffs] = useState<HandoffEvent[]>([]);
+  const handoffsRef = useRef<HandoffEvent[]>([]);
+  const lastHandoffSpawn = useRef(0);
+  const MAX_CONCURRENT = 2;
+  const SPAWN_INTERVAL = 12_000; // ms between new handoffs
+
+  const handleHandoffDone = useCallback((id: string) => {
+    handoffsRef.current = handoffsRef.current.filter(h => h.id !== id);
+    setHandoffs([...handoffsRef.current]);
+  }, []);
+
+  const handleHandoffUpdate = useCallback((updated: HandoffEvent) => {
+    handoffsRef.current = handoffsRef.current.map(h => h.id === updated.id ? updated : h);
+    // Only sync state on phase changes to avoid excessive re-renders
+    const old = handoffsRef.current.find(h => h.id === updated.id);
+    if (old && old.phase !== updated.phase) {
+      setHandoffs([...handoffsRef.current]);
+    }
+  }, []);
+
   const handleSelect = useCallback((agent: CommercialAgent) => {
     setSelectedAgent(agent);
   }, []);
 
-  // Check commercial agent proximity greetings each frame via a lightweight interval
+  // Check commercial agent proximity greetings + spawn handoffs
   const lastCheckRef = useRef(0);
   useFrame(() => {
     const now = Date.now();
-    if (now - lastCheckRef.current < 200) return; // check every 200ms
+    if (now - lastCheckRef.current < 200) return;
     lastCheckRef.current = now;
 
     let changed = false;
@@ -632,7 +653,7 @@ export default function CommercialSector({ playerPos }: CommercialSectorProps) {
         changed = true;
       }
     }
-    // Clean expired
+    // Clean expired greetings
     for (const [id, g] of Object.entries(greetingsRef.current)) {
       if (now > g.expiresAt) {
         delete greetingsRef.current[id];
@@ -640,6 +661,23 @@ export default function CommercialSector({ playerPos }: CommercialSectorProps) {
       }
     }
     if (changed) setGreetings({ ...greetingsRef.current });
+
+    // ── Spawn handoffs periodically ──
+    if (
+      handoffsRef.current.length < MAX_CONCURRENT &&
+      now - lastHandoffSpawn.current > SPAWN_INTERVAL
+    ) {
+      const newHandoff = generateRandomHandoff();
+      if (newHandoff) {
+        // Avoid duplicate from/to currently in motion
+        const activeIds = new Set(handoffsRef.current.flatMap(h => [h.fromId, h.toId]));
+        if (!activeIds.has(newHandoff.fromId) && !activeIds.has(newHandoff.toId)) {
+          handoffsRef.current.push(newHandoff);
+          setHandoffs([...handoffsRef.current]);
+          lastHandoffSpawn.current = now;
+        }
+      }
+    }
   });
 
   return (
