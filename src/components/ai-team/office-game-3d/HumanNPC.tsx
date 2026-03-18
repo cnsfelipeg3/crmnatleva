@@ -14,6 +14,8 @@ interface Props {
   onClick: () => void;
   showBubble?: boolean;
   onBubbleToggle?: () => void;
+  greetingMessage?: string;
+  playerPos?: { x: number; z: number };
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -205,7 +207,7 @@ function SpeechBubble({ agentId, status }: { agentId: string; status: string }) 
   );
 }
 
-export default function HumanNPC({ agentId, emoji, name, status, taskCount, position, isNearby, onClick, showBubble, onBubbleToggle }: Props) {
+export default function HumanNPC({ agentId, emoji, name, status, taskCount, position, isNearby, onClick, showBubble, onBubbleToggle, greetingMessage, playerPos }: Props) {
   const groupRef = useRef<Group>(null);
   const ringRef = useRef<Mesh>(null);
   const color = STATUS_COLORS[status] || '#9ca3af';
@@ -226,7 +228,17 @@ export default function HumanNPC({ agentId, emoji, name, status, taskCount, posi
 
     groupRef.current.position.y = Math.sin(t * 1.5 + offset) * 0.01;
 
-    if (status === 'idle') {
+    // Turn toward boss when greeting
+    if (greetingMessage && playerPos) {
+      const dx = playerPos.x - position[0];
+      const dz = playerPos.z - position[2];
+      const targetAngle = Math.atan2(dx, dz);
+      const cur = groupRef.current.rotation.y;
+      let diff = targetAngle - cur;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      groupRef.current.rotation.y += diff * 0.08;
+    } else if (status === 'idle') {
       groupRef.current.rotation.y = Math.sin(t * 0.3 + offset) * 0.05;
     } else {
       groupRef.current.rotation.y = Math.sin(t * 0.8 + offset) * 0.15;
@@ -431,10 +443,56 @@ export default function HumanNPC({ agentId, emoji, name, status, taskCount, posi
           )}
         </group>
 
-        {/* Speech Bubble */}
-        {showBubble && (
+        {/* Speech Bubble (click-triggered) */}
+        {showBubble && !greetingMessage && (
           <Html position={[0, 1.35, 0]} center distanceFactor={4} style={{ pointerEvents: 'auto' }}>
             <SpeechBubble agentId={agentId} status={status} />
+          </Html>
+        )}
+
+        {/* Greeting Bubble (auto-triggered on boss proximity) */}
+        {greetingMessage && (
+          <Html position={[0, 1.35, 0]} center distanceFactor={4} style={{ pointerEvents: 'none' }}>
+            <div
+              style={{
+                maxWidth: '220px',
+                minWidth: '120px',
+                background: 'rgba(255,255,255,0.97)',
+                backdropFilter: 'blur(12px)',
+                borderRadius: '14px',
+                padding: '10px 14px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.1)',
+                border: '1px solid rgba(201,169,110,0.2)',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+                animation: 'greetPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+              }}
+            >
+              <div style={{
+                fontSize: '10px',
+                lineHeight: '1.5',
+                color: '#2a2a2a',
+                wordBreak: 'break-word',
+              }}>
+                {greetingMessage}
+              </div>
+              <div style={{
+                position: 'absolute',
+                bottom: '-8px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: 0, height: 0,
+                borderLeft: '8px solid transparent',
+                borderRight: '8px solid transparent',
+                borderTop: '8px solid rgba(255,255,255,0.97)',
+                filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.08))',
+              }} />
+            </div>
+            <style>{`
+              @keyframes greetPop {
+                0% { opacity: 0; transform: scale(0.6) translateY(10px); }
+                100% { opacity: 1; transform: scale(1) translateY(0); }
+              }
+            `}</style>
           </Html>
         )}
 

@@ -13,6 +13,7 @@ import {
   PERF_COLORS,
   type CommercialAgent,
 } from './commercialMapData';
+import { checkProximityGreeting, pickCommercialGreeting } from './greetingSystem';
 
 /* ────────────────────────── helpers ─────────────── */
 const fmt = (v: number) => v >= 1000 ? `R$${(v / 1000).toFixed(0)}k` : `R$${v}`;
@@ -120,10 +121,11 @@ function CommChair({ x, z }: { x: number; z: number }) {
 }
 
 /* ────────────────────────── Commercial NPC ──────── */
-function CommNPC({ agent, playerPos, onSelect }: {
+function CommNPC({ agent, playerPos, onSelect, greetingMessage }: {
   agent: CommercialAgent;
   playerPos: { x: number; z: number };
   onSelect: (agent: CommercialAgent) => void;
+  greetingMessage?: string;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const ringRef = useRef<THREE.Mesh>(null);
@@ -139,7 +141,21 @@ function CommNPC({ agent, playerPos, onSelect }: {
     const t = clock.getElapsedTime();
     const offset = agent.position.x * 2 + agent.position.z;
     groupRef.current.position.y = Math.sin(t * 1.5 + offset) * 0.008;
-    groupRef.current.rotation.y = Math.sin(t * 0.6 + offset) * 0.1;
+
+    // Turn toward boss when greeting
+    if (greetingMessage) {
+      const tdx = playerPos.x - agent.position.x;
+      const tdz = playerPos.z - agent.position.z;
+      const targetAngle = Math.atan2(tdx, tdz);
+      const cur = groupRef.current.rotation.y;
+      let diff = targetAngle - cur;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      groupRef.current.rotation.y += diff * 0.08;
+    } else {
+      groupRef.current.rotation.y = Math.sin(t * 0.6 + offset) * 0.1;
+    }
+
     if (ringRef.current) {
       const s = 1 + Math.sin(t * 3) * 0.1;
       ringRef.current.scale.set(s, s, 1);
@@ -291,8 +307,39 @@ function CommNPC({ agent, playerPos, onSelect }: {
         </div>
       </Html>
 
+      {/* Greeting bubble */}
+      {greetingMessage && (
+        <Html position={[0, 1.2, 0]} center distanceFactor={4} style={{ pointerEvents: 'none' }}>
+          <div style={{
+            maxWidth: '220px', minWidth: '120px',
+            background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(12px)',
+            borderRadius: '14px', padding: '10px 14px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
+            border: '1px solid rgba(201,169,110,0.2)',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            animation: 'greetPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          }}>
+            <div style={{ fontSize: '10px', lineHeight: '1.5', color: '#2a2a2a', wordBreak: 'break-word' }}>
+              {greetingMessage}
+            </div>
+            <div style={{
+              position: 'absolute', bottom: '-8px', left: '50%', transform: 'translateX(-50%)',
+              width: 0, height: 0,
+              borderLeft: '8px solid transparent', borderRight: '8px solid transparent',
+              borderTop: '8px solid rgba(255,255,255,0.97)',
+            }} />
+          </div>
+          <style>{`
+            @keyframes greetPop {
+              0% { opacity: 0; transform: scale(0.6) translateY(10px); }
+              100% { opacity: 1; transform: scale(1) translateY(0); }
+            }
+          `}</style>
+        </Html>
+      )}
+
       {/* Interaction prompt */}
-      {isNearby && (
+      {isNearby && !greetingMessage && (
         <Html position={[0, 1.2, 0]} center style={{ pointerEvents: 'none' }}>
           <div style={{
             fontSize: '9px', fontWeight: 600, color: '#fff',
@@ -557,10 +604,41 @@ interface CommercialSectorProps {
 
 export default function CommercialSector({ playerPos }: CommercialSectorProps) {
   const [selectedAgent, setSelectedAgent] = useState<CommercialAgent | null>(null);
+  const [greetings, setGreetings] = useState<Record<string, { message: string; expiresAt: number }>>({});
+  const greetingsRef = useRef<Record<string, { message: string; expiresAt: number }>>({});
 
   const handleSelect = useCallback((agent: CommercialAgent) => {
     setSelectedAgent(agent);
   }, []);
+
+  // Check commercial agent proximity greetings each frame via a lightweight interval
+  const lastCheckRef = useRef(0);
+  useFrame(() => {
+    const now = Date.now();
+    if (now - lastCheckRef.current < 200) return; // check every 200ms
+    lastCheckRef.current = now;
+
+    let changed = false;
+    for (const agent of COMMERCIAL_AGENTS) {
+      const event = checkProximityGreeting(
+        `comm_${agent.id}`, agent.position.x, agent.position.z,
+        playerPos.x, playerPos.z
+      );
+      if (event) {
+        const msg = pickCommercialGreeting(agent.zone, agent.performance);
+        greetingsRef.current[agent.id] = { message: msg, expiresAt: now + 4500 };
+        changed = true;
+      }
+    }
+    // Clean expired
+    for (const [id, g] of Object.entries(greetingsRef.current)) {
+      if (now > g.expiresAt) {
+        delete greetingsRef.current[id];
+        changed = true;
+      }
+    }
+    if (changed) setGreetings({ ...greetingsRef.current });
+  });
 
   return (
     <>
@@ -603,6 +681,7 @@ export default function CommercialSector({ playerPos }: CommercialSectorProps) {
           agent={agent}
           playerPos={playerPos}
           onSelect={handleSelect}
+          greetingMessage={greetings[agent.id]?.message}
         />
       ))}
 
