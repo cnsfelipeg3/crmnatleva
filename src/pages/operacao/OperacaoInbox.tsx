@@ -1738,6 +1738,12 @@ function OperacaoInboxInner() {
                                 {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(msg.text)} /></p>}
                                 <div className="flex items-center justify-end gap-1 mt-1">
                                   {msg.edited && <span className="text-[8px] opacity-50 italic">editada</span>}
+                                  {msg.status === "failed" && (
+                                    <button onClick={() => handleRetryMessage(msg)} className="text-[9px] text-destructive hover:underline flex items-center gap-0.5 mr-1" title="Reenviar">
+                                      <RefreshCw className="h-2.5 w-2.5" /> Reenviar
+                                    </button>
+                                  )}
+                                  {msg.status === "queued" && <span className="text-[8px] text-primary-foreground/50 italic mr-1">na fila</span>}
                                   <span className="text-[9px] opacity-60">{formatMsgTime(msg.created_at)}</span>
                                   {msg.sender_type === "atendente" && getStatusIcon(msg.status)}
                                 </div>
