@@ -35,8 +35,6 @@ export default function NPCChatBubble({ agentName, agentId, agentRole, onClose }
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const systemContext = `Você é o ${agentName}, agente de IA da NatLeva responsável por ${agentRole}. Responda de forma direta, concisa e profissional (máx 3 frases). Use dados e insights quando possível.`;
-
     try {
       const resp = await fetch(AI_URL, {
         method: 'POST',
@@ -45,11 +43,9 @@ export default function NPCChatBubble({ agentName, agentId, agentRole, onClose }
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          messages: [
-            { role: 'system', content: systemContext },
-            { role: 'user', content: q },
-          ],
-          stream: true,
+          question: q,
+          agentName,
+          agentRole: agentRole,
         }),
         signal: controller.signal,
       });
