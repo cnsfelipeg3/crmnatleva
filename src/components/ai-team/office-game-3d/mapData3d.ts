@@ -22,17 +22,21 @@ export const DESKS: { pos: Vec3; size: Vec3; label?: string }[] = [
   { pos: { x: 2.4, y: 0.42, z: -1.2 }, size: { x: 2.0, y: 0.06, z: 0.9 }, label: 'Gerente' },
 ];
 
-export const NPC_POSITIONS: Record<string, Vec3> = {
-  auditor:       { x: -6.0, y: 0, z: -1.8 },
-  estrategista:  { x: -3.2, y: 0, z: -1.8 },
-  analista:      { x: -0.4, y: 0, z: -1.8 },
-  financeiro:    { x: 2.4, y: 0, z: -1.8 },
-  marketing:     { x: 5.2, y: 0, z: -1.8 },
-  comercial:     { x: -6.0, y: 0, z: 1.2 },
-  atendimento:   { x: -3.2, y: 0, z: 1.2 },
-  operacional:   { x: -0.4, y: 0, z: 1.2 },
-  inovacao:      { x: 2.4, y: 0, z: 1.2 },
-  gerente:       { x: 2.4, y: 0, z: -0.1 },
+// NPCs seated at their desks (z pushed close to desk edge, facing monitor)
+// Row 1 desks z=-2.8 → NPC at desk.z + size.z/2 + 0.2 = -2.8+0.375+0.2 = -2.225
+// Row 2 desks z=0.2  → NPC at desk.z + size.z/2 + 0.2 = 0.2+0.375+0.2 = 0.775
+// Gerente desk z=-1.2 → NPC at -1.2+0.45+0.2 = -0.55
+export const NPC_POSITIONS: Record<string, Vec3 & { facingY?: number }> = {
+  auditor:       { x: -6.0, y: 0, z: -2.2, facingY: Math.PI },
+  estrategista:  { x: -3.2, y: 0, z: -2.2, facingY: Math.PI },
+  analista:      { x: -0.4, y: 0, z: -2.2, facingY: Math.PI },
+  financeiro:    { x: 2.4,  y: 0, z: -2.2, facingY: Math.PI },
+  marketing:     { x: 5.2,  y: 0, z: -2.2, facingY: Math.PI },
+  comercial:     { x: -6.0, y: 0, z: 0.8,  facingY: Math.PI },
+  atendimento:   { x: -3.2, y: 0, z: 0.8,  facingY: Math.PI },
+  operacional:   { x: -0.4, y: 0, z: 0.8,  facingY: Math.PI },
+  inovacao:      { x: 2.4,  y: 0, z: 0.8,  facingY: Math.PI },
+  gerente:       { x: 2.4,  y: 0, z: -0.55, facingY: Math.PI },
 };
 
 export const PLAYER_SPAWN: Vec3 = { x: 0, y: 0, z: 5.5 };

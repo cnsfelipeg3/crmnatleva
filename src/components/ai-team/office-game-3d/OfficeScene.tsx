@@ -143,6 +143,7 @@ export default function OfficeScene({ agents, tasks, onSelectAgent, joystickInpu
             status={agent.status}
             taskCount={taskCounts[agent.id] || 0}
             position={[npcPos.x, npcPos.y, npcPos.z]}
+            facingAngle={(npcPos as any).facingY ?? Math.PI}
             isNearby={nearbyId === agent.id}
             onClick={() => onSelectAgent(agent)}
             showBubble={bubbleAgentId === agent.id}

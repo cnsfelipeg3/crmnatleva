@@ -85,7 +85,7 @@ function CommDesk({ pos, size, zone }: { pos: { x: number; y: number; z: number 
         </mesh>
       ))}
 
-      {/* ═══ Samsung Odyssey OLED G9 49" Curved Ultrawide ═══ */}
+      {/* ═══ Samsung Odyssey OLED G9 49" Curved — Simplified ═══ */}
       <group position={[0, pos.y + monH / 2 + 0.06, -size.z / 2 + 0.12]}>
         {/* Stand base */}
         <mesh position={[0, -monH / 2 - 0.02, 0.05]}>
@@ -93,30 +93,19 @@ function CommDesk({ pos, size, zone }: { pos: { x: number; y: number; z: number 
           <meshStandardMaterial color="#c0c0c0" roughness={0.15} metalness={0.85} />
         </mesh>
         <mesh position={[0, -monH / 2 + 0.03, 0.05]}>
-          <cylinderGeometry args={[0.012, 0.016, 0.08, 8]} />
+          <cylinderGeometry args={[0.012, 0.016, 0.08, 6]} />
           <meshStandardMaterial color="#b0b0b0" roughness={0.15} metalness={0.85} />
-        </mesh>
-        {/* RGB ring */}
-        <mesh position={[0, -monH / 2 + 0.03, 0.05]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.02, 0.003, 8, 24]} />
-          <meshStandardMaterial color="#ff44ff" emissive="#ff44ff" emissiveIntensity={1.2} roughness={0.1} metalness={0.3} />
         </mesh>
         {/* Curved monitor body — silver 1000R */}
         <mesh castShadow rotation={[0, Math.PI, 0]}>
-          <cylinderGeometry args={[monW * 0.7, monW * 0.7, monH, 32, 1, true, -Math.PI * 0.38, Math.PI * 0.76]} />
+          <cylinderGeometry args={[monW * 0.7, monW * 0.7, monH, 16, 1, true, -Math.PI * 0.38, Math.PI * 0.76]} />
           <meshStandardMaterial color="#c8c8c8" roughness={0.12} metalness={0.8} side={2} />
-        </mesh>
-        {/* Curved bezel */}
-        <mesh rotation={[0, Math.PI, 0]}>
-          <cylinderGeometry args={[monW * 0.7 + 0.003, monW * 0.7 + 0.003, monH + 0.006, 32, 1, true, -Math.PI * 0.385, Math.PI * 0.77]} />
-          <meshStandardMaterial color="#0a0a0a" roughness={0.1} metalness={0.7} side={2} />
         </mesh>
         {/* Curved OLED Screen */}
         <mesh rotation={[0, Math.PI, 0]}>
-          <cylinderGeometry args={[monW * 0.7 - 0.002, monW * 0.7 - 0.002, monH - 0.006, 32, 1, true, -Math.PI * 0.375, Math.PI * 0.75]} />
-          <meshStandardMaterial color="#020208" emissive={tint} emissiveIntensity={0.5} roughness={0.02} metalness={0.05} side={1} />
+          <cylinderGeometry args={[monW * 0.7 - 0.002, monW * 0.7 - 0.002, monH - 0.006, 16, 1, true, -Math.PI * 0.375, Math.PI * 0.75]} />
+          <meshStandardMaterial color="#020208" emissive={tint} emissiveIntensity={0.4} roughness={0.02} metalness={0.05} side={1} />
         </mesh>
-        <pointLight position={[0, 0, 0.12]} intensity={0.08} color={tint} distance={1} decay={2} />
       </group>
 
       {/* Keyboard */}
@@ -187,9 +176,9 @@ function CommNPC({ agent, playerPos, onSelect, greetingMessage }: {
     if (!groupRef.current) return;
     const t = clock.getElapsedTime();
     const offset = agent.position.x * 2 + agent.position.z;
-    groupRef.current.position.y = Math.sin(t * 1.5 + offset) * 0.008;
+    groupRef.current.position.y = Math.sin(t * 1.5 + offset) * 0.004;
 
-    // Turn toward boss when greeting
+    // Turn toward boss when greeting, otherwise face desk (Math.PI = face -Z)
     if (greetingMessage) {
       const tdx = playerPos.x - agent.position.x;
       const tdz = playerPos.z - agent.position.z;
@@ -200,7 +189,8 @@ function CommNPC({ agent, playerPos, onSelect, greetingMessage }: {
       while (diff < -Math.PI) diff += Math.PI * 2;
       groupRef.current.rotation.y += diff * 0.08;
     } else {
-      groupRef.current.rotation.y = Math.sin(t * 0.6 + offset) * 0.1;
+      // Face the desk with subtle sway
+      groupRef.current.rotation.y = Math.PI + Math.sin(t * 0.4 + offset) * 0.04;
     }
 
     if (ringRef.current) {
@@ -402,177 +392,23 @@ function CommNPC({ agent, playerPos, onSelect, greetingMessage }: {
   );
 }
 
-/* ────────────────────────── Floating KPI Panel ──── */
-function FloatingKPI({ position, title, value, subtitle, color }: {
-  position: [number, number, number];
-  title: string;
-  value: string;
-  subtitle?: string;
-  color: string;
-}) {
-  const ref = useRef<THREE.Group>(null);
-  useFrame(({ clock }) => {
-    if (ref.current) {
-      ref.current.position.y = position[1] + Math.sin(clock.getElapsedTime() * 0.8 + position[0]) * 0.03;
-    }
-  });
+/* FloatingKPI, WallKPIScreen, CelebrationGlow REMOVED for performance
+   (eliminated ~6 Html overlays, ~5 pointLights, ~3 useFrame loops) */
 
-  return (
-    <group ref={ref} position={position}>
-      <Html center distanceFactor={6} style={{ pointerEvents: 'none' }}>
-        <div style={{
-          background: 'rgba(10,20,32,0.92)',
-          backdropFilter: 'blur(12px)',
-          borderRadius: '10px',
-          padding: '8px 16px',
-          border: `1px solid ${color}40`,
-          boxShadow: `0 4px 20px ${color}20`,
-          minWidth: '100px',
-          textAlign: 'center',
-          fontFamily: 'Space Grotesk, sans-serif',
-        }}>
-          <div style={{ fontSize: '8px', color: `${color}cc`, letterSpacing: '1.5px', fontWeight: 600, marginBottom: '3px' }}>
-            {title}
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff', lineHeight: 1.1 }}>
-            {value}
-          </div>
-          {subtitle && (
-            <div style={{ fontSize: '8px', color: '#9ca3af', marginTop: '2px' }}>
-              {subtitle}
-            </div>
-          )}
-        </div>
-      </Html>
-    </group>
-  );
-}
-
-/* ────────────────────────── Wall KPI Screen ─────── */
+/* ────────────────────────── Wall KPI Screen — lightweight ── */
 function WallKPIScreen({ position, rotationY }: { position: [number, number, number]; rotationY: number }) {
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {/* Screen bezel */}
-      <mesh castShadow>
+      <mesh>
         <boxGeometry args={[2.2, 1.3, 0.04]} />
         <meshStandardMaterial color="#0a0a0a" roughness={0.12} metalness={0.7} />
       </mesh>
-      {/* Screen surface */}
       <mesh position={[0, 0, 0.022]}>
         <planeGeometry args={[2.0, 1.1]} />
-        <meshStandardMaterial color="#0a1420" emissive="#1a3050" emissiveIntensity={0.25} roughness={0.1} />
+        <meshStandardMaterial color="#0a1420" emissive="#1a3050" emissiveIntensity={0.2} roughness={0.1} />
       </mesh>
-      {/* Content */}
-      <Html position={[0, 0, 0.03]} center transform scale={0.2} style={{ pointerEvents: 'none' }}>
-        <div style={{
-          width: '440px', height: '260px', background: 'linear-gradient(135deg, #0a1420, #0f2030)',
-          borderRadius: '4px', padding: '16px', fontFamily: 'Space Grotesk, sans-serif',
-          display: 'flex', flexDirection: 'column', gap: '8px',
-        }}>
-          <div style={{ fontSize: '11px', color: '#c9a96e', letterSpacing: '3px', fontWeight: 700 }}>
-            📊 PAINEL COMERCIAL
-          </div>
-          {/* Mini funnel bars */}
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end', height: '80px', marginTop: '4px' }}>
-            {[
-              { label: 'Leads', value: 85, color: '#3b82f6' },
-              { label: 'Qualif.', value: 42, color: '#f59e0b' },
-              { label: 'Negoc.', value: 18, color: '#ef4444' },
-              { label: 'Fechados', value: 8, color: '#10b981' },
-            ].map((bar, i) => (
-              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                <div style={{
-                  width: '100%', height: `${bar.value}px`, background: `linear-gradient(to top, ${bar.color}, ${bar.color}80)`,
-                  borderRadius: '3px 3px 0 0', minHeight: '8px',
-                }} />
-                <span style={{ fontSize: '8px', color: '#9ca3af' }}>{bar.label}</span>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>{bar.value}</span>
-              </div>
-            ))}
-          </div>
-          {/* Bottom stats */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'auto' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#10b981' }}>R$525k</div>
-              <div style={{ fontSize: '8px', color: '#6b7280' }}>Faturamento</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#f59e0b' }}>23%</div>
-              <div style={{ fontSize: '8px', color: '#6b7280' }}>Conversão</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#3b82f6' }}>4.2d</div>
-              <div style={{ fontSize: '8px', color: '#6b7280' }}>Ciclo Médio</div>
-            </div>
-          </div>
-        </div>
-      </Html>
-      <pointLight position={[0, 0, 0.3]} intensity={0.15} color="#3050a0" distance={2} decay={2} />
     </group>
   );
-}
-
-/* ────────────────────────── Glass Divider Wall ──── */
-function GlassDivider() {
-  return (
-    <group position={[0, 0, 6.2]}>
-      {/* Glass panel */}
-      <mesh position={[0, 1.1, 0]}>
-        <boxGeometry args={[16, 2.2, 0.06]} />
-        <meshPhysicalMaterial
-          color="#e0e8f0"
-          transparent
-          opacity={0.15}
-          roughness={0.05}
-          metalness={0.1}
-          transmission={0.6}
-          thickness={0.5}
-        />
-      </mesh>
-      {/* Metal frame top */}
-      <mesh position={[0, 2.2, 0]}>
-        <boxGeometry args={[16.1, 0.04, 0.08]} />
-        <meshStandardMaterial color="#8a8580" roughness={0.3} metalness={0.6} />
-      </mesh>
-      {/* Metal frame bottom */}
-      <mesh position={[0, 0.02, 0]}>
-        <boxGeometry args={[16.1, 0.04, 0.08]} />
-        <meshStandardMaterial color="#8a8580" roughness={0.3} metalness={0.6} />
-      </mesh>
-      {/* Vertical mullions */}
-      {[-6, -2, 2, 6].map((x, i) => (
-        <mesh key={i} position={[x, 1.1, 0]}>
-          <boxGeometry args={[0.04, 2.2, 0.08]} />
-          <meshStandardMaterial color="#8a8580" roughness={0.3} metalness={0.6} />
-        </mesh>
-      ))}
-      {/* Sign */}
-      <Html position={[0, 2.0, 0.05]} center distanceFactor={8} style={{ pointerEvents: 'none' }}>
-        <div style={{
-          fontSize: '13px', fontWeight: 800, color: '#c9a96e',
-          background: 'rgba(10,20,32,0.9)', backdropFilter: 'blur(8px)',
-          padding: '5px 20px', borderRadius: '8px', whiteSpace: 'nowrap',
-          letterSpacing: '3px', fontFamily: 'Space Grotesk, sans-serif',
-          boxShadow: '0 4px 20px rgba(201,169,110,0.2)',
-          border: '1px solid rgba(201,169,110,0.3)',
-        }}>
-          🔥 SETOR COMERCIAL
-        </div>
-      </Html>
-    </group>
-  );
-}
-
-/* ────────────────────────── Celebration Effect ──── */
-function CelebrationGlow({ position }: { position: [number, number, number] }) {
-  const ref = useRef<THREE.PointLight>(null);
-  useFrame(({ clock }) => {
-    if (ref.current) {
-      const t = clock.getElapsedTime();
-      ref.current.intensity = 0.3 + Math.sin(t * 4) * 0.2;
-    }
-  });
-  return <pointLight ref={ref} position={position} color="#10b981" distance={3} decay={2} />;
 }
 
 /* ─────────────────── Agent Detail Panel (overlay) ─ */
@@ -727,10 +563,23 @@ export default function CommercialSector({ playerPos }: CommercialSectorProps) {
 
   return (
     <>
-      {/* Glass divider separating general from commercial */}
-      <GlassDivider />
+      {/* Glass divider — simplified (no meshPhysicalMaterial) */}
+      <group position={[0, 0, 6.2]}>
+        <mesh position={[0, 1.1, 0]}>
+          <boxGeometry args={[16, 2.2, 0.06]} />
+          <meshStandardMaterial color="#d0d8e0" transparent opacity={0.12} roughness={0.05} metalness={0.1} />
+        </mesh>
+        <mesh position={[0, 2.2, 0]}>
+          <boxGeometry args={[16.1, 0.04, 0.08]} />
+          <meshStandardMaterial color="#8a8580" roughness={0.3} metalness={0.6} />
+        </mesh>
+        <mesh position={[0, 0.02, 0]}>
+          <boxGeometry args={[16.1, 0.04, 0.08]} />
+          <meshStandardMaterial color="#8a8580" roughness={0.3} metalness={0.6} />
+        </mesh>
+      </group>
 
-      {/* Zone floors & signs */}
+      {/* Zone floors & signs (NO zone pointLights — removed for perf) */}
       {COMMERCIAL_ZONES.map(zone => (
         <group key={zone.key}>
           <ZoneFloor center={{ x: zone.center.x, z: zone.center.z }} size={zone.size} color={zone.color} />
@@ -739,14 +588,6 @@ export default function CommercialSector({ playerPos }: CommercialSectorProps) {
             emoji={zone.emoji}
             color={zone.color}
             position={[zone.center.x, 2.0, zone.center.z - zone.size.h / 2 + 0.2]}
-          />
-          {/* Zone ambient light */}
-          <pointLight
-            position={[zone.center.x, 2.2, zone.center.z]}
-            intensity={zone.lightIntensity}
-            color={zone.lightColor}
-            distance={zone.size.w * 1.2}
-            decay={2}
           />
         </group>
       ))}
@@ -770,45 +611,32 @@ export default function CommercialSector({ playerPos }: CommercialSectorProps) {
         />
       ))}
 
-      {/* ═══ HANDOFF AGENTS ═══ */}
+      {/* Handoff agents */}
       {handoffs.filter(h => h.phase !== 'done').map(h => (
         <HandoffAgent key={h.id} event={h} onDone={handleHandoffDone} onUpdate={handleHandoffUpdate} />
       ))}
 
-      {/* Floating KPIs for Head Comercial zone */}
-      <FloatingKPI position={[-2.5, 1.8, 17]} title="LEADS ATIVOS" value="85" subtitle="esta semana" color="#3b82f6" />
-      <FloatingKPI position={[2.5, 1.8, 17]} title="CONVERSÃO" value="23%" subtitle="vs 19% anterior" color="#10b981" />
-      <FloatingKPI position={[0, 2.3, 16]} title="FATURAMENTO" value="R$525k" subtitle="mês atual" color="#c9a96e" />
-
-      {/* Wall KPI screen */}
+      {/* Wall KPI screen — lightweight */}
       <WallKPIScreen position={[0, 1.3, 19.3]} rotationY={Math.PI} />
 
-      {/* Celebration effects in closing zone */}
-      <CelebrationGlow position={[4, 1.5, 12.5]} />
-      <CelebrationGlow position={[6.2, 1.5, 13.5]} />
-
-      {/* Some plants for the commercial area */}
+      {/* Plants — simplified (2 meshes each instead of 3) */}
       {[
         { x: -8.2, z: 8 }, { x: 7.5, z: 8 }, { x: -8.2, z: 13 },
-        { x: 7.5, z: 13 }, { x: -2, z: 17 }, { x: 2, z: 17 },
+        { x: 7.5, z: 13 },
       ].map((p, i) => (
         <group key={`cp-${i}`} position={[p.x, 0, p.z]}>
-          <mesh position={[0, 0.13, 0]} castShadow>
-            <cylinderGeometry args={[0.09, 0.06, 0.24, 8]} />
+          <mesh position={[0, 0.13, 0]}>
+            <cylinderGeometry args={[0.09, 0.06, 0.24, 6]} />
             <meshStandardMaterial color="#8b7355" roughness={0.8} />
           </mesh>
-          <mesh position={[0, 0.38, 0]} castShadow>
-            <sphereGeometry args={[0.2, 10, 6]} />
+          <mesh position={[0, 0.38, 0]}>
+            <sphereGeometry args={[0.2, 8, 5]} />
             <meshStandardMaterial color="#4a8a5a" roughness={0.85} />
-          </mesh>
-          <mesh position={[-0.06, 0.42, 0.04]} castShadow>
-            <sphereGeometry args={[0.14, 8, 5]} />
-            <meshStandardMaterial color="#3a7a48" roughness={0.85} />
           </mesh>
         </group>
       ))}
 
-      {/* Agent detail overlay (HTML) */}
+      {/* Agent detail overlay */}
       {selectedAgent && (
         <Html fullscreen style={{ pointerEvents: 'auto' }}>
           <div
