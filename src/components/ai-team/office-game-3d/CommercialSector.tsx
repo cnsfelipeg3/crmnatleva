@@ -16,6 +16,7 @@ import {
 import { checkProximityGreeting, pickCommercialGreeting } from './greetingSystem';
 import { generateRandomHandoff, type HandoffEvent } from './taskHandoffSystem';
 import HandoffAgent from './HandoffAgent';
+import MonitorModel from './MonitorModel';
 
 /* ────────────────────────── helpers ─────────────── */
 const fmt = (v: number) => v >= 1000 ? `R$${(v / 1000).toFixed(0)}k` : `R$${v}`;
