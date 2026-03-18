@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 const OfficeGame3DView = lazy(() => import("@/components/ai-team/office-game-3d/OfficeGame3DView"));
 
-type ViewMode = "dashboard" | "office" | "office3d";
+type ViewMode = "dashboard" | "office3d";
 type FeedFilter = "all" | "alert" | "insight" | "status_change";
 
 const STATUS_BADGE: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
