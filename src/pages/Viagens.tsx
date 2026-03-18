@@ -106,7 +106,7 @@ export default function Viagens() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading) return;
     Promise.all([
       fetchAllRows("sales", "id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, received_value, total_cost, margin, seller_id, client_id, hotel_name, airline, adults, children, locators, is_international", { order: { column: "departure_date", ascending: true } }),
       fetchAllRows("profiles", "id, full_name"),

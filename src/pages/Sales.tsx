@@ -45,7 +45,7 @@ export default function Sales() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (authLoading || !user) return;
+    if (authLoading) return;
     fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, departure_date, adults, children, products, received_value, margin, score, airline, locators, seller_id, created_at, client_id", { order: { column: "created_at", ascending: false } }).then((data) => {
       setSales(data as SaleRow[]);
       setLoading(false);
