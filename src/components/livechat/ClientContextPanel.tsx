@@ -334,7 +334,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
 
     if (conversation.is_vip && hoursSince > 12) actions.unshift({ text: "Cliente VIP aguardando resposta", alert: true });
 
-    if (conversation.unread_count > 3) actions.push({ text: `${conversation.unread_count} mensagens não lidas`, alert: true });
+    if ((conversation as any).unread_count > 3) actions.push({ text: `${(conversation as any).unread_count} mensagens não lidas`, alert: true });
 
     if (totalPending > 0 && !overdueCount) actions.push({ text: `${fmt(totalPending)} em parcelas futuras`, alert: false });
 
