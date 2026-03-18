@@ -35,17 +35,17 @@ const STATUS_LABELS: Record<string, string> = {
   alert: 'Alerta',
 };
 
-const AGENT_APPEARANCE: Record<string, { skin: string; hair: string; hairStyle: 'short' | 'long' | 'bun' | 'buzz'; shirt: string; pants: string }> = {
-  auditor:      { skin: '#d4a574', hair: '#1a1a1a', hairStyle: 'short', shirt: '#1e3a5f', pants: '#2c3e50' },
-  estrategista: { skin: '#f5d0a9', hair: '#8b4513', hairStyle: 'long',  shirt: '#2d4a3e', pants: '#34495e' },
-  analista:     { skin: '#c68642', hair: '#0a0a0a', hairStyle: 'buzz',  shirt: '#4a6fa5', pants: '#2c3e50' },
-  financeiro:   { skin: '#f0d5b0', hair: '#654321', hairStyle: 'short', shirt: '#2e4057', pants: '#1a1a2e' },
-  marketing:    { skin: '#deb887', hair: '#d4a017', hairStyle: 'long',  shirt: '#c0392b', pants: '#2c3e50' },
-  comercial:    { skin: '#e8c39e', hair: '#3b2f2f', hairStyle: 'short', shirt: '#27ae60', pants: '#34495e' },
-  atendimento:  { skin: '#f5cba7', hair: '#a0522d', hairStyle: 'bun',   shirt: '#8e44ad', pants: '#2c3e50' },
-  operacional:  { skin: '#c68642', hair: '#1a1a1a', hairStyle: 'buzz',  shirt: '#e67e22', pants: '#2c3e50' },
-  inovacao:     { skin: '#deb887', hair: '#2c1810', hairStyle: 'short', shirt: '#2980b9', pants: '#1a252f' },
-  gerente:      { skin: '#f0d5b0', hair: '#3b2f2f', hairStyle: 'short', shirt: '#1a1a2e', pants: '#1a1a2e' },
+const AGENT_APPEARANCE: Record<string, { skin: string; skinDark: string; hair: string; hairStyle: 'short' | 'long' | 'bun' | 'buzz'; shirt: string; pants: string; lipColor: string; eyeColor: string; gender: 'm' | 'f' }> = {
+  auditor:      { skin: '#d4a574', skinDark: '#c49464', hair: '#1a1a1a', hairStyle: 'short', shirt: '#1e3a5f', pants: '#2c3e50', lipColor: '#b07060', eyeColor: '#3a2a1a', gender: 'm' },
+  estrategista: { skin: '#f5d0a9', skinDark: '#e5c099', hair: '#8b4513', hairStyle: 'long',  shirt: '#2d4a3e', pants: '#34495e', lipColor: '#c48070', eyeColor: '#2a6030', gender: 'f' },
+  analista:     { skin: '#c68642', skinDark: '#b67632', hair: '#0a0a0a', hairStyle: 'buzz',  shirt: '#4a6fa5', pants: '#2c3e50', lipColor: '#9a6050', eyeColor: '#1a1a2e', gender: 'm' },
+  financeiro:   { skin: '#f0d5b0', skinDark: '#e0c5a0', hair: '#654321', hairStyle: 'short', shirt: '#2e4057', pants: '#1a1a2e', lipColor: '#c08575', eyeColor: '#4a3a2a', gender: 'm' },
+  marketing:    { skin: '#deb887', skinDark: '#cea877', hair: '#d4a017', hairStyle: 'long',  shirt: '#c0392b', pants: '#2c3e50', lipColor: '#c07565', eyeColor: '#2a5a6a', gender: 'f' },
+  comercial:    { skin: '#e8c39e', skinDark: '#d8b38e', hair: '#3b2f2f', hairStyle: 'short', shirt: '#27ae60', pants: '#34495e', lipColor: '#b07565', eyeColor: '#3a2a1a', gender: 'm' },
+  atendimento:  { skin: '#f5cba7', skinDark: '#e5bb97', hair: '#a0522d', hairStyle: 'bun',   shirt: '#8e44ad', pants: '#2c3e50', lipColor: '#c08070', eyeColor: '#5a3a2a', gender: 'f' },
+  operacional:  { skin: '#c68642', skinDark: '#b67632', hair: '#1a1a1a', hairStyle: 'buzz',  shirt: '#e67e22', pants: '#2c3e50', lipColor: '#9a6050', eyeColor: '#1a1a2e', gender: 'm' },
+  inovacao:     { skin: '#deb887', skinDark: '#cea877', hair: '#2c1810', hairStyle: 'short', shirt: '#2980b9', pants: '#1a252f', lipColor: '#b07060', eyeColor: '#2a3a5a', gender: 'm' },
+  gerente:      { skin: '#f0d5b0', skinDark: '#e0c5a0', hair: '#3b2f2f', hairStyle: 'short', shirt: '#1a1a2e', pants: '#1a1a2e', lipColor: '#c08575', eyeColor: '#3a2a1a', gender: 'm' },
 };
 
 /* Thought messages per agent + status */
