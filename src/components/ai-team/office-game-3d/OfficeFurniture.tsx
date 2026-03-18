@@ -42,8 +42,8 @@ function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; 
   const legOffX = size.x / 2 - 0.08;
   const legOffZ = size.z / 2 - 0.06;
 
-  // Monitor should be ~85% of desk width
-  const monitorTargetWidth = size.x * 0.85;
+  // Desk top surface Y = pos.y + size.y/2
+  const deskTopY = pos.y + size.y / 2;
 
   return (
     <group position={[pos.x, 0, pos.z]}>
@@ -52,7 +52,7 @@ function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; 
         <boxGeometry args={[size.x, size.y, size.z]} />
         <meshStandardMaterial color="#6d5d48" roughness={0.55} metalness={0.08} envMapIntensity={0.3} />
       </mesh>
-      <mesh position={[0, pos.y + size.y / 2 + 0.001, 0]}>
+      <mesh position={[0, deskTopY + 0.001, 0]}>
         <boxGeometry args={[size.x + 0.01, 0.005, size.z + 0.01]} />
         <meshStandardMaterial color="#5a4a38" roughness={0.4} metalness={0.15} />
       </mesh>
@@ -64,9 +64,9 @@ function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; 
         </mesh>
       ))}
 
-      {/* ═══ Samsung Odyssey OLED G9 — Real 3D Model ═══ */}
-      <group position={[0, pos.y + 0.02, -size.z / 2 + 0.25]}>
-        <MonitorModel targetWidth={monitorTargetWidth} />
+      {/* ═══ Samsung Odyssey OLED G9 — on desk surface, centered, facing front ═══ */}
+      <group position={[0, deskTopY, -size.z * 0.15]}>
+        <MonitorModel targetWidth={0.9} />
       </group>
 
       {/* Keyboard */}
