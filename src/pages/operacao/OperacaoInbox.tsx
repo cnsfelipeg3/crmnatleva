@@ -1836,11 +1836,18 @@ function OperacaoInboxInner() {
                   />
                 )}
 
-                {/* Disconnected warning */}
+                {/* Disconnected warning with queue info */}
                 {!waConnected && selectedId?.startsWith("wa_") && (
                   <div className="px-4 py-2 border-t border-destructive/20 bg-destructive/5 flex items-center gap-2">
                     <WifiOff className="h-4 w-4 text-destructive shrink-0" />
-                    <p className="text-xs text-destructive">WhatsApp desconectado. Conecte na aba Integrações.</p>
+                    <div className="flex-1">
+                      <p className="text-xs text-destructive font-medium">WhatsApp desconectado</p>
+                      <p className="text-[10px] text-destructive/70">
+                        {getPendingCount() > 0
+                          ? `${getPendingCount()} mensagem(ns) na fila — serão enviadas ao reconectar.`
+                          : "Você pode enviar mensagens — ficarão na fila até reconectar."}
+                      </p>
+                    </div>
                   </div>
                 )}
 
