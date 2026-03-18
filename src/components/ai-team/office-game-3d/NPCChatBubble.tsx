@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Loader2, Send, X } from 'lucide-react';
 
-const AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/natleva-brain`;
+const AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
 
 interface Props {
   agentName: string;
