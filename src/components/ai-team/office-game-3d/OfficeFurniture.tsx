@@ -835,7 +835,7 @@ export default function OfficeFurniture() {
   return (
     <group>
       <WallSet />
-      <CeilingLights />
+      {/* CeilingLights removed */}
       <NatLevaBranding />
       <ReceptionDesk />
       <ConferenceTable />
