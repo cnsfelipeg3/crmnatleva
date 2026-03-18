@@ -1,9 +1,10 @@
 import { Suspense, useEffect, useCallback, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
+import { AdaptiveDpr, AdaptiveEvents } from '@react-three/drei';
 import OfficeScene from './OfficeScene';
 import VirtualJoystick from './VirtualJoystick';
 import type { Agent, Task } from '../mockData';
-import { ArrowLeft, Maximize2, Minimize2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 interface Props {
   agents: Agent[];
@@ -27,7 +28,6 @@ export default function OfficeGame3DView({ agents, tasks, onBack, onSelectAgent 
   const joystickRef = useRef({ x: 0, z: 0 });
   const [joystickInput, setJoystickInput] = useState({ x: 0, z: 0 });
 
-  // E/Escape key
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onBack();
@@ -46,7 +46,7 @@ export default function OfficeGame3DView({ agents, tasks, onBack, onSelectAgent 
     setJoystickInput({ x: 0, z: 0 });
   }, []);
 
-  const dpr = isMobile ? Math.min(window.devicePixelRatio, 2) : Math.min(window.devicePixelRatio, 2);
+  const maxDpr = isMobile ? 1.5 : 2;
 
   return (
     <div className="fixed inset-0 z-50" style={{ background: '#e8e4dc' }}>
@@ -63,25 +63,29 @@ export default function OfficeGame3DView({ agents, tasks, onBack, onSelectAgent 
           camera={{
             position: [0, 6, 8],
             fov: isMobile ? 55 : 45,
-            near: 0.1,
-            far: 60,
+            near: 0.5,
+            far: 50,
           }}
-          dpr={dpr}
+          dpr={[1, maxDpr]}
+          frameloop="always"
           style={{ width: '100%', height: '100%', touchAction: 'none' }}
           gl={{
-            antialias: true,
+            antialias: !isMobile,
             alpha: false,
             powerPreference: 'high-performance',
             stencil: false,
+            depth: true,
           }}
           onCreated={({ gl }) => {
             gl.setClearColor('#e8e4dc');
             gl.shadowMap.enabled = true;
-            gl.shadowMap.type = 2; // PCFSoftShadowMap
+            gl.shadowMap.type = 1; // PCFShadowMap (cheaper than PCFSoft)
             gl.toneMapping = 4; // ACESFilmicToneMapping
             gl.toneMappingExposure = 1.1;
           }}
         >
+          <AdaptiveDpr pixelated />
+          <AdaptiveEvents />
           <OfficeScene
             agents={agents}
             tasks={tasks}
@@ -96,7 +100,7 @@ export default function OfficeGame3DView({ agents, tasks, onBack, onSelectAgent 
         <VirtualJoystick onMove={handleJoystickMove} onRelease={handleJoystickRelease} />
       )}
 
-      {/* Interact button for mobile */}
+      {/* Mobile interact button */}
       {isMobile && (
         <div className="absolute bottom-20 right-6 z-50 pointer-events-auto">
           <div className="w-14 h-14 rounded-full bg-white/15 backdrop-blur-sm border-2 border-white/25 flex items-center justify-center">
@@ -151,8 +155,8 @@ export default function OfficeGame3DView({ agents, tasks, onBack, onSelectAgent 
                 <span className="font-medium">WASD</span> mover&ensp;•&ensp;
                 <span className="font-medium">Arrastar</span> mover visão&ensp;•&ensp;
                 <span className="font-medium">Botão direito</span> rotacionar&ensp;•&ensp;
+                <span className="font-medium">Scroll</span> zoom&ensp;•&ensp;
                 <span className="font-medium">Duplo clique</span> recentrar&ensp;•&ensp;
-                <span className="font-medium">E</span> interagir&ensp;•&ensp;
                 <span className="font-medium">ESC</span> sair
               </>
             )}
