@@ -140,6 +140,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
   const [lastAgentMsgAt, setLastAgentMsgAt] = useState<string | null>(null);
   const [lastClientMsgAt, setLastClientMsgAt] = useState<string | null>(null);
   const [agentHasReplied, setAgentHasReplied] = useState(false);
+  const [msgStats, setMsgStats] = useState<{ totalClient: number; totalAgent: number; avgResponseHours: number | null }>({ totalClient: 0, totalAgent: 0, avgResponseHours: null });
 
   const initials = conversation.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -164,19 +165,25 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
         const convId = dbConv?.id;
         const clientId = dbConv?.client_id;
 
-        // Fetch last agent and client messages to determine reply status
+        // Fetch last agent/client messages + stats for smart actions
         if (convId) {
-          const [agentMsg, clientMsg] = await Promise.all([
-            supabase.from("conversation_messages").select("created_at").eq("conversation_id", convId).in("sender_type", ["agent", "atendente", "system"]).eq("direction", "outbound").order("created_at", { ascending: false }).limit(1),
-            supabase.from("conversation_messages").select("created_at").eq("conversation_id", convId).in("sender_type", ["client", "cliente", "contact"]).eq("direction", "inbound").order("created_at", { ascending: false }).limit(1),
+          const [agentMsg, clientMsg, agentCount, clientCount] = await Promise.all([
+            supabase.from("conversation_messages").select("created_at").eq("conversation_id", convId).eq("sender_type", "atendente").eq("direction", "outgoing").order("created_at", { ascending: false }).limit(1),
+            supabase.from("conversation_messages").select("created_at").eq("conversation_id", convId).eq("sender_type", "cliente").eq("direction", "incoming").order("created_at", { ascending: false }).limit(1),
+            supabase.from("conversation_messages").select("id", { count: "exact", head: true }).eq("conversation_id", convId).eq("sender_type", "atendente"),
+            supabase.from("conversation_messages").select("id", { count: "exact", head: true }).eq("conversation_id", convId).eq("sender_type", "cliente"),
           ]);
           if (!cancelled) {
             const agentAt = agentMsg.data?.[0]?.created_at || null;
             const clientAt = clientMsg.data?.[0]?.created_at || null;
             setLastAgentMsgAt(agentAt);
             setLastClientMsgAt(clientAt);
-            // Agent has replied if their last message is after the client's last message
             setAgentHasReplied(!!(agentAt && (!clientAt || new Date(agentAt) >= new Date(clientAt))));
+            setMsgStats({
+              totalClient: clientCount.count || 0,
+              totalAgent: agentCount.count || 0,
+              avgResponseHours: null,
+            });
           }
         }
 
@@ -287,104 +294,129 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
 
   const assignedName = conversation.assigned_to ? (profiles[conversation.assigned_to] || "—") : "Sem responsável";
 
-  // Next best action — stage-aware + reply-aware
+  // Next best action — stage-aware + reply-aware + engagement-aware
   const nextActions = useMemo(() => {
-    const actions: { text: string; alert: boolean }[] = [];
-    const lastMsgDate = new Date(conversation.last_message_at);
-    const hoursSinceLastMsg = (Date.now() - lastMsgDate.getTime()) / 3600000;
+    const actions: { text: string; alert: boolean; priority: number }[] = [];
     const stage = conversation.stage || "novo_lead";
 
-    // Hours since last CLIENT message (waiting for us)
+    // ─── Time calculations ───
     const hoursSinceClient = lastClientMsgAt ? (Date.now() - new Date(lastClientMsgAt).getTime()) / 3600000 : Infinity;
-    // Hours since last AGENT reply
     const hoursSinceAgent = lastAgentMsgAt ? (Date.now() - new Date(lastAgentMsgAt).getTime()) / 3600000 : Infinity;
-    // Client is waiting = client sent last, agent hasn't replied yet
     const clientWaiting = !agentHasReplied && lastClientMsgAt;
+    const neverReplied = msgStats.totalAgent === 0 && msgStats.totalClient > 0;
+    const isOneWay = msgStats.totalAgent === 0; // agent never sent anything
+    const engagementRatio = msgStats.totalClient > 0 ? msgStats.totalAgent / msgStats.totalClient : 0;
+    const lowEngagement = engagementRatio < 0.3 && msgStats.totalClient > 5;
 
-    // ─── Stage-specific actions ───
-    if (stage === "novo_lead") {
-      if (clientWaiting && hoursSinceClient > 0.5) {
-        actions.push({ text: "Lead aguardando primeira resposta!", alert: true });
-      } else if (clientWaiting) {
-        actions.push({ text: "Responda rápido — lead está esperando", alert: true });
-      } else if (agentHasReplied) {
-        actions.push({ text: "Avance o lead para Contato Inicial", alert: false });
-      } else {
-        actions.push({ text: "Apresente-se e entenda a demanda", alert: false });
+    // ─── CRITICAL: Client waiting for reply ───
+    if (clientWaiting) {
+      if (neverReplied) {
+        actions.push({ text: `Lead com ${msgStats.totalClient} msg sem nenhuma resposta!`, alert: true, priority: 100 });
+      } else if (hoursSinceClient > 72) {
+        actions.push({ text: `Cliente esperando há ${Math.floor(hoursSinceClient / 24)} dias!`, alert: true, priority: 95 });
+      } else if (hoursSinceClient > 24) {
+        actions.push({ text: `Sem resposta há ${Math.round(hoursSinceClient)}h — responda agora`, alert: true, priority: 90 });
+      } else if (hoursSinceClient > 4) {
+        actions.push({ text: `Cliente esperando há ${Math.round(hoursSinceClient)}h`, alert: true, priority: 80 });
+      } else if (hoursSinceClient > 0.5) {
+        actions.push({ text: "Cliente aguardando resposta", alert: true, priority: 70 });
       }
     }
-    if (stage === "contato_inicial") {
-      if (clientWaiting) actions.push({ text: "Cliente aguardando — pergunte destino e datas", alert: hoursSinceClient > 4 });
-      else actions.push({ text: "Pergunte destino, datas e nº de passageiros", alert: false });
-    }
-    if (stage === "qualificacao") {
-      if (!clientData) actions.push({ text: "Vincule este contato a um cliente no CRM", alert: true });
-      if (clientWaiting) actions.push({ text: "Cliente esperando resposta na qualificação", alert: hoursSinceClient > 8 });
-      else actions.push({ text: "Confirme orçamento e preferências do viajante", alert: false });
-    }
-    if (stage === "diagnostico") {
-      if (clientWaiting) actions.push({ text: "Cliente aguardando — continue o diagnóstico", alert: hoursSinceClient > 12 });
-      else actions.push({ text: "Mapeie estilo de viagem e experiências desejadas", alert: false });
-    }
-    if (stage === "proposta_preparacao") {
-      actions.push({ text: "Monte o roteiro e envie atualização ao cliente", alert: hoursSinceAgent > 24 });
-    }
-    if (stage === "proposta_enviada") {
-      if (clientWaiting) actions.push({ text: "Cliente respondeu sobre a proposta — responda!", alert: true });
-      else if (hoursSinceAgent > 48) actions.push({ text: "Follow-up — proposta sem retorno há 2+ dias", alert: true });
-      else if (hoursSinceAgent > 24) actions.push({ text: "Considere fazer follow-up da proposta", alert: false });
-      else actions.push({ text: "Aguardando retorno do cliente sobre a proposta", alert: false });
-    }
-    if (stage === "proposta_visualizada") {
-      actions.push({ text: "Cliente viu a proposta — entre em contato agora!", alert: true });
-    }
-    if (stage === "ajustes") {
-      if (clientWaiting) actions.push({ text: "Cliente pediu ajustes — responda!", alert: true });
-      else actions.push({ text: "Aplique os ajustes solicitados e reenvie", alert: hoursSinceAgent > 12 });
-    }
-    if (stage === "negociacao") {
-      if (clientWaiting) actions.push({ text: "Cliente aguardando na negociação!", alert: true });
-      else actions.push({ text: "Negocie condições e busque o fechamento", alert: false });
-    }
-    if (stage === "fechamento_andamento") {
-      actions.push({ text: "Finalize contrato e confirme pagamento", alert: true });
-    }
-    if (stage === "fechado") {
-      actions.push({ text: "Envie boas-vindas e documentos da viagem", alert: false });
-    }
-    if (stage === "pos_venda") {
-      actions.push({ text: "Peça feedback e ofereça a próxima viagem", alert: false });
-    }
-    if (stage === "perdido") {
-      actions.push({ text: "Registre o motivo da perda para aprendizado", alert: false });
+
+    // ─── VIP priority ───
+    if (conversation.is_vip && clientWaiting) {
+      actions.push({ text: "⭐ Cliente VIP aguardando — prioridade máxima!", alert: true, priority: 99 });
     }
 
-    // ─── Data-driven alerts ───
-    if (clientWaiting && hoursSinceClient > 72) actions.unshift({ text: `⚠️ Cliente sem resposta há ${Math.floor(hoursSinceClient / 24)} dias!`, alert: true });
-    else if (clientWaiting && hoursSinceClient > 48) actions.unshift({ text: `Cliente esperando há ${Math.floor(hoursSinceClient / 24)} dias`, alert: true });
+    // ─── Overdue payments ───
+    if (overdueCount > 0) {
+      actions.push({ text: `${overdueCount} pagamento(s) vencido(s)!`, alert: true, priority: 85 });
+    }
 
-    if (overdueCount > 0) actions.unshift({ text: `${overdueCount} pagamento(s) vencido(s)!`, alert: true });
-
+    // ─── Upcoming trips ───
     if (futureSales.length > 0) {
       const next = futureSales[0];
       const daysUntil = Math.ceil((new Date(next.departure_date).getTime() - Date.now()) / 86400000);
-      if (daysUntil <= 7) actions.unshift({ text: `Viagem em ${daysUntil} dias — urgente!`, alert: true });
-      else if (daysUntil <= 30) actions.push({ text: `Viagem em ${daysUntil} dias — enviar checklist`, alert: false });
+      if (daysUntil <= 3) actions.push({ text: `Viagem em ${daysUntil} dias — preparar documentos!`, alert: true, priority: 92 });
+      else if (daysUntil <= 7) actions.push({ text: `Viagem em ${daysUntil} dias — confirmar tudo`, alert: true, priority: 75 });
+      else if (daysUntil <= 14) actions.push({ text: `Viagem em ${daysUntil} dias — enviar checklist`, alert: false, priority: 50 });
+      else if (daysUntil <= 30) actions.push({ text: `Viagem em ${daysUntil} dias`, alert: false, priority: 30 });
     }
 
-    if (conversation.is_vip && clientWaiting && hoursSinceClient > 4) actions.unshift({ text: "Cliente VIP aguardando resposta!", alert: true });
+    // ─── Stage-specific guidance (only when not urgently waiting) ───
+    if (stage === "novo_lead") {
+      if (agentHasReplied) {
+        actions.push({ text: "Já respondido — avance para Contato Inicial", alert: false, priority: 40 });
+      } else if (!clientWaiting) {
+        actions.push({ text: "Apresente-se e entenda a demanda", alert: false, priority: 35 });
+      }
+    }
+    if (stage === "contato_inicial") {
+      if (!clientWaiting) actions.push({ text: "Colete destino, datas e nº de passageiros", alert: false, priority: 35 });
+    }
+    if (stage === "qualificacao") {
+      if (!clientData) actions.push({ text: "Vincule ao CRM para acompanhar melhor", alert: true, priority: 60 });
+      if (!clientWaiting) actions.push({ text: "Confirme orçamento e preferências", alert: false, priority: 35 });
+    }
+    if (stage === "diagnostico") {
+      if (!clientWaiting) actions.push({ text: "Mapeie estilo de viagem e experiências", alert: false, priority: 35 });
+    }
+    if (stage === "proposta_preparacao") {
+      if (hoursSinceAgent > 48) actions.push({ text: "Roteiro parado — finalize e envie", alert: true, priority: 65 });
+      else if (hoursSinceAgent > 24) actions.push({ text: "Envie atualização ao cliente sobre o roteiro", alert: false, priority: 45 });
+      else actions.push({ text: "Monte o roteiro e envie a proposta", alert: false, priority: 35 });
+    }
+    if (stage === "proposta_enviada") {
+      if (clientWaiting) actions.push({ text: "Cliente respondeu à proposta — responda!", alert: true, priority: 88 });
+      else if (hoursSinceAgent > 72) actions.push({ text: "Follow-up urgente — sem retorno há 3+ dias", alert: true, priority: 70 });
+      else if (hoursSinceAgent > 48) actions.push({ text: "Follow-up — sem retorno há 2 dias", alert: true, priority: 55 });
+      else if (hoursSinceAgent > 24) actions.push({ text: "Considere follow-up da proposta", alert: false, priority: 40 });
+      else actions.push({ text: "Aguardando retorno sobre a proposta", alert: false, priority: 20 });
+    }
+    if (stage === "proposta_visualizada") {
+      actions.push({ text: "Proposta visualizada — contate agora!", alert: true, priority: 82 });
+    }
+    if (stage === "ajustes") {
+      if (clientWaiting) actions.push({ text: "Cliente pediu ajustes — ação imediata!", alert: true, priority: 85 });
+      else actions.push({ text: "Aplique ajustes e reenvie a proposta", alert: hoursSinceAgent > 12, priority: hoursSinceAgent > 12 ? 60 : 35 });
+    }
+    if (stage === "negociacao") {
+      if (!clientWaiting) actions.push({ text: "Negocie condições e busque o fechamento", alert: false, priority: 40 });
+    }
+    if (stage === "fechamento_andamento") {
+      actions.push({ text: "Finalize contrato e confirme pagamento", alert: true, priority: 75 });
+    }
+    if (stage === "fechado") {
+      actions.push({ text: "Envie boas-vindas e docs da viagem", alert: false, priority: 30 });
+    }
+    if (stage === "pos_venda") {
+      if (hoursSinceAgent > 168) actions.push({ text: "Sem contato há 7+ dias — peça feedback", alert: false, priority: 40 });
+      else actions.push({ text: "Peça feedback e ofereça próxima viagem", alert: false, priority: 25 });
+    }
+    if (stage === "perdido") {
+      actions.push({ text: "Registre o motivo da perda", alert: false, priority: 20 });
+    }
 
-    if ((conversation as any).unread_count > 3) actions.push({ text: `${(conversation as any).unread_count} mensagens não lidas`, alert: true });
+    // ─── Engagement alerts ───
+    if (lowEngagement && !isOneWay) {
+      actions.push({ text: "Engajamento baixo — mais respostas necessárias", alert: true, priority: 55 });
+    }
 
-    if (totalPending > 0 && !overdueCount) actions.push({ text: `${fmt(totalPending)} em parcelas futuras`, alert: false });
+    if ((conversation as any).unread_count > 5) {
+      actions.push({ text: `${(conversation as any).unread_count} mensagens não lidas!`, alert: true, priority: 65 });
+    }
 
-    // If absolutely nothing, then truly all good
-    if (actions.length === 0) actions.push({ text: "Tudo em dia ✓", alert: false });
+    if (totalPending > 0 && !overdueCount) {
+      actions.push({ text: `${fmt(totalPending)} em parcelas futuras`, alert: false, priority: 15 });
+    }
 
-    // Deduplicate
+    if (actions.length === 0) actions.push({ text: "Tudo em dia ✓", alert: false, priority: 0 });
+
+    // Sort by priority, deduplicate
+    actions.sort((a, b) => b.priority - a.priority);
     const seen = new Set<string>();
-    return actions.filter(a => { if (seen.has(a.text)) return false; seen.add(a.text); return true; });
-  }, [conversation, overdueCount, futureSales, totalPending, clientData, agentHasReplied, lastClientMsgAt, lastAgentMsgAt]);
+    return actions.filter(a => { if (seen.has(a.text)) return false; seen.add(a.text); return true; }).slice(0, 5);
+  }, [conversation, overdueCount, futureSales, totalPending, clientData, agentHasReplied, lastClientMsgAt, lastAgentMsgAt, msgStats]);
 
   const handleAddNote = useCallback(async () => {
     if (!newNote.trim() || !clientData?.id) return;
