@@ -365,7 +365,7 @@ function CyclingTV({ position, rotationY, offset }: {
   );
 }
 
-/* ── Logo Texture Panel — uses real texture for visibility ─ */
+/* ── LED Screen Panel — animated NatLeva logo scrolling ─ */
 function LogoTexturePanel({ position, rotationY, width, height }: {
   position: [number, number, number];
   rotationY: number;
@@ -373,50 +373,87 @@ function LogoTexturePanel({ position, rotationY, width, height }: {
   height: number;
 }) {
   const texture = useLoader(THREE.TextureLoader, logoNatleva);
-  const logoAspect = 3.2; // approximate aspect ratio of the logo
-  const logoH = height * 0.55;
-  const logoW = logoH * logoAspect;
-  const fitW = Math.min(logoW, width * 0.85);
-  const fitH = fitW / logoAspect;
+  const screenRef = useRef<THREE.Mesh>(null);
+  const glowRef = useRef<THREE.PointLight>(null);
+
+  // Animate LED glow pulse
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime();
+    if (glowRef.current) {
+      glowRef.current.intensity = 0.8 + Math.sin(t * 1.2) * 0.3;
+    }
+  });
 
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {/* Dark backdrop panel */}
+      {/* LED screen bezel — dark metallic frame */}
       <mesh>
-        <boxGeometry args={[width, height, 0.03]} />
-        <meshStandardMaterial color="#0a1420" roughness={0.15} metalness={0.3} />
+        <boxGeometry args={[width + 0.08, height + 0.08, 0.05]} />
+        <meshStandardMaterial color="#0a0a0a" roughness={0.12} metalness={0.8} />
       </mesh>
-      {/* Gold accent border top */}
-      <mesh position={[0, height / 2 - 0.015, 0.016]}>
-        <boxGeometry args={[width - 0.1, 0.012, 0.001]} />
-        <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.8} metalness={0.7} roughness={0.15} />
+      {/* Inner LED panel — emissive dark surface */}
+      <mesh position={[0, 0, 0.026]}>
+        <boxGeometry args={[width, height, 0.005]} />
+        <meshStandardMaterial color="#050a10" roughness={0.05} metalness={0.2} emissive="#0a1830" emissiveIntensity={0.3} />
       </mesh>
-      {/* Gold accent border bottom */}
-      <mesh position={[0, -height / 2 + 0.015, 0.016]}>
-        <boxGeometry args={[width - 0.1, 0.012, 0.001]} />
-        <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={0.8} metalness={0.7} roughness={0.15} />
+      {/* LED pixel grid overlay (subtle) */}
+      <mesh position={[0, 0, 0.029]}>
+        <planeGeometry args={[width, height]} />
+        <meshStandardMaterial color="#101820" transparent opacity={0.15} roughness={0.1} />
       </mesh>
-      {/* Logo as textured plane — bright and illuminated */}
-      <mesh position={[0, 0.06, 0.018]}>
-        <planeGeometry args={[fitW, fitH]} />
-        <meshStandardMaterial
-          map={texture}
-          transparent
-          emissive="#ffffff"
-          emissiveIntensity={0.6}
-          emissiveMap={texture}
-          roughness={0.2}
-          metalness={0.05}
-          side={THREE.FrontSide}
-        />
-      </mesh>
-      {/* Strong spotlights illuminating the logo */}
-      <pointLight position={[0, 0.4, 0.8]} intensity={1.2} color="#fff5e0" distance={4} decay={2} />
-      <pointLight position={[-1, 0, 0.5]} intensity={0.4} color="#c9a96e" distance={3} decay={2} />
-      <pointLight position={[1, 0, 0.5]} intensity={0.4} color="#c9a96e" distance={3} decay={2} />
-      {/* Tagline */}
+
+      {/* Animated logo via Html — CSS animation for scrolling */}
       <Html
-        position={[0, -height / 2 + 0.1, 0.02]}
+        position={[0, 0.05, 0.031]}
+        center
+        transform
+        scale={width * 0.035}
+        style={{ pointerEvents: 'none' }}
+      >
+        <div style={{
+          width: `${Math.round(width * 28)}px`,
+          height: `${Math.round(height * 28)}px`,
+          overflow: 'hidden',
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'transparent',
+        }}>
+          {/* Scrolling logo container */}
+          <div style={{
+            display: 'flex',
+            gap: `${Math.round(width * 10)}px`,
+            alignItems: 'center',
+            animation: 'led-scroll 12s linear infinite',
+            whiteSpace: 'nowrap',
+          }}>
+            {[0, 1, 2].map(i => (
+              <img
+                key={i}
+                src={logoNatleva}
+                alt=""
+                style={{
+                  height: `${Math.round(height * 14)}px`,
+                  objectFit: 'contain',
+                  filter: 'brightness(1.6) drop-shadow(0 0 18px rgba(120,180,80,0.7)) drop-shadow(0 0 40px rgba(201,169,110,0.4))',
+                  flexShrink: 0,
+                }}
+              />
+            ))}
+          </div>
+          <style>{`
+            @keyframes led-scroll {
+              0%   { transform: translateX(30%); }
+              100% { transform: translateX(-70%); }
+            }
+          `}</style>
+        </div>
+      </Html>
+
+      {/* "Viagens Exclusivas" tagline — glowing on LED */}
+      <Html
+        position={[0, -height / 2 + 0.12, 0.031]}
         center
         transform
         scale={width * 0.04}
@@ -426,11 +463,33 @@ function LogoTexturePanel({ position, rotationY, width, height }: {
           fontSize: '11px', fontWeight: 600, letterSpacing: '6px',
           color: '#c9a96e', fontFamily: 'Space Grotesk, sans-serif',
           whiteSpace: 'nowrap', textTransform: 'uppercase',
-          textShadow: '0 0 12px rgba(201,169,110,0.7)',
+          textShadow: '0 0 20px rgba(201,169,110,0.9), 0 0 40px rgba(201,169,110,0.4)',
+          animation: 'led-tagline-pulse 3s ease-in-out infinite',
         }}>
           Viagens Exclusivas
         </div>
+        <style>{`
+          @keyframes led-tagline-pulse {
+            0%, 100% { opacity: 0.8; }
+            50%      { opacity: 1; text-shadow: 0 0 25px rgba(201,169,110,1), 0 0 50px rgba(201,169,110,0.6); }
+          }
+        `}</style>
       </Html>
+
+      {/* LED accent lights — top & bottom strips */}
+      <mesh position={[0, height / 2 + 0.01, 0.03]}>
+        <boxGeometry args={[width, 0.015, 0.01]} />
+        <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={1.2} metalness={0.5} roughness={0.1} />
+      </mesh>
+      <mesh position={[0, -height / 2 - 0.01, 0.03]}>
+        <boxGeometry args={[width, 0.015, 0.01]} />
+        <meshStandardMaterial color="#c9a96e" emissive="#c9a96e" emissiveIntensity={1.2} metalness={0.5} roughness={0.1} />
+      </mesh>
+
+      {/* Strong LED glow lighting */}
+      <pointLight ref={glowRef} position={[0, 0, 1.2]} intensity={0.8} color="#4a6a30" distance={5} decay={2} />
+      <pointLight position={[-width / 3, 0, 0.6]} intensity={0.3} color="#c9a96e" distance={3} decay={2} />
+      <pointLight position={[width / 3, 0, 0.6]} intensity={0.3} color="#c9a96e" distance={3} decay={2} />
     </group>
   );
 }
