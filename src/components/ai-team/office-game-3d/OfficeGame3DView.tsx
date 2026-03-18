@@ -149,8 +149,9 @@ export default function OfficeGame3DView({ agents, tasks, onBack, onSelectAgent 
             ) : (
               <>
                 <span className="font-medium">WASD</span> mover&ensp;•&ensp;
-                <span className="font-medium">Clique</span> andar&ensp;•&ensp;
+                <span className="font-medium">Arrastar</span> mover visão&ensp;•&ensp;
                 <span className="font-medium">Botão direito</span> rotacionar&ensp;•&ensp;
+                <span className="font-medium">Duplo clique</span> recentrar&ensp;•&ensp;
                 <span className="font-medium">E</span> interagir&ensp;•&ensp;
                 <span className="font-medium">ESC</span> sair
               </>
