@@ -14,6 +14,16 @@ const ZOOM_SPEED = 0.1;
 const PAN_SPEED = 0.012;
 const ORBIT_SPEED = 0.005;
 
+// Boss suit colors
+const SUIT_DARK = '#0a0f18';
+const SUIT_PANTS = '#0c1220';
+const SHIRT_WHITE = '#e8e4e0';
+const SKIN = '#f0d5b0';
+const HAIR = '#1a1210';
+const WATCH_GOLD = '#c9a96e';
+const AURA_GOLD = '#c9a96e';
+const SHOE_COLOR = '#1a0e08';
+
 interface Props {
   startPos: [number, number, number];
   onPositionChange: (x: number, z: number) => void;
@@ -22,13 +32,13 @@ interface Props {
 
 export default function PlayerController({ startPos, onPositionChange, joystickInput }: Props) {
   const groupRef = useRef<THREE.Group>(null);
+  const auraRef = useRef<THREE.Mesh>(null);
   const posRef = useRef(new THREE.Vector3(startPos[0], 0, startPos[2]));
   const keysRef = useRef(new Set<string>());
   const velRef = useRef({ x: 0, z: 0 });
   const zoomRef = useRef(1.0);
   const orbitAngleRef = useRef(0);
   const orbitPitchRef = useRef(0);
-  // Pan offset — camera target offset from player (like flow builder drag)
   const panOffsetRef = useRef({ x: 0, z: 0 });
   const isDraggingRef = useRef(false);
   const dragButtonRef = useRef<number | null>(null);
@@ -47,7 +57,6 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
     };
 
     const onPointerDown = (e: PointerEvent) => {
-      // Left-click = pan camera, Right-click = orbit camera
       if (e.button === 0 || e.button === 2 || e.button === 1) {
         e.preventDefault();
         isDraggingRef.current = true;
@@ -64,11 +73,9 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
       lastMouseRef.current = { x: e.clientX, y: e.clientY };
 
       if (dragButtonRef.current === 2 || dragButtonRef.current === 1) {
-        // Right/middle click: orbit
         orbitAngleRef.current -= dx * ORBIT_SPEED;
         orbitPitchRef.current = Math.max(-0.3, Math.min(0.5, orbitPitchRef.current + dy * ORBIT_SPEED * 0.5));
       } else {
-        // Left click: pan (move view like flow builder)
         const angle = orbitAngleRef.current;
         const cos = Math.cos(angle);
         const sin = Math.sin(angle);
@@ -85,11 +92,7 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
     };
 
     const onContextMenu = (e: Event) => e.preventDefault();
-
-    // Double-click to recenter on player
-    const onDblClick = () => {
-      panOffsetRef.current = { x: 0, z: 0 };
-    };
+    const onDblClick = () => { panOffsetRef.current = { x: 0, z: 0 }; };
 
     canvas.addEventListener('wheel', onWheel, { passive: false });
     canvas.addEventListener('pointerdown', onPointerDown);
@@ -113,7 +116,6 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
       if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) {
         e.preventDefault();
         keysRef.current.add(k);
-        // Reset pan when player starts moving with keyboard
         panOffsetRef.current = { x: 0, z: 0 };
       }
     };
@@ -149,11 +151,9 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
       vel.z += (inputZ / len) * accel * dt;
     }
 
-    // Friction
     vel.x -= vel.x * friction * dt;
     vel.z -= vel.z * friction * dt;
 
-    // Clamp speed
     const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
     if (speed > SPEED) {
       vel.x = (vel.x / speed) * SPEED;
@@ -167,7 +167,6 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
     const nz = pos.z + mz;
     if (!collides3D(pos.x, nz, PLAYER_RADIUS)) pos.z = nz; else vel.z = 0;
 
-    // Clamp to floor
     const hw = FLOOR_SIZE.w / 2 - 0.3;
     const hh = FLOOR_SIZE.h / 2 - 0.3;
     pos.x = Math.max(-hw, Math.min(hw, pos.x));
@@ -177,7 +176,6 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
       groupRef.current.position.x = pos.x;
       groupRef.current.position.z = pos.z;
 
-      // Rotate body toward movement
       if (speed > 0.3) {
         const targetAngle = Math.atan2(vel.x, vel.z);
         const cur = groupRef.current.rotation.y;
@@ -188,7 +186,15 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
       }
     }
 
-    // Camera — third-person with orbit + zoom + pan offset
+    // Boss aura pulse
+    if (auraRef.current) {
+      const t = performance.now() / 1000;
+      const s = 1 + Math.sin(t * 2) * 0.08;
+      auraRef.current.scale.set(s, s, 1);
+      (auraRef.current.material as THREE.MeshStandardMaterial).opacity = 0.18 + Math.sin(t * 1.5) * 0.08;
+    }
+
+    // Camera
     const zoom = zoomRef.current;
     const orbitAngle = orbitAngleRef.current;
     const orbitPitch = orbitPitchRef.current;
@@ -209,68 +215,199 @@ export default function PlayerController({ startPos, onPositionChange, joystickI
 
   return (
     <group ref={groupRef} position={[startPos[0], 0, startPos[2]]}>
-      {/* Shadow disc */}
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.005, 0]}>
-        <circleGeometry args={[0.25, 24]} />
-        <meshStandardMaterial color="#000" transparent opacity={0.12} />
+      {/* Ground shadow — larger for boss */}
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.004, 0]}>
+        <circleGeometry args={[0.32, 28]} />
+        <meshStandardMaterial color="#000" transparent opacity={0.15} />
       </mesh>
 
-      {/* Player body — humanoid */}
-      {/* Legs */}
-      <mesh position={[-0.06, 0.2, 0]} castShadow>
-        <capsuleGeometry args={[0.04, 0.2, 4, 8]} />
-        <meshStandardMaterial color="#2c3e50" roughness={0.7} />
+      {/* Golden aura ring */}
+      <mesh ref={auraRef} rotation-x={-Math.PI / 2} position={[0, 0.007, 0]}>
+        <ringGeometry args={[0.34, 0.44, 36]} />
+        <meshStandardMaterial
+          color={AURA_GOLD}
+          emissive={AURA_GOLD}
+          emissiveIntensity={0.7}
+          transparent
+          opacity={0.22}
+        />
       </mesh>
-      <mesh position={[0.06, 0.2, 0]} castShadow>
-        <capsuleGeometry args={[0.04, 0.2, 4, 8]} />
-        <meshStandardMaterial color="#2c3e50" roughness={0.7} />
+
+      {/* Inner gold disc */}
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.006, 0]}>
+        <circleGeometry args={[0.33, 28]} />
+        <meshStandardMaterial color={AURA_GOLD} transparent opacity={0.06} />
       </mesh>
-      {/* Torso */}
+
+      {/* === BOSS HUMANOID — Premium Suit === */}
+
+      {/* Shoes — polished leather */}
+      <mesh position={[-0.055, 0.028, 0.04]} castShadow>
+        <boxGeometry args={[0.05, 0.04, 0.11]} />
+        <meshStandardMaterial color={SHOE_COLOR} roughness={0.25} metalness={0.3} />
+      </mesh>
+      <mesh position={[0.055, 0.028, 0.04]} castShadow>
+        <boxGeometry args={[0.05, 0.04, 0.11]} />
+        <meshStandardMaterial color={SHOE_COLOR} roughness={0.25} metalness={0.3} />
+      </mesh>
+
+      {/* Legs — tailored pants */}
+      <mesh position={[-0.055, 0.2, 0]} castShadow>
+        <capsuleGeometry args={[0.04, 0.22, 4, 10]} />
+        <meshStandardMaterial color={SUIT_PANTS} roughness={0.55} metalness={0.05} />
+      </mesh>
+      <mesh position={[0.055, 0.2, 0]} castShadow>
+        <capsuleGeometry args={[0.04, 0.22, 4, 10]} />
+        <meshStandardMaterial color={SUIT_PANTS} roughness={0.55} metalness={0.05} />
+      </mesh>
+
+      {/* Belt */}
+      <mesh position={[0, 0.34, 0]} castShadow>
+        <boxGeometry args={[0.19, 0.025, 0.11]} />
+        <meshStandardMaterial color="#1a1a1a" roughness={0.3} metalness={0.4} />
+      </mesh>
+      {/* Belt buckle */}
+      <mesh position={[0, 0.34, 0.055]}>
+        <boxGeometry args={[0.03, 0.02, 0.005]} />
+        <meshStandardMaterial color={WATCH_GOLD} roughness={0.15} metalness={0.8} emissive={WATCH_GOLD} emissiveIntensity={0.3} />
+      </mesh>
+
+      {/* Torso — suit jacket (slightly larger, more imposing) */}
       <mesh position={[0, 0.48, 0]} castShadow>
-        <capsuleGeometry args={[0.1, 0.18, 6, 12]} />
-        <meshStandardMaterial color="#6c5ce7" roughness={0.35} metalness={0.15} emissive="#6c5ce7" emissiveIntensity={0.08} />
+        <capsuleGeometry args={[0.1, 0.2, 6, 12]} />
+        <meshStandardMaterial color={SUIT_DARK} roughness={0.4} metalness={0.12} />
       </mesh>
-      {/* Arms */}
-      <mesh position={[-0.15, 0.45, 0]} castShadow>
-        <capsuleGeometry args={[0.03, 0.18, 4, 8]} />
-        <meshStandardMaterial color="#6c5ce7" roughness={0.4} />
+
+      {/* Shirt collar peeking */}
+      <mesh position={[0, 0.59, 0.065]}>
+        <boxGeometry args={[0.07, 0.03, 0.02]} />
+        <meshStandardMaterial color={SHIRT_WHITE} roughness={0.4} />
       </mesh>
-      <mesh position={[0.15, 0.45, 0]} castShadow>
-        <capsuleGeometry args={[0.03, 0.18, 4, 8]} />
-        <meshStandardMaterial color="#6c5ce7" roughness={0.4} />
+      {/* Tie */}
+      <mesh position={[0, 0.5, 0.09]} castShadow>
+        <boxGeometry args={[0.025, 0.14, 0.008]} />
+        <meshStandardMaterial color="#8b1a1a" roughness={0.5} metalness={0.1} />
       </mesh>
+      {/* Tie knot */}
+      <mesh position={[0, 0.57, 0.09]}>
+        <sphereGeometry args={[0.015, 6, 4]} />
+        <meshStandardMaterial color="#7a1515" roughness={0.5} />
+      </mesh>
+
+      {/* Jacket lapels */}
+      <mesh position={[-0.04, 0.52, 0.08]} rotation={[0, 0, 0.2]}>
+        <boxGeometry args={[0.035, 0.1, 0.008]} />
+        <meshStandardMaterial color={SUIT_DARK} roughness={0.35} metalness={0.15} />
+      </mesh>
+      <mesh position={[0.04, 0.52, 0.08]} rotation={[0, 0, -0.2]}>
+        <boxGeometry args={[0.035, 0.1, 0.008]} />
+        <meshStandardMaterial color={SUIT_DARK} roughness={0.35} metalness={0.15} />
+      </mesh>
+
+      {/* Arms — suit sleeves */}
+      <mesh position={[-0.15, 0.46, 0]} castShadow>
+        <capsuleGeometry args={[0.032, 0.2, 4, 8]} />
+        <meshStandardMaterial color={SUIT_DARK} roughness={0.45} metalness={0.08} />
+      </mesh>
+      <mesh position={[0.15, 0.46, 0]} castShadow>
+        <capsuleGeometry args={[0.032, 0.2, 4, 8]} />
+        <meshStandardMaterial color={SUIT_DARK} roughness={0.45} metalness={0.08} />
+      </mesh>
+
+      {/* Hands */}
+      <mesh position={[-0.15, 0.32, 0]} castShadow>
+        <sphereGeometry args={[0.025, 8, 6]} />
+        <meshStandardMaterial color={SKIN} roughness={0.55} />
+      </mesh>
+      <mesh position={[0.15, 0.32, 0]} castShadow>
+        <sphereGeometry args={[0.025, 8, 6]} />
+        <meshStandardMaterial color={SKIN} roughness={0.55} />
+      </mesh>
+
+      {/* Watch on left wrist */}
+      <mesh position={[-0.15, 0.35, 0]}>
+        <torusGeometry args={[0.022, 0.004, 8, 16]} />
+        <meshStandardMaterial color={WATCH_GOLD} roughness={0.15} metalness={0.85} emissive={WATCH_GOLD} emissiveIntensity={0.4} />
+      </mesh>
+      <mesh position={[-0.15, 0.35, 0.005]}>
+        <circleGeometry args={[0.018, 12]} />
+        <meshStandardMaterial color="#0a1420" roughness={0.1} metalness={0.3} />
+      </mesh>
+
       {/* Neck */}
-      <mesh position={[0, 0.62, 0]} castShadow>
-        <cylinderGeometry args={[0.035, 0.04, 0.06, 8]} />
-        <meshStandardMaterial color="#deb887" roughness={0.6} />
+      <mesh position={[0, 0.63, 0]} castShadow>
+        <cylinderGeometry args={[0.032, 0.038, 0.05, 8]} />
+        <meshStandardMaterial color={SKIN} roughness={0.55} />
       </mesh>
-      {/* Head */}
-      <mesh position={[0, 0.72, 0]} castShadow>
-        <sphereGeometry args={[0.09, 16, 12]} />
-        <meshStandardMaterial color="#deb887" roughness={0.55} metalness={0.02} />
+
+      {/* Head — slightly larger for boss presence */}
+      <mesh position={[0, 0.73, 0]} castShadow>
+        <sphereGeometry args={[0.09, 16, 14]} />
+        <meshStandardMaterial color={SKIN} roughness={0.5} metalness={0.02} />
       </mesh>
-      {/* Hair */}
-      <mesh position={[0, 0.78, -0.01]} castShadow>
-        <sphereGeometry args={[0.08, 12, 8]} />
-        <meshStandardMaterial color="#2c1810" roughness={0.9} />
+
+      {/* Hair — styled executive cut */}
+      <mesh position={[0, 0.79, -0.015]} castShadow>
+        <sphereGeometry args={[0.085, 12, 10]} />
+        <meshStandardMaterial color={HAIR} roughness={0.8} />
       </mesh>
+      <mesh position={[0, 0.8, 0.015]}>
+        <boxGeometry args={[0.15, 0.025, 0.08]} />
+        <meshStandardMaterial color={HAIR} roughness={0.8} />
+      </mesh>
+
+      {/* Ears */}
+      <mesh position={[-0.085, 0.73, 0]}>
+        <sphereGeometry args={[0.018, 6, 4]} />
+        <meshStandardMaterial color={SKIN} roughness={0.55} />
+      </mesh>
+      <mesh position={[0.085, 0.73, 0]}>
+        <sphereGeometry args={[0.018, 6, 4]} />
+        <meshStandardMaterial color={SKIN} roughness={0.55} />
+      </mesh>
+
       {/* Eyes */}
-      <mesh position={[-0.025, 0.73, 0.08]}>
-        <sphereGeometry args={[0.012, 8, 6]} />
-        <meshStandardMaterial color="#fff" roughness={0.2} />
+      <mesh position={[-0.028, 0.74, 0.08]}>
+        <sphereGeometry args={[0.013, 8, 6]} />
+        <meshStandardMaterial color="#fff" roughness={0.15} />
       </mesh>
-      <mesh position={[0.025, 0.73, 0.08]}>
-        <sphereGeometry args={[0.012, 8, 6]} />
-        <meshStandardMaterial color="#fff" roughness={0.2} />
+      <mesh position={[0.028, 0.74, 0.08]}>
+        <sphereGeometry args={[0.013, 8, 6]} />
+        <meshStandardMaterial color="#fff" roughness={0.15} />
       </mesh>
-      <mesh position={[-0.025, 0.73, 0.09]}>
+      <mesh position={[-0.028, 0.74, 0.092]}>
         <sphereGeometry args={[0.006, 6, 4]} />
         <meshStandardMaterial color="#1a1a2e" roughness={0.1} />
       </mesh>
-      <mesh position={[0.025, 0.73, 0.09]}>
+      <mesh position={[0.028, 0.74, 0.092]}>
         <sphereGeometry args={[0.006, 6, 4]} />
         <meshStandardMaterial color="#1a1a2e" roughness={0.1} />
       </mesh>
+
+      {/* Eyebrows — slightly thicker for authority */}
+      <mesh position={[-0.028, 0.76, 0.078]}>
+        <boxGeometry args={[0.028, 0.006, 0.01]} />
+        <meshStandardMaterial color={HAIR} roughness={0.8} />
+      </mesh>
+      <mesh position={[0.028, 0.76, 0.078]}>
+        <boxGeometry args={[0.028, 0.006, 0.01]} />
+        <meshStandardMaterial color={HAIR} roughness={0.8} />
+      </mesh>
+
+      {/* Nose */}
+      <mesh position={[0, 0.725, 0.09]}>
+        <boxGeometry args={[0.016, 0.022, 0.016]} />
+        <meshStandardMaterial color={SKIN} roughness={0.55} />
+      </mesh>
+
+      {/* Subtle confident smile */}
+      <mesh position={[0, 0.705, 0.085]}>
+        <boxGeometry args={[0.028, 0.004, 0.006]} />
+        <meshStandardMaterial color="#c4917a" roughness={0.6} />
+      </mesh>
+
+      {/* Subtle boss point light — personal glow */}
+      <pointLight position={[0, 0.5, 0.3]} intensity={0.15} color={AURA_GOLD} distance={2} decay={2} />
     </group>
   );
 }
