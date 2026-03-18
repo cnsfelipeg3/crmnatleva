@@ -4,6 +4,8 @@ import { DESKS, RECEPTION, SOFAS, PLANTS, WALLS, FLOOR_SIZE, CONFERENCE_TABLE } 
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import logoNatleva from '@/assets/logo-natleva-wall.png';
+import monitorWallpaper from '@/assets/monitor-wallpaper.jpg';
+import monitorRgbLight from '@/assets/monitor-rgb-light.jpg';
 
 /* ── Desk with Samsung Odyssey G9 49" Ultrawide ── */
 function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; label?: string }) {
