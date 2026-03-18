@@ -187,9 +187,9 @@ function CommNPC({ agent, playerPos, onSelect, greetingMessage }: {
     if (!groupRef.current) return;
     const t = clock.getElapsedTime();
     const offset = agent.position.x * 2 + agent.position.z;
-    groupRef.current.position.y = Math.sin(t * 1.5 + offset) * 0.008;
+    groupRef.current.position.y = Math.sin(t * 1.5 + offset) * 0.004;
 
-    // Turn toward boss when greeting
+    // Turn toward boss when greeting, otherwise face desk (Math.PI = face -Z)
     if (greetingMessage) {
       const tdx = playerPos.x - agent.position.x;
       const tdz = playerPos.z - agent.position.z;
@@ -200,7 +200,8 @@ function CommNPC({ agent, playerPos, onSelect, greetingMessage }: {
       while (diff < -Math.PI) diff += Math.PI * 2;
       groupRef.current.rotation.y += diff * 0.08;
     } else {
-      groupRef.current.rotation.y = Math.sin(t * 0.6 + offset) * 0.1;
+      // Face the desk with subtle sway
+      groupRef.current.rotation.y = Math.PI + Math.sin(t * 0.4 + offset) * 0.04;
     }
 
     if (ringRef.current) {

@@ -221,14 +221,17 @@ export default function HumanNPC({ agentId, emoji, name, status, taskCount, posi
     }
   }, [isNearby, onBubbleToggle, onClick]);
 
+  // Get the facing angle from NPC_POSITIONS (default Math.PI = face desk)
+  const facingAngle = (position as any).facingY ?? Math.PI;
+
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
     const t = clock.getElapsedTime();
     const offset = position[0] * 2 + position[2];
 
-    groupRef.current.position.y = Math.sin(t * 1.5 + offset) * 0.01;
+    groupRef.current.position.y = Math.sin(t * 1.5 + offset) * 0.005; // very subtle bob
 
-    // Turn toward boss when greeting
+    // Turn toward boss when greeting, otherwise face desk
     if (greetingMessage && playerPos) {
       const dx = playerPos.x - position[0];
       const dz = playerPos.z - position[2];
@@ -238,10 +241,10 @@ export default function HumanNPC({ agentId, emoji, name, status, taskCount, posi
       while (diff > Math.PI) diff -= Math.PI * 2;
       while (diff < -Math.PI) diff += Math.PI * 2;
       groupRef.current.rotation.y += diff * 0.08;
-    } else if (status === 'idle') {
-      groupRef.current.rotation.y = Math.sin(t * 0.3 + offset) * 0.05;
     } else {
-      groupRef.current.rotation.y = Math.sin(t * 0.8 + offset) * 0.15;
+      // Face the desk with tiny idle sway
+      const sway = status === 'idle' ? Math.sin(t * 0.3 + offset) * 0.03 : Math.sin(t * 0.6 + offset) * 0.06;
+      groupRef.current.rotation.y = facingAngle + sway;
     }
 
     if (ringRef.current) {
