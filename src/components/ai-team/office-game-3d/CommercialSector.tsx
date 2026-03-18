@@ -121,10 +121,11 @@ function CommChair({ x, z }: { x: number; z: number }) {
 }
 
 /* ────────────────────────── Commercial NPC ──────── */
-function CommNPC({ agent, playerPos, onSelect }: {
+function CommNPC({ agent, playerPos, onSelect, greetingMessage }: {
   agent: CommercialAgent;
   playerPos: { x: number; z: number };
   onSelect: (agent: CommercialAgent) => void;
+  greetingMessage?: string;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const ringRef = useRef<THREE.Mesh>(null);
@@ -140,7 +141,21 @@ function CommNPC({ agent, playerPos, onSelect }: {
     const t = clock.getElapsedTime();
     const offset = agent.position.x * 2 + agent.position.z;
     groupRef.current.position.y = Math.sin(t * 1.5 + offset) * 0.008;
-    groupRef.current.rotation.y = Math.sin(t * 0.6 + offset) * 0.1;
+
+    // Turn toward boss when greeting
+    if (greetingMessage) {
+      const tdx = playerPos.x - agent.position.x;
+      const tdz = playerPos.z - agent.position.z;
+      const targetAngle = Math.atan2(tdx, tdz);
+      const cur = groupRef.current.rotation.y;
+      let diff = targetAngle - cur;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      groupRef.current.rotation.y += diff * 0.08;
+    } else {
+      groupRef.current.rotation.y = Math.sin(t * 0.6 + offset) * 0.1;
+    }
+
     if (ringRef.current) {
       const s = 1 + Math.sin(t * 3) * 0.1;
       ringRef.current.scale.set(s, s, 1);
