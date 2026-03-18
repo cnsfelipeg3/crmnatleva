@@ -9,8 +9,26 @@ import {
   Users, Star, Clock, MessageSquare, TrendingUp, DollarSign,
   Filter, AlertTriangle, Flame, Snowflake, Eye, Timer,
   Zap, Target, ArrowRight, BarChart3, Activity, Search,
-  ChevronDown, ChevronUp, Phone, MapPin, Plane,
+  ChevronDown, ChevronUp, Phone, MapPin, Plane, Info,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+// ─── Stage Descriptions ───
+const STAGE_DESCRIPTIONS: Record<Stage, { title: string; desc: string; tip: string }> = {
+  novo_lead: { title: "Novo Lead", desc: "Contato acabou de chegar. Ainda não houve nenhuma interação da equipe.", tip: "💡 Responda em até 5 min para maximizar conversão." },
+  contato_inicial: { title: "Contato Inicial", desc: "Primeiro contato foi feito. Estamos entendendo o que o cliente precisa.", tip: "💡 Faça perguntas abertas para mapear o perfil." },
+  qualificacao: { title: "Qualificação", desc: "Avaliando se o lead tem perfil, orçamento e timing para fechar.", tip: "💡 Confirme destino, datas, número de passageiros e faixa de investimento." },
+  diagnostico: { title: "Diagnóstico", desc: "Entendendo em profundidade as preferências e necessidades do viajante.", tip: "💡 Descubra motivações, estilo de viagem e experiências anteriores." },
+  proposta_preparacao: { title: "Estruturação", desc: "Montando o roteiro, cotando voos, hotéis e experiências.", tip: "💡 O cliente está em espera — envie atualizações de progresso." },
+  proposta_enviada: { title: "Proposta Enviada", desc: "A proposta foi enviada e aguardamos o retorno do cliente.", tip: "💡 Faça follow-up em 24-48h se não houver resposta." },
+  proposta_visualizada: { title: "Visualizada", desc: "O cliente abriu e visualizou a proposta. Momento crítico!", tip: "💡 Entre em contato agora — o interesse está fresco." },
+  ajustes: { title: "Ajustes", desc: "O cliente pediu alterações no roteiro ou valores.", tip: "💡 Seja ágil nas alterações para não perder o momentum." },
+  negociacao: { title: "Negociação", desc: "Discutindo valores, condições de pagamento e detalhes finais.", tip: "💡 Ofereça opções e mostre o valor agregado." },
+  fechamento_andamento: { title: "Fechando", desc: "Cliente confirmou! Finalizando contrato e pagamento.", tip: "💡 Confirme todos os dados antes de emitir." },
+  fechado: { title: "Fechado ✓", desc: "Venda concluída com sucesso. Parabéns! 🎉", tip: "💡 Envie boas-vindas e inicie o pós-venda." },
+  pos_venda: { title: "Pós-Venda", desc: "Acompanhamento pós-viagem: feedback, fidelização e indicações.", tip: "💡 Peça avaliação e ofereça a próxima viagem." },
+  perdido: { title: "Perdido", desc: "Lead não converteu. Registre o motivo para aprendizado.", tip: "💡 Revise periodicamente — leads perdidos podem voltar." },
+};
 import { cn } from "@/lib/utils";
 
 // ─── Types ───
@@ -370,6 +388,28 @@ export function InboxPipelineView({ conversations, onSelectConversation, onSwitc
                       <div className="flex items-center gap-1.5 flex-1 min-w-0">
                         <span className="text-sm">{col.emoji}</span>
                         <span className="text-xs font-bold text-foreground truncate">{col.label}</span>
+                        <Popover>
+                          <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <button className="shrink-0 p-0.5 rounded-full hover:bg-accent/60 transition-colors focus:outline-none focus:ring-1 focus:ring-ring">
+                              <Info className="w-3 h-3 text-muted-foreground hover:text-foreground transition-colors" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent side="bottom" align="start" className="w-64 p-0 overflow-hidden shadow-lg border-border/50" onClick={(e) => e.stopPropagation()}>
+                            <div className={cn("px-3 py-2 border-b border-border/30 bg-gradient-to-r", col.gradient)}>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-base">{col.emoji}</span>
+                                <span className="text-sm font-bold text-foreground">{STAGE_DESCRIPTIONS[col.key]?.title}</span>
+                              </div>
+                            </div>
+                            <div className="px-3 py-2.5 space-y-2">
+                              <p className="text-xs text-foreground/80 leading-relaxed">{STAGE_DESCRIPTIONS[col.key]?.desc}</p>
+                              <div className="flex items-start gap-1.5 bg-accent/40 rounded-md px-2 py-1.5">
+                                <Zap className="w-3 h-3 text-amber-500 shrink-0 mt-0.5" />
+                                <span className="text-[10px] text-muted-foreground leading-relaxed">{STAGE_DESCRIPTIONS[col.key]?.tip}</span>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <Badge variant="secondary" className="text-[10px] h-5 font-bold px-1.5">
