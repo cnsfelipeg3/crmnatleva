@@ -1,11 +1,13 @@
 import { useRef, useState, useMemo } from 'react';
 import { useFrame, useLoader } from '@react-three/fiber';
 import { DESKS, RECEPTION, SOFAS, PLANTS, WALLS, FLOOR_SIZE, CONFERENCE_TABLE } from './mapData3d';
-import { Html } from '@react-three/drei';
+import { Html, useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
-import logoNatleva from '@/assets/logo-natleva-wall.png';
-import monitorWallpaper from '@/assets/monitor-wallpaper.jpg';
-import monitorRgbLight from '@/assets/monitor-rgb-light.jpg';
+
+const MONITOR_GLB_PATH = '/models/samsung_odyssey_oled_g9.glb';
+
+// Preload for performance
+useGLTF.preload(MONITOR_GLB_PATH);
 
 /* ── Desk with Samsung Odyssey G9 49" Ultrawide ── */
 function Desk({ pos, size, label, screenTex, rgbTex }: { pos: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; label?: string; screenTex?: THREE.Texture; rgbTex?: THREE.Texture }) {
