@@ -152,7 +152,8 @@ function AppRoutes() {
     <Suspense fallback={<ScreenLoader />}>
       <Routes>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
-        <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
+        {/* TODO: TEMPORÁRIO - Redireciona direto pro dashboard */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/sales" element={<Sales />} />
