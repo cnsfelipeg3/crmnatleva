@@ -563,10 +563,23 @@ export default function CommercialSector({ playerPos }: CommercialSectorProps) {
 
   return (
     <>
-      {/* Glass divider separating general from commercial */}
-      <GlassDivider />
+      {/* Glass divider — simplified (no meshPhysicalMaterial) */}
+      <group position={[0, 0, 6.2]}>
+        <mesh position={[0, 1.1, 0]}>
+          <boxGeometry args={[16, 2.2, 0.06]} />
+          <meshStandardMaterial color="#d0d8e0" transparent opacity={0.12} roughness={0.05} metalness={0.1} />
+        </mesh>
+        <mesh position={[0, 2.2, 0]}>
+          <boxGeometry args={[16.1, 0.04, 0.08]} />
+          <meshStandardMaterial color="#8a8580" roughness={0.3} metalness={0.6} />
+        </mesh>
+        <mesh position={[0, 0.02, 0]}>
+          <boxGeometry args={[16.1, 0.04, 0.08]} />
+          <meshStandardMaterial color="#8a8580" roughness={0.3} metalness={0.6} />
+        </mesh>
+      </group>
 
-      {/* Zone floors & signs */}
+      {/* Zone floors & signs (NO zone pointLights — removed for perf) */}
       {COMMERCIAL_ZONES.map(zone => (
         <group key={zone.key}>
           <ZoneFloor center={{ x: zone.center.x, z: zone.center.z }} size={zone.size} color={zone.color} />
@@ -575,14 +588,6 @@ export default function CommercialSector({ playerPos }: CommercialSectorProps) {
             emoji={zone.emoji}
             color={zone.color}
             position={[zone.center.x, 2.0, zone.center.z - zone.size.h / 2 + 0.2]}
-          />
-          {/* Zone ambient light */}
-          <pointLight
-            position={[zone.center.x, 2.2, zone.center.z]}
-            intensity={zone.lightIntensity}
-            color={zone.lightColor}
-            distance={zone.size.w * 1.2}
-            decay={2}
           />
         </group>
       ))}
@@ -606,45 +611,32 @@ export default function CommercialSector({ playerPos }: CommercialSectorProps) {
         />
       ))}
 
-      {/* ═══ HANDOFF AGENTS ═══ */}
+      {/* Handoff agents */}
       {handoffs.filter(h => h.phase !== 'done').map(h => (
         <HandoffAgent key={h.id} event={h} onDone={handleHandoffDone} onUpdate={handleHandoffUpdate} />
       ))}
 
-      {/* Floating KPIs for Head Comercial zone */}
-      <FloatingKPI position={[-2.5, 1.8, 17]} title="LEADS ATIVOS" value="85" subtitle="esta semana" color="#3b82f6" />
-      <FloatingKPI position={[2.5, 1.8, 17]} title="CONVERSÃO" value="23%" subtitle="vs 19% anterior" color="#10b981" />
-      <FloatingKPI position={[0, 2.3, 16]} title="FATURAMENTO" value="R$525k" subtitle="mês atual" color="#c9a96e" />
-
-      {/* Wall KPI screen */}
+      {/* Wall KPI screen — lightweight */}
       <WallKPIScreen position={[0, 1.3, 19.3]} rotationY={Math.PI} />
 
-      {/* Celebration effects in closing zone */}
-      <CelebrationGlow position={[4, 1.5, 12.5]} />
-      <CelebrationGlow position={[6.2, 1.5, 13.5]} />
-
-      {/* Some plants for the commercial area */}
+      {/* Plants — simplified (2 meshes each instead of 3) */}
       {[
         { x: -8.2, z: 8 }, { x: 7.5, z: 8 }, { x: -8.2, z: 13 },
-        { x: 7.5, z: 13 }, { x: -2, z: 17 }, { x: 2, z: 17 },
+        { x: 7.5, z: 13 },
       ].map((p, i) => (
         <group key={`cp-${i}`} position={[p.x, 0, p.z]}>
-          <mesh position={[0, 0.13, 0]} castShadow>
-            <cylinderGeometry args={[0.09, 0.06, 0.24, 8]} />
+          <mesh position={[0, 0.13, 0]}>
+            <cylinderGeometry args={[0.09, 0.06, 0.24, 6]} />
             <meshStandardMaterial color="#8b7355" roughness={0.8} />
           </mesh>
-          <mesh position={[0, 0.38, 0]} castShadow>
-            <sphereGeometry args={[0.2, 10, 6]} />
+          <mesh position={[0, 0.38, 0]}>
+            <sphereGeometry args={[0.2, 8, 5]} />
             <meshStandardMaterial color="#4a8a5a" roughness={0.85} />
-          </mesh>
-          <mesh position={[-0.06, 0.42, 0.04]} castShadow>
-            <sphereGeometry args={[0.14, 8, 5]} />
-            <meshStandardMaterial color="#3a7a48" roughness={0.85} />
           </mesh>
         </group>
       ))}
 
-      {/* Agent detail overlay (HTML) */}
+      {/* Agent detail overlay */}
       {selectedAgent && (
         <Html fullscreen style={{ pointerEvents: 'auto' }}>
           <div
