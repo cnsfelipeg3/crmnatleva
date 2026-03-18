@@ -161,7 +161,24 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
           .limit(1);
 
         const dbConv = convRows?.[0];
+        const convId = dbConv?.id;
         const clientId = dbConv?.client_id;
+
+        // Fetch last agent and client messages to determine reply status
+        if (convId) {
+          const [agentMsg, clientMsg] = await Promise.all([
+            supabase.from("conversation_messages").select("created_at").eq("conversation_id", convId).in("sender_type", ["agent", "atendente", "system"]).eq("direction", "outbound").order("created_at", { ascending: false }).limit(1),
+            supabase.from("conversation_messages").select("created_at").eq("conversation_id", convId).in("sender_type", ["client", "cliente", "contact"]).eq("direction", "inbound").order("created_at", { ascending: false }).limit(1),
+          ]);
+          if (!cancelled) {
+            const agentAt = agentMsg.data?.[0]?.created_at || null;
+            const clientAt = clientMsg.data?.[0]?.created_at || null;
+            setLastAgentMsgAt(agentAt);
+            setLastClientMsgAt(clientAt);
+            // Agent has replied if their last message is after the client's last message
+            setAgentHasReplied(!!(agentAt && (!clientAt || new Date(agentAt) >= new Date(clientAt))));
+          }
+        }
 
         if (clientId) {
           const [clientRes, salesRes, notesRes, receivablesRes] = await Promise.all([
