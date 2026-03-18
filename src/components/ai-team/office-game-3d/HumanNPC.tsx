@@ -629,7 +629,7 @@ export default function HumanNPC({ agentId, emoji, name, role, status, taskCount
         </group>
 
         {/* Chat Bubble (click-triggered) */}
-        {showBubble && !greetingMessage && (
+        {showBubble && (
           <Html position={[0, 1.6, 0]} center distanceFactor={4} style={{ pointerEvents: 'auto' }}>
             <NPCChatBubble
               agentName={name}
@@ -640,8 +640,8 @@ export default function HumanNPC({ agentId, emoji, name, role, status, taskCount
           </Html>
         )}
 
-        {/* Greeting Bubble (auto-triggered on boss proximity) */}
-        {greetingMessage && (
+        {/* Greeting Bubble (auto-triggered on boss proximity, hidden when chat is open) */}
+        {greetingMessage && !showBubble && (
           <Html position={[0, 1.35, 0]} center distanceFactor={4} style={{ pointerEvents: 'none' }}>
             <div
               style={{
@@ -724,7 +724,7 @@ export default function HumanNPC({ agentId, emoji, name, role, status, taskCount
         </Html>
 
         {/* Interaction prompt */}
-        {isNearby && !showBubble && (
+        {isNearby && !showBubble && !greetingMessage && (
           <Html position={[0, 1.3, 0]} center style={{ pointerEvents: 'none' }}>
             <div style={{
               fontSize: '10px', fontWeight: 600, color: '#fff',
