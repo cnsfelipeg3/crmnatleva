@@ -9,8 +9,26 @@ import {
   Users, Star, Clock, MessageSquare, TrendingUp, DollarSign,
   Filter, AlertTriangle, Flame, Snowflake, Eye, Timer,
   Zap, Target, ArrowRight, BarChart3, Activity, Search,
-  ChevronDown, ChevronUp, Phone, MapPin, Plane,
+  ChevronDown, ChevronUp, Phone, MapPin, Plane, Info,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+// ─── Stage Descriptions ───
+const STAGE_DESCRIPTIONS: Record<Stage, { title: string; desc: string; tip: string }> = {
+  novo_lead: { title: "Novo Lead", desc: "Contato acabou de chegar. Ainda não houve nenhuma interação da equipe.", tip: "💡 Responda em até 5 min para maximizar conversão." },
+  contato_inicial: { title: "Contato Inicial", desc: "Primeiro contato foi feito. Estamos entendendo o que o cliente precisa.", tip: "💡 Faça perguntas abertas para mapear o perfil." },
+  qualificacao: { title: "Qualificação", desc: "Avaliando se o lead tem perfil, orçamento e timing para fechar.", tip: "💡 Confirme destino, datas, número de passageiros e faixa de investimento." },
+  diagnostico: { title: "Diagnóstico", desc: "Entendendo em profundidade as preferências e necessidades do viajante.", tip: "💡 Descubra motivações, estilo de viagem e experiências anteriores." },
+  proposta_preparacao: { title: "Estruturação", desc: "Montando o roteiro, cotando voos, hotéis e experiências.", tip: "💡 O cliente está em espera — envie atualizações de progresso." },
+  proposta_enviada: { title: "Proposta Enviada", desc: "A proposta foi enviada e aguardamos o retorno do cliente.", tip: "💡 Faça follow-up em 24-48h se não houver resposta." },
+  proposta_visualizada: { title: "Visualizada", desc: "O cliente abriu e visualizou a proposta. Momento crítico!", tip: "💡 Entre em contato agora — o interesse está fresco." },
+  ajustes: { title: "Ajustes", desc: "O cliente pediu alterações no roteiro ou valores.", tip: "💡 Seja ágil nas alterações para não perder o momentum." },
+  negociacao: { title: "Negociação", desc: "Discutindo valores, condições de pagamento e detalhes finais.", tip: "💡 Ofereça opções e mostre o valor agregado." },
+  fechamento_andamento: { title: "Fechando", desc: "Cliente confirmou! Finalizando contrato e pagamento.", tip: "💡 Confirme todos os dados antes de emitir." },
+  fechado: { title: "Fechado ✓", desc: "Venda concluída com sucesso. Parabéns! 🎉", tip: "💡 Envie boas-vindas e inicie o pós-venda." },
+  pos_venda: { title: "Pós-Venda", desc: "Acompanhamento pós-viagem: feedback, fidelização e indicações.", tip: "💡 Peça avaliação e ofereça a próxima viagem." },
+  perdido: { title: "Perdido", desc: "Lead não converteu. Registre o motivo para aprendizado.", tip: "💡 Revise periodicamente — leads perdidos podem voltar." },
+};
 import { cn } from "@/lib/utils";
 
 // ─── Types ───
