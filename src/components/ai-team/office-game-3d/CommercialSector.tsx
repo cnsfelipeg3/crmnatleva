@@ -604,10 +604,41 @@ interface CommercialSectorProps {
 
 export default function CommercialSector({ playerPos }: CommercialSectorProps) {
   const [selectedAgent, setSelectedAgent] = useState<CommercialAgent | null>(null);
+  const [greetings, setGreetings] = useState<Record<string, { message: string; expiresAt: number }>>({});
+  const greetingsRef = useRef<Record<string, { message: string; expiresAt: number }>>({});
 
   const handleSelect = useCallback((agent: CommercialAgent) => {
     setSelectedAgent(agent);
   }, []);
+
+  // Check commercial agent proximity greetings each frame via a lightweight interval
+  const lastCheckRef = useRef(0);
+  useFrame(() => {
+    const now = Date.now();
+    if (now - lastCheckRef.current < 200) return; // check every 200ms
+    lastCheckRef.current = now;
+
+    let changed = false;
+    for (const agent of COMMERCIAL_AGENTS) {
+      const event = checkProximityGreeting(
+        `comm_${agent.id}`, agent.position.x, agent.position.z,
+        playerPos.x, playerPos.z
+      );
+      if (event) {
+        const msg = pickCommercialGreeting(agent.zone, agent.performance);
+        greetingsRef.current[agent.id] = { message: msg, expiresAt: now + 4500 };
+        changed = true;
+      }
+    }
+    // Clean expired
+    for (const [id, g] of Object.entries(greetingsRef.current)) {
+      if (now > g.expiresAt) {
+        delete greetingsRef.current[id];
+        changed = true;
+      }
+    }
+    if (changed) setGreetings({ ...greetingsRef.current });
+  });
 
   return (
     <>
@@ -650,6 +681,7 @@ export default function CommercialSector({ playerPos }: CommercialSectorProps) {
           agent={agent}
           playerPos={playerPos}
           onSelect={handleSelect}
+          greetingMessage={greetings[agent.id]?.message}
         />
       ))}
 
