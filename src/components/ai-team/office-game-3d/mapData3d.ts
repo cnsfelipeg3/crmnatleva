@@ -35,7 +35,7 @@ export const NPC_POSITIONS: Record<string, Vec3> = {
   gerente:       { x: 2.4, y: 0, z: -0.1 },
 };
 
-export const PLAYER_SPAWN: Vec3 = { x: 0, y: 0, z: 4.0 };
+export const PLAYER_SPAWN: Vec3 = { x: 0, y: 0, z: 5.5 };
 
 export const WALLS = {
   thickness: 0.15,

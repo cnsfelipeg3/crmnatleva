@@ -101,6 +101,9 @@ export default function OfficeScene({ agents, tasks, onSelectAgent, joystickInpu
           />
         );
       })}
+
+      {/* Commercial Sector */}
+      <CommercialSector playerPos={playerPosRef.current} />
     </>
   );
 }
