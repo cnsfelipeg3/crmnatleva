@@ -392,177 +392,23 @@ function CommNPC({ agent, playerPos, onSelect, greetingMessage }: {
   );
 }
 
-/* ────────────────────────── Floating KPI Panel ──── */
-function FloatingKPI({ position, title, value, subtitle, color }: {
-  position: [number, number, number];
-  title: string;
-  value: string;
-  subtitle?: string;
-  color: string;
-}) {
-  const ref = useRef<THREE.Group>(null);
-  useFrame(({ clock }) => {
-    if (ref.current) {
-      ref.current.position.y = position[1] + Math.sin(clock.getElapsedTime() * 0.8 + position[0]) * 0.03;
-    }
-  });
+/* FloatingKPI, WallKPIScreen, CelebrationGlow REMOVED for performance
+   (eliminated ~6 Html overlays, ~5 pointLights, ~3 useFrame loops) */
 
-  return (
-    <group ref={ref} position={position}>
-      <Html center distanceFactor={6} style={{ pointerEvents: 'none' }}>
-        <div style={{
-          background: 'rgba(10,20,32,0.92)',
-          backdropFilter: 'blur(12px)',
-          borderRadius: '10px',
-          padding: '8px 16px',
-          border: `1px solid ${color}40`,
-          boxShadow: `0 4px 20px ${color}20`,
-          minWidth: '100px',
-          textAlign: 'center',
-          fontFamily: 'Space Grotesk, sans-serif',
-        }}>
-          <div style={{ fontSize: '8px', color: `${color}cc`, letterSpacing: '1.5px', fontWeight: 600, marginBottom: '3px' }}>
-            {title}
-          </div>
-          <div style={{ fontSize: '20px', fontWeight: 800, color: '#fff', lineHeight: 1.1 }}>
-            {value}
-          </div>
-          {subtitle && (
-            <div style={{ fontSize: '8px', color: '#9ca3af', marginTop: '2px' }}>
-              {subtitle}
-            </div>
-          )}
-        </div>
-      </Html>
-    </group>
-  );
-}
-
-/* ────────────────────────── Wall KPI Screen ─────── */
+/* ────────────────────────── Wall KPI Screen — lightweight ── */
 function WallKPIScreen({ position, rotationY }: { position: [number, number, number]; rotationY: number }) {
   return (
     <group position={position} rotation={[0, rotationY, 0]}>
-      {/* Screen bezel */}
-      <mesh castShadow>
+      <mesh>
         <boxGeometry args={[2.2, 1.3, 0.04]} />
         <meshStandardMaterial color="#0a0a0a" roughness={0.12} metalness={0.7} />
       </mesh>
-      {/* Screen surface */}
       <mesh position={[0, 0, 0.022]}>
         <planeGeometry args={[2.0, 1.1]} />
-        <meshStandardMaterial color="#0a1420" emissive="#1a3050" emissiveIntensity={0.25} roughness={0.1} />
+        <meshStandardMaterial color="#0a1420" emissive="#1a3050" emissiveIntensity={0.2} roughness={0.1} />
       </mesh>
-      {/* Content */}
-      <Html position={[0, 0, 0.03]} center transform scale={0.2} style={{ pointerEvents: 'none' }}>
-        <div style={{
-          width: '440px', height: '260px', background: 'linear-gradient(135deg, #0a1420, #0f2030)',
-          borderRadius: '4px', padding: '16px', fontFamily: 'Space Grotesk, sans-serif',
-          display: 'flex', flexDirection: 'column', gap: '8px',
-        }}>
-          <div style={{ fontSize: '11px', color: '#c9a96e', letterSpacing: '3px', fontWeight: 700 }}>
-            📊 PAINEL COMERCIAL
-          </div>
-          {/* Mini funnel bars */}
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end', height: '80px', marginTop: '4px' }}>
-            {[
-              { label: 'Leads', value: 85, color: '#3b82f6' },
-              { label: 'Qualif.', value: 42, color: '#f59e0b' },
-              { label: 'Negoc.', value: 18, color: '#ef4444' },
-              { label: 'Fechados', value: 8, color: '#10b981' },
-            ].map((bar, i) => (
-              <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-                <div style={{
-                  width: '100%', height: `${bar.value}px`, background: `linear-gradient(to top, ${bar.color}, ${bar.color}80)`,
-                  borderRadius: '3px 3px 0 0', minHeight: '8px',
-                }} />
-                <span style={{ fontSize: '8px', color: '#9ca3af' }}>{bar.label}</span>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff' }}>{bar.value}</span>
-              </div>
-            ))}
-          </div>
-          {/* Bottom stats */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 'auto' }}>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#10b981' }}>R$525k</div>
-              <div style={{ fontSize: '8px', color: '#6b7280' }}>Faturamento</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#f59e0b' }}>23%</div>
-              <div style={{ fontSize: '8px', color: '#6b7280' }}>Conversão</div>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#3b82f6' }}>4.2d</div>
-              <div style={{ fontSize: '8px', color: '#6b7280' }}>Ciclo Médio</div>
-            </div>
-          </div>
-        </div>
-      </Html>
-      <pointLight position={[0, 0, 0.3]} intensity={0.15} color="#3050a0" distance={2} decay={2} />
     </group>
   );
-}
-
-/* ────────────────────────── Glass Divider Wall ──── */
-function GlassDivider() {
-  return (
-    <group position={[0, 0, 6.2]}>
-      {/* Glass panel */}
-      <mesh position={[0, 1.1, 0]}>
-        <boxGeometry args={[16, 2.2, 0.06]} />
-        <meshPhysicalMaterial
-          color="#e0e8f0"
-          transparent
-          opacity={0.15}
-          roughness={0.05}
-          metalness={0.1}
-          transmission={0.6}
-          thickness={0.5}
-        />
-      </mesh>
-      {/* Metal frame top */}
-      <mesh position={[0, 2.2, 0]}>
-        <boxGeometry args={[16.1, 0.04, 0.08]} />
-        <meshStandardMaterial color="#8a8580" roughness={0.3} metalness={0.6} />
-      </mesh>
-      {/* Metal frame bottom */}
-      <mesh position={[0, 0.02, 0]}>
-        <boxGeometry args={[16.1, 0.04, 0.08]} />
-        <meshStandardMaterial color="#8a8580" roughness={0.3} metalness={0.6} />
-      </mesh>
-      {/* Vertical mullions */}
-      {[-6, -2, 2, 6].map((x, i) => (
-        <mesh key={i} position={[x, 1.1, 0]}>
-          <boxGeometry args={[0.04, 2.2, 0.08]} />
-          <meshStandardMaterial color="#8a8580" roughness={0.3} metalness={0.6} />
-        </mesh>
-      ))}
-      {/* Sign */}
-      <Html position={[0, 2.0, 0.05]} center distanceFactor={8} style={{ pointerEvents: 'none' }}>
-        <div style={{
-          fontSize: '13px', fontWeight: 800, color: '#c9a96e',
-          background: 'rgba(10,20,32,0.9)', backdropFilter: 'blur(8px)',
-          padding: '5px 20px', borderRadius: '8px', whiteSpace: 'nowrap',
-          letterSpacing: '3px', fontFamily: 'Space Grotesk, sans-serif',
-          boxShadow: '0 4px 20px rgba(201,169,110,0.2)',
-          border: '1px solid rgba(201,169,110,0.3)',
-        }}>
-          🔥 SETOR COMERCIAL
-        </div>
-      </Html>
-    </group>
-  );
-}
-
-/* ────────────────────────── Celebration Effect ──── */
-function CelebrationGlow({ position }: { position: [number, number, number] }) {
-  const ref = useRef<THREE.PointLight>(null);
-  useFrame(({ clock }) => {
-    if (ref.current) {
-      const t = clock.getElapsedTime();
-      ref.current.intensity = 0.3 + Math.sin(t * 4) * 0.2;
-    }
-  });
-  return <pointLight ref={ref} position={position} color="#10b981" distance={3} decay={2} />;
 }
 
 /* ─────────────────── Agent Detail Panel (overlay) ─ */
