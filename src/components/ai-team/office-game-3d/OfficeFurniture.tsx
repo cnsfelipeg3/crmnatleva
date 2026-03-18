@@ -5,15 +5,21 @@ import { Html } from '@react-three/drei';
 import * as THREE from 'three';
 import logoNatleva from '@/assets/logo-natleva-wall.png';
 
-/* ── Desk ──────────────────────────────────────── */
+/* ── Desk with Samsung Odyssey G9 49" Ultrawide ── */
 function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; size: { x: number; y: number; z: number }; label?: string }) {
   const legH = pos.y - 0.02;
   const legR = 0.025;
   const legOffX = size.x / 2 - 0.08;
   const legOffZ = size.z / 2 - 0.06;
 
+  // Monitor takes most of the desk width
+  const monW = size.x * 0.85;
+  const monH = monW * 0.28; // 32:9 ultrawide ratio
+  const monCurveSegments = 24;
+
   return (
     <group position={[pos.x, 0, pos.z]}>
+      {/* Desk surface */}
       <mesh position={[0, pos.y, 0]} castShadow receiveShadow>
         <boxGeometry args={[size.x, size.y, size.z]} />
         <meshStandardMaterial color="#6d5d48" roughness={0.55} metalness={0.08} envMapIntensity={0.3} />
@@ -22,46 +28,87 @@ function Desk({ pos, size, label }: { pos: { x: number; y: number; z: number }; 
         <boxGeometry args={[size.x + 0.01, 0.005, size.z + 0.01]} />
         <meshStandardMaterial color="#5a4a38" roughness={0.4} metalness={0.15} />
       </mesh>
+      {/* Legs */}
       {[[-legOffX, -legOffZ], [legOffX, -legOffZ], [-legOffX, legOffZ], [legOffX, legOffZ]].map(([lx, lz], i) => (
         <mesh key={i} position={[lx, legH / 2, lz]}>
           <cylinderGeometry args={[legR, legR, legH, 8]} />
           <meshStandardMaterial color="#4a4a4a" roughness={0.4} metalness={0.4} />
         </mesh>
       ))}
-      {/* Monitor */}
-      <group position={[0, pos.y + 0.2, -size.z / 2 + 0.15]}>
+
+      {/* ═══ Samsung Odyssey OLED G9 49" Ultrawide ═══ */}
+      <group position={[0, pos.y + monH / 2 + 0.06, -size.z / 2 + 0.2]}>
+        {/* Monitor stand — V-shaped base */}
+        <mesh position={[0, -monH / 2 - 0.02, 0.06]}>
+          <boxGeometry args={[0.25, 0.01, 0.15]} />
+          <meshStandardMaterial color="#c0c0c0" roughness={0.15} metalness={0.85} />
+        </mesh>
+        {/* Stand neck */}
+        <mesh position={[0, -monH / 2 + 0.04, 0.06]}>
+          <cylinderGeometry args={[0.015, 0.02, 0.1, 8]} />
+          <meshStandardMaterial color="#b0b0b0" roughness={0.15} metalness={0.85} />
+        </mesh>
+
+        {/* Monitor shell — silver curved body */}
         <mesh castShadow>
-          <boxGeometry args={[0.34, 0.24, 0.015]} />
-          <meshStandardMaterial color="#1a1a1a" roughness={0.15} metalness={0.6} />
+          <boxGeometry args={[monW, monH, 0.025]} />
+          <meshStandardMaterial color="#c8c8c8" roughness={0.12} metalness={0.8} />
         </mesh>
-        <mesh position={[0, 0, 0.009]}>
-          <planeGeometry args={[0.3, 0.19]} />
-          <meshStandardMaterial color="#0a0a1a" emissive="#3050aa" emissiveIntensity={0.5} roughness={0.1} metalness={0.1} />
+        {/* Thin bezels — dark frame */}
+        <mesh position={[0, 0, 0.013]}>
+          <boxGeometry args={[monW + 0.008, monH + 0.008, 0.002]} />
+          <meshStandardMaterial color="#0a0a0a" roughness={0.1} metalness={0.7} />
         </mesh>
-        <mesh position={[0, -0.15, 0]}>
-          <cylinderGeometry args={[0.012, 0.025, 0.06, 8]} />
-          <meshStandardMaterial color="#2a2a2a" roughness={0.3} metalness={0.5} />
+        {/* OLED Screen — deep blacks, bright emissive */}
+        <mesh position={[0, 0, 0.014]}>
+          <planeGeometry args={[monW - 0.01, monH - 0.01]} />
+          <meshStandardMaterial
+            color="#020208"
+            emissive="#1a3a6a"
+            emissiveIntensity={0.8}
+            roughness={0.02}
+            metalness={0.05}
+          />
         </mesh>
-        <mesh position={[0, -0.18, 0.02]} rotation-x={-0.1}>
-          <boxGeometry args={[0.1, 0.005, 0.06]} />
-          <meshStandardMaterial color="#2a2a2a" roughness={0.3} metalness={0.5} />
+        {/* Screen glow */}
+        <pointLight position={[0, 0, 0.15]} intensity={0.12} color="#4070c0" distance={1.2} decay={2} />
+        {/* Samsung logo — tiny silver bar at bottom center */}
+        <mesh position={[0, -monH / 2 + 0.012, 0.014]}>
+          <boxGeometry args={[0.06, 0.004, 0.002]} />
+          <meshStandardMaterial color="#aaa" roughness={0.1} metalness={0.9} />
         </mesh>
       </group>
-      {/* Keyboard */}
-      <mesh position={[0, pos.y + 0.03, size.z / 2 - 0.18]} castShadow>
-        <boxGeometry args={[0.22, 0.012, 0.08]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.5} metalness={0.3} />
+
+      {/* Keyboard — compact, in front of monitor */}
+      <mesh position={[0, pos.y + 0.03, size.z / 2 - 0.2]} castShadow>
+        <boxGeometry args={[0.24, 0.01, 0.08]} />
+        <meshStandardMaterial color="#2a2a2a" roughness={0.5} metalness={0.3} />
       </mesh>
-      {/* Mouse */}
-      <mesh position={[0.18, pos.y + 0.025, size.z / 2 - 0.18]} castShadow>
+      {/* Mouse — right side */}
+      <mesh position={[0.2, pos.y + 0.025, size.z / 2 - 0.2]} castShadow>
         <boxGeometry args={[0.04, 0.015, 0.06]} />
-        <meshStandardMaterial color="#3a3a3a" roughness={0.5} metalness={0.2} />
+        <meshStandardMaterial color="#2a2a2a" roughness={0.5} metalness={0.2} />
       </mesh>
-      {/* Coffee mug */}
-      <mesh position={[-0.5, pos.y + 0.06, 0.1]} castShadow>
-        <cylinderGeometry args={[0.025, 0.022, 0.06, 8]} />
-        <meshStandardMaterial color="#f0e8d8" roughness={0.7} />
-      </mesh>
+
+      {/* ═══ File/Folder Holder — right side of desk ═══ */}
+      <group position={[size.x / 2 - 0.12, pos.y, size.z / 2 - 0.08]}>
+        {/* Base */}
+        <mesh position={[0, 0.04, 0]} castShadow>
+          <boxGeometry args={[0.1, 0.08, 0.1]} />
+          <meshStandardMaterial color="#3a3a3a" roughness={0.4} metalness={0.5} />
+        </mesh>
+        {/* Folder tabs sticking out */}
+        {[0, 1, 2].map(i => (
+          <mesh key={i} position={[0, 0.06 + i * 0.018, -0.01]} castShadow>
+            <boxGeometry args={[0.08, 0.014, 0.08]} />
+            <meshStandardMaterial
+              color={['#c9a96e', '#4a8a5a', '#4a6aaa'][i]}
+              roughness={0.6}
+              metalness={0.1}
+            />
+          </mesh>
+        ))}
+      </group>
     </group>
   );
 }
