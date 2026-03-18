@@ -629,7 +629,7 @@ export default function HumanNPC({ agentId, emoji, name, role, status, taskCount
         </group>
 
         {/* Chat Bubble (click-triggered) */}
-        {showBubble && !greetingMessage && (
+        {showBubble && (
           <Html position={[0, 1.6, 0]} center distanceFactor={4} style={{ pointerEvents: 'auto' }}>
             <NPCChatBubble
               agentName={name}
