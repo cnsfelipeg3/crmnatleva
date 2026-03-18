@@ -38,6 +38,7 @@ interface MessageBubbleProps {
   onReply: (msg: Message) => void;
   onEdit: (msg: Message) => void;
   onLightbox: (url: string) => void;
+  onRetry?: (msg: Message) => void;
 }
 
 function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit, onLightbox }: MessageBubbleProps) {
