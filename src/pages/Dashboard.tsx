@@ -138,7 +138,7 @@ export default function Dashboard() {
     }).catch(() => { if (alive) setDetailLoading(false); });
 
     return () => { alive = false; };
-  }, [user, authLoading]);
+  }, [authLoading]);
 
   const sellerNames = useMemo(() => {
     const map: Record<string, string> = {};
