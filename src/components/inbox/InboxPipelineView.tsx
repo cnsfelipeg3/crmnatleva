@@ -1,15 +1,15 @@
 import { useMemo, useState, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
 import {
   Users, Star, Clock, MessageSquare, TrendingUp, DollarSign,
   Filter, AlertTriangle, Flame, Snowflake, Eye, Timer,
   Zap, Target, ArrowRight, BarChart3, Activity, Search,
+  ChevronDown, ChevronUp, Phone, MapPin, Plane,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,7 +31,6 @@ interface PipelineConversation {
   assigned_to: string;
   score_potential?: number;
   score_risk?: number;
-  // Pipeline fields
   stage_entered_at?: string;
   engagement_level?: string;
   close_score?: number;
@@ -46,20 +45,20 @@ interface PipelineConversation {
 }
 
 // ─── Pipeline Columns ───
-const PIPELINE_COLUMNS: { key: Stage; label: string; emoji: string; color: string; bg: string }[] = [
-  { key: "novo_lead", label: "Novo Lead", emoji: "🆕", color: "border-t-blue-500", bg: "bg-blue-500/10" },
-  { key: "contato_inicial", label: "Contato Inicial", emoji: "👋", color: "border-t-sky-500", bg: "bg-sky-500/10" },
-  { key: "qualificacao", label: "Qualificação", emoji: "🔍", color: "border-t-amber-500", bg: "bg-amber-500/10" },
-  { key: "diagnostico", label: "Diagnóstico", emoji: "🧠", color: "border-t-yellow-500", bg: "bg-yellow-500/10" },
-  { key: "proposta_preparacao", label: "Estruturação", emoji: "📋", color: "border-t-orange-500", bg: "bg-orange-500/10" },
-  { key: "proposta_enviada", label: "Proposta Enviada", emoji: "📩", color: "border-t-purple-500", bg: "bg-purple-500/10" },
-  { key: "proposta_visualizada", label: "Visualizada", emoji: "👀", color: "border-t-violet-500", bg: "bg-violet-500/10" },
-  { key: "ajustes", label: "Ajustes", emoji: "🔧", color: "border-t-pink-500", bg: "bg-pink-500/10" },
-  { key: "negociacao", label: "Negociação", emoji: "🤝", color: "border-t-primary", bg: "bg-primary/10" },
-  { key: "fechamento_andamento", label: "Fechando", emoji: "🔥", color: "border-t-rose-500", bg: "bg-rose-500/10" },
-  { key: "fechado", label: "Fechado", emoji: "✅", color: "border-t-emerald-500", bg: "bg-emerald-500/10" },
-  { key: "pos_venda", label: "Pós-Venda", emoji: "🎯", color: "border-t-teal-500", bg: "bg-teal-500/10" },
-  { key: "perdido", label: "Perdido", emoji: "❌", color: "border-t-destructive", bg: "bg-destructive/10" },
+const PIPELINE_COLUMNS: { key: Stage; label: string; emoji: string; color: string; bg: string; gradient: string }[] = [
+  { key: "novo_lead", label: "Novo Lead", emoji: "🆕", color: "border-t-blue-500", bg: "bg-blue-500/10", gradient: "from-blue-500/20 to-blue-500/5" },
+  { key: "contato_inicial", label: "Contato Inicial", emoji: "👋", color: "border-t-sky-500", bg: "bg-sky-500/10", gradient: "from-sky-500/20 to-sky-500/5" },
+  { key: "qualificacao", label: "Qualificação", emoji: "🔍", color: "border-t-amber-500", bg: "bg-amber-500/10", gradient: "from-amber-500/20 to-amber-500/5" },
+  { key: "diagnostico", label: "Diagnóstico", emoji: "🧠", color: "border-t-yellow-500", bg: "bg-yellow-500/10", gradient: "from-yellow-500/20 to-yellow-500/5" },
+  { key: "proposta_preparacao", label: "Estruturação", emoji: "📋", color: "border-t-orange-500", bg: "bg-orange-500/10", gradient: "from-orange-500/20 to-orange-500/5" },
+  { key: "proposta_enviada", label: "Proposta Enviada", emoji: "📩", color: "border-t-purple-500", bg: "bg-purple-500/10", gradient: "from-purple-500/20 to-purple-500/5" },
+  { key: "proposta_visualizada", label: "Visualizada", emoji: "👀", color: "border-t-violet-500", bg: "bg-violet-500/10", gradient: "from-violet-500/20 to-violet-500/5" },
+  { key: "ajustes", label: "Ajustes", emoji: "🔧", color: "border-t-pink-500", bg: "bg-pink-500/10", gradient: "from-pink-500/20 to-pink-500/5" },
+  { key: "negociacao", label: "Negociação", emoji: "🤝", color: "border-t-primary", bg: "bg-primary/10", gradient: "from-primary/20 to-primary/5" },
+  { key: "fechamento_andamento", label: "Fechando", emoji: "🔥", color: "border-t-rose-500", bg: "bg-rose-500/10", gradient: "from-rose-500/20 to-rose-500/5" },
+  { key: "fechado", label: "Fechado", emoji: "✅", color: "border-t-emerald-500", bg: "bg-emerald-500/10", gradient: "from-emerald-500/20 to-emerald-500/5" },
+  { key: "pos_venda", label: "Pós-Venda", emoji: "🎯", color: "border-t-teal-500", bg: "bg-teal-500/10", gradient: "from-teal-500/20 to-teal-500/5" },
+  { key: "perdido", label: "Perdido", emoji: "❌", color: "border-t-destructive", bg: "bg-destructive/10", gradient: "from-destructive/20 to-destructive/5" },
 ];
 
 // ─── Smart Tags Engine ───
@@ -71,28 +70,14 @@ function computeAutoTags(lead: PipelineConversation): string[] {
   const lastResponse = lead.last_response_at ? new Date(lead.last_response_at).getTime() : 0;
   const hoursSinceResponse = lastResponse ? (now - lastResponse) / 3600000 : Infinity;
 
-  // Hot lead: recent interaction + high score
   if (hoursSinceLastMsg < 2 && (lead.close_score || 0) >= 60) tags.push("🔥 Lead quente");
   else if (hoursSinceLastMsg > 24 && hoursSinceLastMsg < 72) tags.push("❄️ Esfriando");
-
-  // Stalled
   if (hoursSinceLastMsg > 48) tags.push("🚫 Parado >48h");
-
-  // High interaction
   if ((lead.interaction_count || 0) > 20) tags.push("💬 Alta interação");
-
-  // Slow to respond
   if (hoursSinceResponse > 24 && lead.unread_count > 0) tags.push("🕐 Demora a responder");
-
-  // Proposal viewed
   if (lead.proposal_viewed_at) tags.push("👀 Proposta vista");
-
-  // High close probability
   if ((lead.close_score || 0) >= 80) tags.push("🎯 Alta prob. fechamento");
-
-  // VIP
   if (lead.is_vip) tags.push("⭐ VIP");
-
   return tags;
 }
 
@@ -101,10 +86,9 @@ function getUrgencyColor(lead: PipelineConversation): string {
   const lastMsg = lead.last_message_at ? new Date(lead.last_message_at).getTime() : 0;
   const hours = lastMsg ? (now - lastMsg) / 3600000 : Infinity;
   const score = lead.close_score || 0;
-
-  if (score >= 70 && hours < 4) return "border-l-emerald-500"; // Hot
-  if (hours > 48) return "border-l-destructive"; // Stalled
-  if (hours > 24) return "border-l-amber-500"; // Attention
+  if (score >= 70 && hours < 4) return "border-l-emerald-500";
+  if (hours > 48) return "border-l-destructive";
+  if (hours > 24) return "border-l-amber-500";
   return "border-l-transparent";
 }
 
@@ -112,6 +96,12 @@ function getScoreColor(score: number): string {
   if (score >= 70) return "text-emerald-600 bg-emerald-500/10";
   if (score >= 40) return "text-amber-600 bg-amber-500/10";
   return "text-muted-foreground bg-muted/50";
+}
+
+function getScoreBarColor(score: number): string {
+  if (score >= 70) return "bg-emerald-500";
+  if (score >= 40) return "bg-amber-500";
+  return "bg-muted-foreground/30";
 }
 
 function timeSince(dateStr: string): string {
@@ -143,6 +133,27 @@ function formatPhoneShort(phone: string): string {
   return phone.slice(-8);
 }
 
+function getInitials(name: string): string {
+  return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+}
+
+const AVATAR_COLORS = [
+  "bg-blue-500/15 text-blue-700",
+  "bg-purple-500/15 text-purple-700",
+  "bg-emerald-500/15 text-emerald-700",
+  "bg-amber-500/15 text-amber-700",
+  "bg-rose-500/15 text-rose-700",
+  "bg-teal-500/15 text-teal-700",
+  "bg-indigo-500/15 text-indigo-700",
+  "bg-orange-500/15 text-orange-700",
+];
+
+function avatarColor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
 // ─── Props ───
 interface InboxPipelineViewProps {
   conversations: PipelineConversation[];
@@ -154,6 +165,15 @@ export function InboxPipelineView({ conversations, onSelectConversation, onSwitc
   const [searchQuery, setSearchQuery] = useState("");
   const [filterTag, setFilterTag] = useState<string>("all");
   const [filterScore, setFilterScore] = useState<string>("all");
+  const [collapsedCols, setCollapsedCols] = useState<Set<string>>(new Set());
+
+  const toggleCollapse = useCallback((key: string) => {
+    setCollapsedCols(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }, []);
 
   // Enrich conversations with auto tags
   const enrichedConversations = useMemo(() => {
@@ -197,7 +217,8 @@ export function InboxPipelineView({ conversations, onSelectConversation, onSwitc
       const unread = leads.reduce((s, l) => s + l.unread_count, 0);
       const totalValue = leads.reduce((s, l) => s + (l.proposal_value || 0), 0);
       const weightedValue = leads.reduce((s, l) => s + (l.proposal_value || 0) * ((l.close_score || 0) / 100), 0);
-      return { ...col, leads, count: leads.length, unread, totalValue, weightedValue };
+      const avgScore = leads.length > 0 ? Math.round(leads.reduce((s, l) => s + (l.close_score || 0), 0) / leads.length) : 0;
+      return { ...col, leads, count: leads.length, unread, totalValue, weightedValue, avgScore };
     });
   }, [filteredConversations]);
 
@@ -217,13 +238,16 @@ export function InboxPipelineView({ conversations, onSelectConversation, onSwitc
       const h = c.last_message_at ? (Date.now() - new Date(c.last_message_at).getTime()) / 3600000 : Infinity;
       return h > 48 && c.stage !== "fechado" && c.stage !== "perdido" && c.stage !== "pos_venda";
     }).length;
-    return { total, active, closedCount, conversion, totalValue, weightedValue, totalUnread, avgTicket, hotLeads, stalledLeads };
+    return { total, active, closedCount, lostCount, conversion, totalValue, weightedValue, totalUnread, avgTicket, hotLeads, stalledLeads };
   }, [filteredConversations, columns]);
 
   const handleCardClick = useCallback((id: string) => {
     onSelectConversation(id);
     onSwitchToChat();
   }, [onSelectConversation, onSwitchToChat]);
+
+  // Funnel percentages for mini-funnel bar
+  const maxCount = Math.max(...columns.map(c => c.count), 1);
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -243,6 +267,30 @@ export function InboxPipelineView({ conversations, onSelectConversation, onSwitc
           {kpis.totalUnread > 0 && (
             <KpiChip icon={<MessageSquare className="w-3.5 h-3.5 text-primary" />} value={kpis.totalUnread} label="não lidas" />
           )}
+        </div>
+
+        {/* Mini Funnel Bar */}
+        <div className="flex items-end gap-[2px] h-5">
+          {columns.map(col => {
+            const pct = maxCount > 0 ? Math.max((col.count / maxCount) * 100, 4) : 4;
+            return (
+              <Tooltip key={col.key}>
+                <TooltipTrigger asChild>
+                  <div
+                    className={cn(
+                      "flex-1 rounded-t-sm transition-all cursor-pointer hover:opacity-80",
+                      col.count > 0 ? col.bg : "bg-muted/20"
+                    )}
+                    style={{ height: `${pct}%`, minHeight: 2 }}
+                  />
+                </TooltipTrigger>
+                <TooltipContent className="text-[10px]">
+                  {col.emoji} {col.label}: {col.count} leads
+                  {col.totalValue > 0 && ` • ${formatCurrency(col.totalValue)}`}
+                </TooltipContent>
+              </Tooltip>
+            );
+          })}
         </div>
 
         {/* Filters Row */}
@@ -286,56 +334,120 @@ export function InboxPipelineView({ conversations, onSelectConversation, onSwitc
 
       {/* ═══ PIPELINE KANBAN ═══ */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
-        <div className="flex gap-2 p-3 min-w-max">
-          {columns.map(col => (
-            <div
-              key={col.key}
-              className={cn(
-                "flex flex-col w-[260px] shrink-0 rounded-xl border border-border/60 border-t-[3px] bg-card/30",
-                col.color
-              )}
-            >
-              {/* Column Header */}
-              <div className={cn("px-3 py-2 flex items-center justify-between rounded-t-lg", col.bg)}>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm">{col.emoji}</span>
-                  <span className="text-xs font-bold text-foreground">{col.label}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Badge variant="secondary" className="text-[10px] h-5 font-bold px-1.5">
-                    {col.count}
-                  </Badge>
-                  {col.unread > 0 && (
-                    <Badge className="text-[10px] h-5 font-bold px-1.5 bg-primary text-primary-foreground">
-                      {col.unread}
-                    </Badge>
+        <div className="flex gap-2.5 p-3 min-w-max h-full">
+          {columns.map(col => {
+            const isCollapsed = collapsedCols.has(col.key);
+
+            return (
+              <div
+                key={col.key}
+                className={cn(
+                  "flex flex-col shrink-0 rounded-xl border border-border/50 border-t-[3px] transition-all",
+                  col.color,
+                  isCollapsed ? "w-[48px]" : "w-[270px]"
+                )}
+              >
+                {/* Column Header */}
+                <div
+                  className={cn(
+                    "px-3 py-2.5 flex items-center rounded-t-lg bg-gradient-to-b cursor-pointer select-none",
+                    col.gradient,
+                    isCollapsed && "flex-col gap-2 py-3 px-1"
+                  )}
+                  onClick={() => toggleCollapse(col.key)}
+                >
+                  {isCollapsed ? (
+                    <>
+                      <span className="text-sm">{col.emoji}</span>
+                      <Badge variant="secondary" className="text-[10px] h-5 font-bold px-1.5">{col.count}</Badge>
+                      <span className="text-[8px] font-bold text-muted-foreground [writing-mode:vertical-lr] rotate-180 mt-1">{col.label}</span>
+                      {col.unread > 0 && (
+                        <Badge className="text-[9px] h-4 font-bold px-1 bg-primary text-primary-foreground mt-1">{col.unread}</Badge>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <span className="text-sm">{col.emoji}</span>
+                        <span className="text-xs font-bold text-foreground truncate">{col.label}</span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Badge variant="secondary" className="text-[10px] h-5 font-bold px-1.5">
+                          {col.count}
+                        </Badge>
+                        {col.unread > 0 && (
+                          <Badge className="text-[10px] h-5 font-bold px-1.5 bg-primary text-primary-foreground">
+                            {col.unread}
+                          </Badge>
+                        )}
+                        <ChevronDown className="w-3 h-3 text-muted-foreground ml-0.5" />
+                      </div>
+                    </>
                   )}
                 </div>
-              </div>
-              {/* Column Value */}
-              {col.totalValue > 0 && (
-                <div className="px-3 py-1 flex items-center justify-between text-[10px] border-b border-border/40">
-                  <span className="text-muted-foreground">Valor total</span>
-                  <span className="font-bold text-emerald-600">{formatCurrency(col.totalValue)}</span>
-                </div>
-              )}
 
-              {/* Cards */}
-              <div className="flex-1 overflow-y-auto max-h-[calc(100vh-280px)] p-1.5 space-y-1.5">
-                {col.leads.length === 0 && (
-                  <p className="text-[10px] text-muted-foreground text-center py-8 italic">Nenhum lead</p>
+                {!isCollapsed && (
+                  <>
+                    {/* Column Stats Row */}
+                    <div className="px-3 py-1.5 flex items-center gap-2 text-[10px] border-b border-border/30 bg-muted/20">
+                      {col.totalValue > 0 ? (
+                        <>
+                          <DollarSign className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span className="font-bold text-emerald-600">{formatCurrency(col.totalValue)}</span>
+                          <span className="text-muted-foreground">•</span>
+                        </>
+                      ) : null}
+                      {col.avgScore > 0 && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center gap-1 flex-1">
+                              <span className="text-muted-foreground">Score médio</span>
+                              <div className="flex-1 h-1.5 rounded-full bg-muted/50 overflow-hidden max-w-[50px]">
+                                <div className={cn("h-full rounded-full transition-all", getScoreBarColor(col.avgScore))} style={{ width: `${col.avgScore}%` }} />
+                              </div>
+                              <span className="font-bold text-foreground/70">{col.avgScore}%</span>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent className="text-[10px]">Score médio de fechamento da coluna</TooltipContent>
+                        </Tooltip>
+                      )}
+                      {col.totalValue === 0 && col.avgScore === 0 && (
+                        <span className="text-muted-foreground italic">—</span>
+                      )}
+                    </div>
+
+                    {/* Cards */}
+                    <div className="flex-1 overflow-y-auto max-h-[calc(100vh-320px)] p-1.5 space-y-1.5 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+                      {col.leads.length === 0 && (
+                        <div className="flex flex-col items-center justify-center py-10 gap-2 opacity-40">
+                          <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center">
+                            <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground italic">Nenhum lead</p>
+                        </div>
+                      )}
+                      {col.leads.map(lead => (
+                        <PipelineCard
+                          key={lead.id}
+                          lead={lead}
+                          autoTags={(lead as any)._autoTags || []}
+                          onClick={() => handleCardClick(lead.id)}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Column Footer */}
+                    {col.leads.length > 0 && (
+                      <div className="px-3 py-1.5 border-t border-border/30 text-[9px] text-muted-foreground text-center bg-muted/10 rounded-b-xl">
+                        {col.leads.length} lead{col.leads.length !== 1 ? "s" : ""}
+                        {col.weightedValue > 0 && ` • ${formatCurrency(col.weightedValue)} ponderado`}
+                      </div>
+                    )}
+                  </>
                 )}
-                {col.leads.map(lead => (
-                  <PipelineCard
-                    key={lead.id}
-                    lead={lead}
-                    autoTags={(lead as any)._autoTags || []}
-                    onClick={() => handleCardClick(lead.id)}
-                  />
-                ))}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -365,116 +477,147 @@ function PipelineCard({ lead, autoTags, onClick }: {
   const hasUnread = lead.unread_count > 0;
   const contactName = lead.contact_name || "Sem nome";
   const isPhone = /^\d{10,}$/.test(contactName);
-  const preview = (lead.last_message_preview || "").replace(/\n/g, " ").slice(0, 50);
+  const displayName = isPhone ? formatPhoneShort(contactName) : contactName;
+  const preview = (lead.last_message_preview || "").replace(/\n/g, " ").slice(0, 60);
   const score = lead.close_score || 0;
   const urgencyClass = getUrgencyColor(lead);
   const allTags = [...autoTags, ...(lead.tags || []).slice(0, 2)];
   const stageTime = lead.stage_entered_at ? timeSince(lead.stage_entered_at) : "";
+  const interactions = lead.interaction_count || 0;
 
   return (
     <Card
       className={cn(
-        "cursor-pointer transition-all hover:shadow-md hover:border-primary/30 group border-l-[3px]",
+        "cursor-pointer transition-all hover:shadow-md hover:border-primary/30 group border-l-[3px] overflow-hidden",
         urgencyClass,
         hasUnread && "ring-1 ring-primary/20 bg-primary/[0.02]"
       )}
       onClick={onClick}
     >
-      <CardContent className="p-2.5 space-y-1.5">
-        {/* Row 1: Name + Score */}
-        <div className="flex items-center justify-between gap-1">
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            {lead.is_vip && <Star className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />}
-            <span className={cn(
-              "text-xs truncate leading-tight",
-              hasUnread ? "font-bold text-foreground" : "font-semibold text-foreground/90"
+      <CardContent className="p-0">
+        {/* Score progress bar at top */}
+        {score > 0 && (
+          <div className="h-[3px] w-full bg-muted/30">
+            <div className={cn("h-full transition-all rounded-r-full", getScoreBarColor(score))} style={{ width: `${score}%` }} />
+          </div>
+        )}
+
+        <div className="p-2.5 space-y-1.5">
+          {/* Row 1: Avatar + Name + Score */}
+          <div className="flex items-center gap-2">
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ring-1 ring-border/30",
+              avatarColor(contactName)
             )}>
-              {isPhone ? formatPhoneShort(contactName) : contactName}
-            </span>
+              {isPhone ? <Phone className="w-3 h-3" /> : getInitials(displayName)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1">
+                {lead.is_vip && <Star className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />}
+                <span className={cn(
+                  "text-xs truncate leading-tight",
+                  hasUnread ? "font-bold text-foreground" : "font-semibold text-foreground/90"
+                )}>
+                  {displayName}
+                </span>
+              </div>
+              {lead.phone && !isPhone && (
+                <span className="text-[9px] text-muted-foreground">{formatPhoneShort(lead.phone)}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {score > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", getScoreColor(score))}>
+                      {score}%
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="left" className="text-xs">
+                    Probabilidade de fechamento: {score}%
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {hasUnread && (
+                <span className="h-4 min-w-4 rounded-full bg-primary flex items-center justify-center text-[8px] font-bold text-primary-foreground px-1">
+                  {lead.unread_count}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {score > 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className={cn("text-[9px] font-bold px-1.5 py-0.5 rounded-full", getScoreColor(score))}>
-                    {score}%
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="left" className="text-xs">
-                  Probabilidade de fechamento: {score}%
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {hasUnread && (
-              <span className="h-4 min-w-4 rounded-full bg-primary flex items-center justify-center text-[8px] font-bold text-primary-foreground px-1">
-                {lead.unread_count}
+
+          {/* Row 2: Financial */}
+          {(lead.proposal_value || 0) > 0 && (
+            <div className="flex items-center gap-2 text-[10px] ml-10">
+              <DollarSign className="w-3 h-3 text-emerald-600 shrink-0" />
+              <span className="font-bold text-emerald-600">{formatCurrency(lead.proposal_value || 0)}</span>
+              {score > 0 && (
+                <span className="text-muted-foreground">
+                  → {formatCurrency((lead.proposal_value || 0) * score / 100)} esperado
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Row 3: Preview */}
+          {preview && (
+            <p className={cn(
+              "text-[10px] line-clamp-2 leading-relaxed ml-10",
+              hasUnread ? "text-foreground/70" : "text-muted-foreground"
+            )}>
+              {preview}
+            </p>
+          )}
+
+          {/* Row 4: Meta */}
+          <div className="flex items-center gap-2 text-[9px] text-muted-foreground ml-10 flex-wrap">
+            {stageTime && (
+              <span className="flex items-center gap-0.5">
+                <Timer className="w-2.5 h-2.5" /> {stageTime}
               </span>
             )}
-          </div>
-        </div>
-
-        {/* Row 2: Financial */}
-        {(lead.proposal_value || 0) > 0 && (
-          <div className="flex items-center gap-2 text-[10px]">
-            <span className="font-bold text-emerald-600">{formatCurrency(lead.proposal_value || 0)}</span>
-            {score > 0 && (
-              <span className="text-muted-foreground">
-                → {formatCurrency((lead.proposal_value || 0) * score / 100)} esperado
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Row 3: Preview */}
-        {preview && (
-          <p className={cn(
-            "text-[10px] line-clamp-1 leading-relaxed",
-            hasUnread ? "text-foreground/70" : "text-muted-foreground"
-          )}>
-            {preview}
-          </p>
-        )}
-
-        {/* Row 4: Meta (time in stage + last interaction) */}
-        <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
-          {stageTime && (
             <span className="flex items-center gap-0.5">
-              <Timer className="w-2.5 h-2.5" /> {stageTime} na etapa
+              <Clock className="w-2.5 h-2.5" /> {timeSince(lead.last_message_at)}
             </span>
-          )}
-          <span className="flex items-center gap-0.5">
-            <Clock className="w-2.5 h-2.5" /> {timeSince(lead.last_message_at)}
-          </span>
-          {lead.source && (
-            <span className="text-[8px] px-1 rounded bg-muted/50">{lead.source}</span>
-          )}
-        </div>
-
-        {/* Row 5: Tags */}
-        {allTags.length > 0 && (
-          <div className="flex flex-wrap gap-0.5">
-            {allTags.slice(0, 4).map((t, i) => (
-              <span
-                key={`${t}-${i}`}
-                className={cn(
-                  "text-[8px] px-1.5 py-0.5 rounded-full font-medium",
-                  t.includes("quente") || t.includes("🔥") ? "bg-orange-500/15 text-orange-700" :
-                  t.includes("Parado") || t.includes("🚫") ? "bg-destructive/10 text-destructive" :
-                  t.includes("VIP") || t.includes("⭐") ? "bg-amber-500/15 text-amber-700" :
-                  t.includes("fechamento") || t.includes("🎯") ? "bg-emerald-500/15 text-emerald-700" :
-                  "bg-secondary text-muted-foreground"
-                )}
-              >
-                {t}
-              </span>
-            ))}
-            {allTags.length > 4 && (
-              <span className="text-[8px] px-1 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                +{allTags.length - 4}
+            {interactions > 0 && (
+              <span className="flex items-center gap-0.5">
+                <MessageSquare className="w-2.5 h-2.5" /> {interactions}
               </span>
             )}
+            {lead.source && (
+              <span className="text-[8px] px-1 rounded bg-muted/50">{lead.source}</span>
+            )}
           </div>
-        )}
+
+          {/* Row 5: Tags */}
+          {allTags.length > 0 && (
+            <div className="flex flex-wrap gap-0.5 ml-10">
+              {allTags.slice(0, 4).map((t, i) => (
+                <span
+                  key={`${t}-${i}`}
+                  className={cn(
+                    "text-[8px] px-1.5 py-0.5 rounded-full font-medium",
+                    t.includes("quente") || t.includes("🔥") ? "bg-orange-500/15 text-orange-700" :
+                    t.includes("Parado") || t.includes("🚫") ? "bg-destructive/10 text-destructive" :
+                    t.includes("VIP") || t.includes("⭐") ? "bg-amber-500/15 text-amber-700" :
+                    t.includes("fechamento") || t.includes("🎯") ? "bg-emerald-500/15 text-emerald-700" :
+                    t.includes("vista") || t.includes("👀") ? "bg-violet-500/15 text-violet-700" :
+                    t.includes("Esfriando") || t.includes("❄️") ? "bg-sky-500/15 text-sky-700" :
+                    t.includes("interação") || t.includes("💬") ? "bg-blue-500/15 text-blue-700" :
+                    "bg-secondary text-muted-foreground"
+                  )}
+                >
+                  {t}
+                </span>
+              ))}
+              {allTags.length > 4 && (
+                <span className="text-[8px] px-1 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                  +{allTags.length - 4}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
