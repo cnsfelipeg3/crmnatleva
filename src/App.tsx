@@ -132,7 +132,7 @@ const queryClient = new QueryClient({
 });
 
 function ScreenLoader() {
-  return null;
+  return <NatLevaLoader />;
 }
 
 // TODO: TEMPORÁRIO - Reativar proteção de login depois dos testes
