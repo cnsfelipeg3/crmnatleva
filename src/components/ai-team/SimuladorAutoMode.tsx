@@ -253,7 +253,7 @@ export default function SimuladorAutoMode() {
 
   const filteredLeads = leadFilter === "all" ? leads : leads.filter(l => l.status === leadFilter);
 
-  const toggleSection = (s: string) => setConfigSections(p => ({ ...p, [s]: !p[s] }));
+  // configTab is used for tab navigation in the config panel
   const toggleMulti = (arr: string[], id: string, setter: (v: string[]) => void) => {
     setter(arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id]);
   };
