@@ -63,6 +63,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [rhOpen, setRhOpen] = useState(false);
   
   const [operacaoOpen, setOperacaoOpen] = useState(false);
+  const [aiTeamOpen, setAiTeamOpen] = useState(false);
   const [implOpen, setImplOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [portalAdminOpen, setPortalAdminOpen] = useState(false);
