@@ -176,6 +176,7 @@ function AppRoutes() {
           <Route path="/pendencias" element={<Pendencias />} />
           <Route path="/cotacoes" element={<QuoteRequests />} />
           <Route path="/propostas" element={<Proposals />} />
+          <Route path="/propostas/modelos" element={<ProposalTemplates />} />
           <Route path="/propostas/nova" element={<ProposalEditor />} />
           <Route path="/propostas/:id" element={<ProposalEditor />} />
           <Route path="/livechat" element={<LiveChat />} />
