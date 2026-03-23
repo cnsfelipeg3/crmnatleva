@@ -1277,24 +1277,27 @@ Retorne JSON:
                     <Brain className="w-5 h-5" style={{ color: "#F59E0B" }} />
                     <div>
                       <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Motor IA Avançado</h3>
-                      <p className="text-[11px]" style={{ color: "#64748B" }}>Controles avançados do engine de simulação</p>
+                      <p className="text-[11px]" style={{ color: "#64748B" }}>Controle granular de cada aspecto da simulação</p>
                     </div>
                   </div>
-                  <div className="space-y-3">
+                  {/* Toggles */}
+                  <div className="space-y-2">
                     {[
-                      { label: "Avaliação IA em tempo real", desc: "Lead julga qualidade de cada resposta e ajusta sentimento", value: enableEvaluation, setter: setEnableEvaluation, color: "#EC4899", icon: "🧠" },
+                      { label: "Avaliação IA em tempo real", desc: "Lead julga qualidade de cada resposta (3 dimensões: H/E/T)", value: enableEvaluation, setter: setEnableEvaluation, color: "#EC4899", icon: "🧠" },
                       { label: "Multi-mensagem por perfil", desc: "Ansioso e Sonhador enviam múltiplas msgs seguidas", value: enableMultiMsg, setter: setEnableMultiMsg, color: "#F59E0B", icon: "💬" },
+                      { label: "Transferência entre agentes", desc: "Permite passagem de bastão via [TRANSFERIR] entre agentes", value: enableTransfers, setter: setEnableTransfers, color: "#06B6D4", icon: "🔄" },
+                      { label: "Narrativa de perda por IA", desc: "Gera mensagem de desistência contextual (desativar = mais rápido)", value: enableLossNarrative, setter: setEnableLossNarrative, color: "#EF4444", icon: "📝" },
                     ].map(opt => (
                       <button key={opt.label} onClick={() => opt.setter(!opt.value)}
-                        className="w-full flex items-center gap-4 px-5 py-4 rounded-xl text-left transition-all"
+                        className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-left transition-all"
                         style={{
                           background: opt.value ? `${opt.color}06` : "rgba(255,255,255,0.015)",
                           border: `1px solid ${opt.value ? `${opt.color}25` : "rgba(255,255,255,0.04)"}`,
                         }}>
-                        <span className="text-xl">{opt.icon}</span>
+                        <span className="text-lg">{opt.icon}</span>
                         <div className="flex-1">
-                          <p className="text-[12px] font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
-                          <p className="text-[10px] mt-0.5" style={{ color: "#475569" }}>{opt.desc}</p>
+                          <p className="text-[11px] font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
+                          <p className="text-[9px] mt-0.5" style={{ color: "#475569" }}>{opt.desc}</p>
                         </div>
                         <div className="w-10 h-6 rounded-full relative transition-all" style={{ background: opt.value ? opt.color : "rgba(255,255,255,0.1)" }}>
                           <div className="absolute top-1 w-4 h-4 rounded-full transition-all" style={{ left: opt.value ? 20 : 4, background: "#fff" }} />
@@ -1302,13 +1305,181 @@ Retorne JSON:
                       </button>
                     ))}
                   </div>
+
+                  {/* Sliders */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Volatilidade emocional</span>
+                        <span className="text-[15px] font-bold" style={{ color: "#EC4899" }}>{emotionalVolatility}%</span>
+                      </div>
+                      <p className="text-[9px] mb-3" style={{ color: "#475569" }}>0% = lead estável · 100% = extremamente volátil</p>
+                      <Slider min={0} max={100} step={5} value={[emotionalVolatility]} onValueChange={v => setEmotionalVolatility(v[0])} />
+                    </div>
+                    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Frequência de avaliação IA</span>
+                      <p className="text-[9px] mb-3 mt-1" style={{ color: "#475569" }}>Com que frequência o juiz IA avalia o agente</p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {([
+                          { id: "every" as const, label: "Toda msg", icon: "🔍" },
+                          { id: "every2" as const, label: "A cada 2", icon: "⚡" },
+                          { id: "every3" as const, label: "A cada 3", icon: "💨" },
+                        ]).map(ef => (
+                          <button key={ef.id} onClick={() => setEvalFrequency(ef.id)}
+                            className="flex flex-col items-center gap-1 p-2 rounded-lg transition-all text-center"
+                            style={{
+                              background: evalFrequency === ef.id ? "rgba(236,72,153,0.08)" : "rgba(255,255,255,0.015)",
+                              border: `1px solid ${evalFrequency === ef.id ? "rgba(236,72,153,0.3)" : "rgba(255,255,255,0.04)"}`,
+                            }}>
+                            <span className="text-sm">{ef.icon}</span>
+                            <span className="text-[9px] font-bold" style={{ color: evalFrequency === ef.id ? "#EC4899" : "#64748B" }}>{ef.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Response length */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageSquare className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
+                      <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Tamanho de resposta do agente</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        { id: "curta" as const, label: "Curta", desc: "1 frase", icon: "⚡" },
+                        { id: "media" as const, label: "Média", desc: "1-3 frases", icon: "📝" },
+                        { id: "longa" as const, label: "Detalhada", desc: "3-5 frases", icon: "📄" },
+                      ]).map(rl => (
+                        <button key={rl.id} onClick={() => setAgentResponseLength(rl.id)}
+                          className="flex flex-col items-center gap-1 p-3 rounded-xl transition-all"
+                          style={{
+                            background: agentResponseLength === rl.id ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.015)",
+                            border: `1px solid ${agentResponseLength === rl.id ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.04)"}`,
+                          }}>
+                          <span className="text-lg">{rl.icon}</span>
+                          <span className="text-[11px] font-bold" style={{ color: agentResponseLength === rl.id ? "#E2E8F0" : "#94A3B8" }}>{rl.label}</span>
+                          <span className="text-[8px]" style={{ color: "#475569" }}>{rl.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Engine features checklist */}
                   <div className="rounded-xl p-4" style={{ background: "rgba(236,72,153,0.04)", border: "1px solid rgba(236,72,153,0.1)" }}>
-                    <p className="text-[10px] font-bold mb-2" style={{ color: "#EC4899" }}>Motor de Leads Inteligentes v2.0</p>
+                    <p className="text-[10px] font-bold mb-2" style={{ color: "#EC4899" }}>Motor de Leads Inteligentes v3.0</p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                      {["✅ Psicologia profunda (8 perfis)", "✅ Objeções dinâmicas por IA", "✅ Revelação gradual de info", "✅ Avaliação em tempo real", "✅ Multi-mensagem por perfil", "✅ Perdas motivadas por IA", "✅ Timing realista por perfil", "✅ Sentimento adaptativo"].map(f => (
+                      {[
+                        "✅ 8 perfis psicológicos", "✅ Objeções dinâmicas IA",
+                        "✅ 3 dimensões (H/E/T)", "✅ 12 critérios debrief",
+                        "✅ Avaliação ao vivo", "✅ Duração enforced",
+                        "✅ Multi-mensagem", "✅ Sentimento adaptativo",
+                        "✅ Transferência agentes", "✅ Presets de config",
+                        "✅ Volatilidade emocional", "✅ Freq. avaliação ajustável",
+                      ].map(f => (
                         <p key={f} className="text-[9px]" style={{ color: "#94A3B8" }}>{f}</p>
                       ))}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ===== PRESETS TAB ===== */}
+              {configTab === "presets" && (
+                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <BookOpen className="w-5 h-5" style={{ color: "#10B981" }} />
+                    <div>
+                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Presets de Configuração</h3>
+                      <p className="text-[11px]" style={{ color: "#64748B" }}>Salve e reutilize configurações de teste</p>
+                    </div>
+                  </div>
+
+                  {/* Quick presets */}
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#64748B" }}>⚡ Presets rápidos</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { label: "Teste rápido", desc: "3 leads, 6 msgs, instantâneo", icon: "🚀", apply: () => { setNumLeads(3); setMsgsPerLead(6); setSpeed("instant"); setDuration(60); setEnableEvaluation(false); } },
+                        { label: "Estresse máximo", desc: "20 leads, 30 msgs, todos perfis", icon: "🔥", apply: () => { setNumLeads(20); setMsgsPerLead(30); setDuration(600); setObjectionDensity(80); setEmotionalVolatility(80); setSelectedProfiles([]); } },
+                        { label: "Qualidade total", desc: "5 leads, 20 msgs, avaliação completa", icon: "🏆", apply: () => { setNumLeads(5); setMsgsPerLead(20); setSpeed("normal"); setEnableEvaluation(true); setEvalFrequency("every"); setAgentResponseLength("longa"); setEnableLossNarrative(true); } },
+                      ].map(qp => (
+                        <button key={qp.label} onClick={() => { qp.apply(); toast({ title: `Preset "${qp.label}" aplicado` }); }}
+                          className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all hover:scale-[1.02]"
+                          style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                          <span className="text-2xl">{qp.icon}</span>
+                          <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>{qp.label}</span>
+                          <span className="text-[8px] text-center" style={{ color: "#475569" }}>{qp.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Save preset */}
+                  <div className="rounded-xl p-4" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.1)" }}>
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#10B981" }}>💾 Salvar config atual</p>
+                    <div className="flex gap-2">
+                      <input type="text" value={presetName} onChange={e => setPresetName(e.target.value)}
+                        placeholder="Nome do preset..."
+                        className="flex-1 h-9 rounded-lg px-3 text-[12px] font-semibold outline-none"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "#E2E8F0" }} />
+                      <button onClick={() => { if (presetName.trim()) { savePreset(presetName.trim()); setPresetName(""); } }}
+                        disabled={!presetName.trim()}
+                        className="px-4 h-9 rounded-lg text-[11px] font-bold transition-all"
+                        style={{ background: presetName.trim() ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.02)", color: presetName.trim() ? "#10B981" : "#475569", border: `1px solid ${presetName.trim() ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.04)"}` }}>
+                        Salvar
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Saved presets */}
+                  {presets.length > 0 && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#64748B" }}>📂 Presets salvos</p>
+                      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                        {presets.map((p, i) => (
+                          <div key={p.name} className="flex items-center gap-3 px-4 py-3 transition-all hover:bg-white/[0.02]"
+                            style={{ borderBottom: i < presets.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none" }}>
+                            <BookOpen className="w-4 h-4 shrink-0" style={{ color: "#10B981" }} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[12px] font-bold" style={{ color: "#E2E8F0" }}>{p.name}</p>
+                              <p className="text-[9px]" style={{ color: "#475569" }}>
+                                {p.config.numLeads} leads · {p.config.msgsPerLead} msgs · {p.config.speed}
+                              </p>
+                            </div>
+                            <button onClick={() => loadPreset(p.config)} className="text-[9px] font-bold px-3 py-1.5 rounded-lg transition-all"
+                              style={{ background: "rgba(16,185,129,0.08)", color: "#10B981", border: "1px solid rgba(16,185,129,0.2)" }}>
+                              Carregar
+                            </button>
+                            <button onClick={() => deletePreset(p.name)} className="text-[9px] font-bold px-2 py-1.5 rounded-lg transition-all"
+                              style={{ background: "rgba(239,68,68,0.06)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.15)" }}>
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Export / Import */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button onClick={() => {
+                      const config = { numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency };
+                      navigator.clipboard.writeText(JSON.stringify(config, null, 2));
+                      toast({ title: "Config copiada para clipboard!" });
+                    }}
+                      className="flex items-center justify-center gap-2 p-3 rounded-xl text-[11px] font-bold transition-all"
+                      style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)", color: "#94A3B8" }}>
+                      📋 Copiar JSON
+                    </button>
+                    <button onClick={() => {
+                      const input = prompt("Cole o JSON da configuração:");
+                      if (input) { try { loadPreset(JSON.parse(input)); } catch { toast({ title: "JSON inválido", variant: "destructive" }); } }
+                    }}
+                      className="flex items-center justify-center gap-2 p-3 rounded-xl text-[11px] font-bold transition-all"
+                      style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)", color: "#94A3B8" }}>
+                      📥 Importar JSON
+                    </button>
                   </div>
                 </div>
               )}
