@@ -162,6 +162,16 @@ export default function AITeam() {
         <KpiCard label="Pendentes" value={kpis.pending} color="text-amber-600" icon={Clock} />
       </div>
 
+      {/* ═══ REAL BUSINESS METRICS ═══ */}
+      {realMetrics && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard label="Vendas Total" value={realMetrics.totalSales} color="text-emerald-600" icon={DollarSign} />
+          <KpiCard label="Receita" value={`R$ ${(realMetrics.totalRevenue / 1000).toFixed(0)}k`} color="text-emerald-600" icon={DollarSign} />
+          <KpiCard label="Conversas Ativas" value={realMetrics.activeConversations} total={realMetrics.totalConversations} color="text-blue-600" icon={MessageSquare} />
+          <KpiCard label="Propostas Abertas" value={realMetrics.openProposals} total={realMetrics.totalProposals} color="text-purple-600" icon={FileText} />
+        </div>
+      )}
+
       {/* ═══ [2] FEED + [3] KANBAN ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Feed */}
