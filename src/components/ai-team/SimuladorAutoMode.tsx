@@ -366,17 +366,21 @@ export default function SimuladorAutoMode() {
           lead.mensagens.push({ role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
           setLeads([...allLeads]);
 
-          // 3. Evaluate agent response (AI judge)
+          // 3. Evaluate agent response (AI judge) — 3 dimensões
           if (enableEvaluation) {
             const avaliacao = await avaliarRespostaAgente(agentResp, lead);
             const updatedLead = atualizarEstadoEmocional(lead, avaliacao.nota, avaliacao.reacao, avaliacao.sentimento);
             Object.assign(lead, updatedLead);
+            // Update 3 dimension scores (running average)
+            lead.scoreHumanizacao = lead.scoreHumanizacao > 0 ? Math.round((lead.scoreHumanizacao + avaliacao.humanizacao) / 2) : avaliacao.humanizacao;
+            lead.scoreEficacia = lead.scoreEficacia > 0 ? Math.round((lead.scoreEficacia + avaliacao.eficaciaComercial) / 2) : avaliacao.eficaciaComercial;
+            lead.scoreTecnica = lead.scoreTecnica > 0 ? Math.round((lead.scoreTecnica + avaliacao.qualidadeTecnica) / 2) : avaliacao.qualidadeTecnica;
             setLeads([...allLeads]);
 
             if (avaliacao.nota < 40) {
-              addEvent("#F59E0B", `${lead.nome}: ${avaliacao.reacao} (nota ${avaliacao.nota})`, "😤");
+              addEvent("#F59E0B", `${lead.nome}: ${avaliacao.reacao} (H:${avaliacao.humanizacao} E:${avaliacao.eficaciaComercial} T:${avaliacao.qualidadeTecnica})`, "😤");
             } else if (avaliacao.nota >= 80) {
-              addEvent("#10B981", `${lead.nome}: ${avaliacao.reacao} (nota ${avaliacao.nota})`, "😊");
+              addEvent("#10B981", `${lead.nome}: ${avaliacao.reacao} (H:${avaliacao.humanizacao} E:${avaliacao.eficaciaComercial} T:${avaliacao.qualidadeTecnica})`, "😊");
             }
 
             // Check if lead gives up
