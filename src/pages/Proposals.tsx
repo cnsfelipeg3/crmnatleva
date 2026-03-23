@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Copy, ExternalLink, MoreHorizontal, FileText } from "lucide-react";
+import { Plus, Search, Eye, Copy, ExternalLink, MoreHorizontal, FileText, LayoutTemplate } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -61,9 +61,14 @@ export default function Proposals() {
           <h1 className="text-xl sm:text-2xl font-serif text-foreground">Gerador de Propostas</h1>
           <p className="text-sm text-muted-foreground">Crie propostas visuais premium para seus clientes</p>
         </div>
-        <Button onClick={() => navigate("/propostas/nova")} className="gap-2">
-          <Plus className="w-4 h-4" /> Nova Proposta
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => navigate("/propostas/modelos")} className="gap-2">
+            <LayoutTemplate className="w-4 h-4" /> Gerenciar Modelos
+          </Button>
+          <Button onClick={() => navigate("/propostas/nova")} className="gap-2">
+            <Plus className="w-4 h-4" /> Nova Proposta
+          </Button>
+        </div>
       </div>
 
       <div className="relative max-w-sm">

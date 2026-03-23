@@ -4585,6 +4585,60 @@ export type Database = {
           },
         ]
       }
+      proposal_templates: {
+        Row: {
+          accent_color: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          font_body: string | null
+          font_heading: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          name: string
+          primary_color: string | null
+          sections: Json | null
+          theme_config: Json | null
+          thumbnail_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          accent_color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          font_body?: string | null
+          font_heading?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name: string
+          primary_color?: string | null
+          sections?: Json | null
+          theme_config?: Json | null
+          thumbnail_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          accent_color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          font_body?: string | null
+          font_heading?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          name?: string
+          primary_color?: string | null
+          sections?: Json | null
+          theme_config?: Json | null
+          thumbnail_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       proposal_viewers: {
         Row: {
           cta_clicked: boolean
