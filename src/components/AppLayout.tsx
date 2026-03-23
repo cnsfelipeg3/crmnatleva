@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import GlobalSearch from "./GlobalSearch";
 import AIPageSummaryButton from "./AIPageSummaryButton";
+import PanelHelpButton from "./PanelHelpButton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
