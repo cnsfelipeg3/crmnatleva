@@ -206,9 +206,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/import", icon: FileUp, label: "Importar Planilhas" },
               { to: "/livechat/import-chatguru", icon: FileDown, label: "Importar Conversas" },
               { to: "/implementacao/base-conhecimento", icon: BookOpen, label: "Base de Conhecimento" },
-              { to: "/implementacao/estrategia-ia", icon: Brain, label: "Estratégia IA" },
-              { to: "/implementacao/aprendizados-ia", icon: Lightbulb, label: "Aprendizados IA" },
-              { to: "/implementacao/cerebro-natleva", icon: Zap, label: "Cérebro NatLeva" },
             ].map((item) => renderNavItem(item, true))}
           </div>
         )}
