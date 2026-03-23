@@ -34,8 +34,7 @@ const defaultCovers: Record<string, string> = {
   default: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=800&h=400&fit=crop&q=80",
 };
 
-function getCoverImage(proposal: any): string {
-  if (proposal.cover_image_url && proposal.cover_image_url.startsWith("http")) return proposal.cover_image_url;
+function getFallbackCover(proposal: any): string {
   const title = (proposal.title || "").toLowerCase();
   const dests = (proposal.destinations || []).map((d: string) => d.toLowerCase()).join(" ");
   const combined = `${title} ${dests}`;
@@ -43,6 +42,11 @@ function getCoverImage(proposal: any): string {
     if (key !== "default" && combined.includes(key)) return url;
   }
   return defaultCovers.default;
+}
+
+function getCoverImage(proposal: any): string {
+  if (proposal.cover_image_url && proposal.cover_image_url.startsWith("http")) return proposal.cover_image_url;
+  return getFallbackCover(proposal);
 }
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
