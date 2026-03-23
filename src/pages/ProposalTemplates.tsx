@@ -226,7 +226,7 @@ export default function ProposalTemplates() {
           <LayoutTemplate className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-muted-foreground font-medium">Nenhum modelo configurado</p>
           <p className="text-sm text-muted-foreground/60 mt-1">Crie seu primeiro template para padronizar suas propostas</p>
-          <Button onClick={openCreate} className="mt-4 gap-2">
+          <Button onClick={() => navigate("/propostas/modelos/novo")} className="mt-4 gap-2">
             <Plus className="w-4 h-4" /> Criar modelo
           </Button>
         </Card>
