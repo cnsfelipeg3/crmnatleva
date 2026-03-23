@@ -145,10 +145,13 @@ export default function SimuladorAutoMode() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { toast } = useToast();
 
+  const [numLeadsManual, setNumLeadsManual] = useState(32);
+  const [intervalManual, setIntervalManual] = useState(1);
+
   // Computed
-  const estLeads = msgsPerLeadLocked ? Math.floor(totalMsgs / msgsPerLead) : Math.max(1, Math.floor(totalMsgs / 14));
-  const autoMsgsPerLead = msgsPerLeadLocked ? msgsPerLead : Math.round(totalMsgs / estLeads);
-  const interval = estLeads > 1 ? Math.round(duration / estLeads) : duration;
+  const estLeads = numLeadsManual;
+  const autoMsgsPerLead = msgsPerLead;
+  const interval = intervalManual;
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
 
   // KPIs
