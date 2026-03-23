@@ -1508,7 +1508,6 @@ Retorne JSON:
                 { label: "Leads", value: animLeads, color: "#3B82F6", icon: "👥" },
                 { label: "Fechados", value: animClosed, color: "#10B981", icon: "✅" },
                 { label: "Receita", value: `R$${animReceita}k`, color: "#EAB308", icon: "💰" },
-                { label: "Sentimento", value: avgSentimento, color: sentimentColor(avgSentimento), icon: "💗" },
               ].map(k => (
                 <div key={k.label} className="relative rounded-2xl overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${k.color}, transparent)` }} />
@@ -1518,6 +1517,26 @@ Retorne JSON:
                   </div>
                 </div>
               ))}
+              {/* 3 Dimensões — Scorecard ao vivo */}
+              <div className="relative rounded-2xl overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, #EC4899, #F59E0B, #06B6D4)" }} />
+                <div className="p-3.5">
+                  <p className="text-[8px] uppercase tracking-[0.12em] font-bold text-center mb-2" style={{ color: "#64748B" }}>📊 3 Dimensões</p>
+                  {[
+                    { label: "Humanização", value: avgHumanizacao, color: "#EC4899" },
+                    { label: "Eficácia", value: avgEficacia, color: "#F59E0B" },
+                    { label: "Técnica", value: avgTecnica, color: "#06B6D4" },
+                  ].map(d => (
+                    <div key={d.label} className="flex items-center gap-2 py-1">
+                      <span className="text-[9px] w-16 shrink-0" style={{ color: d.color }}>{d.label}</span>
+                      <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${d.value}%`, background: d.color }} />
+                      </div>
+                      <span className="text-[11px] font-extrabold tabular-nums w-8 text-right" style={{ color: d.color }}>{d.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
               {/* Conversion gauge */}
               <div className="rounded-2xl p-4 text-center" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div className="relative w-18 h-18 mx-auto" style={{ width: 72, height: 72 }}>
