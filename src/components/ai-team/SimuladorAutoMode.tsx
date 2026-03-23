@@ -299,6 +299,47 @@ export default function SimuladorAutoMode() {
   // Auto-scroll chat
   useEffect(() => { chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" }); }, [selectedLead?.mensagens?.length]);
 
+  // ★ Auto-stop simulation when duration is exceeded
+  useEffect(() => {
+    if (running && elapsedSeconds >= duration) {
+      stopSimulationRef.current();
+    }
+  }, [running, elapsedSeconds, duration]);
+
+  const stopSimulationRef = useRef(() => {});
+  stopSimulationRef.current = () => { simAtivaRef.current = false; abortRef.current = true; setRunning(false); if (timerRef.current) clearInterval(timerRef.current); setPhase("report"); };
+
+  // ===== PRESETS =====
+  const PRESET_STORAGE_KEY = "natleva_sim_presets";
+  const loadPresets = (): Array<{ name: string; config: any }> => {
+    try { return JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) || "[]"); } catch { return []; }
+  };
+  const [presets, setPresets] = useState(loadPresets);
+  const savePreset = (name: string) => {
+    const config = { numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency };
+    const updated = [...presets.filter(p => p.name !== name), { name, config }];
+    localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(updated));
+    setPresets(updated);
+    toast({ title: `✅ Preset "${name}" salvo` });
+  };
+  const loadPreset = (config: any) => {
+    setNumLeads(config.numLeads ?? 8); setMsgsPerLead(config.msgsPerLead ?? 14); setIntervalSec(config.intervalSec ?? 1);
+    setDuration(config.duration ?? 180); setSelectedProfiles(config.selectedProfiles ?? []); setProfileMode(config.profileMode ?? "random");
+    setSelectedDestinos(config.selectedDestinos ?? []); setSelectedBudgets(config.selectedBudgets ?? []); setSelectedCanais(config.selectedCanais ?? []);
+    setSelectedGrupos(config.selectedGrupos ?? []); setConversionOverride(config.conversionOverride ?? null); setObjectionDensity(config.objectionDensity ?? 50);
+    setSpeed(config.speed ?? "normal"); setFunnelMode(config.funnelMode ?? "full"); setCustomFunnelAgents(config.customFunnelAgents ?? []);
+    setEnableEvaluation(config.enableEvaluation ?? true); setEnableMultiMsg(config.enableMultiMsg ?? true);
+    setEnableTransfers(config.enableTransfers ?? true); setEmotionalVolatility(config.emotionalVolatility ?? 50);
+    setAgentResponseLength(config.agentResponseLength ?? "media"); setEnableLossNarrative(config.enableLossNarrative ?? true);
+    setEvalFrequency(config.evalFrequency ?? "every");
+    toast({ title: "Preset carregado!" });
+  };
+  const deletePreset = (name: string) => {
+    const updated = presets.filter(p => p.name !== name);
+    localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(updated));
+    setPresets(updated);
+  };
+
   // ===== SIMULATION ENGINE =====
   const runSimulation = useCallback(async () => {
     setPhase("running"); setRunning(true); setLeads([]); setEvents([]); setElapsedSeconds(0);
