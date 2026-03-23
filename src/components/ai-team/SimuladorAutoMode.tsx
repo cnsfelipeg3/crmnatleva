@@ -89,8 +89,10 @@ async function gerarMensagemPerda(lead: LeadInteligente): Promise<string> {
   return callAgent(buildLeadPersona(lead), [{ role: "user", content: prompt }]);
 }
 
-function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean) {
-  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${hasNext ? "Quando completar objetivo, termine com [TRANSFERIR].\n" : ""}Responda APENAS a ultima mensagem. Breve (1-3 frases).`;
+function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean, enableTransfers: boolean, responseLength: "curta" | "media" | "longa") {
+  const lengthInstr = responseLength === "curta" ? "Responda em 1 frase apenas." : responseLength === "longa" ? "Responda de forma detalhada (3-5 frases), incluindo detalhes do produto." : "Responda APENAS a ultima mensagem. Breve (1-3 frases).";
+  const transferInstr = hasNext && enableTransfers ? "Quando completar objetivo, termine com [TRANSFERIR].\n" : "";
+  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${transferInstr}${lengthInstr}`;
 }
 
 const SPEED_OPTIONS = [
@@ -214,25 +216,36 @@ function useCountUp(target: number, duration = 500) {
 
 // ===== COMPONENT =====
 export default function SimuladorAutoMode() {
-  // Config
+  // Config — Volume
   const [numLeads, setNumLeads] = useState(8);
   const [msgsPerLead, setMsgsPerLead] = useState(14);
   const [intervalSec, setIntervalSec] = useState(1);
   const [duration, setDuration] = useState(180);
+  // Config — Perfis
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
   const [profileMode, setProfileMode] = useState<"random" | "roundrobin">("random");
+  // Config — Cenário
   const [selectedDestinos, setSelectedDestinos] = useState<string[]>([]);
   const [selectedBudgets, setSelectedBudgets] = useState<string[]>([]);
   const [selectedCanais, setSelectedCanais] = useState<string[]>([]);
   const [selectedGrupos, setSelectedGrupos] = useState<string[]>([]);
+  // Config — Comportamento
   const [conversionOverride, setConversionOverride] = useState<number | null>(null);
   const [objectionDensity, setObjectionDensity] = useState(50);
   const [speed, setSpeed] = useState("normal");
   const [funnelMode, setFunnelMode] = useState<"full" | "comercial" | "custom">("full");
   const [customFunnelAgents, setCustomFunnelAgents] = useState<string[]>([]);
+  // Config — Motor IA
   const [enableEvaluation, setEnableEvaluation] = useState(true);
   const [enableMultiMsg, setEnableMultiMsg] = useState(true);
-  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "comportamento" | "avancado">("volume");
+  const [enableTransfers, setEnableTransfers] = useState(true);
+  const [emotionalVolatility, setEmotionalVolatility] = useState(50);
+  const [agentResponseLength, setAgentResponseLength] = useState<"curta" | "media" | "longa">("media");
+  const [enableLossNarrative, setEnableLossNarrative] = useState(true);
+  const [evalFrequency, setEvalFrequency] = useState<"every" | "every2" | "every3">("every");
+  // Config — Presets
+  const [presetName, setPresetName] = useState("");
+  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "comportamento" | "avancado" | "presets">("volume");
 
   // Runtime
   const [phase, setPhase] = useState<Phase>("config");
@@ -286,6 +299,47 @@ export default function SimuladorAutoMode() {
   // Auto-scroll chat
   useEffect(() => { chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" }); }, [selectedLead?.mensagens?.length]);
 
+  // ★ Auto-stop simulation when duration is exceeded
+  useEffect(() => {
+    if (running && elapsedSeconds >= duration) {
+      stopSimulationRef.current();
+    }
+  }, [running, elapsedSeconds, duration]);
+
+  const stopSimulationRef = useRef(() => {});
+  stopSimulationRef.current = () => { simAtivaRef.current = false; abortRef.current = true; setRunning(false); if (timerRef.current) clearInterval(timerRef.current); setPhase("report"); };
+
+  // ===== PRESETS =====
+  const PRESET_STORAGE_KEY = "natleva_sim_presets";
+  const loadPresets = (): Array<{ name: string; config: any }> => {
+    try { return JSON.parse(localStorage.getItem(PRESET_STORAGE_KEY) || "[]"); } catch { return []; }
+  };
+  const [presets, setPresets] = useState(loadPresets);
+  const savePreset = (name: string) => {
+    const config = { numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency };
+    const updated = [...presets.filter(p => p.name !== name), { name, config }];
+    localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(updated));
+    setPresets(updated);
+    toast({ title: `✅ Preset "${name}" salvo` });
+  };
+  const loadPreset = (config: any) => {
+    setNumLeads(config.numLeads ?? 8); setMsgsPerLead(config.msgsPerLead ?? 14); setIntervalSec(config.intervalSec ?? 1);
+    setDuration(config.duration ?? 180); setSelectedProfiles(config.selectedProfiles ?? []); setProfileMode(config.profileMode ?? "random");
+    setSelectedDestinos(config.selectedDestinos ?? []); setSelectedBudgets(config.selectedBudgets ?? []); setSelectedCanais(config.selectedCanais ?? []);
+    setSelectedGrupos(config.selectedGrupos ?? []); setConversionOverride(config.conversionOverride ?? null); setObjectionDensity(config.objectionDensity ?? 50);
+    setSpeed(config.speed ?? "normal"); setFunnelMode(config.funnelMode ?? "full"); setCustomFunnelAgents(config.customFunnelAgents ?? []);
+    setEnableEvaluation(config.enableEvaluation ?? true); setEnableMultiMsg(config.enableMultiMsg ?? true);
+    setEnableTransfers(config.enableTransfers ?? true); setEmotionalVolatility(config.emotionalVolatility ?? 50);
+    setAgentResponseLength(config.agentResponseLength ?? "media"); setEnableLossNarrative(config.enableLossNarrative ?? true);
+    setEvalFrequency(config.evalFrequency ?? "every");
+    toast({ title: "Preset carregado!" });
+  };
+  const deletePreset = (name: string) => {
+    const updated = presets.filter(p => p.name !== name);
+    localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(updated));
+    setPresets(updated);
+  };
+
   // ===== SIMULATION ENGINE =====
   const runSimulation = useCallback(async () => {
     setPhase("running"); setRunning(true); setLeads([]); setEvents([]); setElapsedSeconds(0);
@@ -300,6 +354,12 @@ export default function SimuladorAutoMode() {
     const budgets = selectedBudgets.length > 0 ? selectedBudgets : BUDGETS_LEAD;
     const canais = selectedCanais.length > 0 ? selectedCanais : CANAIS_LEAD;
     const speedDelay = SPEED_OPTIONS.find(s => s.id === speed)?.delay ?? 2500;
+    const simStartTime = Date.now();
+    const durationMs = duration * 1000;
+    const evalEvery = evalFrequency === "every" ? 1 : evalFrequency === "every2" ? 2 : 3;
+
+    // Helper to check duration limit
+    const isDurationExceeded = () => Date.now() - simStartTime >= durationMs;
 
     const funnelAgents = funnelMode === "full"
       ? AGENTS_V4.filter(a => ["comercial", "atendimento"].includes(a.squadId)).slice(0, 6)
@@ -315,9 +375,15 @@ export default function SimuladorAutoMode() {
     }
 
     const allLeads: LeadInteligente[] = [];
+    const grupos = selectedGrupos.length > 0 ? selectedGrupos : GRUPOS_LEAD;
 
     for (let i = 0; i < numLeads; i++) {
       if (!simAtivaRef.current || abortRef.current) break;
+      // ★ ENFORCE DURATION LIMIT
+      if (isDurationExceeded()) {
+        addEvent("#F59E0B", `⏱️ Tempo limite (${formatTime(duration)}) atingido — encerrando simulação`, "⏰");
+        break;
+      }
 
       const perfil = profileMode === "roundrobin"
         ? profiles[i % profiles.length]
@@ -327,6 +393,7 @@ export default function SimuladorAutoMode() {
         destino: destinos[Math.floor(Math.random() * destinos.length)],
         orcamento: budgets[Math.floor(Math.random() * budgets.length)],
         canal: canais[Math.floor(Math.random() * canais.length)],
+        grupo: grupos[Math.floor(Math.random() * grupos.length)],
       });
 
       // Apply conversion override
@@ -334,14 +401,19 @@ export default function SimuladorAutoMode() {
         lead.ticket = Math.random() * 100 < conversionOverride ? (8000 + Math.floor(Math.random() * 42000)) : 0;
       }
 
-      // Apply objection density
+      // Apply objection density from config
       lead.temObjecao = Math.random() * 100 < objectionDensity;
+
+      // Apply emotional volatility — affects patience drain
+      if (emotionalVolatility > 70) {
+        lead.pacienciaRestante = Math.max(30, lead.pacienciaRestante - Math.floor((emotionalVolatility - 50) * 0.5));
+      }
 
       allLeads.push(lead);
       setLeads([...allLeads]);
       if (i === 0) setSelectedLeadId(lead.id);
 
-      addEvent("#3B82F6", `${lead.perfil.emoji} ${lead.nome} entrou via ${lead.origem} · ${lead.destino}`, "📥");
+      addEvent("#3B82F6", `${lead.perfil.emoji} ${lead.nome} entrou via ${lead.origem} · ${lead.destino} · ${lead.paxLabel}`, "📥");
 
       try {
         // 1. Generate first client message via AI
@@ -351,31 +423,41 @@ export default function SimuladorAutoMode() {
         addEvent(lead.perfil.cor, `${lead.nome}: "${firstMsg.slice(0, 50)}..."`, "💬");
 
         const stages = ETAPAS_FUNIL.map(e => e.id);
-        const rounds = Math.min(Math.floor(msgsPerLead / 2), 12);
+        // ★ FIX: use msgsPerLead directly — NO artificial cap
+        const rounds = Math.floor(msgsPerLead / 2);
         let agentIdx = 0;
         let forceLoss = false;
+        let evalCounter = 0;
 
         for (let r = 0; r < rounds; r++) {
           if (!simAtivaRef.current || abortRef.current || forceLoss) break;
+          // ★ ENFORCE DURATION LIMIT per round
+          if (isDurationExceeded()) {
+            addEvent("#F59E0B", `⏱️ Tempo esgotado durante conversa com ${lead.nome}`, "⏰");
+            break;
+          }
 
           const agent = funnelAgents[agentIdx % funnelAgents.length];
-          const hasNext = agentIdx < funnelAgents.length - 1;
+          const hasNext = enableTransfers && agentIdx < funnelAgents.length - 1;
           lead.etapaAtual = stages[Math.min(agentIdx, stages.length - 1)];
 
           // 2. Agent responds
           const agentResp = await callAgent(
-            buildAgentSysPrompt(agent, hasNext),
+            buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength),
             lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content }))
           );
           lead.mensagens.push({ role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
           setLeads([...allLeads]);
 
-          // 3. Evaluate agent response (AI judge) — 3 dimensões
-          if (enableEvaluation) {
+          // 3. Evaluate agent response (AI judge) — 3 dimensões — respects evalFrequency
+          evalCounter++;
+          if (enableEvaluation && evalCounter % evalEvery === 0) {
             const avaliacao = await avaliarRespostaAgente(agentResp, lead);
-            const updatedLead = atualizarEstadoEmocional(lead, avaliacao.nota, avaliacao.reacao, avaliacao.sentimento);
+            // Apply emotional volatility to sentiment impact
+            const volatilityMult = emotionalVolatility / 50;
+            const adjustedNota = Math.round(avaliacao.nota * volatilityMult + (50 * (1 - volatilityMult / 2)));
+            const updatedLead = atualizarEstadoEmocional(lead, adjustedNota, avaliacao.reacao, avaliacao.sentimento);
             Object.assign(lead, updatedLead);
-            // Update 3 dimension scores (running average)
             lead.scoreHumanizacao = lead.scoreHumanizacao > 0 ? Math.round((lead.scoreHumanizacao + avaliacao.humanizacao) / 2) : avaliacao.humanizacao;
             lead.scoreEficacia = lead.scoreEficacia > 0 ? Math.round((lead.scoreEficacia + avaliacao.eficaciaComercial) / 2) : avaliacao.eficaciaComercial;
             lead.scoreTecnica = lead.scoreTecnica > 0 ? Math.round((lead.scoreTecnica + avaliacao.qualidadeTecnica) / 2) : avaliacao.qualidadeTecnica;
@@ -389,25 +471,28 @@ export default function SimuladorAutoMode() {
 
             // Check if lead gives up
             if (devePerdeLead(lead)) {
-              const lossMsg = await gerarMensagemPerda(lead);
-              lead.mensagens.push({ role: "client", content: lossMsg, timestamp: Date.now() });
+              if (enableLossNarrative) {
+                const lossMsg = await gerarMensagemPerda(lead);
+                lead.mensagens.push({ role: "client", content: lossMsg, timestamp: Date.now() });
+                lead.motivoPerda = lossMsg;
+              } else {
+                lead.motivoPerda = `Paciência esgotada (${lead.pacienciaRestante})`;
+              }
               lead.status = "perdeu";
               lead.resultadoFinal = "perdeu";
               lead.etapaPerda = lead.etapaAtual;
-              lead.motivoPerda = lossMsg;
               setLeads([...allLeads]);
-              addEvent("#EF4444", `❌ ${lead.nome} DESISTIU em ${lead.etapaAtual}: "${lossMsg.slice(0, 60)}..."`, "💔");
+              addEvent("#EF4444", `❌ ${lead.nome} DESISTIU em ${lead.etapaAtual}: "${(lead.motivoPerda || "").slice(0, 60)}..."`, "💔");
               forceLoss = true;
               break;
             }
           }
 
           // Handle transfer
-          if (hasNext && agentResp.includes("[TRANSFERIR]")) {
+          if (enableTransfers && hasNext && agentResp.includes("[TRANSFERIR]")) {
             agentIdx++;
             const nextAgent = funnelAgents[agentIdx % funnelAgents.length];
             addEvent("#06B6D4", `${agent.name} → ${nextAgent.name}`, "🔄");
-            // Reveal info on stage advance
             if (lead.informacoesPendentes.length > 0) {
               const revealed = lead.informacoesPendentes.shift()!;
               lead.informacoesReveladas.push(revealed);
@@ -430,7 +515,7 @@ export default function SimuladorAutoMode() {
 
             // Agent needs to handle objection
             const objResp = await callAgent(
-              buildAgentSysPrompt(agent, false),
+              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength),
               lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content }))
             );
             lead.mensagens.push({ role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
@@ -466,12 +551,16 @@ export default function SimuladorAutoMode() {
             lead.etapaAtual = "fechamento";
             addEvent("#EAB308", `🎉 ${lead.nome} FECHOU · R$${(lead.ticket / 1000).toFixed(0)}k · ${lead.perfil.label}`, "🏆");
           } else {
-            const lossMsg = await gerarMensagemPerda(lead);
-            lead.mensagens.push({ role: "client", content: lossMsg, timestamp: Date.now() });
+            if (enableLossNarrative) {
+              const lossMsg = await gerarMensagemPerda(lead);
+              lead.mensagens.push({ role: "client", content: lossMsg, timestamp: Date.now() });
+              lead.motivoPerda = lossMsg;
+            } else {
+              lead.motivoPerda = "Não converteu";
+            }
             lead.status = "perdeu";
             lead.resultadoFinal = "perdeu";
             lead.etapaPerda = lead.etapaAtual;
-            lead.motivoPerda = lossMsg;
             addEvent("#EF4444", `${lead.nome} perdido em ${lead.etapaAtual} · ${lead.perfil.label}`, "📉");
           }
           setLeads([...allLeads]);
@@ -483,19 +572,22 @@ export default function SimuladorAutoMode() {
         setLeads([...allLeads]);
       }
 
-      // Delay between leads
-      if (i < numLeads - 1 && speedDelay > 0 && !abortRef.current) {
-        await new Promise(r => setTimeout(r, Math.max(500, intervalSec * 1000)));
+      // ★ ENFORCE intervalSec exactly as configured
+      if (i < numLeads - 1 && !abortRef.current) {
+        const delayMs = intervalSec * 1000;
+        if (delayMs > 0) await new Promise(r => setTimeout(r, delayMs));
       }
     }
 
     if (timerRef.current) clearInterval(timerRef.current);
     setRunning(false);
     setPhase("report");
-    toast({ title: "Simulação concluída!", description: `${allLeads.length} leads processados com IA dinâmica` });
-  }, [numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, toast]);
+    const elapsed = Math.round((Date.now() - simStartTime) / 1000);
+    const wasTimeout = elapsed >= duration;
+    toast({ title: wasTimeout ? "Simulação encerrada por tempo!" : "Simulação concluída!", description: `${allLeads.length} leads processados em ${formatTime(elapsed)}` });
+  }, [numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, toast]);
 
-  const stopSimulation = () => { simAtivaRef.current = false; abortRef.current = true; setRunning(false); if (timerRef.current) clearInterval(timerRef.current); setPhase("report"); };
+  const stopSimulation = () => stopSimulationRef.current();
 
   // Generate debrief — V2 com 12 critérios
   const generateDebrief = useCallback(async () => {
@@ -733,7 +825,8 @@ Retorne JSON:
     { id: "perfis" as const, label: "Perfis", icon: User, color: "#EC4899", summary: `${selectedProfiles.length || 8} perfis ativos` },
     { id: "cenario" as const, label: "Cenário", icon: MapPin, color: "#06B6D4", summary: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos` },
     { id: "comportamento" as const, label: "Funil & Velocidade", icon: Zap, color: "#8B5CF6", summary: `${SPEED_OPTIONS.find(s => s.id === speed)?.label} · ${funnelMode === "full" ? "Completo" : funnelMode === "comercial" ? "Comercial" : "Custom"}` },
-    { id: "avancado" as const, label: "Motor IA", icon: Brain, color: "#F59E0B", summary: enableEvaluation ? "Avaliação ativa" : "Avaliação off" },
+    { id: "avancado" as const, label: "Motor IA", icon: Brain, color: "#F59E0B", summary: `${enableEvaluation ? "Aval." : "—"} ${enableTransfers ? "Transf." : "—"} ${agentResponseLength}` },
+    { id: "presets" as const, label: "Presets", icon: BookOpen, color: "#10B981", summary: `${presets.length} salvo${presets.length !== 1 ? "s" : ""}` },
   ];
 
   // ===== RENDER: CONFIG =====
@@ -1184,24 +1277,27 @@ Retorne JSON:
                     <Brain className="w-5 h-5" style={{ color: "#F59E0B" }} />
                     <div>
                       <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Motor IA Avançado</h3>
-                      <p className="text-[11px]" style={{ color: "#64748B" }}>Controles avançados do engine de simulação</p>
+                      <p className="text-[11px]" style={{ color: "#64748B" }}>Controle granular de cada aspecto da simulação</p>
                     </div>
                   </div>
-                  <div className="space-y-3">
+                  {/* Toggles */}
+                  <div className="space-y-2">
                     {[
-                      { label: "Avaliação IA em tempo real", desc: "Lead julga qualidade de cada resposta e ajusta sentimento", value: enableEvaluation, setter: setEnableEvaluation, color: "#EC4899", icon: "🧠" },
+                      { label: "Avaliação IA em tempo real", desc: "Lead julga qualidade de cada resposta (3 dimensões: H/E/T)", value: enableEvaluation, setter: setEnableEvaluation, color: "#EC4899", icon: "🧠" },
                       { label: "Multi-mensagem por perfil", desc: "Ansioso e Sonhador enviam múltiplas msgs seguidas", value: enableMultiMsg, setter: setEnableMultiMsg, color: "#F59E0B", icon: "💬" },
+                      { label: "Transferência entre agentes", desc: "Permite passagem de bastão via [TRANSFERIR] entre agentes", value: enableTransfers, setter: setEnableTransfers, color: "#06B6D4", icon: "🔄" },
+                      { label: "Narrativa de perda por IA", desc: "Gera mensagem de desistência contextual (desativar = mais rápido)", value: enableLossNarrative, setter: setEnableLossNarrative, color: "#EF4444", icon: "📝" },
                     ].map(opt => (
                       <button key={opt.label} onClick={() => opt.setter(!opt.value)}
-                        className="w-full flex items-center gap-4 px-5 py-4 rounded-xl text-left transition-all"
+                        className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-left transition-all"
                         style={{
                           background: opt.value ? `${opt.color}06` : "rgba(255,255,255,0.015)",
                           border: `1px solid ${opt.value ? `${opt.color}25` : "rgba(255,255,255,0.04)"}`,
                         }}>
-                        <span className="text-xl">{opt.icon}</span>
+                        <span className="text-lg">{opt.icon}</span>
                         <div className="flex-1">
-                          <p className="text-[12px] font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
-                          <p className="text-[10px] mt-0.5" style={{ color: "#475569" }}>{opt.desc}</p>
+                          <p className="text-[11px] font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
+                          <p className="text-[9px] mt-0.5" style={{ color: "#475569" }}>{opt.desc}</p>
                         </div>
                         <div className="w-10 h-6 rounded-full relative transition-all" style={{ background: opt.value ? opt.color : "rgba(255,255,255,0.1)" }}>
                           <div className="absolute top-1 w-4 h-4 rounded-full transition-all" style={{ left: opt.value ? 20 : 4, background: "#fff" }} />
@@ -1209,13 +1305,181 @@ Retorne JSON:
                       </button>
                     ))}
                   </div>
+
+                  {/* Sliders */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Volatilidade emocional</span>
+                        <span className="text-[15px] font-bold" style={{ color: "#EC4899" }}>{emotionalVolatility}%</span>
+                      </div>
+                      <p className="text-[9px] mb-3" style={{ color: "#475569" }}>0% = lead estável · 100% = extremamente volátil</p>
+                      <Slider min={0} max={100} step={5} value={[emotionalVolatility]} onValueChange={v => setEmotionalVolatility(v[0])} />
+                    </div>
+                    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Frequência de avaliação IA</span>
+                      <p className="text-[9px] mb-3 mt-1" style={{ color: "#475569" }}>Com que frequência o juiz IA avalia o agente</p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {([
+                          { id: "every" as const, label: "Toda msg", icon: "🔍" },
+                          { id: "every2" as const, label: "A cada 2", icon: "⚡" },
+                          { id: "every3" as const, label: "A cada 3", icon: "💨" },
+                        ]).map(ef => (
+                          <button key={ef.id} onClick={() => setEvalFrequency(ef.id)}
+                            className="flex flex-col items-center gap-1 p-2 rounded-lg transition-all text-center"
+                            style={{
+                              background: evalFrequency === ef.id ? "rgba(236,72,153,0.08)" : "rgba(255,255,255,0.015)",
+                              border: `1px solid ${evalFrequency === ef.id ? "rgba(236,72,153,0.3)" : "rgba(255,255,255,0.04)"}`,
+                            }}>
+                            <span className="text-sm">{ef.icon}</span>
+                            <span className="text-[9px] font-bold" style={{ color: evalFrequency === ef.id ? "#EC4899" : "#64748B" }}>{ef.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Response length */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageSquare className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
+                      <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Tamanho de resposta do agente</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        { id: "curta" as const, label: "Curta", desc: "1 frase", icon: "⚡" },
+                        { id: "media" as const, label: "Média", desc: "1-3 frases", icon: "📝" },
+                        { id: "longa" as const, label: "Detalhada", desc: "3-5 frases", icon: "📄" },
+                      ]).map(rl => (
+                        <button key={rl.id} onClick={() => setAgentResponseLength(rl.id)}
+                          className="flex flex-col items-center gap-1 p-3 rounded-xl transition-all"
+                          style={{
+                            background: agentResponseLength === rl.id ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.015)",
+                            border: `1px solid ${agentResponseLength === rl.id ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.04)"}`,
+                          }}>
+                          <span className="text-lg">{rl.icon}</span>
+                          <span className="text-[11px] font-bold" style={{ color: agentResponseLength === rl.id ? "#E2E8F0" : "#94A3B8" }}>{rl.label}</span>
+                          <span className="text-[8px]" style={{ color: "#475569" }}>{rl.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Engine features checklist */}
                   <div className="rounded-xl p-4" style={{ background: "rgba(236,72,153,0.04)", border: "1px solid rgba(236,72,153,0.1)" }}>
-                    <p className="text-[10px] font-bold mb-2" style={{ color: "#EC4899" }}>Motor de Leads Inteligentes v2.0</p>
+                    <p className="text-[10px] font-bold mb-2" style={{ color: "#EC4899" }}>Motor de Leads Inteligentes v3.0</p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                      {["✅ Psicologia profunda (8 perfis)", "✅ Objeções dinâmicas por IA", "✅ Revelação gradual de info", "✅ Avaliação em tempo real", "✅ Multi-mensagem por perfil", "✅ Perdas motivadas por IA", "✅ Timing realista por perfil", "✅ Sentimento adaptativo"].map(f => (
+                      {[
+                        "✅ 8 perfis psicológicos", "✅ Objeções dinâmicas IA",
+                        "✅ 3 dimensões (H/E/T)", "✅ 12 critérios debrief",
+                        "✅ Avaliação ao vivo", "✅ Duração enforced",
+                        "✅ Multi-mensagem", "✅ Sentimento adaptativo",
+                        "✅ Transferência agentes", "✅ Presets de config",
+                        "✅ Volatilidade emocional", "✅ Freq. avaliação ajustável",
+                      ].map(f => (
                         <p key={f} className="text-[9px]" style={{ color: "#94A3B8" }}>{f}</p>
                       ))}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ===== PRESETS TAB ===== */}
+              {configTab === "presets" && (
+                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <BookOpen className="w-5 h-5" style={{ color: "#10B981" }} />
+                    <div>
+                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Presets de Configuração</h3>
+                      <p className="text-[11px]" style={{ color: "#64748B" }}>Salve e reutilize configurações de teste</p>
+                    </div>
+                  </div>
+
+                  {/* Quick presets */}
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#64748B" }}>⚡ Presets rápidos</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { label: "Teste rápido", desc: "3 leads, 6 msgs, instantâneo", icon: "🚀", apply: () => { setNumLeads(3); setMsgsPerLead(6); setSpeed("instant"); setDuration(60); setEnableEvaluation(false); } },
+                        { label: "Estresse máximo", desc: "20 leads, 30 msgs, todos perfis", icon: "🔥", apply: () => { setNumLeads(20); setMsgsPerLead(30); setDuration(600); setObjectionDensity(80); setEmotionalVolatility(80); setSelectedProfiles([]); } },
+                        { label: "Qualidade total", desc: "5 leads, 20 msgs, avaliação completa", icon: "🏆", apply: () => { setNumLeads(5); setMsgsPerLead(20); setSpeed("normal"); setEnableEvaluation(true); setEvalFrequency("every"); setAgentResponseLength("longa"); setEnableLossNarrative(true); } },
+                      ].map(qp => (
+                        <button key={qp.label} onClick={() => { qp.apply(); toast({ title: `Preset "${qp.label}" aplicado` }); }}
+                          className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all hover:scale-[1.02]"
+                          style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                          <span className="text-2xl">{qp.icon}</span>
+                          <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>{qp.label}</span>
+                          <span className="text-[8px] text-center" style={{ color: "#475569" }}>{qp.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Save preset */}
+                  <div className="rounded-xl p-4" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.1)" }}>
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#10B981" }}>💾 Salvar config atual</p>
+                    <div className="flex gap-2">
+                      <input type="text" value={presetName} onChange={e => setPresetName(e.target.value)}
+                        placeholder="Nome do preset..."
+                        className="flex-1 h-9 rounded-lg px-3 text-[12px] font-semibold outline-none"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "#E2E8F0" }} />
+                      <button onClick={() => { if (presetName.trim()) { savePreset(presetName.trim()); setPresetName(""); } }}
+                        disabled={!presetName.trim()}
+                        className="px-4 h-9 rounded-lg text-[11px] font-bold transition-all"
+                        style={{ background: presetName.trim() ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.02)", color: presetName.trim() ? "#10B981" : "#475569", border: `1px solid ${presetName.trim() ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.04)"}` }}>
+                        Salvar
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Saved presets */}
+                  {presets.length > 0 && (
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#64748B" }}>📂 Presets salvos</p>
+                      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                        {presets.map((p, i) => (
+                          <div key={p.name} className="flex items-center gap-3 px-4 py-3 transition-all hover:bg-white/[0.02]"
+                            style={{ borderBottom: i < presets.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none" }}>
+                            <BookOpen className="w-4 h-4 shrink-0" style={{ color: "#10B981" }} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[12px] font-bold" style={{ color: "#E2E8F0" }}>{p.name}</p>
+                              <p className="text-[9px]" style={{ color: "#475569" }}>
+                                {p.config.numLeads} leads · {p.config.msgsPerLead} msgs · {p.config.speed}
+                              </p>
+                            </div>
+                            <button onClick={() => loadPreset(p.config)} className="text-[9px] font-bold px-3 py-1.5 rounded-lg transition-all"
+                              style={{ background: "rgba(16,185,129,0.08)", color: "#10B981", border: "1px solid rgba(16,185,129,0.2)" }}>
+                              Carregar
+                            </button>
+                            <button onClick={() => deletePreset(p.name)} className="text-[9px] font-bold px-2 py-1.5 rounded-lg transition-all"
+                              style={{ background: "rgba(239,68,68,0.06)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.15)" }}>
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Export / Import */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <button onClick={() => {
+                      const config = { numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency };
+                      navigator.clipboard.writeText(JSON.stringify(config, null, 2));
+                      toast({ title: "Config copiada para clipboard!" });
+                    }}
+                      className="flex items-center justify-center gap-2 p-3 rounded-xl text-[11px] font-bold transition-all"
+                      style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)", color: "#94A3B8" }}>
+                      📋 Copiar JSON
+                    </button>
+                    <button onClick={() => {
+                      const input = prompt("Cole o JSON da configuração:");
+                      if (input) { try { loadPreset(JSON.parse(input)); } catch { toast({ title: "JSON inválido", variant: "destructive" }); } }
+                    }}
+                      className="flex items-center justify-center gap-2 p-3 rounded-xl text-[11px] font-bold transition-all"
+                      style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)", color: "#94A3B8" }}>
+                      📥 Importar JSON
+                    </button>
                   </div>
                 </div>
               )}
@@ -1239,6 +1503,9 @@ Retorne JSON:
                 { icon: "🎯", label: `${selectedProfiles.length || 8} perfis`, color: "#EC4899" },
                 { icon: "🌍", label: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos`, color: "#06B6D4" },
                 { icon: "⚡", label: SPEED_OPTIONS.find(s => s.id === speed)?.label || "Normal", color: "#F59E0B" },
+                { icon: "🧠", label: enableEvaluation ? `Aval. ${evalFrequency === "every" ? "100%" : evalFrequency === "every2" ? "50%" : "33%"}` : "Aval. off", color: "#EC4899" },
+                { icon: "🔄", label: enableTransfers ? "Transf. on" : "Transf. off", color: "#06B6D4" },
+                { icon: "💥", label: `Vol. ${emotionalVolatility}%`, color: "#EF4444" },
               ].map(chip => (
                 <span key={chip.label} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0"
                   style={{ background: `${chip.color}08`, color: chip.color, border: `1px solid ${chip.color}15` }}>
