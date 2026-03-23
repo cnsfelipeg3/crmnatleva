@@ -34,8 +34,7 @@ const defaultCovers: Record<string, string> = {
   default: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=800&h=400&fit=crop&q=80",
 };
 
-function getCoverImage(proposal: any): string {
-  if (proposal.cover_image_url && proposal.cover_image_url.startsWith("http")) return proposal.cover_image_url;
+function getFallbackCover(proposal: any): string {
   const title = (proposal.title || "").toLowerCase();
   const dests = (proposal.destinations || []).map((d: string) => d.toLowerCase()).join(" ");
   const combined = `${title} ${dests}`;
@@ -43,6 +42,11 @@ function getCoverImage(proposal: any): string {
     if (key !== "default" && combined.includes(key)) return url;
   }
   return defaultCovers.default;
+}
+
+function getCoverImage(proposal: any): string {
+  if (proposal.cover_image_url && proposal.cover_image_url.startsWith("http")) return proposal.cover_image_url;
+  return getFallbackCover(proposal);
 }
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -139,7 +143,12 @@ export default function Proposals() {
                 onClick={() => navigate(`/propostas/${p.id}`)}
               >
                 <div className="h-36 overflow-hidden relative">
-                  <img src={getCoverImage(p)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img
+                    src={getCoverImage(p)}
+                    alt=""
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    onError={(e) => { (e.target as HTMLImageElement).src = getFallbackCover(p); }}
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>
                 <div className="p-5 space-y-3">
