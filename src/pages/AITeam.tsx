@@ -355,7 +355,7 @@ export default function AITeam() {
 
 /* ═══ Sub-components ═══ */
 
-function KpiCard({ label, value, total, color, icon: Icon }: { label: string; value: number; total?: number; color: string; icon: React.ElementType }) {
+function KpiCard({ label, value, total, color, icon: Icon }: { label: string; value: number | string; total?: number; color: string; icon: React.ElementType }) {
   return (
     <div className="rounded-xl border border-border/50 bg-card p-4 flex items-center gap-3">
       <div className={cn("p-2 rounded-lg bg-muted", color)}><Icon className="w-5 h-5" /></div>
