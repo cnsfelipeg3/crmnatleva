@@ -131,8 +131,8 @@ export default function AITeamSkills() {
                 ) : skill.trend < 0 ? (
                   <span className="text-[9px] text-red-400">↓{skill.trend}%</span>
                 ) : null}
-                <Switch checked={skill.active} onCheckedChange={(e) => { e.stopPropagation?.(); toggleSkill(skill.id); }}
-                  onClick={(e) => e.stopPropagation()} className="scale-75" />
+                <Switch checked={skill.active} onCheckedChange={() => toggleSkill(skill.id)}
+                  onClick={(e: React.MouseEvent) => e.stopPropagation()} className="scale-75" />
               </div>
             </div>
             <h3 className="text-sm font-bold mb-1">{skill.name}</h3>
