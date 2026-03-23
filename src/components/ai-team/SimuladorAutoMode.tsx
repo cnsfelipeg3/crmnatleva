@@ -1615,7 +1615,7 @@ Retorne JSON:
                                     <p className="text-[9px] uppercase font-bold mb-2" style={{ color: "#64748B" }}>Linha de Raciocínio</p>
                                     <div className="flex items-start gap-2 flex-wrap">
                                       {m.deepAnalysis.linhaRaciocinio.map((step, i) => (
-                                        <div key={i} className="flex items-center gap-2">
+                                        <div key={`step-${i}`} className="flex items-center gap-2">
                                           <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0" style={{
                                             background: `hsl(${260 + i * 30}, 70%, 50%)`, color: "#fff"
                                           }}>{i + 1}</div>
