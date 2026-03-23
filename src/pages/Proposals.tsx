@@ -143,7 +143,12 @@ export default function Proposals() {
                 onClick={() => navigate(`/propostas/${p.id}`)}
               >
                 <div className="h-36 overflow-hidden relative">
-                  <img src={getCoverImage(p)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img
+                    src={getCoverImage(p)}
+                    alt=""
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    onError={(e) => { (e.target as HTMLImageElement).src = getFallbackCover(p); }}
+                  />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>
                 <div className="p-5 space-y-3">
