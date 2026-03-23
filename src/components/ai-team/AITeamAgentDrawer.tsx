@@ -142,7 +142,7 @@ export default function AITeamAgentDrawer({ agent, tasks, open, onOpenChange }: 
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {chat.map((m, i) => (
                   <div
-                    key={i}
+                    key={`chat-${i}-${m.role}`}
                     className={cn(
                       "text-sm rounded-lg px-3 py-2 max-w-[85%]",
                       m.role === "user"

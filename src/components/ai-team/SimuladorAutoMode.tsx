@@ -234,6 +234,7 @@ export default function SimuladorAutoMode() {
   const chatRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef(false);
+  const simAtivaRef = useRef(false);
   const { toast } = useToast();
 
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
@@ -268,7 +269,7 @@ export default function SimuladorAutoMode() {
   // ===== SIMULATION ENGINE =====
   const runSimulation = useCallback(async () => {
     setPhase("running"); setRunning(true); setLeads([]); setEvents([]); setElapsedSeconds(0);
-    setSelectedLeadId(null); setDebrief(null); abortRef.current = false;
+    setSelectedLeadId(null); setDebrief(null); abortRef.current = false; simAtivaRef.current = true;
 
     timerRef.current = setInterval(() => setElapsedSeconds(p => p + 1), 1000);
 
@@ -296,7 +297,7 @@ export default function SimuladorAutoMode() {
     const allLeads: LeadInteligente[] = [];
 
     for (let i = 0; i < numLeads; i++) {
-      if (abortRef.current) break;
+      if (!simAtivaRef.current || abortRef.current) break;
 
       const perfil = profileMode === "roundrobin"
         ? profiles[i % profiles.length]
@@ -335,7 +336,7 @@ export default function SimuladorAutoMode() {
         let forceLoss = false;
 
         for (let r = 0; r < rounds; r++) {
-          if (abortRef.current || forceLoss) break;
+          if (!simAtivaRef.current || abortRef.current || forceLoss) break;
 
           const agent = funnelAgents[agentIdx % funnelAgents.length];
           const hasNext = agentIdx < funnelAgents.length - 1;
@@ -470,7 +471,7 @@ export default function SimuladorAutoMode() {
     toast({ title: "Simulação concluída!", description: `${allLeads.length} leads processados com IA dinâmica` });
   }, [numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, toast]);
 
-  const stopSimulation = () => { abortRef.current = true; setRunning(false); if (timerRef.current) clearInterval(timerRef.current); setPhase("report"); };
+  const stopSimulation = () => { simAtivaRef.current = false; abortRef.current = true; setRunning(false); if (timerRef.current) clearInterval(timerRef.current); setPhase("report"); };
 
   // Generate debrief
   const generateDebrief = useCallback(async () => {
@@ -1267,7 +1268,7 @@ Retorne JSON:
                     const isAgent = msg.role === "agent";
                     const showName = isAgent && (i === 0 || selectedLead.mensagens[i - 1]?.role !== "agent" || selectedLead.mensagens[i - 1]?.agentName !== msg.agentName);
                     return (
-                      <div key={i} className={cn("flex gap-2 animate-in duration-300", isAgent ? "justify-start slide-in-from-left-3" : "justify-end slide-in-from-right-3")}>
+                      <div key={`msg-${msg.timestamp}-${i}`} className={cn("flex gap-2 animate-in duration-300", isAgent ? "justify-start slide-in-from-left-3" : "justify-end slide-in-from-right-3")}>
                         <div style={{
                           background: isAgent ? "rgba(31,44,51,0.9)" : "linear-gradient(135deg, #005C4B, #00694D)", color: "#E9EDEF",
                           borderRadius: isAgent ? "4px 16px 16px 16px" : "16px 4px 16px 16px",
@@ -1489,7 +1490,7 @@ Retorne JSON:
                 <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#10B981" }}>✅ Pontos Fortes</p>
                   {debrief.pontosFortes.slice(0, 4).map((p, i) => (
-                    <div key={i} className="flex items-start gap-2.5 py-1.5">
+                    <div key={`forte-${i}`} className="flex items-start gap-2.5 py-1.5">
                       <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#10B981" }} />
                       <p className="text-[11px] leading-relaxed" style={{ color: "#E2E8F0" }}>{p}</p>
                     </div>
@@ -1614,7 +1615,7 @@ Retorne JSON:
                                     <p className="text-[9px] uppercase font-bold mb-2" style={{ color: "#64748B" }}>Linha de Raciocínio</p>
                                     <div className="flex items-start gap-2 flex-wrap">
                                       {m.deepAnalysis.linhaRaciocinio.map((step, i) => (
-                                        <div key={i} className="flex items-center gap-2">
+                                        <div key={`step-${i}`} className="flex items-center gap-2">
                                           <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0" style={{
                                             background: `hsl(${260 + i * 30}, 70%, 50%)`, color: "#fff"
                                           }}>{i + 1}</div>
@@ -1722,7 +1723,7 @@ Retorne JSON:
                       <BookOpen className="w-3.5 h-3.5 inline mr-1.5" />Lacunas de Conhecimento
                     </p>
                     {debrief.lacunasConhecimento.map((l, i) => (
-                      <div key={i} className="flex items-start gap-2.5 py-2 group" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                      <div key={`lacuna-${i}`} className="flex items-start gap-2.5 py-2 group" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                         <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#F59E0B" }} />
                         <p className="text-[10px] flex-1" style={{ color: "#E2E8F0" }}>{l}</p>
                         <button onClick={() => convertLacunaToKB(l)}
@@ -1740,7 +1741,7 @@ Retorne JSON:
                       <Lightbulb className="w-3.5 h-3.5 inline mr-1.5" />Insights de Comportamento
                     </p>
                     {debrief.insightsCliente.map((ins, i) => (
-                      <div key={i} className="flex items-start gap-2.5 py-2 group" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                      <div key={`insight-${i}`} className="flex items-start gap-2.5 py-2 group" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                         <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#06B6D4" }} />
                         <p className="text-[10px] flex-1" style={{ color: "#E2E8F0" }}>{ins}</p>
                         <button onClick={() => convertInsightToImprovement(ins)}

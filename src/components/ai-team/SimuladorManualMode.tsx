@@ -142,7 +142,10 @@ export default function SimuladorManualMode() {
     } finally { setLoading(false); }
   }, [input, loading, selectedAgent, selectedDestino]);
 
-  const resetChat = () => { setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0); };
+  const resetChat = () => {
+    if (messages.length > 0 && !confirm("Tem certeza? Os dados atuais serão perdidos.")) return;
+    setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0);
+  };
 
   const loadSession = (session: SavedSession) => {
     setMessages(session.messages); setCurrentSessionId(session.id);
