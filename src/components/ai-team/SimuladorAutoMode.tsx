@@ -402,118 +402,116 @@ export default function SimuladorAutoMode() {
   // ===== RENDER =====
   if (phase === "config") {
     return (
-      <div className="space-y-4 max-w-4xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="space-y-4 max-w-4xl animate-in fade-in slide-in-from-bottom-3 duration-500">
         {/* Volume */}
-        <ConfigSection id="volume" title="Volume e Tempo">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <span className="text-[11px] block mb-1" style={{ color: "#64748B" }}>Leads estimados</span>
-              <Slider min={1} max={200} step={1} value={[numLeadsManual]} onValueChange={v => setNumLeadsManual(v[0])} />
-              <p className="text-[22px] font-extrabold tabular-nums text-right mt-1" style={{ color: "#3B82F6" }}>{numLeadsManual}</p>
-            </div>
-            <div>
-              <span className="text-[11px] block mb-1" style={{ color: "#64748B" }}>Msgs por lead</span>
-              <Slider min={4} max={60} step={2} value={[msgsPerLead]} onValueChange={v => setMsgsPerLead(v[0])} />
-              <p className="text-[22px] font-extrabold tabular-nums text-right mt-1" style={{ color: "#10B981" }}>{msgsPerLead}</p>
-            </div>
-            <div>
-              <span className="text-[11px] block mb-1" style={{ color: "#64748B" }}>Intervalo entre leads (s)</span>
-              <Slider min={0} max={30} step={1} value={[intervalManual]} onValueChange={v => setIntervalManual(v[0])} />
-              <p className="text-[22px] font-extrabold tabular-nums text-right mt-1" style={{ color: "#F59E0B" }}>{intervalManual}s</p>
-            </div>
-            <div>
-              <span className="text-[11px] block mb-1" style={{ color: "#64748B" }}>Duração máx (s)</span>
-              <Slider min={30} max={1800} step={30} value={[duration]} onValueChange={v => setDuration(v[0])} />
-              <p className="text-[22px] font-extrabold tabular-nums text-right mt-1" style={{ color: "#8B5CF6" }}>{formatTime(duration)}</p>
-            </div>
+        <ConfigSection id="volume" title="Volume e Tempo" accentColor="#3B82F6" icon={<BarChart3 className="w-3.5 h-3.5" style={{ color: "#3B82F6" }} />}>
+          <div className="grid grid-cols-2 gap-5">
+            {[
+              { label: "Leads", value: numLeadsManual, setter: setNumLeadsManual, min: 1, max: 200, step: 1, color: "#3B82F6" },
+              { label: "Msgs por lead", value: msgsPerLead, setter: setMsgsPerLead, min: 4, max: 60, step: 2, color: "#10B981" },
+              { label: "Intervalo (s)", value: intervalManual, setter: setIntervalManual, min: 0, max: 30, step: 1, color: "#F59E0B", suffix: "s" },
+              { label: "Duração máx", value: duration, setter: setDuration, min: 30, max: 1800, step: 30, color: "#8B5CF6", format: true },
+            ].map(s => (
+              <div key={s.label}>
+                <span className="text-[11px] block mb-2" style={{ color: "#94A3B8" }}>{s.label}</span>
+                <Slider min={s.min} max={s.max} step={s.step} value={[s.value]} onValueChange={v => s.setter(v[0])} />
+                <p className="text-[24px] font-extrabold tabular-nums text-right mt-1.5" style={{ color: s.color, textShadow: `0 0 20px ${s.color}20` }}>
+                  {s.format ? formatTime(s.value) : `${s.value}${s.suffix || ""}`}
+                </p>
+              </div>
+            ))}
           </div>
           {/* Preview card */}
-          <div className="grid grid-cols-4 gap-2 p-3 rounded-lg" style={{ background: "#111827", border: "1px solid #1E293B" }}>
+          <div className="grid grid-cols-4 gap-3 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
             {[
-              { label: "LEADS EST.", value: numLeadsManual, color: "#3B82F6" },
+              { label: "LEADS", value: numLeadsManual, color: "#3B82F6" },
               { label: "MSGS/LEAD", value: msgsPerLead, color: "#10B981" },
               { label: "INTERVALO", value: `${intervalManual}s`, color: "#F59E0B" },
               { label: "DURAÇÃO", value: formatTime(duration), color: "#8B5CF6" },
             ].map(k => (
               <div key={k.label} className="text-center">
-                <p className="text-[16px] font-extrabold tabular-nums" style={{ color: k.color }}>{k.value}</p>
-                <p className="text-[8px] uppercase tracking-wider" style={{ color: "#64748B" }}>{k.label}</p>
+                <p className="text-[18px] font-extrabold tabular-nums" style={{ color: k.color }}>{k.value}</p>
+                <p className="text-[8px] uppercase tracking-[0.15em]" style={{ color: "#64748B" }}>{k.label}</p>
               </div>
             ))}
           </div>
         </ConfigSection>
 
         {/* Profiles */}
-        <ConfigSection id="perfis" title="Perfis dos Leads">
+        <ConfigSection id="perfis" title="Perfis dos Leads" accentColor="#F59E0B" icon={<User className="w-3.5 h-3.5" style={{ color: "#F59E0B" }} />}>
           <div className="grid grid-cols-4 gap-2">
             {CLIENT_PROFILES.map(p => {
               const active = selectedProfiles.includes(p.id);
               return (
                 <button key={p.id} onClick={() => toggleMulti(selectedProfiles, p.id, setSelectedProfiles)}
-                  className="text-left rounded-lg p-2.5 transition-all duration-200"
-                  style={{ background: active ? `${p.color}08` : "#111827", border: `1px solid ${active ? p.color : "#1E293B"}` }}>
-                  <span className="text-lg">{p.emoji}</span>
-                  <p className="text-[10px] font-bold mt-1" style={{ color: active ? p.color : "#F1F5F9" }}>{p.name}</p>
-                  <p className="text-[8px]" style={{ color: "#64748B" }}>{p.description}</p>
+                  className="text-left rounded-xl p-3 transition-all duration-300 hover:scale-[1.02]"
+                  style={{
+                    background: active ? `${p.color}08` : "rgba(255,255,255,0.015)",
+                    border: `1px solid ${active ? `${p.color}30` : "rgba(255,255,255,0.04)"}`,
+                    boxShadow: active ? `0 0 16px ${p.color}10` : "none",
+                  }}>
+                  <span className="text-xl">{p.emoji}</span>
+                  <p className="text-[10px] font-bold mt-1.5" style={{ color: active ? p.color : "#E2E8F0" }}>{p.name}</p>
+                  <p className="text-[8px] mt-0.5" style={{ color: "#64748B" }}>{p.description}</p>
                 </button>
               );
             })}
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Modo de distribuição</p>
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Modo de distribuição</p>
             <div className="flex gap-2">
               {[{ id: "random", label: "Aleatório" }, { id: "forced", label: "Forçado" }, { id: "roundrobin", label: "Round-robin" }].map(m => (
                 <button key={m.id} onClick={() => setProfileMode(m.id as any)}
-                  className="text-[10px] px-3 py-1.5 rounded-lg font-medium"
-                  style={{ background: profileMode === m.id ? "#10B98110" : "#111827", border: `1px solid ${profileMode === m.id ? "#10B981" : "#1E293B"}`, color: profileMode === m.id ? "#10B981" : "#64748B" }}>
+                  className="text-[10px] px-4 py-2 rounded-xl font-semibold transition-all duration-300"
+                  style={{ background: profileMode === m.id ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${profileMode === m.id ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: profileMode === m.id ? "#10B981" : "#64748B" }}>
                   {m.label}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Destinos</p>
-            <div className="flex flex-wrap gap-1">
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Destinos</p>
+            <div className="flex flex-wrap gap-1.5">
               {DESTINOS_ALL.map(d => (
                 <button key={d} onClick={() => toggleMulti(selectedDestinos, d, setSelectedDestinos)}
-                  className="text-[9px] px-2 py-1 rounded font-medium"
-                  style={{ background: selectedDestinos.includes(d) ? "#F59E0B10" : "transparent", border: `1px solid ${selectedDestinos.includes(d) ? "#F59E0B" : "#1E293B"}`, color: selectedDestinos.includes(d) ? "#F59E0B" : "#64748B" }}>
+                  className="text-[9px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
+                  style={{ background: selectedDestinos.includes(d) ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${selectedDestinos.includes(d) ? "rgba(245,158,11,0.25)" : "rgba(255,255,255,0.04)"}`, color: selectedDestinos.includes(d) ? "#F59E0B" : "#64748B" }}>
                   {d}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Faixa de orçamento</p>
-            <div className="flex flex-wrap gap-1">
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Faixa de orçamento</p>
+            <div className="flex flex-wrap gap-1.5">
               {BUDGETS.map(b => (
                 <button key={b} onClick={() => toggleMulti(selectedBudgets, b, setSelectedBudgets)}
-                  className="text-[9px] px-2 py-1 rounded font-medium"
-                  style={{ background: selectedBudgets.includes(b) ? "#10B98110" : "transparent", border: `1px solid ${selectedBudgets.includes(b) ? "#10B981" : "#1E293B"}`, color: selectedBudgets.includes(b) ? "#10B981" : "#64748B" }}>
+                  className="text-[9px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
+                  style={{ background: selectedBudgets.includes(b) ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${selectedBudgets.includes(b) ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: selectedBudgets.includes(b) ? "#10B981" : "#64748B" }}>
                   {b}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Origens de canal</p>
-            <div className="flex flex-wrap gap-1">
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Origens de canal</p>
+            <div className="flex flex-wrap gap-1.5">
               {CANAIS.map(c => (
                 <button key={c} onClick={() => toggleMulti(selectedCanais, c, setSelectedCanais)}
-                  className="text-[9px] px-2 py-1 rounded font-medium"
-                  style={{ background: selectedCanais.includes(c) ? "#3B82F610" : "transparent", border: `1px solid ${selectedCanais.includes(c) ? "#3B82F6" : "#1E293B"}`, color: selectedCanais.includes(c) ? "#3B82F6" : "#64748B" }}>
+                  className="text-[9px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
+                  style={{ background: selectedCanais.includes(c) ? "rgba(59,130,246,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${selectedCanais.includes(c) ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)"}`, color: selectedCanais.includes(c) ? "#3B82F6" : "#64748B" }}>
                   {c}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Grupos de viajantes</p>
-            <div className="flex flex-wrap gap-1">
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Grupos de viajantes</p>
+            <div className="flex flex-wrap gap-1.5">
               {GRUPOS.map(g => (
                 <button key={g} onClick={() => toggleMulti(selectedGrupos, g, setSelectedGrupos)}
-                  className="text-[9px] px-2 py-1 rounded font-medium"
-                  style={{ background: selectedGrupos.includes(g) ? "#8B5CF610" : "transparent", border: `1px solid ${selectedGrupos.includes(g) ? "#8B5CF6" : "#1E293B"}`, color: selectedGrupos.includes(g) ? "#8B5CF6" : "#64748B" }}>
+                  className="text-[9px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
+                  style={{ background: selectedGrupos.includes(g) ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${selectedGrupos.includes(g) ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.04)"}`, color: selectedGrupos.includes(g) ? "#8B5CF6" : "#64748B" }}>
                   {g}
                 </button>
               ))}
@@ -522,62 +520,62 @@ export default function SimuladorAutoMode() {
         </ConfigSection>
 
         {/* Behavior */}
-        <ConfigSection id="comportamento" title="Comportamento da Simulação">
+        <ConfigSection id="comportamento" title="Comportamento" accentColor="#8B5CF6" icon={<Zap className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />}>
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px]" style={{ color: "#64748B" }}>Taxa alvo de conversão</span>
-              <span className="text-[14px] font-bold" style={{ color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px]" style={{ color: "#94A3B8" }}>Taxa alvo de conversão</span>
+              <span className="text-[15px] font-bold" style={{ color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
                 {conversionOverride !== null ? `${conversionOverride}%` : "Natural"}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Slider min={0} max={100} step={5} value={[conversionOverride ?? 50]} onValueChange={v => setConversionOverride(v[0])} disabled={conversionOverride === null} />
               <button onClick={() => setConversionOverride(conversionOverride === null ? 50 : null)}
-                className="text-[9px] px-2 py-1 rounded shrink-0"
-                style={{ background: conversionOverride !== null ? "#10B98120" : "#1E293B", color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
+                className="text-[9px] px-3 py-1.5 rounded-lg shrink-0 font-semibold transition-all"
+                style={{ background: conversionOverride !== null ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.02)", border: `1px solid ${conversionOverride !== null ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
                 {conversionOverride !== null ? "Override" : "Natural"}
               </button>
             </div>
           </div>
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px]" style={{ color: "#64748B" }}>Densidade de objeções</span>
-              <span className="text-[14px] font-bold" style={{ color: "#F59E0B" }}>{objectionDensity}%</span>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px]" style={{ color: "#94A3B8" }}>Densidade de objeções</span>
+              <span className="text-[15px] font-bold" style={{ color: "#F59E0B" }}>{objectionDensity}%</span>
             </div>
             <Slider min={0} max={100} step={5} value={[objectionDensity]} onValueChange={v => setObjectionDensity(v[0])} />
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Velocidade das mensagens</p>
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Velocidade das mensagens</p>
             <div className="flex gap-2">
               {SPEED_OPTIONS.map(s => (
                 <button key={s.id} onClick={() => setSpeed(s.id)}
-                  className="text-[10px] px-3 py-1.5 rounded-lg font-medium flex-1"
-                  style={{ background: speed === s.id ? "#10B98110" : "#111827", border: `1px solid ${speed === s.id ? "#10B981" : "#1E293B"}`, color: speed === s.id ? "#10B981" : "#64748B" }}>
+                  className="text-[10px] px-3 py-2 rounded-xl font-semibold flex-1 transition-all duration-300"
+                  style={{ background: speed === s.id ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${speed === s.id ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: speed === s.id ? "#10B981" : "#64748B" }}>
                   {s.label}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Agentes do funil</p>
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Agentes do funil</p>
             <div className="flex gap-2 mb-2">
               {[{ id: "full", label: "Funil completo" }, { id: "comercial", label: "Só comercial" }, { id: "custom", label: "Personalizado" }].map(m => (
                 <button key={m.id} onClick={() => setFunnelMode(m.id as any)}
-                  className="text-[10px] px-3 py-1.5 rounded-lg font-medium"
-                  style={{ background: funnelMode === m.id ? "#8B5CF610" : "#111827", border: `1px solid ${funnelMode === m.id ? "#8B5CF6" : "#1E293B"}`, color: funnelMode === m.id ? "#8B5CF6" : "#64748B" }}>
+                  className="text-[10px] px-4 py-2 rounded-xl font-semibold transition-all"
+                  style={{ background: funnelMode === m.id ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${funnelMode === m.id ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.04)"}`, color: funnelMode === m.id ? "#8B5CF6" : "#64748B" }}>
                   {m.label}
                 </button>
               ))}
             </div>
             {funnelMode === "custom" && (
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5 animate-in fade-in duration-200">
                 {AGENTS_V4.map(a => {
                   const active = customFunnelAgents.includes(a.id);
                   const c = getAgentColor(a);
                   return (
                     <button key={a.id} onClick={() => toggleMulti(customFunnelAgents, a.id, setCustomFunnelAgents)}
-                      className="text-[9px] px-2 py-1 rounded font-medium"
-                      style={{ background: active ? `${c}10` : "transparent", border: `1px solid ${active ? c : "#1E293B"}`, color: active ? c : "#64748B" }}>
+                      className="text-[9px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
+                      style={{ background: active ? `${c}10` : "rgba(255,255,255,0.02)", border: `1px solid ${active ? `${c}30` : "rgba(255,255,255,0.04)"}`, color: active ? c : "#64748B" }}>
                       {a.name}
                     </button>
                   );
@@ -589,10 +587,10 @@ export default function SimuladorAutoMode() {
 
         {/* Start button */}
         <button onClick={runSimulation}
-          className="w-full py-4 rounded-xl text-sm font-bold transition-all duration-200"
-          style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 8px 24px #10B98140" }}
-          onMouseEnter={e => { (e.target as HTMLElement).style.transform = "translateY(-2px)"; }}
-          onMouseLeave={e => { (e.target as HTMLElement).style.transform = "translateY(0)"; }}>
+          className="w-full py-4 rounded-2xl text-sm font-bold transition-all duration-300 relative overflow-hidden group"
+          style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 8px 32px rgba(16,185,129,0.3)" }}
+          onMouseEnter={e => { (e.target as HTMLElement).style.transform = "translateY(-2px)"; (e.target as HTMLElement).style.boxShadow = "0 12px 40px rgba(16,185,129,0.45)"; }}
+          onMouseLeave={e => { (e.target as HTMLElement).style.transform = "translateY(0)"; (e.target as HTMLElement).style.boxShadow = "0 8px 32px rgba(16,185,129,0.3)"; }}>
           <Play className="w-4 h-4 inline mr-2" />
           Iniciar Simulação · {estLeads} leads · {formatTime(duration)}
         </button>
