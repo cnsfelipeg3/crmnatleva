@@ -11,6 +11,12 @@ import {
   buildAvaliacaoPrompt, buildMensagemPerdaPrompt,
   gerarLeadInteligente, deveInserirObjecao, atualizarEstadoEmocional, devePerdeLead,
 } from "./intelligentLeads";
+import {
+  getAgentPesos, getNivel, buildLiveEvalPrompt, buildDebriefV2Prompt,
+  SYSTEM_DEBRIEF_V2, CRITERIOS_AVALIACAO,
+  type DimensaoScore, type CriterioScore,
+  saveHistoricoAvaliacao, loadHistoricoAvaliacoes,
+} from "./evaluationFramework";
 
 // ===== API =====
 async function callAgent(sysPrompt: string, history: { role: string; content: string }[]): Promise<string> {
