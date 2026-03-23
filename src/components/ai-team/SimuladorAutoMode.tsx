@@ -1503,6 +1503,9 @@ Retorne JSON:
                 { icon: "🎯", label: `${selectedProfiles.length || 8} perfis`, color: "#EC4899" },
                 { icon: "🌍", label: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos`, color: "#06B6D4" },
                 { icon: "⚡", label: SPEED_OPTIONS.find(s => s.id === speed)?.label || "Normal", color: "#F59E0B" },
+                { icon: "🧠", label: enableEvaluation ? `Aval. ${evalFrequency === "every" ? "100%" : evalFrequency === "every2" ? "50%" : "33%"}` : "Aval. off", color: "#EC4899" },
+                { icon: "🔄", label: enableTransfers ? "Transf. on" : "Transf. off", color: "#06B6D4" },
+                { icon: "💥", label: `Vol. ${emotionalVolatility}%`, color: "#EF4444" },
               ].map(chip => (
                 <span key={chip.label} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0"
                   style={{ background: `${chip.color}08`, color: chip.color, border: `1px solid ${chip.color}15` }}>
