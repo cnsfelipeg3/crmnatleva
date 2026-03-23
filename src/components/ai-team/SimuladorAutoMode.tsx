@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users } from "lucide-react";
+import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users, BookOpen, Search, FileText, Workflow, Edit3 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { cn } from "@/lib/utils";
@@ -98,14 +98,87 @@ const getAgentColor = (agent: typeof AGENTS_V4[0]) => {
 
 type Phase = "config" | "running" | "report";
 type ReportTab = "numeros" | "conversas" | "debrief";
+type ImprovementType = "conhecimento_kb" | "nova_skill" | "instrucao_prompt" | "workflow";
 
 interface Improvement {
   id: string; titulo: string; desc: string; impacto: string; agente: string;
-  prioridade: "alta" | "media" | "baixa"; status: "pending" | "approved" | "rejected";
+  prioridade: "alta" | "media" | "baixa"; status: "pending" | "analyzing" | "approved" | "rejected";
+  tipo: ImprovementType; conteudoSugerido: string; fonte: string;
+  deepAnalysis?: DeepAnalysis | null; editedContent?: string; rejectReason?: string;
+}
+interface DeepAnalysis {
+  analiseCompleta: string; linhaRaciocinio: string[];
+  impactoNumeros: { conversao: string; receita: string; satisfacao: string; eficiencia: string };
+  psicologiaCliente: string; riscosNaoImplementar: string;
+  recomendacao: string; confianca: number;
 }
 interface DebriefData {
   scoreGeral: number; resumoExecutivo: string; fraseNathAI: string;
   pontosFortes: string[]; melhorias: Improvement[]; lacunasConhecimento: string[]; insightsCliente: string[];
+}
+interface SimHistoryEntry {
+  id: string; date: string; scoreGeral: number; totalLeads: number;
+  fechados: number; perdidos: number; conversao: number; melhorias_aprovadas: string[];
+}
+
+const TIPO_COLORS: Record<ImprovementType, { bg: string; color: string; label: string; icon: string }> = {
+  conhecimento_kb: { bg: "rgba(59,130,246,0.08)", color: "#3B82F6", label: "KB", icon: "📚" },
+  nova_skill: { bg: "rgba(245,158,11,0.08)", color: "#F59E0B", label: "Skill", icon: "⚡" },
+  instrucao_prompt: { bg: "rgba(139,92,246,0.08)", color: "#8B5CF6", label: "Prompt", icon: "📝" },
+  workflow: { bg: "rgba(6,182,212,0.08)", color: "#06B6D4", label: "Workflow", icon: "🔄" },
+};
+
+// ===== FLYWHEEL STORAGE =====
+const STORAGE_KEYS = {
+  sim_history: "natleva_sim_historico",
+  kb: "natleva_knowledge_base_improvements",
+  skills: "natleva_skills_improvements",
+  prompts: "natleva_prompt_improvements",
+  workflows: "natleva_workflow_improvements",
+  evolution: "natleva_evolution_timeline",
+};
+
+function loadJson(key: string) {
+  try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
+}
+function saveJson(key: string, data: any) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+async function implementImprovement(m: Improvement) {
+  const entry = { id: m.id, titulo: m.titulo, agente: m.agente, conteudo: m.editedContent || m.conteudoSugerido, data: new Date().toISOString(), tipo: m.tipo };
+  if (m.tipo === "conhecimento_kb") {
+    const kb = loadJson(STORAGE_KEYS.kb);
+    kb.unshift(entry);
+    saveJson(STORAGE_KEYS.kb, kb);
+  } else if (m.tipo === "nova_skill") {
+    const skills = loadJson(STORAGE_KEYS.skills);
+    skills.unshift(entry);
+    saveJson(STORAGE_KEYS.skills, skills);
+  } else if (m.tipo === "instrucao_prompt") {
+    const prompts = loadJson(STORAGE_KEYS.prompts);
+    prompts.unshift(entry);
+    saveJson(STORAGE_KEYS.prompts, prompts);
+  } else if (m.tipo === "workflow") {
+    const wfs = loadJson(STORAGE_KEYS.workflows);
+    wfs.unshift(entry);
+    saveJson(STORAGE_KEYS.workflows, wfs);
+  }
+  // Register in Evolution timeline
+  const timeline = loadJson(STORAGE_KEYS.evolution);
+  timeline.unshift({
+    id: "ev_" + Date.now(), tipo: m.tipo, agenteId: m.agente,
+    titulo: m.titulo, antes: "Problema identificado em simulação",
+    depois: (m.editedContent || m.conteudoSugerido).slice(0, 80),
+    impacto: m.impacto, status: "aplicado", data: new Date().toISOString(), fonte: "debrief_simulacao",
+  });
+  saveJson(STORAGE_KEYS.evolution, timeline);
+}
+
+function saveSimHistory(entry: SimHistoryEntry) {
+  const history = loadJson(STORAGE_KEYS.sim_history);
+  history.unshift(entry);
+  saveJson(STORAGE_KEYS.sim_history, history.slice(0, 20));
 }
 
 function useCountUp(target: number, duration = 500) {
@@ -408,36 +481,199 @@ export default function SimuladorAutoMode() {
         objecoes: l.objecoesLancadas, etapaPerda: l.etapaPerda,
         msgs: l.mensagens.slice(0, 12).map(m => `${m.role}: ${m.content.slice(0, 120)}`).join("\n"),
       }));
-      const prompt = `Analise esta simulação de agência de viagens com leads inteligentes (IA dinâmica) e retorne JSON válido com: scoreGeral (0-100), resumoExecutivo (3-4 frases detalhadas sobre performance), fraseNathAI (frase motivacional da gestora), pontosFortes (array strings detalhadas), melhorias (array com titulo, desc, impacto, agente, prioridade alta/media/baixa), lacunasConhecimento (array strings), insightsCliente (array strings sobre padrões de comportamento dos leads).\n\nStats: ${leads.length} leads, ${closedLeads.length} fechados, ${lostLeads.length} perdidos, R$${totalReceita} receita, ${totalObjecoes} objeções (${totalContornadas} contornadas), sentimento médio: ${avgSentimento}/100.\n\nPerdas por perfil: ${lostLeads.map(l => `${l.perfil.label} em ${l.etapaPerda}: ${l.motivoPerda?.slice(0, 80)}`).join(" | ")}\n\nConversas:\n${JSON.stringify(sampleConvos)}`;
-      const resp = await callAgent("Voce e analista de qualidade de agencia de viagens premium. Retorne SOMENTE JSON válido sem markdown.", [{ role: "user", content: prompt }]);
+
+      const pResumo = PERFIS_INTELIGENTES.map(p => {
+        const pLeads = leads.filter(l => l.perfil.tipo === p.tipo);
+        const pClosed = pLeads.filter(l => l.status === "fechou");
+        return pLeads.length > 0 ? `${p.label}: ${pClosed.length}/${pLeads.length}` : null;
+      }).filter(Boolean).join(" | ");
+
+      const topObjs = leads.flatMap(l => l.objecoesLancadas).reduce((acc, o) => { acc[o] = (acc[o] || 0) + 1; return acc; }, {} as Record<string, number>);
+      const topObjsStr = Object.entries(topObjs).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `"${k}" (${v}x)`).join(", ");
+
+      const prompt = `Você é NATH.AI, consultora de inteligência operacional da NatLeva Viagens.
+Sua missão: analisar simulações de atendimento com precisão cirúrgica.
+Tom: direto, construtivo, sem rodeios. A Nathália precisa de diagnóstico acionável.
+Cultura NatLeva: calorosa, próxima, humana. Nunca genérica.
+Retorne SOMENTE JSON válido. Nenhum texto fora do JSON.
+
+DADOS DA SIMULAÇÃO:
+- Total de leads: ${leads.length}
+- Fechados: ${closedLeads.length} (${conversionRate}%)
+- Perdidos: ${lostLeads.length}
+- Receita simulada: R$${(totalReceita/1000).toFixed(0)}k
+- Ticket médio: R$${(ticketMedio/1000).toFixed(0)}k
+- Objeções total: ${totalObjecoes}
+- Objeções contornadas: ${totalContornadas} (${totalObjecoes > 0 ? Math.round(totalContornadas/totalObjecoes*100) : 0}%)
+
+PERFORMANCE POR PERFIL: ${pResumo}
+TOP 5 OBJEÇÕES: ${topObjsStr || "nenhuma"}
+
+Perdas motivadas: ${lostLeads.slice(0, 5).map(l => `${l.perfil.label} em ${l.etapaPerda}: ${l.motivoPerda?.slice(0, 80)}`).join(" | ")}
+
+AMOSTRA DE CONVERSAS:
+${JSON.stringify(sampleConvos)}
+
+Retorne JSON:
+{
+  "scoreGeral": 0-100,
+  "resumoExecutivo": "2-3 frases de diagnóstico preciso",
+  "fraseNathAI": "frase motivacional e específica para a Nathália",
+  "pontosFortes": ["o que funcionou bem com evidência"],
+  "melhorias": [{
+    "titulo": "título curto e específico",
+    "desc": "2-3 frases explicando o problema e a solução",
+    "impacto": "impacto estimado com número",
+    "agente": "nome do agente responsável",
+    "prioridade": "alta|media|baixa",
+    "tipo": "conhecimento_kb|nova_skill|instrucao_prompt|workflow",
+    "conteudoSugerido": "TEXTO PRONTO para ser implementado no agente"
+  }],
+  "lacunasConhecimento": ["gap específico identificado"],
+  "insightsCliente": ["padrão de comportamento detectado com dados"]
+}`;
+
+      const resp = await callAgent("Voce e NATH.AI da NatLeva. Retorne SOMENTE JSON válido sem markdown.", [{ role: "user", content: prompt }]);
       const jsonMatch = resp.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const data = JSON.parse(jsonMatch[0]);
-        setDebrief({
-          scoreGeral: data.scoreGeral || 0, resumoExecutivo: data.resumoExecutivo || "",
+        const debriefResult: DebriefData = {
+          scoreGeral: data.scoreGeral || 0,
+          resumoExecutivo: data.resumoExecutivo || "",
           fraseNathAI: data.fraseNathAI || "",
           pontosFortes: data.pontosFortes || [],
-          melhorias: (data.melhorias || []).map((m: any, i: number) => ({ id: `imp-${i}`, titulo: m.titulo, desc: m.desc || m.descricao || "", impacto: m.impacto || "", agente: m.agente || "", prioridade: m.prioridade || "media", status: "pending" as const })),
+          melhorias: (data.melhorias || []).map((m: any, i: number) => ({
+            id: `imp-${Date.now()}-${i}`,
+            titulo: m.titulo || "",
+            desc: m.desc || m.descricao || "",
+            impacto: m.impacto || "",
+            agente: m.agente || "",
+            prioridade: m.prioridade || "media",
+            tipo: (m.tipo || "instrucao_prompt") as ImprovementType,
+            conteudoSugerido: m.conteudoSugerido || "",
+            fonte: "debrief_simulacao",
+            status: "pending" as const,
+            deepAnalysis: null,
+            editedContent: undefined,
+          })),
           lacunasConhecimento: data.lacunasConhecimento || [],
           insightsCliente: data.insightsCliente || [],
+        };
+        setDebrief(debriefResult);
+        // Save to simulation history
+        saveSimHistory({
+          id: "wr_" + Date.now(),
+          date: new Date().toISOString(),
+          scoreGeral: debriefResult.scoreGeral,
+          totalLeads: leads.length,
+          fechados: closedLeads.length,
+          perdidos: lostLeads.length,
+          conversao: conversionRate,
+          melhorias_aprovadas: [],
         });
       }
     } catch { toast({ title: "Erro ao gerar debrief", variant: "destructive" }); }
     finally { setDebriefLoading(false); }
-  }, [leads, closedLeads, lostLeads, totalReceita, totalObjecoes, totalContornadas, avgSentimento, toast]);
+  }, [leads, closedLeads, lostLeads, totalReceita, totalObjecoes, totalContornadas, avgSentimento, conversionRate, ticketMedio, toast]);
 
   useEffect(() => { if (phase === "report" && !debrief && !debriefLoading) generateDebrief(); }, [phase]);
 
-  const handleImprovement = (id: string, action: "approved" | "rejected") => {
+  // Deep analysis for a single improvement
+  const runDeepAnalysis = useCallback(async (improvementId: string) => {
     if (!debrief) return;
-    setDebrief({ ...debrief, melhorias: debrief.melhorias.map(m => m.id === id ? { ...m, status: action } : m) });
-    toast({ title: action === "approved" ? "Melhoria aprovada" : "Melhoria rejeitada", description: action === "approved" ? "Enviada ao Evolution Engine" : "" });
+    const m = debrief.melhorias.find(x => x.id === improvementId);
+    if (!m) return;
+    setDebrief(prev => prev ? { ...prev, melhorias: prev.melhorias.map(x => x.id === improvementId ? { ...x, status: "analyzing" as const } : x) } : prev);
+    try {
+      const agent = AGENTS_V4.find(a => a.name.toLowerCase().includes(m.agente.toLowerCase()));
+      const prompt = `Você é NATH.AI. Analise esta melhoria com profundidade máxima.
+Tom: consultora sênior. Evidências primeiro, depois recomendação.
+Retorne SOMENTE JSON.
+
+Melhoria: ${m.titulo}
+Descrição: ${m.desc}
+Agente afetado: ${m.agente} (${agent?.role || "agente"})
+Tipo de implementação: ${m.tipo}
+Impacto estimado: ${m.impacto}
+Prioridade: ${m.prioridade}
+Conteúdo sugerido: ${m.conteudoSugerido?.slice(0, 200)}
+
+Retorne JSON:
+{
+  "analiseCompleta": "3-5 parágrafos com problema, causa raiz, solução, evidências",
+  "linhaRaciocinio": ["passo 1", "passo 2", "passo 3", "conclusão"],
+  "impactoNumeros": {
+    "conversao": "ex: +12% taxa com Pechincheiro",
+    "receita": "ex: +R$1.800/mês",
+    "satisfacao": "ex: NPS +0.3 em 60 dias",
+    "eficiencia": "ex: -2 turnos por conversa"
+  },
+  "psicologiaCliente": "como a melhoria afeta a percepção do cliente",
+  "riscosNaoImplementar": "o que acontece se ignorar",
+  "recomendacao": "APROVAR|AVALIAR|REJEITAR",
+  "confianca": 0-100
+}`;
+      const resp = await callAgent("Voce e NATH.AI analista senior. Retorne SOMENTE JSON.", [{ role: "user", content: prompt }]);
+      const jsonMatch = resp.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const analysis: DeepAnalysis = JSON.parse(jsonMatch[0]);
+        setDebrief(prev => prev ? { ...prev, melhorias: prev.melhorias.map(x => x.id === improvementId ? { ...x, status: "pending" as const, deepAnalysis: analysis } : x) } : prev);
+      }
+    } catch {
+      setDebrief(prev => prev ? { ...prev, melhorias: prev.melhorias.map(x => x.id === improvementId ? { ...x, status: "pending" as const } : x) } : prev);
+      toast({ title: "Erro na análise profunda", variant: "destructive" });
+    }
+  }, [debrief, toast]);
+
+  const handleImprovement = async (id: string, action: "approved" | "rejected", reason?: string) => {
+    if (!debrief) return;
+    const m = debrief.melhorias.find(x => x.id === id);
+    if (!m) return;
+    if (action === "approved") {
+      await implementImprovement(m);
+    }
+    setDebrief({ ...debrief, melhorias: debrief.melhorias.map(x => x.id === id ? { ...x, status: action, rejectReason: reason } : x) });
+    toast({ title: action === "approved" ? "✅ Melhoria aprovada e implementada" : "Melhoria rejeitada", description: action === "approved" ? `Salva em ${TIPO_COLORS[m.tipo].label} → ${m.agente}` : reason || "" });
   };
-  const approveAll = () => {
+
+  const approveAll = async () => {
     if (!debrief) return;
+    const pending = debrief.melhorias.filter(m => m.status === "pending");
+    for (const m of pending) { await implementImprovement(m); }
     setDebrief({ ...debrief, melhorias: debrief.melhorias.map(m => ({ ...m, status: "approved" as const })) });
-    toast({ title: `${debrief.melhorias.length} melhorias aprovadas` });
+    toast({ title: `✅ ${pending.length} melhorias aprovadas e implementadas` });
   };
+
+  const updateImprovementContent = (id: string, content: string) => {
+    if (!debrief) return;
+    setDebrief({ ...debrief, melhorias: debrief.melhorias.map(m => m.id === id ? { ...m, editedContent: content } : m) });
+  };
+
+  const convertInsightToImprovement = (insight: string) => {
+    if (!debrief) return;
+    const newImp: Improvement = {
+      id: `imp-insight-${Date.now()}`, titulo: insight.slice(0, 60),
+      desc: insight, impacto: "A ser avaliado", agente: "NATH.AI",
+      prioridade: "media", status: "pending", tipo: "instrucao_prompt",
+      conteudoSugerido: "", fonte: "insight_convertido",
+    };
+    setDebrief({ ...debrief, melhorias: [...debrief.melhorias, newImp] });
+    toast({ title: "Insight convertido em melhoria pendente" });
+  };
+
+  const convertLacunaToKB = (lacuna: string) => {
+    if (!debrief) return;
+    const newImp: Improvement = {
+      id: `imp-kb-${Date.now()}`, titulo: `KB: ${lacuna.slice(0, 50)}`,
+      desc: lacuna, impacto: "Preencher lacuna de conhecimento", agente: "DANTE",
+      prioridade: "alta", status: "pending", tipo: "conhecimento_kb",
+      conteudoSugerido: "", fonte: "lacuna_convertida",
+    };
+    setDebrief({ ...debrief, melhorias: [...debrief.melhorias, newImp] });
+    toast({ title: "Lacuna convertida em documento KB pendente" });
+  };
+
+  const simHistory: SimHistoryEntry[] = loadJson(STORAGE_KEYS.sim_history);
 
   // Sentiment color helper
   const sentimentColor = (s: number) => s >= 70 ? "#10B981" : s >= 40 ? "#F59E0B" : "#EF4444";
@@ -1189,27 +1425,53 @@ export default function SimuladorAutoMode() {
           {debriefLoading && (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
               <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#8B5CF6" }} />
-              <p className="text-[13px]" style={{ color: "#64748B" }}>Gerando Debrief IA com análise de leads inteligentes...</p>
+              <p className="text-[13px]" style={{ color: "#64748B" }}>NATH.AI analisando simulação com leads inteligentes...</p>
             </div>
           )}
           {debrief && (
             <>
+              {/* Header */}
+              <div className="rounded-2xl p-5 relative overflow-hidden" style={{ background: "#0D1220", border: "1px solid rgba(30,41,59,0.5)" }}>
+                <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${sentimentColor(debrief.scoreGeral)}, transparent)` }} />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Brain className="w-5 h-5" style={{ color: "#8B5CF6" }} />
+                    <div>
+                      <p className="text-[14px] font-bold" style={{ color: "#F1F5F9" }}>Debrief da Simulação</p>
+                      <p className="text-[10px]" style={{ color: "#64748B" }}>{new Date().toLocaleDateString("pt-BR")} · {leads.length} leads · {closedLeads.length} fechados</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={generateDebrief} className="text-[10px] px-4 py-2 rounded-xl font-semibold transition-all hover:scale-[1.02]"
+                      style={{ border: "1px solid rgba(255,255,255,0.06)", color: "#64748B", background: "rgba(255,255,255,0.02)" }}>
+                      <Loader2 className={cn("w-3 h-3 inline mr-1.5", debriefLoading && "animate-spin")} /> Reanalisar
+                    </button>
+                    {debrief.melhorias.filter(m => m.status === "pending").length > 0 && (
+                      <button onClick={approveAll} className="text-[10px] px-4 py-2 rounded-xl font-bold transition-all hover:scale-105"
+                        style={{ background: "linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.15))", color: "#10B981", border: "1px solid rgba(16,185,129,0.25)" }}>
+                        Aprovar todas ({debrief.melhorias.filter(m => m.status === "pending").length})
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Score + Summary */}
               <div className="flex gap-4">
-                <div className="rounded-2xl p-6 text-center relative overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${sentimentColor(debrief.scoreGeral)}, transparent)` }} />
-                  <div className="relative w-28 h-28 mx-auto">
+                <div className="rounded-2xl p-6 text-center relative overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)", minWidth: 160 }}>
+                  <div className="relative w-[72px] h-[72px] mx-auto">
                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                       <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
                       <circle cx="18" cy="18" r="15" fill="none" stroke={sentimentColor(debrief.scoreGeral)}
                         strokeWidth="3" strokeDasharray={`${debrief.scoreGeral * 0.94} 100`} strokeLinecap="round"
                         style={{ filter: `drop-shadow(0 0 6px ${sentimentColor(debrief.scoreGeral)})` }} />
                     </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-[32px] font-extrabold" style={{ color: sentimentColor(debrief.scoreGeral) }}>{debrief.scoreGeral}</span>
+                    <span className="absolute inset-0 flex items-center justify-center text-[22px] font-extrabold" style={{ color: sentimentColor(debrief.scoreGeral) }}>{debrief.scoreGeral}</span>
                   </div>
                   <p className="text-[9px] uppercase tracking-[0.12em] mt-2" style={{ color: "#64748B" }}>Score Geral</p>
                 </div>
                 <div className="flex-1 space-y-3">
-                  <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="rounded-2xl p-4" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
                     <p className="text-[13px] leading-[1.7]" style={{ color: "#E2E8F0" }}>{debrief.resumoExecutivo}</p>
                   </div>
                   {debrief.fraseNathAI && (
@@ -1220,10 +1482,12 @@ export default function SimuladorAutoMode() {
                   )}
                 </div>
               </div>
+
+              {/* Pontos Fortes */}
               {debrief.pontosFortes.length > 0 && (
                 <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                  <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#64748B" }}>Pontos Fortes</p>
-                  {debrief.pontosFortes.map((p, i) => (
+                  <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#10B981" }}>✅ Pontos Fortes</p>
+                  {debrief.pontosFortes.slice(0, 4).map((p, i) => (
                     <div key={i} className="flex items-start gap-2.5 py-1.5">
                       <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#10B981" }} />
                       <p className="text-[11px] leading-relaxed" style={{ color: "#E2E8F0" }}>{p}</p>
@@ -1231,77 +1495,281 @@ export default function SimuladorAutoMode() {
                   ))}
                 </div>
               )}
+
+              {/* === MELHORIAS — O CORAÇÃO DO DEBRIEF === */}
               <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <div className="flex items-center justify-between mb-4">
-                  <p className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#64748B" }}>Melhorias Sugeridas</p>
-                  <button onClick={approveAll} className="text-[9px] px-3 py-1.5 rounded-xl font-bold transition-all hover:scale-105"
-                    style={{ background: "rgba(16,185,129,0.08)", color: "#10B981", border: "1px solid rgba(16,185,129,0.2)" }}>Aprovar Tudo</button>
-                </div>
-                <div className="space-y-2.5">
-                  {debrief.melhorias.map(m => (
-                    <div key={m.id} className="rounded-xl p-4 transition-all" style={{
-                      background: "rgba(255,255,255,0.015)",
-                      border: `1px solid ${m.status === "approved" ? "rgba(16,185,129,0.2)" : m.status === "rejected" ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.04)"}`,
-                      opacity: m.status === "rejected" ? 0.5 : 1,
-                    }}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <p className="text-[12px] font-bold" style={{ color: "#F1F5F9" }}>{m.titulo}</p>
-                            <span className="text-[8px] font-bold uppercase px-2 py-0.5 rounded-lg"
-                              style={{ background: m.prioridade === "alta" ? "rgba(239,68,68,0.08)" : m.prioridade === "media" ? "rgba(245,158,11,0.08)" : "rgba(59,130,246,0.08)", color: m.prioridade === "alta" ? "#EF4444" : m.prioridade === "media" ? "#F59E0B" : "#3B82F6" }}>{m.prioridade}</span>
-                          </div>
-                          <p className="text-[10px]" style={{ color: "#94A3B8" }}>{m.desc}</p>
-                          <div className="flex items-center gap-4 mt-2">
-                            <span className="text-[9px]" style={{ color: "#8B5CF6" }}>Agente: {m.agente}</span>
-                            <span className="text-[9px]" style={{ color: "#10B981" }}>Impacto: {m.impacto}</span>
-                          </div>
-                        </div>
-                        {m.status === "pending" && (
-                          <div className="flex gap-1.5 shrink-0">
-                            <button onClick={() => handleImprovement(m.id, "approved")} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110"
-                              style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}><Check className="w-4 h-4" style={{ color: "#10B981" }} /></button>
-                            <button onClick={() => handleImprovement(m.id, "rejected")} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110"
-                              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}><X className="w-4 h-4" style={{ color: "#EF4444" }} /></button>
-                          </div>
-                        )}
-                        {m.status === "approved" && <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "#10B981" }} />}
-                        {m.status === "rejected" && <XCircle className="w-5 h-5 shrink-0" style={{ color: "#EF4444" }} />}
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#F59E0B" }}>🔧 Melhorias Sugeridas</p>
+                    <div className="flex gap-1.5">
+                      {Object.entries(TIPO_COLORS).map(([key, val]) => {
+                        const count = debrief.melhorias.filter(m => m.tipo === key).length;
+                        if (count === 0) return null;
+                        return <span key={key} className="text-[8px] px-2 py-0.5 rounded-full font-semibold" style={{ background: val.bg, color: val.color }}>{val.icon} {val.label} ({count})</span>;
+                      })}
                     </div>
-                  ))}
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {debrief.melhorias.map(m => {
+                    const tipoInfo = TIPO_COLORS[m.tipo] || TIPO_COLORS.instrucao_prompt;
+                    const isAnalyzing = m.status === "analyzing";
+                    const isApproved = m.status === "approved";
+                    const isRejected = m.status === "rejected";
+                    const isPending = m.status === "pending";
+                    const hasDeepAnalysis = !!m.deepAnalysis;
+
+                    return (
+                      <div key={m.id} className="rounded-xl overflow-hidden transition-all duration-300" style={{
+                        border: `1px solid ${isApproved ? "rgba(16,185,129,0.25)" : isRejected ? "rgba(239,68,68,0.15)" : isAnalyzing ? "rgba(139,92,246,0.25)" : "rgba(245,158,11,0.15)"}`,
+                        opacity: isRejected ? 0.5 : 1,
+                      }}>
+                        {/* Card header bar */}
+                        <div className="h-[2px]" style={{ background: isApproved ? "#10B981" : isRejected ? "#EF4444" : isAnalyzing ? "#8B5CF6" : "#F59E0B" }} />
+
+                        <div className="p-4" style={{ background: isApproved ? "rgba(16,185,129,0.03)" : "rgba(255,255,255,0.015)" }}>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                                <p className="text-[12px] font-bold" style={{ color: "#F1F5F9" }}>{m.titulo}</p>
+                                {/* Tipo pill */}
+                                <span className="text-[8px] font-bold px-2 py-0.5 rounded-full" style={{ background: tipoInfo.bg, color: tipoInfo.color }}>
+                                  {tipoInfo.icon} {tipoInfo.label}
+                                </span>
+                                {/* Prioridade */}
+                                <span className="text-[8px] font-bold uppercase px-2 py-0.5 rounded-full"
+                                  style={{ background: m.prioridade === "alta" ? "rgba(239,68,68,0.08)" : m.prioridade === "media" ? "rgba(245,158,11,0.08)" : "rgba(59,130,246,0.08)", color: m.prioridade === "alta" ? "#EF4444" : m.prioridade === "media" ? "#F59E0B" : "#3B82F6" }}>{m.prioridade}</span>
+                                {/* Agent pill */}
+                                <span className="text-[8px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(139,92,246,0.08)", color: "#8B5CF6" }}>{m.agente}</span>
+                              </div>
+                              <p className="text-[10px] leading-relaxed" style={{ color: "#94A3B8" }}>{m.desc}</p>
+                              <p className="text-[9px] mt-1.5" style={{ color: "#10B981" }}>📈 Impacto: {m.impacto}</p>
+
+                              {/* Approved state */}
+                              {isApproved && (
+                                <div className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-lg" style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.1)" }}>
+                                  <CheckCircle2 className="w-3.5 h-3.5" style={{ color: "#10B981" }} />
+                                  <span className="text-[10px] font-semibold" style={{ color: "#10B981" }}>Implementada em {tipoInfo.label} → {m.agente}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action buttons */}
+                            {isPending && !hasDeepAnalysis && (
+                              <div className="flex gap-1.5 shrink-0">
+                                <button onClick={() => handleImprovement(m.id, "approved")} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110" title="Aprovar"
+                                  style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}><Check className="w-4 h-4" style={{ color: "#10B981" }} /></button>
+                                <button onClick={() => handleImprovement(m.id, "rejected")} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110" title="Rejeitar"
+                                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}><X className="w-4 h-4" style={{ color: "#EF4444" }} /></button>
+                                <button onClick={() => runDeepAnalysis(m.id)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110" title="Analisar"
+                                  style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}><Search className="w-4 h-4" style={{ color: "#8B5CF6" }} /></button>
+                              </div>
+                            )}
+                            {isAnalyzing && <Loader2 className="w-5 h-5 animate-spin shrink-0" style={{ color: "#8B5CF6" }} />}
+                            {isApproved && <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "#10B981" }} />}
+                            {isRejected && <XCircle className="w-5 h-5 shrink-0" style={{ color: "#EF4444" }} />}
+                          </div>
+
+                          {/* === DEEP ANALYSIS EXPANDED === */}
+                          {hasDeepAnalysis && isPending && m.deepAnalysis && (
+                            <div className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                              {/* Recommendation + Confidence */}
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="rounded-xl p-3 text-center" style={{
+                                  background: m.deepAnalysis.recomendacao === "APROVAR" ? "rgba(16,185,129,0.06)" : m.deepAnalysis.recomendacao === "REJEITAR" ? "rgba(239,68,68,0.06)" : "rgba(245,158,11,0.06)",
+                                  border: `1px solid ${m.deepAnalysis.recomendacao === "APROVAR" ? "rgba(16,185,129,0.15)" : m.deepAnalysis.recomendacao === "REJEITAR" ? "rgba(239,68,68,0.15)" : "rgba(245,158,11,0.15)"}`,
+                                }}>
+                                  <p className="text-[16px] font-extrabold" style={{
+                                    color: m.deepAnalysis.recomendacao === "APROVAR" ? "#10B981" : m.deepAnalysis.recomendacao === "REJEITAR" ? "#EF4444" : "#F59E0B"
+                                  }}>{m.deepAnalysis.recomendacao}</p>
+                                  <p className="text-[8px] uppercase" style={{ color: "#64748B" }}>Recomendação</p>
+                                </div>
+                                <div className="rounded-xl p-3 text-center" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.15)" }}>
+                                  <p className="text-[16px] font-extrabold" style={{ color: "#8B5CF6" }}>{m.deepAnalysis.confianca}%</p>
+                                  <p className="text-[8px] uppercase" style={{ color: "#64748B" }}>Confiança</p>
+                                </div>
+                              </div>
+
+                              {/* Analysis text */}
+                              <div className="rounded-xl p-4" style={{ background: "#111827", maxHeight: 200, overflow: "auto" }}>
+                                <p className="text-[11px] leading-[1.8]" style={{ color: "#D1D5DB" }}>{m.deepAnalysis.analiseCompleta}</p>
+                              </div>
+
+                              {/* Reasoning chain */}
+                              {m.deepAnalysis.linhaRaciocinio?.length > 0 && (
+                                <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                                  <p className="text-[9px] uppercase font-bold mb-2" style={{ color: "#64748B" }}>Linha de Raciocínio</p>
+                                  <div className="flex items-start gap-2 flex-wrap">
+                                    {m.deepAnalysis.linhaRaciocinio.map((step, i) => (
+                                      <div key={i} className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0" style={{
+                                          background: `hsl(${260 + i * 30}, 70%, 50%)`, color: "#fff"
+                                        }}>{i + 1}</div>
+                                        <p className="text-[10px]" style={{ color: "#E2E8F0" }}>{step}</p>
+                                        {i < m.deepAnalysis!.linhaRaciocinio.length - 1 && <span className="text-[10px]" style={{ color: "#475569" }}>→</span>}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Impact 4 dimensions */}
+                              {m.deepAnalysis.impactoNumeros && (
+                                <div className="grid grid-cols-4 gap-2">
+                                  {[
+                                    { key: "conversao", label: "Conversão", icon: "📊", color: "#3B82F6" },
+                                    { key: "receita", label: "Receita", icon: "💰", color: "#10B981" },
+                                    { key: "satisfacao", label: "Satisfação", icon: "💗", color: "#EC4899" },
+                                    { key: "eficiencia", label: "Eficiência", icon: "⚡", color: "#F59E0B" },
+                                  ].map(dim => (
+                                    <div key={dim.key} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                                      <p className="text-[8px] uppercase font-bold" style={{ color: dim.color }}>{dim.icon} {dim.label}</p>
+                                      <p className="text-[10px] mt-1" style={{ color: "#E2E8F0" }}>{(m.deepAnalysis!.impactoNumeros as any)[dim.key]}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Psychology */}
+                              {m.deepAnalysis.psicologiaCliente && (
+                                <div className="rounded-xl p-4" style={{ background: "rgba(236,72,153,0.04)", border: "1px solid rgba(236,72,153,0.1)" }}>
+                                  <p className="text-[9px] uppercase font-bold mb-1" style={{ color: "#EC4899" }}>🧠 Psicologia do Cliente</p>
+                                  <p className="text-[10px] leading-relaxed" style={{ color: "#E2E8F0" }}>{m.deepAnalysis.psicologiaCliente}</p>
+                                </div>
+                              )}
+
+                              {/* Risks */}
+                              {m.deepAnalysis.riscosNaoImplementar && (
+                                <div className="rounded-xl p-4" style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.1)" }}>
+                                  <p className="text-[9px] uppercase font-bold mb-1" style={{ color: "#EF4444" }}>⚠️ Riscos de não implementar</p>
+                                  <p className="text-[10px] leading-relaxed" style={{ color: "#E2E8F0" }}>{m.deepAnalysis.riscosNaoImplementar}</p>
+                                </div>
+                              )}
+
+                              {/* Editable content */}
+                              <div>
+                                <p className="text-[9px] uppercase font-bold mb-1.5" style={{ color: "#64748B" }}>
+                                  <Edit3 className="w-3 h-3 inline mr-1" />Conteúdo para implementação (editável)
+                                </p>
+                                <textarea
+                                  value={m.editedContent ?? m.conteudoSugerido}
+                                  onChange={e => updateImprovementContent(m.id, e.target.value)}
+                                  className="w-full rounded-xl text-[11px] p-4 resize-y"
+                                  rows={4}
+                                  style={{ background: "#111827", color: "#E2E8F0", border: "1px solid rgba(255,255,255,0.08)", outline: "none" }}
+                                />
+                              </div>
+
+                              {/* Final action buttons */}
+                              <div className="flex gap-3">
+                                <button onClick={() => handleImprovement(m.id, "approved")}
+                                  className="flex-1 py-3 rounded-xl text-[12px] font-bold transition-all hover:scale-[1.02]"
+                                  style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000" }}>
+                                  <CheckCircle2 className="w-4 h-4 inline mr-1.5" />Aprovar e implementar
+                                </button>
+                                <button onClick={() => handleImprovement(m.id, "rejected")}
+                                  className="px-6 py-3 rounded-xl text-[12px] font-bold transition-all hover:scale-[1.02]"
+                                  style={{ color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)", background: "transparent" }}>
+                                  Rejeitar
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Conteudo preview for pending without deep analysis */}
+                          {isPending && !hasDeepAnalysis && m.conteudoSugerido && (
+                            <div className="mt-3 rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                              <p className="text-[9px] font-bold" style={{ color: "#64748B" }}>
+                                <FileText className="w-3 h-3 inline mr-1" />Conteúdo sugerido
+                              </p>
+                              <p className="text-[10px] mt-1 line-clamp-2" style={{ color: "#94A3B8" }}>{m.conteudoSugerido.slice(0, 150)}...</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
+
+              {/* Lacunas + Insights side by side */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {debrief.lacunasConhecimento.length > 0 && (
                   <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#64748B" }}>Lacunas de Conhecimento</p>
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#F59E0B" }}>
+                      <BookOpen className="w-3.5 h-3.5 inline mr-1.5" />Lacunas de Conhecimento
+                    </p>
                     {debrief.lacunasConhecimento.map((l, i) => (
-                      <div key={i} className="flex items-start gap-2.5 py-1.5">
+                      <div key={i} className="flex items-start gap-2.5 py-2 group" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                         <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#F59E0B" }} />
-                        <p className="text-[10px]" style={{ color: "#E2E8F0" }}>{l}</p>
+                        <p className="text-[10px] flex-1" style={{ color: "#E2E8F0" }}>{l}</p>
+                        <button onClick={() => convertLacunaToKB(l)}
+                          className="text-[8px] px-2 py-1 rounded-lg font-semibold opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          style={{ background: "rgba(59,130,246,0.08)", color: "#3B82F6", border: "1px solid rgba(59,130,246,0.15)" }}>
+                          📚 Criar KB
+                        </button>
                       </div>
                     ))}
                   </div>
                 )}
                 {debrief.insightsCliente.length > 0 && (
                   <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#64748B" }}>Insights de Comportamento</p>
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#06B6D4" }}>
+                      <Lightbulb className="w-3.5 h-3.5 inline mr-1.5" />Insights de Comportamento
+                    </p>
                     {debrief.insightsCliente.map((ins, i) => (
-                      <div key={i} className="flex items-start gap-2.5 py-1.5">
+                      <div key={i} className="flex items-start gap-2.5 py-2 group" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                         <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#06B6D4" }} />
-                        <p className="text-[10px]" style={{ color: "#E2E8F0" }}>{ins}</p>
+                        <p className="text-[10px] flex-1" style={{ color: "#E2E8F0" }}>{ins}</p>
+                        <button onClick={() => convertInsightToImprovement(ins)}
+                          className="text-[8px] px-2 py-1 rounded-lg font-semibold opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          style={{ background: "rgba(245,158,11,0.08)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.15)" }}>
+                          🔧 Usar como melhoria
+                        </button>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-              <div className="flex gap-3">
-                <button onClick={generateDebrief} className="text-[10px] px-5 py-2.5 rounded-xl font-semibold transition-all hover:scale-[1.02]"
-                  style={{ border: "1px solid rgba(255,255,255,0.06)", color: "#64748B", background: "rgba(255,255,255,0.02)" }}>
-                  <Loader2 className={cn("w-3 h-3 inline mr-1.5", debriefLoading && "animate-spin")} /> Reanalisar
-                </button>
-              </div>
+
+              {/* Simulation History */}
+              {simHistory.length > 1 && (
+                <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-4" style={{ color: "#64748B" }}>
+                    <TrendingUp className="w-3.5 h-3.5 inline mr-1.5" />Histórico de Simulações
+                  </p>
+                  <div className="flex items-end gap-2" style={{ height: 80 }}>
+                    {simHistory.slice(0, 10).reverse().map((h, i) => {
+                      const maxScore = Math.max(...simHistory.slice(0, 10).map(s => s.scoreGeral), 1);
+                      const height = (h.scoreGeral / maxScore) * 100;
+                      return (
+                        <div key={h.id} className="flex-1 flex flex-col items-center gap-1 group relative">
+                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity text-[8px] px-2 py-1 rounded-lg whitespace-nowrap z-10"
+                            style={{ background: "#1E293B", color: "#E2E8F0", border: "1px solid rgba(255,255,255,0.1)" }}>
+                            {new Date(h.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })} · {h.conversao}% conv · {h.melhorias_aprovadas?.length || 0} mel.
+                          </div>
+                          <div className="w-full rounded-t transition-all duration-300 hover:opacity-80" style={{
+                            height: `${height}%`,
+                            background: `linear-gradient(180deg, ${sentimentColor(h.scoreGeral)}, ${sentimentColor(h.scoreGeral)}40)`,
+                            minHeight: 4,
+                          }} />
+                          <span className="text-[8px] font-bold tabular-nums" style={{ color: sentimentColor(h.scoreGeral) }}>{h.scoreGeral}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {simHistory.length >= 2 && (
+                    <div className="flex items-center gap-2 mt-3 px-3 py-2 rounded-lg" style={{ background: "rgba(255,255,255,0.02)" }}>
+                      <TrendingUp className="w-3 h-3" style={{ color: simHistory[0].scoreGeral >= simHistory[1].scoreGeral ? "#10B981" : "#EF4444" }} />
+                      <p className="text-[10px]" style={{ color: "#94A3B8" }}>
+                        Delta: <span style={{ color: simHistory[0].scoreGeral >= simHistory[1].scoreGeral ? "#10B981" : "#EF4444", fontWeight: 700 }}>
+                          {simHistory[0].scoreGeral >= simHistory[1].scoreGeral ? "+" : ""}{simHistory[0].scoreGeral - simHistory[1].scoreGeral} pontos
+                        </span> vs simulação anterior
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
