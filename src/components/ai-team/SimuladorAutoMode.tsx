@@ -89,8 +89,10 @@ async function gerarMensagemPerda(lead: LeadInteligente): Promise<string> {
   return callAgent(buildLeadPersona(lead), [{ role: "user", content: prompt }]);
 }
 
-function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean) {
-  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${hasNext ? "Quando completar objetivo, termine com [TRANSFERIR].\n" : ""}Responda APENAS a ultima mensagem. Breve (1-3 frases).`;
+function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean, enableTransfers: boolean, responseLength: "curta" | "media" | "longa") {
+  const lengthInstr = responseLength === "curta" ? "Responda em 1 frase apenas." : responseLength === "longa" ? "Responda de forma detalhada (3-5 frases), incluindo detalhes do produto." : "Responda APENAS a ultima mensagem. Breve (1-3 frases).";
+  const transferInstr = hasNext && enableTransfers ? "Quando completar objetivo, termine com [TRANSFERIR].\n" : "";
+  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${transferInstr}${lengthInstr}`;
 }
 
 const SPEED_OPTIONS = [
