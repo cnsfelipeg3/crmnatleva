@@ -110,10 +110,8 @@ const getAgentColor = (agent: typeof AGENTS_V4[0]) => {
 // ===== COMPONENT =====
 export default function SimuladorAutoMode() {
   // Config state
-  const [totalMsgs, setTotalMsgs] = useState(200);
   const [duration, setDuration] = useState(180);
   const [msgsPerLead, setMsgsPerLead] = useState(14);
-  const [msgsPerLeadLocked, setMsgsPerLeadLocked] = useState(false);
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
   const [profileMode, setProfileMode] = useState<"random" | "forced" | "roundrobin">("random");
   const [selectedDestinos, setSelectedDestinos] = useState<string[]>([]);
@@ -145,10 +143,13 @@ export default function SimuladorAutoMode() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { toast } = useToast();
 
+  const [numLeadsManual, setNumLeadsManual] = useState(32);
+  const [intervalManual, setIntervalManual] = useState(1);
+
   // Computed
-  const estLeads = msgsPerLeadLocked ? Math.floor(totalMsgs / msgsPerLead) : Math.max(1, Math.floor(totalMsgs / 14));
-  const autoMsgsPerLead = msgsPerLeadLocked ? msgsPerLead : Math.round(totalMsgs / estLeads);
-  const interval = estLeads > 1 ? Math.round(duration / estLeads) : duration;
+  const estLeads = numLeadsManual;
+  const autoMsgsPerLead = msgsPerLead;
+  const interval = intervalManual;
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
 
   // KPIs
@@ -318,7 +319,7 @@ export default function SimuladorAutoMode() {
     setRunning(false);
     setPhase("report");
     toast({ title: "Simulação concluída!", description: `${allNewLeads.length} leads processados` });
-  }, [totalMsgs, duration, msgsPerLead, msgsPerLeadLocked, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, estLeads, autoMsgsPerLead, interval, toast]);
+  }, [numLeadsManual, duration, msgsPerLead, intervalManual, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, estLeads, autoMsgsPerLead, interval, toast]);
 
   const stopSimulation = () => {
     setRunning(false);
@@ -394,39 +395,34 @@ export default function SimuladorAutoMode() {
       <div className="space-y-4 max-w-4xl animate-in fade-in slide-in-from-bottom-2 duration-300">
         {/* Volume */}
         <ConfigSection id="volume" title="Volume e Tempo">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px]" style={{ color: "#64748B" }}>Total de mensagens</span>
-              <span className="text-[24px] font-extrabold tabular-nums" style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>{totalMsgs}</span>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <span className="text-[11px] block mb-1" style={{ color: "#64748B" }}>Leads estimados</span>
+              <Slider min={1} max={200} step={1} value={[numLeadsManual]} onValueChange={v => setNumLeadsManual(v[0])} />
+              <p className="text-[22px] font-extrabold tabular-nums text-right mt-1" style={{ color: "#3B82F6" }}>{numLeadsManual}</p>
             </div>
-            <Slider min={20} max={2000} step={10} value={[totalMsgs]} onValueChange={v => setTotalMsgs(v[0])} />
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px]" style={{ color: "#64748B" }}>Duração</span>
-              <span className="text-[18px] font-bold tabular-nums" style={{ color: "#8B5CF6" }}>{formatTime(duration)}</span>
+            <div>
+              <span className="text-[11px] block mb-1" style={{ color: "#64748B" }}>Msgs por lead</span>
+              <Slider min={4} max={60} step={2} value={[msgsPerLead]} onValueChange={v => setMsgsPerLead(v[0])} />
+              <p className="text-[22px] font-extrabold tabular-nums text-right mt-1" style={{ color: "#10B981" }}>{msgsPerLead}</p>
             </div>
-            <Slider min={30} max={1800} step={30} value={[duration]} onValueChange={v => setDuration(v[0])} />
-          </div>
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[11px]" style={{ color: "#64748B" }}>Msgs por lead</span>
-              <div className="flex items-center gap-2">
-                <span className="text-[14px] font-bold tabular-nums" style={{ color: "#F1F5F9" }}>{msgsPerLeadLocked ? msgsPerLead : "Auto"}</span>
-                <button onClick={() => setMsgsPerLeadLocked(!msgsPerLeadLocked)} className="text-[9px] px-1.5 py-0.5 rounded"
-                  style={{ background: msgsPerLeadLocked ? "#10B98120" : "#1E293B", color: msgsPerLeadLocked ? "#10B981" : "#64748B", border: "1px solid #1E293B" }}>
-                  {msgsPerLeadLocked ? "Travado" : "Auto"}
-                </button>
-              </div>
+            <div>
+              <span className="text-[11px] block mb-1" style={{ color: "#64748B" }}>Intervalo entre leads (s)</span>
+              <Slider min={0} max={30} step={1} value={[intervalManual]} onValueChange={v => setIntervalManual(v[0])} />
+              <p className="text-[22px] font-extrabold tabular-nums text-right mt-1" style={{ color: "#F59E0B" }}>{intervalManual}s</p>
             </div>
-            {msgsPerLeadLocked && <Slider min={6} max={60} step={2} value={[msgsPerLead]} onValueChange={v => setMsgsPerLead(v[0])} />}
+            <div>
+              <span className="text-[11px] block mb-1" style={{ color: "#64748B" }}>Duração máx (s)</span>
+              <Slider min={30} max={1800} step={30} value={[duration]} onValueChange={v => setDuration(v[0])} />
+              <p className="text-[22px] font-extrabold tabular-nums text-right mt-1" style={{ color: "#8B5CF6" }}>{formatTime(duration)}</p>
+            </div>
           </div>
           {/* Preview card */}
           <div className="grid grid-cols-4 gap-2 p-3 rounded-lg" style={{ background: "#111827", border: "1px solid #1E293B" }}>
             {[
-              { label: "LEADS EST.", value: estLeads, color: "#3B82F6" },
-              { label: "MSGS/LEAD", value: autoMsgsPerLead, color: "#10B981" },
-              { label: "INTERVALO", value: `${interval}s`, color: "#F59E0B" },
+              { label: "LEADS EST.", value: numLeadsManual, color: "#3B82F6" },
+              { label: "MSGS/LEAD", value: msgsPerLead, color: "#10B981" },
+              { label: "INTERVALO", value: `${intervalManual}s`, color: "#F59E0B" },
               { label: "DURAÇÃO", value: formatTime(duration), color: "#8B5CF6" },
             ].map(k => (
               <div key={k.label} className="text-center">
