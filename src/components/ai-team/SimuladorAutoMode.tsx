@@ -297,7 +297,7 @@ export default function SimuladorAutoMode() {
     const allLeads: LeadInteligente[] = [];
 
     for (let i = 0; i < numLeads; i++) {
-      if (abortRef.current) break;
+      if (!simAtivaRef.current || abortRef.current) break;
 
       const perfil = profileMode === "roundrobin"
         ? profiles[i % profiles.length]
