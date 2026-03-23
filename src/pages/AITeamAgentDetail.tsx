@@ -5,20 +5,25 @@ import {
   Loader2, Activity, AlertTriangle, Eye, Pause, ChevronDown, ChevronUp,
   Cpu, TrendingUp, TrendingDown, Pencil, Save, X, Plus,
 } from "lucide-react";
-import { agents as mockAgents, initialTasks, simulatedResponses, defaultSkills, defaultScopes, defaultRestrictions, sectorOptions, type Task, type AgentLevel } from "@/components/ai-team/mockData";
+import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
+import { getAllV4Agents, getV4InitialTasks } from "@/components/ai-team/agentV4Bridge";
 import { useAgentEngine } from "@/components/ai-team/useAgentEngine";
 import type { AgentEvent } from "@/components/ai-team/agentEngine";
 import type { AgentMemory } from "@/components/ai-team/agentMemory";
+import type { Task, AgentLevel } from "@/components/ai-team/mockData";
+import { defaultSkills, defaultScopes, defaultRestrictions, sectorOptions } from "@/components/ai-team/mockData";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
-/* ═══ Config ═══ */
+const baseAgents = getAllV4Agents();
+const baseTasks = getV4InitialTasks();
 
 const STATUS_MAP: Record<string, { label: string; icon: React.ElementType; badge: string; border: string; text: string }> = {
   idle:       { label: "Aguardando",         icon: Pause,         badge: "bg-zinc-500/15 text-zinc-400 border-zinc-500/25",   border: "border-zinc-500/20", text: "text-zinc-400" },
@@ -28,7 +33,6 @@ const STATUS_MAP: Record<string, { label: string; icon: React.ElementType; badge
   alert:      { label: "Alerta",             icon: AlertTriangle, badge: "bg-red-500/15 text-red-400 border-red-500/25",       border: "border-red-500/20", text: "text-red-400" },
 };
 
-const LEVEL_MAP: Record<string, string> = { basic: "Nível 1", intermediate: "Nível 2", advanced: "Nível 3" };
 const LEVEL_LABELS: Record<AgentLevel, string> = { basic: "Básico", intermediate: "Intermediário", advanced: "Avançado" };
 
 const PRIORITY_MAP: Record<string, { label: string; class: string; dot: string }> = {
@@ -45,21 +49,19 @@ const KANBAN_COLS = [
 
 const MAX_VISIBLE = 4;
 
-/* ═══ Page ═══ */
-
 export default function AITeamAgentDetail() {
   const { agentId } = useParams<{ agentId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { agents, tasks, events, updateAgent } = useAgentEngine(mockAgents, initialTasks);
+  const { agents, tasks, events, updateAgent } = useAgentEngine(baseAgents, baseTasks);
 
   const agent = useMemo(() => agents.find(a => a.id === agentId), [agents, agentId]);
+  const v4 = useMemo(() => AGENTS_V4.find(a => a.id === agentId), [agentId]);
+  const squad = useMemo(() => v4 ? SQUADS.find(s => s.id === v4.squadId) : null, [v4]);
   const agentTasks = useMemo(() => tasks.filter(t => t.sourceAgentId === agentId), [tasks, agentId]);
   const agentEvents = useMemo(() => events.filter(e => e.agentId === agentId).slice(0, 15), [events, agentId]);
 
   const [editing, setEditing] = useState(false);
-
-  // Edit state
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState("");
   const [editSector, setEditSector] = useState("");
@@ -98,7 +100,7 @@ export default function AITeamAgentDetail() {
       behaviorPrompt: editBehavior.trim(),
     });
     setEditing(false);
-    toast({ title: "Agente atualizado", description: `${editName.trim()} foi editado com sucesso.` });
+    toast({ title: "Agente atualizado", description: `${editName.trim()} editado com sucesso.` });
   }, [agent, editName, editRole, editSector, editLevel, editSkills, editScope, editRestrictions, editBehavior, updateAgent, toast]);
 
   const toggleItem = (arr: string[], item: string, setter: (v: string[]) => void) => {
@@ -126,35 +128,43 @@ export default function AITeamAgentDetail() {
 
   const st = STATUS_MAP[agent.status] ?? STATUS_MAP.idle;
   const StatusIcon = st.icon;
+  const displayName = v4?.name ?? agent.name;
+  const displayEmoji = v4?.emoji ?? agent.emoji;
 
   return (
     <div className="min-h-screen pb-12">
       {/* ═══ HEADER ═══ */}
       <div className="border-b border-border/50 bg-card/30 backdrop-blur-sm sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <Button variant="ghost" size="sm" onClick={() => navigate("/ai-team")} className="gap-1.5 text-muted-foreground">
               <ArrowLeft className="w-4 h-4" /> AI Team
             </Button>
             <div className="h-5 w-px bg-border" />
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <span className="text-2xl">{agent.emoji}</span>
+              <span className="text-2xl">{displayEmoji}</span>
               <div className="min-w-0">
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-lg font-bold tracking-wide">{agent.name}</h1>
+                  <h1 className="text-lg font-bold tracking-wide">{displayName}</h1>
                   <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border", st.badge)}>
                     <StatusIcon className="w-3.5 h-3.5" />
                     {st.label}
                   </span>
+                  {squad && (
+                    <Badge variant="outline" className={cn("text-[10px]", squad.color)}>
+                      {squad.emoji} {squad.name}
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {agent.sector} · {LEVEL_MAP[agent.level] ?? agent.level} · {agent.skills.length} capacidades
+                  {v4?.role ?? agent.role}
+                  {v4 && <> · Lv.{v4.level} · {v4.successRate}% taxa</>}
                 </p>
               </div>
             </div>
             {!editing ? (
               <Button variant="outline" size="sm" onClick={startEditing} className="gap-1.5">
-                <Pencil className="w-4 h-4" /> Editar agente
+                <Pencil className="w-4 h-4" /> Editar
               </Button>
             ) : (
               <div className="flex gap-2">
@@ -172,41 +182,60 @@ export default function AITeamAgentDetail() {
 
       {/* ═══ CONTENT ═══ */}
       <div className="max-w-7xl mx-auto px-6 pt-6 space-y-6">
+        {/* V4 Stats bar */}
+        {v4 && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <MiniStat label="Nível" value={v4.level} />
+            <MiniStat label="XP" value={`${v4.xp.toLocaleString()}/${v4.maxXp.toLocaleString()}`} />
+            <MiniStat label="Taxa de Sucesso" value={`${v4.successRate}%`} />
+            <MiniStat label="Tarefas Hoje" value={v4.tasksToday} />
+            <MiniStat label="Missões Ativas" value={agentTasks.filter(t => t.status !== "done").length} />
+          </div>
+        )}
 
-        {/* Row 1: Status + Info */}
+        {/* XP Progress */}
+        {v4 && (
+          <div className="rounded-xl border border-border/50 bg-card p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-muted-foreground">Progresso para Lv.{v4.level + 1}</span>
+              <span className="text-xs text-muted-foreground">{Math.round((v4.xp / v4.maxXp) * 100)}%</span>
+            </div>
+            <Progress value={(v4.xp / v4.maxXp) * 100} className="h-2" />
+          </div>
+        )}
+
+        {/* Status + Info */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2">
             <SectionCard title="Status Operacional" icon={Activity}>
               <p className="text-base text-foreground/80 leading-relaxed">
-                {agent.currentThought || "Aguardando novas demandas."}
+                {agent.currentThought || v4?.persona || "Aguardando novas demandas."}
               </p>
               {agent.lastAction && (
                 <p className="text-sm text-muted-foreground mt-3">
                   Última ação: <span className="text-foreground/60">{agent.lastAction}</span>
                 </p>
               )}
-              {agent.role && (
-                <p className="text-sm text-muted-foreground mt-2 pt-2 border-t border-border/30">
-                  {agent.role}
-                </p>
-              )}
             </SectionCard>
           </div>
-          <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
-            <MiniStat label="Missões ativas" value={agentTasks.filter(t => t.status !== "done").length} />
-            <MiniStat label="Concluídas" value={agentTasks.filter(t => t.status === "done").length} />
+          <div>
+            <SectionCard title="Skills" icon={Zap}>
+              <div className="flex flex-wrap gap-1.5">
+                {(v4?.skills ?? agent.skills).map(s => (
+                  <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                ))}
+              </div>
+            </SectionCard>
           </div>
         </div>
 
-        {/* ═══ EDIT PANEL ═══ */}
+        {/* Edit panel */}
         {editing && (
           <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-6 space-y-6">
             <div className="flex items-center gap-2 mb-2">
               <Pencil className="w-4 h-4 text-primary" />
               <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Editar Agente</h3>
             </div>
-
-            {/* Basic fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Nome</label>
@@ -237,8 +266,6 @@ export default function AITeamAgentDetail() {
                 </Select>
               </div>
             </div>
-
-            {/* Skills */}
             <div className="space-y-3">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Habilidades</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -249,18 +276,6 @@ export default function AITeamAgentDetail() {
                   </label>
                 ))}
               </div>
-              {editSkills.filter(s => !defaultSkills.includes(s)).length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {editSkills.filter(s => !defaultSkills.includes(s)).map(s => (
-                    <Badge key={s} variant="secondary" className="text-xs gap-1">
-                      {s}
-                      <button onClick={() => setEditSkills(prev => prev.filter(i => i !== s))} className="hover:text-destructive">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
               <div className="flex gap-2 max-w-sm">
                 <Input placeholder="Nova habilidade..." value={customSkill} onChange={e => setCustomSkill(e.target.value)}
                   onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addCustomSkill())} className="text-sm" />
@@ -269,96 +284,39 @@ export default function AITeamAgentDetail() {
                 </Button>
               </div>
             </div>
-
-            {/* Scope */}
-            <div className="space-y-3">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Escopo de Atuação</label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {defaultScopes.map(s => (
-                  <label key={s} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox checked={editScope.includes(s)} onCheckedChange={() => toggleItem(editScope, s, setEditScope)} />
-                    {s}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Restrictions */}
-            <div className="space-y-3">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Restrições</label>
-              <div className="grid grid-cols-2 gap-2">
-                {defaultRestrictions.map(r => (
-                  <label key={r} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox checked={editRestrictions.includes(r)} onCheckedChange={() => toggleItem(editRestrictions, r, setEditRestrictions)} />
-                    {r}
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {/* Behavior */}
             <div className="space-y-2">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Diretiva Comportamental</label>
-              <Textarea placeholder="Ex: Seja crítico, focado em performance e conversão." value={editBehavior}
+              <Textarea placeholder="Ex: Seja crítico, focado em performance." value={editBehavior}
                 onChange={e => setEditBehavior(e.target.value)} rows={3} />
             </div>
-
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" size="sm" onClick={cancelEditing}>Cancelar</Button>
               <Button size="sm" onClick={saveEditing} disabled={!editName.trim() || !editRole.trim()} className="gap-1.5">
-                <Save className="w-4 h-4" /> Salvar alterações
+                <Save className="w-4 h-4" /> Salvar
               </Button>
             </div>
           </div>
         )}
 
-        {/* Row 2: Missões (kanban) */}
+        {/* Missions */}
         <SectionCard title={`Missões · ${agentTasks.length}`} icon={Target}>
           <MissionBoard tasks={agentTasks} />
         </SectionCard>
 
-        {/* Row 3: Log + Sidebar */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            <SectionCard title="Log de Atividade" icon={Clock}>
-              <ActivityLog events={agentEvents} />
-            </SectionCard>
-          </div>
-          <div className="space-y-4">
-            {agent.skills.length > 0 && (
-              <SectionCard title="Capacidades" icon={Zap}>
-                <SimpleList items={agent.skills} icon={Zap} />
-              </SectionCard>
-            )}
-            {agent.scope.length > 0 && (
-              <SectionCard title="Áreas de Atuação" icon={Target}>
-                <SimpleList items={agent.scope} icon={Target} />
-              </SectionCard>
-            )}
-            {agent.restrictions.length > 0 && (
-              <SectionCard title="Restrições" icon={Shield}>
-                <SimpleList items={agent.restrictions} icon={Shield} muted />
-              </SectionCard>
-            )}
-          </div>
+        {/* Log + Terminal */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <SectionCard title="Log de Atividade" icon={Clock}>
+            <ActivityLog events={agentEvents} />
+          </SectionCard>
+          <SectionCard title="Terminal de Comando" icon={Send}>
+            <CommandTerminal agentName={displayName} agentId={agent.id} agentRole={v4?.persona ?? agent.role} />
+          </SectionCard>
         </div>
 
-        {/* Intelligence / Memory */}
+        {/* Intelligence */}
         {agent.memory && (agent.memory.learnedPatterns.length > 0 || Object.keys(agent.memory.preferences).length > 0 || agent.memory.shortTerm.length > 0) && (
           <IntelligenceSection memory={agent.memory} />
         )}
-
-        {/* Diretiva + Terminal */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {agent.behaviorPrompt && (
-            <SectionCard title="Diretiva Comportamental" icon={Brain}>
-              <p className="text-sm text-muted-foreground leading-relaxed">{agent.behaviorPrompt}</p>
-            </SectionCard>
-          )}
-          <SectionCard title="Terminal de Comando" icon={Send}>
-            <CommandTerminal agentName={agent.name} agentId={agent.id} />
-          </SectionCard>
-        </div>
       </div>
     </div>
   );
@@ -378,24 +336,11 @@ function SectionCard({ title, icon: Icon, children }: { title: string; icon: Rea
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: number }) {
+function MiniStat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-4 flex flex-col justify-center">
-      <p className="text-2xl font-bold">{value}</p>
-      <p className="text-xs text-muted-foreground mt-1">{label}</p>
-    </div>
-  );
-}
-
-function SimpleList({ items, icon: Icon, muted }: { items: string[]; icon: React.ElementType; muted?: boolean }) {
-  return (
-    <div className="space-y-1.5">
-      {items.map(item => (
-        <div key={item} className="flex items-center gap-2.5 py-1.5">
-          <Icon className={cn("w-3.5 h-3.5 shrink-0", muted ? "text-muted-foreground/30" : "text-muted-foreground/50")} />
-          <span className={cn("text-sm", muted ? "text-muted-foreground/60" : "text-foreground/70")}>{item}</span>
-        </div>
-      ))}
+    <div className="rounded-xl border border-border/50 bg-card p-3 text-center">
+      <p className="text-xl font-bold">{value}</p>
+      <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
     </div>
   );
 }
@@ -425,7 +370,7 @@ function MissionBoard({ tasks }: { tasks: Task[] }) {
               {visible.map(t => {
                 const pri = PRIORITY_MAP[t.priority] ?? PRIORITY_MAP.low;
                 return (
-                  <div key={t.id} className={cn("rounded-lg p-3 border border-border/40 bg-muted/30 transition-colors hover:bg-muted/50", col.accent, "border-l-2", isDone && "opacity-50")}>
+                  <div key={t.id} className={cn("rounded-lg p-3 border border-border/40 bg-muted/30 border-l-2", col.accent, isDone && "opacity-50")}>
                     <div className="flex items-center gap-2 mb-1">
                       <div className={cn("w-1.5 h-1.5 rounded-full", pri.dot)} />
                       <span className={cn("text-[10px] font-bold tracking-wider uppercase", pri.class)}>{pri.label}</span>
@@ -456,16 +401,15 @@ function ActivityLog({ events }: { events: AgentEvent[] }) {
         const hh = String(time.getHours()).padStart(2, "0");
         const mm = String(time.getMinutes()).padStart(2, "0");
         return (
-          <div key={evt.id} className={cn("flex items-start gap-3 py-2 px-3 rounded-lg transition-colors font-mono text-sm", i === 0 ? "bg-muted/50" : "hover:bg-muted/20")}>
+          <div key={evt.id} className={cn("flex items-start gap-3 py-2 px-3 rounded-lg font-mono text-sm", i === 0 ? "bg-muted/50" : "hover:bg-muted/20")}>
             <span className="text-muted-foreground/40 shrink-0 text-xs mt-0.5">[{hh}:{mm}]</span>
             <span className={cn("leading-relaxed", i === 0 ? "text-foreground/70" : "text-muted-foreground/60")}>{evt.message}</span>
             {evt.severity === "high" && <span className="text-red-400 text-xs shrink-0 mt-0.5">●</span>}
-            {evt.severity === "medium" && <span className="text-amber-400 text-xs shrink-0 mt-0.5">○</span>}
           </div>
         );
       })}
       {events.length > 5 && (
-        <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground/60 transition-colors py-2 px-3">
+        <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground/60 py-2 px-3">
           {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           {expanded ? "Mostrar menos" : `Ver todos (${events.length})`}
         </button>
@@ -474,18 +418,79 @@ function ActivityLog({ events }: { events: AgentEvent[] }) {
   );
 }
 
-function CommandTerminal({ agentName, agentId }: { agentName: string; agentId: string }) {
+function CommandTerminal({ agentName, agentId, agentRole }: { agentName: string; agentId: string; agentRole: string }) {
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<{ role: "user" | "agent"; text: string }[]>([]);
+  const [loading, setLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
-  const responses = simulatedResponses[agentId] ?? ["Processando.", "Analisando."];
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chat]);
-  const handleSend = useCallback(() => {
-    if (!input.trim()) return;
-    const reply = responses[Math.floor(Math.random() * responses.length)];
-    setChat(prev => [...prev, { role: "user", text: input.trim() }, { role: "agent", text: reply }]);
+
+  const handleSend = useCallback(async () => {
+    if (!input.trim() || loading) return;
+    const userText = input.trim();
+    setChat(prev => [...prev, { role: "user", text: userText }]);
     setInput("");
-  }, [input, responses]);
+    setLoading(true);
+
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ question: userText, agentName, agentRole }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        setChat(prev => [...prev, { role: "agent", text: "Erro na comunicação." }]);
+        setLoading(false);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      let agentText = "";
+
+      const updateChat = (text: string) => {
+        setChat(prev => {
+          const last = prev[prev.length - 1];
+          if (last?.role === "agent") {
+            return prev.map((m, i) => i === prev.length - 1 ? { ...m, text } : m);
+          }
+          return [...prev, { role: "agent", text }];
+        });
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.indexOf("\n")) !== -1) {
+          let line = buf.slice(0, nl);
+          buf = buf.slice(nl + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const json = line.slice(6).trim();
+          if (json === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(json);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) { agentText += content; updateChat(agentText); }
+          } catch { /* partial */ }
+        }
+      }
+
+      if (!agentText) updateChat("Processando. Tente novamente.");
+    } catch {
+      setChat(prev => [...prev, { role: "agent", text: "Erro de conexão." }]);
+    } finally {
+      setLoading(false);
+    }
+  }, [input, loading, agentName, agentRole]);
 
   return (
     <div className="space-y-3">
@@ -504,12 +509,14 @@ function CommandTerminal({ agentName, agentId }: { agentName: string; agentId: s
       )}
       <div className="flex items-center gap-2 rounded-lg px-4 py-3 bg-muted/30 border border-border/40 focus-within:border-border transition-colors">
         <span className="text-sm font-mono text-muted-foreground/40">$</span>
-        <input type="text" placeholder={`Inserir comando para ${agentName}...`} value={input}
+        <input type="text" placeholder={`Comando para ${agentName}...`} value={input}
           onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSend()}
-          className="flex-1 bg-transparent text-sm text-foreground/70 font-mono placeholder:text-muted-foreground/30 outline-none" />
-        <button onClick={handleSend} disabled={!input.trim()} className="p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-20">
-          <Send className="w-4 h-4" />
-        </button>
+          className="flex-1 bg-transparent text-sm text-foreground/70 font-mono placeholder:text-muted-foreground/30 outline-none" disabled={loading} />
+        {loading ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" /> : (
+          <button onClick={handleSend} disabled={!input.trim()} className="p-1.5 rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-20">
+            <Send className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -553,7 +560,7 @@ function IntelligenceSection({ memory }: { memory: AgentMemory }) {
                     </div>
                   </div>
                   <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
-                    <div className={cn("h-full rounded-full transition-all", isPositive ? "bg-emerald-500/60" : "bg-red-500/60")} style={{ width: `${Math.max(4, width)}%` }} />
+                    <div className={cn("h-full rounded-full", isPositive ? "bg-emerald-500/60" : "bg-red-500/60")} style={{ width: `${Math.max(4, width)}%` }} />
                   </div>
                 </div>
               );
