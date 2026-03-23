@@ -336,7 +336,7 @@ export default function SimuladorAutoMode() {
         let forceLoss = false;
 
         for (let r = 0; r < rounds; r++) {
-          if (abortRef.current || forceLoss) break;
+          if (!simAtivaRef.current || abortRef.current || forceLoss) break;
 
           const agent = funnelAgents[agentIdx % funnelAgents.length];
           const hasNext = agentIdx < funnelAgents.length - 1;
