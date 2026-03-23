@@ -825,7 +825,8 @@ Retorne JSON:
     { id: "perfis" as const, label: "Perfis", icon: User, color: "#EC4899", summary: `${selectedProfiles.length || 8} perfis ativos` },
     { id: "cenario" as const, label: "Cenário", icon: MapPin, color: "#06B6D4", summary: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos` },
     { id: "comportamento" as const, label: "Funil & Velocidade", icon: Zap, color: "#8B5CF6", summary: `${SPEED_OPTIONS.find(s => s.id === speed)?.label} · ${funnelMode === "full" ? "Completo" : funnelMode === "comercial" ? "Comercial" : "Custom"}` },
-    { id: "avancado" as const, label: "Motor IA", icon: Brain, color: "#F59E0B", summary: enableEvaluation ? "Avaliação ativa" : "Avaliação off" },
+    { id: "avancado" as const, label: "Motor IA", icon: Brain, color: "#F59E0B", summary: `${enableEvaluation ? "Aval." : "—"} ${enableTransfers ? "Transf." : "—"} ${agentResponseLength}` },
+    { id: "presets" as const, label: "Presets", icon: BookOpen, color: "#10B981", summary: `${presets.length} salvo${presets.length !== 1 ? "s" : ""}` },
   ];
 
   // ===== RENDER: CONFIG =====
