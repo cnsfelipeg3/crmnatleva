@@ -19,15 +19,23 @@ import {
 
 const defaultCovers: Record<string, string> = {
   orlando: "https://images.unsplash.com/photo-1575089976121-8ed7b2a54265?w=800&h=400&fit=crop&q=80",
+  disney: "https://images.unsplash.com/photo-1575089976121-8ed7b2a54265?w=800&h=400&fit=crop&q=80",
+  família: "https://images.unsplash.com/photo-1575089976121-8ed7b2a54265?w=800&h=400&fit=crop&q=80",
   paris: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&h=400&fit=crop&q=80",
+  santorini: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=800&h=400&fit=crop&q=80",
   maldivas: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&h=400&fit=crop&q=80",
   europa: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800&h=400&fit=crop&q=80",
   safari: "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=400&fit=crop&q=80",
+  japão: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&h=400&fit=crop&q=80",
+  japao: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&h=400&fit=crop&q=80",
+  tóquio: "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=800&h=400&fit=crop&q=80",
+  patagônia: "https://images.unsplash.com/photo-1478827536114-da961b7f86d2?w=800&h=400&fit=crop&q=80",
+  patagonia: "https://images.unsplash.com/photo-1478827536114-da961b7f86d2?w=800&h=400&fit=crop&q=80",
   default: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=800&h=400&fit=crop&q=80",
 };
 
 function getCoverImage(proposal: any): string {
-  if (proposal.cover_image_url) return proposal.cover_image_url;
+  if (proposal.cover_image_url && proposal.cover_image_url.startsWith("http")) return proposal.cover_image_url;
   const title = (proposal.title || "").toLowerCase();
   const dests = (proposal.destinations || []).map((d: string) => d.toLowerCase()).join(" ");
   const combined = `${title} ${dests}`;
