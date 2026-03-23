@@ -1292,7 +1292,7 @@ Retorne JSON:
             })}
           </div>
           {/* Nova Simulação */}
-          <button onClick={() => { setPhase("config"); setLeads([]); setDebrief(null); }}
+          <button onClick={() => { if (leads.length > 0 && !confirm("Tem certeza? Os dados da simulação atual serão perdidos.")) return; setPhase("config"); setLeads([]); setDebrief(null); setEvents([]); setElapsedSeconds(0); }}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-bold transition-all hover:scale-[1.03]"
             style={{
               background: "linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,182,212,0.1))",
