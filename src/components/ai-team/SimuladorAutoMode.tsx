@@ -716,33 +716,33 @@ export default function SimuladorAutoMode() {
           </div>
 
           {/* CENTER: Chat */}
-          <div className="flex-1 rounded-[14px] flex flex-col overflow-hidden" style={{ background: "#111B21", border: "1px solid #2A3942" }}>
+          <div className="flex-1 rounded-2xl flex flex-col overflow-hidden" style={{ background: "rgba(11,20,26,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
             {selectedLead ? (
               <>
-                <div className="flex items-center gap-3 px-4 shrink-0" style={{ height: 56, background: "#1F2C33" }}>
-                  <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center text-sm font-bold"
-                    style={{ background: `${selectedLead.profileColor}20`, color: selectedLead.profileColor }}>
+                <div className="flex items-center gap-3 px-5 shrink-0 relative" style={{ height: 60, background: "linear-gradient(180deg, rgba(31,44,51,0.95), rgba(31,44,51,0.8))", backdropFilter: "blur(12px)" }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold"
+                    style={{ background: `${selectedLead.profileColor}12`, color: selectedLead.profileColor, border: `1px solid ${selectedLead.profileColor}20` }}>
                     {selectedLead.name[0]}
                   </div>
                   <div className="flex-1">
-                    <p className="text-[14px] font-semibold" style={{ color: "#E9EDEF" }}>{selectedLead.name}</p>
-                    <p className="text-[11px]" style={{ color: "#8696A0" }}>{selectedLead.destino} · {selectedLead.profileEmoji} {selectedLead.profileName}</p>
+                    <p className="text-[14px] font-bold" style={{ color: "#F1F5F9" }}>{selectedLead.name}</p>
+                    <p className="text-[11px]" style={{ color: "#64748B" }}>{selectedLead.destino} · {selectedLead.profileEmoji} {selectedLead.profileName}</p>
                   </div>
-                  {running && <span className="text-[9px] font-bold px-2 py-0.5 rounded" style={{ background: "#F59E0B15", color: "#F59E0B" }}>AUTO</span>}
+                  {running && <span className="text-[9px] font-bold px-2.5 py-1 rounded-lg" style={{ background: "rgba(245,158,11,0.08)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.15)" }}>AUTO</span>}
                 </div>
-                <div ref={chatRef} className="flex-1 overflow-y-auto p-4 space-y-1.5" style={{ background: "#0B141A" }}>
+                <div ref={chatRef} className="flex-1 overflow-y-auto p-5 space-y-2" style={{ background: "#0B141A" }}>
                   {selectedLead.messages.map((msg, i) => {
                     const isAgent = msg.role === "agent";
                     const showName = isAgent && (i === 0 || selectedLead.messages[i - 1]?.role !== "agent" || selectedLead.messages[i - 1]?.agentName !== msg.agentName);
                     return (
-                      <div key={i} className={cn("flex gap-2 animate-in duration-200", isAgent ? "justify-start slide-in-from-left-2" : "justify-end slide-in-from-right-2")}>
+                      <div key={i} className={cn("flex gap-2 animate-in duration-300", isAgent ? "justify-start slide-in-from-left-3" : "justify-end slide-in-from-right-3")}>
                         <div style={{
-                          background: isAgent ? "#1F2C33" : "#005C4B", color: "#E9EDEF",
-                          borderRadius: isAgent ? "0 12px 12px 12px" : "12px 0 12px 12px",
-                          maxWidth: "70%", padding: "8px 12px", boxShadow: "0 1px 1px rgba(0,0,0,0.13)",
+                          background: isAgent ? "rgba(31,44,51,0.9)" : "linear-gradient(135deg, #005C4B, #00694D)", color: "#E9EDEF",
+                          borderRadius: isAgent ? "4px 16px 16px 16px" : "16px 4px 16px 16px",
+                          maxWidth: "70%", padding: "10px 14px", boxShadow: isAgent ? "0 2px 8px rgba(0,0,0,0.15)" : "0 2px 12px rgba(0,92,75,0.25)",
                         }}>
-                          {showName && msg.agentName && <p className="text-[11px] font-semibold mb-0.5" style={{ color: "#53BDEB" }}>{msg.agentName}</p>}
-                          <p className="text-[13px] leading-[1.5]">{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
+                          {showName && msg.agentName && <p className="text-[11px] font-bold mb-1" style={{ color: "#53BDEB" }}>{msg.agentName}</p>}
+                          <p className="text-[13px] leading-[1.6]">{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
                         </div>
                       </div>
                     );
@@ -750,7 +750,8 @@ export default function SimuladorAutoMode() {
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center" style={{ background: "#0B141A" }}>
+              <div className="flex-1 flex flex-col items-center justify-center gap-3" style={{ background: "#0B141A" }}>
+                <MessageSquare className="w-10 h-10" style={{ color: "rgba(255,255,255,0.05)" }} />
                 <p className="text-[13px]" style={{ color: "#334155" }}>Selecione um lead para ver a conversa</p>
               </div>
             )}
@@ -758,44 +759,45 @@ export default function SimuladorAutoMode() {
 
           {/* RIGHT: KPIs + Feed */}
           {running && (
-            <div className="w-[220px] shrink-0 space-y-3 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+            <div className="w-[240px] shrink-0 space-y-3 overflow-y-auto custom-scrollbar">
               {[
                 { label: "Leads", value: animLeads, color: "#3B82F6" },
                 { label: "Fechados", value: animClosed, color: "#10B981", extra: conversionRate > 0 ? `${conversionRate}%` : undefined },
                 { label: "Receita", value: `R$${animReceita}k`, color: "#EAB308" },
                 { label: "Objeções", value: `${totalContornadas}/${totalObjecoes}`, color: "#F59E0B" },
               ].map(k => (
-                <div key={k.label} className="relative rounded-xl overflow-hidden" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                  <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: k.color }} />
-                  <div className="p-3 text-center">
-                    <p className="text-[22px] font-extrabold tabular-nums" style={{ color: k.color }}>{k.value}</p>
-                    <p className="text-[9px] uppercase tracking-wider" style={{ color: "#64748B" }}>{k.label}</p>
-                    {k.extra && <span className="text-[9px] px-1.5 py-0.5 rounded mt-1 inline-block" style={{ background: `${k.color}15`, color: k.color }}>{k.extra}</span>}
+                <div key={k.label} className="relative rounded-2xl overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
+                  <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${k.color}, transparent)` }} />
+                  <div className="p-3.5 text-center">
+                    <p className="text-[24px] font-extrabold tabular-nums" style={{ color: k.color, textShadow: `0 0 20px ${k.color}20` }}>{k.value}</p>
+                    <p className="text-[9px] uppercase tracking-[0.12em]" style={{ color: "#64748B" }}>{k.label}</p>
+                    {k.extra && <span className="text-[9px] px-2 py-0.5 rounded-lg mt-1 inline-block" style={{ background: `${k.color}08`, color: k.color, border: `1px solid ${k.color}15` }}>{k.extra}</span>}
                   </div>
                 </div>
               ))}
               {/* Conversion gauge */}
-              <div className="rounded-xl p-3 text-center" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                <div className="relative w-16 h-16 mx-auto">
+              <div className="rounded-2xl p-4 text-center" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="relative w-18 h-18 mx-auto" style={{ width: 72, height: 72 }}>
                   <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                    <circle cx="18" cy="18" r="15" fill="none" stroke="#1E293B" strokeWidth="3" />
+                    <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
                     <circle cx="18" cy="18" r="15" fill="none" stroke={conversionRate >= 50 ? "#10B981" : conversionRate >= 30 ? "#F59E0B" : "#EF4444"}
-                      strokeWidth="3" strokeDasharray={`${conversionRate * 0.94} 100`} strokeLinecap="round" className="transition-all duration-500" />
+                      strokeWidth="3" strokeDasharray={`${conversionRate * 0.94} 100`} strokeLinecap="round" className="transition-all duration-500"
+                      style={{ filter: `drop-shadow(0 0 4px ${conversionRate >= 50 ? "rgba(16,185,129,0.4)" : conversionRate >= 30 ? "rgba(245,158,11,0.4)" : "rgba(239,68,68,0.4)"})` }} />
                   </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-[14px] font-extrabold" style={{ color: "#F1F5F9" }}>{conversionRate}%</span>
+                  <span className="absolute inset-0 flex items-center justify-center text-[16px] font-extrabold" style={{ color: "#F1F5F9" }}>{conversionRate}%</span>
                 </div>
-                <p className="text-[9px] uppercase tracking-wider mt-1" style={{ color: "#64748B" }}>Conversão</p>
+                <p className="text-[9px] uppercase tracking-[0.12em] mt-1.5" style={{ color: "#64748B" }}>Conversão</p>
               </div>
               {/* Feed */}
-              <div className="rounded-xl overflow-hidden" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                <p className="text-[9px] uppercase tracking-wider font-bold px-3 py-2" style={{ color: "#64748B", borderBottom: "1px solid #1E293B" }}>Feed ao vivo</p>
-                <div className="max-h-[200px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+              <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <p className="text-[9px] uppercase tracking-[0.12em] font-bold px-4 py-2.5" style={{ color: "#64748B", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>Feed ao vivo</p>
+                <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
                   {events.map(e => (
-                    <div key={e.id} className="flex items-start gap-2 px-3 py-1.5 animate-in slide-in-from-top-1 duration-200" style={{ borderBottom: "1px solid #1E293B10" }}>
-                      <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: e.color }} />
+                    <div key={e.id} className="flex items-start gap-2.5 px-4 py-2 animate-in slide-in-from-top-1 duration-200" style={{ borderBottom: "1px solid rgba(255,255,255,0.02)" }}>
+                      <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: e.color, boxShadow: `0 0 4px ${e.color}40` }} />
                       <div>
-                        <p className="text-[10px]" style={{ color: "#E9EDEF" }}>{e.text}</p>
-                        <p className="text-[8px]" style={{ color: "#667781" }}>{e.time}</p>
+                        <p className="text-[10px]" style={{ color: "#E2E8F0" }}>{e.text}</p>
+                        <p className="text-[8px]" style={{ color: "#475569" }}>{e.time}</p>
                       </div>
                     </div>
                   ))}
