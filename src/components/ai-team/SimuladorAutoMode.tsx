@@ -234,6 +234,7 @@ export default function SimuladorAutoMode() {
   const chatRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const abortRef = useRef(false);
+  const simAtivaRef = useRef(false);
   const { toast } = useToast();
 
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
