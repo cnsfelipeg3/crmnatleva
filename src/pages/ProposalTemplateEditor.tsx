@@ -483,7 +483,7 @@ export default function ProposalTemplateEditor() {
                     <div className="w-24 h-[5px] rounded-full bg-white/15" />
                   </div>
                 )}
-                <TemplatePreview form={form} activePanel={activePanel} onClickSection={setActivePanel} zoom={previewDevice === "desktop" ? zoom : previewDevice === "tablet" ? Math.min(zoom, 1) : 1} />
+                <TemplatePreview form={form} activePanel={activePanel} onClickSection={setActivePanel} zoom={previewDevice === "desktop" ? zoom : previewDevice === "tablet" ? Math.min(zoom, 1) : 1} device={previewDevice} />
                 {previewDevice === "mobile" && (
                   <div className="h-6 bg-black flex items-center justify-center">
                     <div className="w-32 h-1 rounded-full bg-white/10" />
