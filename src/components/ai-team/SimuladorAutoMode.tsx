@@ -121,13 +121,20 @@ interface DeepAnalysis {
   psicologiaCliente: string; riscosNaoImplementar: string;
   recomendacao: string; confianca: number;
 }
+interface DebriefDimensoes {
+  humanizacao: DimensaoScore;
+  eficaciaComercial: DimensaoScore;
+  qualidadeTecnica: DimensaoScore;
+}
 interface DebriefData {
   scoreGeral: number; resumoExecutivo: string; fraseNathAI: string;
   pontosFortes: string[]; melhorias: Improvement[]; lacunasConhecimento: string[]; insightsCliente: string[];
+  dimensoes?: DebriefDimensoes;
 }
 interface SimHistoryEntry {
   id: string; date: string; scoreGeral: number; totalLeads: number;
   fechados: number; perdidos: number; conversao: number; melhorias_aprovadas: string[];
+  dimensoes?: { humanizacao: number; eficaciaComercial: number; qualidadeTecnica: number };
 }
 
 const TIPO_COLORS: Record<ImprovementType, { bg: string; color: string; label: string; icon: string }> = {
