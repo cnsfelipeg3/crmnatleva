@@ -1605,7 +1605,7 @@ function getHelpForPath(pathname: string): PanelHelp | null {
   if (pathname.startsWith("/rh/")) return PANEL_HELP["/rh"];
   if (pathname.startsWith("/financeiro/")) return PANEL_HELP["/financeiro"];
   if (pathname.startsWith("/portal-admin/")) return PANEL_HELP["/portal-admin"];
-  if (pathname.startsWith("/ai-team/")) return PANEL_HELP["/ai-team"];
+  
   if (pathname.startsWith("/operacao/")) return PANEL_HELP["/operacao/inbox"];
   if (pathname.startsWith("/implementacao/")) return PANEL_HELP["/implementacao/base-conhecimento"];
   if (pathname.startsWith("/admin/")) return PANEL_HELP["/admin/users"];
