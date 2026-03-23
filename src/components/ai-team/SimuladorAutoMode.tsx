@@ -810,7 +810,7 @@ export default function SimuladorAutoMode() {
 
       {/* Report: Números tab */}
       {phase === "report" && !running && reportTab === "numeros" && (
-        <div className="space-y-4 animate-in fade-in duration-300">
+        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
             {[
               { label: "Leads", value: leads.length, color: "#3B82F6" },
@@ -820,33 +820,33 @@ export default function SimuladorAutoMode() {
               { label: "Taxa", value: `${conversionRate}%`, color: conversionRate >= 50 ? "#10B981" : "#F59E0B" },
               { label: "Ticket Médio", value: `R$${Math.round(ticketMedio / 1000)}k`, color: "#8B5CF6" },
             ].map(k => (
-              <div key={k.label} className="relative rounded-xl overflow-hidden" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: k.color }} />
-                <div className="p-3 text-center">
-                  <p className="text-[20px] font-extrabold tabular-nums" style={{ color: k.color }}>{k.value}</p>
-                  <p className="text-[9px] uppercase tracking-wider" style={{ color: "#64748B" }}>{k.label}</p>
+              <div key={k.label} className="relative rounded-2xl overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
+                <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${k.color}, transparent)` }} />
+                <div className="p-4 text-center">
+                  <p className="text-[22px] font-extrabold tabular-nums" style={{ color: k.color, textShadow: `0 0 20px ${k.color}20` }}>{k.value}</p>
+                  <p className="text-[9px] uppercase tracking-[0.12em]" style={{ color: "#64748B" }}>{k.label}</p>
                 </div>
               </div>
             ))}
           </div>
           {/* By profile */}
-          <div className="rounded-xl p-4" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-            <p className="text-[11px] uppercase tracking-[0.08em] font-bold mb-3" style={{ color: "#64748B" }}>Por Perfil</p>
+          <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-4" style={{ color: "#64748B" }}>Desempenho por Perfil</p>
             {CLIENT_PROFILES.map(p => {
               const pLeads = leads.filter(l => l.profileId === p.id);
               const pClosed = pLeads.filter(l => l.status === "closed");
               const rate = pLeads.length > 0 ? Math.round((pClosed.length / pLeads.length) * 100) : 0;
               if (pLeads.length === 0) return null;
               return (
-                <div key={p.id} className="flex items-center gap-3 py-2" style={{ borderBottom: "1px solid #1E293B20" }}>
+                <div key={p.id} className="flex items-center gap-3 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                   <span className="text-sm">{p.emoji}</span>
-                  <span className="text-[11px] font-semibold w-24" style={{ color: p.color }}>{p.name}</span>
-                  <span className="text-[10px] w-12 text-center" style={{ color: "#64748B" }}>{pLeads.length} leads</span>
-                  <span className="text-[10px] w-16 text-center" style={{ color: "#10B981" }}>{pClosed.length} fechados</span>
-                  <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#1E293B" }}>
-                    <div className="h-full rounded-full transition-all" style={{ width: `${rate}%`, background: rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444" }} />
+                  <span className="text-[11px] font-bold w-24" style={{ color: p.color }}>{p.name}</span>
+                  <span className="text-[10px] w-14 text-center" style={{ color: "#64748B" }}>{pLeads.length} leads</span>
+                  <span className="text-[10px] w-16 text-center font-semibold" style={{ color: "#10B981" }}>{pClosed.length} fechados</span>
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${rate}%`, background: `linear-gradient(90deg, ${rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444"}, ${rate >= 50 ? "#06D6A0" : rate >= 30 ? "#FBBF24" : "#F87171"})` }} />
                   </div>
-                  <span className="text-[11px] font-bold tabular-nums w-10 text-right" style={{ color: rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444" }}>{rate}%</span>
+                  <span className="text-[12px] font-extrabold tabular-nums w-12 text-right" style={{ color: rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444" }}>{rate}%</span>
                 </div>
               );
             })}
