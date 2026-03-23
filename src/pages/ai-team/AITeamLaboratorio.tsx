@@ -380,7 +380,7 @@ export default function AITeamLaboratorio() {
               {results.map((r, i) => {
                 const agent = AGENTS_V4.find(a => a.id === r.agentId);
                 return (
-                  <div key={i} className="rounded-lg border border-border/30 p-4">
+                  <div key={`result-${r.agentId}-${r.profileName}-${i}`} className="rounded-lg border border-border/30 p-4">
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{agent?.emoji}</span>
