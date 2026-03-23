@@ -36,11 +36,13 @@ export interface TemplateForm {
 }
 
 export type ActivePanel = "colors" | "fonts" | "sections" | "settings" | "layout" | "effects" | "cta" | "ai" | null;
+export type PreviewDevice = "desktop" | "tablet" | "mobile";
 
 export interface StylePreviewProps {
   form: TemplateForm;
   activePanel: ActivePanel;
   onClickSection: (panel: ActivePanel) => void;
+  device: PreviewDevice;
 }
 
 // Shared utilities
@@ -69,20 +71,26 @@ export function editOverlay(label: string) {
   );
 }
 
+/** Returns true if device is mobile */
+export function isMob(d: PreviewDevice) { return d === "mobile"; }
+/** Returns true if device is mobile or tablet */
+export function isMobOrTab(d: PreviewDevice) { return d === "mobile" || d === "tablet"; }
+
 import { EditorialStyle } from "./preview-styles/EditorialStyle";
 import { LuxuryStyle } from "./preview-styles/LuxuryStyle";
 import { ModernStyle } from "./preview-styles/ModernStyle";
 import { TropicalStyle } from "./preview-styles/TropicalStyle";
 
-export function TemplatePreview({ form, activePanel, onClickSection, zoom }: {
+export function TemplatePreview({ form, activePanel, onClickSection, zoom, device = "desktop" }: {
   form: TemplateForm;
   activePanel: ActivePanel;
   onClickSection: (panel: ActivePanel) => void;
   zoom: number;
+  device?: PreviewDevice;
 }) {
   const style = form.theme_config.style;
   const bgCol = form.bg_color || (style === "modern" ? "#0a0a0a" : "#ffffff");
-  const props: StylePreviewProps = { form, activePanel, onClickSection };
+  const props: StylePreviewProps = { form, activePanel, onClickSection, device };
 
   return (
     <div

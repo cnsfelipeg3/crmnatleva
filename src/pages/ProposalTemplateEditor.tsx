@@ -24,7 +24,7 @@ import {
   Download, Paintbrush, Move, LayoutGrid, Sliders, MessageSquare,
   Monitor, Smartphone, Tablet, Plus, ChevronRight, Info, Grip,
   RotateCcw, Wand, Droplets, Box, PanelLeft, PanelRight,
-  Check, Power, Zap,
+  Check, Power, Zap, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -455,8 +455,22 @@ export default function ProposalTemplateEditor() {
           <div className="flex-1 overflow-auto bg-muted/10 relative">
             <div className="sticky top-0 z-10 bg-background/60 backdrop-blur-xl border-b border-border/20 px-4 py-1.5 flex items-center gap-2">
               <Eye className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[10px] text-muted-foreground font-medium">Preview ao vivo — clique nas seções para editar</span>
+              <span className="text-[10px] text-muted-foreground font-medium">Preview ao vivo</span>
               <div className="ml-auto flex items-center gap-1.5">
+                <Button variant="ghost" size="sm" className="h-6 px-2 text-[9px] gap-1 text-muted-foreground hover:text-foreground" onClick={() => {
+                  const w = window.open("", "_blank");
+                  if (!w) return;
+                  const style = form.theme_config.style;
+                  w.document.title = `Preview: ${form.name || "Modelo"}`;
+                  w.document.body.innerHTML = '<div id="root"></div>';
+                  w.document.head.innerHTML = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">`;
+                  // Copy stylesheets
+                  document.querySelectorAll('link[rel="stylesheet"], style').forEach(el => w.document.head.appendChild(el.cloneNode(true)));
+                  // Render preview via React portal would be complex; instead open current URL with preview param
+                  w.location.href = window.location.href + "?preview=1";
+                }}>
+                  <ExternalLink className="w-3 h-3" /> Abrir em nova aba
+                </Button>
                 <Badge variant="outline" className="text-[9px] gap-1 rounded-lg border-border/40">
                   {previewDevice === "desktop" ? <Monitor className="w-3 h-3" /> : previewDevice === "tablet" ? <Tablet className="w-3 h-3" /> : <Smartphone className="w-3 h-3" />}
                   {previewDevice === "desktop" ? "1280px" : previewDevice === "tablet" ? "768px" : "375px"}
@@ -483,7 +497,7 @@ export default function ProposalTemplateEditor() {
                     <div className="w-24 h-[5px] rounded-full bg-white/15" />
                   </div>
                 )}
-                <TemplatePreview form={form} activePanel={activePanel} onClickSection={setActivePanel} zoom={previewDevice === "desktop" ? zoom : previewDevice === "tablet" ? Math.min(zoom, 1) : 1} />
+                <TemplatePreview form={form} activePanel={activePanel} onClickSection={setActivePanel} zoom={previewDevice === "desktop" ? zoom : previewDevice === "tablet" ? Math.min(zoom, 1) : 1} device={previewDevice} />
                 {previewDevice === "mobile" && (
                   <div className="h-6 bg-black flex items-center justify-center">
                     <div className="w-32 h-1 rounded-full bg-white/10" />
