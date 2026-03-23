@@ -168,7 +168,17 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         {aiTeamOpen && !isCollapsed && (
           <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
             {[
-              { to: "/ai-team", icon: Brain, label: "Central de Comando" },
+              { to: "/ai-team", icon: Brain, label: "Mission Control" },
+              { to: "/ai-team/equipe", icon: Users, label: "Equipe" },
+              { to: "/ai-team/evolution", icon: Sparkles, label: "Evolution Engine" },
+              { to: "/ai-team/conhecimento", icon: BookOpen, label: "Conhecimento" },
+              { to: "/ai-team/skills", icon: Zap, label: "Skills" },
+              { to: "/ai-team/workflow", icon: GitBranch, label: "Workflow" },
+              { to: "/ai-team/memoria", icon: Database, label: "Memória & Fiscal" },
+              { to: "/ai-team/academia", icon: Star, label: "Academia" },
+              { to: "/ai-team/simulador", icon: MessageSquare, label: "Simulador" },
+              { to: "/ai-team/laboratorio", icon: TestTube, label: "Laboratório" },
+              { to: "/ai-team/config", icon: Cog, label: "Configurações" },
               { to: "/implementacao/estrategia-ia", icon: Lightbulb, label: "Estratégia IA" },
               { to: "/implementacao/aprendizados-ia", icon: Sparkles, label: "Aprendizados IA" },
               { to: "/implementacao/cerebro-natleva", icon: Zap, label: "Cérebro NatLeva" },
