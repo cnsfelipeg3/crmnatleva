@@ -1,16 +1,19 @@
 import { useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Brain, Plus, Building2, LayoutDashboard, Box, AlertTriangle, Clock,
-  Activity, CheckCircle2, Loader2, ChevronDown, ChevronUp, Check, X, Filter,
+  Brain, Plus, Building2, LayoutDashboard, AlertTriangle, Clock,
+  Activity, CheckCircle2, Loader2, Check, X, Filter,
 } from "lucide-react";
-import { agents as mockAgents, initialTasks, type Agent, type Task } from "@/components/ai-team/mockData";
+import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
+import { getAllV4Agents, getV4InitialTasks } from "@/components/ai-team/agentV4Bridge";
 import { useAgentEngine } from "@/components/ai-team/useAgentEngine";
 import type { AgentEvent } from "@/components/ai-team/agentEngine";
+import type { Agent } from "@/components/ai-team/mockData";
 import AITeamCreateAgentDialog from "@/components/ai-team/AITeamCreateAgentDialog";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +21,9 @@ const OfficeGame3DView = lazy(() => import("@/components/ai-team/office-game-3d/
 
 type ViewMode = "dashboard" | "office3d";
 type FeedFilter = "all" | "alert" | "insight" | "status_change";
+
+const baseAgents = getAllV4Agents();
+const baseTasks = getV4InitialTasks();
 
 const STATUS_BADGE: Record<string, { label: string; icon: React.ElementType; cls: string }> = {
   idle:       { label: "Idle",        icon: Clock,          cls: "text-muted-foreground bg-muted" },
@@ -44,11 +50,11 @@ const FEED_FILTERS: { key: FeedFilter; label: string }[] = [
 ];
 
 export default function AITeam() {
-  const { agents, tasks, events, addAgent, removeTask } = useAgentEngine(mockAgents, initialTasks);
+  const { agents, tasks, events, addAgent, removeTask } = useAgentEngine(baseAgents, baseTasks);
   const [createOpen, setCreateOpen] = useState(false);
   const [view, setView] = useState<ViewMode>("dashboard");
   const [feedFilter, setFeedFilter] = useState<FeedFilter>("all");
-  const [workLogAgent, setWorkLogAgent] = useState<string>(mockAgents[0]?.id ?? "");
+  const [workLogAgent, setWorkLogAgent] = useState<string>(baseAgents[0]?.id ?? "");
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -83,13 +89,24 @@ export default function AITeam() {
   // Filtered feed
   const filteredEvents = useMemo(() => {
     const evts = feedFilter === "all" ? events : events.filter(e => e.type === feedFilter);
-    return evts.slice(0, 20);
+    return evts.slice(0, 25);
   }, [events, feedFilter]);
 
   // Work log
   const workLogEvents = useMemo(() => {
     return events.filter(e => e.agentId === workLogAgent).slice(0, 15);
   }, [events, workLogAgent]);
+
+  // Group agents by squad for display
+  const agentsBySquad = useMemo(() => {
+    const map = new Map<string, typeof agents>();
+    for (const a of agents) {
+      const squad = a.sector; // sector = squadId from bridge
+      if (!map.has(squad)) map.set(squad, []);
+      map.get(squad)!.push(a);
+    }
+    return map;
+  }, [agents]);
 
   if (view === "office3d") {
     return (
@@ -106,8 +123,8 @@ export default function AITeam() {
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10"><Brain className="w-6 h-6 text-primary" /></div>
           <div>
-            <h1 className="text-xl font-bold">AI Team · Central de Operação</h1>
-            <p className="text-sm text-muted-foreground">{agents.length} agentes · {tasks.length} tarefas</p>
+            <h1 className="text-xl font-bold">AI Team · Mission Control</h1>
+            <p className="text-sm text-muted-foreground">{agents.length} agentes · {SQUADS.length} squads · {tasks.length} tarefas</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -152,15 +169,16 @@ export default function AITeam() {
             {filteredEvents.length === 0 && <p className="text-sm text-muted-foreground/40 py-4 text-center">Nenhum evento.</p>}
             {filteredEvents.map((evt, i) => {
               const agent = agents.find(a => a.id === evt.agentId);
+              const v4 = AGENTS_V4.find(a => a.id === evt.agentId);
               const time = new Date(evt.timestamp);
               const hh = String(time.getHours()).padStart(2, "0");
               const mm = String(time.getMinutes()).padStart(2, "0");
               return (
                 <div key={evt.id} className={cn("flex items-start gap-2 py-1.5 px-2 rounded text-sm", i === 0 && "bg-muted/40")}>
                   <span className="text-muted-foreground/40 text-xs font-mono shrink-0 mt-0.5">[{hh}:{mm}]</span>
-                  <span className="shrink-0">{agent?.emoji}</span>
+                  <span className="shrink-0">{v4?.emoji ?? agent?.emoji}</span>
                   <span className={cn("leading-snug", i === 0 ? "text-foreground/70" : "text-muted-foreground/60")}>
-                    <span className="font-medium">{agent?.name}</span> · {evt.message}
+                    <span className="font-medium">{v4?.name ?? agent?.name}</span> · {evt.message}
                   </span>
                   {evt.severity === "high" && <span className="text-red-500 text-xs shrink-0 mt-0.5">●</span>}
                 </div>
@@ -186,12 +204,12 @@ export default function AITeam() {
                   </div>
                   <div className="space-y-2">
                     {visible.map(t => {
-                      const agent = agents.find(a => a.id === t.sourceAgentId);
+                      const v4 = AGENTS_V4.find(a => a.id === t.sourceAgentId);
                       return (
                         <div key={t.id} className={cn("rounded-lg p-2.5 border border-border/40 bg-muted/20 border-l-2", col.accent)}>
                           <div className="flex items-center gap-1.5 mb-1">
                             <div className={cn("w-1.5 h-1.5 rounded-full", PRIORITY_DOT[t.priority])} />
-                            <span className="text-[10px] text-muted-foreground">{agent?.emoji} {agent?.name}</span>
+                            <span className="text-[10px] text-muted-foreground">{v4?.emoji} {v4?.name ?? t.sourceAgentId}</span>
                           </div>
                           <p className="text-xs font-medium text-foreground/80 leading-snug">{t.title}</p>
                           {col.key === "suggested" && (
@@ -217,34 +235,50 @@ export default function AITeam() {
         </div>
       </div>
 
-      {/* ═══ [4] AGENT GRID ═══ */}
+      {/* ═══ [4] AGENT GRID BY SQUAD ═══ */}
       <div className="rounded-xl border border-border/50 bg-card p-5">
         <h3 className="text-xs font-bold tracking-[0.1em] text-muted-foreground uppercase flex items-center gap-2 mb-4">
-          <Brain className="w-4 h-4" /> Agentes ({agents.length})
+          <Brain className="w-4 h-4" /> Agentes ({agents.length}) · {SQUADS.length} Squads
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-          {agents.map(agent => {
-            const st = STATUS_BADGE[agent.status] ?? STATUS_BADGE.idle;
-            const StIcon = st.icon;
-            const agentTaskCount = tasks.filter(t => t.sourceAgentId === agent.id && t.status !== "done").length;
+        <div className="space-y-6">
+          {SQUADS.map(squad => {
+            const squadAgents = agents.filter(a => a.sector === squad.id);
+            if (squadAgents.length === 0) return null;
             return (
-              <button key={agent.id} onClick={() => handleSelectAgent(agent)}
-                className="text-left rounded-xl border border-border/40 p-4 hover:border-primary/30 hover:bg-muted/30 transition-all group">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-lg">{agent.emoji}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold truncate">{agent.name}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{agent.sector}</p>
-                  </div>
+              <div key={squad.id}>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-sm">{squad.emoji}</span>
+                  <span className={cn("text-xs font-bold uppercase tracking-wider", squad.color)}>{squad.name}</span>
+                  <span className="text-[10px] text-muted-foreground">({squadAgents.length})</span>
                 </div>
-                <div className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium", st.cls)}>
-                  <StIcon className="w-3 h-3" /> {st.label}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                  {squadAgents.map(agent => {
+                    const v4 = AGENTS_V4.find(a => a.id === agent.id);
+                    const st = STATUS_BADGE[agent.status] ?? STATUS_BADGE.idle;
+                    const StIcon = st.icon;
+                    return (
+                      <button key={agent.id} onClick={() => handleSelectAgent(agent)}
+                        className="text-left rounded-xl border border-border/40 p-3 hover:border-primary/30 hover:bg-muted/30 transition-all group">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className="text-lg">{v4?.emoji ?? agent.emoji}</span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold truncate">{v4?.name ?? agent.name}</p>
+                          </div>
+                        </div>
+                        <div className={cn("inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-medium", st.cls)}>
+                          <StIcon className="w-2.5 h-2.5" /> {st.label}
+                        </div>
+                        {v4 && (
+                          <div className="flex items-center gap-1 mt-1.5">
+                            <Progress value={(v4.xp / v4.maxXp) * 100} className="h-1 flex-1" />
+                            <span className="text-[8px] text-muted-foreground">Lv.{v4.level}</span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-                <p className="text-xs text-muted-foreground/60 mt-2 line-clamp-1">{agent.lastAction}</p>
-                {agentTaskCount > 0 && (
-                  <p className="text-[10px] text-muted-foreground/40 mt-1">{agentTaskCount} tarefa{agentTaskCount > 1 ? "s" : ""} ativa{agentTaskCount > 1 ? "s" : ""}</p>
-                )}
-              </button>
+              </div>
             );
           })}
         </div>
@@ -256,14 +290,17 @@ export default function AITeam() {
           <Clock className="w-4 h-4" /> Work Log por Agente
         </h3>
         <div className="flex gap-1.5 overflow-x-auto pb-3 mb-3 border-b border-border/30 scrollbar-hide">
-          {agents.map(a => (
-            <button key={a.id} onClick={() => setWorkLogAgent(a.id)}
-              className={cn("shrink-0 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap",
-                workLogAgent === a.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
-              )}>
-              {a.emoji} {a.name}
-            </button>
-          ))}
+          {agents.slice(0, 15).map(a => {
+            const v4 = AGENTS_V4.find(v => v.id === a.id);
+            return (
+              <button key={a.id} onClick={() => setWorkLogAgent(a.id)}
+                className={cn("shrink-0 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap",
+                  workLogAgent === a.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+                )}>
+                {v4?.emoji ?? a.emoji} {v4?.name ?? a.name}
+              </button>
+            );
+          })}
         </div>
         <div className="space-y-1 max-h-64 overflow-y-auto">
           {workLogEvents.length === 0 && <p className="text-sm text-muted-foreground/40 py-4 text-center">Nenhuma atividade registrada.</p>}
