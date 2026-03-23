@@ -1,8 +1,8 @@
-import { useState, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Brain, Plus, Building2, LayoutDashboard, AlertTriangle, Clock,
-  Activity, CheckCircle2, Loader2, Check, X, Filter,
+  Activity, CheckCircle2, Loader2, Check, X, Filter, DollarSign, MessageSquare, FileText,
 } from "lucide-react";
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
 import { getAllV4Agents, getV4InitialTasks } from "@/components/ai-team/agentV4Bridge";
@@ -10,6 +10,7 @@ import { useAgentEngine } from "@/components/ai-team/useAgentEngine";
 import type { AgentEvent } from "@/components/ai-team/agentEngine";
 import type { Agent } from "@/components/ai-team/mockData";
 import AITeamCreateAgentDialog from "@/components/ai-team/AITeamCreateAgentDialog";
+import { useAITeamPersistence } from "@/hooks/useAITeamPersistence";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,6 +58,19 @@ export default function AITeam() {
   const [workLogAgent, setWorkLogAgent] = useState<string>(baseAgents[0]?.id ?? "");
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { seedAgents, fetchRealMetrics } = useAITeamPersistence();
+
+  // Real business metrics
+  const [realMetrics, setRealMetrics] = useState<{
+    totalSales: number; totalRevenue: number; totalProfit: number;
+    activeConversations: number; totalConversations: number;
+    openProposals: number; totalProposals: number; salesToday: number;
+  } | null>(null);
+
+  useEffect(() => {
+    seedAgents();
+    fetchRealMetrics().then(setRealMetrics).catch(console.error);
+  }, []);
 
   const handleApprove = useCallback((id: string) => {
     removeTask(id, "approve");
@@ -147,6 +161,16 @@ export default function AITeam() {
         <KpiCard label="Alertas" value={kpis.alerts} color="text-red-600" icon={AlertTriangle} />
         <KpiCard label="Pendentes" value={kpis.pending} color="text-amber-600" icon={Clock} />
       </div>
+
+      {/* ═══ REAL BUSINESS METRICS ═══ */}
+      {realMetrics && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard label="Vendas Total" value={realMetrics.totalSales} color="text-emerald-600" icon={DollarSign} />
+          <KpiCard label="Receita" value={`R$ ${(realMetrics.totalRevenue / 1000).toFixed(0)}k`} color="text-emerald-600" icon={DollarSign} />
+          <KpiCard label="Conversas Ativas" value={realMetrics.activeConversations} total={realMetrics.totalConversations} color="text-blue-600" icon={MessageSquare} />
+          <KpiCard label="Propostas Abertas" value={realMetrics.openProposals} total={realMetrics.totalProposals} color="text-purple-600" icon={FileText} />
+        </div>
+      )}
 
       {/* ═══ [2] FEED + [3] KANBAN ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -331,7 +355,7 @@ export default function AITeam() {
 
 /* ═══ Sub-components ═══ */
 
-function KpiCard({ label, value, total, color, icon: Icon }: { label: string; value: number; total?: number; color: string; icon: React.ElementType }) {
+function KpiCard({ label, value, total, color, icon: Icon }: { label: string; value: number | string; total?: number; color: string; icon: React.ElementType }) {
   return (
     <div className="rounded-xl border border-border/50 bg-card p-4 flex items-center gap-3">
       <div className={cn("p-2 rounded-lg bg-muted", color)}><Icon className="w-5 h-5" /></div>

@@ -776,6 +776,254 @@ export type Database = {
           },
         ]
       }
+      ai_team_activity_log: {
+        Row: {
+          agent_id: string
+          created_at: string
+          event_type: string
+          id: string
+          message: string
+          metadata: Json | null
+          severity: string | null
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          message: string
+          metadata?: Json | null
+          severity?: string | null
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          message?: string
+          metadata?: Json | null
+          severity?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_team_activity_log_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_team_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_team_agents: {
+        Row: {
+          behavior_prompt: string | null
+          created_at: string
+          emoji: string
+          id: string
+          is_active: boolean
+          level: number
+          max_xp: number
+          name: string
+          persona: string | null
+          role: string
+          skills: string[]
+          squad_id: string
+          status: string
+          success_rate: number | null
+          tasks_today: number | null
+          updated_at: string
+          xp: number
+        }
+        Insert: {
+          behavior_prompt?: string | null
+          created_at?: string
+          emoji?: string
+          id: string
+          is_active?: boolean
+          level?: number
+          max_xp?: number
+          name: string
+          persona?: string | null
+          role: string
+          skills?: string[]
+          squad_id: string
+          status?: string
+          success_rate?: number | null
+          tasks_today?: number | null
+          updated_at?: string
+          xp?: number
+        }
+        Update: {
+          behavior_prompt?: string | null
+          created_at?: string
+          emoji?: string
+          id?: string
+          is_active?: boolean
+          level?: number
+          max_xp?: number
+          name?: string
+          persona?: string | null
+          role?: string
+          skills?: string[]
+          squad_id?: string
+          status?: string
+          success_rate?: number | null
+          tasks_today?: number | null
+          updated_at?: string
+          xp?: number
+        }
+        Relationships: []
+      }
+      ai_team_improvements: {
+        Row: {
+          agent_id: string
+          approved_at: string | null
+          approved_by: string | null
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          impact_score: number | null
+          status: string
+          title: string
+        }
+        Insert: {
+          agent_id: string
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact_score?: number | null
+          status?: string
+          title: string
+        }
+        Update: {
+          agent_id?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          impact_score?: number | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_team_improvements_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_team_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_team_lab_results: {
+        Row: {
+          aderencia: number | null
+          agent_id: string
+          ai_evaluation: string | null
+          clareza: number | null
+          created_at: string
+          id: string
+          proatividade: number | null
+          profile_id: string
+          profile_name: string
+          response: string | null
+          response_time_ms: number | null
+          sentimento: number | null
+          total_score: number | null
+        }
+        Insert: {
+          aderencia?: number | null
+          agent_id: string
+          ai_evaluation?: string | null
+          clareza?: number | null
+          created_at?: string
+          id?: string
+          proatividade?: number | null
+          profile_id: string
+          profile_name: string
+          response?: string | null
+          response_time_ms?: number | null
+          sentimento?: number | null
+          total_score?: number | null
+        }
+        Update: {
+          aderencia?: number | null
+          agent_id?: string
+          ai_evaluation?: string | null
+          clareza?: number | null
+          created_at?: string
+          id?: string
+          proatividade?: number | null
+          profile_id?: string
+          profile_name?: string
+          response?: string | null
+          response_time_ms?: number | null
+          sentimento?: number | null
+          total_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_team_lab_results_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_team_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_team_missions: {
+        Row: {
+          agent_id: string
+          completed_at: string | null
+          context: string | null
+          created_at: string
+          description: string | null
+          id: string
+          priority: string
+          status: string
+          title: string
+          xp_reward: number | null
+        }
+        Insert: {
+          agent_id: string
+          completed_at?: string | null
+          context?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          title: string
+          xp_reward?: number | null
+        }
+        Update: {
+          agent_id?: string
+          completed_at?: string | null
+          context?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          title?: string
+          xp_reward?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_team_missions_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "ai_team_agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       airline_checkin_rules: {
         Row: {
           airline_iata: string
