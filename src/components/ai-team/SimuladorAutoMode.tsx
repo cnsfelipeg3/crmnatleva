@@ -1723,7 +1723,7 @@ Retorne JSON:
                       <BookOpen className="w-3.5 h-3.5 inline mr-1.5" />Lacunas de Conhecimento
                     </p>
                     {debrief.lacunasConhecimento.map((l, i) => (
-                      <div key={i} className="flex items-start gap-2.5 py-2 group" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                      <div key={`lacuna-${i}`} className="flex items-start gap-2.5 py-2 group" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                         <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#F59E0B" }} />
                         <p className="text-[10px] flex-1" style={{ color: "#E2E8F0" }}>{l}</p>
                         <button onClick={() => convertLacunaToKB(l)}
