@@ -139,6 +139,7 @@ export default function ProposalTemplateEditor() {
   const undoRedo = useUndoRedo(defaultForm);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
 
   useGoogleFont(form.font_heading);
   useGoogleFont(form.font_body);
@@ -307,6 +308,25 @@ export default function ProposalTemplateEditor() {
 
             <div className="w-px h-4 bg-border mx-0.5" />
 
+            {/* Device preview switcher */}
+            <Tooltip><TooltipTrigger asChild>
+              <Button variant={previewDevice === "desktop" ? "secondary" : "ghost"} size="icon" className="h-7 w-7" onClick={() => setPreviewDevice("desktop")}>
+                <Monitor className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger><TooltipContent>Desktop</TooltipContent></Tooltip>
+            <Tooltip><TooltipTrigger asChild>
+              <Button variant={previewDevice === "tablet" ? "secondary" : "ghost"} size="icon" className="h-7 w-7" onClick={() => setPreviewDevice("tablet")}>
+                <Tablet className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger><TooltipContent>Tablet</TooltipContent></Tooltip>
+            <Tooltip><TooltipTrigger asChild>
+              <Button variant={previewDevice === "mobile" ? "secondary" : "ghost"} size="icon" className="h-7 w-7" onClick={() => setPreviewDevice("mobile")}>
+                <Smartphone className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger><TooltipContent>Mobile</TooltipContent></Tooltip>
+
+            <div className="w-px h-4 bg-border mx-0.5" />
+
             <Tooltip><TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.max(0.4, z - 0.1))}>
                 <ZoomOut className="w-3.5 h-3.5" />
@@ -407,13 +427,37 @@ export default function ProposalTemplateEditor() {
               <span className="text-[10px] text-muted-foreground font-medium">Preview ao vivo — clique nas seções para editar</span>
               <div className="ml-auto flex items-center gap-1.5">
                 <Badge variant="outline" className="text-[9px] gap-1">
+                  {previewDevice === "desktop" ? <Monitor className="w-3 h-3" /> : previewDevice === "tablet" ? <Tablet className="w-3 h-3" /> : <Smartphone className="w-3 h-3" />}
+                  {previewDevice === "desktop" ? "1280px" : previewDevice === "tablet" ? "768px" : "375px"}
+                </Badge>
+                <Badge variant="outline" className="text-[9px] gap-1">
                   <Sparkles className="w-3 h-3" /> {form.theme_config.style || "classic"}
                 </Badge>
               </div>
             </div>
-            <div className="p-6">
-              <div className="max-w-4xl mx-auto">
-                <TemplatePreview form={form} activePanel={activePanel} onClickSection={setActivePanel} zoom={zoom} />
+            <div className="p-6 flex justify-center">
+              <div
+                className={cn(
+                  "transition-all duration-300",
+                  previewDevice === "tablet" && "border-x border-border/50 shadow-lg rounded-2xl overflow-hidden",
+                  previewDevice === "mobile" && "border border-border/60 shadow-xl rounded-[2rem] overflow-hidden ring-4 ring-border/20",
+                )}
+                style={{
+                  width: previewDevice === "desktop" ? "100%" : previewDevice === "tablet" ? "768px" : "375px",
+                  maxWidth: previewDevice === "desktop" ? "1280px" : undefined,
+                }}
+              >
+                {previewDevice === "mobile" && (
+                  <div className="h-6 bg-black/90 flex items-center justify-center">
+                    <div className="w-20 h-1.5 rounded-full bg-white/20" />
+                  </div>
+                )}
+                <TemplatePreview form={form} activePanel={activePanel} onClickSection={setActivePanel} zoom={previewDevice === "desktop" ? zoom : previewDevice === "tablet" ? Math.min(zoom, 1) : 1} />
+                {previewDevice === "mobile" && (
+                  <div className="h-5 bg-black/90 flex items-center justify-center">
+                    <div className="w-28 h-1 rounded-full bg-white/15" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
