@@ -843,7 +843,7 @@ Retorne JSON:
                               <p className="text-[12px] font-bold" style={{ color: active ? "#F1F5F9" : "#64748B" }}>{p.label}</p>
                               {active && <div className="w-2 h-2 rounded-full" style={{ background: p.cor }} />}
                             </div>
-                            <p className="text-[9px] mt-0.5 line-clamp-2" style={{ color: "#475569" }}>{p.tracos.slice(0, 2).join(" · ")}</p>
+                            <p className="text-[9px] mt-0.5 line-clamp-2" style={{ color: "#475569" }}>{p.gatilhosCompra.slice(0, 2).join(" · ")}</p>
                           </div>
                         </button>
                       );
