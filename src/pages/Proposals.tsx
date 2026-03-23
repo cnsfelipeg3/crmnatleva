@@ -130,11 +130,10 @@ export default function Proposals() {
                 className="group hover:shadow-md transition-all cursor-pointer hover:border-primary/30 overflow-hidden"
                 onClick={() => navigate(`/propostas/${p.id}`)}
               >
-                {p.cover_image_url && (
-                  <div className="h-32 overflow-hidden">
-                    <img src={p.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  </div>
-                )}
+                <div className="h-36 overflow-hidden relative">
+                  <img src={getCoverImage(p)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                </div>
                 <div className="p-5 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
