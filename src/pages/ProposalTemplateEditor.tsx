@@ -139,6 +139,7 @@ export default function ProposalTemplateEditor() {
   const undoRedo = useUndoRedo(defaultForm);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
 
   useGoogleFont(form.font_heading);
   useGoogleFont(form.font_body);
