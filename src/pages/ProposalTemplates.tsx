@@ -290,8 +290,8 @@ export default function ProposalTemplates() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1.5 pt-2 border-t border-border/50">
-                  <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs flex-1" onClick={() => openEdit(t)}>
-                    <Pencil className="w-3.5 h-3.5" /> Editar
+                  <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs flex-1" onClick={() => navigate(`/propostas/modelos/${t.id}`)}>
+                    <Eye className="w-3.5 h-3.5" /> Preview & Editar
                   </Button>
                   <Button
                     variant="ghost" size="sm" className="h-8 gap-1 text-xs"
