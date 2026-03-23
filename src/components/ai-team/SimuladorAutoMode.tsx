@@ -1675,9 +1675,9 @@ Retorne JSON:
                 </div>
               </div>
 
-              {/* Score + Summary */}
+              {/* Score + 3 Dimensões + Summary */}
               <div className="flex gap-4">
-                <div className="rounded-2xl p-6 text-center relative overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)", minWidth: 160 }}>
+                <div className="rounded-2xl p-6 text-center relative overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)", minWidth: 180 }}>
                   <div className="relative w-[72px] h-[72px] mx-auto">
                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
                       <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
@@ -1688,6 +1688,25 @@ Retorne JSON:
                     <span className="absolute inset-0 flex items-center justify-center text-[22px] font-extrabold" style={{ color: sentimentColor(debrief.scoreGeral) }}>{debrief.scoreGeral}</span>
                   </div>
                   <p className="text-[9px] uppercase tracking-[0.12em] mt-2" style={{ color: "#64748B" }}>Score Geral</p>
+                  {debrief.dimensoes && (
+                    <div className="mt-4 space-y-2">
+                      {[
+                        { label: "Humanização", score: debrief.dimensoes.humanizacao.score, color: "#EC4899" },
+                        { label: "Eficácia", score: debrief.dimensoes.eficaciaComercial.score, color: "#F59E0B" },
+                        { label: "Técnica", score: debrief.dimensoes.qualidadeTecnica.score, color: "#06B6D4" },
+                      ].map(d => (
+                        <div key={d.label}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[8px]" style={{ color: d.color }}>{d.label}</span>
+                            <span className="text-[10px] font-extrabold tabular-nums" style={{ color: d.color }}>{d.score}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${d.score}%`, background: d.color }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 space-y-3">
                   <div className="rounded-2xl p-4" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -1697,6 +1716,49 @@ Retorne JSON:
                     <div className="rounded-2xl p-4 relative overflow-hidden" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.1)" }}>
                       <p className="text-[12px] italic" style={{ color: "#10B981" }}>"{debrief.fraseNathAI}"</p>
                       <p className="text-[9px] mt-1.5 font-bold" style={{ color: "#64748B" }}>— NATH.AI</p>
+                    </div>
+                  )}
+                  {debrief.dimensoes && (
+                    <div className="rounded-2xl p-4" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                      <p className="text-[9px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#8B5CF6" }}>📋 12 Critérios de Excelência</p>
+                      {([
+                        { key: "humanizacao" as const, label: "Humanização", color: "#EC4899", criterioIds: ["rapport", "personalizacao", "tomVoz", "surpresa"] },
+                        { key: "eficaciaComercial" as const, label: "Eficácia Comercial", color: "#F59E0B", criterioIds: ["identificacaoPerfil", "progressaoFunil", "manejoObjecoes", "antecipacao"] },
+                        { key: "qualidadeTecnica" as const, label: "Qualidade Técnica", color: "#06B6D4", criterioIds: ["clarezaEscrita", "conhecimentoProduto", "coerencia", "timing"] },
+                      ]).map(dim => {
+                        const dimData = debrief.dimensoes![dim.key];
+                        return (
+                          <div key={dim.key} className="mb-3 last:mb-0">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <div className="w-2 h-2 rounded-full" style={{ background: dim.color }} />
+                              <span className="text-[10px] font-bold" style={{ color: dim.color }}>{dim.label}</span>
+                              <span className="text-[10px] font-extrabold ml-auto" style={{ color: dim.color }}>{dimData.score}</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 pl-4">
+                              {dim.criterioIds.map(cId => {
+                                const criterio = dimData.criterios[cId];
+                                const nome = CRITERIOS_AVALIACAO.find(c => c.id === cId)?.nome || cId;
+                                if (!criterio) return (
+                                  <div key={cId} className="flex items-center justify-between">
+                                    <span className="text-[9px]" style={{ color: "#475569" }}>{nome}</span>
+                                    <span className="text-[9px]" style={{ color: "#334155" }}>—</span>
+                                  </div>
+                                );
+                                const nivelInfo = getNivel(criterio.score);
+                                return (
+                                  <div key={cId} className="flex items-center justify-between group" title={criterio.evidencia}>
+                                    <span className="text-[9px]" style={{ color: "#94A3B8" }}>{nome}</span>
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded" style={{ background: `${nivelInfo.cor}10`, color: nivelInfo.cor }}>{nivelInfo.nivel}</span>
+                                      <span className="text-[10px] font-bold tabular-nums" style={{ color: nivelInfo.cor }}>{criterio.score}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
