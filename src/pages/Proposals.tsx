@@ -10,6 +10,7 @@ import { Plus, Search, Eye, Copy, ExternalLink, MoreHorizontal, FileText, Layout
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import orlandoFamilyCover from "@/assets/proposals/orlando-family-cover.jpg";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,10 +18,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const BROKEN_COVER_HINTS = ["1575362018928-f5b56f627e3e"];
+
 const defaultCovers: Record<string, string> = {
-  orlando: "https://images.unsplash.com/photo-1575089976121-8ed7b2a54265?w=800&h=400&fit=crop&q=80",
-  disney: "https://images.unsplash.com/photo-1575089976121-8ed7b2a54265?w=800&h=400&fit=crop&q=80",
-  família: "https://images.unsplash.com/photo-1575089976121-8ed7b2a54265?w=800&h=400&fit=crop&q=80",
+  orlando: orlandoFamilyCover,
+  disney: orlandoFamilyCover,
+  família: orlandoFamilyCover,
+  familia: orlandoFamilyCover,
   paris: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&h=400&fit=crop&q=80",
   santorini: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=800&h=400&fit=crop&q=80",
   maldivas: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&h=400&fit=crop&q=80",
@@ -38,14 +42,32 @@ function getFallbackCover(proposal: any): string {
   const title = (proposal.title || "").toLowerCase();
   const dests = (proposal.destinations || []).map((d: string) => d.toLowerCase()).join(" ");
   const combined = `${title} ${dests}`;
+
+  if (proposal.slug === "familia-orlando-2026") {
+    return orlandoFamilyCover;
+  }
+
   for (const [key, url] of Object.entries(defaultCovers)) {
     if (key !== "default" && combined.includes(key)) return url;
   }
+
   return defaultCovers.default;
 }
 
+function isBrokenCoverUrl(url?: string | null): boolean {
+  if (!url || !url.startsWith("http")) return true;
+  return BROKEN_COVER_HINTS.some((hint) => url.includes(hint));
+}
+
 function getCoverImage(proposal: any): string {
-  if (proposal.cover_image_url && proposal.cover_image_url.startsWith("http")) return proposal.cover_image_url;
+  if (proposal.slug === "familia-orlando-2026") {
+    return orlandoFamilyCover;
+  }
+
+  if (!isBrokenCoverUrl(proposal.cover_image_url)) {
+    return proposal.cover_image_url;
+  }
+
   return getFallbackCover(proposal);
 }
 
@@ -142,12 +164,21 @@ export default function Proposals() {
                 className="group hover:shadow-md transition-all cursor-pointer hover:border-primary/30 overflow-hidden"
                 onClick={() => navigate(`/propostas/${p.id}`)}
               >
-                <div className="h-36 overflow-hidden relative">
+                <div className="h-36 overflow-hidden relative bg-muted">
                   <img
                     src={getCoverImage(p)}
-                    alt=""
+                    alt={`Capa da proposta ${p.title || "sem título"}`}
+                    loading="lazy"
+                    width={1600}
+                    height={900}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    onError={(e) => { (e.target as HTMLImageElement).src = getFallbackCover(p); }}
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      const fallback = getFallbackCover(p);
+                      if (target.src !== fallback) {
+                        target.src = fallback;
+                      }
+                    }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>
