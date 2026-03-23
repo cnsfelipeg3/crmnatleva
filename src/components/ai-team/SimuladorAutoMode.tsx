@@ -379,13 +379,23 @@ export default function SimuladorAutoMode() {
   };
 
   // ===== CONFIG SECTION COMPONENT =====
-  const ConfigSection = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => (
-    <div className="rounded-xl overflow-hidden" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-      <button onClick={() => toggleSection(id)} className="w-full flex items-center justify-between px-4 py-3">
-        <p className="text-[11px] uppercase tracking-[0.08em] font-bold" style={{ color: "#64748B" }}>{title}</p>
-        {configSections[id] ? <ChevronUp className="w-3.5 h-3.5" style={{ color: "#64748B" }} /> : <ChevronDown className="w-3.5 h-3.5" style={{ color: "#64748B" }} />}
+  const ConfigSection = ({ id, title, icon, accentColor, children }: { id: string; title: string; icon?: React.ReactNode; accentColor?: string; children: React.ReactNode }) => (
+    <div className="rounded-2xl overflow-hidden transition-all duration-300" style={{
+      background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))",
+      border: `1px solid ${configSections[id] ? (accentColor || "rgba(16,185,129,0.15)") + "30" : "rgba(255,255,255,0.06)"}`,
+      backdropFilter: "blur(8px)",
+    }}>
+      {configSections[id] && <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${accentColor || "#10B981"}, transparent)` }} />}
+      <button onClick={() => toggleSection(id)} className="w-full flex items-center justify-between px-5 py-3.5 relative">
+        <div className="flex items-center gap-2">
+          {icon}
+          <p className="text-[11px] uppercase tracking-[0.1em] font-bold" style={{ color: configSections[id] ? (accentColor || "#10B981") : "#64748B" }}>{title}</p>
+        </div>
+        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.03)" }}>
+          {configSections[id] ? <ChevronUp className="w-3.5 h-3.5" style={{ color: "#64748B" }} /> : <ChevronDown className="w-3.5 h-3.5" style={{ color: "#64748B" }} />}
+        </div>
       </button>
-      {configSections[id] && <div className="px-4 pb-4 space-y-4">{children}</div>}
+      {configSections[id] && <div className="px-5 pb-5 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">{children}</div>}
     </div>
   );
 
