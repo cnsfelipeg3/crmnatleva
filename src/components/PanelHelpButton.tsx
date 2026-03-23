@@ -612,7 +612,15 @@ function getHelpForPath(pathname: string): PanelHelp | null {
   if (pathname.startsWith("/operacao/")) return { title: "Operação", description: "Módulo de operação diária da agência.", features: ["Gestão de processos operacionais"], tips: ["Explore os submódulos para funcionalidades específicas"] };
   if (pathname.startsWith("/configuracoes/")) return PANEL_HELP["/configuracoes"];
 
-  return null;
+  // Fallback genérico para qualquer rota não mapeada
+  const pageName = pathname.split("/").filter(Boolean).pop() || "Página";
+  const formattedName = pageName.charAt(0).toUpperCase() + pageName.slice(1).replace(/-/g, " ");
+  return {
+    title: formattedName,
+    description: `Painel de ${formattedName}. Use este espaço para gerenciar e visualizar informações relacionadas.`,
+    features: ["Visualização e gestão de dados", "Filtros e busca integrados", "Ações contextuais disponíveis"],
+    tips: ["Explore os botões e menus para descobrir todas as funcionalidades disponíveis"],
+  };
 }
 
 export default function PanelHelpButton() {
