@@ -27,7 +27,7 @@ const defaultCovers: Record<string, string> = {
 };
 
 function getCoverImage(proposal: any): string {
-  if (proposal.cover_image_url) return proposal.cover_image_url;
+  if (proposal.cover_image_url && proposal.cover_image_url.startsWith("http")) return proposal.cover_image_url;
   const title = (proposal.title || "").toLowerCase();
   const dests = (proposal.destinations || []).map((d: string) => d.toLowerCase()).join(" ");
   const combined = `${title} ${dests}`;
