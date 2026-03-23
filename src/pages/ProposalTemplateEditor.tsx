@@ -24,7 +24,7 @@ import {
   Download, Paintbrush, Move, LayoutGrid, Sliders, MessageSquare,
   Monitor, Smartphone, Tablet, Plus, ChevronRight, Info, Grip,
   RotateCcw, Wand, Droplets, Box, PanelLeft, PanelRight,
-  Check, Power, Zap,
+  Check, Power, Zap, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
