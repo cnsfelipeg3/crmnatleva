@@ -1268,7 +1268,7 @@ Retorne JSON:
                     const isAgent = msg.role === "agent";
                     const showName = isAgent && (i === 0 || selectedLead.mensagens[i - 1]?.role !== "agent" || selectedLead.mensagens[i - 1]?.agentName !== msg.agentName);
                     return (
-                      <div key={i} className={cn("flex gap-2 animate-in duration-300", isAgent ? "justify-start slide-in-from-left-3" : "justify-end slide-in-from-right-3")}>
+                      <div key={`msg-${msg.timestamp}-${i}`} className={cn("flex gap-2 animate-in duration-300", isAgent ? "justify-start slide-in-from-left-3" : "justify-end slide-in-from-right-3")}>
                         <div style={{
                           background: isAgent ? "rgba(31,44,51,0.9)" : "linear-gradient(135deg, #005C4B, #00694D)", color: "#E9EDEF",
                           borderRadius: isAgent ? "4px 16px 16px 16px" : "16px 4px 16px 16px",
