@@ -191,7 +191,7 @@ export default function AITeamAgentPanel({ agent, tasks, events = [], open, onOp
                 {chat.length > 0 && (
                   <div className="space-y-1.5 max-h-32 overflow-y-auto mb-3 scrollbar-thin">
                     {chat.map((m, i) => (
-                      <div key={i} className={cn(
+                      <div key={`cmd-${i}-${m.role}`} className={cn(
                         "text-xs font-mono px-3 py-1.5 rounded-md max-w-[85%]",
                         m.role === "user"
                           ? "ml-auto text-white/50 bg-white/[0.04] border border-white/[0.06]"

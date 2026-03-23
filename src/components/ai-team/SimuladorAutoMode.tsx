@@ -1741,7 +1741,7 @@ Retorne JSON:
                       <Lightbulb className="w-3.5 h-3.5 inline mr-1.5" />Insights de Comportamento
                     </p>
                     {debrief.insightsCliente.map((ins, i) => (
-                      <div key={i} className="flex items-start gap-2.5 py-2 group" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                      <div key={`insight-${i}`} className="flex items-start gap-2.5 py-2 group" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                         <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#06B6D4" }} />
                         <p className="text-[10px] flex-1" style={{ color: "#E2E8F0" }}>{ins}</p>
                         <button onClick={() => convertInsightToImprovement(ins)}
