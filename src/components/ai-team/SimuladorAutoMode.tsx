@@ -216,7 +216,7 @@ export default function SimuladorAutoMode() {
   const [customFunnelAgents, setCustomFunnelAgents] = useState<string[]>([]);
   const [enableEvaluation, setEnableEvaluation] = useState(true);
   const [enableMultiMsg, setEnableMultiMsg] = useState(true);
-  const [configSections, setConfigSections] = useState<Record<string, boolean>>({ volume: true, perfis: false, cenario: false, comportamento: false, avancado: false });
+  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "comportamento" | "avancado">("volume");
 
   // Runtime
   const [phase, setPhase] = useState<Phase>("config");
