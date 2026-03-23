@@ -856,98 +856,106 @@ export default function SimuladorAutoMode() {
 
       {/* Report: Debrief tab */}
       {phase === "report" && !running && reportTab === "debrief" && (
-        <div className="space-y-4 animate-in fade-in duration-300">
+        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
           {debriefLoading && (
-            <div className="flex items-center justify-center py-12 gap-2" style={{ color: "#64748B" }}>
-              <Loader2 className="w-5 h-5 animate-spin" /> Gerando Debrief IA...
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="relative">
+                <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#8B5CF6" }} />
+                <div className="absolute inset-0 rounded-full" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.15), transparent)", filter: "blur(12px)" }} />
+              </div>
+              <p className="text-[13px] font-medium" style={{ color: "#64748B" }}>Gerando Debrief IA...</p>
             </div>
           )}
           {debrief && (
             <>
               {/* Score gauge + resumo */}
               <div className="flex gap-4">
-                <div className="rounded-xl p-6 text-center" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                  <div className="relative w-24 h-24 mx-auto">
+                <div className="rounded-2xl p-6 text-center relative overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${debrief.scoreGeral >= 70 ? "#10B981" : debrief.scoreGeral >= 40 ? "#F59E0B" : "#EF4444"}, transparent)` }} />
+                  <div className="relative w-28 h-28 mx-auto">
                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                      <circle cx="18" cy="18" r="15" fill="none" stroke="#1E293B" strokeWidth="3" />
+                      <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
                       <circle cx="18" cy="18" r="15" fill="none"
                         stroke={debrief.scoreGeral >= 70 ? "#10B981" : debrief.scoreGeral >= 40 ? "#F59E0B" : "#EF4444"}
-                        strokeWidth="3" strokeDasharray={`${debrief.scoreGeral * 0.94} 100`} strokeLinecap="round" />
+                        strokeWidth="3" strokeDasharray={`${debrief.scoreGeral * 0.94} 100`} strokeLinecap="round"
+                        style={{ filter: `drop-shadow(0 0 6px ${debrief.scoreGeral >= 70 ? "rgba(16,185,129,0.5)" : debrief.scoreGeral >= 40 ? "rgba(245,158,11,0.5)" : "rgba(239,68,68,0.5)"})` }} />
                     </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-[28px] font-extrabold"
-                      style={{ color: debrief.scoreGeral >= 70 ? "#10B981" : debrief.scoreGeral >= 40 ? "#F59E0B" : "#EF4444" }}>
+                    <span className="absolute inset-0 flex items-center justify-center text-[32px] font-extrabold"
+                      style={{ color: debrief.scoreGeral >= 70 ? "#10B981" : debrief.scoreGeral >= 40 ? "#F59E0B" : "#EF4444", textShadow: `0 0 20px ${debrief.scoreGeral >= 70 ? "rgba(16,185,129,0.3)" : "rgba(245,158,11,0.3)"}` }}>
                       {debrief.scoreGeral}
                     </span>
                   </div>
-                  <p className="text-[9px] uppercase tracking-wider mt-2" style={{ color: "#64748B" }}>Score Geral</p>
+                  <p className="text-[9px] uppercase tracking-[0.12em] mt-2" style={{ color: "#64748B" }}>Score Geral</p>
                 </div>
                 <div className="flex-1 space-y-3">
-                  <div className="rounded-xl p-4" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                    <p className="text-[13px] leading-relaxed" style={{ color: "#E9EDEF" }}>{debrief.resumoExecutivo}</p>
+                  <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <p className="text-[13px] leading-[1.7]" style={{ color: "#E2E8F0" }}>{debrief.resumoExecutivo}</p>
                   </div>
                   {debrief.fraseNathAI && (
-                    <div className="rounded-xl p-4" style={{ background: "#10B98108", border: "1px solid #10B98120" }}>
+                    <div className="rounded-2xl p-4 relative overflow-hidden" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.1)" }}>
+                      <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(16,185,129,0.3), transparent)" }} />
                       <p className="text-[12px] italic" style={{ color: "#10B981" }}>"{debrief.fraseNathAI}"</p>
-                      <p className="text-[9px] mt-1" style={{ color: "#64748B" }}>— NATH.AI</p>
+                      <p className="text-[9px] mt-1.5 font-bold" style={{ color: "#64748B" }}>— NATH.AI</p>
                     </div>
                   )}
                 </div>
               </div>
               {/* Pontos fortes */}
               {debrief.pontosFortes.length > 0 && (
-                <div className="rounded-xl p-4" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                  <p className="text-[11px] uppercase tracking-[0.08em] font-bold mb-2" style={{ color: "#64748B" }}>Pontos Fortes</p>
+                <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#64748B" }}>Pontos Fortes</p>
                   {debrief.pontosFortes.map((p, i) => (
-                    <div key={i} className="flex items-start gap-2 py-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#10B981" }} />
-                      <p className="text-[11px]" style={{ color: "#E9EDEF" }}>{p}</p>
+                    <div key={i} className="flex items-start gap-2.5 py-1.5">
+                      <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#10B981" }} />
+                      <p className="text-[11px] leading-relaxed" style={{ color: "#E2E8F0" }}>{p}</p>
                     </div>
                   ))}
                 </div>
               )}
               {/* Melhorias */}
-              <div className="rounded-xl p-4" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[11px] uppercase tracking-[0.08em] font-bold" style={{ color: "#64748B" }}>Melhorias Sugeridas</p>
-                  <button onClick={approveAll} className="text-[9px] px-2 py-1 rounded font-bold"
-                    style={{ background: "#10B98120", color: "#10B981", border: "1px solid #10B98130" }}>
+              <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#64748B" }}>Melhorias Sugeridas</p>
+                  <button onClick={approveAll} className="text-[9px] px-3 py-1.5 rounded-xl font-bold transition-all hover:scale-105"
+                    style={{ background: "rgba(16,185,129,0.08)", color: "#10B981", border: "1px solid rgba(16,185,129,0.2)" }}>
                     Aprovar Tudo
                   </button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {debrief.melhorias.map(m => (
-                    <div key={m.id} className="rounded-lg p-3" style={{
-                      background: "#111827",
-                      border: `1px solid ${m.status === "approved" ? "#10B98130" : m.status === "rejected" ? "#EF444430" : "#1E293B"}`,
+                    <div key={m.id} className="rounded-xl p-4 transition-all duration-300" style={{
+                      background: "rgba(255,255,255,0.015)",
+                      border: `1px solid ${m.status === "approved" ? "rgba(16,185,129,0.2)" : m.status === "rejected" ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.04)"}`,
                       opacity: m.status === "rejected" ? 0.5 : 1,
                     }}>
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1.5">
                             <p className="text-[12px] font-bold" style={{ color: "#F1F5F9" }}>{m.titulo}</p>
-                            <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded"
+                            <span className="text-[8px] font-bold uppercase px-2 py-0.5 rounded-lg"
                               style={{
-                                background: m.prioridade === "alta" ? "#EF444415" : m.prioridade === "media" ? "#F59E0B15" : "#3B82F615",
+                                background: m.prioridade === "alta" ? "rgba(239,68,68,0.08)" : m.prioridade === "media" ? "rgba(245,158,11,0.08)" : "rgba(59,130,246,0.08)",
                                 color: m.prioridade === "alta" ? "#EF4444" : m.prioridade === "media" ? "#F59E0B" : "#3B82F6",
+                                border: `1px solid ${m.prioridade === "alta" ? "rgba(239,68,68,0.15)" : m.prioridade === "media" ? "rgba(245,158,11,0.15)" : "rgba(59,130,246,0.15)"}`,
                               }}>{m.prioridade}</span>
                           </div>
-                          <p className="text-[10px]" style={{ color: "#64748B" }}>{m.desc}</p>
-                          <div className="flex items-center gap-3 mt-1.5">
+                          <p className="text-[10px] leading-relaxed" style={{ color: "#94A3B8" }}>{m.desc}</p>
+                          <div className="flex items-center gap-4 mt-2">
                             <span className="text-[9px]" style={{ color: "#8B5CF6" }}>Agente: {m.agente}</span>
                             <span className="text-[9px]" style={{ color: "#10B981" }}>Impacto: {m.impacto}</span>
                           </div>
                         </div>
                         {m.status === "pending" && (
-                          <div className="flex gap-1 shrink-0">
+                          <div className="flex gap-1.5 shrink-0">
                             <button onClick={() => handleImprovement(m.id, "approved")}
-                              className="w-7 h-7 rounded flex items-center justify-center"
-                              style={{ background: "#10B98120", border: "1px solid #10B98130" }}>
-                              <Check className="w-3.5 h-3.5" style={{ color: "#10B981" }} />
+                              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110"
+                              style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                              <Check className="w-4 h-4" style={{ color: "#10B981" }} />
                             </button>
                             <button onClick={() => handleImprovement(m.id, "rejected")}
-                              className="w-7 h-7 rounded flex items-center justify-center"
-                              style={{ background: "#EF444420", border: "1px solid #EF444430" }}>
-                              <X className="w-3.5 h-3.5" style={{ color: "#EF4444" }} />
+                              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110"
+                              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                              <X className="w-4 h-4" style={{ color: "#EF4444" }} />
                             </button>
                           </div>
                         )}
@@ -961,33 +969,33 @@ export default function SimuladorAutoMode() {
               {/* Lacunas + Insights */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {debrief.lacunasConhecimento.length > 0 && (
-                  <div className="rounded-xl p-4" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                    <p className="text-[11px] uppercase tracking-[0.08em] font-bold mb-2" style={{ color: "#64748B" }}>Lacunas de Conhecimento</p>
+                  <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#64748B" }}>Lacunas de Conhecimento</p>
                     {debrief.lacunasConhecimento.map((l, i) => (
-                      <div key={i} className="flex items-start gap-2 py-1">
-                        <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" style={{ color: "#F59E0B" }} />
-                        <p className="text-[10px]" style={{ color: "#E9EDEF" }}>{l}</p>
+                      <div key={i} className="flex items-start gap-2.5 py-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#F59E0B" }} />
+                        <p className="text-[10px] leading-relaxed" style={{ color: "#E2E8F0" }}>{l}</p>
                       </div>
                     ))}
                   </div>
                 )}
                 {debrief.insightsCliente.length > 0 && (
-                  <div className="rounded-xl p-4" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                    <p className="text-[11px] uppercase tracking-[0.08em] font-bold mb-2" style={{ color: "#64748B" }}>Insights de Cliente</p>
+                  <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#64748B" }}>Insights de Cliente</p>
                     {debrief.insightsCliente.map((ins, i) => (
-                      <div key={i} className="flex items-start gap-2 py-1">
-                        <Lightbulb className="w-3 h-3 mt-0.5 shrink-0" style={{ color: "#06B6D4" }} />
-                        <p className="text-[10px]" style={{ color: "#E9EDEF" }}>{ins}</p>
+                      <div key={i} className="flex items-start gap-2.5 py-1.5">
+                        <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#06B6D4" }} />
+                        <p className="text-[10px] leading-relaxed" style={{ color: "#E2E8F0" }}>{ins}</p>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
               {/* Actions */}
-              <div className="flex gap-2">
-                <button onClick={generateDebrief} className="text-[10px] px-4 py-2 rounded-lg font-medium"
-                  style={{ border: "1px solid #1E293B", color: "#64748B" }}>
-                  <Loader2 className={cn("w-3 h-3 inline mr-1", debriefLoading && "animate-spin")} /> Reanalisar
+              <div className="flex gap-3">
+                <button onClick={generateDebrief} className="text-[10px] px-5 py-2.5 rounded-xl font-semibold transition-all hover:scale-[1.02]"
+                  style={{ border: "1px solid rgba(255,255,255,0.06)", color: "#64748B", background: "rgba(255,255,255,0.02)" }}>
+                  <Loader2 className={cn("w-3 h-3 inline mr-1.5", debriefLoading && "animate-spin")} /> Reanalisar
                 </button>
               </div>
             </>
