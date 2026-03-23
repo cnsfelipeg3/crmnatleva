@@ -269,7 +269,7 @@ export default function SimuladorAutoMode() {
   // ===== SIMULATION ENGINE =====
   const runSimulation = useCallback(async () => {
     setPhase("running"); setRunning(true); setLeads([]); setEvents([]); setElapsedSeconds(0);
-    setSelectedLeadId(null); setDebrief(null); abortRef.current = false;
+    setSelectedLeadId(null); setDebrief(null); abortRef.current = false; simAtivaRef.current = true;
 
     timerRef.current = setInterval(() => setElapsedSeconds(p => p + 1), 1000);
 
