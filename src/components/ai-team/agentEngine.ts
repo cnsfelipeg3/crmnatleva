@@ -1,5 +1,5 @@
 /**
- * Agent Engine — pure simulation logic, zero React dependencies.
+ * Agent Engine v4 — pure simulation logic for 21 agents across 7 squads.
  * Every function is pure: receives state + time, returns new state.
  */
 
@@ -48,17 +48,17 @@ export interface EngineState {
 
 const MAX_TASKS_PER_AGENT = 15;
 const MAX_EVENTS_PER_AGENT = 20;
-const MAX_GLOBAL_EVENTS = 80;
-const MIN_TASK_INTERVAL_MS = 12_000;
-const MIN_ALERT_INTERVAL_MS = 20_000;
+const MAX_GLOBAL_EVENTS = 120;
+const MIN_TASK_INTERVAL_MS = 10_000;
+const MIN_ALERT_INTERVAL_MS = 18_000;
 const DECAY_EVERY_N_TICKS = 30;
 
 const statusDuration: Record<AgentStatus, [number, number]> = {
-  idle:       [6_000,  12_000],
-  analyzing:  [8_000,  16_000],
-  suggesting: [5_000,  10_000],
-  waiting:    [10_000, 20_000],
-  alert:      [4_000,  8_000],
+  idle:       [5_000,  12_000],
+  analyzing:  [7_000,  15_000],
+  suggesting: [4_000,  10_000],
+  waiting:    [8_000,  18_000],
+  alert:      [3_000,  7_000],
 };
 
 type Weights = Record<string, number>;
@@ -72,18 +72,35 @@ const defaultWeights: TransitionMap = {
   alert:      { suggesting: 0.5, waiting: 0.5 },
 };
 
-/* Agent-specific weights for the original 3 (others use default) */
+/* Squad-specific weight overrides */
 const transitionWeights: Record<string, TransitionMap> = {
-  gerente: {
-    idle: { analyzing: 0.6, idle: 0.4 },
-    analyzing: { suggesting: 0.45, waiting: 0.3, alert: 0.15, analyzing: 0.1 },
-    suggesting: { waiting: 0.55, idle: 0.45 },
-    waiting: { idle: 0.65, analyzing: 0.35 },
-    alert: { waiting: 0.5, suggesting: 0.5 },
-  },
-  auditor: {
+  // Orquestração — high analyzing, frequent suggestions
+  "nath-ai": {
     idle: { analyzing: 0.7, idle: 0.3 },
-    analyzing: { alert: 0.3, suggesting: 0.4, analyzing: 0.15, idle: 0.15 },
+    analyzing: { suggesting: 0.5, waiting: 0.25, alert: 0.15, analyzing: 0.1 },
+    suggesting: { waiting: 0.55, idle: 0.45 },
+    waiting: { idle: 0.55, analyzing: 0.45 },
+    alert: { suggesting: 0.6, waiting: 0.4 },
+  },
+  orion: {
+    idle: { analyzing: 0.7, idle: 0.3 },
+    analyzing: { suggesting: 0.45, alert: 0.2, idle: 0.15, analyzing: 0.2 },
+    suggesting: { waiting: 0.5, idle: 0.5 },
+    waiting: { idle: 0.6, analyzing: 0.4 },
+    alert: { suggesting: 0.6, waiting: 0.4 },
+  },
+  // Closer — more alerts, pressure
+  nero: {
+    idle: { analyzing: 0.65, idle: 0.35 },
+    analyzing: { suggesting: 0.4, alert: 0.25, idle: 0.15, analyzing: 0.2 },
+    suggesting: { waiting: 0.45, idle: 0.55 },
+    waiting: { idle: 0.55, analyzing: 0.45 },
+    alert: { suggesting: 0.7, waiting: 0.3 },
+  },
+  // VIGIL — very alert-oriented
+  vigil: {
+    idle: { analyzing: 0.75, idle: 0.25 },
+    analyzing: { alert: 0.35, suggesting: 0.35, analyzing: 0.15, idle: 0.15 },
     suggesting: { waiting: 0.5, idle: 0.5 },
     waiting: { idle: 0.6, analyzing: 0.4 },
     alert: { suggesting: 0.6, waiting: 0.4 },
@@ -91,145 +108,295 @@ const transitionWeights: Record<string, TransitionMap> = {
 };
 
 /* ═══════════════════════════════════════════
-   Message banks — all 10 agents
+   Message banks — all 21 agents
    ═══════════════════════════════════════════ */
 
 const thoughtBank: Record<string, Partial<Record<AgentStatus, string[]>>> = {
-  gerente: {
-    idle: ["Aguardando novas demandas do time.", "Revisando status geral."],
-    analyzing: ["Revisando prioridades do backlog...", "Avaliando performance da equipe...", "Cruzando métricas de conversão..."],
-    suggesting: ["Reorganizar prioridades do módulo de propostas.", "Acelerar entrega dos templates por perfil.", "Redistribuir tarefas entre os agentes."],
-    waiting: ["Aguardando aprovação para reorganização.", "Esperando decisão sobre priorização."],
-    alert: ["Acúmulo de tarefas sem decisão há 48h.", "Capacidade operacional no limite."],
+  // ═══ ORQUESTRAÇÃO ═══
+  "nath-ai": {
+    idle: ["Monitorando performance geral dos 6 squads.", "Revisando métricas consolidadas."],
+    analyzing: ["Avaliando carga de trabalho entre squads...", "Redistribuindo prioridades...", "Cruzando KPIs do pipeline comercial..."],
+    suggesting: ["Redistribuir 3 leads do ATLAS para o HABIBI.", "Escalar prioridade da proposta Dubai VIP.", "Rebalancear carga entre squads."],
+    waiting: ["Aguardando aprovação para rebalanceamento.", "Esperando decisão sobre prioridades."],
+    alert: ["Squad Comercial sobrecarregado — 3 agentes no limite.", "Pipeline desbalanceado entre destinos."],
   },
-  auditor: {
-    idle: ["Monitorando processos.", "Aguardando novos dados."],
-    analyzing: ["Escaneando inconsistências em propostas...", "Verificando uso da biblioteca de mídia...", "Analisando SLA de fornecedores...", "Comparando margens entre destinos..."],
-    suggesting: ["Otimização na curadoria de mídia.", "Padronizar descrições de quartos.", "Padrão automatizável detectado."],
-    waiting: ["Aguardando validação sobre fornecedores.", "Esperando decisão sobre inconsistência."],
-    alert: ["Fornecedor com 3 confirmações >48h.", "Queda de 15% na reutilização de mídias.", "Inconsistência em precificação."],
+  orion: {
+    idle: ["Monitorando fluxo do pipeline.", "Verificando handoffs entre agentes."],
+    analyzing: ["Rastreando gargalos entre ATLAS→HABIBI...", "Verificando tempo médio por etapa...", "Otimizando roteamento de leads..."],
+    suggesting: ["Handoff MAYA→ATLAS pode ser automático.", "Rota alternativa: leads Europa direto para DANTE.", "Sugestão: bypass qualificação para VIP."],
+    waiting: ["Aguardando confirmação de rota.", "Esperando validação de handoff."],
+    alert: ["Gargalo crítico: 5 leads parados entre ATLAS e LUNA.", "Handoff falhando entre squads."],
   },
-  estrategista: {
-    idle: ["Monitorando tendências.", "Consolidando padrões dos últimos 30 dias."],
-    analyzing: ["Padrões de vendas por sazonalidade...", "Correlação mídia vs. conversão...", "Oportunidades de upsell...", "Margem por categoria de destino..."],
-    suggesting: ["Reforçar propostas nacionais premium.", "Lua de mel aceita 40% mais upgrades.", "Pacotes experienciais para Q2."],
-    waiting: ["Aguardando aprovação para destinos nacionais.", "Esperando decisão sobre upsell."],
-    alert: ["Concentração excessiva em destinos europeus.", "Margem média em queda."],
+  // ═══ SQUAD COMERCIAL ═══
+  maya: {
+    idle: ["Aguardando novos leads.", "Preparando mensagens de boas-vindas."],
+    analyzing: ["Analisando perfil do novo lead...", "Classificando tipo de viajante...", "Verificando canal de origem do lead..."],
+    suggesting: ["Lead premium detectado — direcionar para HABIBI.", "Família com crianças — roteiro NEMO.", "Lua de mel — acionar DANTE para Europa."],
+    waiting: ["Aguardando resposta do lead.", "Esperando classificação completa."],
+    alert: ["3 leads sem resposta há 2h — SLA em risco.", "Lead VIP aguardando primeiro contato."],
   },
-  analista: {
-    idle: ["Consolidando dados para relatório.", "Monitorando anomalias nos KPIs."],
-    analyzing: ["Cruzando conversão com tempo de resposta...", "Funil de vendas por etapa...", "Performance semanal...", "Outliers em dados de venda..."],
-    suggesting: ["Painel de conversão por etapa do funil.", "Fotos de qualidade → +25% conversão.", "Segmento premium cresceu 12%."],
-    waiting: ["Aguardando validação do relatório.", "Esperando aprovação do dashboard."],
-    alert: ["Conversão caiu 8% vs. semana anterior.", "Anomalia em dados de vendas."],
+  atlas: {
+    idle: ["Aguardando leads para qualificação.", "Revisando critérios de scoring."],
+    analyzing: ["Qualificando lead por orçamento e datas...", "Aplicando scoring por perfil...", "Mapeando preferências do viajante..."],
+    suggesting: ["Lead score 85 — ready for specialist.", "Perfil família Orlando → NEMO.", "Budget premium → HABIBI para Dubai."],
+    waiting: ["Aguardando dados adicionais do lead.", "Esperando confirmação de budget."],
+    alert: ["5 leads sem qualificação há 48h.", "Scoring abaixo da média — revisar critérios."],
   },
-  financeiro: {
-    idle: ["Monitorando fluxo de caixa.", "Aguardando fechamento mensal."],
-    analyzing: ["Margens por destino e fornecedor...", "Projeção de fluxo de caixa...", "Custos fixos vs. variáveis...", "DRE do período..."],
-    suggesting: ["Revisar markups com margem <8%.", "Renegociação com 3 fornecedores.", "Ajuste em custos operacionais."],
-    waiting: ["Aguardando aprovação de markups.", "Esperando decisão sobre renegociação."],
-    alert: ["Margem abaixo da meta de 15%.", "Caixa negativo projetado em 15 dias."],
+  habibi: {
+    idle: ["Monitorando destinos orientais.", "Atualizando experiências VIP Dubai."],
+    analyzing: ["Montando roteiro Dubai personalizado...", "Verificando disponibilidade Maldivas...", "Cotando experiências premium no deserto..."],
+    suggesting: ["Upgrade para suite no Atlantis disponível.", "Experiência exclusiva no deserto em oferta.", "Maldivas: villa overwater com 20% off."],
+    waiting: ["Aguardando confirmação do hotel.", "Esperando retorno sobre experiência VIP."],
+    alert: ["Hotel esgotado para datas solicitadas.", "Preço do voo Dubai subiu 30% — urgente."],
   },
-  marketing: {
-    idle: ["Monitorando engajamento de leads.", "Analisando campanhas anteriores."],
-    analyzing: ["Segmentando leads inativos...", "Destinos mais buscados...", "Perfis com potencial...", "ROI de campanhas..."],
-    suggesting: ["Reativação de 340 leads premium.", "Maldivas trending (+45%).", "Remarketing: até R$180k."],
-    waiting: ["Aguardando aprovação de campanha.", "Esperando decisão sobre segmentação."],
-    alert: ["Pipeline de leads caiu 20%.", "Email marketing em queda."],
+  nemo: {
+    idle: ["Monitorando parques Orlando.", "Verificando promoções Disney."],
+    analyzing: ["Planejando roteiro de parques otimizado...", "Calculando melhor hotel por proximidade...", "Verificando ingressos com desconto..."],
+    suggesting: ["Roteiro 7 dias com todos os parques top.", "Hotel com cozinha perto do Magic Kingdom.", "Combo ingresso + refeição economiza 15%."],
+    waiting: ["Aguardando confirmação de hotel.", "Esperando decisão sobre parques."],
+    alert: ["Ingressos Disney subindo amanhã — urgência.", "Hotel preferido lotado para as datas."],
   },
-  comercial: {
-    idle: ["Monitorando pipeline.", "Aguardando propostas."],
-    analyzing: ["Probabilidade de fechamento...", "Tempo de decisão dos clientes...", "Objeções mais comuns...", "Taxas de follow-up..."],
-    suggesting: ["5 propostas com score >80%.", "Follow-up em 24h triplica fechamento.", "Cliente premium sem contato há 48h."],
-    waiting: ["Aguardando retorno de propostas.", "Esperando decisão comercial."],
-    alert: ["3 propostas perdendo timing.", "Pipeline de fechamento em queda."],
+  dante: {
+    idle: ["Monitorando destinos europeus.", "Atualizando roteiros culturais."],
+    analyzing: ["Montando roteiro Itália + França...", "Verificando trens entre cidades...", "Cotando experiências gastronômicas..."],
+    suggesting: ["Roteiro Toscana + Costa Amalfitana perfeito.", "Trem Roma→Florença com vista panorâmica.", "Tour gastronômico em Barcelona em promoção."],
+    waiting: ["Aguardando confirmação de reservas.", "Esperando decisão sobre cidades."],
+    alert: ["Voo para Roma cancelado — alternativas.", "Alta temporada Europa — preços subindo."],
   },
-  atendimento: {
-    idle: ["Monitorando chamados.", "Verificando SLA."],
-    analyzing: ["Tempo médio de resposta...", "Satisfação dos atendimentos...", "Chamados pendentes...", "Padrões de reclamação..."],
-    suggesting: ["3 clientes sem retorno 48h.", "Template reduz 30% do tempo.", "Pesquisa NPS pós-viagem."],
-    waiting: ["Aguardando resolução de chamados.", "Esperando feedback de SLA."],
-    alert: ["Resposta acima do SLA (6.5h vs 4h).", "NPS caiu 5 pontos."],
+  luna: {
+    idle: ["Preparando templates de propostas.", "Revisando elementos visuais."],
+    analyzing: ["Montando proposta visual...", "Calculando precificação otimizada...", "Selecionando fotos de impacto..."],
+    suggesting: ["Proposta com storytelling aumenta 40% conversão.", "Incluir mapa interativo do roteiro.", "Precificação em 3 tiers: Essential/Premium/VIP."],
+    waiting: ["Aguardando aprovação da proposta.", "Esperando feedback visual do cliente."],
+    alert: ["3 propostas sem envio há 24h.", "Template com erro de precificação."],
   },
-  operacional: {
-    idle: ["Monitorando fluxos.", "Verificando eficiência."],
-    analyzing: ["Gargalos no fluxo de propostas...", "Tempo por etapa...", "Etapas automatizáveis...", "Eficiência entre times..."],
-    suggesting: ["Automatizar briefing (-18min).", "3 etapas redundantes.", "Templates: -35% tempo."],
-    waiting: ["Aguardando aprovação de otimização.", "Esperando decisão sobre automação."],
-    alert: ["Gargalo: aprovação fornecedor (18h).", "Montagem subiu 20%."],
+  nero: {
+    idle: ["Monitorando propostas abertas.", "Analisando objeções recentes."],
+    analyzing: ["Probabilidade de fechamento por proposta...", "Analisando objeções mais comuns...", "Timing ideal para follow-up..."],
+    suggesting: ["5 propostas com score >80% para follow-up.", "Oferta relâmpago para destravar indeciso.", "Objeção 'preço' — mostrar comparativo."],
+    waiting: ["Aguardando retorno do cliente.", "Esperando decisão final."],
+    alert: ["3 propostas perdendo timing AGORA.", "Cliente VIP pode fechar com concorrente."],
   },
-  inovacao: {
-    idle: ["Explorando travel tech.", "Monitorando concorrentes."],
-    analyzing: ["Viabilidade de itinerário IA...", "Portais interativos...", "IA generativa no turismo...", "Tecnologias emergentes..."],
-    suggesting: ["Itinerário IA: -80% tempo.", "Portal interativo: diferencial.", "Galeria imersiva aumenta conversão."],
-    waiting: ["Aguardando aprovação de protótipo.", "Esperando decisão sobre portal."],
-    alert: ["Concorrente lançou IA generativa.", "Gap tecnológico detectado."],
+  iris: {
+    idle: ["Monitorando satisfação pós-viagem.", "Preparando NPS."],
+    analyzing: ["Coletando feedback pós-viagem...", "Analisando padrão de recompra...", "Identificando embaixadores..."],
+    suggesting: ["Enviar NPS para 8 clientes retornados.", "Cliente satisfeito → oferecer programa de indicação.", "Recompra: destino complementar para viajante."],
+    waiting: ["Aguardando respostas NPS.", "Esperando feedback."],
+    alert: ["NPS negativo detectado — ação imediata.", "Cliente reclamou no WhatsApp."],
+  },
+  // ═══ SQUAD ATENDIMENTO ═══
+  athos: {
+    idle: ["Monitorando chamados abertos.", "Verificando SLA de resposta."],
+    analyzing: ["Classificando urgência dos chamados...", "Tempo de resposta por canal...", "Padrões de reclamação..."],
+    suggesting: ["3 chamados podem ser resolvidos com FAQ.", "Escalar chamado do cliente VIP.", "Template de resposta para dúvida comum."],
+    waiting: ["Aguardando resolução de chamado.", "Esperando retorno do fornecedor."],
+    alert: ["SLA estourado: resposta acima de 6h.", "Chamado crítico sem atendimento."],
+  },
+  zara: {
+    idle: ["Preparando experiências exclusivas.", "Monitorando reservas especiais."],
+    analyzing: ["Organizando transfer VIP...", "Verificando disponibilidade de experiência...", "Cotando restaurante exclusivo..."],
+    suggesting: ["Surpresa de aniversário no hotel — reservar.", "Transfer de luxo do aeroporto em promoção.", "Experiência sunset cruise disponível."],
+    waiting: ["Aguardando confirmação do restaurante.", "Esperando disponibilidade."],
+    alert: ["Reserva especial cancelada — alternativa urgente.", "Transfer não confirmado para amanhã."],
+  },
+  // ═══ SQUAD FINANCEIRO ═══
+  finx: {
+    idle: ["Monitorando pagamentos.", "Verificando vencimentos."],
+    analyzing: ["Conciliando pagamentos recebidos...", "Verificando parcelas em atraso...", "Emitindo NFs pendentes..."],
+    suggesting: ["5 parcelas vencem esta semana — enviar lembretes.", "Conciliação bancária com 3 divergências.", "NF pendente para 2 vendas fechadas."],
+    waiting: ["Aguardando confirmação de pagamento.", "Esperando emissão de NF."],
+    alert: ["R$ 15.000 em parcelas vencidas.", "Pagamento não identificado na conta."],
+  },
+  sage: {
+    idle: ["Monitorando margens.", "Consolidando DRE."],
+    analyzing: ["Analisando margem por destino...", "Projetando fluxo de caixa 30 dias...", "Comparando markup vs. mercado..."],
+    suggesting: ["Markup Dubai pode subir 3% sem perder competitividade.", "Renegociar 2 fornecedores acima do benchmark.", "DRE mostra oportunidade em destinos nacionais."],
+    waiting: ["Aguardando aprovação de markup.", "Esperando dados do fornecedor."],
+    alert: ["Margem média caiu para 8% — abaixo da meta.", "Fluxo de caixa negativo projetado em 15 dias."],
+  },
+  // ═══ SQUAD OPERACIONAL ═══
+  opex: {
+    idle: ["Monitorando fluxos operacionais.", "Verificando automações."],
+    analyzing: ["Mapeando gargalos no processo...", "Tempo por etapa do pipeline...", "Identificando etapas automatizáveis..."],
+    suggesting: ["Automatizar briefing (-18min por proposta).", "3 etapas redundantes no fluxo.", "Integração Amadeus para cotação automática."],
+    waiting: ["Aguardando aprovação de automação.", "Esperando deploy da integração."],
+    alert: ["Gargalo: aprovação de fornecedor (18h média).", "Montagem de propostas subiu 25%."],
+  },
+  vigil: {
+    idle: ["Monitorando compliance.", "Escaneando processos."],
+    analyzing: ["Verificando mensagens contra regras fiscais...", "Auditando propostas recentes...", "Checando CADASTUR e documentação..."],
+    suggesting: ["Padronizar disclaimers em propostas.", "Atualizar template de contrato.", "3 mensagens precisam de revisão fiscal."],
+    waiting: ["Aguardando validação jurídica.", "Esperando atualização de regras."],
+    alert: ["Menção a câmbio paralelo detectada.", "Proposta sem disclaimer obrigatório.", "CADASTUR vencendo em 15 dias."],
+  },
+  sentinel: {
+    idle: ["Monitorando concorrência.", "Rastreando tendências."],
+    analyzing: ["Comparando preços com concorrentes...", "Analisando tendências do mercado...", "Benchmarking de serviços..."],
+    suggesting: ["Concorrente lançou pacote Maldivas 10% mais barato.", "Tendência: viagens de experiência crescendo 45%.", "Oportunidade: destinos nacionais premium."],
+    waiting: ["Aguardando dados de mercado.", "Esperando análise comparativa."],
+    alert: ["Concorrente ganhou 3 clientes nossos este mês.", "Gap de preço significativo detectado."],
+  },
+  // ═══ SQUAD GERAÇÃO DE DEMANDA ═══
+  spark: {
+    idle: ["Planejando conteúdo.", "Analisando engajamento."],
+    analyzing: ["Melhores horários de publicação...", "Conteúdo com maior engajamento...", "Temas trending para travel..."],
+    suggesting: ["Post sobre Maldivas pode gerar 50+ leads.", "Reels de Dubai performam 3x melhor.", "Newsletter semanal com destinos trending."],
+    waiting: ["Aguardando aprovação de conteúdo.", "Esperando arte do designer."],
+    alert: ["Engajamento caiu 30% esta semana.", "Nenhum post publicado há 3 dias."],
+  },
+  hunter: {
+    idle: ["Buscando oportunidades.", "Monitorando canais."],
+    analyzing: ["Prospectando leads qualificados...", "Analisando parcerias potenciais...", "Cold outreach performance..."],
+    suggesting: ["340 leads inativos com potencial de reativação.", "Parceria com influencer de viagem.", "LinkedIn: 5 leads corporativos identificados."],
+    waiting: ["Aguardando retorno de prospecção.", "Esperando resposta de parceria."],
+    alert: ["Pipeline de leads caiu 20%.", "Meta de captação em risco."],
+  },
+  // ═══ SQUAD RETENÇÃO ═══
+  aegis: {
+    idle: ["Monitorando sinais de churn.", "Analisando inatividade."],
+    analyzing: ["Detectando padrões de churn...", "Classificando clientes em risco...", "Preparando campanhas win-back..."],
+    suggesting: ["12 clientes com risco alto de churn.", "Campanha win-back com desconto exclusivo.", "Oferta de aniversário para clientes inativos."],
+    waiting: ["Aguardando resposta da campanha.", "Esperando análise de churn."],
+    alert: ["Cliente VIP não compra há 6 meses.", "Taxa de churn subiu 5% este mês."],
+  },
+  nurture: {
+    idle: ["Monitorando régua de relacionamento.", "Verificando sequências."],
+    analyzing: ["Segmentando leads por temperatura...", "Performance das sequências de email...", "Leads prontos para handoff comercial..."],
+    suggesting: ["45 leads quentes prontos para comercial.", "Sequência 'Destinos de Inverno' com 35% open rate.", "Reativar leads que abriram email 3x sem clicar."],
+    waiting: ["Aguardando envio de sequência.", "Esperando resultado de segmentação."],
+    alert: ["Sequência de emails com bounce alto.", "Leads esfriando — nutrir urgente."],
   },
 };
 
 const memoryThoughts: Record<string, string[]> = {
-  gerente: ["Ajustei prioridades com base nas suas decisões.", "Você aprova organização — reforçando.", "Preferência por ações rápidas detectada."],
-  auditor: ["Focando em inconsistências que você aprova.", "Análises ajustadas por suas decisões."],
-  estrategista: ["Upsell não aceito — ajustando.", "Priorizei abordagens diretas."],
-  analista: ["Priorizando métricas que você aprova."],
-  financeiro: ["Alertas financeiros ajustados por suas aprovações."],
-  marketing: ["Foco em campanhas por suas aprovações."],
-  comercial: ["Propostas alinhadas ao seu padrão."],
-  atendimento: ["Priorizando SLA por suas decisões."],
-  operacional: ["Automação ajustada por suas aprovações."],
-  inovacao: ["Inovações alinhadas com suas aprovações."],
+  "nath-ai": ["Ajustei prioridades com base nas suas decisões.", "Reforçando padrão de delegação que você aprova."],
+  orion: ["Roteamento ajustado por suas aprovações.", "Handoffs otimizados com base no seu feedback."],
+  maya: ["Boas-vindas alinhadas ao tom que você prefere.", "Classificação de leads ajustada."],
+  atlas: ["Scoring calibrado por suas decisões.", "Qualificação ajustada ao seu padrão."],
+  habibi: ["Experiências orientais alinhadas ao seu gosto.", "Propostas Dubai ajustadas."],
+  nemo: ["Roteiros Orlando otimizados por suas decisões.", "Parques priorizados conforme seu padrão."],
+  dante: ["Roteiros Europa refinados por feedback.", "Experiências culturais ajustadas."],
+  luna: ["Propostas visuais no estilo que você aprova.", "Precificação calibrada."],
+  nero: ["Técnica de fechamento ajustada ao seu estilo.", "Follow-up calibrado por suas decisões."],
+  iris: ["Pós-venda alinhado ao seu padrão de qualidade.", "NPS ajustado por feedback."],
+  athos: ["SLA ajustado por suas prioridades.", "Resolução de chamados otimizada."],
+  zara: ["Experiências concierge alinhadas ao seu gosto.", "Reservas especiais priorizadas."],
+  finx: ["Conciliação ajustada por suas regras.", "Alertas financeiros calibrados."],
+  sage: ["Margens monitoradas conforme seus critérios.", "DRE ajustado por suas aprovações."],
+  opex: ["Automações priorizadas por suas decisões.", "Fluxos otimizados por feedback."],
+  vigil: ["Regras de compliance ajustadas.", "Auditorias focadas nas suas prioridades."],
+  sentinel: ["Benchmarking ajustado por seus interesses.", "Monitoramento de concorrência refinado."],
+  spark: ["Conteúdo alinhado ao tom que você aprova.", "Estratégia de posts calibrada."],
+  hunter: ["Prospecção focada nos canais que você prefere.", "Cold outreach ajustado."],
+  aegis: ["Retenção priorizada por suas decisões.", "Win-back calibrado."],
+  nurture: ["Régua de relacionamento ajustada.", "Segmentação refinada por feedback."],
 };
 
 const taskTemplates: Record<string, Array<{ title: string; description: string; priority: TaskPriority; context: string }>> = {
-  gerente: [
-    { title: "Reorganizar prioridades do backlog", description: "Redistribuir tarefas com base na capacidade e impacto.", priority: "medium", context: "backlog" },
-    { title: "Revisar SLA de atendimento", description: "Tempo de resposta subiu 12%.", priority: "high", context: "sla" },
-    { title: "Relatório semanal de performance", description: "Consolidar métricas de vendas e conversão.", priority: "low", context: "operacional" },
+  "nath-ai": [
+    { title: "Rebalancear carga entre squads", description: "Squad Comercial sobrecarregado vs. Retenção ociosa.", priority: "high", context: "gestão" },
+    { title: "Relatório semanal de performance", description: "Consolidar KPIs de todos os 6 squads.", priority: "medium", context: "relatório" },
+    { title: "Revisar prioridades do pipeline", description: "Realinhar com metas do mês.", priority: "medium", context: "estratégia" },
   ],
-  auditor: [
-    { title: "Auditar propostas sem resposta 7+ dias", description: "Propostas abandonadas — recontato.", priority: "high", context: "follow-up" },
-    { title: "Mapear fornecedores com SLA irregular", description: "Confirmações >48h recorrentes.", priority: "medium", context: "fornecedores" },
-    { title: "Consistência de dados de hospedagem", description: "Cruzar nomes de quartos.", priority: "low", context: "propostas" },
+  orion: [
+    { title: "Otimizar roteamento de leads", description: "Leads parados entre etapas > 24h.", priority: "high", context: "pipeline" },
+    { title: "Automatizar handoff MAYA→ATLAS", description: "Transição manual consome 8min.", priority: "medium", context: "automação" },
+    { title: "Mapear gargalos do pipeline", description: "Identificar etapas com maior tempo.", priority: "low", context: "pipeline" },
   ],
-  estrategista: [
-    { title: "Pacote experiencial Q2", description: "Pacote temático baseado em tendências.", priority: "medium", context: "estratégia" },
-    { title: "Elasticidade de preço", description: "Impacto de 5% na margem.", priority: "high", context: "pricing" },
-    { title: "Destinos emergentes", description: "Crescimento >20%.", priority: "low", context: "estratégia" },
+  maya: [
+    { title: "Responder 3 leads sem contato", description: "Leads aguardando primeiro contato há 2h.", priority: "high", context: "boas-vindas" },
+    { title: "Atualizar mensagem de boas-vindas", description: "A/B test com novo tom.", priority: "low", context: "boas-vindas" },
+    { title: "Classificar leads do Instagram", description: "12 leads sem classificação.", priority: "medium", context: "qualificação" },
   ],
-  analista: [
-    { title: "Dashboard de conversão por etapa", description: "Funil de vendas detalhado.", priority: "medium", context: "métricas" },
-    { title: "Relatório de anomalias", description: "Outliers em vendas e margens.", priority: "high", context: "métricas" },
-    { title: "Correlação mídia vs. conversão", description: "Impacto de fotos.", priority: "low", context: "métricas" },
+  atlas: [
+    { title: "Qualificar 5 leads pendentes", description: "Leads sem qualificação há 48h.", priority: "high", context: "qualificação" },
+    { title: "Calibrar modelo de scoring", description: "Precisão caiu 5% este mês.", priority: "medium", context: "scoring" },
+    { title: "Perfil detalhado para lead VIP", description: "Budget alto detectado.", priority: "high", context: "qualificação" },
   ],
-  financeiro: [
-    { title: "Revisar markups abaixo da meta", description: "Margem <8%.", priority: "high", context: "pricing" },
+  habibi: [
+    { title: "Montar roteiro Dubai VIP", description: "Cliente premium aguardando.", priority: "high", context: "proposta" },
+    { title: "Atualizar preços Maldivas", description: "Tarifas mudaram esta semana.", priority: "medium", context: "pricing" },
+    { title: "Experiência deserto exclusiva", description: "Novo parceiro disponível.", priority: "low", context: "experiência" },
+  ],
+  nemo: [
+    { title: "Roteiro Orlando 7 dias", description: "Família com 2 crianças.", priority: "high", context: "proposta" },
+    { title: "Atualizar preços parques", description: "Disney subiu ingressos.", priority: "medium", context: "pricing" },
+    { title: "Combo hotel + ingressos", description: "Negociar pacote econômico.", priority: "medium", context: "proposta" },
+  ],
+  dante: [
+    { title: "Roteiro Itália 12 dias", description: "Casal lua de mel premium.", priority: "high", context: "proposta" },
+    { title: "Verificar trens europeus", description: "Greve na França afeta rotas.", priority: "medium", context: "operacional" },
+    { title: "Tour gastronômico Barcelona", description: "Parceiro com disponibilidade.", priority: "low", context: "experiência" },
+  ],
+  luna: [
+    { title: "Montar proposta visual Dubai", description: "Lead VIP aguardando 24h.", priority: "high", context: "proposta" },
+    { title: "Criar template destinos nacionais", description: "Faltam templates para Brasil.", priority: "medium", context: "template" },
+    { title: "Incluir mapa interativo", description: "Aumenta conversão em 25%.", priority: "low", context: "proposta" },
+  ],
+  nero: [
+    { title: "Follow-up 5 propostas abertas", description: "Score >80% sem resposta.", priority: "high", context: "fechamento" },
+    { title: "Preparar contra-objeção de preço", description: "3 clientes acharam caro.", priority: "high", context: "objeção" },
+    { title: "Oferta relâmpago para indecisos", description: "2 leads em cima do muro.", priority: "medium", context: "fechamento" },
+  ],
+  iris: [
+    { title: "Enviar NPS pós-viagem", description: "8 clientes retornaram esta semana.", priority: "medium", context: "pós-venda" },
+    { title: "Programa de indicação", description: "3 clientes satisfeitos podem indicar.", priority: "low", context: "fidelização" },
+    { title: "Follow-up cliente insatisfeito", description: "NPS 6 detectado.", priority: "high", context: "pós-venda" },
+  ],
+  athos: [
+    { title: "Resolver 3 chamados pendentes", description: "SLA perto do limite.", priority: "high", context: "suporte" },
+    { title: "Criar FAQ para dúvidas comuns", description: "Reduzir 30% dos chamados.", priority: "medium", context: "suporte" },
+    { title: "Escalar chamado VIP", description: "Cliente premium insatisfeito.", priority: "high", context: "suporte" },
+  ],
+  zara: [
+    { title: "Organizar transfer VIP", description: "Cliente chega amanhã.", priority: "high", context: "concierge" },
+    { title: "Reservar restaurante exclusivo", description: "Aniversário do cliente.", priority: "medium", context: "experiência" },
+    { title: "Surprise & delight", description: "Preparar surpresa no hotel.", priority: "low", context: "concierge" },
+  ],
+  finx: [
+    { title: "Enviar lembretes de parcelas", description: "5 vencem esta semana.", priority: "high", context: "cobrança" },
+    { title: "Conciliação bancária", description: "3 divergências encontradas.", priority: "medium", context: "financeiro" },
+    { title: "Emitir NFs pendentes", description: "2 vendas sem NF.", priority: "medium", context: "fiscal" },
+  ],
+  sage: [
+    { title: "Revisar markups <8%", description: "3 destinos com margem baixa.", priority: "high", context: "margem" },
     { title: "Projeção de fluxo de caixa", description: "Próximos 30 dias.", priority: "medium", context: "financeiro" },
-    { title: "Renegociar fornecedores caros", description: "Acima do benchmark.", priority: "medium", context: "fornecedores" },
+    { title: "Renegociar fornecedor caro", description: "Acima do benchmark 15%.", priority: "medium", context: "fornecedor" },
   ],
-  marketing: [
-    { title: "Campanha de reativação de leads", description: "340 leads inativos premium.", priority: "medium", context: "marketing" },
-    { title: "Destaque destino trending", description: "Destino em alta.", priority: "low", context: "marketing" },
-    { title: "Remarketing propostas abertas", description: "Propostas sem resposta.", priority: "high", context: "marketing" },
+  opex: [
+    { title: "Automatizar briefing", description: "18min por proposta — automatizável.", priority: "medium", context: "automação" },
+    { title: "Eliminar 3 etapas redundantes", description: "Processo duplicado.", priority: "high", context: "processo" },
+    { title: "Benchmark tempo por etapa", description: "Comparar com meta.", priority: "low", context: "processo" },
   ],
-  comercial: [
-    { title: "Propostas para fechamento", description: "Score >80%.", priority: "high", context: "vendas" },
-    { title: "Follow-up urgente", description: "Sem contato há 48h.", priority: "high", context: "follow-up" },
-    { title: "Objeções recorrentes", description: "Padrões comuns.", priority: "medium", context: "vendas" },
+  vigil: [
+    { title: "Auditoria de compliance", description: "20 mensagens para revisar.", priority: "high", context: "compliance" },
+    { title: "Atualizar disclaimers", description: "Nova regra fiscal.", priority: "medium", context: "fiscal" },
+    { title: "Verificar CADASTUR", description: "Vencimento próximo.", priority: "high", context: "regulatório" },
   ],
-  atendimento: [
-    { title: "Clientes sem resposta 48h", description: "Chamados abertos.", priority: "high", context: "sla" },
-    { title: "Pesquisa NPS pós-viagem", description: "Enviar para clientes.", priority: "low", context: "atendimento" },
-    { title: "Template de resposta rápida", description: "Reduzir 30% do tempo.", priority: "medium", context: "atendimento" },
+  sentinel: [
+    { title: "Relatório de concorrência", description: "3 concorrentes monitorados.", priority: "medium", context: "inteligência" },
+    { title: "Alerta de preço concorrente", description: "Maldivas 10% mais barato.", priority: "high", context: "pricing" },
+    { title: "Tendências do mercado", description: "Viagens de experiência em alta.", priority: "low", context: "tendências" },
   ],
-  operacional: [
-    { title: "Automatizar briefing", description: "Consome 18min.", priority: "medium", context: "automação" },
-    { title: "Eliminar etapas redundantes", description: "3 etapas duplicadas.", priority: "high", context: "processos" },
-    { title: "Benchmark tempo por etapa", description: "Comparar com meta.", priority: "low", context: "processos" },
+  spark: [
+    { title: "Criar 3 posts para Instagram", description: "Destinos trending.", priority: "medium", context: "conteúdo" },
+    { title: "Newsletter semanal", description: "Curadoria de destinos.", priority: "low", context: "conteúdo" },
+    { title: "Reels Dubai", description: "Performance 3x maior.", priority: "medium", context: "conteúdo" },
   ],
-  inovacao: [
-    { title: "Prototipar itinerário por IA", description: "Geração baseada no perfil.", priority: "medium", context: "inovação" },
-    { title: "Portal do viajante interativo", description: "Tracking em tempo real.", priority: "low", context: "inovação" },
-    { title: "Galeria imersiva em propostas", description: "Fotos 360° e vídeos.", priority: "medium", context: "inovação" },
+  hunter: [
+    { title: "Reativar 340 leads inativos", description: "Leads premium dormentes.", priority: "high", context: "prospecção" },
+    { title: "Prospecção LinkedIn", description: "5 leads corporativos.", priority: "medium", context: "prospecção" },
+    { title: "Parceria com influencer", description: "Audiência de 500k.", priority: "low", context: "parceria" },
+  ],
+  aegis: [
+    { title: "Campanha anti-churn", description: "12 clientes em risco.", priority: "high", context: "retenção" },
+    { title: "Win-back VIP", description: "Cliente premium inativo 6 meses.", priority: "high", context: "retenção" },
+    { title: "Desconto de aniversário", description: "Oferta personalizada.", priority: "medium", context: "retenção" },
+  ],
+  nurture: [
+    { title: "Handoff 45 leads quentes", description: "Prontos para comercial.", priority: "high", context: "nurturing" },
+    { title: "Sequência destinos de inverno", description: "35% open rate.", priority: "medium", context: "email" },
+    { title: "Reaquecimento de leads frios", description: "Abriram 3x sem clicar.", priority: "medium", context: "nurturing" },
   ],
 };
 
@@ -308,10 +475,10 @@ export function createInitialState(baseAgents: Agent[], baseTasks: Task[], now: 
 }
 
 /* ═══════════════════════════════════════════
-   TICK — allow up to 2 transitions per tick for 10 agents
+   TICK — allow up to 3 transitions per tick for 21 agents
    ═══════════════════════════════════════════ */
 
-const MAX_TRANSITIONS_PER_TICK = 2;
+const MAX_TRANSITIONS_PER_TICK = 3;
 
 export function tick(state: EngineState, now: number): EngineState {
   let { agents, tasks, events, lastTaskCreatedAt, lastAlertAt, tickCount } = state;
