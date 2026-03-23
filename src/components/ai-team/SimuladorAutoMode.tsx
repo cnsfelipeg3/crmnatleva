@@ -61,11 +61,11 @@ async function gerarObjecao(lead: LeadInteligente, ultimaMsgAgente: string): Pro
   return callAgent(buildLeadPersona(lead), [{ role: "user", content: prompt }]);
 }
 
-// Evaluate agent response quality
-async function avaliarRespostaAgente(resposta: string, lead: LeadInteligente): Promise<{ nota: number; reacao: string; sentimento: number; motivo: string }> {
+// Evaluate agent response quality — 3 dimensions
+async function avaliarRespostaAgente(resposta: string, lead: LeadInteligente): Promise<{ nota: number; reacao: string; sentimento: number; motivo: string; humanizacao: number; eficaciaComercial: number; qualidadeTecnica: number }> {
   try {
-    const prompt = buildAvaliacaoPrompt(resposta, lead, lead.etapaAtual);
-    const result = await callAgent("Voce avalia qualidade de atendimento. Retorne SOMENTE JSON válido sem markdown.", [{ role: "user", content: prompt }]);
+    const prompt = buildLiveEvalPrompt(resposta, lead.perfil.label, lead.etapaAtual);
+    const result = await callAgent("Voce avalia qualidade de atendimento em 3 dimensões. Retorne SOMENTE JSON válido sem markdown.", [{ role: "user", content: prompt }]);
     const jsonMatch = result.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const data = JSON.parse(jsonMatch[0]);
@@ -74,10 +74,13 @@ async function avaliarRespostaAgente(resposta: string, lead: LeadInteligente): P
         reacao: data.reacaoEmocional || "neutro",
         sentimento: Math.min(100, Math.max(0, data.sentimentoScore || 50)),
         motivo: data.motivoNota || "",
+        humanizacao: Math.min(100, Math.max(0, data.humanizacao || 50)),
+        eficaciaComercial: Math.min(100, Math.max(0, data.eficaciaComercial || 50)),
+        qualidadeTecnica: Math.min(100, Math.max(0, data.qualidadeTecnica || 50)),
       };
     }
   } catch {}
-  return { nota: 50, reacao: "neutro", sentimento: 50, motivo: "" };
+  return { nota: 50, reacao: "neutro", sentimento: 50, motivo: "", humanizacao: 50, eficaciaComercial: 50, qualidadeTecnica: 50 };
 }
 
 // Generate motivated loss message
