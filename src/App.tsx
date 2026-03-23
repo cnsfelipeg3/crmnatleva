@@ -260,7 +260,6 @@ function AppRoutes() {
             <Route path="memoria" element={<AITeamMemoria />} />
             <Route path="academia" element={<AITeamAcademia />} />
             <Route path="simulador" element={<AITeamSimulador />} />
-            <Route path="laboratorio" element={<AITeamLaboratorio />} />
             <Route path="config" element={<AITeamConfig />} />
             <Route path="agent/:agentId" element={<AITeamAgentDetail />} />
           </Route>
