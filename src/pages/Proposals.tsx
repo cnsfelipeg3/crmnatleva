@@ -17,6 +17,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const defaultCovers: Record<string, string> = {
+  orlando: "https://images.unsplash.com/photo-1575089976121-8ed7b2a54265?w=800&h=400&fit=crop&q=80",
+  paris: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&h=400&fit=crop&q=80",
+  maldivas: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&h=400&fit=crop&q=80",
+  europa: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800&h=400&fit=crop&q=80",
+  safari: "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=400&fit=crop&q=80",
+  default: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=800&h=400&fit=crop&q=80",
+};
+
+function getCoverImage(proposal: any): string {
+  if (proposal.cover_image_url) return proposal.cover_image_url;
+  const title = (proposal.title || "").toLowerCase();
+  const dests = (proposal.destinations || []).map((d: string) => d.toLowerCase()).join(" ");
+  const combined = `${title} ${dests}`;
+  for (const [key, url] of Object.entries(defaultCovers)) {
+    if (key !== "default" && combined.includes(key)) return url;
+  }
+  return defaultCovers.default;
+}
+
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: "Em elaboração", variant: "secondary" },
   sent: { label: "Enviada", variant: "default" },
