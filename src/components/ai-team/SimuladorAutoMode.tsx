@@ -680,37 +680,36 @@ export default function SimuladorAutoMode() {
                 ))}
               </div>
             )}
-            <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
               {(running ? leads : filteredLeads).map((l, i) => (
                 <button key={l.id} onClick={() => setSelectedLeadId(l.id)}
-                  className={cn("w-full text-left px-3 py-2.5 transition-all duration-200", i === 0 && running && "animate-in slide-in-from-top-2")}
+                  className={cn("w-full text-left px-3.5 py-3 transition-all duration-300", i === 0 && running && "animate-in slide-in-from-top-2")}
                   style={{
-                    background: selectedLeadId === l.id ? "#1F2C34" : "transparent",
-                    borderLeft: selectedLeadId === l.id ? "3px solid #10B981" : "3px solid transparent",
-                    borderBottom: "1px solid #2A394220",
+                    background: selectedLeadId === l.id ? "rgba(16,185,129,0.05)" : "transparent",
+                    borderLeft: selectedLeadId === l.id ? `3px solid ${l.profileColor}` : "3px solid transparent",
+                    borderBottom: "1px solid rgba(255,255,255,0.03)",
                   }}>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                      style={{ background: `${l.profileColor}20`, color: l.profileColor }}>{l.name[0]}</div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
+                      style={{ background: `${l.profileColor}12`, color: l.profileColor, border: `1px solid ${l.profileColor}20` }}>{l.name[0]}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className="text-[13px] font-bold truncate" style={{ color: "#E9EDEF" }}>{l.name}</p>
-                        <span className="text-[11px] tabular-nums" style={{ color: "#667781" }}>
+                        <p className="text-[13px] font-bold truncate" style={{ color: "#E2E8F0" }}>{l.name}</p>
+                        <span className="text-[10px] tabular-nums" style={{ color: "#475569" }}>
                           {l.startedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
-                      <p className="text-[12px] truncate" style={{ color: "#8696A0" }}>{l.destino}</p>
-                      <p className="text-[12px] truncate" style={{ color: "#8696A0" }}>
-                        {l.messages[l.messages.length - 1]?.content?.slice(0, 40) || "..."}
+                      <p className="text-[11px] truncate mt-0.5" style={{ color: "#64748B" }}>
+                        {l.messages[l.messages.length - 1]?.content?.slice(0, 35) || l.destino}
                       </p>
                     </div>
                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{
                       background: l.status === "active" ? "#25D366" : l.status === "closed" ? "#3B82F6" : "#EF4444",
-                      animation: l.status === "active" ? "pulse 2s infinite" : "none",
+                      boxShadow: l.status === "active" ? "0 0 6px rgba(37,211,102,0.4)" : "none",
                     }} />
                   </div>
-                  <span className="inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded font-medium"
-                    style={{ background: `${l.profileColor}15`, color: l.profileColor }}>{l.profileEmoji} {l.profileName}</span>
+                  <span className="inline-block mt-1.5 text-[9px] px-2 py-0.5 rounded-lg font-medium"
+                    style={{ background: `${l.profileColor}08`, color: l.profileColor, border: `1px solid ${l.profileColor}15` }}>{l.profileEmoji} {l.profileName}</span>
                 </button>
               ))}
             </div>
