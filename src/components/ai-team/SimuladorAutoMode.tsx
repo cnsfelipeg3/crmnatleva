@@ -635,41 +635,46 @@ export default function SimuladorAutoMode() {
 
       {/* Report tabs (after simulation) */}
       {phase === "report" && !running && (
-        <div className="flex items-center gap-2 mb-3">
-          {(["numeros", "conversas", "debrief"] as ReportTab[]).map(t => (
-            <button key={t} onClick={() => setReportTab(t)}
-              className="text-[11px] px-4 py-2 rounded-lg font-bold transition-all"
-              style={{
-                background: reportTab === t ? (t === "debrief" ? "#8B5CF610" : "#10B98110") : "transparent",
-                border: `1px solid ${reportTab === t ? (t === "debrief" ? "#8B5CF6" : "#10B981") : "#1E293B"}`,
-                color: reportTab === t ? (t === "debrief" ? "#8B5CF6" : "#10B981") : "#64748B",
-              }}>
-              {t === "numeros" ? "📊 Números" : t === "conversas" ? "💬 Conversas" : "🧠 Debrief IA"}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 mb-4">
+          {(["numeros", "conversas", "debrief"] as ReportTab[]).map(t => {
+            const active = reportTab === t;
+            const accent = t === "debrief" ? "#8B5CF6" : t === "numeros" ? "#3B82F6" : "#10B981";
+            return (
+              <button key={t} onClick={() => setReportTab(t)}
+                className="text-[11px] px-5 py-2.5 rounded-xl font-bold transition-all duration-300 hover:scale-[1.02]"
+                style={{
+                  background: active ? `${accent}10` : "rgba(255,255,255,0.02)",
+                  border: `1px solid ${active ? `${accent}30` : "rgba(255,255,255,0.04)"}`,
+                  color: active ? accent : "#64748B",
+                  boxShadow: active ? `0 0 16px ${accent}10` : "none",
+                }}>
+                {t === "numeros" ? "📊 Números" : t === "conversas" ? "💬 Conversas" : "🧠 Debrief IA"}
+              </button>
+            );
+          })}
           <button onClick={() => { setPhase("config"); setLeads([]); setDebrief(null); }}
-            className="ml-auto text-[10px] px-3 py-1.5 rounded-lg font-medium"
-            style={{ border: "1px solid #1E293B", color: "#64748B" }}>Nova Simulação</button>
+            className="ml-auto text-[10px] px-4 py-2 rounded-xl font-semibold transition-all hover:scale-[1.02]"
+            style={{ border: "1px solid rgba(255,255,255,0.06)", color: "#64748B", background: "rgba(255,255,255,0.02)" }}>Nova Simulação</button>
         </div>
       )}
 
       {/* 3-column layout for running / conversas tab */}
       {(running || (phase === "report" && reportTab === "conversas")) && (
-        <div className="flex gap-3" style={{ height: "calc(100vh - 280px)", minHeight: 500 }}>
+        <div className="flex gap-4" style={{ height: "calc(100vh - 300px)", minHeight: 500 }}>
           {/* LEFT: Lead list */}
-          <div className="w-[240px] shrink-0 rounded-xl overflow-hidden flex flex-col" style={{ background: "#111B21", border: "1px solid #2A3942" }}>
-            <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: "1px solid #2A3942" }}>
-              <span className="text-[13px] font-semibold" style={{ color: "#E9EDEF" }}>Conversas</span>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#25D36620", color: "#25D366" }}>
+          <div className="w-[260px] shrink-0 rounded-2xl overflow-hidden flex flex-col" style={{ background: "rgba(11,20,26,0.9)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
+            <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+              <span className="text-[13px] font-bold" style={{ color: "#F1F5F9" }}>Conversas</span>
+              <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg" style={{ background: "rgba(37,211,102,0.1)", color: "#25D366", border: "1px solid rgba(37,211,102,0.2)" }}>
                 {leads.filter(l => l.status === "active").length}
               </span>
             </div>
             {!running && (
-              <div className="flex px-2 py-1 gap-0.5" style={{ borderBottom: "1px solid #2A3942" }}>
+              <div className="flex px-3 py-1.5 gap-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                 {(["all", "active", "closed", "lost"] as const).map(f => (
                   <button key={f} onClick={() => setLeadFilter(f)}
-                    className="flex-1 text-[9px] py-1 font-medium transition-all"
-                    style={{ color: leadFilter === f ? "#10B981" : "#667781", borderBottom: leadFilter === f ? "2px solid #10B981" : "2px solid transparent" }}>
+                    className="flex-1 text-[9px] py-1.5 font-semibold transition-all rounded-lg"
+                    style={{ color: leadFilter === f ? "#10B981" : "#667781", background: leadFilter === f ? "rgba(16,185,129,0.06)" : "transparent" }}>
                     {f === "all" ? "Todos" : f === "active" ? "Ativos" : f === "closed" ? "Fechados" : "Perdidos"}
                   </button>
                 ))}
