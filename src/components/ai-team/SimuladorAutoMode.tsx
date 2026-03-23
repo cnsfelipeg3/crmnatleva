@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send } from "lucide-react";
+import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { cn } from "@/lib/utils";
