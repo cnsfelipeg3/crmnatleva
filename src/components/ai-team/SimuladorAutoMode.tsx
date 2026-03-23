@@ -110,10 +110,8 @@ const getAgentColor = (agent: typeof AGENTS_V4[0]) => {
 // ===== COMPONENT =====
 export default function SimuladorAutoMode() {
   // Config state
-  const [totalMsgs, setTotalMsgs] = useState(200);
   const [duration, setDuration] = useState(180);
   const [msgsPerLead, setMsgsPerLead] = useState(14);
-  const [msgsPerLeadLocked, setMsgsPerLeadLocked] = useState(false);
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
   const [profileMode, setProfileMode] = useState<"random" | "forced" | "roundrobin">("random");
   const [selectedDestinos, setSelectedDestinos] = useState<string[]>([]);
