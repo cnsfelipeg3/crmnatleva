@@ -308,6 +308,25 @@ export default function ProposalTemplateEditor() {
 
             <div className="w-px h-4 bg-border mx-0.5" />
 
+            {/* Device preview switcher */}
+            <Tooltip><TooltipTrigger asChild>
+              <Button variant={previewDevice === "desktop" ? "secondary" : "ghost"} size="icon" className="h-7 w-7" onClick={() => setPreviewDevice("desktop")}>
+                <Monitor className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger><TooltipContent>Desktop</TooltipContent></Tooltip>
+            <Tooltip><TooltipTrigger asChild>
+              <Button variant={previewDevice === "tablet" ? "secondary" : "ghost"} size="icon" className="h-7 w-7" onClick={() => setPreviewDevice("tablet")}>
+                <Tablet className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger><TooltipContent>Tablet</TooltipContent></Tooltip>
+            <Tooltip><TooltipTrigger asChild>
+              <Button variant={previewDevice === "mobile" ? "secondary" : "ghost"} size="icon" className="h-7 w-7" onClick={() => setPreviewDevice("mobile")}>
+                <Smartphone className="w-3.5 h-3.5" />
+              </Button>
+            </TooltipTrigger><TooltipContent>Mobile</TooltipContent></Tooltip>
+
+            <div className="w-px h-4 bg-border mx-0.5" />
+
             <Tooltip><TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.max(0.4, z - 0.1))}>
                 <ZoomOut className="w-3.5 h-3.5" />
