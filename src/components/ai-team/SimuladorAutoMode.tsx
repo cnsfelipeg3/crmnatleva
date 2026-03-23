@@ -726,32 +726,89 @@ export default function SimuladorAutoMode() {
             </div>
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Velocidade</p>
-            <div className="flex gap-2">
-              {SPEED_OPTIONS.map(s => (
-                <button key={s.id} onClick={() => setSpeed(s.id)}
-                  className="text-[10px] px-3 py-2 rounded-xl font-semibold flex-1 transition-all"
-                  style={{ background: speed === s.id ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${speed === s.id ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: speed === s.id ? "#10B981" : "#64748B" }}>{s.label}</button>
-              ))}
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
+              <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Velocidade da Simulação</span>
+            </div>
+            <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+              {SPEED_OPTIONS.map((s, i) => {
+                const active = speed === s.id;
+                const speedIcons: Record<string, string> = { lenta: "🐢", normal: "⚡", rapida: "🚀", instant: "💥" };
+                const speedDescs: Record<string, string> = { lenta: "5s entre msgs", normal: "2.5s entre msgs", rapida: "0.5s entre msgs", instant: "Sem delay" };
+                return (
+                  <button key={s.id} onClick={() => setSpeed(s.id)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
+                    style={{
+                      background: active ? "rgba(139,92,246,0.06)" : "transparent",
+                      borderBottom: i < SPEED_OPTIONS.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                    }}>
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 transition-all" style={{
+                      background: active ? "#8B5CF6" : "transparent",
+                      border: `2px solid ${active ? "#8B5CF6" : "rgba(255,255,255,0.12)"}`,
+                    }}>
+                      {active && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                    <span className="text-sm">{speedIcons[s.id]}</span>
+                    <div className="flex-1">
+                      <span className="text-[11px] font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{s.label}</span>
+                      <span className="text-[9px] ml-2" style={{ color: "#475569" }}>{speedDescs[s.id]}</span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Agentes do funil</p>
-            <div className="flex gap-2 mb-2">
-              {[{ id: "full", label: "Funil completo" }, { id: "comercial", label: "Só comercial" }, { id: "custom", label: "Personalizado" }].map(m => (
-                <button key={m.id} onClick={() => setFunnelMode(m.id as any)}
-                  className="text-[10px] px-4 py-2 rounded-xl font-semibold transition-all"
-                  style={{ background: funnelMode === m.id ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${funnelMode === m.id ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.04)"}`, color: funnelMode === m.id ? "#8B5CF6" : "#64748B" }}>{m.label}</button>
-              ))}
+            <div className="flex items-center gap-2 mb-2">
+              <Users className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
+              <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Agentes do Funil</span>
+            </div>
+            <div className="rounded-xl overflow-hidden mb-3" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+              {[{ id: "full", label: "Funil completo", desc: "Comercial + Atendimento (6 agentes)", icon: "🔄" }, { id: "comercial", label: "Só comercial", desc: "Apenas squad comercial", icon: "💰" }, { id: "custom", label: "Personalizado", desc: "Escolha os agentes manualmente", icon: "⚙️" }].map((m, i) => {
+                const active = funnelMode === m.id;
+                return (
+                  <button key={m.id} onClick={() => setFunnelMode(m.id as any)}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
+                    style={{
+                      background: active ? "rgba(139,92,246,0.06)" : "transparent",
+                      borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                    }}>
+                    <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 transition-all" style={{
+                      background: active ? "#8B5CF6" : "transparent",
+                      border: `2px solid ${active ? "#8B5CF6" : "rgba(255,255,255,0.12)"}`,
+                    }}>
+                      {active && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                    <span className="text-sm">{m.icon}</span>
+                    <div>
+                      <span className="text-[11px] font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{m.label}</span>
+                      <p className="text-[9px]" style={{ color: "#475569" }}>{m.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
             {funnelMode === "custom" && (
-              <div className="flex flex-wrap gap-1.5 animate-in fade-in duration-200">
-                {AGENTS_V4.map(a => {
+              <div className="rounded-xl overflow-hidden animate-in fade-in duration-200" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                {AGENTS_V4.map((a, i) => {
                   const active = customFunnelAgents.includes(a.id); const c = getAgentColor(a);
                   return (
                     <button key={a.id} onClick={() => toggleMulti(customFunnelAgents, a.id, setCustomFunnelAgents)}
-                      className="text-[9px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
-                      style={{ background: active ? `${c}10` : "rgba(255,255,255,0.02)", border: `1px solid ${active ? `${c}30` : "rgba(255,255,255,0.04)"}`, color: active ? c : "#64748B" }}>{a.name}</button>
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left transition-all duration-200 hover:bg-white/[0.02]"
+                      style={{
+                        background: active ? `${c}08` : "transparent",
+                        borderBottom: i < AGENTS_V4.length - 1 ? "1px solid rgba(255,255,255,0.02)" : "none",
+                      }}>
+                      <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
+                        background: active ? c : "rgba(255,255,255,0.04)",
+                        border: `1px solid ${active ? c : "rgba(255,255,255,0.08)"}`,
+                      }}>
+                        {active && <Check className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                      <span className="text-sm">{a.emoji}</span>
+                      <span className="text-[10px] font-semibold" style={{ color: active ? "#E2E8F0" : "#64748B" }}>{a.name}</span>
+                      <span className="text-[8px] ml-auto px-1.5 py-0.5 rounded" style={{ background: `${c}10`, color: c }}>{a.role.split(" ")[0]}</span>
+                    </button>
                   );
                 })}
               </div>
