@@ -214,25 +214,36 @@ function useCountUp(target: number, duration = 500) {
 
 // ===== COMPONENT =====
 export default function SimuladorAutoMode() {
-  // Config
+  // Config — Volume
   const [numLeads, setNumLeads] = useState(8);
   const [msgsPerLead, setMsgsPerLead] = useState(14);
   const [intervalSec, setIntervalSec] = useState(1);
   const [duration, setDuration] = useState(180);
+  // Config — Perfis
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
   const [profileMode, setProfileMode] = useState<"random" | "roundrobin">("random");
+  // Config — Cenário
   const [selectedDestinos, setSelectedDestinos] = useState<string[]>([]);
   const [selectedBudgets, setSelectedBudgets] = useState<string[]>([]);
   const [selectedCanais, setSelectedCanais] = useState<string[]>([]);
   const [selectedGrupos, setSelectedGrupos] = useState<string[]>([]);
+  // Config — Comportamento
   const [conversionOverride, setConversionOverride] = useState<number | null>(null);
   const [objectionDensity, setObjectionDensity] = useState(50);
   const [speed, setSpeed] = useState("normal");
   const [funnelMode, setFunnelMode] = useState<"full" | "comercial" | "custom">("full");
   const [customFunnelAgents, setCustomFunnelAgents] = useState<string[]>([]);
+  // Config — Motor IA
   const [enableEvaluation, setEnableEvaluation] = useState(true);
   const [enableMultiMsg, setEnableMultiMsg] = useState(true);
-  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "comportamento" | "avancado">("volume");
+  const [enableTransfers, setEnableTransfers] = useState(true);
+  const [emotionalVolatility, setEmotionalVolatility] = useState(50);
+  const [agentResponseLength, setAgentResponseLength] = useState<"curta" | "media" | "longa">("media");
+  const [enableLossNarrative, setEnableLossNarrative] = useState(true);
+  const [evalFrequency, setEvalFrequency] = useState<"every" | "every2" | "every3">("every");
+  // Config — Presets
+  const [presetName, setPresetName] = useState("");
+  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "comportamento" | "avancado" | "presets">("volume");
 
   // Runtime
   const [phase, setPhase] = useState<Phase>("config");
