@@ -497,7 +497,7 @@ function CommandTerminal({ agentName, agentId, agentRole }: { agentName: string;
       {chat.length > 0 && (
         <div className="space-y-2 max-h-48 overflow-y-auto">
           {chat.map((m, i) => (
-            <div key={i} className={cn("text-sm font-mono px-3 py-2 rounded-lg max-w-[90%]",
+            <div key={`chat-${m.role}-${i}`} className={cn("text-sm font-mono px-3 py-2 rounded-lg max-w-[90%]",
               m.role === "user" ? "ml-auto text-foreground/60 bg-muted/50 border border-border/40" : "text-primary/70 bg-primary/5 border border-primary/10"
             )}>
               {m.role === "agent" && <span className="text-[10px] text-muted-foreground block mb-0.5">{agentName} &gt;</span>}

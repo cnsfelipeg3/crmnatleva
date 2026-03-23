@@ -105,7 +105,7 @@ export default function SimuladorManualMode() {
       const updateAgent = (t: string) => {
         setMessages(prev => {
           const last = prev[prev.length - 1];
-          if (last?.id === streamId) return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: t } : m);
+          if (last?.id === streamId) return prev.map((m, idx) => idx === prev.length - 1 ? { ...m, content: t } : m);
           return [...prev, { id: streamId, role: "agent" as const, content: t, timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name }];
         });
       };
