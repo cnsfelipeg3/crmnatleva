@@ -313,6 +313,12 @@ export default function SimuladorAutoMode() {
     const budgets = selectedBudgets.length > 0 ? selectedBudgets : BUDGETS_LEAD;
     const canais = selectedCanais.length > 0 ? selectedCanais : CANAIS_LEAD;
     const speedDelay = SPEED_OPTIONS.find(s => s.id === speed)?.delay ?? 2500;
+    const simStartTime = Date.now();
+    const durationMs = duration * 1000;
+    const evalEvery = evalFrequency === "every" ? 1 : evalFrequency === "every2" ? 2 : 3;
+
+    // Helper to check duration limit
+    const isDurationExceeded = () => Date.now() - simStartTime >= durationMs;
 
     const funnelAgents = funnelMode === "full"
       ? AGENTS_V4.filter(a => ["comercial", "atendimento"].includes(a.squadId)).slice(0, 6)
@@ -328,9 +334,15 @@ export default function SimuladorAutoMode() {
     }
 
     const allLeads: LeadInteligente[] = [];
+    const grupos = selectedGrupos.length > 0 ? selectedGrupos : GRUPOS_LEAD;
 
     for (let i = 0; i < numLeads; i++) {
       if (!simAtivaRef.current || abortRef.current) break;
+      // ★ ENFORCE DURATION LIMIT
+      if (isDurationExceeded()) {
+        addEvent("#F59E0B", `⏱️ Tempo limite (${formatTime(duration)}) atingido — encerrando simulação`, "⏰");
+        break;
+      }
 
       const perfil = profileMode === "roundrobin"
         ? profiles[i % profiles.length]
@@ -340,6 +352,7 @@ export default function SimuladorAutoMode() {
         destino: destinos[Math.floor(Math.random() * destinos.length)],
         orcamento: budgets[Math.floor(Math.random() * budgets.length)],
         canal: canais[Math.floor(Math.random() * canais.length)],
+        grupo: grupos[Math.floor(Math.random() * grupos.length)],
       });
 
       // Apply conversion override
@@ -347,14 +360,19 @@ export default function SimuladorAutoMode() {
         lead.ticket = Math.random() * 100 < conversionOverride ? (8000 + Math.floor(Math.random() * 42000)) : 0;
       }
 
-      // Apply objection density
+      // Apply objection density from config
       lead.temObjecao = Math.random() * 100 < objectionDensity;
+
+      // Apply emotional volatility — affects patience drain
+      if (emotionalVolatility > 70) {
+        lead.pacienciaRestante = Math.max(30, lead.pacienciaRestante - Math.floor((emotionalVolatility - 50) * 0.5));
+      }
 
       allLeads.push(lead);
       setLeads([...allLeads]);
       if (i === 0) setSelectedLeadId(lead.id);
 
-      addEvent("#3B82F6", `${lead.perfil.emoji} ${lead.nome} entrou via ${lead.origem} · ${lead.destino}`, "📥");
+      addEvent("#3B82F6", `${lead.perfil.emoji} ${lead.nome} entrou via ${lead.origem} · ${lead.destino} · ${lead.paxLabel}`, "📥");
 
       try {
         // 1. Generate first client message via AI
@@ -364,31 +382,41 @@ export default function SimuladorAutoMode() {
         addEvent(lead.perfil.cor, `${lead.nome}: "${firstMsg.slice(0, 50)}..."`, "💬");
 
         const stages = ETAPAS_FUNIL.map(e => e.id);
-        const rounds = Math.min(Math.floor(msgsPerLead / 2), 12);
+        // ★ FIX: use msgsPerLead directly — NO artificial cap
+        const rounds = Math.floor(msgsPerLead / 2);
         let agentIdx = 0;
         let forceLoss = false;
+        let evalCounter = 0;
 
         for (let r = 0; r < rounds; r++) {
           if (!simAtivaRef.current || abortRef.current || forceLoss) break;
+          // ★ ENFORCE DURATION LIMIT per round
+          if (isDurationExceeded()) {
+            addEvent("#F59E0B", `⏱️ Tempo esgotado durante conversa com ${lead.nome}`, "⏰");
+            break;
+          }
 
           const agent = funnelAgents[agentIdx % funnelAgents.length];
-          const hasNext = agentIdx < funnelAgents.length - 1;
+          const hasNext = enableTransfers && agentIdx < funnelAgents.length - 1;
           lead.etapaAtual = stages[Math.min(agentIdx, stages.length - 1)];
 
           // 2. Agent responds
           const agentResp = await callAgent(
-            buildAgentSysPrompt(agent, hasNext),
+            buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength),
             lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content }))
           );
           lead.mensagens.push({ role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
           setLeads([...allLeads]);
 
-          // 3. Evaluate agent response (AI judge) — 3 dimensões
-          if (enableEvaluation) {
+          // 3. Evaluate agent response (AI judge) — 3 dimensões — respects evalFrequency
+          evalCounter++;
+          if (enableEvaluation && evalCounter % evalEvery === 0) {
             const avaliacao = await avaliarRespostaAgente(agentResp, lead);
-            const updatedLead = atualizarEstadoEmocional(lead, avaliacao.nota, avaliacao.reacao, avaliacao.sentimento);
+            // Apply emotional volatility to sentiment impact
+            const volatilityMult = emotionalVolatility / 50;
+            const adjustedNota = Math.round(avaliacao.nota * volatilityMult + (50 * (1 - volatilityMult / 2)));
+            const updatedLead = atualizarEstadoEmocional(lead, adjustedNota, avaliacao.reacao, avaliacao.sentimento);
             Object.assign(lead, updatedLead);
-            // Update 3 dimension scores (running average)
             lead.scoreHumanizacao = lead.scoreHumanizacao > 0 ? Math.round((lead.scoreHumanizacao + avaliacao.humanizacao) / 2) : avaliacao.humanizacao;
             lead.scoreEficacia = lead.scoreEficacia > 0 ? Math.round((lead.scoreEficacia + avaliacao.eficaciaComercial) / 2) : avaliacao.eficaciaComercial;
             lead.scoreTecnica = lead.scoreTecnica > 0 ? Math.round((lead.scoreTecnica + avaliacao.qualidadeTecnica) / 2) : avaliacao.qualidadeTecnica;
@@ -402,25 +430,28 @@ export default function SimuladorAutoMode() {
 
             // Check if lead gives up
             if (devePerdeLead(lead)) {
-              const lossMsg = await gerarMensagemPerda(lead);
-              lead.mensagens.push({ role: "client", content: lossMsg, timestamp: Date.now() });
+              if (enableLossNarrative) {
+                const lossMsg = await gerarMensagemPerda(lead);
+                lead.mensagens.push({ role: "client", content: lossMsg, timestamp: Date.now() });
+                lead.motivoPerda = lossMsg;
+              } else {
+                lead.motivoPerda = `Paciência esgotada (${lead.pacienciaRestante})`;
+              }
               lead.status = "perdeu";
               lead.resultadoFinal = "perdeu";
               lead.etapaPerda = lead.etapaAtual;
-              lead.motivoPerda = lossMsg;
               setLeads([...allLeads]);
-              addEvent("#EF4444", `❌ ${lead.nome} DESISTIU em ${lead.etapaAtual}: "${lossMsg.slice(0, 60)}..."`, "💔");
+              addEvent("#EF4444", `❌ ${lead.nome} DESISTIU em ${lead.etapaAtual}: "${(lead.motivoPerda || "").slice(0, 60)}..."`, "💔");
               forceLoss = true;
               break;
             }
           }
 
           // Handle transfer
-          if (hasNext && agentResp.includes("[TRANSFERIR]")) {
+          if (enableTransfers && hasNext && agentResp.includes("[TRANSFERIR]")) {
             agentIdx++;
             const nextAgent = funnelAgents[agentIdx % funnelAgents.length];
             addEvent("#06B6D4", `${agent.name} → ${nextAgent.name}`, "🔄");
-            // Reveal info on stage advance
             if (lead.informacoesPendentes.length > 0) {
               const revealed = lead.informacoesPendentes.shift()!;
               lead.informacoesReveladas.push(revealed);
@@ -443,7 +474,7 @@ export default function SimuladorAutoMode() {
 
             // Agent needs to handle objection
             const objResp = await callAgent(
-              buildAgentSysPrompt(agent, false),
+              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength),
               lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content }))
             );
             lead.mensagens.push({ role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
@@ -479,12 +510,16 @@ export default function SimuladorAutoMode() {
             lead.etapaAtual = "fechamento";
             addEvent("#EAB308", `🎉 ${lead.nome} FECHOU · R$${(lead.ticket / 1000).toFixed(0)}k · ${lead.perfil.label}`, "🏆");
           } else {
-            const lossMsg = await gerarMensagemPerda(lead);
-            lead.mensagens.push({ role: "client", content: lossMsg, timestamp: Date.now() });
+            if (enableLossNarrative) {
+              const lossMsg = await gerarMensagemPerda(lead);
+              lead.mensagens.push({ role: "client", content: lossMsg, timestamp: Date.now() });
+              lead.motivoPerda = lossMsg;
+            } else {
+              lead.motivoPerda = "Não converteu";
+            }
             lead.status = "perdeu";
             lead.resultadoFinal = "perdeu";
             lead.etapaPerda = lead.etapaAtual;
-            lead.motivoPerda = lossMsg;
             addEvent("#EF4444", `${lead.nome} perdido em ${lead.etapaAtual} · ${lead.perfil.label}`, "📉");
           }
           setLeads([...allLeads]);
@@ -496,17 +531,20 @@ export default function SimuladorAutoMode() {
         setLeads([...allLeads]);
       }
 
-      // Delay between leads
-      if (i < numLeads - 1 && speedDelay > 0 && !abortRef.current) {
-        await new Promise(r => setTimeout(r, Math.max(500, intervalSec * 1000)));
+      // ★ ENFORCE intervalSec exactly as configured
+      if (i < numLeads - 1 && !abortRef.current) {
+        const delayMs = intervalSec * 1000;
+        if (delayMs > 0) await new Promise(r => setTimeout(r, delayMs));
       }
     }
 
     if (timerRef.current) clearInterval(timerRef.current);
     setRunning(false);
     setPhase("report");
-    toast({ title: "Simulação concluída!", description: `${allLeads.length} leads processados com IA dinâmica` });
-  }, [numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, toast]);
+    const elapsed = Math.round((Date.now() - simStartTime) / 1000);
+    const wasTimeout = elapsed >= duration;
+    toast({ title: wasTimeout ? "Simulação encerrada por tempo!" : "Simulação concluída!", description: `${allLeads.length} leads processados em ${formatTime(elapsed)}` });
+  }, [numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, toast]);
 
   const stopSimulation = () => { simAtivaRef.current = false; abortRef.current = true; setRunning(false); if (timerRef.current) clearInterval(timerRef.current); setPhase("report"); };
 
