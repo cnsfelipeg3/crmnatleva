@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import GlobalSearch from "./GlobalSearch";
 import AIPageSummaryButton from "./AIPageSummaryButton";
+import PanelHelpButton from "./PanelHelpButton";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -43,6 +44,7 @@ export default function AppLayout() {
         <main className={cn("flex-1 min-h-0", isImmersive ? "overflow-hidden" : "overflow-auto")}>
           <Outlet />
         </main>
+        <PanelHelpButton />
       </div>
     );
   }
@@ -66,6 +68,7 @@ export default function AppLayout() {
         <main className={cn("flex-1 overflow-auto min-h-0", isImmersive && "overflow-hidden")}>
           <Outlet />
         </main>
+        <PanelHelpButton />
       </div>
     </div>
   );
