@@ -229,6 +229,7 @@ export default function SimuladorAutoMode() {
   const [debrief, setDebrief] = useState<DebriefData | null>(null);
   const [debriefLoading, setDebriefLoading] = useState(false);
   const [leadFilter, setLeadFilter] = useState<"all" | "ativo" | "fechou" | "perdeu">("all");
+  const [expandedMelhoriaId, setExpandedMelhoriaId] = useState<string | null>(null);
 
   const chatRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1519,149 +1520,180 @@ Retorne JSON:
                     const isPending = m.status === "pending";
                     const hasDeepAnalysis = !!m.deepAnalysis;
 
+                    const isExpanded = expandedMelhoriaId === m.id;
+
                     return (
                       <div key={m.id} className="rounded-xl overflow-hidden transition-all duration-300" style={{
-                        border: `1px solid ${isApproved ? "rgba(16,185,129,0.25)" : isRejected ? "rgba(239,68,68,0.15)" : isAnalyzing ? "rgba(139,92,246,0.25)" : "rgba(245,158,11,0.15)"}`,
+                        border: `1px solid ${isApproved ? "rgba(16,185,129,0.25)" : isRejected ? "rgba(239,68,68,0.15)" : isAnalyzing ? "rgba(139,92,246,0.25)" : isExpanded ? "rgba(245,158,11,0.3)" : "rgba(245,158,11,0.15)"}`,
                         opacity: isRejected ? 0.5 : 1,
                       }}>
                         {/* Card header bar */}
                         <div className="h-[2px]" style={{ background: isApproved ? "#10B981" : isRejected ? "#EF4444" : isAnalyzing ? "#8B5CF6" : "#F59E0B" }} />
 
-                        <div className="p-4" style={{ background: isApproved ? "rgba(16,185,129,0.03)" : "rgba(255,255,255,0.015)" }}>
+                        {/* Clickable header */}
+                        <div
+                          className="p-4 cursor-pointer transition-colors hover:brightness-110"
+                          style={{ background: isApproved ? "rgba(16,185,129,0.03)" : isExpanded ? "rgba(255,255,255,0.025)" : "rgba(255,255,255,0.015)" }}
+                          onClick={() => setExpandedMelhoriaId(isExpanded ? null : m.id)}
+                        >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                                 <p className="text-[12px] font-bold" style={{ color: "#F1F5F9" }}>{m.titulo}</p>
-                                {/* Tipo pill */}
                                 <span className="text-[8px] font-bold px-2 py-0.5 rounded-full" style={{ background: tipoInfo.bg, color: tipoInfo.color }}>
                                   {tipoInfo.icon} {tipoInfo.label}
                                 </span>
-                                {/* Prioridade */}
                                 <span className="text-[8px] font-bold uppercase px-2 py-0.5 rounded-full"
                                   style={{ background: m.prioridade === "alta" ? "rgba(239,68,68,0.08)" : m.prioridade === "media" ? "rgba(245,158,11,0.08)" : "rgba(59,130,246,0.08)", color: m.prioridade === "alta" ? "#EF4444" : m.prioridade === "media" ? "#F59E0B" : "#3B82F6" }}>{m.prioridade}</span>
-                                {/* Agent pill */}
                                 <span className="text-[8px] font-semibold px-2 py-0.5 rounded-full" style={{ background: "rgba(139,92,246,0.08)", color: "#8B5CF6" }}>{m.agente}</span>
                               </div>
-                              <p className="text-[10px] leading-relaxed" style={{ color: "#94A3B8" }}>{m.desc}</p>
-                              <p className="text-[9px] mt-1.5" style={{ color: "#10B981" }}>📈 Impacto: {m.impacto}</p>
-
-                              {/* Approved state */}
-                              {isApproved && (
-                                <div className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded-lg" style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.1)" }}>
-                                  <CheckCircle2 className="w-3.5 h-3.5" style={{ color: "#10B981" }} />
-                                  <span className="text-[10px] font-semibold" style={{ color: "#10B981" }}>Implementada em {tipoInfo.label} → {m.agente}</span>
-                                </div>
+                              <p className={cn("text-[10px] leading-relaxed", !isExpanded && "line-clamp-1")} style={{ color: "#94A3B8" }}>{m.desc}</p>
+                              {!isExpanded && (
+                                <p className="text-[9px] mt-1" style={{ color: "#10B981" }}>📈 Impacto: {m.impacto}</p>
                               )}
                             </div>
 
-                            {/* Action buttons */}
-                            {isPending && !hasDeepAnalysis && (
-                              <div className="flex gap-1.5 shrink-0">
-                                <button onClick={() => handleImprovement(m.id, "approved")} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110" title="Aprovar"
-                                  style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}><Check className="w-4 h-4" style={{ color: "#10B981" }} /></button>
-                                <button onClick={() => handleImprovement(m.id, "rejected")} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110" title="Rejeitar"
-                                  style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}><X className="w-4 h-4" style={{ color: "#EF4444" }} /></button>
-                                <button onClick={() => runDeepAnalysis(m.id)} className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110" title="Analisar"
-                                  style={{ background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}><Search className="w-4 h-4" style={{ color: "#8B5CF6" }} /></button>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {isApproved && <CheckCircle2 className="w-5 h-5" style={{ color: "#10B981" }} />}
+                              {isRejected && <XCircle className="w-5 h-5" style={{ color: "#EF4444" }} />}
+                              {isAnalyzing && <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#8B5CF6" }} />}
+                              <ChevronDown className={cn("w-4 h-4 transition-transform duration-300", isExpanded && "rotate-180")} style={{ color: "#64748B" }} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Expanded detail panel */}
+                        {isExpanded && (
+                          <div className="px-4 pb-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300" style={{ background: "rgba(255,255,255,0.01)" }}>
+                            <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+
+                            {/* Full description */}
+                            <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                              <p className="text-[9px] uppercase font-bold mb-1.5" style={{ color: "#64748B" }}>Descrição Completa</p>
+                              <p className="text-[11px] leading-[1.8]" style={{ color: "#E2E8F0" }}>{m.desc}</p>
+                              <p className="text-[10px] mt-2" style={{ color: "#10B981" }}>📈 Impacto estimado: {m.impacto}</p>
+                            </div>
+
+                            {/* Approved state */}
+                            {isApproved && (
+                              <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.1)" }}>
+                                <CheckCircle2 className="w-3.5 h-3.5" style={{ color: "#10B981" }} />
+                                <span className="text-[10px] font-semibold" style={{ color: "#10B981" }}>Implementada em {tipoInfo.label} → {m.agente}</span>
                               </div>
                             )}
-                            {isAnalyzing && <Loader2 className="w-5 h-5 animate-spin shrink-0" style={{ color: "#8B5CF6" }} />}
-                            {isApproved && <CheckCircle2 className="w-5 h-5 shrink-0" style={{ color: "#10B981" }} />}
-                            {isRejected && <XCircle className="w-5 h-5 shrink-0" style={{ color: "#EF4444" }} />}
-                          </div>
 
-                          {/* === DEEP ANALYSIS EXPANDED === */}
-                          {hasDeepAnalysis && isPending && m.deepAnalysis && (
-                            <div className="mt-4 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                              {/* Recommendation + Confidence */}
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="rounded-xl p-3 text-center" style={{
-                                  background: m.deepAnalysis.recomendacao === "APROVAR" ? "rgba(16,185,129,0.06)" : m.deepAnalysis.recomendacao === "REJEITAR" ? "rgba(239,68,68,0.06)" : "rgba(245,158,11,0.06)",
-                                  border: `1px solid ${m.deepAnalysis.recomendacao === "APROVAR" ? "rgba(16,185,129,0.15)" : m.deepAnalysis.recomendacao === "REJEITAR" ? "rgba(239,68,68,0.15)" : "rgba(245,158,11,0.15)"}`,
-                                }}>
-                                  <p className="text-[16px] font-extrabold" style={{
-                                    color: m.deepAnalysis.recomendacao === "APROVAR" ? "#10B981" : m.deepAnalysis.recomendacao === "REJEITAR" ? "#EF4444" : "#F59E0B"
-                                  }}>{m.deepAnalysis.recomendacao}</p>
-                                  <p className="text-[8px] uppercase" style={{ color: "#64748B" }}>Recomendação</p>
+                            {/* Deep analysis content if available */}
+                            {hasDeepAnalysis && m.deepAnalysis && (
+                              <>
+                                {/* Recommendation + Confidence */}
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="rounded-xl p-3 text-center" style={{
+                                    background: m.deepAnalysis.recomendacao === "APROVAR" ? "rgba(16,185,129,0.06)" : m.deepAnalysis.recomendacao === "REJEITAR" ? "rgba(239,68,68,0.06)" : "rgba(245,158,11,0.06)",
+                                    border: `1px solid ${m.deepAnalysis.recomendacao === "APROVAR" ? "rgba(16,185,129,0.15)" : m.deepAnalysis.recomendacao === "REJEITAR" ? "rgba(239,68,68,0.15)" : "rgba(245,158,11,0.15)"}`,
+                                  }}>
+                                    <p className="text-[16px] font-extrabold" style={{
+                                      color: m.deepAnalysis.recomendacao === "APROVAR" ? "#10B981" : m.deepAnalysis.recomendacao === "REJEITAR" ? "#EF4444" : "#F59E0B"
+                                    }}>{m.deepAnalysis.recomendacao}</p>
+                                    <p className="text-[8px] uppercase" style={{ color: "#64748B" }}>Recomendação</p>
+                                  </div>
+                                  <div className="rounded-xl p-3 text-center" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.15)" }}>
+                                    <p className="text-[16px] font-extrabold" style={{ color: "#8B5CF6" }}>{m.deepAnalysis.confianca}%</p>
+                                    <p className="text-[8px] uppercase" style={{ color: "#64748B" }}>Confiança</p>
+                                  </div>
                                 </div>
-                                <div className="rounded-xl p-3 text-center" style={{ background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.15)" }}>
-                                  <p className="text-[16px] font-extrabold" style={{ color: "#8B5CF6" }}>{m.deepAnalysis.confianca}%</p>
-                                  <p className="text-[8px] uppercase" style={{ color: "#64748B" }}>Confiança</p>
+
+                                {/* Full analysis */}
+                                <div className="rounded-xl p-4" style={{ background: "#111827", maxHeight: 200, overflow: "auto" }}>
+                                  <p className="text-[9px] uppercase font-bold mb-1" style={{ color: "#64748B" }}>Análise Completa</p>
+                                  <p className="text-[11px] leading-[1.8]" style={{ color: "#D1D5DB" }}>{m.deepAnalysis.analiseCompleta}</p>
                                 </div>
-                              </div>
 
-                              {/* Analysis text */}
-                              <div className="rounded-xl p-4" style={{ background: "#111827", maxHeight: 200, overflow: "auto" }}>
-                                <p className="text-[11px] leading-[1.8]" style={{ color: "#D1D5DB" }}>{m.deepAnalysis.analiseCompleta}</p>
-                              </div>
+                                {/* Reasoning chain */}
+                                {m.deepAnalysis.linhaRaciocinio?.length > 0 && (
+                                  <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                                    <p className="text-[9px] uppercase font-bold mb-2" style={{ color: "#64748B" }}>Linha de Raciocínio</p>
+                                    <div className="flex items-start gap-2 flex-wrap">
+                                      {m.deepAnalysis.linhaRaciocinio.map((step, i) => (
+                                        <div key={i} className="flex items-center gap-2">
+                                          <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0" style={{
+                                            background: `hsl(${260 + i * 30}, 70%, 50%)`, color: "#fff"
+                                          }}>{i + 1}</div>
+                                          <p className="text-[10px]" style={{ color: "#E2E8F0" }}>{step}</p>
+                                          {i < m.deepAnalysis!.linhaRaciocinio.length - 1 && <span className="text-[10px]" style={{ color: "#475569" }}>→</span>}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
 
-                              {/* Reasoning chain */}
-                              {m.deepAnalysis.linhaRaciocinio?.length > 0 && (
-                                <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                                  <p className="text-[9px] uppercase font-bold mb-2" style={{ color: "#64748B" }}>Linha de Raciocínio</p>
-                                  <div className="flex items-start gap-2 flex-wrap">
-                                    {m.deepAnalysis.linhaRaciocinio.map((step, i) => (
-                                      <div key={i} className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0" style={{
-                                          background: `hsl(${260 + i * 30}, 70%, 50%)`, color: "#fff"
-                                        }}>{i + 1}</div>
-                                        <p className="text-[10px]" style={{ color: "#E2E8F0" }}>{step}</p>
-                                        {i < m.deepAnalysis!.linhaRaciocinio.length - 1 && <span className="text-[10px]" style={{ color: "#475569" }}>→</span>}
+                                {/* Impact 4 dimensions */}
+                                {m.deepAnalysis.impactoNumeros && (
+                                  <div className="grid grid-cols-4 gap-2">
+                                    {[
+                                      { key: "conversao", label: "Conversão", icon: "📊", color: "#3B82F6" },
+                                      { key: "receita", label: "Receita", icon: "💰", color: "#10B981" },
+                                      { key: "satisfacao", label: "Satisfação", icon: "💗", color: "#EC4899" },
+                                      { key: "eficiencia", label: "Eficiência", icon: "⚡", color: "#F59E0B" },
+                                    ].map(dim => (
+                                      <div key={dim.key} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                                        <p className="text-[8px] uppercase font-bold" style={{ color: dim.color }}>{dim.icon} {dim.label}</p>
+                                        <p className="text-[10px] mt-1" style={{ color: "#E2E8F0" }}>{(m.deepAnalysis!.impactoNumeros as any)[dim.key]}</p>
                                       </div>
                                     ))}
                                   </div>
-                                </div>
-                              )}
+                                )}
 
-                              {/* Impact 4 dimensions */}
-                              {m.deepAnalysis.impactoNumeros && (
-                                <div className="grid grid-cols-4 gap-2">
-                                  {[
-                                    { key: "conversao", label: "Conversão", icon: "📊", color: "#3B82F6" },
-                                    { key: "receita", label: "Receita", icon: "💰", color: "#10B981" },
-                                    { key: "satisfacao", label: "Satisfação", icon: "💗", color: "#EC4899" },
-                                    { key: "eficiencia", label: "Eficiência", icon: "⚡", color: "#F59E0B" },
-                                  ].map(dim => (
-                                    <div key={dim.key} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                                      <p className="text-[8px] uppercase font-bold" style={{ color: dim.color }}>{dim.icon} {dim.label}</p>
-                                      <p className="text-[10px] mt-1" style={{ color: "#E2E8F0" }}>{(m.deepAnalysis!.impactoNumeros as any)[dim.key]}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                                {/* Psychology */}
+                                {m.deepAnalysis.psicologiaCliente && (
+                                  <div className="rounded-xl p-4" style={{ background: "rgba(236,72,153,0.04)", border: "1px solid rgba(236,72,153,0.1)" }}>
+                                    <p className="text-[9px] uppercase font-bold mb-1" style={{ color: "#EC4899" }}>🧠 Psicologia do Cliente</p>
+                                    <p className="text-[10px] leading-relaxed" style={{ color: "#E2E8F0" }}>{m.deepAnalysis.psicologiaCliente}</p>
+                                  </div>
+                                )}
 
-                              {/* Psychology */}
-                              {m.deepAnalysis.psicologiaCliente && (
-                                <div className="rounded-xl p-4" style={{ background: "rgba(236,72,153,0.04)", border: "1px solid rgba(236,72,153,0.1)" }}>
-                                  <p className="text-[9px] uppercase font-bold mb-1" style={{ color: "#EC4899" }}>🧠 Psicologia do Cliente</p>
-                                  <p className="text-[10px] leading-relaxed" style={{ color: "#E2E8F0" }}>{m.deepAnalysis.psicologiaCliente}</p>
-                                </div>
-                              )}
+                                {/* Risks */}
+                                {m.deepAnalysis.riscosNaoImplementar && (
+                                  <div className="rounded-xl p-4" style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.1)" }}>
+                                    <p className="text-[9px] uppercase font-bold mb-1" style={{ color: "#EF4444" }}>⚠️ Riscos de não implementar</p>
+                                    <p className="text-[10px] leading-relaxed" style={{ color: "#E2E8F0" }}>{m.deepAnalysis.riscosNaoImplementar}</p>
+                                  </div>
+                                )}
+                              </>
+                            )}
 
-                              {/* Risks */}
-                              {m.deepAnalysis.riscosNaoImplementar && (
-                                <div className="rounded-xl p-4" style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.1)" }}>
-                                  <p className="text-[9px] uppercase font-bold mb-1" style={{ color: "#EF4444" }}>⚠️ Riscos de não implementar</p>
-                                  <p className="text-[10px] leading-relaxed" style={{ color: "#E2E8F0" }}>{m.deepAnalysis.riscosNaoImplementar}</p>
-                                </div>
-                              )}
-
-                              {/* Editable content */}
+                            {/* Conteúdo sugerido */}
+                            {m.conteudoSugerido && (
                               <div>
                                 <p className="text-[9px] uppercase font-bold mb-1.5" style={{ color: "#64748B" }}>
-                                  <Edit3 className="w-3 h-3 inline mr-1" />Conteúdo para implementação (editável)
+                                  <Edit3 className="w-3 h-3 inline mr-1" />Conteúdo sugerido {isPending ? "(editável)" : ""}
                                 </p>
-                                <textarea
-                                  value={m.editedContent ?? m.conteudoSugerido}
-                                  onChange={e => updateImprovementContent(m.id, e.target.value)}
-                                  className="w-full rounded-xl text-[11px] p-4 resize-y"
-                                  rows={4}
-                                  style={{ background: "#111827", color: "#E2E8F0", border: "1px solid rgba(255,255,255,0.08)", outline: "none" }}
-                                />
+                                {isPending ? (
+                                  <textarea
+                                    value={m.editedContent ?? m.conteudoSugerido}
+                                    onChange={e => updateImprovementContent(m.id, e.target.value)}
+                                    onClick={e => e.stopPropagation()}
+                                    className="w-full rounded-xl text-[11px] p-4 resize-y"
+                                    rows={4}
+                                    style={{ background: "#111827", color: "#E2E8F0", border: "1px solid rgba(255,255,255,0.08)", outline: "none" }}
+                                  />
+                                ) : (
+                                  <div className="rounded-xl p-4" style={{ background: "#111827", border: "1px solid rgba(255,255,255,0.06)" }}>
+                                    <p className="text-[11px] leading-[1.8]" style={{ color: "#E2E8F0" }}>{m.editedContent || m.conteudoSugerido}</p>
+                                  </div>
+                                )}
                               </div>
+                            )}
 
-                              {/* Final action buttons */}
-                              <div className="flex gap-3">
+                            {/* Action buttons for pending */}
+                            {isPending && (
+                              <div className="flex gap-3" onClick={e => e.stopPropagation()}>
+                                {!hasDeepAnalysis && (
+                                  <button onClick={() => runDeepAnalysis(m.id)}
+                                    className="px-5 py-3 rounded-xl text-[12px] font-bold transition-all hover:scale-[1.02]"
+                                    style={{ color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.2)", background: "rgba(139,92,246,0.05)" }}>
+                                    <Search className="w-4 h-4 inline mr-1.5" />Análise Profunda
+                                  </button>
+                                )}
                                 <button onClick={() => handleImprovement(m.id, "approved")}
                                   className="flex-1 py-3 rounded-xl text-[12px] font-bold transition-all hover:scale-[1.02]"
                                   style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000" }}>
@@ -1673,19 +1705,9 @@ Retorne JSON:
                                   Rejeitar
                                 </button>
                               </div>
-                            </div>
-                          )}
-
-                          {/* Conteudo preview for pending without deep analysis */}
-                          {isPending && !hasDeepAnalysis && m.conteudoSugerido && (
-                            <div className="mt-3 rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                              <p className="text-[9px] font-bold" style={{ color: "#64748B" }}>
-                                <FileText className="w-3 h-3 inline mr-1" />Conteúdo sugerido
-                              </p>
-                              <p className="text-[10px] mt-1 line-clamp-2" style={{ color: "#94A3B8" }}>{m.conteudoSugerido.slice(0, 150)}...</p>
-                            </div>
-                          )}
-                        </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
