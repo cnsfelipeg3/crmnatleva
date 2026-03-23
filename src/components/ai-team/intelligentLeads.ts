@@ -404,6 +404,9 @@ export function gerarLeadInteligente(
     probabilidadeMultiMensagem: p.tendenciaMultiMsg,
     etapaAtual: "recepcao",
     agentIdxAtual: 0,
+    scoreHumanizacao: 0,
+    scoreEficacia: 0,
+    scoreTecnica: 0,
   };
 }
 
