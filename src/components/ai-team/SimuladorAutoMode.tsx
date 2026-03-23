@@ -262,6 +262,10 @@ export default function SimuladorAutoMode() {
   const totalContornadas = leads.reduce((s, l) => s + (l.status === "fechou" ? l.objecoesLancadas.length : 0), 0);
   const ticketMedio = closedLeads.length > 0 ? Math.round(totalReceita / closedLeads.length) : 0;
   const avgSentimento = leads.length > 0 ? Math.round(leads.reduce((s, l) => s + l.sentimentoScore, 0) / leads.length) : 0;
+  // 3 Dimensões — médias ao vivo
+  const avgHumanizacao = leads.length > 0 ? Math.round(leads.reduce((s, l) => s + l.scoreHumanizacao, 0) / leads.length) : 0;
+  const avgEficacia = leads.length > 0 ? Math.round(leads.reduce((s, l) => s + l.scoreEficacia, 0) / leads.length) : 0;
+  const avgTecnica = leads.length > 0 ? Math.round(leads.reduce((s, l) => s + l.scoreTecnica, 0) / leads.length) : 0;
 
   const animLeads = useCountUp(leads.length);
   const animClosed = useCountUp(closedLeads.length);
