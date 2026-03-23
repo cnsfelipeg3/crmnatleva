@@ -603,19 +603,31 @@ export default function SimuladorAutoMode() {
     <div className="space-y-0 animate-in fade-in duration-300">
       {/* War Room header (running) */}
       {running && (
-        <div className="flex items-center gap-4 px-4 py-2 rounded-xl mb-3" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#EF4444" }} />
-            <span className="text-[13px] font-bold" style={{ color: "#F1F5F9" }}>WAR ROOM</span>
-            <span className="text-[13px] font-bold tabular-nums" style={{ color: "#F59E0B" }}>{formatTime(elapsedSeconds)}</span>
+        <div className="flex items-center gap-4 px-5 py-3 rounded-2xl mb-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(13,18,32,0.95), rgba(15,23,42,0.9))", border: "1px solid rgba(239,68,68,0.15)", backdropFilter: "blur(12px)" }}>
+          <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #EF4444, #F59E0B, transparent)" }} />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: "#EF4444", boxShadow: "0 0 12px rgba(239,68,68,0.5)" }} />
+            </div>
+            <span className="text-[14px] font-extrabold tracking-wider" style={{ color: "#F1F5F9" }}>WAR ROOM</span>
+            <span className="text-[15px] font-bold tabular-nums px-3 py-1 rounded-lg" style={{ color: "#F59E0B", background: "rgba(245,158,11,0.08)" }}>{formatTime(elapsedSeconds)}</span>
           </div>
-          <div className="flex-1 flex items-center justify-center gap-6">
-            <span className="text-[11px]" style={{ color: "#64748B" }}><strong style={{ color: "#3B82F6" }}>{animLeads}</strong> leads</span>
-            <span className="text-[11px]" style={{ color: "#64748B" }}><strong style={{ color: "#10B981" }}>{animClosed}</strong> fechados</span>
-            <span className="text-[11px]" style={{ color: "#64748B" }}><strong style={{ color: "#F59E0B" }}>{conversionRate}%</strong></span>
+          <div className="flex-1 flex items-center justify-center gap-8">
+            <div className="text-center">
+              <span className="text-[18px] font-extrabold tabular-nums block" style={{ color: "#3B82F6" }}>{animLeads}</span>
+              <span className="text-[8px] uppercase tracking-wider" style={{ color: "#64748B" }}>Leads</span>
+            </div>
+            <div className="text-center">
+              <span className="text-[18px] font-extrabold tabular-nums block" style={{ color: "#10B981" }}>{animClosed}</span>
+              <span className="text-[8px] uppercase tracking-wider" style={{ color: "#64748B" }}>Fechados</span>
+            </div>
+            <div className="text-center">
+              <span className="text-[18px] font-extrabold tabular-nums block" style={{ color: "#F59E0B" }}>{conversionRate}%</span>
+              <span className="text-[8px] uppercase tracking-wider" style={{ color: "#64748B" }}>Conversão</span>
+            </div>
           </div>
-          <button onClick={stopSimulation} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold"
-            style={{ background: "#EF444420", color: "#EF4444", border: "1px solid #EF444430" }}>
+          <button onClick={stopSimulation} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold transition-all hover:scale-105"
+            style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)" }}>
             <Square className="w-3 h-3" /> Parar
           </button>
         </div>
