@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { MessageSquare, Send, User, RotateCcw, Loader2 } from "lucide-react";
+import { MessageSquare, Send, User, RotateCcw, Loader2, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { cn } from "@/lib/utils";
+import SimuladorAutoMode from "@/components/ai-team/SimuladorAutoMode";
 
 const DESTINOS = ["Dubai", "Orlando", "Europa", "Maldivas", "Caribe", "Japão", "Egito", "Tailândia"];
+
+type Mode = "manual" | "auto";
 
 interface ChatMsg {
   id: string;
@@ -16,6 +19,7 @@ interface ChatMsg {
 }
 
 export default function AITeamSimulador() {
+  const [mode, setMode] = useState<Mode>("manual");
   const [selectedAgent, setSelectedAgent] = useState(AGENTS_V4[2]); // MAYA
   const [selectedDestino, setSelectedDestino] = useState("Dubai");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -108,6 +112,15 @@ export default function AITeamSimulador() {
 
   const resetChat = () => setMessages([]);
 
+  const handleModeSwitch = (newMode: Mode) => {
+    if (newMode === mode) return;
+    if (mode === "manual" && messages.length > 0) {
+      if (!confirm("Trocar de modo vai limpar a conversa atual. Continuar?")) return;
+      setMessages([]);
+    }
+    setMode(newMode);
+  };
+
   return (
     <div className="p-6 space-y-4 max-w-5xl mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -115,94 +128,132 @@ export default function AITeamSimulador() {
           <div className="p-2 rounded-lg bg-primary/10"><MessageSquare className="w-6 h-6 text-primary" /></div>
           <div>
             <h1 className="text-xl font-bold">Simulador</h1>
-            <p className="text-sm text-muted-foreground">Converse com qualquer dos 21 agentes em tempo real (streaming)</p>
+            <p className="text-sm text-muted-foreground">
+              {mode === "manual" ? "Converse com qualquer dos 21 agentes em tempo real" : "Simulação automática com IA juiz e múltiplos perfis"}
+            </p>
           </div>
         </div>
-        <Button variant="outline" size="sm" onClick={resetChat}><RotateCcw className="w-4 h-4 mr-1" /> Nova sessão</Button>
+        {mode === "manual" && (
+          <Button variant="outline" size="sm" onClick={resetChat}><RotateCcw className="w-4 h-4 mr-1" /> Nova sessão</Button>
+        )}
       </div>
 
-      {/* Squad filter + Agent selection */}
-      <div className="space-y-2">
-        <div className="flex gap-1 overflow-x-auto pb-1">
-          <button onClick={() => setActiveSquad("all")}
-            className={cn("shrink-0 text-[10px] px-2 py-1 rounded-lg font-medium transition-colors",
-              activeSquad === "all" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
-            )}>Todos</button>
-          {SQUADS.map(s => (
-            <button key={s.id} onClick={() => setActiveSquad(s.id)}
-              className={cn("shrink-0 text-[10px] px-2 py-1 rounded-lg font-medium transition-colors",
-                activeSquad === s.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
-              )}>{s.emoji} {s.name}</button>
-          ))}
-        </div>
-        <div className="flex gap-1 overflow-x-auto pb-1">
-          {filteredAgents.map(a => (
-            <button key={a.id} onClick={() => setSelectedAgent(a)}
-              className={cn("shrink-0 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors",
-                selectedAgent.id === a.id ? "bg-primary/10 text-primary border border-primary/30" : "text-muted-foreground hover:bg-muted border border-transparent"
-              )}>{a.emoji} {a.name}</button>
-          ))}
-        </div>
-        <div className="flex gap-1 overflow-x-auto">
-          {DESTINOS.map(d => (
-            <button key={d} onClick={() => setSelectedDestino(d)}
-              className={cn("text-xs px-2 py-1 rounded-lg transition-colors",
-                selectedDestino === d ? "bg-blue-500/10 text-blue-600" : "text-muted-foreground hover:bg-muted"
-              )}>{d}</button>
-          ))}
-        </div>
+      {/* Mode selector */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => handleModeSwitch("manual")}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
+            mode === "manual"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "border border-border/50 text-muted-foreground hover:bg-muted"
+          )}
+        >
+          <MessageSquare className="w-4 h-4" /> Conversa Manual
+        </button>
+        <button
+          onClick={() => handleModeSwitch("auto")}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all",
+            mode === "auto"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "border border-border/50 text-muted-foreground hover:bg-muted"
+          )}
+        >
+          <Zap className="w-4 h-4" /> Simulação Automática
+        </button>
       </div>
 
-      {/* Chat area */}
-      <div className="rounded-xl border border-border/50 bg-card flex flex-col h-[500px]">
-        <div className="px-4 py-3 border-b border-border/30 flex items-center gap-2">
-          <span className="text-lg">{selectedAgent.emoji}</span>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold">{selectedAgent.name}</p>
-            <p className="text-[10px] text-muted-foreground truncate">{selectedAgent.role} · {selectedDestino}</p>
+      {/* Manual mode */}
+      {mode === "manual" && (
+        <>
+          {/* Squad filter + Agent selection */}
+          <div className="space-y-2">
+            <div className="flex gap-1 overflow-x-auto pb-1">
+              <button onClick={() => setActiveSquad("all")}
+                className={cn("shrink-0 text-[10px] px-2 py-1 rounded-lg font-medium transition-colors",
+                  activeSquad === "all" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+                )}>Todos</button>
+              {SQUADS.map(s => (
+                <button key={s.id} onClick={() => setActiveSquad(s.id)}
+                  className={cn("shrink-0 text-[10px] px-2 py-1 rounded-lg font-medium transition-colors",
+                    activeSquad === s.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+                  )}>{s.emoji} {s.name}</button>
+              ))}
+            </div>
+            <div className="flex gap-1 overflow-x-auto pb-1">
+              {filteredAgents.map(a => (
+                <button key={a.id} onClick={() => setSelectedAgent(a)}
+                  className={cn("shrink-0 text-xs px-3 py-1.5 rounded-lg font-medium transition-colors",
+                    selectedAgent.id === a.id ? "bg-primary/10 text-primary border border-primary/30" : "text-muted-foreground hover:bg-muted border border-transparent"
+                  )}>{a.emoji} {a.name}</button>
+              ))}
+            </div>
+            <div className="flex gap-1 overflow-x-auto">
+              {DESTINOS.map(d => (
+                <button key={d} onClick={() => setSelectedDestino(d)}
+                  className={cn("text-xs px-2 py-1 rounded-lg transition-colors",
+                    selectedDestino === d ? "bg-blue-500/10 text-blue-600" : "text-muted-foreground hover:bg-muted"
+                  )}>{d}</button>
+              ))}
+            </div>
           </div>
-          <Badge variant="outline" className="text-[9px]">Lv.{selectedAgent.level}</Badge>
-        </div>
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-          {messages.length === 0 && (
-            <div className="text-center py-12">
-              <MessageSquare className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Comece a conversa como um cliente interessado em {selectedDestino}</p>
-              <p className="text-xs text-muted-foreground/50 mt-1">Respostas em streaming via IA</p>
-            </div>
-          )}
-          {messages.map(msg => (
-            <div key={msg.id} className={cn("flex gap-2", msg.role === "user" ? "justify-end" : "justify-start")}>
-              {msg.role === "agent" && <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><span className="text-sm">{selectedAgent.emoji}</span></div>}
-              <div className={cn(
-                "rounded-2xl px-4 py-2.5 max-w-[75%] text-sm",
-                msg.role === "user"
-                  ? "bg-primary text-primary-foreground rounded-br-md"
-                  : "bg-muted rounded-bl-md"
-              )}>
-                {msg.content}
-                <p className={cn("text-[9px] mt-1", msg.role === "user" ? "text-primary-foreground/60" : "text-muted-foreground/50")}>
-                  {msg.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                </p>
+
+          {/* Chat area */}
+          <div className="rounded-xl border border-border/50 bg-card flex flex-col h-[500px]">
+            <div className="px-4 py-3 border-b border-border/30 flex items-center gap-2">
+              <span className="text-lg">{selectedAgent.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold">{selectedAgent.name}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{selectedAgent.role} · {selectedDestino}</p>
               </div>
-              {msg.role === "user" && <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0"><User className="w-4 h-4 text-muted-foreground" /></div>}
+              <Badge variant="outline" className="text-[9px]">Lv.{selectedAgent.level}</Badge>
             </div>
-          ))}
-          {loading && (
-            <div className="flex gap-2">
-              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><span className="text-sm">{selectedAgent.emoji}</span></div>
-              <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
-                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-              </div>
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+              {messages.length === 0 && (
+                <div className="text-center py-12">
+                  <MessageSquare className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">Comece a conversa como um cliente interessado em {selectedDestino}</p>
+                  <p className="text-xs text-muted-foreground/50 mt-1">Respostas em streaming via IA</p>
+                </div>
+              )}
+              {messages.map(msg => (
+                <div key={msg.id} className={cn("flex gap-2", msg.role === "user" ? "justify-end" : "justify-start")}>
+                  {msg.role === "agent" && <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><span className="text-sm">{selectedAgent.emoji}</span></div>}
+                  <div className={cn(
+                    "rounded-2xl px-4 py-2.5 max-w-[75%] text-sm",
+                    msg.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-br-md"
+                      : "bg-muted rounded-bl-md"
+                  )}>
+                    {msg.content}
+                    <p className={cn("text-[9px] mt-1", msg.role === "user" ? "text-primary-foreground/60" : "text-muted-foreground/50")}>
+                      {msg.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                  {msg.role === "user" && <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0"><User className="w-4 h-4 text-muted-foreground" /></div>}
+                </div>
+              ))}
+              {loading && (
+                <div className="flex gap-2">
+                  <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><span className="text-sm">{selectedAgent.emoji}</span></div>
+                  <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        <div className="px-4 py-3 border-t border-border/30 flex gap-2">
-          <Input placeholder="Digite como um cliente..." value={input} onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && handleSend()} disabled={loading} />
-          <Button onClick={handleSend} disabled={loading || !input.trim()} size="icon"><Send className="w-4 h-4" /></Button>
-        </div>
-      </div>
+            <div className="px-4 py-3 border-t border-border/30 flex gap-2">
+              <Input placeholder="Digite como um cliente..." value={input} onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleSend()} disabled={loading} />
+              <Button onClick={handleSend} disabled={loading || !input.trim()} size="icon"><Send className="w-4 h-4" /></Button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Auto mode */}
+      {mode === "auto" && <SimuladorAutoMode />}
     </div>
   );
 }

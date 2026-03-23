@@ -177,7 +177,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/ai-team/memoria", icon: Database, label: "Memória & Fiscal" },
               { to: "/ai-team/academia", icon: Star, label: "Academia" },
               { to: "/ai-team/simulador", icon: MessageSquare, label: "Simulador" },
-              { to: "/ai-team/laboratorio", icon: TestTube, label: "Laboratório" },
               { to: "/ai-team/config", icon: Cog, label: "Configurações" },
               { to: "/implementacao/estrategia-ia", icon: Lightbulb, label: "Estratégia IA" },
               { to: "/implementacao/aprendizados-ia", icon: Sparkles, label: "Aprendizados IA" },
