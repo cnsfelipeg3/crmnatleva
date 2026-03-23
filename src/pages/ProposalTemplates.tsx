@@ -203,7 +203,7 @@ export default function ProposalTemplates() {
             <p className="text-sm text-muted-foreground">Configure os templates padrão para suas propostas</p>
           </div>
         </div>
-        <Button onClick={openCreate} className="gap-2">
+        <Button onClick={() => navigate("/propostas/modelos/novo")} className="gap-2">
           <Plus className="w-4 h-4" /> Novo Modelo
         </Button>
       </div>
@@ -226,7 +226,7 @@ export default function ProposalTemplates() {
           <LayoutTemplate className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-muted-foreground font-medium">Nenhum modelo configurado</p>
           <p className="text-sm text-muted-foreground/60 mt-1">Crie seu primeiro template para padronizar suas propostas</p>
-          <Button onClick={openCreate} className="mt-4 gap-2">
+          <Button onClick={() => navigate("/propostas/modelos/novo")} className="mt-4 gap-2">
             <Plus className="w-4 h-4" /> Criar modelo
           </Button>
         </Card>
@@ -290,8 +290,8 @@ export default function ProposalTemplates() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-1.5 pt-2 border-t border-border/50">
-                  <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs flex-1" onClick={() => openEdit(t)}>
-                    <Pencil className="w-3.5 h-3.5" /> Editar
+                  <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs flex-1" onClick={() => navigate(`/propostas/modelos/${t.id}`)}>
+                    <Eye className="w-3.5 h-3.5" /> Preview & Editar
                   </Button>
                   <Button
                     variant="ghost" size="sm" className="h-8 gap-1 text-xs"

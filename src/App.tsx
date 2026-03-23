@@ -109,6 +109,7 @@ const QuoteRequests = lazy(() => import("@/pages/QuoteRequests"));
 const Proposals = lazy(() => import("@/pages/Proposals"));
 const ProposalEditor = lazy(() => import("@/pages/ProposalEditor"));
 const ProposalTemplates = lazy(() => import("@/pages/ProposalTemplates"));
+const ProposalTemplateEditor = lazy(() => import("@/pages/ProposalTemplateEditor"));
 const ProposalPublicView = lazy(() => import("@/pages/ProposalPublicView"));
 const MediaLibrary = lazy(() => import("@/pages/MediaLibrary"));
 
@@ -177,6 +178,8 @@ function AppRoutes() {
           <Route path="/cotacoes" element={<QuoteRequests />} />
           <Route path="/propostas" element={<Proposals />} />
           <Route path="/propostas/modelos" element={<ProposalTemplates />} />
+          <Route path="/propostas/modelos/novo" element={<ProposalTemplateEditor />} />
+          <Route path="/propostas/modelos/:id" element={<ProposalTemplateEditor />} />
           <Route path="/propostas/nova" element={<ProposalEditor />} />
           <Route path="/propostas/:id" element={<ProposalEditor />} />
           <Route path="/livechat" element={<LiveChat />} />
