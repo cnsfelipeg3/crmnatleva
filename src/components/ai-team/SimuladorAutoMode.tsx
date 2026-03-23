@@ -98,14 +98,87 @@ const getAgentColor = (agent: typeof AGENTS_V4[0]) => {
 
 type Phase = "config" | "running" | "report";
 type ReportTab = "numeros" | "conversas" | "debrief";
+type ImprovementType = "conhecimento_kb" | "nova_skill" | "instrucao_prompt" | "workflow";
 
 interface Improvement {
   id: string; titulo: string; desc: string; impacto: string; agente: string;
-  prioridade: "alta" | "media" | "baixa"; status: "pending" | "approved" | "rejected";
+  prioridade: "alta" | "media" | "baixa"; status: "pending" | "analyzing" | "approved" | "rejected";
+  tipo: ImprovementType; conteudoSugerido: string; fonte: string;
+  deepAnalysis?: DeepAnalysis | null; editedContent?: string; rejectReason?: string;
+}
+interface DeepAnalysis {
+  analiseCompleta: string; linhaRaciocinio: string[];
+  impactoNumeros: { conversao: string; receita: string; satisfacao: string; eficiencia: string };
+  psicologiaCliente: string; riscosNaoImplementar: string;
+  recomendacao: string; confianca: number;
 }
 interface DebriefData {
   scoreGeral: number; resumoExecutivo: string; fraseNathAI: string;
   pontosFortes: string[]; melhorias: Improvement[]; lacunasConhecimento: string[]; insightsCliente: string[];
+}
+interface SimHistoryEntry {
+  id: string; date: string; scoreGeral: number; totalLeads: number;
+  fechados: number; perdidos: number; conversao: number; melhorias_aprovadas: string[];
+}
+
+const TIPO_COLORS: Record<ImprovementType, { bg: string; color: string; label: string; icon: string }> = {
+  conhecimento_kb: { bg: "rgba(59,130,246,0.08)", color: "#3B82F6", label: "KB", icon: "📚" },
+  nova_skill: { bg: "rgba(245,158,11,0.08)", color: "#F59E0B", label: "Skill", icon: "⚡" },
+  instrucao_prompt: { bg: "rgba(139,92,246,0.08)", color: "#8B5CF6", label: "Prompt", icon: "📝" },
+  workflow: { bg: "rgba(6,182,212,0.08)", color: "#06B6D4", label: "Workflow", icon: "🔄" },
+};
+
+// ===== FLYWHEEL STORAGE =====
+const STORAGE_KEYS = {
+  sim_history: "natleva_sim_historico",
+  kb: "natleva_knowledge_base_improvements",
+  skills: "natleva_skills_improvements",
+  prompts: "natleva_prompt_improvements",
+  workflows: "natleva_workflow_improvements",
+  evolution: "natleva_evolution_timeline",
+};
+
+function loadJson(key: string) {
+  try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; }
+}
+function saveJson(key: string, data: any) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+async function implementImprovement(m: Improvement) {
+  const entry = { id: m.id, titulo: m.titulo, agente: m.agente, conteudo: m.editedContent || m.conteudoSugerido, data: new Date().toISOString(), tipo: m.tipo };
+  if (m.tipo === "conhecimento_kb") {
+    const kb = loadJson(STORAGE_KEYS.kb);
+    kb.unshift(entry);
+    saveJson(STORAGE_KEYS.kb, kb);
+  } else if (m.tipo === "nova_skill") {
+    const skills = loadJson(STORAGE_KEYS.skills);
+    skills.unshift(entry);
+    saveJson(STORAGE_KEYS.skills, skills);
+  } else if (m.tipo === "instrucao_prompt") {
+    const prompts = loadJson(STORAGE_KEYS.prompts);
+    prompts.unshift(entry);
+    saveJson(STORAGE_KEYS.prompts, prompts);
+  } else if (m.tipo === "workflow") {
+    const wfs = loadJson(STORAGE_KEYS.workflows);
+    wfs.unshift(entry);
+    saveJson(STORAGE_KEYS.workflows, wfs);
+  }
+  // Register in Evolution timeline
+  const timeline = loadJson(STORAGE_KEYS.evolution);
+  timeline.unshift({
+    id: "ev_" + Date.now(), tipo: m.tipo, agenteId: m.agente,
+    titulo: m.titulo, antes: "Problema identificado em simulação",
+    depois: (m.editedContent || m.conteudoSugerido).slice(0, 80),
+    impacto: m.impacto, status: "aplicado", data: new Date().toISOString(), fonte: "debrief_simulacao",
+  });
+  saveJson(STORAGE_KEYS.evolution, timeline);
+}
+
+function saveSimHistory(entry: SimHistoryEntry) {
+  const history = loadJson(STORAGE_KEYS.sim_history);
+  history.unshift(entry);
+  saveJson(STORAGE_KEYS.sim_history, history.slice(0, 20));
 }
 
 function useCountUp(target: number, duration = 500) {
