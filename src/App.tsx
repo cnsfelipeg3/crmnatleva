@@ -93,6 +93,17 @@ const AILearningDashboard = lazy(() => import("@/pages/AILearningDashboard"));
 const CerebroNatLeva = lazy(() => import("@/pages/CerebroNatLeva"));
 const AITeam = lazy(() => import("@/pages/AITeam"));
 const AITeamAgentDetail = lazy(() => import("@/pages/AITeamAgentDetail"));
+const AITeamLayout = lazy(() => import("@/components/ai-team/AITeamLayout"));
+const AITeamEquipe = lazy(() => import("@/pages/ai-team/AITeamEquipe"));
+const AITeamEvolution = lazy(() => import("@/pages/ai-team/AITeamEvolution"));
+const AITeamConhecimento = lazy(() => import("@/pages/ai-team/AITeamConhecimento"));
+const AITeamSkills = lazy(() => import("@/pages/ai-team/AITeamSkills"));
+const AITeamWorkflow = lazy(() => import("@/pages/ai-team/AITeamWorkflow"));
+const AITeamMemoria = lazy(() => import("@/pages/ai-team/AITeamMemoria"));
+const AITeamAcademia = lazy(() => import("@/pages/ai-team/AITeamAcademia"));
+const AITeamSimulador = lazy(() => import("@/pages/ai-team/AITeamSimulador"));
+const AITeamLaboratorio = lazy(() => import("@/pages/ai-team/AITeamLaboratorio"));
+const AITeamConfig = lazy(() => import("@/pages/ai-team/AITeamConfig"));
 
 // Portal do Cliente
 const PortalLogin = lazy(() => import("@/pages/portal/PortalLogin"));
