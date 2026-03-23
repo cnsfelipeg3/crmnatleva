@@ -1,8 +1,8 @@
-import { useState, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Brain, Plus, Building2, LayoutDashboard, AlertTriangle, Clock,
-  Activity, CheckCircle2, Loader2, Check, X, Filter,
+  Activity, CheckCircle2, Loader2, Check, X, Filter, DollarSign, MessageSquare, FileText,
 } from "lucide-react";
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
 import { getAllV4Agents, getV4InitialTasks } from "@/components/ai-team/agentV4Bridge";
@@ -10,6 +10,7 @@ import { useAgentEngine } from "@/components/ai-team/useAgentEngine";
 import type { AgentEvent } from "@/components/ai-team/agentEngine";
 import type { Agent } from "@/components/ai-team/mockData";
 import AITeamCreateAgentDialog from "@/components/ai-team/AITeamCreateAgentDialog";
+import { useAITeamPersistence } from "@/hooks/useAITeamPersistence";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
