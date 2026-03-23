@@ -51,6 +51,10 @@ export interface LeadInteligente {
   // Stage tracking
   etapaAtual: string;
   agentIdxAtual: number;
+  // 3 Dimensões (avaliação ao vivo)
+  scoreHumanizacao: number;
+  scoreEficacia: number;
+  scoreTecnica: number;
 }
 
 export interface MensagemLead {
