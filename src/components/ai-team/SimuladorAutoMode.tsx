@@ -481,36 +481,199 @@ export default function SimuladorAutoMode() {
         objecoes: l.objecoesLancadas, etapaPerda: l.etapaPerda,
         msgs: l.mensagens.slice(0, 12).map(m => `${m.role}: ${m.content.slice(0, 120)}`).join("\n"),
       }));
-      const prompt = `Analise esta simulação de agência de viagens com leads inteligentes (IA dinâmica) e retorne JSON válido com: scoreGeral (0-100), resumoExecutivo (3-4 frases detalhadas sobre performance), fraseNathAI (frase motivacional da gestora), pontosFortes (array strings detalhadas), melhorias (array com titulo, desc, impacto, agente, prioridade alta/media/baixa), lacunasConhecimento (array strings), insightsCliente (array strings sobre padrões de comportamento dos leads).\n\nStats: ${leads.length} leads, ${closedLeads.length} fechados, ${lostLeads.length} perdidos, R$${totalReceita} receita, ${totalObjecoes} objeções (${totalContornadas} contornadas), sentimento médio: ${avgSentimento}/100.\n\nPerdas por perfil: ${lostLeads.map(l => `${l.perfil.label} em ${l.etapaPerda}: ${l.motivoPerda?.slice(0, 80)}`).join(" | ")}\n\nConversas:\n${JSON.stringify(sampleConvos)}`;
-      const resp = await callAgent("Voce e analista de qualidade de agencia de viagens premium. Retorne SOMENTE JSON válido sem markdown.", [{ role: "user", content: prompt }]);
+
+      const pResumo = PERFIS_INTELIGENTES.map(p => {
+        const pLeads = leads.filter(l => l.perfil.tipo === p.tipo);
+        const pClosed = pLeads.filter(l => l.status === "fechou");
+        return pLeads.length > 0 ? `${p.label}: ${pClosed.length}/${pLeads.length}` : null;
+      }).filter(Boolean).join(" | ");
+
+      const topObjs = leads.flatMap(l => l.objecoesLancadas).reduce((acc, o) => { acc[o] = (acc[o] || 0) + 1; return acc; }, {} as Record<string, number>);
+      const topObjsStr = Object.entries(topObjs).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `"${k}" (${v}x)`).join(", ");
+
+      const prompt = `Você é NATH.AI, consultora de inteligência operacional da NatLeva Viagens.
+Sua missão: analisar simulações de atendimento com precisão cirúrgica.
+Tom: direto, construtivo, sem rodeios. A Nathália precisa de diagnóstico acionável.
+Cultura NatLeva: calorosa, próxima, humana. Nunca genérica.
+Retorne SOMENTE JSON válido. Nenhum texto fora do JSON.
+
+DADOS DA SIMULAÇÃO:
+- Total de leads: ${leads.length}
+- Fechados: ${closedLeads.length} (${conversionRate}%)
+- Perdidos: ${lostLeads.length}
+- Receita simulada: R$${(totalReceita/1000).toFixed(0)}k
+- Ticket médio: R$${(ticketMedio/1000).toFixed(0)}k
+- Objeções total: ${totalObjecoes}
+- Objeções contornadas: ${totalContornadas} (${totalObjecoes > 0 ? Math.round(totalContornadas/totalObjecoes*100) : 0}%)
+
+PERFORMANCE POR PERFIL: ${pResumo}
+TOP 5 OBJEÇÕES: ${topObjsStr || "nenhuma"}
+
+Perdas motivadas: ${lostLeads.slice(0, 5).map(l => `${l.perfil.label} em ${l.etapaPerda}: ${l.motivoPerda?.slice(0, 80)}`).join(" | ")}
+
+AMOSTRA DE CONVERSAS:
+${JSON.stringify(sampleConvos)}
+
+Retorne JSON:
+{
+  "scoreGeral": 0-100,
+  "resumoExecutivo": "2-3 frases de diagnóstico preciso",
+  "fraseNathAI": "frase motivacional e específica para a Nathália",
+  "pontosFortes": ["o que funcionou bem com evidência"],
+  "melhorias": [{
+    "titulo": "título curto e específico",
+    "desc": "2-3 frases explicando o problema e a solução",
+    "impacto": "impacto estimado com número",
+    "agente": "nome do agente responsável",
+    "prioridade": "alta|media|baixa",
+    "tipo": "conhecimento_kb|nova_skill|instrucao_prompt|workflow",
+    "conteudoSugerido": "TEXTO PRONTO para ser implementado no agente"
+  }],
+  "lacunasConhecimento": ["gap específico identificado"],
+  "insightsCliente": ["padrão de comportamento detectado com dados"]
+}`;
+
+      const resp = await callAgent("Voce e NATH.AI da NatLeva. Retorne SOMENTE JSON válido sem markdown.", [{ role: "user", content: prompt }]);
       const jsonMatch = resp.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const data = JSON.parse(jsonMatch[0]);
-        setDebrief({
-          scoreGeral: data.scoreGeral || 0, resumoExecutivo: data.resumoExecutivo || "",
+        const debriefResult: DebriefData = {
+          scoreGeral: data.scoreGeral || 0,
+          resumoExecutivo: data.resumoExecutivo || "",
           fraseNathAI: data.fraseNathAI || "",
           pontosFortes: data.pontosFortes || [],
-          melhorias: (data.melhorias || []).map((m: any, i: number) => ({ id: `imp-${i}`, titulo: m.titulo, desc: m.desc || m.descricao || "", impacto: m.impacto || "", agente: m.agente || "", prioridade: m.prioridade || "media", status: "pending" as const })),
+          melhorias: (data.melhorias || []).map((m: any, i: number) => ({
+            id: `imp-${Date.now()}-${i}`,
+            titulo: m.titulo || "",
+            desc: m.desc || m.descricao || "",
+            impacto: m.impacto || "",
+            agente: m.agente || "",
+            prioridade: m.prioridade || "media",
+            tipo: (m.tipo || "instrucao_prompt") as ImprovementType,
+            conteudoSugerido: m.conteudoSugerido || "",
+            fonte: "debrief_simulacao",
+            status: "pending" as const,
+            deepAnalysis: null,
+            editedContent: undefined,
+          })),
           lacunasConhecimento: data.lacunasConhecimento || [],
           insightsCliente: data.insightsCliente || [],
+        };
+        setDebrief(debriefResult);
+        // Save to simulation history
+        saveSimHistory({
+          id: "wr_" + Date.now(),
+          date: new Date().toISOString(),
+          scoreGeral: debriefResult.scoreGeral,
+          totalLeads: leads.length,
+          fechados: closedLeads.length,
+          perdidos: lostLeads.length,
+          conversao: conversionRate,
+          melhorias_aprovadas: [],
         });
       }
     } catch { toast({ title: "Erro ao gerar debrief", variant: "destructive" }); }
     finally { setDebriefLoading(false); }
-  }, [leads, closedLeads, lostLeads, totalReceita, totalObjecoes, totalContornadas, avgSentimento, toast]);
+  }, [leads, closedLeads, lostLeads, totalReceita, totalObjecoes, totalContornadas, avgSentimento, conversionRate, ticketMedio, toast]);
 
   useEffect(() => { if (phase === "report" && !debrief && !debriefLoading) generateDebrief(); }, [phase]);
 
-  const handleImprovement = (id: string, action: "approved" | "rejected") => {
+  // Deep analysis for a single improvement
+  const runDeepAnalysis = useCallback(async (improvementId: string) => {
     if (!debrief) return;
-    setDebrief({ ...debrief, melhorias: debrief.melhorias.map(m => m.id === id ? { ...m, status: action } : m) });
-    toast({ title: action === "approved" ? "Melhoria aprovada" : "Melhoria rejeitada", description: action === "approved" ? "Enviada ao Evolution Engine" : "" });
+    const m = debrief.melhorias.find(x => x.id === improvementId);
+    if (!m) return;
+    setDebrief(prev => prev ? { ...prev, melhorias: prev.melhorias.map(x => x.id === improvementId ? { ...x, status: "analyzing" as const } : x) } : prev);
+    try {
+      const agent = AGENTS_V4.find(a => a.name.toLowerCase().includes(m.agente.toLowerCase()));
+      const prompt = `Você é NATH.AI. Analise esta melhoria com profundidade máxima.
+Tom: consultora sênior. Evidências primeiro, depois recomendação.
+Retorne SOMENTE JSON.
+
+Melhoria: ${m.titulo}
+Descrição: ${m.desc}
+Agente afetado: ${m.agente} (${agent?.role || "agente"})
+Tipo de implementação: ${m.tipo}
+Impacto estimado: ${m.impacto}
+Prioridade: ${m.prioridade}
+Conteúdo sugerido: ${m.conteudoSugerido?.slice(0, 200)}
+
+Retorne JSON:
+{
+  "analiseCompleta": "3-5 parágrafos com problema, causa raiz, solução, evidências",
+  "linhaRaciocinio": ["passo 1", "passo 2", "passo 3", "conclusão"],
+  "impactoNumeros": {
+    "conversao": "ex: +12% taxa com Pechincheiro",
+    "receita": "ex: +R$1.800/mês",
+    "satisfacao": "ex: NPS +0.3 em 60 dias",
+    "eficiencia": "ex: -2 turnos por conversa"
+  },
+  "psicologiaCliente": "como a melhoria afeta a percepção do cliente",
+  "riscosNaoImplementar": "o que acontece se ignorar",
+  "recomendacao": "APROVAR|AVALIAR|REJEITAR",
+  "confianca": 0-100
+}`;
+      const resp = await callAgent("Voce e NATH.AI analista senior. Retorne SOMENTE JSON.", [{ role: "user", content: prompt }]);
+      const jsonMatch = resp.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const analysis: DeepAnalysis = JSON.parse(jsonMatch[0]);
+        setDebrief(prev => prev ? { ...prev, melhorias: prev.melhorias.map(x => x.id === improvementId ? { ...x, status: "pending" as const, deepAnalysis: analysis } : x) } : prev);
+      }
+    } catch {
+      setDebrief(prev => prev ? { ...prev, melhorias: prev.melhorias.map(x => x.id === improvementId ? { ...x, status: "pending" as const } : x) } : prev);
+      toast({ title: "Erro na análise profunda", variant: "destructive" });
+    }
+  }, [debrief, toast]);
+
+  const handleImprovement = async (id: string, action: "approved" | "rejected", reason?: string) => {
+    if (!debrief) return;
+    const m = debrief.melhorias.find(x => x.id === id);
+    if (!m) return;
+    if (action === "approved") {
+      await implementImprovement(m);
+    }
+    setDebrief({ ...debrief, melhorias: debrief.melhorias.map(x => x.id === id ? { ...x, status: action, rejectReason: reason } : x) });
+    toast({ title: action === "approved" ? "✅ Melhoria aprovada e implementada" : "Melhoria rejeitada", description: action === "approved" ? `Salva em ${TIPO_COLORS[m.tipo].label} → ${m.agente}` : reason || "" });
   };
-  const approveAll = () => {
+
+  const approveAll = async () => {
     if (!debrief) return;
+    const pending = debrief.melhorias.filter(m => m.status === "pending");
+    for (const m of pending) { await implementImprovement(m); }
     setDebrief({ ...debrief, melhorias: debrief.melhorias.map(m => ({ ...m, status: "approved" as const })) });
-    toast({ title: `${debrief.melhorias.length} melhorias aprovadas` });
+    toast({ title: `✅ ${pending.length} melhorias aprovadas e implementadas` });
   };
+
+  const updateImprovementContent = (id: string, content: string) => {
+    if (!debrief) return;
+    setDebrief({ ...debrief, melhorias: debrief.melhorias.map(m => m.id === id ? { ...m, editedContent: content } : m) });
+  };
+
+  const convertInsightToImprovement = (insight: string) => {
+    if (!debrief) return;
+    const newImp: Improvement = {
+      id: `imp-insight-${Date.now()}`, titulo: insight.slice(0, 60),
+      desc: insight, impacto: "A ser avaliado", agente: "NATH.AI",
+      prioridade: "media", status: "pending", tipo: "instrucao_prompt",
+      conteudoSugerido: "", fonte: "insight_convertido",
+    };
+    setDebrief({ ...debrief, melhorias: [...debrief.melhorias, newImp] });
+    toast({ title: "Insight convertido em melhoria pendente" });
+  };
+
+  const convertLacunaToKB = (lacuna: string) => {
+    if (!debrief) return;
+    const newImp: Improvement = {
+      id: `imp-kb-${Date.now()}`, titulo: `KB: ${lacuna.slice(0, 50)}`,
+      desc: lacuna, impacto: "Preencher lacuna de conhecimento", agente: "DANTE",
+      prioridade: "alta", status: "pending", tipo: "conhecimento_kb",
+      conteudoSugerido: "", fonte: "lacuna_convertida",
+    };
+    setDebrief({ ...debrief, melhorias: [...debrief.melhorias, newImp] });
+    toast({ title: "Lacuna convertida em documento KB pendente" });
+  };
+
+  const simHistory: SimHistoryEntry[] = loadJson(STORAGE_KEYS.sim_history);
 
   // Sentiment color helper
   const sentimentColor = (s: number) => s >= 70 ? "#10B981" : s >= 40 ? "#F59E0B" : "#EF4444";
