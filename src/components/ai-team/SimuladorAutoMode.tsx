@@ -471,7 +471,7 @@ export default function SimuladorAutoMode() {
     toast({ title: "Simulação concluída!", description: `${allLeads.length} leads processados com IA dinâmica` });
   }, [numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, toast]);
 
-  const stopSimulation = () => { abortRef.current = true; setRunning(false); if (timerRef.current) clearInterval(timerRef.current); setPhase("report"); };
+  const stopSimulation = () => { simAtivaRef.current = false; abortRef.current = true; setRunning(false); if (timerRef.current) clearInterval(timerRef.current); setPhase("report"); };
 
   // Generate debrief
   const generateDebrief = useCallback(async () => {
