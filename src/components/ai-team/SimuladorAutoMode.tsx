@@ -1246,21 +1246,61 @@ Retorne JSON:
 
       {/* Report tabs */}
       {phase === "report" && !running && (
-        <div className="flex items-center gap-2 mb-4">
-          {(["numeros", "conversas", "debrief"] as ReportTab[]).map(t => {
-            const active = reportTab === t;
-            const accent = t === "debrief" ? "#8B5CF6" : t === "numeros" ? "#3B82F6" : "#10B981";
-            return (
-              <button key={t} onClick={() => setReportTab(t)}
-                className="text-[11px] px-5 py-2.5 rounded-xl font-bold transition-all duration-300"
-                style={{ background: active ? `${accent}10` : "rgba(255,255,255,0.02)", border: `1px solid ${active ? `${accent}30` : "rgba(255,255,255,0.04)"}`, color: active ? accent : "#64748B" }}>
-                {t === "numeros" ? "📊 Números" : t === "conversas" ? "💬 Conversas" : "🧠 Debrief IA"}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-3 mb-5 rounded-2xl px-5 py-3 relative overflow-hidden" style={{
+          background: "linear-gradient(135deg, rgba(13,18,32,0.95), rgba(15,23,42,0.9))",
+          border: "1px solid rgba(255,255,255,0.06)",
+        }}>
+          <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, #3B82F6, #10B981, #8B5CF6)" }} />
+          {/* Workflow stepper */}
+          <div className="flex items-center gap-2 mr-4">
+            {[
+              { label: "Simulação", icon: "✓", done: true },
+              { label: "Análise", icon: reportTab === "numeros" ? "●" : "✓", done: reportTab !== "numeros" },
+              { label: "Debrief", icon: reportTab === "debrief" ? "●" : (reportTab === "numeros" ? "○" : "○"), done: false },
+            ].map((step, i) => (
+              <div key={step.label} className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold" style={{
+                    background: step.done ? "#10B981" : "rgba(255,255,255,0.06)",
+                    color: step.done ? "#000" : "#64748B",
+                  }}>{step.icon}</div>
+                  <span className="text-[9px] font-semibold" style={{ color: step.done ? "#10B981" : "#64748B" }}>{step.label}</span>
+                </div>
+                {i < 2 && <div className="w-6 h-px" style={{ background: "rgba(255,255,255,0.1)" }} />}
+              </div>
+            ))}
+          </div>
+          <div className="h-6 w-px mx-2" style={{ background: "rgba(255,255,255,0.06)" }} />
+          {/* Tab buttons */}
+          <div className="flex items-center gap-1.5 flex-1">
+            {(["numeros", "conversas", "debrief"] as ReportTab[]).map(t => {
+              const active = reportTab === t;
+              const accent = t === "debrief" ? "#8B5CF6" : t === "numeros" ? "#3B82F6" : "#10B981";
+              const icons = { numeros: "📊", conversas: "💬", debrief: "🧠" };
+              const labels = { numeros: "Números", conversas: "Conversas", debrief: "Debrief IA" };
+              return (
+                <button key={t} onClick={() => setReportTab(t)}
+                  className="text-[11px] px-4 py-2 rounded-xl font-bold transition-all duration-300"
+                  style={{
+                    background: active ? `${accent}12` : "transparent",
+                    border: `1px solid ${active ? `${accent}30` : "transparent"}`,
+                    color: active ? accent : "#64748B",
+                  }}>
+                  {icons[t]} {labels[t]}
+                </button>
+              );
+            })}
+          </div>
+          {/* Nova Simulação */}
           <button onClick={() => { setPhase("config"); setLeads([]); setDebrief(null); }}
-            className="ml-auto text-[10px] px-4 py-2 rounded-xl font-semibold transition-all"
-            style={{ border: "1px solid rgba(255,255,255,0.06)", color: "#64748B", background: "rgba(255,255,255,0.02)" }}>Nova Simulação</button>
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-bold transition-all hover:scale-[1.03]"
+            style={{
+              background: "linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,182,212,0.1))",
+              border: "1px solid rgba(16,185,129,0.2)",
+              color: "#10B981",
+            }}>
+            <Play className="w-3.5 h-3.5" /> Nova Simulação
+          </button>
         </div>
       )}
 
