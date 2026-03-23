@@ -17,6 +17,26 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const defaultCovers: Record<string, string> = {
+  orlando: "https://images.unsplash.com/photo-1575089976121-8ed7b2a54265?w=800&h=400&fit=crop&q=80",
+  paris: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&h=400&fit=crop&q=80",
+  maldivas: "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=800&h=400&fit=crop&q=80",
+  europa: "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=800&h=400&fit=crop&q=80",
+  safari: "https://images.unsplash.com/photo-1516426122078-c23e76319801?w=800&h=400&fit=crop&q=80",
+  default: "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=800&h=400&fit=crop&q=80",
+};
+
+function getCoverImage(proposal: any): string {
+  if (proposal.cover_image_url) return proposal.cover_image_url;
+  const title = (proposal.title || "").toLowerCase();
+  const dests = (proposal.destinations || []).map((d: string) => d.toLowerCase()).join(" ");
+  const combined = `${title} ${dests}`;
+  for (const [key, url] of Object.entries(defaultCovers)) {
+    if (key !== "default" && combined.includes(key)) return url;
+  }
+  return defaultCovers.default;
+}
+
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: "Em elaboração", variant: "secondary" },
   sent: { label: "Enviada", variant: "default" },
@@ -110,11 +130,10 @@ export default function Proposals() {
                 className="group hover:shadow-md transition-all cursor-pointer hover:border-primary/30 overflow-hidden"
                 onClick={() => navigate(`/propostas/${p.id}`)}
               >
-                {p.cover_image_url && (
-                  <div className="h-32 overflow-hidden">
-                    <img src={p.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  </div>
-                )}
+                <div className="h-36 overflow-hidden relative">
+                  <img src={getCoverImage(p)} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                </div>
                 <div className="p-5 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
