@@ -172,7 +172,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/operacao/inbox", icon: Inbox, label: "WhatsApp" },
               { to: "/operacao/flows", icon: GitBranch, label: "Flow Builder" },
               { to: "/operacao/integracoes", icon: Plug, label: "Integrações" },
-              { to: "/operacao/agentes", icon: Bot, label: "Agentes IA" },
               { to: "/operacao/pipeline", icon: Tag, label: "Tags & Pipeline" },
               { to: "/operacao/simulador", icon: TestTube, label: "Simulador" },
               { to: "/operacao/logs", icon: ScrollText, label: "Logs & Auditoria" },

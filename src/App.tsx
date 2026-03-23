@@ -115,7 +115,7 @@ const MediaLibrary = lazy(() => import("@/pages/MediaLibrary"));
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
 const OperacaoFlowBuilder = lazy(() => import("@/pages/operacao/OperacaoFlowBuilder"));
 const OperacaoIntegracoes = lazy(() => import("@/pages/operacao/OperacaoIntegracoes"));
-const OperacaoAgentesIA = lazy(() => import("@/pages/operacao/OperacaoAgentesIA"));
+
 const OperacaoTagsPipeline = lazy(() => import("@/pages/operacao/OperacaoTagsPipeline"));
 const OperacaoSimulador = lazy(() => import("@/pages/operacao/OperacaoSimulador"));
 const OperacaoLogs = lazy(() => import("@/pages/operacao/OperacaoLogs"));
@@ -242,7 +242,7 @@ function AppRoutes() {
           <Route path="/operacao/inbox" element={<OperacaoInbox />} />
           <Route path="/operacao/flows" element={<OperacaoFlowBuilder />} />
           <Route path="/operacao/integracoes" element={<OperacaoIntegracoes />} />
-          <Route path="/operacao/agentes" element={<OperacaoAgentesIA />} />
+          
           <Route path="/operacao/pipeline" element={<OperacaoTagsPipeline />} />
           <Route path="/operacao/simulador" element={<OperacaoSimulador />} />
           <Route path="/operacao/logs" element={<OperacaoLogs />} />
