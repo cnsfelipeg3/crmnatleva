@@ -68,6 +68,7 @@ export default function AppLayout() {
         <main className={cn("flex-1 overflow-auto min-h-0", isImmersive && "overflow-hidden")}>
           <Outlet />
         </main>
+        <PanelHelpButton />
       </div>
     </div>
   );
