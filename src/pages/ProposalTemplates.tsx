@@ -203,7 +203,7 @@ export default function ProposalTemplates() {
             <p className="text-sm text-muted-foreground">Configure os templates padrão para suas propostas</p>
           </div>
         </div>
-        <Button onClick={openCreate} className="gap-2">
+        <Button onClick={() => navigate("/propostas/modelos/novo")} className="gap-2">
           <Plus className="w-4 h-4" /> Novo Modelo
         </Button>
       </div>
