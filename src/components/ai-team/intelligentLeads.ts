@@ -51,6 +51,10 @@ export interface LeadInteligente {
   // Stage tracking
   etapaAtual: string;
   agentIdxAtual: number;
+  // 3 Dimensões (avaliação ao vivo)
+  scoreHumanizacao: number;
+  scoreEficacia: number;
+  scoreTecnica: number;
 }
 
 export interface MensagemLead {
@@ -400,6 +404,9 @@ export function gerarLeadInteligente(
     probabilidadeMultiMensagem: p.tendenciaMultiMsg,
     etapaAtual: "recepcao",
     agentIdxAtual: 0,
+    scoreHumanizacao: 0,
+    scoreEficacia: 0,
+    scoreTecnica: 0,
   };
 }
 
