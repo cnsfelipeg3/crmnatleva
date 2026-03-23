@@ -1,11 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, User, RotateCcw, Loader2, History, FileText, ArrowRight, Info, Trophy } from "lucide-react";
+import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin } from "lucide-react";
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
-} from "@/components/ui/sheet";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -25,7 +22,7 @@ function loadSessions(): SavedSession[] { try { return JSON.parse(localStorage.g
 function saveSessions(sessions: SavedSession[]) { localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions.slice(0, 50))); }
 
 const SUGGESTION_CHIPS = [
-  "Quero uma viagem dos sonhos!",
+  "Quero uma viagem dos sonhos! ✨",
   "Quanto custa um pacote completo?",
   "Tem promoção para esse mês?",
   "Preciso de ajuda com um problema",
@@ -33,7 +30,6 @@ const SUGGESTION_CHIPS = [
 
 const FUNNEL_STAGES = ["Recepção", "Qualificação", "Especialista", "Proposta", "Fechamento", "Pós-venda"];
 
-// Shared color helper
 const getAgentColor = (agent: typeof AGENTS_V4[0]) => {
   const colors: Record<string, string> = {
     orquestracao: "#10B981", comercial: "#F59E0B", atendimento: "#3B82F6",
@@ -72,7 +68,6 @@ export default function SimuladorManualMode() {
     const updated = [session, ...sessions.filter(s => s.id !== currentSessionId)];
     setSessions(updated);
     saveSessions(updated);
-    // Advance funnel stage based on message count
     setCurrentStage(Math.min(5, Math.floor(messages.length / 4)));
   }, [messages]);
 
@@ -199,67 +194,78 @@ export default function SimuladorManualMode() {
 
   return (
     <>
-      <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300" style={{ height: "calc(100vh - 200px)", minHeight: 550 }}>
-        {/* CENTER — Chat WhatsApp */}
-        <div className="flex-1 rounded-[14px] flex flex-col overflow-hidden" style={{ background: "#111B21", border: "1px solid #2A3942" }}>
+      <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ height: "calc(100vh - 220px)", minHeight: 550 }}>
+        {/* CENTER — Chat */}
+        <div className="flex-1 rounded-2xl flex flex-col overflow-hidden relative" style={{ background: "#0B141A", border: "1px solid rgba(255,255,255,0.06)" }}>
+          {/* Ambient top glow */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-20 pointer-events-none" style={{ background: `radial-gradient(ellipse, ${agentColor}10, transparent 70%)` }} />
+
           {/* Chat header */}
-          <div className="flex items-center gap-3 px-4 shrink-0" style={{ height: 56, background: "#1F2C33" }}>
+          <div className="flex items-center gap-3 px-5 shrink-0 relative z-10" style={{ height: 62, background: "linear-gradient(180deg, rgba(31,44,51,0.95), rgba(31,44,51,0.8))", backdropFilter: "blur(12px)" }}>
             <div className="relative">
-              <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center text-sm font-bold"
-                style={{ background: `${agentColor}20`, color: agentColor, border: `2px solid ${agentColor}` }}>
-                {selectedAgent.name[0]}
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-bold transition-all duration-300"
+                style={{ background: `${agentColor}15`, color: agentColor, border: `2px solid ${agentColor}40`, boxShadow: `0 0 20px ${agentColor}15` }}>
+                {selectedAgent.emoji}
               </div>
-              <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full" style={{ background: "#25D366", border: "2px solid #1F2C33" }}>
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full" style={{ background: "#25D366", border: "2px solid #1F2C33" }}>
                 <span className="absolute inset-0 rounded-full animate-ping" style={{ background: "#25D366", opacity: 0.4 }} />
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-semibold" style={{ color: "#E9EDEF" }}>{selectedAgent.name}</p>
-              <p className="text-[11px]" style={{ color: "#8696A0" }}>Especialista {selectedDestino} · Lv.{selectedAgent.level}</p>
+              <p className="text-[14px] font-bold" style={{ color: "#F1F5F9" }}>{selectedAgent.name}</p>
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-3 h-3" style={{ color: "#F59E0B" }} />
+                <p className="text-[11px]" style={{ color: "#8696A0" }}>Especialista {selectedDestino} · Lv.{selectedAgent.level}</p>
+              </div>
             </div>
             {/* Funnel stage bar */}
-            <div className="flex items-center gap-1">
-              {FUNNEL_STAGES.map((_, i) => (
-                <div key={i} className="flex items-center">
-                  <div className="w-2 h-2 rounded-full transition-all duration-300" style={{
-                    background: i < currentStage ? "#10B981" : i === currentStage ? agentColor : "#2A3942",
-                    boxShadow: i === currentStage ? `0 0 6px ${agentColor}` : "none",
+            <div className="flex items-center gap-1.5 bg-black/20 px-3 py-1.5 rounded-full">
+              {FUNNEL_STAGES.map((stage, i) => (
+                <div key={i} className="flex items-center gap-1" title={stage}>
+                  <div className="w-2.5 h-2.5 rounded-full transition-all duration-500 relative" style={{
+                    background: i < currentStage ? "#10B981" : i === currentStage ? agentColor : "rgba(255,255,255,0.08)",
+                    boxShadow: i === currentStage ? `0 0 8px ${agentColor}80` : "none",
                   }}>
-                    {i === currentStage && <div className="w-2 h-2 rounded-full animate-ping" style={{ background: agentColor, opacity: 0.5 }} />}
+                    {i === currentStage && <div className="absolute inset-0 rounded-full animate-ping" style={{ background: agentColor, opacity: 0.3 }} />}
                   </div>
-                  {i < FUNNEL_STAGES.length - 1 && <div className="w-2 h-px" style={{ background: i < currentStage ? "#10B981" : "#2A3942" }} />}
+                  {i < FUNNEL_STAGES.length - 1 && <div className="w-3 h-px" style={{ background: i < currentStage ? "#10B98160" : "rgba(255,255,255,0.06)" }} />}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Transfer notice inline */}
+          {/* Transfer notice */}
           {transferNotice && (
-            <div className="flex items-center justify-center py-1.5 animate-in fade-in duration-200" style={{ background: "#1F2C3380" }}>
-              <span className="text-[11px] px-3 py-0.5 rounded-full" style={{ background: "#1F2C33", color: "#8696A0" }}>
-                {transferNotice}
-              </span>
+            <div className="flex items-center justify-center py-2 animate-in fade-in zoom-in-95 duration-300" style={{ background: "rgba(6,182,212,0.08)" }}>
+              <div className="flex items-center gap-2 text-[11px] px-4 py-1 rounded-full" style={{ background: "rgba(6,182,212,0.1)", color: "#06B6D4", border: "1px solid rgba(6,182,212,0.2)" }}>
+                <Plane className="w-3 h-3" /> {transferNotice}
+              </div>
             </div>
           )}
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-1.5" style={{
-            background: "#0B141A",
-            backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h60v60H0z' fill='none'/%3E%3Cpath d='M30 30h30v30H30zM0 0h30v30H0z' fill='%23ffffff' fill-opacity='0.015'/%3E%3C/svg%3E\")",
-          }}>
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-2" style={{ background: "#0B141A" }}>
             {messages.length === 0 && (
-              <div className="text-center py-20 space-y-4 animate-in fade-in duration-500">
-                <svg className="w-16 h-16 mx-auto opacity-15" viewBox="0 0 24 24" fill="none" stroke="#8696A0" strokeWidth="1">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-                <p className="text-[13px]" style={{ color: "#8696A0" }}>
-                  Comece a conversa como cliente interessado em {selectedDestino}
-                </p>
-                <div className="flex flex-wrap gap-2 justify-center max-w-sm mx-auto">
+              <div className="text-center py-16 space-y-5 animate-in fade-in zoom-in-95 duration-700">
+                <div className="relative w-20 h-20 mx-auto">
+                  <div className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle, ${agentColor}15, transparent)` }} />
+                  <div className="absolute inset-2 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <span className="text-3xl">{selectedAgent.emoji}</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[15px] font-semibold" style={{ color: "#E9EDEF" }}>
+                    Converse com {selectedAgent.name}
+                  </p>
+                  <p className="text-[12px] mt-1" style={{ color: "#64748B" }}>
+                    Simule um cliente interessado em {selectedDestino}
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 justify-center max-w-md mx-auto">
                   {SUGGESTION_CHIPS.map(chip => (
                     <button key={chip} onClick={() => handleSend(chip)}
-                      className="text-[11px] px-3 py-1.5 rounded-full transition-all duration-200 hover:translate-y-[-1px]"
-                      style={{ background: "#1F2C33", border: "1px solid #2A3942", color: "#8696A0" }}>
+                      className="text-[11px] px-4 py-2 rounded-xl transition-all duration-300 hover:scale-[1.03] hover:border-opacity-60"
+                      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "#94A3B8" }}>
                       {chip}
                     </button>
                   ))}
@@ -271,20 +277,21 @@ export default function SimuladorManualMode() {
               const showName = isAgent && (i === 0 || messages[i - 1]?.role !== "agent" || messages[i - 1]?.agentId !== msg.agentId);
               return (
                 <div key={msg.id}
-                  className={cn("flex gap-2 animate-in duration-200", isAgent ? "justify-start slide-in-from-left-2" : "justify-end slide-in-from-right-2")}>
-                  <div style={{
-                    background: isAgent ? "#1F2C33" : "#005C4B",
+                  className={cn("flex gap-2 animate-in duration-300", isAgent ? "justify-start slide-in-from-left-3" : "justify-end slide-in-from-right-3")}>
+                  <div className="relative" style={{
+                    background: isAgent ? "rgba(31,44,51,0.9)" : "linear-gradient(135deg, #005C4B, #00694D)",
                     color: "#E9EDEF",
-                    borderRadius: isAgent ? "0 12px 12px 12px" : "12px 0 12px 12px",
-                    maxWidth: "70%", padding: "8px 12px",
-                    boxShadow: "0 1px 1px rgba(0,0,0,0.13)",
+                    borderRadius: isAgent ? "4px 16px 16px 16px" : "16px 4px 16px 16px",
+                    maxWidth: "68%", padding: "10px 14px",
+                    boxShadow: isAgent ? "0 2px 8px rgba(0,0,0,0.15)" : "0 2px 12px rgba(0,92,75,0.25)",
+                    backdropFilter: "blur(8px)",
                   }}>
                     {showName && msg.agentName && (
-                      <p className="text-[11px] font-semibold mb-0.5" style={{ color: "#53BDEB" }}>{msg.agentName}</p>
+                      <p className="text-[11px] font-bold mb-1" style={{ color: agentColor }}>{msg.agentName}</p>
                     )}
-                    <p className="text-[13px] leading-[1.5]">{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
-                    <div className="flex items-center justify-end gap-1 mt-0.5">
-                      <span className="text-[10px]" style={{ color: "#667781" }}>
+                    <p className="text-[13px] leading-[1.6]">{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
+                    <div className="flex items-center justify-end gap-1.5 mt-1">
+                      <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
                         {new Date(msg.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                       </span>
                       {!isAgent && <span className="text-[10px]" style={{ color: "#34B7F1" }}>✓✓</span>}
@@ -294,11 +301,11 @@ export default function SimuladorManualMode() {
               );
             })}
             {loading && (
-              <div className="flex gap-2 animate-in slide-in-from-left-2 duration-200">
-                <div className="px-4 py-3" style={{ background: "#1F2C33", borderRadius: "0 12px 12px 12px" }}>
+              <div className="flex gap-2 animate-in slide-in-from-left-3 duration-300">
+                <div className="px-5 py-3 rounded-2xl" style={{ background: "rgba(31,44,51,0.9)", backdropFilter: "blur(8px)" }}>
                   <div className="flex gap-1.5">
                     {[0, 1, 2].map(i => (
-                      <div key={i} className="w-[6px] h-[6px] rounded-full animate-bounce" style={{ background: "#8696A0", animationDelay: `${i * 300}ms` }} />
+                      <div key={i} className="w-[7px] h-[7px] rounded-full animate-bounce" style={{ background: agentColor, animationDelay: `${i * 200}ms`, opacity: 0.7 }} />
                     ))}
                   </div>
                 </div>
@@ -307,102 +314,108 @@ export default function SimuladorManualMode() {
           </div>
 
           {/* Input */}
-          <div className="flex items-center gap-2 px-3 py-2.5 shrink-0" style={{ background: "#1F2C33" }}>
+          <div className="flex items-center gap-3 px-4 py-3 shrink-0" style={{ background: "rgba(31,44,51,0.6)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
             <input
               placeholder="Digite como um cliente..."
               value={input}
               onChange={e => setInput(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
-              }}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               disabled={loading}
-              className="flex-1 text-[13px] px-[14px] py-[10px] rounded-lg outline-none"
-              style={{ background: "#2A3942", color: "#E9EDEF", border: "none" }}
+              className="flex-1 text-[13px] px-4 py-2.5 rounded-xl outline-none transition-all focus:ring-1"
+              style={{ background: "rgba(255,255,255,0.05)", color: "#E9EDEF", border: "1px solid rgba(255,255,255,0.06)", boxShadow: "inset 0 1px 2px rgba(0,0,0,0.2)" }}
             />
             <button onClick={() => handleSend()} disabled={loading || !input.trim()}
-              className="w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 shrink-0"
-              style={{ background: input.trim() ? "#10B981" : "#2A3942" }}>
-              <Send className="w-4 h-4" style={{ color: input.trim() ? "#fff" : "#8696A0" }} />
+              className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0"
+              style={{
+                background: input.trim() ? `linear-gradient(135deg, ${agentColor}, ${agentColor}CC)` : "rgba(255,255,255,0.05)",
+                boxShadow: input.trim() ? `0 4px 16px ${agentColor}40` : "none",
+                transform: input.trim() ? "scale(1)" : "scale(0.95)",
+              }}>
+              <Send className="w-4 h-4" style={{ color: input.trim() ? "#fff" : "#64748B" }} />
             </button>
           </div>
         </div>
 
-        {/* RIGHT PANEL — Agent/Destino/Sessions */}
-        <div className="w-[280px] shrink-0 flex flex-col gap-3 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
-          {/* Header actions */}
-          <div className="flex gap-1.5">
+        {/* RIGHT PANEL */}
+        <div className="w-[300px] shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar">
+          {/* Actions */}
+          <div className="flex gap-2">
             <button onClick={generateSummary} disabled={messages.length < 2}
-              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-all"
-              style={{ background: "transparent", border: "1px solid #1E293B", color: messages.length < 2 ? "#334155" : "#64748B" }}>
-              <FileText className="w-3 h-3" /> Resumo IA
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all duration-300 hover:scale-[1.02]"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: messages.length < 2 ? "#334155" : "#94A3B8" }}>
+              <FileText className="w-3.5 h-3.5" /> Resumo IA
             </button>
             <button onClick={resetChat}
-              className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-[10px] font-medium transition-all"
-              style={{ border: "1px solid #10B98130", color: "#10B981" }}>
-              <RotateCcw className="w-3 h-3" /> Nova
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all duration-300 hover:scale-[1.02]"
+              style={{ background: `${agentColor}08`, border: `1px solid ${agentColor}20`, color: agentColor }}>
+              <RotateCcw className="w-3.5 h-3.5" /> Nova
             </button>
           </div>
 
           {/* Agent info card */}
-          <div className="rounded-xl p-3" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold"
-                style={{ background: `${agentColor}20`, color: agentColor, border: `2px solid ${agentColor}` }}>
-                {selectedAgent.name[0]}
+          <div className="rounded-2xl p-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(12px)" }}>
+            <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${agentColor}, transparent)` }} />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold relative"
+                style={{ background: `${agentColor}12`, border: `2px solid ${agentColor}30`, boxShadow: `0 0 24px ${agentColor}10` }}>
+                {selectedAgent.emoji}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold" style={{ color: agentColor }}>{selectedAgent.name}</p>
-                <p className="text-[10px]" style={{ color: "#64748B" }}>{selectedAgent.role}</p>
+                <p className="text-[14px] font-bold" style={{ color: "#F1F5F9" }}>{selectedAgent.name}</p>
+                <p className="text-[11px]" style={{ color: "#64748B" }}>{selectedAgent.role}</p>
               </div>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: `${agentColor}15`, color: agentColor }}>Lv.{selectedAgent.level}</span>
+              <span className="text-[10px] font-bold px-2 py-1 rounded-lg" style={{ background: `${agentColor}10`, color: agentColor, border: `1px solid ${agentColor}20` }}>
+                <Trophy className="w-3 h-3 inline mr-0.5" />Lv.{selectedAgent.level}
+              </span>
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <div className="text-center p-1.5 rounded" style={{ background: "#111827" }}>
-                <p className="text-[11px] font-bold" style={{ color: "#10B981" }}>{selectedAgent.successRate}%</p>
-                <p className="text-[8px]" style={{ color: "#64748B" }}>Sucesso</p>
+              <div className="text-center p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                <p className="text-[14px] font-extrabold tabular-nums" style={{ color: "#10B981" }}>{selectedAgent.successRate}%</p>
+                <p className="text-[9px] uppercase tracking-wider" style={{ color: "#64748B" }}>Sucesso</p>
               </div>
-              <div className="text-center p-1.5 rounded" style={{ background: "#111827" }}>
-                <p className="text-[11px] font-bold" style={{ color: "#F1F5F9" }}>{selectedAgent.tasksToday}</p>
-                <p className="text-[8px]" style={{ color: "#64748B" }}>Tarefas hoje</p>
+              <div className="text-center p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                <p className="text-[14px] font-extrabold tabular-nums" style={{ color: "#F1F5F9" }}>{selectedAgent.tasksToday}</p>
+                <p className="text-[9px] uppercase tracking-wider" style={{ color: "#64748B" }}>Tarefas</p>
               </div>
             </div>
-            <div className="flex flex-wrap gap-1 mt-2">
-              {selectedAgent.skills.slice(0, 3).map(s => (
-                <span key={s} className="text-[8px] px-1.5 py-0.5 rounded" style={{ background: "#1E293B", color: "#64748B" }}>{s}</span>
+            <div className="flex flex-wrap gap-1 mt-3">
+              {selectedAgent.skills.slice(0, 4).map(s => (
+                <span key={s} className="text-[9px] px-2 py-0.5 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", color: "#94A3B8", border: "1px solid rgba(255,255,255,0.05)" }}>{s}</span>
               ))}
             </div>
           </div>
 
           {/* Squad filter + agents */}
-          <div className="rounded-xl p-3" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-            <p className="text-[11px] uppercase tracking-[0.08em] font-bold mb-2" style={{ color: "#64748B" }}>Agentes</p>
-            <div className="flex gap-1 flex-wrap mb-2">
-              <button onClick={() => setActiveSquad("all")} className="text-[9px] px-2 py-0.5 rounded font-medium"
-                style={{ background: activeSquad === "all" ? "#10B98110" : "transparent", border: `1px solid ${activeSquad === "all" ? "#10B981" : "#1E293B"}`, color: activeSquad === "all" ? "#10B981" : "#64748B" }}>
+          <div className="rounded-2xl p-4" style={{ background: "rgba(13,18,32,0.7)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
+            <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2.5" style={{ color: "#64748B" }}>Agentes</p>
+            <div className="flex gap-1 flex-wrap mb-3">
+              <button onClick={() => setActiveSquad("all")} className="text-[9px] px-2.5 py-1 rounded-lg font-semibold transition-all"
+                style={{ background: activeSquad === "all" ? `rgba(16,185,129,0.1)` : "transparent", border: `1px solid ${activeSquad === "all" ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.06)"}`, color: activeSquad === "all" ? "#10B981" : "#64748B" }}>
                 Todos
               </button>
               {SQUADS.map(s => (
-                <button key={s.id} onClick={() => setActiveSquad(s.id)} className="text-[9px] px-2 py-0.5 rounded font-medium"
-                  style={{ background: activeSquad === s.id ? "#10B98110" : "transparent", border: `1px solid ${activeSquad === s.id ? "#10B981" : "#1E293B"}`, color: activeSquad === s.id ? "#10B981" : "#64748B" }}>
+                <button key={s.id} onClick={() => setActiveSquad(s.id)} className="text-[9px] px-2.5 py-1 rounded-lg font-semibold transition-all"
+                  style={{ background: activeSquad === s.id ? `rgba(16,185,129,0.1)` : "transparent", border: `1px solid ${activeSquad === s.id ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.06)"}`, color: activeSquad === s.id ? "#10B981" : "#64748B" }}>
                   {s.name}
                 </button>
               ))}
             </div>
-            <div className="grid grid-cols-2 gap-1 max-h-[200px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+            <div className="grid grid-cols-2 gap-1.5 max-h-[200px] overflow-y-auto custom-scrollbar">
               {filteredAgents.map(a => {
                 const c = getAgentColor(a);
                 const active = selectedAgent.id === a.id;
                 return (
                   <button key={a.id} onClick={() => setSelectedAgent(a)}
-                    className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all duration-200"
+                    className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-left transition-all duration-300"
                     style={{
-                      background: active ? `${c}12` : "transparent",
-                      border: `1px solid ${active ? c : "#1E293B"}`,
+                      background: active ? `${c}08` : "rgba(255,255,255,0.015)",
+                      border: `1px solid ${active ? `${c}30` : "rgba(255,255,255,0.04)"}`,
+                      boxShadow: active ? `0 0 12px ${c}10` : "none",
                     }}>
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0"
-                      style={{ background: `${c}20`, color: c }}>{a.name[0]}</div>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] shrink-0"
+                      style={{ background: `${c}12`, color: c }}>{a.emoji}</div>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-semibold truncate" style={{ color: active ? c : "#F1F5F9" }}>{a.name}</p>
+                      <p className="text-[10px] font-semibold truncate" style={{ color: active ? c : "#E2E8F0" }}>{a.name}</p>
                       <p className="text-[8px] truncate" style={{ color: "#64748B" }}>Lv.{a.level}</p>
                     </div>
                   </button>
@@ -412,48 +425,49 @@ export default function SimuladorManualMode() {
           </div>
 
           {/* Destinos */}
-          <div className="rounded-xl p-3" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-            <p className="text-[11px] uppercase tracking-[0.08em] font-bold mb-2" style={{ color: "#64748B" }}>Destino</p>
-            <div className="flex flex-wrap gap-1">
+          <div className="rounded-2xl p-4" style={{ background: "rgba(13,18,32,0.7)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2.5" style={{ color: "#64748B" }}>Destino</p>
+            <div className="flex flex-wrap gap-1.5">
               {DESTINOS.map(d => (
                 <button key={d} onClick={() => setSelectedDestino(d)}
-                  className="text-[10px] px-2.5 py-1 rounded font-medium transition-all"
+                  className="text-[10px] px-3 py-1.5 rounded-lg font-medium transition-all duration-300"
                   style={{
-                    background: selectedDestino === d ? "#F59E0B10" : "transparent",
-                    border: `1px solid ${selectedDestino === d ? "#F59E0B" : "#1E293B"}`,
+                    background: selectedDestino === d ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.02)",
+                    border: `1px solid ${selectedDestino === d ? "rgba(245,158,11,0.3)" : "rgba(255,255,255,0.04)"}`,
                     color: selectedDestino === d ? "#F59E0B" : "#64748B",
+                    boxShadow: selectedDestino === d ? "0 0 8px rgba(245,158,11,0.1)" : "none",
                   }}>{d}</button>
               ))}
             </div>
           </div>
 
           {/* Sessions */}
-          <div className="rounded-xl p-3" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[11px] uppercase tracking-[0.08em] font-bold" style={{ color: "#64748B" }}>Sessões</p>
-              <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ background: "#1E293B", color: "#64748B" }}>{sessions.length}</span>
+          <div className="rounded-2xl p-4" style={{ background: "rgba(13,18,32,0.7)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <div className="flex items-center justify-between mb-2.5">
+              <p className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#64748B" }}>Sessões</p>
+              <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", color: "#64748B" }}>{sessions.length}</span>
             </div>
-            <div className="space-y-1 max-h-[200px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
-              {sessions.length === 0 && <p className="text-[10px] text-center py-4" style={{ color: "#334155" }}>Nenhuma sessão</p>}
+            <div className="space-y-1.5 max-h-[180px] overflow-y-auto custom-scrollbar">
+              {sessions.length === 0 && <p className="text-[11px] text-center py-6" style={{ color: "#334155" }}>Nenhuma sessão salva</p>}
               {sessions.slice(0, 10).map(s => (
                 <div key={s.id} onClick={() => loadSession(s)}
-                  className="rounded-lg p-2 cursor-pointer transition-all duration-200"
+                  className="rounded-xl p-2.5 cursor-pointer transition-all duration-300 hover:scale-[1.01]"
                   style={{
-                    background: s.id === currentSessionId ? "#10B98108" : "transparent",
-                    border: `1px solid ${s.id === currentSessionId ? "#10B98130" : "transparent"}`,
+                    background: s.id === currentSessionId ? `rgba(16,185,129,0.05)` : "rgba(255,255,255,0.015)",
+                    border: `1px solid ${s.id === currentSessionId ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.03)"}`,
                   }}>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold"
-                      style={{ background: "#10B98120", color: "#10B981" }}>{s.agentName[0]}</div>
-                    <span className="text-[10px] font-semibold flex-1 truncate" style={{ color: "#F1F5F9" }}>{s.agentName}</span>
-                    <span className="text-[8px]" style={{ color: "#F59E0B" }}>{s.destino}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg flex items-center justify-center text-[9px] font-bold"
+                      style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>{s.agentName[0]}</div>
+                    <span className="text-[10px] font-semibold flex-1 truncate" style={{ color: "#E2E8F0" }}>{s.agentName}</span>
+                    <span className="text-[9px] font-medium" style={{ color: "#F59E0B" }}>{s.destino}</span>
                   </div>
-                  <div className="flex items-center justify-between mt-0.5 pl-6">
-                    <span className="text-[8px]" style={{ color: "#64748B" }}>
+                  <div className="flex items-center justify-between mt-1 pl-8">
+                    <span className="text-[9px]" style={{ color: "#475569" }}>
                       {new Date(s.updatedAt).toLocaleDateString("pt-BR")} · {s.messages.length} msgs
                     </span>
                     <button onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
-                      className="text-[8px]" style={{ color: "#EF4444" }}>×</button>
+                      className="text-[9px] w-5 h-5 rounded flex items-center justify-center hover:bg-red-500/10 transition-colors" style={{ color: "#EF4444" }}>×</button>
                   </div>
                 </div>
               ))}
@@ -464,7 +478,7 @@ export default function SimuladorManualMode() {
 
       {/* Summary dialog */}
       <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
-        <DialogContent className="max-w-lg" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
+        <DialogContent className="max-w-lg" style={{ background: "linear-gradient(135deg, #0D1220, #111827)", border: "1px solid rgba(255,255,255,0.08)" }}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2" style={{ color: "#F1F5F9" }}>
               <FileText className="w-5 h-5" style={{ color: "#10B981" }} /> Resumo da Conversa

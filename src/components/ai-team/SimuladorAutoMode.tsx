@@ -379,131 +379,139 @@ export default function SimuladorAutoMode() {
   };
 
   // ===== CONFIG SECTION COMPONENT =====
-  const ConfigSection = ({ id, title, children }: { id: string; title: string; children: React.ReactNode }) => (
-    <div className="rounded-xl overflow-hidden" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-      <button onClick={() => toggleSection(id)} className="w-full flex items-center justify-between px-4 py-3">
-        <p className="text-[11px] uppercase tracking-[0.08em] font-bold" style={{ color: "#64748B" }}>{title}</p>
-        {configSections[id] ? <ChevronUp className="w-3.5 h-3.5" style={{ color: "#64748B" }} /> : <ChevronDown className="w-3.5 h-3.5" style={{ color: "#64748B" }} />}
+  const ConfigSection = ({ id, title, icon, accentColor, children }: { id: string; title: string; icon?: React.ReactNode; accentColor?: string; children: React.ReactNode }) => (
+    <div className="rounded-2xl overflow-hidden transition-all duration-300" style={{
+      background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))",
+      border: `1px solid ${configSections[id] ? (accentColor || "rgba(16,185,129,0.15)") + "30" : "rgba(255,255,255,0.06)"}`,
+      backdropFilter: "blur(8px)",
+    }}>
+      {configSections[id] && <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${accentColor || "#10B981"}, transparent)` }} />}
+      <button onClick={() => toggleSection(id)} className="w-full flex items-center justify-between px-5 py-3.5 relative">
+        <div className="flex items-center gap-2">
+          {icon}
+          <p className="text-[11px] uppercase tracking-[0.1em] font-bold" style={{ color: configSections[id] ? (accentColor || "#10B981") : "#64748B" }}>{title}</p>
+        </div>
+        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.03)" }}>
+          {configSections[id] ? <ChevronUp className="w-3.5 h-3.5" style={{ color: "#64748B" }} /> : <ChevronDown className="w-3.5 h-3.5" style={{ color: "#64748B" }} />}
+        </div>
       </button>
-      {configSections[id] && <div className="px-4 pb-4 space-y-4">{children}</div>}
+      {configSections[id] && <div className="px-5 pb-5 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">{children}</div>}
     </div>
   );
 
   // ===== RENDER =====
   if (phase === "config") {
     return (
-      <div className="space-y-4 max-w-4xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="space-y-4 max-w-4xl animate-in fade-in slide-in-from-bottom-3 duration-500">
         {/* Volume */}
-        <ConfigSection id="volume" title="Volume e Tempo">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <span className="text-[11px] block mb-1" style={{ color: "#64748B" }}>Leads estimados</span>
-              <Slider min={1} max={200} step={1} value={[numLeadsManual]} onValueChange={v => setNumLeadsManual(v[0])} />
-              <p className="text-[22px] font-extrabold tabular-nums text-right mt-1" style={{ color: "#3B82F6" }}>{numLeadsManual}</p>
-            </div>
-            <div>
-              <span className="text-[11px] block mb-1" style={{ color: "#64748B" }}>Msgs por lead</span>
-              <Slider min={4} max={60} step={2} value={[msgsPerLead]} onValueChange={v => setMsgsPerLead(v[0])} />
-              <p className="text-[22px] font-extrabold tabular-nums text-right mt-1" style={{ color: "#10B981" }}>{msgsPerLead}</p>
-            </div>
-            <div>
-              <span className="text-[11px] block mb-1" style={{ color: "#64748B" }}>Intervalo entre leads (s)</span>
-              <Slider min={0} max={30} step={1} value={[intervalManual]} onValueChange={v => setIntervalManual(v[0])} />
-              <p className="text-[22px] font-extrabold tabular-nums text-right mt-1" style={{ color: "#F59E0B" }}>{intervalManual}s</p>
-            </div>
-            <div>
-              <span className="text-[11px] block mb-1" style={{ color: "#64748B" }}>Duração máx (s)</span>
-              <Slider min={30} max={1800} step={30} value={[duration]} onValueChange={v => setDuration(v[0])} />
-              <p className="text-[22px] font-extrabold tabular-nums text-right mt-1" style={{ color: "#8B5CF6" }}>{formatTime(duration)}</p>
-            </div>
+        <ConfigSection id="volume" title="Volume e Tempo" accentColor="#3B82F6" icon={<BarChart3 className="w-3.5 h-3.5" style={{ color: "#3B82F6" }} />}>
+          <div className="grid grid-cols-2 gap-5">
+            {[
+              { label: "Leads", value: numLeadsManual, setter: setNumLeadsManual, min: 1, max: 200, step: 1, color: "#3B82F6" },
+              { label: "Msgs por lead", value: msgsPerLead, setter: setMsgsPerLead, min: 4, max: 60, step: 2, color: "#10B981" },
+              { label: "Intervalo (s)", value: intervalManual, setter: setIntervalManual, min: 0, max: 30, step: 1, color: "#F59E0B", suffix: "s" },
+              { label: "Duração máx", value: duration, setter: setDuration, min: 30, max: 1800, step: 30, color: "#8B5CF6", format: true },
+            ].map(s => (
+              <div key={s.label}>
+                <span className="text-[11px] block mb-2" style={{ color: "#94A3B8" }}>{s.label}</span>
+                <Slider min={s.min} max={s.max} step={s.step} value={[s.value]} onValueChange={v => s.setter(v[0])} />
+                <p className="text-[24px] font-extrabold tabular-nums text-right mt-1.5" style={{ color: s.color, textShadow: `0 0 20px ${s.color}20` }}>
+                  {s.format ? formatTime(s.value) : `${s.value}${s.suffix || ""}`}
+                </p>
+              </div>
+            ))}
           </div>
           {/* Preview card */}
-          <div className="grid grid-cols-4 gap-2 p-3 rounded-lg" style={{ background: "#111827", border: "1px solid #1E293B" }}>
+          <div className="grid grid-cols-4 gap-3 p-4 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
             {[
-              { label: "LEADS EST.", value: numLeadsManual, color: "#3B82F6" },
+              { label: "LEADS", value: numLeadsManual, color: "#3B82F6" },
               { label: "MSGS/LEAD", value: msgsPerLead, color: "#10B981" },
               { label: "INTERVALO", value: `${intervalManual}s`, color: "#F59E0B" },
               { label: "DURAÇÃO", value: formatTime(duration), color: "#8B5CF6" },
             ].map(k => (
               <div key={k.label} className="text-center">
-                <p className="text-[16px] font-extrabold tabular-nums" style={{ color: k.color }}>{k.value}</p>
-                <p className="text-[8px] uppercase tracking-wider" style={{ color: "#64748B" }}>{k.label}</p>
+                <p className="text-[18px] font-extrabold tabular-nums" style={{ color: k.color }}>{k.value}</p>
+                <p className="text-[8px] uppercase tracking-[0.15em]" style={{ color: "#64748B" }}>{k.label}</p>
               </div>
             ))}
           </div>
         </ConfigSection>
 
         {/* Profiles */}
-        <ConfigSection id="perfis" title="Perfis dos Leads">
+        <ConfigSection id="perfis" title="Perfis dos Leads" accentColor="#F59E0B" icon={<User className="w-3.5 h-3.5" style={{ color: "#F59E0B" }} />}>
           <div className="grid grid-cols-4 gap-2">
             {CLIENT_PROFILES.map(p => {
               const active = selectedProfiles.includes(p.id);
               return (
                 <button key={p.id} onClick={() => toggleMulti(selectedProfiles, p.id, setSelectedProfiles)}
-                  className="text-left rounded-lg p-2.5 transition-all duration-200"
-                  style={{ background: active ? `${p.color}08` : "#111827", border: `1px solid ${active ? p.color : "#1E293B"}` }}>
-                  <span className="text-lg">{p.emoji}</span>
-                  <p className="text-[10px] font-bold mt-1" style={{ color: active ? p.color : "#F1F5F9" }}>{p.name}</p>
-                  <p className="text-[8px]" style={{ color: "#64748B" }}>{p.description}</p>
+                  className="text-left rounded-xl p-3 transition-all duration-300 hover:scale-[1.02]"
+                  style={{
+                    background: active ? `${p.color}08` : "rgba(255,255,255,0.015)",
+                    border: `1px solid ${active ? `${p.color}30` : "rgba(255,255,255,0.04)"}`,
+                    boxShadow: active ? `0 0 16px ${p.color}10` : "none",
+                  }}>
+                  <span className="text-xl">{p.emoji}</span>
+                  <p className="text-[10px] font-bold mt-1.5" style={{ color: active ? p.color : "#E2E8F0" }}>{p.name}</p>
+                  <p className="text-[8px] mt-0.5" style={{ color: "#64748B" }}>{p.description}</p>
                 </button>
               );
             })}
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Modo de distribuição</p>
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Modo de distribuição</p>
             <div className="flex gap-2">
               {[{ id: "random", label: "Aleatório" }, { id: "forced", label: "Forçado" }, { id: "roundrobin", label: "Round-robin" }].map(m => (
                 <button key={m.id} onClick={() => setProfileMode(m.id as any)}
-                  className="text-[10px] px-3 py-1.5 rounded-lg font-medium"
-                  style={{ background: profileMode === m.id ? "#10B98110" : "#111827", border: `1px solid ${profileMode === m.id ? "#10B981" : "#1E293B"}`, color: profileMode === m.id ? "#10B981" : "#64748B" }}>
+                  className="text-[10px] px-4 py-2 rounded-xl font-semibold transition-all duration-300"
+                  style={{ background: profileMode === m.id ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${profileMode === m.id ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: profileMode === m.id ? "#10B981" : "#64748B" }}>
                   {m.label}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Destinos</p>
-            <div className="flex flex-wrap gap-1">
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Destinos</p>
+            <div className="flex flex-wrap gap-1.5">
               {DESTINOS_ALL.map(d => (
                 <button key={d} onClick={() => toggleMulti(selectedDestinos, d, setSelectedDestinos)}
-                  className="text-[9px] px-2 py-1 rounded font-medium"
-                  style={{ background: selectedDestinos.includes(d) ? "#F59E0B10" : "transparent", border: `1px solid ${selectedDestinos.includes(d) ? "#F59E0B" : "#1E293B"}`, color: selectedDestinos.includes(d) ? "#F59E0B" : "#64748B" }}>
+                  className="text-[9px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
+                  style={{ background: selectedDestinos.includes(d) ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${selectedDestinos.includes(d) ? "rgba(245,158,11,0.25)" : "rgba(255,255,255,0.04)"}`, color: selectedDestinos.includes(d) ? "#F59E0B" : "#64748B" }}>
                   {d}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Faixa de orçamento</p>
-            <div className="flex flex-wrap gap-1">
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Faixa de orçamento</p>
+            <div className="flex flex-wrap gap-1.5">
               {BUDGETS.map(b => (
                 <button key={b} onClick={() => toggleMulti(selectedBudgets, b, setSelectedBudgets)}
-                  className="text-[9px] px-2 py-1 rounded font-medium"
-                  style={{ background: selectedBudgets.includes(b) ? "#10B98110" : "transparent", border: `1px solid ${selectedBudgets.includes(b) ? "#10B981" : "#1E293B"}`, color: selectedBudgets.includes(b) ? "#10B981" : "#64748B" }}>
+                  className="text-[9px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
+                  style={{ background: selectedBudgets.includes(b) ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${selectedBudgets.includes(b) ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: selectedBudgets.includes(b) ? "#10B981" : "#64748B" }}>
                   {b}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Origens de canal</p>
-            <div className="flex flex-wrap gap-1">
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Origens de canal</p>
+            <div className="flex flex-wrap gap-1.5">
               {CANAIS.map(c => (
                 <button key={c} onClick={() => toggleMulti(selectedCanais, c, setSelectedCanais)}
-                  className="text-[9px] px-2 py-1 rounded font-medium"
-                  style={{ background: selectedCanais.includes(c) ? "#3B82F610" : "transparent", border: `1px solid ${selectedCanais.includes(c) ? "#3B82F6" : "#1E293B"}`, color: selectedCanais.includes(c) ? "#3B82F6" : "#64748B" }}>
+                  className="text-[9px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
+                  style={{ background: selectedCanais.includes(c) ? "rgba(59,130,246,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${selectedCanais.includes(c) ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)"}`, color: selectedCanais.includes(c) ? "#3B82F6" : "#64748B" }}>
                   {c}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Grupos de viajantes</p>
-            <div className="flex flex-wrap gap-1">
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Grupos de viajantes</p>
+            <div className="flex flex-wrap gap-1.5">
               {GRUPOS.map(g => (
                 <button key={g} onClick={() => toggleMulti(selectedGrupos, g, setSelectedGrupos)}
-                  className="text-[9px] px-2 py-1 rounded font-medium"
-                  style={{ background: selectedGrupos.includes(g) ? "#8B5CF610" : "transparent", border: `1px solid ${selectedGrupos.includes(g) ? "#8B5CF6" : "#1E293B"}`, color: selectedGrupos.includes(g) ? "#8B5CF6" : "#64748B" }}>
+                  className="text-[9px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
+                  style={{ background: selectedGrupos.includes(g) ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${selectedGrupos.includes(g) ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.04)"}`, color: selectedGrupos.includes(g) ? "#8B5CF6" : "#64748B" }}>
                   {g}
                 </button>
               ))}
@@ -512,62 +520,62 @@ export default function SimuladorAutoMode() {
         </ConfigSection>
 
         {/* Behavior */}
-        <ConfigSection id="comportamento" title="Comportamento da Simulação">
+        <ConfigSection id="comportamento" title="Comportamento" accentColor="#8B5CF6" icon={<Zap className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />}>
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px]" style={{ color: "#64748B" }}>Taxa alvo de conversão</span>
-              <span className="text-[14px] font-bold" style={{ color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px]" style={{ color: "#94A3B8" }}>Taxa alvo de conversão</span>
+              <span className="text-[15px] font-bold" style={{ color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
                 {conversionOverride !== null ? `${conversionOverride}%` : "Natural"}
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <Slider min={0} max={100} step={5} value={[conversionOverride ?? 50]} onValueChange={v => setConversionOverride(v[0])} disabled={conversionOverride === null} />
               <button onClick={() => setConversionOverride(conversionOverride === null ? 50 : null)}
-                className="text-[9px] px-2 py-1 rounded shrink-0"
-                style={{ background: conversionOverride !== null ? "#10B98120" : "#1E293B", color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
+                className="text-[9px] px-3 py-1.5 rounded-lg shrink-0 font-semibold transition-all"
+                style={{ background: conversionOverride !== null ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.02)", border: `1px solid ${conversionOverride !== null ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
                 {conversionOverride !== null ? "Override" : "Natural"}
               </button>
             </div>
           </div>
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px]" style={{ color: "#64748B" }}>Densidade de objeções</span>
-              <span className="text-[14px] font-bold" style={{ color: "#F59E0B" }}>{objectionDensity}%</span>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px]" style={{ color: "#94A3B8" }}>Densidade de objeções</span>
+              <span className="text-[15px] font-bold" style={{ color: "#F59E0B" }}>{objectionDensity}%</span>
             </div>
             <Slider min={0} max={100} step={5} value={[objectionDensity]} onValueChange={v => setObjectionDensity(v[0])} />
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Velocidade das mensagens</p>
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Velocidade das mensagens</p>
             <div className="flex gap-2">
               {SPEED_OPTIONS.map(s => (
                 <button key={s.id} onClick={() => setSpeed(s.id)}
-                  className="text-[10px] px-3 py-1.5 rounded-lg font-medium flex-1"
-                  style={{ background: speed === s.id ? "#10B98110" : "#111827", border: `1px solid ${speed === s.id ? "#10B981" : "#1E293B"}`, color: speed === s.id ? "#10B981" : "#64748B" }}>
+                  className="text-[10px] px-3 py-2 rounded-xl font-semibold flex-1 transition-all duration-300"
+                  style={{ background: speed === s.id ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${speed === s.id ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: speed === s.id ? "#10B981" : "#64748B" }}>
                   {s.label}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-[10px] mb-2" style={{ color: "#64748B" }}>Agentes do funil</p>
+            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Agentes do funil</p>
             <div className="flex gap-2 mb-2">
               {[{ id: "full", label: "Funil completo" }, { id: "comercial", label: "Só comercial" }, { id: "custom", label: "Personalizado" }].map(m => (
                 <button key={m.id} onClick={() => setFunnelMode(m.id as any)}
-                  className="text-[10px] px-3 py-1.5 rounded-lg font-medium"
-                  style={{ background: funnelMode === m.id ? "#8B5CF610" : "#111827", border: `1px solid ${funnelMode === m.id ? "#8B5CF6" : "#1E293B"}`, color: funnelMode === m.id ? "#8B5CF6" : "#64748B" }}>
+                  className="text-[10px] px-4 py-2 rounded-xl font-semibold transition-all"
+                  style={{ background: funnelMode === m.id ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${funnelMode === m.id ? "rgba(139,92,246,0.25)" : "rgba(255,255,255,0.04)"}`, color: funnelMode === m.id ? "#8B5CF6" : "#64748B" }}>
                   {m.label}
                 </button>
               ))}
             </div>
             {funnelMode === "custom" && (
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5 animate-in fade-in duration-200">
                 {AGENTS_V4.map(a => {
                   const active = customFunnelAgents.includes(a.id);
                   const c = getAgentColor(a);
                   return (
                     <button key={a.id} onClick={() => toggleMulti(customFunnelAgents, a.id, setCustomFunnelAgents)}
-                      className="text-[9px] px-2 py-1 rounded font-medium"
-                      style={{ background: active ? `${c}10` : "transparent", border: `1px solid ${active ? c : "#1E293B"}`, color: active ? c : "#64748B" }}>
+                      className="text-[9px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
+                      style={{ background: active ? `${c}10` : "rgba(255,255,255,0.02)", border: `1px solid ${active ? `${c}30` : "rgba(255,255,255,0.04)"}`, color: active ? c : "#64748B" }}>
                       {a.name}
                     </button>
                   );
@@ -579,10 +587,10 @@ export default function SimuladorAutoMode() {
 
         {/* Start button */}
         <button onClick={runSimulation}
-          className="w-full py-4 rounded-xl text-sm font-bold transition-all duration-200"
-          style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 8px 24px #10B98140" }}
-          onMouseEnter={e => { (e.target as HTMLElement).style.transform = "translateY(-2px)"; }}
-          onMouseLeave={e => { (e.target as HTMLElement).style.transform = "translateY(0)"; }}>
+          className="w-full py-4 rounded-2xl text-sm font-bold transition-all duration-300 relative overflow-hidden group"
+          style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 8px 32px rgba(16,185,129,0.3)" }}
+          onMouseEnter={e => { (e.target as HTMLElement).style.transform = "translateY(-2px)"; (e.target as HTMLElement).style.boxShadow = "0 12px 40px rgba(16,185,129,0.45)"; }}
+          onMouseLeave={e => { (e.target as HTMLElement).style.transform = "translateY(0)"; (e.target as HTMLElement).style.boxShadow = "0 8px 32px rgba(16,185,129,0.3)"; }}>
           <Play className="w-4 h-4 inline mr-2" />
           Iniciar Simulação · {estLeads} leads · {formatTime(duration)}
         </button>
@@ -595,19 +603,31 @@ export default function SimuladorAutoMode() {
     <div className="space-y-0 animate-in fade-in duration-300">
       {/* War Room header (running) */}
       {running && (
-        <div className="flex items-center gap-4 px-4 py-2 rounded-xl mb-3" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#EF4444" }} />
-            <span className="text-[13px] font-bold" style={{ color: "#F1F5F9" }}>WAR ROOM</span>
-            <span className="text-[13px] font-bold tabular-nums" style={{ color: "#F59E0B" }}>{formatTime(elapsedSeconds)}</span>
+        <div className="flex items-center gap-4 px-5 py-3 rounded-2xl mb-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(13,18,32,0.95), rgba(15,23,42,0.9))", border: "1px solid rgba(239,68,68,0.15)", backdropFilter: "blur(12px)" }}>
+          <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #EF4444, #F59E0B, transparent)" }} />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: "#EF4444", boxShadow: "0 0 12px rgba(239,68,68,0.5)" }} />
+            </div>
+            <span className="text-[14px] font-extrabold tracking-wider" style={{ color: "#F1F5F9" }}>WAR ROOM</span>
+            <span className="text-[15px] font-bold tabular-nums px-3 py-1 rounded-lg" style={{ color: "#F59E0B", background: "rgba(245,158,11,0.08)" }}>{formatTime(elapsedSeconds)}</span>
           </div>
-          <div className="flex-1 flex items-center justify-center gap-6">
-            <span className="text-[11px]" style={{ color: "#64748B" }}><strong style={{ color: "#3B82F6" }}>{animLeads}</strong> leads</span>
-            <span className="text-[11px]" style={{ color: "#64748B" }}><strong style={{ color: "#10B981" }}>{animClosed}</strong> fechados</span>
-            <span className="text-[11px]" style={{ color: "#64748B" }}><strong style={{ color: "#F59E0B" }}>{conversionRate}%</strong></span>
+          <div className="flex-1 flex items-center justify-center gap-8">
+            <div className="text-center">
+              <span className="text-[18px] font-extrabold tabular-nums block" style={{ color: "#3B82F6" }}>{animLeads}</span>
+              <span className="text-[8px] uppercase tracking-wider" style={{ color: "#64748B" }}>Leads</span>
+            </div>
+            <div className="text-center">
+              <span className="text-[18px] font-extrabold tabular-nums block" style={{ color: "#10B981" }}>{animClosed}</span>
+              <span className="text-[8px] uppercase tracking-wider" style={{ color: "#64748B" }}>Fechados</span>
+            </div>
+            <div className="text-center">
+              <span className="text-[18px] font-extrabold tabular-nums block" style={{ color: "#F59E0B" }}>{conversionRate}%</span>
+              <span className="text-[8px] uppercase tracking-wider" style={{ color: "#64748B" }}>Conversão</span>
+            </div>
           </div>
-          <button onClick={stopSimulation} className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold"
-            style={{ background: "#EF444420", color: "#EF4444", border: "1px solid #EF444430" }}>
+          <button onClick={stopSimulation} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold transition-all hover:scale-105"
+            style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)" }}>
             <Square className="w-3 h-3" /> Parar
           </button>
         </div>
@@ -615,110 +635,114 @@ export default function SimuladorAutoMode() {
 
       {/* Report tabs (after simulation) */}
       {phase === "report" && !running && (
-        <div className="flex items-center gap-2 mb-3">
-          {(["numeros", "conversas", "debrief"] as ReportTab[]).map(t => (
-            <button key={t} onClick={() => setReportTab(t)}
-              className="text-[11px] px-4 py-2 rounded-lg font-bold transition-all"
-              style={{
-                background: reportTab === t ? (t === "debrief" ? "#8B5CF610" : "#10B98110") : "transparent",
-                border: `1px solid ${reportTab === t ? (t === "debrief" ? "#8B5CF6" : "#10B981") : "#1E293B"}`,
-                color: reportTab === t ? (t === "debrief" ? "#8B5CF6" : "#10B981") : "#64748B",
-              }}>
-              {t === "numeros" ? "📊 Números" : t === "conversas" ? "💬 Conversas" : "🧠 Debrief IA"}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 mb-4">
+          {(["numeros", "conversas", "debrief"] as ReportTab[]).map(t => {
+            const active = reportTab === t;
+            const accent = t === "debrief" ? "#8B5CF6" : t === "numeros" ? "#3B82F6" : "#10B981";
+            return (
+              <button key={t} onClick={() => setReportTab(t)}
+                className="text-[11px] px-5 py-2.5 rounded-xl font-bold transition-all duration-300 hover:scale-[1.02]"
+                style={{
+                  background: active ? `${accent}10` : "rgba(255,255,255,0.02)",
+                  border: `1px solid ${active ? `${accent}30` : "rgba(255,255,255,0.04)"}`,
+                  color: active ? accent : "#64748B",
+                  boxShadow: active ? `0 0 16px ${accent}10` : "none",
+                }}>
+                {t === "numeros" ? "📊 Números" : t === "conversas" ? "💬 Conversas" : "🧠 Debrief IA"}
+              </button>
+            );
+          })}
           <button onClick={() => { setPhase("config"); setLeads([]); setDebrief(null); }}
-            className="ml-auto text-[10px] px-3 py-1.5 rounded-lg font-medium"
-            style={{ border: "1px solid #1E293B", color: "#64748B" }}>Nova Simulação</button>
+            className="ml-auto text-[10px] px-4 py-2 rounded-xl font-semibold transition-all hover:scale-[1.02]"
+            style={{ border: "1px solid rgba(255,255,255,0.06)", color: "#64748B", background: "rgba(255,255,255,0.02)" }}>Nova Simulação</button>
         </div>
       )}
 
       {/* 3-column layout for running / conversas tab */}
       {(running || (phase === "report" && reportTab === "conversas")) && (
-        <div className="flex gap-3" style={{ height: "calc(100vh - 280px)", minHeight: 500 }}>
+        <div className="flex gap-4" style={{ height: "calc(100vh - 300px)", minHeight: 500 }}>
           {/* LEFT: Lead list */}
-          <div className="w-[240px] shrink-0 rounded-xl overflow-hidden flex flex-col" style={{ background: "#111B21", border: "1px solid #2A3942" }}>
-            <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: "1px solid #2A3942" }}>
-              <span className="text-[13px] font-semibold" style={{ color: "#E9EDEF" }}>Conversas</span>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#25D36620", color: "#25D366" }}>
+          <div className="w-[260px] shrink-0 rounded-2xl overflow-hidden flex flex-col" style={{ background: "rgba(11,20,26,0.9)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
+            <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+              <span className="text-[13px] font-bold" style={{ color: "#F1F5F9" }}>Conversas</span>
+              <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg" style={{ background: "rgba(37,211,102,0.1)", color: "#25D366", border: "1px solid rgba(37,211,102,0.2)" }}>
                 {leads.filter(l => l.status === "active").length}
               </span>
             </div>
             {!running && (
-              <div className="flex px-2 py-1 gap-0.5" style={{ borderBottom: "1px solid #2A3942" }}>
+              <div className="flex px-3 py-1.5 gap-1" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
                 {(["all", "active", "closed", "lost"] as const).map(f => (
                   <button key={f} onClick={() => setLeadFilter(f)}
-                    className="flex-1 text-[9px] py-1 font-medium transition-all"
-                    style={{ color: leadFilter === f ? "#10B981" : "#667781", borderBottom: leadFilter === f ? "2px solid #10B981" : "2px solid transparent" }}>
+                    className="flex-1 text-[9px] py-1.5 font-semibold transition-all rounded-lg"
+                    style={{ color: leadFilter === f ? "#10B981" : "#667781", background: leadFilter === f ? "rgba(16,185,129,0.06)" : "transparent" }}>
                     {f === "all" ? "Todos" : f === "active" ? "Ativos" : f === "closed" ? "Fechados" : "Perdidos"}
                   </button>
                 ))}
               </div>
             )}
-            <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
               {(running ? leads : filteredLeads).map((l, i) => (
                 <button key={l.id} onClick={() => setSelectedLeadId(l.id)}
-                  className={cn("w-full text-left px-3 py-2.5 transition-all duration-200", i === 0 && running && "animate-in slide-in-from-top-2")}
+                  className={cn("w-full text-left px-3.5 py-3 transition-all duration-300", i === 0 && running && "animate-in slide-in-from-top-2")}
                   style={{
-                    background: selectedLeadId === l.id ? "#1F2C34" : "transparent",
-                    borderLeft: selectedLeadId === l.id ? "3px solid #10B981" : "3px solid transparent",
-                    borderBottom: "1px solid #2A394220",
+                    background: selectedLeadId === l.id ? "rgba(16,185,129,0.05)" : "transparent",
+                    borderLeft: selectedLeadId === l.id ? `3px solid ${l.profileColor}` : "3px solid transparent",
+                    borderBottom: "1px solid rgba(255,255,255,0.03)",
                   }}>
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-[46px] h-[46px] rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                      style={{ background: `${l.profileColor}20`, color: l.profileColor }}>{l.name[0]}</div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center text-sm font-bold shrink-0"
+                      style={{ background: `${l.profileColor}12`, color: l.profileColor, border: `1px solid ${l.profileColor}20` }}>{l.name[0]}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <p className="text-[13px] font-bold truncate" style={{ color: "#E9EDEF" }}>{l.name}</p>
-                        <span className="text-[11px] tabular-nums" style={{ color: "#667781" }}>
+                        <p className="text-[13px] font-bold truncate" style={{ color: "#E2E8F0" }}>{l.name}</p>
+                        <span className="text-[10px] tabular-nums" style={{ color: "#475569" }}>
                           {l.startedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
-                      <p className="text-[12px] truncate" style={{ color: "#8696A0" }}>{l.destino}</p>
-                      <p className="text-[12px] truncate" style={{ color: "#8696A0" }}>
-                        {l.messages[l.messages.length - 1]?.content?.slice(0, 40) || "..."}
+                      <p className="text-[11px] truncate mt-0.5" style={{ color: "#64748B" }}>
+                        {l.messages[l.messages.length - 1]?.content?.slice(0, 35) || l.destino}
                       </p>
                     </div>
                     <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{
                       background: l.status === "active" ? "#25D366" : l.status === "closed" ? "#3B82F6" : "#EF4444",
-                      animation: l.status === "active" ? "pulse 2s infinite" : "none",
+                      boxShadow: l.status === "active" ? "0 0 6px rgba(37,211,102,0.4)" : "none",
                     }} />
                   </div>
-                  <span className="inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded font-medium"
-                    style={{ background: `${l.profileColor}15`, color: l.profileColor }}>{l.profileEmoji} {l.profileName}</span>
+                  <span className="inline-block mt-1.5 text-[9px] px-2 py-0.5 rounded-lg font-medium"
+                    style={{ background: `${l.profileColor}08`, color: l.profileColor, border: `1px solid ${l.profileColor}15` }}>{l.profileEmoji} {l.profileName}</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* CENTER: Chat */}
-          <div className="flex-1 rounded-[14px] flex flex-col overflow-hidden" style={{ background: "#111B21", border: "1px solid #2A3942" }}>
+          <div className="flex-1 rounded-2xl flex flex-col overflow-hidden" style={{ background: "rgba(11,20,26,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
             {selectedLead ? (
               <>
-                <div className="flex items-center gap-3 px-4 shrink-0" style={{ height: 56, background: "#1F2C33" }}>
-                  <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center text-sm font-bold"
-                    style={{ background: `${selectedLead.profileColor}20`, color: selectedLead.profileColor }}>
+                <div className="flex items-center gap-3 px-5 shrink-0 relative" style={{ height: 60, background: "linear-gradient(180deg, rgba(31,44,51,0.95), rgba(31,44,51,0.8))", backdropFilter: "blur(12px)" }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold"
+                    style={{ background: `${selectedLead.profileColor}12`, color: selectedLead.profileColor, border: `1px solid ${selectedLead.profileColor}20` }}>
                     {selectedLead.name[0]}
                   </div>
                   <div className="flex-1">
-                    <p className="text-[14px] font-semibold" style={{ color: "#E9EDEF" }}>{selectedLead.name}</p>
-                    <p className="text-[11px]" style={{ color: "#8696A0" }}>{selectedLead.destino} · {selectedLead.profileEmoji} {selectedLead.profileName}</p>
+                    <p className="text-[14px] font-bold" style={{ color: "#F1F5F9" }}>{selectedLead.name}</p>
+                    <p className="text-[11px]" style={{ color: "#64748B" }}>{selectedLead.destino} · {selectedLead.profileEmoji} {selectedLead.profileName}</p>
                   </div>
-                  {running && <span className="text-[9px] font-bold px-2 py-0.5 rounded" style={{ background: "#F59E0B15", color: "#F59E0B" }}>AUTO</span>}
+                  {running && <span className="text-[9px] font-bold px-2.5 py-1 rounded-lg" style={{ background: "rgba(245,158,11,0.08)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.15)" }}>AUTO</span>}
                 </div>
-                <div ref={chatRef} className="flex-1 overflow-y-auto p-4 space-y-1.5" style={{ background: "#0B141A" }}>
+                <div ref={chatRef} className="flex-1 overflow-y-auto p-5 space-y-2" style={{ background: "#0B141A" }}>
                   {selectedLead.messages.map((msg, i) => {
                     const isAgent = msg.role === "agent";
                     const showName = isAgent && (i === 0 || selectedLead.messages[i - 1]?.role !== "agent" || selectedLead.messages[i - 1]?.agentName !== msg.agentName);
                     return (
-                      <div key={i} className={cn("flex gap-2 animate-in duration-200", isAgent ? "justify-start slide-in-from-left-2" : "justify-end slide-in-from-right-2")}>
+                      <div key={i} className={cn("flex gap-2 animate-in duration-300", isAgent ? "justify-start slide-in-from-left-3" : "justify-end slide-in-from-right-3")}>
                         <div style={{
-                          background: isAgent ? "#1F2C33" : "#005C4B", color: "#E9EDEF",
-                          borderRadius: isAgent ? "0 12px 12px 12px" : "12px 0 12px 12px",
-                          maxWidth: "70%", padding: "8px 12px", boxShadow: "0 1px 1px rgba(0,0,0,0.13)",
+                          background: isAgent ? "rgba(31,44,51,0.9)" : "linear-gradient(135deg, #005C4B, #00694D)", color: "#E9EDEF",
+                          borderRadius: isAgent ? "4px 16px 16px 16px" : "16px 4px 16px 16px",
+                          maxWidth: "70%", padding: "10px 14px", boxShadow: isAgent ? "0 2px 8px rgba(0,0,0,0.15)" : "0 2px 12px rgba(0,92,75,0.25)",
                         }}>
-                          {showName && msg.agentName && <p className="text-[11px] font-semibold mb-0.5" style={{ color: "#53BDEB" }}>{msg.agentName}</p>}
-                          <p className="text-[13px] leading-[1.5]">{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
+                          {showName && msg.agentName && <p className="text-[11px] font-bold mb-1" style={{ color: "#53BDEB" }}>{msg.agentName}</p>}
+                          <p className="text-[13px] leading-[1.6]">{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
                         </div>
                       </div>
                     );
@@ -726,7 +750,8 @@ export default function SimuladorAutoMode() {
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center" style={{ background: "#0B141A" }}>
+              <div className="flex-1 flex flex-col items-center justify-center gap-3" style={{ background: "#0B141A" }}>
+                <MessageSquare className="w-10 h-10" style={{ color: "rgba(255,255,255,0.05)" }} />
                 <p className="text-[13px]" style={{ color: "#334155" }}>Selecione um lead para ver a conversa</p>
               </div>
             )}
@@ -734,44 +759,45 @@ export default function SimuladorAutoMode() {
 
           {/* RIGHT: KPIs + Feed */}
           {running && (
-            <div className="w-[220px] shrink-0 space-y-3 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+            <div className="w-[240px] shrink-0 space-y-3 overflow-y-auto custom-scrollbar">
               {[
                 { label: "Leads", value: animLeads, color: "#3B82F6" },
                 { label: "Fechados", value: animClosed, color: "#10B981", extra: conversionRate > 0 ? `${conversionRate}%` : undefined },
                 { label: "Receita", value: `R$${animReceita}k`, color: "#EAB308" },
                 { label: "Objeções", value: `${totalContornadas}/${totalObjecoes}`, color: "#F59E0B" },
               ].map(k => (
-                <div key={k.label} className="relative rounded-xl overflow-hidden" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                  <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: k.color }} />
-                  <div className="p-3 text-center">
-                    <p className="text-[22px] font-extrabold tabular-nums" style={{ color: k.color }}>{k.value}</p>
-                    <p className="text-[9px] uppercase tracking-wider" style={{ color: "#64748B" }}>{k.label}</p>
-                    {k.extra && <span className="text-[9px] px-1.5 py-0.5 rounded mt-1 inline-block" style={{ background: `${k.color}15`, color: k.color }}>{k.extra}</span>}
+                <div key={k.label} className="relative rounded-2xl overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
+                  <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${k.color}, transparent)` }} />
+                  <div className="p-3.5 text-center">
+                    <p className="text-[24px] font-extrabold tabular-nums" style={{ color: k.color, textShadow: `0 0 20px ${k.color}20` }}>{k.value}</p>
+                    <p className="text-[9px] uppercase tracking-[0.12em]" style={{ color: "#64748B" }}>{k.label}</p>
+                    {k.extra && <span className="text-[9px] px-2 py-0.5 rounded-lg mt-1 inline-block" style={{ background: `${k.color}08`, color: k.color, border: `1px solid ${k.color}15` }}>{k.extra}</span>}
                   </div>
                 </div>
               ))}
               {/* Conversion gauge */}
-              <div className="rounded-xl p-3 text-center" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                <div className="relative w-16 h-16 mx-auto">
+              <div className="rounded-2xl p-4 text-center" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="relative w-18 h-18 mx-auto" style={{ width: 72, height: 72 }}>
                   <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                    <circle cx="18" cy="18" r="15" fill="none" stroke="#1E293B" strokeWidth="3" />
+                    <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
                     <circle cx="18" cy="18" r="15" fill="none" stroke={conversionRate >= 50 ? "#10B981" : conversionRate >= 30 ? "#F59E0B" : "#EF4444"}
-                      strokeWidth="3" strokeDasharray={`${conversionRate * 0.94} 100`} strokeLinecap="round" className="transition-all duration-500" />
+                      strokeWidth="3" strokeDasharray={`${conversionRate * 0.94} 100`} strokeLinecap="round" className="transition-all duration-500"
+                      style={{ filter: `drop-shadow(0 0 4px ${conversionRate >= 50 ? "rgba(16,185,129,0.4)" : conversionRate >= 30 ? "rgba(245,158,11,0.4)" : "rgba(239,68,68,0.4)"})` }} />
                   </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-[14px] font-extrabold" style={{ color: "#F1F5F9" }}>{conversionRate}%</span>
+                  <span className="absolute inset-0 flex items-center justify-center text-[16px] font-extrabold" style={{ color: "#F1F5F9" }}>{conversionRate}%</span>
                 </div>
-                <p className="text-[9px] uppercase tracking-wider mt-1" style={{ color: "#64748B" }}>Conversão</p>
+                <p className="text-[9px] uppercase tracking-[0.12em] mt-1.5" style={{ color: "#64748B" }}>Conversão</p>
               </div>
               {/* Feed */}
-              <div className="rounded-xl overflow-hidden" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                <p className="text-[9px] uppercase tracking-wider font-bold px-3 py-2" style={{ color: "#64748B", borderBottom: "1px solid #1E293B" }}>Feed ao vivo</p>
-                <div className="max-h-[200px] overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+              <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <p className="text-[9px] uppercase tracking-[0.12em] font-bold px-4 py-2.5" style={{ color: "#64748B", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>Feed ao vivo</p>
+                <div className="max-h-[200px] overflow-y-auto custom-scrollbar">
                   {events.map(e => (
-                    <div key={e.id} className="flex items-start gap-2 px-3 py-1.5 animate-in slide-in-from-top-1 duration-200" style={{ borderBottom: "1px solid #1E293B10" }}>
-                      <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: e.color }} />
+                    <div key={e.id} className="flex items-start gap-2.5 px-4 py-2 animate-in slide-in-from-top-1 duration-200" style={{ borderBottom: "1px solid rgba(255,255,255,0.02)" }}>
+                      <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: e.color, boxShadow: `0 0 4px ${e.color}40` }} />
                       <div>
-                        <p className="text-[10px]" style={{ color: "#E9EDEF" }}>{e.text}</p>
-                        <p className="text-[8px]" style={{ color: "#667781" }}>{e.time}</p>
+                        <p className="text-[10px]" style={{ color: "#E2E8F0" }}>{e.text}</p>
+                        <p className="text-[8px]" style={{ color: "#475569" }}>{e.time}</p>
                       </div>
                     </div>
                   ))}
@@ -784,7 +810,7 @@ export default function SimuladorAutoMode() {
 
       {/* Report: Números tab */}
       {phase === "report" && !running && reportTab === "numeros" && (
-        <div className="space-y-4 animate-in fade-in duration-300">
+        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
             {[
               { label: "Leads", value: leads.length, color: "#3B82F6" },
@@ -794,33 +820,33 @@ export default function SimuladorAutoMode() {
               { label: "Taxa", value: `${conversionRate}%`, color: conversionRate >= 50 ? "#10B981" : "#F59E0B" },
               { label: "Ticket Médio", value: `R$${Math.round(ticketMedio / 1000)}k`, color: "#8B5CF6" },
             ].map(k => (
-              <div key={k.label} className="relative rounded-xl overflow-hidden" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: k.color }} />
-                <div className="p-3 text-center">
-                  <p className="text-[20px] font-extrabold tabular-nums" style={{ color: k.color }}>{k.value}</p>
-                  <p className="text-[9px] uppercase tracking-wider" style={{ color: "#64748B" }}>{k.label}</p>
+              <div key={k.label} className="relative rounded-2xl overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
+                <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${k.color}, transparent)` }} />
+                <div className="p-4 text-center">
+                  <p className="text-[22px] font-extrabold tabular-nums" style={{ color: k.color, textShadow: `0 0 20px ${k.color}20` }}>{k.value}</p>
+                  <p className="text-[9px] uppercase tracking-[0.12em]" style={{ color: "#64748B" }}>{k.label}</p>
                 </div>
               </div>
             ))}
           </div>
           {/* By profile */}
-          <div className="rounded-xl p-4" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-            <p className="text-[11px] uppercase tracking-[0.08em] font-bold mb-3" style={{ color: "#64748B" }}>Por Perfil</p>
+          <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-4" style={{ color: "#64748B" }}>Desempenho por Perfil</p>
             {CLIENT_PROFILES.map(p => {
               const pLeads = leads.filter(l => l.profileId === p.id);
               const pClosed = pLeads.filter(l => l.status === "closed");
               const rate = pLeads.length > 0 ? Math.round((pClosed.length / pLeads.length) * 100) : 0;
               if (pLeads.length === 0) return null;
               return (
-                <div key={p.id} className="flex items-center gap-3 py-2" style={{ borderBottom: "1px solid #1E293B20" }}>
+                <div key={p.id} className="flex items-center gap-3 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
                   <span className="text-sm">{p.emoji}</span>
-                  <span className="text-[11px] font-semibold w-24" style={{ color: p.color }}>{p.name}</span>
-                  <span className="text-[10px] w-12 text-center" style={{ color: "#64748B" }}>{pLeads.length} leads</span>
-                  <span className="text-[10px] w-16 text-center" style={{ color: "#10B981" }}>{pClosed.length} fechados</span>
-                  <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#1E293B" }}>
-                    <div className="h-full rounded-full transition-all" style={{ width: `${rate}%`, background: rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444" }} />
+                  <span className="text-[11px] font-bold w-24" style={{ color: p.color }}>{p.name}</span>
+                  <span className="text-[10px] w-14 text-center" style={{ color: "#64748B" }}>{pLeads.length} leads</span>
+                  <span className="text-[10px] w-16 text-center font-semibold" style={{ color: "#10B981" }}>{pClosed.length} fechados</span>
+                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${rate}%`, background: `linear-gradient(90deg, ${rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444"}, ${rate >= 50 ? "#06D6A0" : rate >= 30 ? "#FBBF24" : "#F87171"})` }} />
                   </div>
-                  <span className="text-[11px] font-bold tabular-nums w-10 text-right" style={{ color: rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444" }}>{rate}%</span>
+                  <span className="text-[12px] font-extrabold tabular-nums w-12 text-right" style={{ color: rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444" }}>{rate}%</span>
                 </div>
               );
             })}
@@ -830,98 +856,106 @@ export default function SimuladorAutoMode() {
 
       {/* Report: Debrief tab */}
       {phase === "report" && !running && reportTab === "debrief" && (
-        <div className="space-y-4 animate-in fade-in duration-300">
+        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
           {debriefLoading && (
-            <div className="flex items-center justify-center py-12 gap-2" style={{ color: "#64748B" }}>
-              <Loader2 className="w-5 h-5 animate-spin" /> Gerando Debrief IA...
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <div className="relative">
+                <Loader2 className="w-8 h-8 animate-spin" style={{ color: "#8B5CF6" }} />
+                <div className="absolute inset-0 rounded-full" style={{ background: "radial-gradient(circle, rgba(139,92,246,0.15), transparent)", filter: "blur(12px)" }} />
+              </div>
+              <p className="text-[13px] font-medium" style={{ color: "#64748B" }}>Gerando Debrief IA...</p>
             </div>
           )}
           {debrief && (
             <>
               {/* Score gauge + resumo */}
               <div className="flex gap-4">
-                <div className="rounded-xl p-6 text-center" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                  <div className="relative w-24 h-24 mx-auto">
+                <div className="rounded-2xl p-6 text-center relative overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${debrief.scoreGeral >= 70 ? "#10B981" : debrief.scoreGeral >= 40 ? "#F59E0B" : "#EF4444"}, transparent)` }} />
+                  <div className="relative w-28 h-28 mx-auto">
                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                      <circle cx="18" cy="18" r="15" fill="none" stroke="#1E293B" strokeWidth="3" />
+                      <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth="3" />
                       <circle cx="18" cy="18" r="15" fill="none"
                         stroke={debrief.scoreGeral >= 70 ? "#10B981" : debrief.scoreGeral >= 40 ? "#F59E0B" : "#EF4444"}
-                        strokeWidth="3" strokeDasharray={`${debrief.scoreGeral * 0.94} 100`} strokeLinecap="round" />
+                        strokeWidth="3" strokeDasharray={`${debrief.scoreGeral * 0.94} 100`} strokeLinecap="round"
+                        style={{ filter: `drop-shadow(0 0 6px ${debrief.scoreGeral >= 70 ? "rgba(16,185,129,0.5)" : debrief.scoreGeral >= 40 ? "rgba(245,158,11,0.5)" : "rgba(239,68,68,0.5)"})` }} />
                     </svg>
-                    <span className="absolute inset-0 flex items-center justify-center text-[28px] font-extrabold"
-                      style={{ color: debrief.scoreGeral >= 70 ? "#10B981" : debrief.scoreGeral >= 40 ? "#F59E0B" : "#EF4444" }}>
+                    <span className="absolute inset-0 flex items-center justify-center text-[32px] font-extrabold"
+                      style={{ color: debrief.scoreGeral >= 70 ? "#10B981" : debrief.scoreGeral >= 40 ? "#F59E0B" : "#EF4444", textShadow: `0 0 20px ${debrief.scoreGeral >= 70 ? "rgba(16,185,129,0.3)" : "rgba(245,158,11,0.3)"}` }}>
                       {debrief.scoreGeral}
                     </span>
                   </div>
-                  <p className="text-[9px] uppercase tracking-wider mt-2" style={{ color: "#64748B" }}>Score Geral</p>
+                  <p className="text-[9px] uppercase tracking-[0.12em] mt-2" style={{ color: "#64748B" }}>Score Geral</p>
                 </div>
                 <div className="flex-1 space-y-3">
-                  <div className="rounded-xl p-4" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                    <p className="text-[13px] leading-relaxed" style={{ color: "#E9EDEF" }}>{debrief.resumoExecutivo}</p>
+                  <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <p className="text-[13px] leading-[1.7]" style={{ color: "#E2E8F0" }}>{debrief.resumoExecutivo}</p>
                   </div>
                   {debrief.fraseNathAI && (
-                    <div className="rounded-xl p-4" style={{ background: "#10B98108", border: "1px solid #10B98120" }}>
+                    <div className="rounded-2xl p-4 relative overflow-hidden" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.1)" }}>
+                      <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(16,185,129,0.3), transparent)" }} />
                       <p className="text-[12px] italic" style={{ color: "#10B981" }}>"{debrief.fraseNathAI}"</p>
-                      <p className="text-[9px] mt-1" style={{ color: "#64748B" }}>— NATH.AI</p>
+                      <p className="text-[9px] mt-1.5 font-bold" style={{ color: "#64748B" }}>— NATH.AI</p>
                     </div>
                   )}
                 </div>
               </div>
               {/* Pontos fortes */}
               {debrief.pontosFortes.length > 0 && (
-                <div className="rounded-xl p-4" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                  <p className="text-[11px] uppercase tracking-[0.08em] font-bold mb-2" style={{ color: "#64748B" }}>Pontos Fortes</p>
+                <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#64748B" }}>Pontos Fortes</p>
                   {debrief.pontosFortes.map((p, i) => (
-                    <div key={i} className="flex items-start gap-2 py-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#10B981" }} />
-                      <p className="text-[11px]" style={{ color: "#E9EDEF" }}>{p}</p>
+                    <div key={i} className="flex items-start gap-2.5 py-1.5">
+                      <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#10B981" }} />
+                      <p className="text-[11px] leading-relaxed" style={{ color: "#E2E8F0" }}>{p}</p>
                     </div>
                   ))}
                 </div>
               )}
               {/* Melhorias */}
-              <div className="rounded-xl p-4" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[11px] uppercase tracking-[0.08em] font-bold" style={{ color: "#64748B" }}>Melhorias Sugeridas</p>
-                  <button onClick={approveAll} className="text-[9px] px-2 py-1 rounded font-bold"
-                    style={{ background: "#10B98120", color: "#10B981", border: "1px solid #10B98130" }}>
+              <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#64748B" }}>Melhorias Sugeridas</p>
+                  <button onClick={approveAll} className="text-[9px] px-3 py-1.5 rounded-xl font-bold transition-all hover:scale-105"
+                    style={{ background: "rgba(16,185,129,0.08)", color: "#10B981", border: "1px solid rgba(16,185,129,0.2)" }}>
                     Aprovar Tudo
                   </button>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {debrief.melhorias.map(m => (
-                    <div key={m.id} className="rounded-lg p-3" style={{
-                      background: "#111827",
-                      border: `1px solid ${m.status === "approved" ? "#10B98130" : m.status === "rejected" ? "#EF444430" : "#1E293B"}`,
+                    <div key={m.id} className="rounded-xl p-4 transition-all duration-300" style={{
+                      background: "rgba(255,255,255,0.015)",
+                      border: `1px solid ${m.status === "approved" ? "rgba(16,185,129,0.2)" : m.status === "rejected" ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.04)"}`,
                       opacity: m.status === "rejected" ? 0.5 : 1,
                     }}>
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1.5">
                             <p className="text-[12px] font-bold" style={{ color: "#F1F5F9" }}>{m.titulo}</p>
-                            <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded"
+                            <span className="text-[8px] font-bold uppercase px-2 py-0.5 rounded-lg"
                               style={{
-                                background: m.prioridade === "alta" ? "#EF444415" : m.prioridade === "media" ? "#F59E0B15" : "#3B82F615",
+                                background: m.prioridade === "alta" ? "rgba(239,68,68,0.08)" : m.prioridade === "media" ? "rgba(245,158,11,0.08)" : "rgba(59,130,246,0.08)",
                                 color: m.prioridade === "alta" ? "#EF4444" : m.prioridade === "media" ? "#F59E0B" : "#3B82F6",
+                                border: `1px solid ${m.prioridade === "alta" ? "rgba(239,68,68,0.15)" : m.prioridade === "media" ? "rgba(245,158,11,0.15)" : "rgba(59,130,246,0.15)"}`,
                               }}>{m.prioridade}</span>
                           </div>
-                          <p className="text-[10px]" style={{ color: "#64748B" }}>{m.desc}</p>
-                          <div className="flex items-center gap-3 mt-1.5">
+                          <p className="text-[10px] leading-relaxed" style={{ color: "#94A3B8" }}>{m.desc}</p>
+                          <div className="flex items-center gap-4 mt-2">
                             <span className="text-[9px]" style={{ color: "#8B5CF6" }}>Agente: {m.agente}</span>
                             <span className="text-[9px]" style={{ color: "#10B981" }}>Impacto: {m.impacto}</span>
                           </div>
                         </div>
                         {m.status === "pending" && (
-                          <div className="flex gap-1 shrink-0">
+                          <div className="flex gap-1.5 shrink-0">
                             <button onClick={() => handleImprovement(m.id, "approved")}
-                              className="w-7 h-7 rounded flex items-center justify-center"
-                              style={{ background: "#10B98120", border: "1px solid #10B98130" }}>
-                              <Check className="w-3.5 h-3.5" style={{ color: "#10B981" }} />
+                              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110"
+                              style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                              <Check className="w-4 h-4" style={{ color: "#10B981" }} />
                             </button>
                             <button onClick={() => handleImprovement(m.id, "rejected")}
-                              className="w-7 h-7 rounded flex items-center justify-center"
-                              style={{ background: "#EF444420", border: "1px solid #EF444430" }}>
-                              <X className="w-3.5 h-3.5" style={{ color: "#EF4444" }} />
+                              className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:scale-110"
+                              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                              <X className="w-4 h-4" style={{ color: "#EF4444" }} />
                             </button>
                           </div>
                         )}
@@ -935,33 +969,33 @@ export default function SimuladorAutoMode() {
               {/* Lacunas + Insights */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {debrief.lacunasConhecimento.length > 0 && (
-                  <div className="rounded-xl p-4" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                    <p className="text-[11px] uppercase tracking-[0.08em] font-bold mb-2" style={{ color: "#64748B" }}>Lacunas de Conhecimento</p>
+                  <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#64748B" }}>Lacunas de Conhecimento</p>
                     {debrief.lacunasConhecimento.map((l, i) => (
-                      <div key={i} className="flex items-start gap-2 py-1">
-                        <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" style={{ color: "#F59E0B" }} />
-                        <p className="text-[10px]" style={{ color: "#E9EDEF" }}>{l}</p>
+                      <div key={i} className="flex items-start gap-2.5 py-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#F59E0B" }} />
+                        <p className="text-[10px] leading-relaxed" style={{ color: "#E2E8F0" }}>{l}</p>
                       </div>
                     ))}
                   </div>
                 )}
                 {debrief.insightsCliente.length > 0 && (
-                  <div className="rounded-xl p-4" style={{ background: "#0D1220", border: "1px solid #1E293B" }}>
-                    <p className="text-[11px] uppercase tracking-[0.08em] font-bold mb-2" style={{ color: "#64748B" }}>Insights de Cliente</p>
+                  <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#64748B" }}>Insights de Cliente</p>
                     {debrief.insightsCliente.map((ins, i) => (
-                      <div key={i} className="flex items-start gap-2 py-1">
-                        <Lightbulb className="w-3 h-3 mt-0.5 shrink-0" style={{ color: "#06B6D4" }} />
-                        <p className="text-[10px]" style={{ color: "#E9EDEF" }}>{ins}</p>
+                      <div key={i} className="flex items-start gap-2.5 py-1.5">
+                        <Lightbulb className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: "#06B6D4" }} />
+                        <p className="text-[10px] leading-relaxed" style={{ color: "#E2E8F0" }}>{ins}</p>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
               {/* Actions */}
-              <div className="flex gap-2">
-                <button onClick={generateDebrief} className="text-[10px] px-4 py-2 rounded-lg font-medium"
-                  style={{ border: "1px solid #1E293B", color: "#64748B" }}>
-                  <Loader2 className={cn("w-3 h-3 inline mr-1", debriefLoading && "animate-spin")} /> Reanalisar
+              <div className="flex gap-3">
+                <button onClick={generateDebrief} className="text-[10px] px-5 py-2.5 rounded-xl font-semibold transition-all hover:scale-[1.02]"
+                  style={{ border: "1px solid rgba(255,255,255,0.06)", color: "#64748B", background: "rgba(255,255,255,0.02)" }}>
+                  <Loader2 className={cn("w-3 h-3 inline mr-1.5", debriefLoading && "animate-spin")} /> Reanalisar
                 </button>
               </div>
             </>
