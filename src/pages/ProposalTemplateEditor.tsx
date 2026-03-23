@@ -337,8 +337,8 @@ export default function ProposalTemplateEditor() {
         font_body: template.font_body || "Inter",
         primary_color: template.primary_color || "#1a2332",
         accent_color: template.accent_color || "#c9a84c",
-        theme_config: template.theme_config || {},
-        sections: (template.sections as any[])?.length ? template.sections as any[] : defaultForm.sections,
+        theme_config: (template.theme_config as any) || { style: "classic", backgroundPattern: "none" },
+        sections: Array.isArray(template.sections) && (template.sections as any[]).length ? template.sections as any[] : defaultForm.sections,
         is_default: template.is_default || false,
         is_active: template.is_active ?? true,
       });
