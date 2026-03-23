@@ -138,7 +138,7 @@ export default function AITeamConfig() {
               <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                 <div>
                   <p className="text-sm font-medium">Auto-aprovar melhorias de baixo risco</p>
-                  <p className="text-xs text-muted-foreground">Melhorias com confiança >90% e impacto baixo são aplicadas automaticamente</p>
+                  <p className="text-xs text-muted-foreground"><p className="text-xs text-muted-foreground">{"Melhorias com confiança >90% e impacto baixo são aplicadas automaticamente"}</p></p>
                 </div>
                 <Switch checked={autoApprove} onCheckedChange={setAutoApprove} />
               </div>
