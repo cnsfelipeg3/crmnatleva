@@ -229,6 +229,7 @@ export default function SimuladorAutoMode() {
   const [debrief, setDebrief] = useState<DebriefData | null>(null);
   const [debriefLoading, setDebriefLoading] = useState(false);
   const [leadFilter, setLeadFilter] = useState<"all" | "ativo" | "fechou" | "perdeu">("all");
+  const [expandedMelhoriaId, setExpandedMelhoriaId] = useState<string | null>(null);
 
   const chatRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
