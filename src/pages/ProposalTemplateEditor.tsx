@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,7 @@ import {
   Download, Paintbrush, Move, LayoutGrid, Sliders, MessageSquare,
   Monitor, Smartphone, Tablet, Plus, ChevronRight, Info, Grip,
   RotateCcw, Wand, Droplets, Box, PanelLeft, PanelRight,
+  Check, Power, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -37,16 +38,16 @@ const FONT_OPTIONS = [
 ];
 
 const SECTION_DEFS = [
-  { type: "hero", label: "Capa / Hero", icon: Camera, desc: "Banner principal com imagem e título" },
-  { type: "intro", label: "Introdução", icon: MessageSquare, desc: "Texto de abertura e citação" },
-  { type: "timeline", label: "Timeline", icon: Clock, desc: "Roteiro dia a dia da viagem" },
-  { type: "distribution", label: "Distribuição", icon: LayoutGrid, desc: "Barra de proporção por destino" },
-  { type: "destinations", label: "Destinos", icon: MapPin, desc: "Cards com fotos dos destinos" },
-  { type: "flights", label: "Voos", icon: Plane, desc: "Boarding passes com detalhes" },
-  { type: "hotels", label: "Hotéis", icon: Hotel, desc: "Galeria de fotos e amenidades" },
-  { type: "experiences", label: "Experiências", icon: Star, desc: "Atividades e passeios" },
-  { type: "info", label: "Informações", icon: Info, desc: "Seguro, vacinas, cancelamento" },
-  { type: "pricing", label: "Valores", icon: Sparkles, desc: "Breakdown e investimento" },
+  { type: "hero", label: "Capa / Hero", icon: Camera, desc: "Banner principal com imagem e título", color: "from-rose-500/20 to-orange-500/20", iconColor: "text-rose-400" },
+  { type: "intro", label: "Introdução", icon: MessageSquare, desc: "Texto de abertura e citação", color: "from-violet-500/20 to-purple-500/20", iconColor: "text-violet-400" },
+  { type: "timeline", label: "Timeline", icon: Clock, desc: "Roteiro dia a dia da viagem", color: "from-blue-500/20 to-cyan-500/20", iconColor: "text-blue-400" },
+  { type: "distribution", label: "Distribuição", icon: LayoutGrid, desc: "Barra de proporção por destino", color: "from-teal-500/20 to-emerald-500/20", iconColor: "text-teal-400" },
+  { type: "destinations", label: "Destinos", icon: MapPin, desc: "Cards com fotos dos destinos", color: "from-emerald-500/20 to-green-500/20", iconColor: "text-emerald-400" },
+  { type: "flights", label: "Voos", icon: Plane, desc: "Boarding passes com detalhes", color: "from-sky-500/20 to-blue-500/20", iconColor: "text-sky-400" },
+  { type: "hotels", label: "Hotéis", icon: Hotel, desc: "Galeria de fotos e amenidades", color: "from-amber-500/20 to-yellow-500/20", iconColor: "text-amber-400" },
+  { type: "experiences", label: "Experiências", icon: Star, desc: "Atividades e passeios", color: "from-pink-500/20 to-rose-500/20", iconColor: "text-pink-400" },
+  { type: "info", label: "Informações", icon: Info, desc: "Seguro, vacinas, cancelamento", color: "from-slate-500/20 to-gray-500/20", iconColor: "text-slate-400" },
+  { type: "pricing", label: "Valores", icon: Sparkles, desc: "Breakdown e investimento", color: "from-yellow-500/20 to-amber-500/20", iconColor: "text-yellow-400" },
 ];
 
 type ActivePanel = "colors" | "fonts" | "sections" | "settings" | "layout" | "effects" | "cta" | "ai" | null;
@@ -118,12 +119,12 @@ function useUndoRedo(initial: TemplateForm) {
 }
 
 const AI_SUGGESTIONS = [
-  { name: "Safari Premium", desc: "Tons terrosos para safaris", preset: { primary_color: "#2d1f0e", accent_color: "#d4a853", font_heading: "Cormorant Garamond", font_body: "DM Sans", theme_config: { ...defaultThemeConfig, style: "editorial", heroLayout: "cinematic", heroHeight: "tall", dividerStyle: "diamond", sectionSpacing: "relaxed", shadowIntensity: "medium", borderRadius: "lg" } } },
-  { name: "Praia Tropical", desc: "Cores frescas para praias", preset: { primary_color: "#003d4d", accent_color: "#00c9a7", font_heading: "Libre Baskerville", font_body: "Open Sans", theme_config: { ...defaultThemeConfig, style: "tropical", heroLayout: "classic", heroHeight: "tall", dividerStyle: "wave", ctaStyle: "pill", sectionSpacing: "relaxed", borderRadius: "full" } } },
-  { name: "Lua de Mel", desc: "Romântico e sofisticado", preset: { primary_color: "#1a1035", accent_color: "#e8b4b8", font_heading: "Playfair Display", font_body: "Lato", theme_config: { ...defaultThemeConfig, style: "luxury", heroLayout: "split", dividerStyle: "diamond", ctaStyle: "gradient", introStyle: "italic", shadowIntensity: "glow", borderRadius: "lg" } } },
-  { name: "Ásia Futurista", desc: "Dark mode neon ousado", preset: { primary_color: "#0a0a0a", accent_color: "#ff3366", font_heading: "Montserrat", font_body: "Space Grotesk", theme_config: { ...defaultThemeConfig, style: "modern", heroLayout: "minimal", heroHeight: "short", ctaStyle: "solid", dividerStyle: "dots", borderRadius: "md", shadowIntensity: "strong" } } },
-  { name: "Europa Clássica", desc: "Elegante e minimalista", preset: { primary_color: "#1a1a2e", accent_color: "#c9a84c", font_heading: "Bodoni Moda", font_body: "Inter", theme_config: { ...defaultThemeConfig, style: "editorial", heroLayout: "classic", dividerStyle: "line", cardStyle: "flat", sectionSpacing: "spacious", borderRadius: "sm", shadowIntensity: "none" } } },
-  { name: "Minimalista Luxury", desc: "Máximo de espaço", preset: { primary_color: "#000000", accent_color: "#888888", font_heading: "Sora", font_body: "Inter", theme_config: { ...defaultThemeConfig, style: "modern", heroLayout: "minimal", dividerStyle: "line", sectionSpacing: "spacious", shadowIntensity: "none", borderRadius: "none", ctaStyle: "outline", introStyle: "quote" } } },
+  { name: "Safari Premium", desc: "Tons terrosos para safaris", emoji: "🦁", preset: { primary_color: "#2d1f0e", accent_color: "#d4a853", font_heading: "Cormorant Garamond", font_body: "DM Sans", theme_config: { ...defaultThemeConfig, style: "editorial", heroLayout: "cinematic", heroHeight: "tall", dividerStyle: "diamond", sectionSpacing: "relaxed", shadowIntensity: "medium", borderRadius: "lg" } } },
+  { name: "Praia Tropical", desc: "Cores frescas para praias", emoji: "🏝️", preset: { primary_color: "#003d4d", accent_color: "#00c9a7", font_heading: "Libre Baskerville", font_body: "Open Sans", theme_config: { ...defaultThemeConfig, style: "tropical", heroLayout: "classic", heroHeight: "tall", dividerStyle: "wave", ctaStyle: "pill", sectionSpacing: "relaxed", borderRadius: "full" } } },
+  { name: "Lua de Mel", desc: "Romântico e sofisticado", emoji: "💍", preset: { primary_color: "#1a1035", accent_color: "#e8b4b8", font_heading: "Playfair Display", font_body: "Lato", theme_config: { ...defaultThemeConfig, style: "luxury", heroLayout: "split", dividerStyle: "diamond", ctaStyle: "gradient", introStyle: "italic", shadowIntensity: "glow", borderRadius: "lg" } } },
+  { name: "Ásia Futurista", desc: "Dark mode neon ousado", emoji: "🗼", preset: { primary_color: "#0a0a0a", accent_color: "#ff3366", font_heading: "Montserrat", font_body: "Space Grotesk", theme_config: { ...defaultThemeConfig, style: "modern", heroLayout: "minimal", heroHeight: "short", ctaStyle: "solid", dividerStyle: "dots", borderRadius: "md", shadowIntensity: "strong" } } },
+  { name: "Europa Clássica", desc: "Elegante e minimalista", emoji: "🏛️", preset: { primary_color: "#1a1a2e", accent_color: "#c9a84c", font_heading: "Bodoni Moda", font_body: "Inter", theme_config: { ...defaultThemeConfig, style: "editorial", heroLayout: "classic", dividerStyle: "line", cardStyle: "flat", sectionSpacing: "spacious", borderRadius: "sm", shadowIntensity: "none" } } },
+  { name: "Minimalista Luxury", desc: "Máximo de espaço", emoji: "◻️", preset: { primary_color: "#000000", accent_color: "#888888", font_heading: "Sora", font_body: "Inter", theme_config: { ...defaultThemeConfig, style: "modern", heroLayout: "minimal", dividerStyle: "line", sectionSpacing: "spacious", shadowIntensity: "none", borderRadius: "none", ctaStyle: "outline", introStyle: "quote" } } },
 ];
 
 export default function ProposalTemplateEditor() {
@@ -251,32 +252,30 @@ export default function ProposalTemplateEditor() {
 
   if (isLoading) return <div className="flex items-center justify-center h-full text-muted-foreground">Carregando...</div>;
 
-  const panels: { key: ActivePanel; icon: any; label: string; color: string }[] = [
-    { key: "sections", icon: Layers, label: "Blocos", color: "text-blue-400" },
-    { key: "colors", icon: Palette, label: "Cores", color: "text-pink-400" },
-    { key: "fonts", icon: Type, label: "Fontes", color: "text-purple-400" },
-    { key: "layout", icon: Layout, label: "Layout", color: "text-cyan-400" },
-    { key: "effects", icon: Sliders, label: "Efeitos", color: "text-orange-400" },
-    { key: "cta", icon: MousePointerClick, label: "CTA", color: "text-green-400" },
-    { key: "ai", icon: Wand2, label: "IA", color: "text-amber-400" },
-    { key: "settings", icon: Settings2, label: "Config", color: "text-muted-foreground" },
+  const panels: { key: ActivePanel; icon: any; label: string }[] = [
+    { key: "sections", icon: Layers, label: "Blocos" },
+    { key: "colors", icon: Palette, label: "Cores" },
+    { key: "fonts", icon: Type, label: "Fontes" },
+    { key: "layout", icon: Layout, label: "Layout" },
+    { key: "effects", icon: Sliders, label: "Efeitos" },
+    { key: "cta", icon: MousePointerClick, label: "CTA" },
+    { key: "ai", icon: Wand2, label: "IA" },
+    { key: "settings", icon: Settings2, label: "Config" },
   ];
 
   const enabledCount = form.sections.filter(s => s.enabled).length;
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="flex flex-col h-[calc(100vh-64px)]">
-        {/* ═══ TOP BAR ═══ */}
-        <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-card/95 backdrop-blur-sm z-20 shrink-0">
-          <div className="flex items-center gap-2">
-            <Tooltip><TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/propostas/modelos")}>
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-            </TooltipTrigger><TooltipContent side="bottom">Voltar</TooltipContent></Tooltip>
+      <div className="flex flex-col h-[calc(100vh-64px)] bg-background">
+        {/* ═══ TOP BAR — Glass morphism ═══ */}
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/50 bg-card/80 backdrop-blur-xl z-20 shrink-0">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-xl hover:bg-primary/10" onClick={() => navigate("/propostas/modelos")}>
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
 
-            <div className="h-6 w-px bg-border" />
+            <div className="h-5 w-px bg-border/50" />
 
             <Input
               value={form.name}
@@ -286,70 +285,74 @@ export default function ProposalTemplateEditor() {
             />
 
             {form.is_active ? (
-              <Badge className="text-[9px] bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20">Ativo</Badge>
+              <Badge className="text-[9px] bg-emerald-500/15 text-emerald-400 border-emerald-500/25 hover:bg-emerald-500/20 gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Ativo
+              </Badge>
             ) : (
               <Badge variant="secondary" className="text-[9px]">Inativo</Badge>
             )}
-            {hasChanges && <span className="text-[10px] text-amber-500 font-mono animate-pulse">● não salvo</span>}
+            {hasChanges && (
+              <span className="text-[10px] text-amber-400 font-mono flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                não salvo
+              </span>
+            )}
           </div>
 
           {/* Center toolbar */}
-          <div className="flex items-center gap-0.5 bg-muted/60 rounded-lg px-1 py-0.5">
+          <div className="flex items-center gap-0.5 bg-muted/40 backdrop-blur-sm rounded-xl px-1.5 py-1 border border-border/30">
             <Tooltip><TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { undoRedo.undo(); setForm(undoRedo.current); }} disabled={!undoRedo.canUndo}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => { undoRedo.undo(); setForm(undoRedo.current); }} disabled={!undoRedo.canUndo}>
                 <Undo2 className="w-3.5 h-3.5" />
               </Button>
             </TooltipTrigger><TooltipContent>Desfazer ⌘Z</TooltipContent></Tooltip>
             <Tooltip><TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { undoRedo.redo(); setForm(undoRedo.current); }} disabled={!undoRedo.canRedo}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => { undoRedo.redo(); setForm(undoRedo.current); }} disabled={!undoRedo.canRedo}>
                 <Redo2 className="w-3.5 h-3.5" />
               </Button>
             </TooltipTrigger><TooltipContent>Refazer ⌘⇧Z</TooltipContent></Tooltip>
 
-            <div className="w-px h-4 bg-border mx-0.5" />
+            <div className="w-px h-4 bg-border/40 mx-1" />
 
-            {/* Device preview switcher */}
-            <Tooltip><TooltipTrigger asChild>
-              <Button variant={previewDevice === "desktop" ? "secondary" : "ghost"} size="icon" className="h-7 w-7" onClick={() => setPreviewDevice("desktop")}>
-                <Monitor className="w-3.5 h-3.5" />
-              </Button>
-            </TooltipTrigger><TooltipContent>Desktop</TooltipContent></Tooltip>
-            <Tooltip><TooltipTrigger asChild>
-              <Button variant={previewDevice === "tablet" ? "secondary" : "ghost"} size="icon" className="h-7 w-7" onClick={() => setPreviewDevice("tablet")}>
-                <Tablet className="w-3.5 h-3.5" />
-              </Button>
-            </TooltipTrigger><TooltipContent>Tablet</TooltipContent></Tooltip>
-            <Tooltip><TooltipTrigger asChild>
-              <Button variant={previewDevice === "mobile" ? "secondary" : "ghost"} size="icon" className="h-7 w-7" onClick={() => setPreviewDevice("mobile")}>
-                <Smartphone className="w-3.5 h-3.5" />
-              </Button>
-            </TooltipTrigger><TooltipContent>Mobile</TooltipContent></Tooltip>
+            {/* Device preview */}
+            {(["desktop", "tablet", "mobile"] as const).map(device => (
+              <Tooltip key={device}><TooltipTrigger asChild>
+                <Button
+                  variant="ghost" size="icon"
+                  className={cn("h-7 w-7 rounded-lg transition-all", previewDevice === device && "bg-primary/15 text-primary shadow-sm")}
+                  onClick={() => setPreviewDevice(device)}
+                >
+                  {device === "desktop" ? <Monitor className="w-3.5 h-3.5" /> : device === "tablet" ? <Tablet className="w-3.5 h-3.5" /> : <Smartphone className="w-3.5 h-3.5" />}
+                </Button>
+              </TooltipTrigger><TooltipContent className="capitalize">{device}</TooltipContent></Tooltip>
+            ))}
 
-            <div className="w-px h-4 bg-border mx-0.5" />
+            <div className="w-px h-4 bg-border/40 mx-1" />
 
             <Tooltip><TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.max(0.4, z - 0.1))}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setZoom(z => Math.max(0.4, z - 0.1))}>
                 <ZoomOut className="w-3.5 h-3.5" />
               </Button>
             </TooltipTrigger><TooltipContent>Zoom out</TooltipContent></Tooltip>
             <button onClick={() => setZoom(0.7)} className="text-[10px] font-mono text-muted-foreground w-9 text-center hover:text-foreground transition-colors">{Math.round(zoom * 100)}%</button>
             <Tooltip><TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setZoom(z => Math.min(1.5, z + 0.1))}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setZoom(z => Math.min(1.5, z + 0.1))}>
                 <ZoomIn className="w-3.5 h-3.5" />
               </Button>
             </TooltipTrigger><TooltipContent>Zoom in</TooltipContent></Tooltip>
 
-            <div className="w-px h-4 bg-border mx-0.5" />
+            <div className="w-px h-4 bg-border/40 mx-1" />
 
             <Tooltip><TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setPanelCollapsed(!panelCollapsed)}>
+              <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg" onClick={() => setPanelCollapsed(!panelCollapsed)}>
                 {panelCollapsed ? <PanelRight className="w-3.5 h-3.5" /> : <PanelLeft className="w-3.5 h-3.5" />}
               </Button>
             </TooltipTrigger><TooltipContent>{panelCollapsed ? "Mostrar painel" : "Esconder painel"}</TooltipContent></Tooltip>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} size="sm" className="gap-1.5 text-xs">
+            <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} size="sm" className="gap-1.5 text-xs rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
               <Save className="w-3.5 h-3.5" />
               {saveMutation.isPending ? "Salvando..." : "Salvar"}
             </Button>
@@ -358,8 +361,8 @@ export default function ProposalTemplateEditor() {
 
         {/* ═══ MAIN AREA ═══ */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Icon rail */}
-          <div className="w-[52px] border-r border-border bg-card flex flex-col items-center py-2 gap-1 shrink-0">
+          {/* Icon rail — Floating glass */}
+          <div className="w-[56px] border-r border-border/30 bg-card/50 backdrop-blur-sm flex flex-col items-center py-3 gap-0.5 shrink-0">
             {panels.map((tab) => {
               const active = activePanel === tab.key && !panelCollapsed;
               return (
@@ -369,11 +372,13 @@ export default function ProposalTemplateEditor() {
                       onClick={() => { setActivePanel(activePanel === tab.key ? null : tab.key); setPanelCollapsed(false); }}
                       className={cn(
                         "w-10 h-10 flex flex-col items-center justify-center gap-0.5 rounded-xl text-[8px] font-medium transition-all relative",
-                        active ? "bg-primary/10 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                        active
+                          ? "bg-primary/15 text-primary shadow-md shadow-primary/10"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
                       )}
                     >
-                      {active && <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full bg-primary" />}
-                      <tab.icon className={cn("w-4 h-4", active && tab.color)} />
+                      {active && <div className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-primary shadow-lg shadow-primary/50" />}
+                      <tab.icon className="w-4 h-4" />
                       <span className="leading-none">{tab.label}</span>
                     </button>
                   </TooltipTrigger>
@@ -383,20 +388,46 @@ export default function ProposalTemplateEditor() {
             })}
           </div>
 
-          {/* Panel content */}
+          {/* Panel content — Glass sidebar */}
           {activePanel && !panelCollapsed && (
-            <div className="w-80 border-r border-border bg-card flex flex-col shrink-0 overflow-hidden">
-              <div className="px-4 py-3 border-b border-border/50 shrink-0 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {(() => { const P = panels.find(p => p.key === activePanel); return P ? <P.icon className={cn("w-4 h-4", P.color)} /> : null; })()}
-                  <h3 className="text-sm font-bold">{panels.find(p => p.key === activePanel)?.label}</h3>
+            <div className="w-[320px] border-r border-border/30 bg-card/60 backdrop-blur-sm flex flex-col shrink-0 overflow-hidden">
+              {/* Panel header */}
+              <div className="px-5 py-4 border-b border-border/30 shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    {(() => { const P = panels.find(p => p.key === activePanel); return P ? <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center"><P.icon className="w-4 h-4 text-primary" /></div> : null; })()}
+                    <div>
+                      <h3 className="text-sm font-bold">{panels.find(p => p.key === activePanel)?.label}</h3>
+                      {activePanel === "sections" && (
+                        <p className="text-[10px] text-muted-foreground">{enabledCount} de {form.sections.length} ativos</p>
+                      )}
+                      {activePanel === "colors" && (
+                        <p className="text-[10px] text-muted-foreground">Paleta e gradientes</p>
+                      )}
+                      {activePanel === "fonts" && (
+                        <p className="text-[10px] text-muted-foreground">Tipografia e combinações</p>
+                      )}
+                      {activePanel === "layout" && (
+                        <p className="text-[10px] text-muted-foreground">Estrutura e espaçamento</p>
+                      )}
+                      {activePanel === "effects" && (
+                        <p className="text-[10px] text-muted-foreground">Bordas, sombras e divisores</p>
+                      )}
+                      {activePanel === "cta" && (
+                        <p className="text-[10px] text-muted-foreground">Botão de conversão</p>
+                      )}
+                      {activePanel === "ai" && (
+                        <p className="text-[10px] text-muted-foreground">Presets inteligentes</p>
+                      )}
+                      {activePanel === "settings" && (
+                        <p className="text-[10px] text-muted-foreground">Nome e status</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                {activePanel === "sections" && (
-                  <Badge variant="secondary" className="text-[9px]">{enabledCount} de {form.sections.length}</Badge>
-                )}
               </div>
               <ScrollArea className="flex-1">
-                <div className="p-4 space-y-5">
+                <div className="p-4 space-y-4">
                   {activePanel === "colors" && <ColorsPanel form={form} update={update} />}
                   {activePanel === "fonts" && <FontsPanel form={form} update={update} />}
                   {activePanel === "layout" && <LayoutPanel form={form} updateTC={updateTC} />}
@@ -421,16 +452,16 @@ export default function ProposalTemplateEditor() {
           )}
 
           {/* Preview */}
-          <div className="flex-1 overflow-auto bg-muted/20 relative">
-            <div className="sticky top-0 z-10 bg-muted/40 backdrop-blur-sm border-b border-border/30 px-4 py-1.5 flex items-center gap-2">
+          <div className="flex-1 overflow-auto bg-muted/10 relative">
+            <div className="sticky top-0 z-10 bg-background/60 backdrop-blur-xl border-b border-border/20 px-4 py-1.5 flex items-center gap-2">
               <Eye className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="text-[10px] text-muted-foreground font-medium">Preview ao vivo — clique nas seções para editar</span>
               <div className="ml-auto flex items-center gap-1.5">
-                <Badge variant="outline" className="text-[9px] gap-1">
+                <Badge variant="outline" className="text-[9px] gap-1 rounded-lg border-border/40">
                   {previewDevice === "desktop" ? <Monitor className="w-3 h-3" /> : previewDevice === "tablet" ? <Tablet className="w-3 h-3" /> : <Smartphone className="w-3 h-3" />}
                   {previewDevice === "desktop" ? "1280px" : previewDevice === "tablet" ? "768px" : "375px"}
                 </Badge>
-                <Badge variant="outline" className="text-[9px] gap-1">
+                <Badge variant="outline" className="text-[9px] gap-1 rounded-lg border-border/40">
                   <Sparkles className="w-3 h-3" /> {form.theme_config.style || "classic"}
                 </Badge>
               </div>
@@ -438,9 +469,9 @@ export default function ProposalTemplateEditor() {
             <div className="p-6 flex justify-center">
               <div
                 className={cn(
-                  "transition-all duration-300",
-                  previewDevice === "tablet" && "border-x border-border/50 shadow-lg rounded-2xl overflow-hidden",
-                  previewDevice === "mobile" && "border border-border/60 shadow-xl rounded-[2rem] overflow-hidden ring-4 ring-border/20",
+                  "transition-all duration-500 ease-out",
+                  previewDevice === "tablet" && "border-x border-border/40 shadow-2xl rounded-2xl overflow-hidden",
+                  previewDevice === "mobile" && "border border-border/50 shadow-2xl rounded-[2.5rem] overflow-hidden ring-8 ring-border/10",
                 )}
                 style={{
                   width: previewDevice === "desktop" ? "100%" : previewDevice === "tablet" ? "768px" : "375px",
@@ -448,14 +479,14 @@ export default function ProposalTemplateEditor() {
                 }}
               >
                 {previewDevice === "mobile" && (
-                  <div className="h-6 bg-black/90 flex items-center justify-center">
-                    <div className="w-20 h-1.5 rounded-full bg-white/20" />
+                  <div className="h-7 bg-black flex items-center justify-center relative">
+                    <div className="w-24 h-[5px] rounded-full bg-white/15" />
                   </div>
                 )}
                 <TemplatePreview form={form} activePanel={activePanel} onClickSection={setActivePanel} zoom={previewDevice === "desktop" ? zoom : previewDevice === "tablet" ? Math.min(zoom, 1) : 1} />
                 {previewDevice === "mobile" && (
-                  <div className="h-5 bg-black/90 flex items-center justify-center">
-                    <div className="w-28 h-1 rounded-full bg-white/15" />
+                  <div className="h-6 bg-black flex items-center justify-center">
+                    <div className="w-32 h-1 rounded-full bg-white/10" />
                   </div>
                 )}
               </div>
@@ -483,19 +514,8 @@ function SectionsPanel({
 }) {
   return (
     <>
-      {/* Info banner */}
-      <div className="p-3 rounded-xl bg-primary/5 border border-primary/15">
-        <div className="flex items-center gap-2 mb-1">
-          <Grip className="w-4 h-4 text-primary" />
-          <span className="text-xs font-bold text-primary">Blocos da Proposta</span>
-        </div>
-        <p className="text-[10px] text-muted-foreground leading-relaxed">
-          Arraste os blocos para reordenar. Ative ou desative seções conforme necessário.
-        </p>
-      </div>
-
-      {/* Draggable blocks */}
-      <div className="space-y-1">
+      {/* Draggable blocks — Rich cards */}
+      <div className="space-y-1.5">
         {form.sections.map((sec, idx) => {
           const def = SECTION_DEFS.find(d => d.type === sec.type);
           if (!def) return null;
@@ -512,34 +532,42 @@ function SectionsPanel({
               onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx); }}
               onDragLeave={() => setDragOverIdx(null)}
               className={cn(
-                "group flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all cursor-grab active:cursor-grabbing",
-                sec.enabled ? "border-primary/15 bg-primary/[0.03] hover:bg-primary/[0.06]" : "border-border/40 bg-muted/20 opacity-60 hover:opacity-80",
-                isDragging && "opacity-40 scale-95",
-                isDragOver && "border-primary/40 bg-primary/10 shadow-sm",
+                "group flex items-center gap-3 px-3 py-3 rounded-xl border transition-all cursor-grab active:cursor-grabbing relative overflow-hidden",
+                sec.enabled
+                  ? "border-border/40 bg-card hover:bg-card/80 hover:border-primary/20 hover:shadow-md"
+                  : "border-border/20 bg-muted/30 opacity-50 hover:opacity-70",
+                isDragging && "opacity-30 scale-95",
+                isDragOver && "border-primary/50 bg-primary/5 shadow-lg shadow-primary/5",
               )}
             >
-              <div className="flex flex-col items-center text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors">
-                <GripVertical className="w-4 h-4" />
+              {/* Gradient accent stripe */}
+              {sec.enabled && (
+                <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] bg-gradient-to-b rounded-r-full", def.color.replace("from-", "from-").replace("/20", "/60").replace("to-", "to-").replace("/20", "/40"))}
+                  style={{ background: `linear-gradient(to bottom, var(--tw-gradient-from, hsl(var(--primary) / 0.4)), var(--tw-gradient-to, hsl(var(--primary) / 0.15)))` }}
+                />
+              )}
+
+              <div className="flex flex-col items-center text-muted-foreground/20 group-hover:text-muted-foreground/50 transition-colors">
+                <GripVertical className="w-3.5 h-3.5" />
               </div>
 
               <div className={cn(
-                "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                sec.enabled ? "bg-primary/10" : "bg-muted/50"
+                "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all bg-gradient-to-br",
+                sec.enabled ? def.color : "from-muted/50 to-muted/30"
               )}>
-                <Icon className={cn("w-4 h-4", sec.enabled ? "text-primary" : "text-muted-foreground/50")} />
+                <Icon className={cn("w-4 h-4 transition-colors", sec.enabled ? def.iconColor : "text-muted-foreground/40")} />
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className={cn("text-xs font-semibold truncate", !sec.enabled && "text-muted-foreground/60")}>{def.label}</p>
-                <p className="text-[9px] text-muted-foreground/60 truncate">{def.desc}</p>
+                <p className={cn("text-xs font-semibold truncate", !sec.enabled && "text-muted-foreground/50")}>{def.label}</p>
+                <p className="text-[9px] text-muted-foreground/50 truncate">{def.desc}</p>
               </div>
 
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[9px] font-mono text-muted-foreground/40">#{String(idx + 1).padStart(2, "0")}</span>
+              <div className="flex items-center gap-2 shrink-0">
                 <Switch
                   checked={sec.enabled}
                   onCheckedChange={() => toggleSection(sec.type)}
-                  className="scale-75"
+                  className="scale-[0.7]"
                 />
               </div>
             </div>
@@ -548,25 +576,23 @@ function SectionsPanel({
       </div>
 
       {/* Quick actions */}
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" className="flex-1 text-[10px] h-8 gap-1"
+      <div className="flex gap-2 pt-1">
+        <Button variant="outline" size="sm" className="flex-1 text-[10px] h-8 gap-1.5 rounded-xl border-border/40"
           onClick={() => {
             const allEnabled = form.sections.every(s => s.enabled);
-            // Toggle all
             const sections = form.sections.map(s => ({ ...s, enabled: !allEnabled }));
-            // But always keep hero enabled
             const heroIdx = sections.findIndex(s => s.type === "hero");
             if (heroIdx >= 0) sections[heroIdx].enabled = true;
           }}
         >
-          <CheckCircle className="w-3 h-3" /> Todos
+          <Power className="w-3 h-3" /> {form.sections.every(s => s.enabled) ? "Desativar" : "Ativar"} todos
         </Button>
-        <Button variant="outline" size="sm" className="flex-1 text-[10px] h-8 gap-1"
+        <Button variant="outline" size="sm" className="flex-1 text-[10px] h-8 gap-1.5 rounded-xl border-border/40"
           onClick={() => {
-            const reset = SECTION_DEFS.map((s, i) => ({ type: s.type, enabled: true, order: i }));
+            SECTION_DEFS.map((s, i) => ({ type: s.type, enabled: true, order: i }));
           }}
         >
-          <RotateCcw className="w-3 h-3" /> Reset
+          <RotateCcw className="w-3 h-3" /> Resetar ordem
         </Button>
       </div>
     </>
@@ -591,6 +617,25 @@ function ColorsPanel({ form, update }: { form: TemplateForm; update: (p: Partial
 
   return (
     <>
+      {/* Live preview at top */}
+      <div className="p-5 rounded-2xl overflow-hidden relative" style={{ background: `linear-gradient(135deg, ${form.primary_color}, ${form.primary_color}cc)` }}>
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-xl shadow-lg" style={{ backgroundColor: form.accent_color }} />
+          <div className="flex-1">
+            <div className="h-2.5 w-24 rounded-full" style={{ backgroundColor: form.accent_color }} />
+            <div className="h-1.5 w-16 rounded-full mt-2 opacity-30" style={{ backgroundColor: form.accent_color }} />
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <div className="flex-1 h-8 rounded-lg" style={{ backgroundColor: `${form.accent_color}20` }} />
+          <div className="w-20 h-8 rounded-lg" style={{ backgroundColor: form.accent_color }} />
+        </div>
+        <div className="flex items-center gap-2 mt-3">
+          <div className="h-1 flex-1 rounded-full opacity-20" style={{ backgroundColor: form.accent_color }} />
+          <span className="text-[8px] font-mono" style={{ color: `${form.accent_color}80` }}>{form.primary_color} + {form.accent_color}</span>
+        </div>
+      </div>
+
       <ColorRow label="Cor principal" description="Fundo da capa e gradientes" value={form.primary_color} onChange={v => update({ primary_color: v })} />
       <ColorRow label="Cor de destaque" description="Separadores, badges e valores" value={form.accent_color} onChange={v => update({ accent_color: v })} />
       <ColorRow label="Cor do texto" description="Textos do corpo" value={form.text_color} onChange={v => update({ text_color: v })} />
@@ -599,28 +644,16 @@ function ColorsPanel({ form, update }: { form: TemplateForm; update: (p: Partial
       <div>
         <Label className="text-xs font-medium mb-2 block">Gradiente secundário</Label>
         <div className="flex items-center gap-2">
-          <input type="color" value={form.theme_config.gradientSecondary || form.primary_color} onChange={e => update({ theme_config: { ...form.theme_config, gradientSecondary: e.target.value } })} className="w-10 h-8 rounded-lg border border-border cursor-pointer shrink-0" />
-          <Input value={form.theme_config.gradientSecondary || ""} onChange={e => update({ theme_config: { ...form.theme_config, gradientSecondary: e.target.value } })} placeholder="Opcional" className="font-mono text-xs" />
+          <input type="color" value={form.theme_config.gradientSecondary || form.primary_color} onChange={e => update({ theme_config: { ...form.theme_config, gradientSecondary: e.target.value } })} className="w-10 h-9 rounded-xl border border-border/50 cursor-pointer shrink-0" />
+          <Input value={form.theme_config.gradientSecondary || ""} onChange={e => update({ theme_config: { ...form.theme_config, gradientSecondary: e.target.value } })} placeholder="Opcional" className="font-mono text-xs rounded-xl" />
         </div>
         {form.theme_config.gradientSecondary && (
           <>
             <Label className="text-xs mt-3 block">Ângulo: {form.theme_config.gradientAngle}°</Label>
             <Slider value={[form.theme_config.gradientAngle]} onValueChange={([v]) => update({ theme_config: { ...form.theme_config, gradientAngle: v } })} min={0} max={360} step={15} className="mt-2" />
-            <div className="mt-2 h-8 rounded-xl" style={{ background: `linear-gradient(${form.theme_config.gradientAngle}deg, ${form.primary_color}, ${form.theme_config.gradientSecondary})` }} />
+            <div className="mt-2 h-10 rounded-2xl shadow-inner" style={{ background: `linear-gradient(${form.theme_config.gradientAngle}deg, ${form.primary_color}, ${form.theme_config.gradientSecondary})` }} />
           </>
         )}
-      </div>
-
-      {/* Live preview swatch */}
-      <div className="p-4 rounded-xl overflow-hidden relative" style={{ backgroundColor: form.primary_color }}>
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-8 h-8 rounded-lg" style={{ backgroundColor: form.accent_color }} />
-          <div>
-            <div className="h-2 w-20 rounded-full" style={{ backgroundColor: form.accent_color }} />
-            <div className="h-1.5 w-14 rounded-full mt-1.5 opacity-40" style={{ backgroundColor: form.accent_color }} />
-          </div>
-        </div>
-        <div className="h-1 rounded-full opacity-20" style={{ backgroundColor: form.accent_color }} />
       </div>
 
       <div>
@@ -629,12 +662,12 @@ function ColorsPanel({ form, update }: { form: TemplateForm; update: (p: Partial
           {presets.map((preset) => (
             <button key={preset.name} onClick={() => update({ primary_color: preset.primary, accent_color: preset.accent })}
               className={cn(
-                "group flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all",
+                "group flex flex-col items-center gap-1 p-1.5 rounded-xl transition-all",
                 form.primary_color === preset.primary && form.accent_color === preset.accent
-                  ? "bg-primary/10 ring-1 ring-primary/30"
+                  ? "bg-primary/10 ring-2 ring-primary/30 shadow-sm"
                   : "hover:bg-muted/50"
               )}>
-              <div className="w-full h-8 rounded-lg overflow-hidden border border-border/50 shadow-sm">
+              <div className="w-full h-9 rounded-xl overflow-hidden border border-border/30 shadow-sm">
                 <div className="h-1/2" style={{ backgroundColor: preset.primary }} />
                 <div className="h-1/2" style={{ backgroundColor: preset.accent }} />
               </div>
@@ -649,37 +682,51 @@ function ColorsPanel({ form, update }: { form: TemplateForm; update: (p: Partial
 
 function ColorRow({ label, description, value, onChange }: { label: string; description: string; value: string; onChange: (v: string) => void }) {
   return (
-    <div>
-      <Label className="text-xs font-medium mb-1.5 block">{label}</Label>
-      <div className="flex items-center gap-2">
-        <div className="relative">
-          <input type="color" value={value} onChange={e => onChange(e.target.value)} className="w-10 h-10 rounded-xl border border-border cursor-pointer shrink-0 [&::-webkit-color-swatch-wrapper]:p-1 [&::-webkit-color-swatch]:rounded-lg" />
-        </div>
-        <Input value={value} onChange={e => onChange(e.target.value)} className="font-mono text-xs" />
+    <div className="flex items-center gap-3 p-3 rounded-xl border border-border/30 bg-card/50 hover:bg-card transition-colors">
+      <div className="relative">
+        <input type="color" value={value} onChange={e => onChange(e.target.value)} className="w-10 h-10 rounded-xl border-2 border-border/50 cursor-pointer shrink-0 [&::-webkit-color-swatch-wrapper]:p-1 [&::-webkit-color-swatch]:rounded-lg shadow-sm" />
       </div>
-      <p className="text-[10px] text-muted-foreground mt-1">{description}</p>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-semibold">{label}</p>
+        <p className="text-[10px] text-muted-foreground">{description}</p>
+      </div>
+      <Input value={value} onChange={e => onChange(e.target.value)} className="font-mono text-[10px] w-24 h-7 rounded-lg border-border/40 bg-muted/30 text-center" />
     </div>
   );
 }
 
 function FontsPanel({ form, update }: { form: TemplateForm; update: (p: Partial<TemplateForm>) => void }) {
   const combos = [
-    { heading: "Playfair Display", body: "Inter", name: "Clássico" },
-    { heading: "Cormorant Garamond", body: "DM Sans", name: "Editorial" },
-    { heading: "Montserrat", body: "Open Sans", name: "Moderno" },
-    { heading: "Bodoni Moda", body: "Lato", name: "Elegante" },
-    { heading: "Space Grotesk", body: "Inter", name: "Tech" },
-    { heading: "Fraunces", body: "Outfit", name: "Artístico" },
-    { heading: "Sora", body: "DM Sans", name: "Futurista" },
-    { heading: "Libre Baskerville", body: "Raleway", name: "Literário" },
+    { heading: "Playfair Display", body: "Inter", name: "Clássico", emoji: "📜" },
+    { heading: "Cormorant Garamond", body: "DM Sans", name: "Editorial", emoji: "📰" },
+    { heading: "Montserrat", body: "Open Sans", name: "Moderno", emoji: "🔲" },
+    { heading: "Bodoni Moda", body: "Lato", name: "Elegante", emoji: "✨" },
+    { heading: "Space Grotesk", body: "Inter", name: "Tech", emoji: "💻" },
+    { heading: "Fraunces", body: "Outfit", name: "Artístico", emoji: "🎨" },
+    { heading: "Sora", body: "DM Sans", name: "Futurista", emoji: "🚀" },
+    { heading: "Libre Baskerville", body: "Raleway", name: "Literário", emoji: "📖" },
   ];
 
   return (
     <>
+      {/* Live font preview */}
+      <div className="p-6 rounded-2xl overflow-hidden relative" style={{ background: `linear-gradient(135deg, ${form.primary_color}, ${form.primary_color}dd)` }}>
+        <p className="text-2xl font-bold text-white mb-2 leading-tight" style={{ fontFamily: `'${form.font_heading}', serif` }}>Aventura Inesquecível</p>
+        <p className="text-xs text-white/50 leading-relaxed" style={{ fontFamily: `'${form.font_body}', sans-serif` }}>
+          Descubra paisagens deslumbrantes e experiências únicas nesta jornada exclusiva.
+        </p>
+        <div className="mt-4 flex items-center gap-3">
+          <div className="px-4 py-1.5 rounded-full text-[9px] font-bold text-white" style={{ backgroundColor: form.accent_color }}>
+            Reservar
+          </div>
+          <div className="h-1 flex-1 rounded-full opacity-20" style={{ backgroundColor: form.accent_color }} />
+        </div>
+      </div>
+
       <div>
         <Label className="text-xs font-medium mb-1.5 block">Fonte de títulos</Label>
         <Select value={form.font_heading} onValueChange={(v) => update({ font_heading: v })}>
-          <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="text-xs rounded-xl"><SelectValue /></SelectTrigger>
           <SelectContent>
             {FONT_OPTIONS.map((f) => <SelectItem key={f} value={f}><span style={{ fontFamily: `'${f}'` }}>{f}</span></SelectItem>)}
           </SelectContent>
@@ -689,25 +736,11 @@ function FontsPanel({ form, update }: { form: TemplateForm; update: (p: Partial<
       <div>
         <Label className="text-xs font-medium mb-1.5 block">Fonte do corpo</Label>
         <Select value={form.font_body} onValueChange={(v) => update({ font_body: v })}>
-          <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="text-xs rounded-xl"><SelectValue /></SelectTrigger>
           <SelectContent>
             {FONT_OPTIONS.map((f) => <SelectItem key={f} value={f}><span style={{ fontFamily: `'${f}'` }}>{f}</span></SelectItem>)}
           </SelectContent>
         </Select>
-      </div>
-
-      {/* Font preview */}
-      <div className="p-5 rounded-xl border border-border overflow-hidden" style={{ background: `linear-gradient(135deg, ${form.primary_color}, ${form.primary_color}dd)` }}>
-        <p className="text-xl font-bold text-white mb-1 leading-tight" style={{ fontFamily: `'${form.font_heading}', serif` }}>Aventura Inesquecível</p>
-        <p className="text-xs text-white/60 leading-relaxed" style={{ fontFamily: `'${form.font_body}', sans-serif` }}>
-          Descubra paisagens deslumbrantes e experiências únicas com a {form.font_body}.
-        </p>
-        <div className="mt-3 flex items-center gap-2">
-          <div className="h-1 flex-1 rounded-full" style={{ backgroundColor: `${form.accent_color}40` }}>
-            <div className="h-full w-2/3 rounded-full" style={{ backgroundColor: form.accent_color }} />
-          </div>
-          <span className="text-[9px] font-mono text-white/40">Aa</span>
-        </div>
       </div>
 
       <div>
@@ -716,13 +749,16 @@ function FontsPanel({ form, update }: { form: TemplateForm; update: (p: Partial<
           {combos.map((c) => (
             <button key={c.name} onClick={() => update({ font_heading: c.heading, font_body: c.body })}
               className={cn(
-                "text-left px-3 py-2.5 rounded-xl border transition-all",
+                "text-left px-3 py-3 rounded-xl border transition-all group",
                 form.font_heading === c.heading && form.font_body === c.body
-                  ? "border-primary bg-primary/5 shadow-sm"
-                  : "border-border/50 hover:bg-muted/50"
+                  ? "border-primary/40 bg-primary/5 shadow-md shadow-primary/5"
+                  : "border-border/30 hover:bg-muted/40 hover:border-border/50"
               )}>
-              <span className="text-xs font-bold block" style={{ fontFamily: `'${c.heading}'` }}>{c.name}</span>
-              <span className="text-[9px] text-muted-foreground block mt-0.5 truncate" style={{ fontFamily: `'${c.body}'` }}>{c.heading}</span>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm">{c.emoji}</span>
+                <span className="text-[10px] font-bold" style={{ fontFamily: `'${c.heading}'` }}>{c.name}</span>
+              </div>
+              <span className="text-[9px] text-muted-foreground block truncate" style={{ fontFamily: `'${c.body}'` }}>{c.heading} + {c.body}</span>
             </button>
           ))}
         </div>
@@ -742,8 +778,10 @@ function LayoutPanel({ form, updateTC }: { form: TemplateForm; updateTC: (p: Par
           const Icon = opt.icon;
           return (
             <button key={opt.value} onClick={() => onChange(opt.value)}
-              className={cn("flex flex-col items-center gap-1 p-2.5 rounded-xl border text-[10px] transition-all",
-                value === opt.value ? "border-primary bg-primary/5 text-primary shadow-sm" : "border-border/40 text-muted-foreground hover:bg-muted/50"
+              className={cn("flex flex-col items-center gap-1 p-3 rounded-xl border text-[10px] transition-all",
+                value === opt.value
+                  ? "border-primary/40 bg-primary/8 text-primary shadow-md shadow-primary/5"
+                  : "border-border/30 text-muted-foreground hover:bg-muted/40 hover:border-border/50"
               )}>
               {Icon && <Icon className="w-4 h-4" />}
               <span className="font-medium">{opt.label}</span>
@@ -777,9 +815,9 @@ function LayoutPanel({ form, updateTC }: { form: TemplateForm; updateTC: (p: Par
         { value: "full", label: "Full" },
       ]} value={tc.heroHeight} onChange={v => updateTC({ heroHeight: v })} />
 
-      <div>
-        <Label className="text-xs font-medium block">Opacidade do overlay: {tc.heroOverlayOpacity}%</Label>
-        <Slider value={[tc.heroOverlayOpacity]} onValueChange={([v]) => updateTC({ heroOverlayOpacity: v })} min={20} max={100} step={5} className="mt-2" />
+      <div className="p-3 rounded-xl border border-border/30 bg-card/50">
+        <Label className="text-xs font-medium block mb-2">Opacidade do overlay: {tc.heroOverlayOpacity}%</Label>
+        <Slider value={[tc.heroOverlayOpacity]} onValueChange={([v]) => updateTC({ heroOverlayOpacity: v })} min={20} max={100} step={5} />
       </div>
 
       <OptionGrid label="Posição do logo" cols={3} options={[
@@ -813,8 +851,10 @@ function EffectsPanel({ form, updateTC }: { form: TemplateForm; updateTC: (p: Pa
       <div className={`grid gap-1.5`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
         {options.map(opt => (
           <button key={opt.value} onClick={() => onChange(opt.value)}
-            className={cn("text-[10px] px-2 py-2 rounded-xl border transition-all font-medium",
-              value === opt.value ? "border-primary bg-primary/5 text-primary shadow-sm" : "border-border/40 text-muted-foreground hover:bg-muted/50"
+            className={cn("text-[10px] px-2 py-2.5 rounded-xl border transition-all font-medium",
+              value === opt.value
+                ? "border-primary/40 bg-primary/8 text-primary shadow-md shadow-primary/5"
+                : "border-border/30 text-muted-foreground hover:bg-muted/40"
             )}>{opt.label}</button>
         ))}
       </div>
@@ -854,22 +894,29 @@ function CTAPanel({ form, updateTC }: { form: TemplateForm; updateTC: (p: Partia
         <Label className="text-xs font-medium mb-2 block">Estilo do botão</Label>
         <div className="grid grid-cols-2 gap-1.5">
           {[
-            { value: "solid", label: "Sólido" }, { value: "gradient", label: "Gradiente" },
-            { value: "outline", label: "Contorno" }, { value: "pill", label: "Pill" },
+            { value: "solid", label: "Sólido", icon: Square },
+            { value: "gradient", label: "Gradiente", icon: Sparkles },
+            { value: "outline", label: "Contorno", icon: Circle },
+            { value: "pill", label: "Pill", icon: Heart },
           ].map(s => (
             <button key={s.value} onClick={() => updateTC({ ctaStyle: s.value })}
-              className={cn("text-xs px-3 py-2.5 rounded-xl border transition-all font-medium",
-                tc.ctaStyle === s.value ? "border-primary bg-primary/5 text-primary shadow-sm" : "border-border/40 text-muted-foreground hover:bg-muted/50"
-              )}>{s.label}</button>
+              className={cn("flex items-center gap-2 text-xs px-3 py-3 rounded-xl border transition-all font-medium",
+                tc.ctaStyle === s.value
+                  ? "border-primary/40 bg-primary/8 text-primary shadow-md shadow-primary/5"
+                  : "border-border/30 text-muted-foreground hover:bg-muted/40"
+              )}>
+              <s.icon className="w-3.5 h-3.5" />
+              {s.label}
+            </button>
           ))}
         </div>
       </div>
       <div>
         <Label className="text-xs font-medium mb-1.5 block">Texto do botão</Label>
-        <Input value={tc.ctaText} onChange={e => updateTC({ ctaText: e.target.value })} className="text-xs" placeholder="Quero reservar" />
+        <Input value={tc.ctaText} onChange={e => updateTC({ ctaText: e.target.value })} className="text-xs rounded-xl" placeholder="Quero reservar" />
       </div>
       {/* Preview */}
-      <div className="p-6 rounded-xl border border-border/30 bg-muted/20 flex items-center justify-center">
+      <div className="p-8 rounded-2xl border border-border/20 flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${form.primary_color}15, ${form.accent_color}08)` }}>
         {tc.ctaStyle === "gradient" ? (
           <div className="px-8 py-3 text-white font-bold text-sm rounded-xl shadow-lg" style={{ background: `linear-gradient(135deg, ${form.accent_color}, ${form.primary_color})` }}>{tc.ctaText || "Quero reservar"}</div>
         ) : tc.ctaStyle === "outline" ? (
@@ -887,32 +934,40 @@ function CTAPanel({ form, updateTC }: { form: TemplateForm; updateTC: (p: Partia
 function AIPanel({ form, applyAISuggestion }: { form: TemplateForm; applyAISuggestion: (preset: any) => void }) {
   return (
     <>
-      <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 to-accent/5 border border-primary/15">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Wand2 className="w-4 h-4 text-primary" />
-          </div>
-          <div>
-            <span className="text-xs font-bold block">Sugestões Inteligentes</span>
-            <span className="text-[9px] text-muted-foreground">Um clique aplica todo o estilo</span>
+      {/* Hero card */}
+      <div className="p-5 rounded-2xl bg-gradient-to-br from-primary/15 via-primary/5 to-accent/5 border border-primary/20 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center shadow-lg shadow-primary/10">
+              <Wand2 className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <span className="text-sm font-bold block">Sugestões IA</span>
+              <span className="text-[10px] text-muted-foreground">Um clique aplica cores, fontes e layout</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="space-y-2">
         {AI_SUGGESTIONS.map((sug) => (
           <button key={sug.name} onClick={() => applyAISuggestion(sug.preset)}
-            className="w-full text-left px-3 py-3 rounded-xl border border-border/40 hover:border-primary/30 hover:bg-primary/[0.03] transition-all group">
+            className="w-full text-left px-4 py-3.5 rounded-xl border border-border/30 hover:border-primary/30 hover:bg-primary/[0.03] transition-all group hover:shadow-md">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 border border-border/50 shadow-sm">
+              <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-border/30 shadow-sm relative">
                 <div className="h-1/2" style={{ backgroundColor: sug.preset.primary_color }} />
                 <div className="h-1/2" style={{ backgroundColor: sug.preset.accent_color }} />
+                <div className="absolute inset-0 flex items-center justify-center text-lg">{sug.emoji}</div>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold group-hover:text-primary transition-colors truncate">{sug.name}</p>
                 <p className="text-[9px] text-muted-foreground truncate">{sug.desc}</p>
+                <p className="text-[8px] text-muted-foreground/50 mt-0.5 font-mono truncate">{sug.preset.font_heading}</p>
               </div>
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+              <div className="flex items-center gap-1 shrink-0">
+                <Zap className="w-3.5 h-3.5 text-muted-foreground/20 group-hover:text-primary transition-colors" />
+              </div>
             </div>
           </button>
         ))}
@@ -926,11 +981,11 @@ function SettingsPanel({ form, update }: { form: TemplateForm; update: (p: Parti
     <>
       <div className="space-y-2">
         <Label className="text-xs font-medium">Nome do modelo</Label>
-        <Input value={form.name} onChange={(e) => update({ name: e.target.value })} className="text-xs" />
+        <Input value={form.name} onChange={(e) => update({ name: e.target.value })} className="text-xs rounded-xl" />
       </div>
       <div className="space-y-2">
         <Label className="text-xs font-medium">Descrição</Label>
-        <Textarea value={form.description} onChange={(e) => update({ description: e.target.value })} rows={3} className="text-xs" />
+        <Textarea value={form.description} onChange={(e) => update({ description: e.target.value })} rows={3} className="text-xs rounded-xl" />
       </div>
 
       <div className="space-y-2">
@@ -938,7 +993,7 @@ function SettingsPanel({ form, update }: { form: TemplateForm; update: (p: Parti
           { label: "Modelo padrão", desc: "Usar automaticamente em novas propostas", value: form.is_default, key: "is_default" },
           { label: "Ativo", desc: "Disponível para seleção", value: form.is_active, key: "is_active" },
         ].map(item => (
-          <div key={item.key} className="flex items-center justify-between px-4 py-3 rounded-xl border border-border/40">
+          <div key={item.key} className="flex items-center justify-between px-4 py-3.5 rounded-xl border border-border/30 bg-card/50 hover:bg-card transition-colors">
             <div>
               <p className="text-sm font-medium">{item.label}</p>
               <p className="text-[10px] text-muted-foreground">{item.desc}</p>
@@ -949,7 +1004,7 @@ function SettingsPanel({ form, update }: { form: TemplateForm; update: (p: Parti
       </div>
 
       <div className="pt-2">
-        <Button variant="outline" size="sm" className="w-full text-xs gap-1.5 text-destructive hover:text-destructive">
+        <Button variant="outline" size="sm" className="w-full text-xs gap-1.5 text-destructive hover:text-destructive rounded-xl border-destructive/20 hover:bg-destructive/5">
           <Trash2 className="w-3.5 h-3.5" /> Excluir modelo
         </Button>
       </div>
