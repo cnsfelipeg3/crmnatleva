@@ -890,32 +890,304 @@ const PANEL_HELP: Record<string, PanelHelp> = {
 
   // ── AI Team ──────────────────────────────────────
   "/ai-team": {
-    title: "AI Team",
-    subtitle: "Central de comando dos agentes IA",
+    title: "Mission Control",
+    subtitle: "Central de Comando do AI Team v4",
     description:
-      "Gerencie a equipe de agentes de inteligência artificial da NatLeva. Cada agente tem habilidades específicas e pode executar tarefas automaticamente. Monitore desempenho, atribua tarefas e explore o escritório 3D interativo.",
+      "Quartel-general da equipe de 21 agentes IA organizados em 7 squads. Aqui você monitora KPIs em tempo real, acompanha o feed de atividades, gerencia missões no Kanban e visualiza o status de cada agente. É o ponto central de controle de toda a operação de IA da NatLeva.",
     features: [
-      "Visão geral de todos os agentes com status em tempo real",
-      "Criação de novos agentes com nome, função e habilidades",
-      "Dashboard de tarefas executadas e pendentes por agente",
-      "Escritório 3D interativo — navegue e interaja com agentes",
-      "Métricas de performance: tarefas concluídas, tempo médio, precisão",
+      "KPIs de visão geral: agentes ativos, tarefas concluídas, alertas e sugestões",
+      "Live Feed cronológico com filtros por tipo (Alertas, Sugestões, Decisões, Sistema)",
+      "Kanban de Missões: Sugeridas → Executando → Concluídas",
+      "Grid de 21 agentes com status, XP, nível e squad",
+      "Work Log individual por agente com timeline de decisões",
+      "Escritório 3D interativo com os agentes em ambiente virtual",
     ],
     steps: [
-      { title: "Conheça os agentes", detail: "Cada card representa um agente com sua função, status (ativo/ocioso) e métricas. Clique para detalhes." },
-      { title: "Crie um novo agente", detail: "Use 'Novo Agente' para definir nome, função e habilidades. A IA gera uma descrição e configuração automaticamente." },
-      { title: "Atribua tarefas", detail: "Clique em um agente e use 'Nova Tarefa' para atribuir uma tarefa específica." },
-      { title: "Explore o escritório 3D", detail: "Alterne para a visualização 3D para ver os agentes em um ambiente virtual interativo." },
+      { title: "Monitore os KPIs", detail: "Os cards no topo mostram a saúde geral do time: agentes online, tarefas do dia, alertas pendentes e sugestões geradas." },
+      { title: "Acompanhe o Feed", detail: "O Live Feed mostra tudo que os agentes estão fazendo em tempo real. Filtre por tipo para focar em alertas ou decisões." },
+      { title: "Gerencie Missões", detail: "O Kanban permite arrastar missões entre colunas. Clique para ver detalhes e atribuir a agentes específicos." },
+      { title: "Clique em um agente", detail: "Acesse o HUD Tático do agente para ver missões, métricas, terminal de comando e logs detalhados." },
     ],
     tips: [
-      "Cada agente tem especialidades — distribua tarefas de acordo com suas habilidades",
-      "Use o escritório 3D para uma visão gamificada e divertida da equipe de IA",
-      "Monitore as métricas para identificar agentes sobrecarregados",
+      "Use os filtros do Feed para identificar rapidamente alertas críticos",
+      "O Kanban mostra missões de todos os squads — filtre por squad para focar",
+      "Clique em qualquer agente para acessar seu painel detalhado com terminal de comando",
+    ],
+    relatedPanels: [
+      { label: "Equipe", path: "/ai-team/equipe" },
+      { label: "Laboratório", path: "/ai-team/laboratorio" },
+      { label: "Evolution Engine", path: "/ai-team/evolution" },
+    ],
+  },
+
+  "/ai-team/equipe": {
+    title: "Equipe de Agentes",
+    subtitle: "Grid completo dos 21 agentes IA",
+    description:
+      "Visualize todos os 21 agentes organizados em 7 squads especializados. Cada card mostra nome, função, status, nível, XP e habilidades. Filtre por squad, status ou busque por nome para encontrar rapidamente qualquer agente.",
+    features: [
+      "Grid responsivo com cards de cada agente mostrando avatar, nível e status",
+      "Filtros por squad (Orquestração, Comercial, Criativo, Operacional, Financeiro, QA, Growth)",
+      "Indicador visual de status: ativo, ocioso, em tarefa, offline",
+      "Barra de XP mostrando progresso para o próximo nível",
+      "Clique para abrir o HUD Tático detalhado de cada agente",
+    ],
+    steps: [
+      { title: "Navegue pelos squads", detail: "Use os filtros no topo para ver apenas agentes de um squad específico, como 'Comercial' ou 'QA/VIGIL'." },
+      { title: "Verifique o status", detail: "Agentes verdes estão ativos. Amarelos estão ociosos. Verifique se algum está sobrecarregado." },
+      { title: "Acesse o detalhe", detail: "Clique em qualquer agente para abrir seu HUD Tático com missões, terminal e métricas." },
+    ],
+    tips: [
+      "Agentes com XP próximo do máximo estão prestes a subir de nível",
+      "Use a visão por squad para entender a distribuição de carga de trabalho",
+      "O status 'em tarefa' indica que o agente está processando algo no momento",
+    ],
+    relatedPanels: [
+      { label: "Mission Control", path: "/ai-team" },
+      { label: "Skills", path: "/ai-team/skills" },
+      { label: "Academia", path: "/ai-team/academia" },
+    ],
+  },
+
+  "/ai-team/evolution": {
+    title: "Evolution Engine",
+    subtitle: "Motor de evolução contínua dos agentes",
+    description:
+      "Sistema de melhoria contínua onde os agentes propõem otimizações baseadas em seus aprendizados. Cada sugestão passa por aprovação humana antes de ser aplicada. Inclui A/B testing para comparar versões de comportamento.",
+    features: [
+      "Lista de melhorias propostas pelos agentes com score de impacto",
+      "Fluxo de aprovação: Pendente → Aprovado → Aplicado",
+      "Categorias: Prompt, Workflow, Integração, Performance",
+      "A/B Testing para comparar comportamentos antes e depois",
+      "Histórico completo de evoluções aplicadas por agente",
+    ],
+    steps: [
+      { title: "Revise as propostas", detail: "Cada melhoria mostra o agente que propôs, a categoria, descrição detalhada e score de impacto estimado." },
+      { title: "Aprove ou rejeite", detail: "Avalie se a melhoria faz sentido para o negócio. Aprovações são aplicadas imediatamente ao comportamento do agente." },
+      { title: "Acompanhe o A/B Test", detail: "Compare métricas antes e depois de aplicar uma melhoria para validar o impacto real." },
+    ],
+    tips: [
+      "Priorize melhorias com score de impacto alto (acima de 80)",
+      "Use o A/B Testing antes de aprovar mudanças em agentes críticos como NATH.AI",
+      "O histórico de evoluções mostra a jornada de aprendizado de cada agente",
+    ],
+    relatedPanels: [
+      { label: "Mission Control", path: "/ai-team" },
+      { label: "Laboratório", path: "/ai-team/laboratorio" },
+      { label: "Skills", path: "/ai-team/skills" },
+    ],
+  },
+
+  "/ai-team/conhecimento": {
+    title: "Base de Conhecimento",
+    subtitle: "Memória RAG dos agentes IA",
+    description:
+      "Repositório central de conhecimento que alimenta todos os agentes. Aqui você gerencia documentos, textos e referências que a IA usa para fundamentar suas respostas. Funciona como a 'biblioteca' dos agentes.",
+    features: [
+      "Upload de documentos (PDF, TXT, DOCX) para a base de conhecimento",
+      "Categorização por área: vendas, destinos, políticas, procedimentos",
+      "Busca semântica nos documentos carregados",
+      "Ativação/desativação de documentos sem excluí-los",
+      "Visualização de quais agentes utilizam cada documento",
+    ],
+    steps: [
+      { title: "Adicione conhecimento", detail: "Faça upload de documentos ou cole textos diretamente. A IA indexa o conteúdo para busca semântica." },
+      { title: "Organize por categoria", detail: "Classifique cada item para que os agentes certos acessem o conhecimento relevante." },
+      { title: "Gerencie a base", detail: "Ative ou desative documentos conforme necessário. Documentos desativados não são consultados pela IA." },
+    ],
+    tips: [
+      "Documentos mais específicos geram respostas melhores do que genéricos",
+      "Atualize regularmente as políticas de cancelamento e condições de viagem",
+      "Use categorias para que cada agente acesse apenas o conhecimento relevante ao seu squad",
     ],
     relatedPanels: [
       { label: "Estratégia IA", path: "/implementacao/estrategia-ia" },
-      { label: "Aprendizados IA", path: "/implementacao/aprendizados-ia" },
-      { label: "Cérebro NatLeva", path: "/implementacao/cerebro-natleva" },
+      { label: "Mission Control", path: "/ai-team" },
+    ],
+  },
+
+  "/ai-team/skills": {
+    title: "Skills dos Agentes",
+    subtitle: "Habilidades e capacidades de cada agente",
+    description:
+      "Gerencie as habilidades técnicas e comportamentais de cada agente. Skills determinam quais tarefas um agente pode executar e com qual qualidade. Agentes ganham novas skills ao subir de nível.",
+    features: [
+      "Catálogo de skills disponíveis no sistema",
+      "Atribuição de skills por agente com nível de proficiência",
+      "Skills desbloqueáveis por nível (sistema de progressão)",
+      "Visualização de gaps — habilidades faltantes no time",
+    ],
+    steps: [
+      { title: "Veja as skills do time", detail: "O dashboard mostra todas as skills e quais agentes as possuem. Identifique lacunas." },
+      { title: "Atribua novas skills", detail: "Selecione um agente e adicione skills compatíveis com sua função e squad." },
+    ],
+    tips: [
+      "Skills de comunicação são essenciais para agentes do squad Comercial",
+      "O VIGIL squad precisa de skills de análise e compliance",
+      "Verifique se não há skill crítica coberta por apenas um agente (ponto único de falha)",
+    ],
+    relatedPanels: [
+      { label: "Equipe", path: "/ai-team/equipe" },
+      { label: "Academia", path: "/ai-team/academia" },
+    ],
+  },
+
+  "/ai-team/workflow": {
+    title: "Workflow Visual",
+    subtitle: "Mapa de conexões entre squads e agentes",
+    description:
+      "Visualização gráfica de como os 7 squads se conectam e como as tarefas fluem entre agentes. Mostra os handoffs automáticos e as dependências entre agentes.",
+    features: [
+      "Diagrama visual dos 7 squads com conexões",
+      "Fluxo de handoff entre agentes (ex: ÓRION → MAYA → ATLAS)",
+      "Indicadores de volume de tarefas em cada conexão",
+      "Detecção de gargalos no fluxo de trabalho",
+    ],
+    steps: [
+      { title: "Entenda o fluxo", detail: "Cada squad é um bloco no diagrama. As setas mostram como tarefas são repassadas entre squads." },
+      { title: "Identifique gargalos", detail: "Conexões com alto volume e baixa vazão indicam gargalos que precisam de atenção." },
+    ],
+    tips: [
+      "O squad de Orquestração (NATH.AI + ÓRION) é o hub central de distribuição",
+      "Acompanhe se o fluxo Comercial → Criativo está fluindo sem acúmulos",
+      "Use essa visão para planejar a adição de novos agentes em squads sobrecarregados",
+    ],
+    relatedPanels: [
+      { label: "Mission Control", path: "/ai-team" },
+      { label: "Equipe", path: "/ai-team/equipe" },
+    ],
+  },
+
+  "/ai-team/memoria": {
+    title: "Memória & Fiscal",
+    subtitle: "Sistema de memória persistente e auditoria",
+    description:
+      "Painel de memória de longo prazo dos agentes e logs de fiscalização do VIGIL. Aqui você vê o que os agentes aprenderam, retiveram e como o quality gate está filtrando decisões.",
+    features: [
+      "Memórias retidas por agente com contexto e data",
+      "Logs do VIGIL com decisões aprovadas/barradas",
+      "Estatísticas de retenção de memória por período",
+      "Busca em memórias por palavra-chave ou agente",
+    ],
+    tips: [
+      "Memórias frequentes indicam padrões que podem virar regras na Estratégia IA",
+      "Logs do VIGIL barrados merecem revisão — podem indicar falsos positivos",
+    ],
+    relatedPanels: [
+      { label: "Conhecimento", path: "/ai-team/conhecimento" },
+      { label: "Evolution Engine", path: "/ai-team/evolution" },
+    ],
+  },
+
+  "/ai-team/academia": {
+    title: "Academia",
+    subtitle: "Sistema de treinamento e gamificação",
+    description:
+      "Centro de treinamento gamificado dos agentes. Missões de XP, leaderboard de performance, conquistas desbloqueáveis e progressão de nível. Incentiva a evolução contínua dos agentes.",
+    features: [
+      "Leaderboard com ranking de XP entre todos os agentes",
+      "Missões de treinamento com recompensas em XP",
+      "Conquistas desbloqueáveis por marcos atingidos",
+      "Histórico de progressão de nível por agente",
+    ],
+    steps: [
+      { title: "Veja o ranking", detail: "O leaderboard mostra quem está evoluindo mais rápido. Use para identificar agentes que precisam de mais missões." },
+      { title: "Atribua missões", detail: "Crie missões de treinamento focadas em skills que o agente precisa desenvolver." },
+    ],
+    tips: [
+      "Agentes com XP estagnado podem precisar de missões mais desafiadoras",
+      "Conquistas motivam — verifique quais estão próximas de serem desbloqueadas",
+      "O leaderboard gera competição saudável entre os squads",
+    ],
+    relatedPanels: [
+      { label: "Skills", path: "/ai-team/skills" },
+      { label: "Equipe", path: "/ai-team/equipe" },
+    ],
+  },
+
+  "/ai-team/simulador": {
+    title: "Simulador",
+    subtitle: "Chat direto com qualquer agente",
+    description:
+      "Converse diretamente com qualquer agente IA em tempo real. Teste respostas, valide comportamentos e explore as capacidades de cada agente antes de colocá-lo em produção. O chat usa streaming para respostas naturais.",
+    features: [
+      "Seleção de qualquer um dos 21 agentes para conversar",
+      "Chat em tempo real com streaming de resposta",
+      "Contexto da persona e habilidades do agente aplicados automaticamente",
+      "Histórico de conversas da sessão para referência",
+    ],
+    steps: [
+      { title: "Escolha o agente", detail: "Selecione o agente que deseja testar no seletor. Cada agente responde de acordo com sua persona e skills." },
+      { title: "Envie uma mensagem", detail: "Digite uma situação real (ex: 'Cliente quer viajar para Maldivas em lua de mel'). O agente responderá em caráter." },
+      { title: "Avalie a resposta", detail: "Verifique se a resposta está alinhada com as regras de negócio e a persona do agente." },
+    ],
+    tips: [
+      "Teste cenários difíceis: reclamações, cancelamentos, orçamentos apertados",
+      "Compare respostas de agentes diferentes para o mesmo cenário",
+      "Use o simulador antes de ativar um agente novo em produção",
+    ],
+    relatedPanels: [
+      { label: "Laboratório", path: "/ai-team/laboratorio" },
+      { label: "Mission Control", path: "/ai-team" },
+    ],
+  },
+
+  "/ai-team/laboratorio": {
+    title: "Laboratório (War Room)",
+    subtitle: "Stress test com avaliação por IA juiz",
+    description:
+      "Ambiente de testes rigorosos onde você seleciona agentes e perfis de cliente para rodar stress tests. Cada resposta do agente é avaliada automaticamente por uma IA juiz em 4 dimensões: Aderência às regras, Sentimento, Clareza e Proatividade. Ideal para validar agentes antes de ativá-los em produção.",
+    features: [
+      "Seleção múltipla de agentes para teste simultâneo",
+      "8 perfis de cliente realistas: Sonhador, Indeciso, Desconfiado, Pechincheiro, Família, Lua de Mel, Corporativo, Reclamação",
+      "Avaliação automática por IA juiz com score 0-100 em 4 dimensões",
+      "Resumo qualitativo da avaliação com pontos fortes e fracos",
+      "Histórico de resultados para acompanhar evolução",
+      "Botão 'Rodar Teste' para executar stress test completo",
+    ],
+    steps: [
+      { title: "Selecione os agentes", detail: "Clique nos badges dos agentes que deseja testar. Você pode selecionar vários para comparar resultados lado a lado." },
+      { title: "Escolha um perfil de cliente", detail: "Selecione um dos 8 perfis. Cada perfil simula um tipo diferente de cliente com comportamentos e expectativas distintas." },
+      { title: "Rode o teste", detail: "Clique em 'Rodar Teste'. O sistema gera uma mensagem do perfil escolhido, o agente responde, e a IA juiz avalia a resposta." },
+      { title: "Analise os resultados", detail: "Veja os scores em cada dimensão. Aderência mede se seguiu as regras. Sentimento avalia empatia. Clareza mede objetividade. Proatividade verifica se ofereceu soluções extras." },
+    ],
+    faq: [
+      { q: "O que é a IA juiz?", a: "É uma segunda camada de IA que avalia a qualidade da resposta do agente. Ela não participa da conversa — apenas analisa e pontua." },
+      { q: "Posso testar vários perfis de uma vez?", a: "Você seleciona um perfil por vez, mas pode rodar testes sequenciais e comparar os resultados no painel de histórico." },
+      { q: "Os resultados do lab afetam o agente em produção?", a: "Não diretamente. Os testes são isolados. Use os insights para ajustar prompts e skills antes de ativar em produção." },
+    ],
+    tips: [
+      "Teste sempre com o perfil 'Reclamação' — é o cenário mais desafiador",
+      "Compare o mesmo agente com perfis diferentes para encontrar fraquezas",
+      "Scores abaixo de 60 em qualquer dimensão indicam necessidade de ajuste no prompt",
+      "Use os resultados do lab para alimentar o Evolution Engine com melhorias",
+    ],
+    relatedPanels: [
+      { label: "Simulador", path: "/ai-team/simulador" },
+      { label: "Evolution Engine", path: "/ai-team/evolution" },
+      { label: "Mission Control", path: "/ai-team" },
+    ],
+  },
+
+  "/ai-team/config": {
+    title: "Configurações",
+    subtitle: "Identidade, gateway e guardrails do AI Team",
+    description:
+      "Configure a identidade dos agentes, os modelos de IA utilizados, limites de segurança (guardrails) e parâmetros operacionais do time. Todas as configurações afetam o comportamento dos agentes em tempo real.",
+    features: [
+      "Configuração de identidade e persona de cada agente",
+      "Seleção de modelo de IA (gateway) por agente ou global",
+      "Guardrails: limites de tokens, temas proibidos, regras de escalação",
+      "Parâmetros de temperatura, top-p e frequência de resposta",
+    ],
+    tips: [
+      "Guardrails são essenciais — defina temas proibidos para evitar respostas inadequadas",
+      "Modelos mais rápidos (Flash) são ideais para tarefas simples; use Pro para raciocínio complexo",
+      "Teste mudanças no Simulador antes de aplicar em produção",
+    ],
+    relatedPanels: [
+      { label: "Mission Control", path: "/ai-team" },
+      { label: "Estratégia IA", path: "/implementacao/estrategia-ia" },
     ],
   },
 
