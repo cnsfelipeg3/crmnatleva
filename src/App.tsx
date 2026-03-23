@@ -251,8 +251,20 @@ function AppRoutes() {
           <Route path="/implementacao/cerebro-natleva" element={<CerebroNatLeva />} />
 
           {/* AI Team */}
-          <Route path="/ai-team" element={<AITeam />} />
-          <Route path="/ai-team/agent/:agentId" element={<AITeamAgentDetail />} />
+          <Route path="/ai-team" element={<AITeamLayout />}>
+            <Route index element={<AITeam />} />
+            <Route path="equipe" element={<AITeamEquipe />} />
+            <Route path="evolution" element={<AITeamEvolution />} />
+            <Route path="conhecimento" element={<AITeamConhecimento />} />
+            <Route path="skills" element={<AITeamSkills />} />
+            <Route path="workflow" element={<AITeamWorkflow />} />
+            <Route path="memoria" element={<AITeamMemoria />} />
+            <Route path="academia" element={<AITeamAcademia />} />
+            <Route path="simulador" element={<AITeamSimulador />} />
+            <Route path="laboratorio" element={<AITeamLaboratorio />} />
+            <Route path="config" element={<AITeamConfig />} />
+            <Route path="agent/:agentId" element={<AITeamAgentDetail />} />
+          </Route>
 
           {/* Operação Diária */}
           <Route path="/operacao/inbox" element={<OperacaoInbox />} />
