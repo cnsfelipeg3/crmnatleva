@@ -109,6 +109,7 @@ const QuoteRequests = lazy(() => import("@/pages/QuoteRequests"));
 const Proposals = lazy(() => import("@/pages/Proposals"));
 const ProposalEditor = lazy(() => import("@/pages/ProposalEditor"));
 const ProposalTemplates = lazy(() => import("@/pages/ProposalTemplates"));
+const ProposalTemplateEditor = lazy(() => import("@/pages/ProposalTemplateEditor"));
 const ProposalPublicView = lazy(() => import("@/pages/ProposalPublicView"));
 const MediaLibrary = lazy(() => import("@/pages/MediaLibrary"));
 
