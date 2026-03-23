@@ -681,425 +681,537 @@ Retorne JSON:
   const sentimentColor = (s: number) => s >= 70 ? "#10B981" : s >= 40 ? "#F59E0B" : "#EF4444";
   const sentimentLabel = (s: number) => s >= 80 ? "Empolgado" : s >= 60 ? "Satisfeito" : s >= 40 ? "Neutro" : s >= 20 ? "Impaciente" : "Desistindo";
 
-  // ===== CONFIG SECTION =====
-  const ConfigSection = ({ id, title, icon, accentColor, children }: { id: string; title: string; icon?: React.ReactNode; accentColor?: string; children: React.ReactNode }) => (
-    <div className="rounded-2xl overflow-hidden transition-all duration-300 relative" style={{
-      background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))",
-      border: `1px solid ${configSections[id] ? (accentColor || "#10B981") + "30" : "rgba(255,255,255,0.06)"}`,
-      backdropFilter: "blur(8px)",
-    }}>
-      {configSections[id] && <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${accentColor || "#10B981"}, transparent)` }} />}
-      <button onClick={() => toggleSection(id)} className="w-full flex items-center justify-between px-5 py-3.5 relative">
-        <div className="flex items-center gap-2">
-          {icon}
-          <p className="text-[11px] uppercase tracking-[0.1em] font-bold" style={{ color: configSections[id] ? (accentColor || "#10B981") : "#64748B" }}>{title}</p>
-        </div>
-        <div className="w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: "rgba(255,255,255,0.03)" }}>
-          {configSections[id] ? <ChevronUp className="w-3.5 h-3.5" style={{ color: "#64748B" }} /> : <ChevronDown className="w-3.5 h-3.5" style={{ color: "#64748B" }} />}
-        </div>
-      </button>
-      {configSections[id] && <div className="px-5 pb-5 space-y-4 animate-in fade-in slide-in-from-top-1 duration-200">{children}</div>}
-    </div>
-  );
+  // ===== CONFIG TABS =====
+  const CONFIG_TABS = [
+    { id: "volume" as const, label: "Volume & Tempo", icon: BarChart3, color: "#3B82F6", summary: `${numLeads} leads · ${msgsPerLead} msgs · ${formatTime(duration)}` },
+    { id: "perfis" as const, label: "Perfis", icon: User, color: "#EC4899", summary: `${selectedProfiles.length || 8} perfis ativos` },
+    { id: "cenario" as const, label: "Cenário", icon: MapPin, color: "#06B6D4", summary: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos` },
+    { id: "comportamento" as const, label: "Funil & Velocidade", icon: Zap, color: "#8B5CF6", summary: `${SPEED_OPTIONS.find(s => s.id === speed)?.label} · ${funnelMode === "full" ? "Completo" : funnelMode === "comercial" ? "Comercial" : "Custom"}` },
+    { id: "avancado" as const, label: "Motor IA", icon: Brain, color: "#F59E0B", summary: enableEvaluation ? "Avaliação ativa" : "Avaliação off" },
+  ];
 
   // ===== RENDER: CONFIG =====
   if (phase === "config") {
     return (
-      <div className="space-y-4 max-w-4xl animate-in fade-in slide-in-from-bottom-3 duration-500">
-        {/* Volume */}
-        <ConfigSection id="volume" title="Volume e Tempo" accentColor="#3B82F6" icon={<BarChart3 className="w-3.5 h-3.5" style={{ color: "#3B82F6" }} />}>
-          <div className="grid grid-cols-2 gap-5">
-            {[
-              { label: "Leads", value: numLeads, setter: setNumLeads, min: 1, max: 100, step: 1, color: "#3B82F6" },
-              { label: "Msgs por lead", value: msgsPerLead, setter: setMsgsPerLead, min: 4, max: 40, step: 2, color: "#10B981" },
-              { label: "Intervalo (s)", value: intervalSec, setter: setIntervalSec, min: 0, max: 30, step: 1, color: "#F59E0B", suffix: "s" },
-              { label: "Duração máx", value: duration, setter: setDuration, min: 30, max: 1800, step: 30, color: "#8B5CF6", format: true },
-            ].map(s => (
-              <div key={s.label}>
-                <span className="text-[11px] block mb-2" style={{ color: "#94A3B8" }}>{s.label}</span>
-                <Slider min={s.min} max={s.max} step={s.step} value={[s.value]} onValueChange={v => s.setter(v[0])} />
-                <p className="text-[24px] font-extrabold tabular-nums text-right mt-1.5" style={{ color: s.color, textShadow: `0 0 20px ${s.color}20` }}>
-                  {s.format ? formatTime(s.value) : `${s.value}${s.suffix || ""}`}
-                </p>
-              </div>
-            ))}
-          </div>
-        </ConfigSection>
-
-        {/* Profiles */}
-        <ConfigSection id="perfis" title="Perfis Psicológicos (8 tipos)" accentColor="#F59E0B" icon={<Brain className="w-3.5 h-3.5" style={{ color: "#F59E0B" }} />}>
-          <div className="grid grid-cols-4 gap-2">
-            {PERFIS_INTELIGENTES.map(p => {
-              const active = selectedProfiles.includes(p.tipo);
+      <div className="animate-in fade-in slide-in-from-bottom-3 duration-500" style={{ maxWidth: 1100 }}>
+        {/* 2-column: Tabs + Content */}
+        <div className="flex gap-5" style={{ minHeight: 520 }}>
+          {/* LEFT: Tab Navigation */}
+          <div className="w-[220px] shrink-0 space-y-1.5">
+            {CONFIG_TABS.map((tab, i) => {
+              const active = configTab === tab.id;
+              const Icon = tab.icon;
               return (
-                <button key={p.tipo} onClick={() => toggleMulti(selectedProfiles, p.tipo, setSelectedProfiles)}
-                  className="text-left rounded-xl p-3 transition-all duration-300 hover:scale-[1.02] relative overflow-hidden"
+                <button key={tab.id} onClick={() => setConfigTab(tab.id)}
+                  className="w-full text-left px-4 py-3.5 rounded-xl transition-all duration-300 relative group"
                   style={{
-                    background: active ? `${p.cor}08` : "rgba(255,255,255,0.015)",
-                    border: `1px solid ${active ? `${p.cor}30` : "rgba(255,255,255,0.04)"}`,
+                    background: active ? `linear-gradient(135deg, ${tab.color}12, ${tab.color}06)` : "transparent",
+                    border: `1px solid ${active ? `${tab.color}30` : "transparent"}`,
                   }}>
-                  {active && <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: p.cor }} />}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-lg">{p.emoji}</span>
-                    <span className="text-[10px] font-bold" style={{ color: active ? p.cor : "#E2E8F0" }}>{p.label}</span>
+                  {active && <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full" style={{ background: tab.color }} />}
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{
+                      background: active ? `${tab.color}15` : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${active ? `${tab.color}25` : "rgba(255,255,255,0.05)"}`,
+                    }}>
+                      <Icon className="w-4 h-4" style={{ color: active ? tab.color : "#64748B" }} />
+                    </div>
+                    <div>
+                      <p className="text-[12px] font-bold" style={{ color: active ? "#F1F5F9" : "#94A3B8" }}>{tab.label}</p>
+                      <p className="text-[9px] mt-0.5" style={{ color: active ? tab.color : "#475569" }}>{tab.summary}</p>
+                    </div>
                   </div>
-                  <p className="text-[8px] mt-1 leading-snug" style={{ color: "#64748B" }}>{p.descricaoPsicologica.slice(0, 60)}...</p>
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-[8px] px-1.5 py-0.5 rounded" style={{ background: `${p.cor}10`, color: p.cor }}>{p.convRate}% conv.</span>
-                    <span className="text-[8px]" style={{ color: "#475569" }}>{p.velocidadeResposta.min/1000}-{p.velocidadeResposta.max/1000}s</span>
+                  {/* Step number */}
+                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
+                    style={{ background: active ? `${tab.color}15` : "rgba(255,255,255,0.02)", color: active ? tab.color : "#334155" }}>
+                    {i + 1}
                   </div>
                 </button>
               );
             })}
-          </div>
-          <div className="flex gap-2 mt-3">
-            <span className="text-[10px] self-center mr-1" style={{ color: "#64748B" }}>Distribuição:</span>
-            {[{ id: "random", label: "Aleatório" }, { id: "roundrobin", label: "Round-robin" }].map(m => (
-              <button key={m.id} onClick={() => setProfileMode(m.id as any)}
-                className="text-[10px] px-4 py-2 rounded-xl font-semibold transition-all"
-                style={{ background: profileMode === m.id ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${profileMode === m.id ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: profileMode === m.id ? "#10B981" : "#64748B" }}>{m.label}</button>
-            ))}
-          </div>
-        </ConfigSection>
 
-        {/* Cenário dos Leads - structured tables */}
-        <ConfigSection id="cenario" title="Cenário dos Leads" accentColor="#06B6D4" icon={<MapPin className="w-3.5 h-3.5" style={{ color: "#06B6D4" }} />}>
-          <div className="space-y-5">
-            {/* Destinos */}
-            {(() => {
-              const DESTINO_DATA = DESTINOS_LEAD.map(d => {
-                const regions: Record<string, string> = { Dubai: "Oriente Médio", Orlando: "América do Norte", Europa: "Europa", Maldivas: "Ásia", Caribe: "Caribe", Japão: "Ásia", Egito: "África", Tailândia: "Ásia", "Nova York": "América do Norte", Paris: "Europa", Grécia: "Europa", Bali: "Ásia", Cancún: "Caribe", Lisboa: "Europa", Seychelles: "África" };
-                const icons: Record<string, string> = { Dubai: "🏙️", Orlando: "🎢", Europa: "🏰", Maldivas: "🏝️", Caribe: "🌴", Japão: "🗾", Egito: "🏛️", Tailândia: "🛕", "Nova York": "🗽", Paris: "🗼", Grécia: "🏛️", Bali: "🌺", Cancún: "🏖️", Lisboa: "🚋", Seychelles: "🐚" };
-                return { name: d, region: regions[d] || "Outros", icon: icons[d] || "✈️" };
-              });
-              const allSelected = selectedDestinos.length === 0;
-              return (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-3.5 h-3.5" style={{ color: "#06B6D4" }} />
-                      <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Destinos</span>
-                      <span className="text-[9px] px-2 py-0.5 rounded-md" style={{ background: "rgba(6,182,212,0.08)", color: "#06B6D4" }}>
-                        {allSelected ? "Todos" : `${selectedDestinos.length} de ${DESTINOS_LEAD.length}`}
-                      </span>
-                    </div>
-                    <button onClick={() => setSelectedDestinos(allSelected ? [...DESTINOS_LEAD] : [])}
-                      className="text-[9px] font-semibold px-2.5 py-1 rounded-lg transition-all"
-                      style={{ color: "#06B6D4", background: "rgba(6,182,212,0.06)", border: "1px solid rgba(6,182,212,0.12)" }}>
-                      {allSelected ? "Selecionar todos" : "Limpar"}
-                    </button>
+            {/* Config Summary Card */}
+            <div className="mt-4 rounded-xl p-4 space-y-2" style={{
+              background: "linear-gradient(135deg, rgba(16,185,129,0.04), rgba(6,182,212,0.04))",
+              border: "1px solid rgba(16,185,129,0.1)",
+            }}>
+              <p className="text-[9px] uppercase tracking-[0.12em] font-bold" style={{ color: "#10B981" }}>Resumo da Config</p>
+              <div className="space-y-1.5">
+                {[
+                  { label: "Leads", value: `${numLeads}`, color: "#3B82F6" },
+                  { label: "Msgs/lead", value: `${msgsPerLead}`, color: "#10B981" },
+                  { label: "Duração", value: formatTime(duration), color: "#8B5CF6" },
+                  { label: "Objeções", value: `${objectionDensity}%`, color: "#F59E0B" },
+                  { label: "Perfis", value: `${selectedProfiles.length || 8}`, color: "#EC4899" },
+                ].map(item => (
+                  <div key={item.label} className="flex items-center justify-between">
+                    <span className="text-[9px]" style={{ color: "#64748B" }}>{item.label}</span>
+                    <span className="text-[11px] font-bold tabular-nums" style={{ color: item.color }}>{item.value}</span>
                   </div>
-                  <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-                    <div className="grid grid-cols-5 gap-0">
-                      {DESTINO_DATA.map((d, i) => {
-                        const active = selectedDestinos.includes(d.name);
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT: Content Area */}
+          <div className="flex-1 rounded-2xl overflow-hidden relative" style={{
+            background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))",
+            border: "1px solid rgba(255,255,255,0.06)",
+            backdropFilter: "blur(8px)",
+          }}>
+            {/* Active tab accent line */}
+            <div className="h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${CONFIG_TABS.find(t => t.id === configTab)?.color || "#10B981"}, transparent)` }} />
+
+            <div className="p-6 overflow-y-auto" style={{ maxHeight: 500 }}>
+              {/* ===== VOLUME TAB ===== */}
+              {configTab === "volume" && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-right-3 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <BarChart3 className="w-5 h-5" style={{ color: "#3B82F6" }} />
+                    <div>
+                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Volume & Tempo</h3>
+                      <p className="text-[11px]" style={{ color: "#64748B" }}>Configure a escala e duração do teste de estresse</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-6">
+                    {[
+                      { label: "Leads simultâneos", value: numLeads, setter: setNumLeads, min: 1, max: 100, step: 1, color: "#3B82F6", desc: "Quantidade de leads que entram na simulação" },
+                      { label: "Mensagens por lead", value: msgsPerLead, setter: setMsgsPerLead, min: 4, max: 40, step: 2, color: "#10B981", desc: "Rodadas de conversa entre agente e lead" },
+                      { label: "Intervalo entre leads", value: intervalSec, setter: setIntervalSec, min: 0, max: 30, step: 1, color: "#F59E0B", desc: "Segundos entre entrada de cada lead", suffix: "s" },
+                      { label: "Duração máxima", value: duration, setter: setDuration, min: 30, max: 1800, step: 30, color: "#8B5CF6", desc: "Tempo limite da simulação", format: true },
+                    ].map(s => (
+                      <div key={s.label} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[12px] font-semibold" style={{ color: "#E2E8F0" }}>{s.label}</span>
+                          <span className="text-[22px] font-extrabold tabular-nums" style={{ color: s.color, textShadow: `0 0 20px ${s.color}20` }}>
+                            {s.format ? formatTime(s.value) : s.value}{s.suffix || ""}
+                          </span>
+                        </div>
+                        <p className="text-[9px] mb-3" style={{ color: "#475569" }}>{s.desc}</p>
+                        <Slider min={s.min} max={s.max} step={s.step} value={[s.value]} onValueChange={v => s.setter(v[0])} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ===== PERFIS TAB ===== */}
+              {configTab === "perfis" && (
+                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <User className="w-5 h-5" style={{ color: "#EC4899" }} />
+                      <div>
+                        <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Perfis Psicológicos</h3>
+                        <p className="text-[11px]" style={{ color: "#64748B" }}>Selecione quais perfis participam · {selectedProfiles.length || "Todos os 8"} ativos</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      {[
+                        { id: "random", label: "Aleatório", icon: "🎲" },
+                        { id: "roundrobin", label: "Round-robin", icon: "🔄" },
+                      ].map(m => (
+                        <button key={m.id} onClick={() => setProfileMode(m.id as any)}
+                          className="text-[10px] px-3 py-1.5 rounded-lg font-semibold transition-all"
+                          style={{
+                            background: profileMode === m.id ? "rgba(236,72,153,0.1)" : "rgba(255,255,255,0.02)",
+                            border: `1px solid ${profileMode === m.id ? "rgba(236,72,153,0.25)" : "rgba(255,255,255,0.04)"}`,
+                            color: profileMode === m.id ? "#EC4899" : "#64748B",
+                          }}>
+                          {m.icon} {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {PERFIS_INTELIGENTES.map(p => {
+                      const active = selectedProfiles.length === 0 || selectedProfiles.includes(p.tipo);
+                      return (
+                        <button key={p.tipo} onClick={() => toggleMulti(selectedProfiles, p.tipo, setSelectedProfiles)}
+                          className="flex items-start gap-3 p-4 rounded-xl text-left transition-all duration-200"
+                          style={{
+                            background: active ? `${p.cor}06` : "rgba(255,255,255,0.01)",
+                            border: `1px solid ${active ? `${p.cor}25` : "rgba(255,255,255,0.04)"}`,
+                          }}>
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0" style={{
+                            background: active ? `${p.cor}12` : "rgba(255,255,255,0.03)",
+                          }}>
+                            {p.emoji}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-[12px] font-bold" style={{ color: active ? "#F1F5F9" : "#64748B" }}>{p.label}</p>
+                              {active && <div className="w-2 h-2 rounded-full" style={{ background: p.cor }} />}
+                            </div>
+                            <p className="text-[9px] mt-0.5 line-clamp-2" style={{ color: "#475569" }}>{p.tracos.slice(0, 2).join(" · ")}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* ===== CENARIO TAB ===== */}
+              {configTab === "cenario" && (
+                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <MapPin className="w-5 h-5" style={{ color: "#06B6D4" }} />
+                    <div>
+                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Cenário dos Leads</h3>
+                      <p className="text-[11px]" style={{ color: "#64748B" }}>Destinos, orçamentos, canais e composição de grupo</p>
+                    </div>
+                  </div>
+
+                  {/* Destinations */}
+                  {(() => {
+                    const DESTINO_DATA = DESTINOS_LEAD.map(d => {
+                      const regions: Record<string, { icon: string; region: string }> = {
+                        "Maldivas": { icon: "🏝️", region: "Ásia" }, "Paris": { icon: "🗼", region: "Europa" }, "Nova York": { icon: "🗽", region: "América" },
+                        "Tóquio": { icon: "🗾", region: "Ásia" }, "Dubai": { icon: "🏙️", region: "Oriente Médio" }, "Roma": { icon: "🏛️", region: "Europa" },
+                        "Cancún": { icon: "🌴", region: "América" }, "Santorini": { icon: "🏖️", region: "Europa" }, "Fernando de Noronha": { icon: "🐢", region: "Brasil" },
+                        "Gramado": { icon: "🏔️", region: "Brasil" }, "Bali": { icon: "🛕", region: "Ásia" }, "Londres": { icon: "🎡", region: "Europa" },
+                        "Orlando": { icon: "🎢", region: "América" }, "Santiago": { icon: "🏔️", region: "América" }, "Lisboa": { icon: "⛵", region: "Europa" },
+                      };
+                      return { name: d, ...regions[d] || { icon: "🌍", region: "Outros" } };
+                    });
+
+                    return (
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Destinos</span>
+                            <span className="text-[9px] px-2 py-0.5 rounded-full" style={{ background: "rgba(6,182,212,0.08)", color: "#06B6D4" }}>
+                              {selectedDestinos.length || DESTINOS_LEAD.length} selecionados
+                            </span>
+                          </div>
+                          <button onClick={() => setSelectedDestinos([])} className="text-[9px] font-semibold px-2 py-1 rounded-lg" style={{ color: "#64748B", background: "rgba(255,255,255,0.02)" }}>
+                            {selectedDestinos.length > 0 ? "Limpar" : "Todos"}
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-5 gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                          {DESTINO_DATA.map((d, i) => {
+                            const active = selectedDestinos.length === 0 || selectedDestinos.includes(d.name);
+                            return (
+                              <button key={d.name} onClick={() => toggleMulti(selectedDestinos, d.name, setSelectedDestinos)}
+                                className="flex items-center gap-2 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
+                                style={{
+                                  background: active ? "rgba(6,182,212,0.06)" : "transparent",
+                                  borderBottom: i < DESTINO_DATA.length - 5 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                                  borderRight: (i + 1) % 5 !== 0 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                                }}>
+                                <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
+                                  background: active ? "#06B6D4" : "rgba(255,255,255,0.04)",
+                                  border: `1px solid ${active ? "#06B6D4" : "rgba(255,255,255,0.08)"}`,
+                                }}>
+                                  {active && <Check className="w-2.5 h-2.5 text-white" />}
+                                </div>
+                                <span className="text-sm">{d.icon}</span>
+                                <div className="min-w-0">
+                                  <p className="text-[10px] font-semibold truncate" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{d.name}</p>
+                                  <p className="text-[8px]" style={{ color: "#475569" }}>{d.region}</p>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Budget + Canal side by side */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Budget */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Wallet className="w-3.5 h-3.5" style={{ color: "#10B981" }} />
+                        <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Faixa de Orçamento</span>
+                      </div>
+                      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                        {BUDGETS_LEAD.map((b, i) => {
+                          const active = selectedBudgets.includes(b);
+                          const barWidths = [20, 35, 55, 75, 100];
+                          return (
+                            <button key={b} onClick={() => toggleMulti(selectedBudgets, b, setSelectedBudgets)}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
+                              style={{
+                                background: active ? "rgba(16,185,129,0.05)" : "transparent",
+                                borderBottom: i < BUDGETS_LEAD.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                              }}>
+                              <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
+                                background: active ? "#10B981" : "rgba(255,255,255,0.04)",
+                                border: `1px solid ${active ? "#10B981" : "rgba(255,255,255,0.08)"}`,
+                              }}>
+                                {active && <Check className="w-2.5 h-2.5 text-white" />}
+                              </div>
+                              <span className="text-[11px] font-semibold w-24 shrink-0" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{b}</span>
+                              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                                <div className="h-full rounded-full transition-all" style={{ width: `${barWidths[i]}%`, background: active ? "#10B981" : "rgba(255,255,255,0.08)" }} />
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Canal */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Radio className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
+                        <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Origem do Lead</span>
+                      </div>
+                      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                        {CANAIS_LEAD.map((c, i) => {
+                          const active = selectedCanais.includes(c);
+                          const canalIcons: Record<string, string> = { "Instagram DM": "📸", WhatsApp: "💬", Site: "🌐", Indicação: "🤝", Google: "🔍", TikTok: "🎵" };
+                          return (
+                            <button key={c} onClick={() => toggleMulti(selectedCanais, c, setSelectedCanais)}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
+                              style={{
+                                background: active ? "rgba(139,92,246,0.05)" : "transparent",
+                                borderBottom: i < CANAIS_LEAD.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                              }}>
+                              <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
+                                background: active ? "#8B5CF6" : "rgba(255,255,255,0.04)",
+                                border: `1px solid ${active ? "#8B5CF6" : "rgba(255,255,255,0.08)"}`,
+                              }}>
+                                {active && <Check className="w-2.5 h-2.5 text-white" />}
+                              </div>
+                              <span className="text-sm">{canalIcons[c] || "📡"}</span>
+                              <span className="text-[11px] font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{c}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Grupos */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="w-3.5 h-3.5" style={{ color: "#F59E0B" }} />
+                      <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Grupo de Viajantes</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                      {GRUPOS_LEAD.map((g, i) => {
+                        const active = selectedGrupos.includes(g);
+                        const grupoIcons: Record<string, string> = { "1 pessoa": "🧍", Casal: "👫", "Família 4 pax": "👨‍👩‍👧‍👦", "Grupo 6 amigos": "👥", "Corporativo 3 pax": "💼", "Casal lua de mel": "💍" };
                         return (
-                          <button key={d.name} onClick={() => toggleMulti(selectedDestinos, d.name, setSelectedDestinos)}
-                            className="flex items-center gap-2 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02] relative"
+                          <button key={g} onClick={() => toggleMulti(selectedGrupos, g, setSelectedGrupos)}
+                            className="flex items-center gap-2.5 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
                             style={{
-                              background: active ? "rgba(6,182,212,0.06)" : "transparent",
-                              borderBottom: i < DESTINO_DATA.length - 5 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                              borderRight: (i + 1) % 5 !== 0 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                              background: active ? "rgba(245,158,11,0.05)" : "transparent",
+                              borderBottom: i < GRUPOS_LEAD.length - 3 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                              borderRight: (i + 1) % 3 !== 0 ? "1px solid rgba(255,255,255,0.03)" : "none",
                             }}>
                             <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
-                              background: active ? "#06B6D4" : "rgba(255,255,255,0.04)",
-                              border: `1px solid ${active ? "#06B6D4" : "rgba(255,255,255,0.08)"}`,
+                              background: active ? "#F59E0B" : "rgba(255,255,255,0.04)",
+                              border: `1px solid ${active ? "#F59E0B" : "rgba(255,255,255,0.08)"}`,
                             }}>
                               {active && <Check className="w-2.5 h-2.5 text-white" />}
                             </div>
-                            <span className="text-sm">{d.icon}</span>
-                            <div className="min-w-0">
-                              <p className="text-[10px] font-semibold truncate" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{d.name}</p>
-                              <p className="text-[8px]" style={{ color: "#475569" }}>{d.region}</p>
-                            </div>
+                            <span className="text-sm">{grupoIcons[g] || "👤"}</span>
+                            <span className="text-[10px] font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{g}</span>
                           </button>
                         );
                       })}
                     </div>
                   </div>
                 </div>
-              );
-            })()}
+              )}
 
-            {/* Budget + Canal side by side */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Budget */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Wallet className="w-3.5 h-3.5" style={{ color: "#10B981" }} />
-                  <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Faixa de Orçamento</span>
-                </div>
-                <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-                  {BUDGETS_LEAD.map((b, i) => {
-                    const active = selectedBudgets.includes(b);
-                    const barWidths = [20, 35, 55, 75, 100];
-                    return (
-                      <button key={b} onClick={() => toggleMulti(selectedBudgets, b, setSelectedBudgets)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
-                        style={{
-                          background: active ? "rgba(16,185,129,0.05)" : "transparent",
-                          borderBottom: i < BUDGETS_LEAD.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                        }}>
-                        <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
-                          background: active ? "#10B981" : "rgba(255,255,255,0.04)",
-                          border: `1px solid ${active ? "#10B981" : "rgba(255,255,255,0.08)"}`,
-                        }}>
-                          {active && <Check className="w-2.5 h-2.5 text-white" />}
-                        </div>
-                        <span className="text-[11px] font-semibold w-24 shrink-0" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{b}</span>
-                        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
-                          <div className="h-full rounded-full transition-all" style={{ width: `${barWidths[i]}%`, background: active ? "#10B981" : "rgba(255,255,255,0.08)" }} />
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Canal */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Radio className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
-                  <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Origem do Lead</span>
-                </div>
-                <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-                  {CANAIS_LEAD.map((c, i) => {
-                    const active = selectedCanais.includes(c);
-                    const canalIcons: Record<string, string> = { "Instagram DM": "📸", WhatsApp: "💬", Site: "🌐", Indicação: "🤝", Google: "🔍", TikTok: "🎵" };
-                    return (
-                      <button key={c} onClick={() => toggleMulti(selectedCanais, c, setSelectedCanais)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
-                        style={{
-                          background: active ? "rgba(139,92,246,0.05)" : "transparent",
-                          borderBottom: i < CANAIS_LEAD.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                        }}>
-                        <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
-                          background: active ? "#8B5CF6" : "rgba(255,255,255,0.04)",
-                          border: `1px solid ${active ? "#8B5CF6" : "rgba(255,255,255,0.08)"}`,
-                        }}>
-                          {active && <Check className="w-2.5 h-2.5 text-white" />}
-                        </div>
-                        <span className="text-sm">{canalIcons[c] || "📡"}</span>
-                        <span className="text-[11px] font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{c}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Grupos */}
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="w-3.5 h-3.5" style={{ color: "#F59E0B" }} />
-                <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Grupo de Viajantes</span>
-              </div>
-              <div className="grid grid-cols-3 gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-                {GRUPOS_LEAD.map((g, i) => {
-                  const active = selectedGrupos.includes(g);
-                  const grupoIcons: Record<string, string> = { "1 pessoa": "🧍", Casal: "👫", "Família 4 pax": "👨‍👩‍👧‍👦", "Grupo 6 amigos": "👥", "Corporativo 3 pax": "💼", "Casal lua de mel": "💍" };
-                  return (
-                    <button key={g} onClick={() => toggleMulti(selectedGrupos, g, setSelectedGrupos)}
-                      className="flex items-center gap-2.5 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
-                      style={{
-                        background: active ? "rgba(245,158,11,0.05)" : "transparent",
-                        borderBottom: i < GRUPOS_LEAD.length - 3 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                        borderRight: (i + 1) % 3 !== 0 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                      }}>
-                      <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
-                        background: active ? "#F59E0B" : "rgba(255,255,255,0.04)",
-                        border: `1px solid ${active ? "#F59E0B" : "rgba(255,255,255,0.08)"}`,
-                      }}>
-                        {active && <Check className="w-2.5 h-2.5 text-white" />}
-                      </div>
-                      <span className="text-sm">{grupoIcons[g] || "👤"}</span>
-                      <span className="text-[10px] font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{g}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Summary bar */}
-            <div className="rounded-xl px-4 py-3 flex items-center gap-6" style={{ background: "rgba(6,182,212,0.04)", border: "1px solid rgba(6,182,212,0.1)" }}>
-              <span className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#06B6D4" }}>Resumo</span>
-              <div className="flex gap-4 text-[10px]" style={{ color: "#94A3B8" }}>
-                <span>{selectedDestinos.length || DESTINOS_LEAD.length} destinos</span>
-                <span>·</span>
-                <span>{selectedBudgets.length || BUDGETS_LEAD.length} faixas</span>
-                <span>·</span>
-                <span>{selectedCanais.length || CANAIS_LEAD.length} canais</span>
-                <span>·</span>
-                <span>{selectedGrupos.length || GRUPOS_LEAD.length} grupos</span>
-              </div>
-            </div>
-          </div>
-        </ConfigSection>
-
-        {/* Behavior */}
-        <ConfigSection id="comportamento" title="Comportamento & Funil" accentColor="#8B5CF6" icon={<Zap className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />}>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px]" style={{ color: "#94A3B8" }}>Taxa alvo de conversão</span>
-                <span className="text-[13px] font-bold" style={{ color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
-                  {conversionOverride !== null ? `${conversionOverride}%` : "Natural"}
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Slider min={0} max={100} step={5} value={[conversionOverride ?? 50]} onValueChange={v => setConversionOverride(v[0])} disabled={conversionOverride === null} />
-                <button onClick={() => setConversionOverride(conversionOverride === null ? 50 : null)}
-                  className="text-[9px] px-3 py-1.5 rounded-lg shrink-0 font-semibold transition-all"
-                  style={{ background: conversionOverride !== null ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.02)", border: `1px solid ${conversionOverride !== null ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
-                  {conversionOverride !== null ? "Override" : "Natural"}
-                </button>
-              </div>
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[10px]" style={{ color: "#94A3B8" }}>Densidade de objeções</span>
-                <span className="text-[13px] font-bold" style={{ color: "#F59E0B" }}>{objectionDensity}%</span>
-              </div>
-              <Slider min={0} max={100} step={5} value={[objectionDensity]} onValueChange={v => setObjectionDensity(v[0])} />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
-              <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Velocidade da Simulação</span>
-            </div>
-            <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-              {SPEED_OPTIONS.map((s, i) => {
-                const active = speed === s.id;
-                const speedIcons: Record<string, string> = { lenta: "🐢", normal: "⚡", rapida: "🚀", instant: "💥" };
-                const speedDescs: Record<string, string> = { lenta: "5s entre msgs", normal: "2.5s entre msgs", rapida: "0.5s entre msgs", instant: "Sem delay" };
-                return (
-                  <button key={s.id} onClick={() => setSpeed(s.id)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
-                    style={{
-                      background: active ? "rgba(139,92,246,0.06)" : "transparent",
-                      borderBottom: i < SPEED_OPTIONS.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                    }}>
-                    <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 transition-all" style={{
-                      background: active ? "#8B5CF6" : "transparent",
-                      border: `2px solid ${active ? "#8B5CF6" : "rgba(255,255,255,0.12)"}`,
-                    }}>
-                      {active && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                    </div>
-                    <span className="text-sm">{speedIcons[s.id]}</span>
-                    <div className="flex-1">
-                      <span className="text-[11px] font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{s.label}</span>
-                      <span className="text-[9px] ml-2" style={{ color: "#475569" }}>{speedDescs[s.id]}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Users className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
-              <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Agentes do Funil</span>
-            </div>
-            <div className="rounded-xl overflow-hidden mb-3" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-              {[{ id: "full", label: "Funil completo", desc: "Comercial + Atendimento (6 agentes)", icon: "🔄" }, { id: "comercial", label: "Só comercial", desc: "Apenas squad comercial", icon: "💰" }, { id: "custom", label: "Personalizado", desc: "Escolha os agentes manualmente", icon: "⚙️" }].map((m, i) => {
-                const active = funnelMode === m.id;
-                return (
-                  <button key={m.id} onClick={() => setFunnelMode(m.id as any)}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
-                    style={{
-                      background: active ? "rgba(139,92,246,0.06)" : "transparent",
-                      borderBottom: i < 2 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                    }}>
-                    <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 transition-all" style={{
-                      background: active ? "#8B5CF6" : "transparent",
-                      border: `2px solid ${active ? "#8B5CF6" : "rgba(255,255,255,0.12)"}`,
-                    }}>
-                      {active && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                    </div>
-                    <span className="text-sm">{m.icon}</span>
+              {/* ===== COMPORTAMENTO TAB ===== */}
+              {configTab === "comportamento" && (
+                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Zap className="w-5 h-5" style={{ color: "#8B5CF6" }} />
                     <div>
-                      <span className="text-[11px] font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{m.label}</span>
-                      <p className="text-[9px]" style={{ color: "#475569" }}>{m.desc}</p>
+                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Comportamento & Funil</h3>
+                      <p className="text-[11px]" style={{ color: "#64748B" }}>Conversão, objeções, velocidade e agentes do pipeline</p>
                     </div>
-                  </button>
-                );
-              })}
-            </div>
-            {funnelMode === "custom" && (
-              <div className="rounded-xl overflow-hidden animate-in fade-in duration-200" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-                {AGENTS_V4.map((a, i) => {
-                  const active = customFunnelAgents.includes(a.id); const c = getAgentColor(a);
-                  return (
-                    <button key={a.id} onClick={() => toggleMulti(customFunnelAgents, a.id, setCustomFunnelAgents)}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-left transition-all duration-200 hover:bg-white/[0.02]"
-                      style={{
-                        background: active ? `${c}08` : "transparent",
-                        borderBottom: i < AGENTS_V4.length - 1 ? "1px solid rgba(255,255,255,0.02)" : "none",
-                      }}>
-                      <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
-                        background: active ? c : "rgba(255,255,255,0.04)",
-                        border: `1px solid ${active ? c : "rgba(255,255,255,0.08)"}`,
-                      }}>
-                        {active && <Check className="w-2.5 h-2.5 text-white" />}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Taxa alvo de conversão</span>
+                        <span className="text-[15px] font-bold" style={{ color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
+                          {conversionOverride !== null ? `${conversionOverride}%` : "Natural"}
+                        </span>
                       </div>
-                      <span className="text-sm">{a.emoji}</span>
-                      <span className="text-[10px] font-semibold" style={{ color: active ? "#E2E8F0" : "#64748B" }}>{a.name}</span>
-                      <span className="text-[8px] ml-auto px-1.5 py-0.5 rounded" style={{ background: `${c}10`, color: c }}>{a.role.split(" ")[0]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </ConfigSection>
+                      <p className="text-[9px] mb-3" style={{ color: "#475569" }}>Forçar uma taxa específica ou deixar natural</p>
+                      <div className="flex items-center gap-3">
+                        <Slider min={0} max={100} step={5} value={[conversionOverride ?? 50]} onValueChange={v => setConversionOverride(v[0])} disabled={conversionOverride === null} />
+                        <button onClick={() => setConversionOverride(conversionOverride === null ? 50 : null)}
+                          className="text-[9px] px-3 py-1.5 rounded-lg shrink-0 font-semibold transition-all"
+                          style={{ background: conversionOverride !== null ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.02)", border: `1px solid ${conversionOverride !== null ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
+                          {conversionOverride !== null ? "Override" : "Natural"}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Densidade de objeções</span>
+                        <span className="text-[15px] font-bold" style={{ color: "#F59E0B" }}>{objectionDensity}%</span>
+                      </div>
+                      <p className="text-[9px] mb-3" style={{ color: "#475569" }}>Probabilidade de objeções por turno</p>
+                      <Slider min={0} max={100} step={5} value={[objectionDensity]} onValueChange={v => setObjectionDensity(v[0])} />
+                    </div>
+                  </div>
+                  {/* Speed */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
+                      <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Velocidade da Simulação</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {SPEED_OPTIONS.map(s => {
+                        const active = speed === s.id;
+                        const speedIcons: Record<string, string> = { lenta: "🐢", normal: "⚡", rapida: "🚀", instant: "💥" };
+                        return (
+                          <button key={s.id} onClick={() => setSpeed(s.id)}
+                            className="flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all"
+                            style={{
+                              background: active ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.015)",
+                              border: `1px solid ${active ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.04)"}`,
+                            }}>
+                            <span className="text-lg">{speedIcons[s.id]}</span>
+                            <span className="text-[11px] font-bold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{s.label}</span>
+                            <span className="text-[8px]" style={{ color: "#475569" }}>{s.delay > 0 ? `${s.delay / 1000}s` : "0s"}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {/* Funnel agents */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
+                      <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Agentes do Funil</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      {[{ id: "full", label: "Funil completo", desc: "Comercial + Atendimento", icon: "🔄" }, { id: "comercial", label: "Só comercial", desc: "Squad comercial", icon: "💰" }, { id: "custom", label: "Personalizado", desc: "Escolha manual", icon: "⚙️" }].map(m => (
+                        <button key={m.id} onClick={() => setFunnelMode(m.id as any)}
+                          className="flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all"
+                          style={{
+                            background: funnelMode === m.id ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.015)",
+                            border: `1px solid ${funnelMode === m.id ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.04)"}`,
+                          }}>
+                          <span className="text-lg">{m.icon}</span>
+                          <span className="text-[11px] font-bold" style={{ color: funnelMode === m.id ? "#E2E8F0" : "#94A3B8" }}>{m.label}</span>
+                          <span className="text-[8px]" style={{ color: "#475569" }}>{m.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                    {funnelMode === "custom" && (
+                      <div className="rounded-xl overflow-hidden animate-in fade-in duration-200" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                        {AGENTS_V4.map((a, i) => {
+                          const active = customFunnelAgents.includes(a.id); const c = getAgentColor(a);
+                          return (
+                            <button key={a.id} onClick={() => toggleMulti(customFunnelAgents, a.id, setCustomFunnelAgents)}
+                              className="w-full flex items-center gap-3 px-3 py-2 text-left transition-all duration-200 hover:bg-white/[0.02]"
+                              style={{
+                                background: active ? `${c}08` : "transparent",
+                                borderBottom: i < AGENTS_V4.length - 1 ? "1px solid rgba(255,255,255,0.02)" : "none",
+                              }}>
+                              <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
+                                background: active ? c : "rgba(255,255,255,0.04)",
+                                border: `1px solid ${active ? c : "rgba(255,255,255,0.08)"}`,
+                              }}>
+                                {active && <Check className="w-2.5 h-2.5 text-white" />}
+                              </div>
+                              <span className="text-sm">{a.emoji}</span>
+                              <span className="text-[10px] font-semibold" style={{ color: active ? "#E2E8F0" : "#64748B" }}>{a.name}</span>
+                              <span className="text-[8px] ml-auto px-1.5 py-0.5 rounded" style={{ background: `${c}10`, color: c }}>{a.role.split(" ")[0]}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
-        {/* Advanced */}
-        <ConfigSection id="avancado" title="Motor IA Avançado" accentColor="#EC4899" icon={<Brain className="w-3.5 h-3.5" style={{ color: "#EC4899" }} />}>
-          <div className="space-y-3">
-            {[
-              { label: "Avaliação IA em tempo real", desc: "Lead julga qualidade de cada resposta e ajusta sentimento", value: enableEvaluation, setter: setEnableEvaluation, color: "#EC4899" },
-              { label: "Multi-mensagem por perfil", desc: "Ansioso e Sonhador enviam múltiplas msgs seguidas", value: enableMultiMsg, setter: setEnableMultiMsg, color: "#F59E0B" },
-            ].map(opt => (
-              <button key={opt.label} onClick={() => opt.setter(!opt.value)}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all"
-                style={{
-                  background: opt.value ? `${opt.color}06` : "rgba(255,255,255,0.015)",
-                  border: `1px solid ${opt.value ? `${opt.color}25` : "rgba(255,255,255,0.04)"}`,
-                }}>
-                <div className="w-8 h-5 rounded-full relative transition-all" style={{ background: opt.value ? opt.color : "rgba(255,255,255,0.1)" }}>
-                  <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all" style={{ left: opt.value ? 16 : 2, background: "#fff" }} />
+              {/* ===== AVANCADO TAB ===== */}
+              {configTab === "avancado" && (
+                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Brain className="w-5 h-5" style={{ color: "#F59E0B" }} />
+                    <div>
+                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Motor IA Avançado</h3>
+                      <p className="text-[11px]" style={{ color: "#64748B" }}>Controles avançados do engine de simulação</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { label: "Avaliação IA em tempo real", desc: "Lead julga qualidade de cada resposta e ajusta sentimento", value: enableEvaluation, setter: setEnableEvaluation, color: "#EC4899", icon: "🧠" },
+                      { label: "Multi-mensagem por perfil", desc: "Ansioso e Sonhador enviam múltiplas msgs seguidas", value: enableMultiMsg, setter: setEnableMultiMsg, color: "#F59E0B", icon: "💬" },
+                    ].map(opt => (
+                      <button key={opt.label} onClick={() => opt.setter(!opt.value)}
+                        className="w-full flex items-center gap-4 px-5 py-4 rounded-xl text-left transition-all"
+                        style={{
+                          background: opt.value ? `${opt.color}06` : "rgba(255,255,255,0.015)",
+                          border: `1px solid ${opt.value ? `${opt.color}25` : "rgba(255,255,255,0.04)"}`,
+                        }}>
+                        <span className="text-xl">{opt.icon}</span>
+                        <div className="flex-1">
+                          <p className="text-[12px] font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
+                          <p className="text-[10px] mt-0.5" style={{ color: "#475569" }}>{opt.desc}</p>
+                        </div>
+                        <div className="w-10 h-6 rounded-full relative transition-all" style={{ background: opt.value ? opt.color : "rgba(255,255,255,0.1)" }}>
+                          <div className="absolute top-1 w-4 h-4 rounded-full transition-all" style={{ left: opt.value ? 20 : 4, background: "#fff" }} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="rounded-xl p-4" style={{ background: "rgba(236,72,153,0.04)", border: "1px solid rgba(236,72,153,0.1)" }}>
+                    <p className="text-[10px] font-bold mb-2" style={{ color: "#EC4899" }}>Motor de Leads Inteligentes v2.0</p>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                      {["✅ Psicologia profunda (8 perfis)", "✅ Objeções dinâmicas por IA", "✅ Revelação gradual de info", "✅ Avaliação em tempo real", "✅ Multi-mensagem por perfil", "✅ Perdas motivadas por IA", "✅ Timing realista por perfil", "✅ Sentimento adaptativo"].map(f => (
+                        <p key={f} className="text-[9px]" style={{ color: "#94A3B8" }}>{f}</p>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[11px] font-bold" style={{ color: opt.value ? opt.color : "#94A3B8" }}>{opt.label}</p>
-                  <p className="text-[9px]" style={{ color: "#64748B" }}>{opt.desc}</p>
-                </div>
-              </button>
-            ))}
+              )}
+            </div>
           </div>
-          <div className="rounded-xl p-4" style={{ background: "rgba(236,72,153,0.04)", border: "1px solid rgba(236,72,153,0.1)" }}>
-            <p className="text-[10px] font-bold mb-2" style={{ color: "#EC4899" }}>Motor de Leads Inteligentes v2.0</p>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-              {["✅ Psicologia profunda (8 perfis)", "✅ Objeções dinâmicas por IA", "✅ Revelação gradual de info", "✅ Avaliação em tempo real", "✅ Multi-mensagem por perfil", "✅ Perdas motivadas por IA", "✅ Timing realista por perfil", "✅ Sentimento adaptativo"].map(f => (
-                <p key={f} className="text-[9px]" style={{ color: "#94A3B8" }}>{f}</p>
+        </div>
+
+        {/* CTA Bar */}
+        <div className="mt-5 rounded-2xl overflow-hidden relative" style={{
+          background: "linear-gradient(135deg, rgba(13,18,32,0.95), rgba(13,18,32,0.8))",
+          border: "1px solid rgba(16,185,129,0.15)",
+        }}>
+          <div className="h-[2px]" style={{ background: "linear-gradient(90deg, #10B981, #06B6D4, #8B5CF6)" }} />
+          <div className="flex items-center gap-6 px-6 py-4">
+            {/* Config chips */}
+            <div className="flex-1 flex items-center gap-3 overflow-x-auto">
+              {[
+                { icon: "👥", label: `${numLeads} leads`, color: "#3B82F6" },
+                { icon: "💬", label: `${msgsPerLead} msgs`, color: "#10B981" },
+                { icon: "⏱️", label: formatTime(duration), color: "#8B5CF6" },
+                { icon: "🎯", label: `${selectedProfiles.length || 8} perfis`, color: "#EC4899" },
+                { icon: "🌍", label: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos`, color: "#06B6D4" },
+                { icon: "⚡", label: SPEED_OPTIONS.find(s => s.id === speed)?.label || "Normal", color: "#F59E0B" },
+              ].map(chip => (
+                <span key={chip.label} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0"
+                  style={{ background: `${chip.color}08`, color: chip.color, border: `1px solid ${chip.color}15` }}>
+                  {chip.icon} {chip.label}
+                </span>
               ))}
             </div>
+            {/* Start button */}
+            <button onClick={runSimulation}
+              className="px-8 py-3 rounded-xl text-[13px] font-bold transition-all duration-300 relative overflow-hidden shrink-0 hover:scale-[1.03] active:scale-[0.98]"
+              style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 4px 24px rgba(16,185,129,0.3)" }}>
+              <Play className="w-4 h-4 inline mr-2" />
+              Iniciar Simulação IA
+            </button>
           </div>
-        </ConfigSection>
-
-        {/* Start */}
-        <button onClick={runSimulation}
-          className="w-full py-4 rounded-2xl text-sm font-bold transition-all duration-300 relative overflow-hidden group"
-          style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 8px 32px rgba(16,185,129,0.3)" }}
-          onMouseEnter={e => { (e.target as HTMLElement).style.transform = "translateY(-2px)"; }}
-          onMouseLeave={e => { (e.target as HTMLElement).style.transform = "translateY(0)"; }}>
-          <Brain className="w-4 h-4 inline mr-2" />
-          Iniciar Simulação IA · {numLeads} leads inteligentes · {formatTime(duration)}
-        </button>
+        </div>
       </div>
     );
   }
-
   // ===== WAR ROOM / REPORT =====
   return (
     <div className="space-y-0 animate-in fade-in duration-300">
