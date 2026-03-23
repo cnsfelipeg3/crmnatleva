@@ -319,7 +319,7 @@ export default function SimuladorAutoMode() {
     setRunning(false);
     setPhase("report");
     toast({ title: "Simulação concluída!", description: `${allNewLeads.length} leads processados` });
-  }, [totalMsgs, duration, msgsPerLead, msgsPerLeadLocked, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, estLeads, autoMsgsPerLead, interval, toast]);
+  }, [numLeadsManual, duration, msgsPerLead, intervalManual, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, estLeads, autoMsgsPerLead, interval, toast]);
 
   const stopSimulation = () => {
     setRunning(false);
