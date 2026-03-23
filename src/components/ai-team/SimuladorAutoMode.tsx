@@ -135,6 +135,7 @@ export default function SimuladorAutoMode() {
   const [selectedDestinos, setSelectedDestinos] = useState<string[]>([]);
   const [selectedBudgets, setSelectedBudgets] = useState<string[]>([]);
   const [selectedCanais, setSelectedCanais] = useState<string[]>([]);
+  const [selectedGrupos, setSelectedGrupos] = useState<string[]>([]);
   const [conversionOverride, setConversionOverride] = useState<number | null>(null);
   const [objectionDensity, setObjectionDensity] = useState(50);
   const [speed, setSpeed] = useState("normal");
@@ -142,7 +143,7 @@ export default function SimuladorAutoMode() {
   const [customFunnelAgents, setCustomFunnelAgents] = useState<string[]>([]);
   const [enableEvaluation, setEnableEvaluation] = useState(true);
   const [enableMultiMsg, setEnableMultiMsg] = useState(true);
-  const [configSections, setConfigSections] = useState<Record<string, boolean>>({ volume: true, perfis: false, comportamento: false, avancado: false });
+  const [configSections, setConfigSections] = useState<Record<string, boolean>>({ volume: true, perfis: false, cenario: false, comportamento: false, avancado: false });
 
   // Runtime
   const [phase, setPhase] = useState<Phase>("config");
