@@ -178,6 +178,8 @@ function AppRoutes() {
           <Route path="/cotacoes" element={<QuoteRequests />} />
           <Route path="/propostas" element={<Proposals />} />
           <Route path="/propostas/modelos" element={<ProposalTemplates />} />
+          <Route path="/propostas/modelos/novo" element={<ProposalTemplateEditor />} />
+          <Route path="/propostas/modelos/:id" element={<ProposalTemplateEditor />} />
           <Route path="/propostas/nova" element={<ProposalEditor />} />
           <Route path="/propostas/:id" element={<ProposalEditor />} />
           <Route path="/livechat" element={<LiveChat />} />
