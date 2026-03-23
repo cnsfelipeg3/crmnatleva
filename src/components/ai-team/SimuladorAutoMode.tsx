@@ -514,21 +514,186 @@ export default function SimuladorAutoMode() {
               );
             })}
           </div>
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2 mt-3">
+            <span className="text-[10px] self-center mr-1" style={{ color: "#64748B" }}>Distribuição:</span>
             {[{ id: "random", label: "Aleatório" }, { id: "roundrobin", label: "Round-robin" }].map(m => (
               <button key={m.id} onClick={() => setProfileMode(m.id as any)}
                 className="text-[10px] px-4 py-2 rounded-xl font-semibold transition-all"
                 style={{ background: profileMode === m.id ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${profileMode === m.id ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: profileMode === m.id ? "#10B981" : "#64748B" }}>{m.label}</button>
             ))}
           </div>
-          <div>
-            <p className="text-[10px] mb-2" style={{ color: "#94A3B8" }}>Destinos</p>
-            <div className="flex flex-wrap gap-1.5">
-              {DESTINOS_LEAD.map(d => (
-                <button key={d} onClick={() => toggleMulti(selectedDestinos, d, setSelectedDestinos)}
-                  className="text-[9px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
-                  style={{ background: selectedDestinos.includes(d) ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.02)", border: `1px solid ${selectedDestinos.includes(d) ? "rgba(245,158,11,0.25)" : "rgba(255,255,255,0.04)"}`, color: selectedDestinos.includes(d) ? "#F59E0B" : "#64748B" }}>{d}</button>
-              ))}
+        </ConfigSection>
+
+        {/* Cenário dos Leads - structured tables */}
+        <ConfigSection id="cenario" title="Cenário dos Leads" accentColor="#06B6D4" icon={<MapPin className="w-3.5 h-3.5" style={{ color: "#06B6D4" }} />}>
+          <div className="space-y-5">
+            {/* Destinos */}
+            {(() => {
+              const DESTINO_DATA = DESTINOS_LEAD.map(d => {
+                const regions: Record<string, string> = { Dubai: "Oriente Médio", Orlando: "América do Norte", Europa: "Europa", Maldivas: "Ásia", Caribe: "Caribe", Japão: "Ásia", Egito: "África", Tailândia: "Ásia", "Nova York": "América do Norte", Paris: "Europa", Grécia: "Europa", Bali: "Ásia", Cancún: "Caribe", Lisboa: "Europa", Seychelles: "África" };
+                const icons: Record<string, string> = { Dubai: "🏙️", Orlando: "🎢", Europa: "🏰", Maldivas: "🏝️", Caribe: "🌴", Japão: "🗾", Egito: "🏛️", Tailândia: "🛕", "Nova York": "🗽", Paris: "🗼", Grécia: "🏛️", Bali: "🌺", Cancún: "🏖️", Lisboa: "🚋", Seychelles: "🐚" };
+                return { name: d, region: regions[d] || "Outros", icon: icons[d] || "✈️" };
+              });
+              const allSelected = selectedDestinos.length === 0;
+              return (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-3.5 h-3.5" style={{ color: "#06B6D4" }} />
+                      <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Destinos</span>
+                      <span className="text-[9px] px-2 py-0.5 rounded-md" style={{ background: "rgba(6,182,212,0.08)", color: "#06B6D4" }}>
+                        {allSelected ? "Todos" : `${selectedDestinos.length} de ${DESTINOS_LEAD.length}`}
+                      </span>
+                    </div>
+                    <button onClick={() => setSelectedDestinos(allSelected ? [...DESTINOS_LEAD] : [])}
+                      className="text-[9px] font-semibold px-2.5 py-1 rounded-lg transition-all"
+                      style={{ color: "#06B6D4", background: "rgba(6,182,212,0.06)", border: "1px solid rgba(6,182,212,0.12)" }}>
+                      {allSelected ? "Selecionar todos" : "Limpar"}
+                    </button>
+                  </div>
+                  <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div className="grid grid-cols-5 gap-0">
+                      {DESTINO_DATA.map((d, i) => {
+                        const active = selectedDestinos.includes(d.name);
+                        return (
+                          <button key={d.name} onClick={() => toggleMulti(selectedDestinos, d.name, setSelectedDestinos)}
+                            className="flex items-center gap-2 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02] relative"
+                            style={{
+                              background: active ? "rgba(6,182,212,0.06)" : "transparent",
+                              borderBottom: i < DESTINO_DATA.length - 5 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                              borderRight: (i + 1) % 5 !== 0 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                            }}>
+                            <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
+                              background: active ? "#06B6D4" : "rgba(255,255,255,0.04)",
+                              border: `1px solid ${active ? "#06B6D4" : "rgba(255,255,255,0.08)"}`,
+                            }}>
+                              {active && <Check className="w-2.5 h-2.5 text-white" />}
+                            </div>
+                            <span className="text-sm">{d.icon}</span>
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-semibold truncate" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{d.name}</p>
+                              <p className="text-[8px]" style={{ color: "#475569" }}>{d.region}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Budget + Canal side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Budget */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Wallet className="w-3.5 h-3.5" style={{ color: "#10B981" }} />
+                  <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Faixa de Orçamento</span>
+                </div>
+                <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                  {BUDGETS_LEAD.map((b, i) => {
+                    const active = selectedBudgets.includes(b);
+                    const barWidths = [20, 35, 55, 75, 100];
+                    return (
+                      <button key={b} onClick={() => toggleMulti(selectedBudgets, b, setSelectedBudgets)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
+                        style={{
+                          background: active ? "rgba(16,185,129,0.05)" : "transparent",
+                          borderBottom: i < BUDGETS_LEAD.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                        }}>
+                        <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
+                          background: active ? "#10B981" : "rgba(255,255,255,0.04)",
+                          border: `1px solid ${active ? "#10B981" : "rgba(255,255,255,0.08)"}`,
+                        }}>
+                          {active && <Check className="w-2.5 h-2.5 text-white" />}
+                        </div>
+                        <span className="text-[11px] font-semibold w-24 shrink-0" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{b}</span>
+                        <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                          <div className="h-full rounded-full transition-all" style={{ width: `${barWidths[i]}%`, background: active ? "#10B981" : "rgba(255,255,255,0.08)" }} />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Canal */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Radio className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
+                  <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Origem do Lead</span>
+                </div>
+                <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                  {CANAIS_LEAD.map((c, i) => {
+                    const active = selectedCanais.includes(c);
+                    const canalIcons: Record<string, string> = { "Instagram DM": "📸", WhatsApp: "💬", Site: "🌐", Indicação: "🤝", Google: "🔍", TikTok: "🎵" };
+                    return (
+                      <button key={c} onClick={() => toggleMulti(selectedCanais, c, setSelectedCanais)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
+                        style={{
+                          background: active ? "rgba(139,92,246,0.05)" : "transparent",
+                          borderBottom: i < CANAIS_LEAD.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                        }}>
+                        <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
+                          background: active ? "#8B5CF6" : "rgba(255,255,255,0.04)",
+                          border: `1px solid ${active ? "#8B5CF6" : "rgba(255,255,255,0.08)"}`,
+                        }}>
+                          {active && <Check className="w-2.5 h-2.5 text-white" />}
+                        </div>
+                        <span className="text-sm">{canalIcons[c] || "📡"}</span>
+                        <span className="text-[11px] font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{c}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Grupos */}
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="w-3.5 h-3.5" style={{ color: "#F59E0B" }} />
+                <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Grupo de Viajantes</span>
+              </div>
+              <div className="grid grid-cols-3 gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                {GRUPOS_LEAD.map((g, i) => {
+                  const active = selectedGrupos.includes(g);
+                  const grupoIcons: Record<string, string> = { "1 pessoa": "🧍", Casal: "👫", "Família 4 pax": "👨‍👩‍👧‍👦", "Grupo 6 amigos": "👥", "Corporativo 3 pax": "💼", "Casal lua de mel": "💍" };
+                  return (
+                    <button key={g} onClick={() => toggleMulti(selectedGrupos, g, setSelectedGrupos)}
+                      className="flex items-center gap-2.5 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
+                      style={{
+                        background: active ? "rgba(245,158,11,0.05)" : "transparent",
+                        borderBottom: i < GRUPOS_LEAD.length - 3 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                        borderRight: (i + 1) % 3 !== 0 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                      }}>
+                      <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
+                        background: active ? "#F59E0B" : "rgba(255,255,255,0.04)",
+                        border: `1px solid ${active ? "#F59E0B" : "rgba(255,255,255,0.08)"}`,
+                      }}>
+                        {active && <Check className="w-2.5 h-2.5 text-white" />}
+                      </div>
+                      <span className="text-sm">{grupoIcons[g] || "👤"}</span>
+                      <span className="text-[10px] font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{g}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Summary bar */}
+            <div className="rounded-xl px-4 py-3 flex items-center gap-6" style={{ background: "rgba(6,182,212,0.04)", border: "1px solid rgba(6,182,212,0.1)" }}>
+              <span className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#06B6D4" }}>Resumo</span>
+              <div className="flex gap-4 text-[10px]" style={{ color: "#94A3B8" }}>
+                <span>{selectedDestinos.length || DESTINOS_LEAD.length} destinos</span>
+                <span>·</span>
+                <span>{selectedBudgets.length || BUDGETS_LEAD.length} faixas</span>
+                <span>·</span>
+                <span>{selectedCanais.length || CANAIS_LEAD.length} canais</span>
+                <span>·</span>
+                <span>{selectedGrupos.length || GRUPOS_LEAD.length} grupos</span>
+              </div>
             </div>
           </div>
         </ConfigSection>
