@@ -1490,7 +1490,7 @@ Retorne JSON:
                 <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
                   <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#10B981" }}>✅ Pontos Fortes</p>
                   {debrief.pontosFortes.slice(0, 4).map((p, i) => (
-                    <div key={i} className="flex items-start gap-2.5 py-1.5">
+                    <div key={`forte-${i}`} className="flex items-start gap-2.5 py-1.5">
                       <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#10B981" }} />
                       <p className="text-[11px] leading-relaxed" style={{ color: "#E2E8F0" }}>{p}</p>
                     </div>
