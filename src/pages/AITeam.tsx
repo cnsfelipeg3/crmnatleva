@@ -58,6 +58,19 @@ export default function AITeam() {
   const [workLogAgent, setWorkLogAgent] = useState<string>(baseAgents[0]?.id ?? "");
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { seedAgents, fetchRealMetrics } = useAITeamPersistence();
+
+  // Real business metrics
+  const [realMetrics, setRealMetrics] = useState<{
+    totalSales: number; totalRevenue: number; totalProfit: number;
+    activeConversations: number; totalConversations: number;
+    openProposals: number; totalProposals: number; salesToday: number;
+  } | null>(null);
+
+  useEffect(() => {
+    seedAgents();
+    fetchRealMetrics().then(setRealMetrics).catch(console.error);
+  }, []);
 
   const handleApprove = useCallback((id: string) => {
     removeTask(id, "approve");
