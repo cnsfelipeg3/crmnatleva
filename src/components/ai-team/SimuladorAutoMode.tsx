@@ -493,7 +493,7 @@ export default function SimuladorAutoMode() {
 
   const stopSimulation = () => { simAtivaRef.current = false; abortRef.current = true; setRunning(false); if (timerRef.current) clearInterval(timerRef.current); setPhase("report"); };
 
-  // Generate debrief
+  // Generate debrief — V2 com 12 critérios
   const generateDebrief = useCallback(async () => {
     setDebriefLoading(true);
     try {
@@ -501,6 +501,7 @@ export default function SimuladorAutoMode() {
         name: l.nome, profile: l.perfil.label, destino: l.destino, status: l.status,
         sentimento: l.sentimentoScore, emocao: l.estadoEmocional, motivoPerda: l.motivoPerda,
         objecoes: l.objecoesLancadas, etapaPerda: l.etapaPerda,
+        dimensoes: { h: l.scoreHumanizacao, e: l.scoreEficacia, t: l.scoreTecnica },
         msgs: l.mensagens.slice(0, 12).map(m => `${m.role}: ${m.content.slice(0, 120)}`).join("\n"),
       }));
 
@@ -513,57 +514,54 @@ export default function SimuladorAutoMode() {
       const topObjs = leads.flatMap(l => l.objecoesLancadas).reduce((acc, o) => { acc[o] = (acc[o] || 0) + 1; return acc; }, {} as Record<string, number>);
       const topObjsStr = Object.entries(topObjs).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `"${k}" (${v}x)`).join(", ");
 
-      const prompt = `Você é NATH.AI, consultora de inteligência operacional da NatLeva Viagens.
-Sua missão: analisar simulações de atendimento com precisão cirúrgica.
-Tom: direto, construtivo, sem rodeios. A Nathália precisa de diagnóstico acionável.
-Cultura NatLeva: calorosa, próxima, humana. Nunca genérica.
-Retorne SOMENTE JSON válido. Nenhum texto fora do JSON.
+      // Collect unique agent names used
+      const agentesUsados = [...new Set(leads.flatMap(l => l.mensagens.filter(m => m.agentName).map(m => m.agentName!)))];
 
-DADOS DA SIMULAÇÃO:
-- Total de leads: ${leads.length}
-- Fechados: ${closedLeads.length} (${conversionRate}%)
-- Perdidos: ${lostLeads.length}
-- Receita simulada: R$${(totalReceita/1000).toFixed(0)}k
-- Ticket médio: R$${(ticketMedio/1000).toFixed(0)}k
-- Objeções total: ${totalObjecoes}
-- Objeções contornadas: ${totalContornadas} (${totalObjecoes > 0 ? Math.round(totalContornadas/totalObjecoes*100) : 0}%)
+      const prompt = buildDebriefV2Prompt({
+        totalLeads: leads.length,
+        fechados: closedLeads.length,
+        perdidos: lostLeads.length,
+        conversionRate,
+        receita: totalReceita,
+        ticketMedio,
+        totalObjecoes,
+        totalContornadas,
+        performancePorPerfil: pResumo,
+        topObjecoes: topObjsStr,
+        perdasMotivadas: lostLeads.slice(0, 5).map(l => `${l.perfil.label} em ${l.etapaPerda}: ${l.motivoPerda?.slice(0, 80)}`).join(" | "),
+        amostraConversas: JSON.stringify(sampleConvos),
+        agentesUsados,
+      });
 
-PERFORMANCE POR PERFIL: ${pResumo}
-TOP 5 OBJEÇÕES: ${topObjsStr || "nenhuma"}
-
-Perdas motivadas: ${lostLeads.slice(0, 5).map(l => `${l.perfil.label} em ${l.etapaPerda}: ${l.motivoPerda?.slice(0, 80)}`).join(" | ")}
-
-AMOSTRA DE CONVERSAS:
-${JSON.stringify(sampleConvos)}
-
-Retorne JSON:
-{
-  "scoreGeral": 0-100,
-  "resumoExecutivo": "2-3 frases de diagnóstico preciso",
-  "fraseNathAI": "frase motivacional e específica para a Nathália",
-  "pontosFortes": ["o que funcionou bem com evidência"],
-  "melhorias": [{
-    "titulo": "título curto e específico",
-    "desc": "2-3 frases explicando o problema e a solução",
-    "impacto": "impacto estimado com número",
-    "agente": "nome do agente responsável",
-    "prioridade": "alta|media|baixa",
-    "tipo": "conhecimento_kb|nova_skill|instrucao_prompt|workflow",
-    "conteudoSugerido": "TEXTO PRONTO para ser implementado no agente"
-  }],
-  "lacunasConhecimento": ["gap específico identificado"],
-  "insightsCliente": ["padrão de comportamento detectado com dados"]
-}`;
-
-      const resp = await callAgent("Voce e NATH.AI da NatLeva. Retorne SOMENTE JSON válido sem markdown.", [{ role: "user", content: prompt }]);
+      const resp = await callAgent(SYSTEM_DEBRIEF_V2, [{ role: "user", content: prompt }]);
       const jsonMatch = resp.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const data = JSON.parse(jsonMatch[0]);
+
+        // Parse dimensões
+        const parseDimensao = (dim: any, pesoKey: string): DimensaoScore => {
+          if (!dim) return { score: 50, peso_agente: 35, criterios: {} };
+          const criterios: Record<string, CriterioScore> = {};
+          if (dim.criterios) {
+            Object.entries(dim.criterios).forEach(([k, v]: [string, any]) => {
+              criterios[k] = { score: v?.score ?? 50, nivel: v?.nivel ?? "REGULAR", evidencia: v?.evidencia ?? "" };
+            });
+          }
+          return { score: dim.score ?? 50, peso_agente: dim.peso_agente ?? 35, criterios };
+        };
+
+        const dimensoes: DebriefDimensoes = {
+          humanizacao: parseDimensao(data.dimensoes?.humanizacao, "humanizacao"),
+          eficaciaComercial: parseDimensao(data.dimensoes?.eficaciaComercial, "eficaciaComercial"),
+          qualidadeTecnica: parseDimensao(data.dimensoes?.qualidadeTecnica, "qualidadeTecnica"),
+        };
+
         const debriefResult: DebriefData = {
           scoreGeral: data.scoreGeral || 0,
-          resumoExecutivo: data.resumoExecutivo || "",
+          resumoExecutivo: data.resumoExecutivo || data.resumo_executivo || "",
           fraseNathAI: data.fraseNathAI || "",
-          pontosFortes: data.pontosFortes || [],
+          pontosFortes: data.pontosFortes || data.pontos_fortes || [],
+          dimensoes,
           melhorias: (data.melhorias || []).map((m: any, i: number) => ({
             id: `imp-${Date.now()}-${i}`,
             titulo: m.titulo || "",
@@ -573,7 +571,7 @@ Retorne JSON:
             prioridade: m.prioridade || "media",
             tipo: (m.tipo || "instrucao_prompt") as ImprovementType,
             conteudoSugerido: m.conteudoSugerido || "",
-            fonte: "debrief_simulacao",
+            fonte: `debrief_criterio_${m.criterio || "geral"}`,
             status: "pending" as const,
             deepAnalysis: null,
             editedContent: undefined,
@@ -582,7 +580,8 @@ Retorne JSON:
           insightsCliente: data.insightsCliente || [],
         };
         setDebrief(debriefResult);
-        // Save to simulation history
+
+        // Save to simulation history with dimensions
         saveSimHistory({
           id: "wr_" + Date.now(),
           date: new Date().toISOString(),
@@ -592,6 +591,29 @@ Retorne JSON:
           perdidos: lostLeads.length,
           conversao: conversionRate,
           melhorias_aprovadas: [],
+          dimensoes: {
+            humanizacao: dimensoes.humanizacao.score,
+            eficaciaComercial: dimensoes.eficaciaComercial.score,
+            qualidadeTecnica: dimensoes.qualidadeTecnica.score,
+          },
+        });
+
+        // Save to evaluation history
+        agentesUsados.forEach(agenteName => {
+          saveHistoricoAvaliacao({
+            id: `eval_${Date.now()}_${agenteName}`,
+            timestamp: Date.now(),
+            agenteId: agenteName.toLowerCase(),
+            agenteName,
+            scoreGeral: debriefResult.scoreGeral,
+            dimensoes: {
+              humanizacao: dimensoes.humanizacao.score,
+              eficaciaComercial: dimensoes.eficaciaComercial.score,
+              qualidadeTecnica: dimensoes.qualidadeTecnica.score,
+            },
+            perfilLead: leads.map(l => l.perfil.label).join(", "),
+            fonteSimulacao: "war_room_auto",
+          });
         });
       }
     } catch { toast({ title: "Erro ao gerar debrief", variant: "destructive" }); }
