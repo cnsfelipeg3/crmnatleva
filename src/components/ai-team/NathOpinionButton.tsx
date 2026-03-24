@@ -897,14 +897,26 @@ Retorne SOMENTE o JSON, sem markdown.`,
                                       </div>
                                       <div className="flex-1 min-w-0" onClick={() => loadDetailReport(action)}>
                                         <div className="flex items-center gap-2 mb-1">
-                                          <TypeIcon className="w-3.5 h-3.5 shrink-0" style={{ color: tc.color }} />
+                                          {action.type === "new_agent" && action.newAgentEmoji ? (
+                                            <span className="text-sm">{action.newAgentEmoji}</span>
+                                          ) : (
+                                            <TypeIcon className="w-3.5 h-3.5 shrink-0" style={{ color: tc.color }} />
+                                          )}
                                           <span className="text-[11px] font-bold truncate" style={{ color: "#E9EDEF" }}>
-                                            {action.title}
+                                            {action.type === "new_agent" && action.newAgentName
+                                              ? `Criar agente: ${action.newAgentName}`
+                                              : action.title}
                                           </span>
                                         </div>
-                                        <p className="text-[10px] leading-relaxed line-clamp-2" style={{ color: "#9CA3AF" }}>
-                                          {action.description}
-                                        </p>
+                                        {action.type === "new_agent" && action.newAgentRole ? (
+                                          <p className="text-[10px] leading-relaxed line-clamp-2" style={{ color: "#C4B5FD" }}>
+                                            {action.newAgentRole}
+                                          </p>
+                                        ) : (
+                                          <p className="text-[10px] leading-relaxed line-clamp-2" style={{ color: "#9CA3AF" }}>
+                                            {action.description}
+                                          </p>
+                                        )}
                                         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                                           <span className="text-[8px] font-bold px-2 py-0.5 rounded-full uppercase"
                                             style={{ background: tc.bg, color: tc.color, border: `1px solid ${tc.color}20` }}>
@@ -914,14 +926,33 @@ Retorne SOMENTE o JSON, sem markdown.`,
                                             style={{ background: `${pc.color}10`, color: pc.color }}>
                                             {pc.label}
                                           </span>
-                                          <span className="text-[8px] px-2 py-0.5 rounded-full flex items-center gap-1"
-                                            style={{ background: "rgba(255,255,255,0.04)", color: action.targetAgent ? "#A855F7" : "#6B7280" }}>
-                                            {action.targetAgent ? (
-                                              <><User className="w-2.5 h-2.5" /> {action.targetAgent}</>
-                                            ) : (
-                                              <><Users className="w-2.5 h-2.5" /> Todos</>
-                                            )}
-                                          </span>
+                                          {action.type === "new_agent" ? (
+                                            <>
+                                              {action.newAgentSquad && (
+                                                <span className="text-[8px] px-2 py-0.5 rounded-full capitalize flex items-center gap-1"
+                                                  style={{ background: "rgba(168,85,247,0.08)", color: "#C084FC" }}>
+                                                  <Bot className="w-2.5 h-2.5" /> {action.newAgentSquad}
+                                                </span>
+                                              )}
+                                              {action.newAgentStage && (
+                                                <span className="text-[8px] px-2 py-0.5 rounded-full flex items-center gap-1"
+                                                  style={{ background: "rgba(236,72,153,0.08)", color: "#F472B6" }}>
+                                                  {action.newAgentStage}
+                                                </span>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <>
+                                              <span className="text-[8px] px-2 py-0.5 rounded-full flex items-center gap-1"
+                                                style={{ background: "rgba(255,255,255,0.04)", color: action.targetAgent ? "#A855F7" : "#6B7280" }}>
+                                                {action.targetAgent ? (
+                                                  <><User className="w-2.5 h-2.5" /> {action.targetAgent}</>
+                                                ) : (
+                                                  <><Users className="w-2.5 h-2.5" /> Todos</>
+                                                )}
+                                              </span>
+                                            </>
+                                          )}
                                           {action.difficulty && (
                                             <span className="text-[8px] font-bold px-2 py-0.5 rounded-full capitalize"
                                               style={{ background: dc.bg, color: dc.color }}>
