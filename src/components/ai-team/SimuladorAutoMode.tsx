@@ -1642,22 +1642,9 @@ Retorne JSON:
 
                   {/* Advanced: re-engagement + max conv time + custom instructions */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Reengajamento</span>
-                        <span className="text-sm font-bold" style={{ color: "#06B6D4" }}>{leadReengagementChance}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Chance do lead voltar após silêncio/desistência parcial</p>
-                      <Slider min={0} max={80} step={5} value={[leadReengagementChance]} onValueChange={v => setLeadReengagementChance(v[0])} />
-                    </div>
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Duração máx por conversa</span>
-                        <span className="text-sm font-bold" style={{ color: "#8B5CF6" }}>{maxConversationMinutes === 0 ? "∞" : `${maxConversationMinutes}min`}</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Limite de tempo por conversa individual (0 = ilimitado)</p>
-                      <Slider min={0} max={30} step={1} value={[maxConversationMinutes]} onValueChange={v => setMaxConversationMinutes(v[0])} />
-                    </div>
+                    <SimConfigInput label="Reengajamento" value={leadReengagementChance} onChange={setLeadReengagementChance} min={0} max={80} step={5} color="#06B6D4" desc="Chance do lead voltar após silêncio/desistência parcial" suffix="%" icon="🔁" />
+                    <SimConfigInput label="Duração máx por conversa" value={maxConversationMinutes} onChange={setMaxConversationMinutes} min={0} max={30} step={1} color="#8B5CF6" desc="Limite por conversa individual (0 = ilimitado)" suffix="min" icon="⏱️"
+                      format={v => v === 0 ? "∞" : `${v}min`} />
                   </div>
 
                   {/* Custom instructions */}
