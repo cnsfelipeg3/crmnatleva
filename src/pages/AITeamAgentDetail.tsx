@@ -479,6 +479,117 @@ export default function AITeamAgentDetail() {
   );
 }
 
+/* ═══ Nath Improvements Tab ═══ */
+function NathImprovementsTab({ improvements, knowledge, agentName }: {
+  improvements: any[];
+  knowledge: any[];
+  agentName: string;
+}) {
+  const CATEGORY_LABELS: Record<string, { label: string; icon: typeof Zap; color: string }> = {
+    skill: { label: "Skill", icon: Zap, color: "text-purple-400 bg-purple-500/10 border-purple-500/20" },
+    knowledge_base: { label: "Conhecimento", icon: BookOpen, color: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
+    global_rule: { label: "Regra Global", icon: Shield, color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+    prompt: { label: "Prompt", icon: Brain, color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
+  };
+
+  const totalItems = improvements.length + knowledge.length;
+
+  if (totalItems === 0) {
+    return (
+      <div className="rounded-xl border border-border/50 bg-card p-8 text-center">
+        <Sparkles className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground">Nenhuma melhoria aplicada pela Nath ainda.</p>
+        <p className="text-xs text-muted-foreground/50 mt-1">
+          Use o Simulador e clique em "Opinião da Nath" → "Converter em Ação" para gerar melhorias.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Sparkles className="w-4 h-4 text-primary" />
+        <p className="text-xs text-muted-foreground">
+          <span className="font-semibold text-foreground">{totalItems}</span> melhoria{totalItems !== 1 ? "s" : ""} aplicada{totalItems !== 1 ? "s" : ""} pela Nath para <span className="font-semibold text-foreground">{agentName}</span>
+        </p>
+      </div>
+
+      {/* Agent-specific improvements from ai_team_improvements */}
+      {improvements.length > 0 && (
+        <SectionCard title={`Melhorias do Agente · ${improvements.length}`} icon={Zap}>
+          <div className="space-y-2">
+            {improvements.map((imp) => {
+              const cat = CATEGORY_LABELS[imp.category] || CATEGORY_LABELS.skill;
+              const CatIcon = cat.icon;
+              return (
+                <div key={imp.id} className="flex items-start gap-3 p-3 rounded-lg border border-border/50 bg-card hover:border-primary/20 transition-all">
+                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border", cat.color)}>
+                    <CatIcon className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-sm font-semibold text-foreground">{imp.title}</h4>
+                      <Badge className={cn("text-[9px] border", cat.color)}>{cat.label}</Badge>
+                      <Badge variant="outline" className={cn("text-[9px]",
+                        imp.status === "approved" ? "text-emerald-400 border-emerald-500/30" :
+                        imp.status === "pending" ? "text-amber-400 border-amber-500/30" :
+                        "text-muted-foreground"
+                      )}>{imp.status === "approved" ? "Aprovado" : imp.status === "pending" ? "Pendente" : imp.status}</Badge>
+                    </div>
+                    {imp.description && (
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{imp.description}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground/60">
+                      {imp.impact_score && <span>Impacto: {imp.impact_score}%</span>}
+                      <span>{new Date(imp.created_at).toLocaleDateString("pt-BR")}</span>
+                      {imp.approved_at && <span>· Aprovado em {new Date(imp.approved_at).toLocaleDateString("pt-BR")}</span>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </SectionCard>
+      )}
+
+      {/* Global knowledge from ai_strategy_knowledge with nath origin */}
+      {knowledge.length > 0 && (
+        <SectionCard title={`Conhecimento Estratégico da Nath · ${knowledge.length}`} icon={BookOpen}>
+          <div className="space-y-2">
+            {knowledge.map((kb) => (
+              <div key={kb.id} className="flex items-start gap-3 p-3 rounded-lg border border-border/50 bg-card hover:border-primary/20 transition-all">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border text-primary bg-primary/10 border-primary/20">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-sm font-semibold text-foreground">{kb.title}</h4>
+                    <Badge className="text-[9px] border text-primary bg-primary/10 border-primary/20">
+                      {kb.category === "regra_global" ? "Regra Global" : "Conhecimento"}
+                    </Badge>
+                    {kb.tags?.map((t: string) => (
+                      <Badge key={t} variant="secondary" className="text-[9px]">{t}</Badge>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{kb.rule}</p>
+                  {kb.description && (
+                    <p className="text-[10px] text-muted-foreground/60 mt-1 italic">{kb.description}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground/60">
+                    <span>Prioridade: {kb.priority}</span>
+                    <span>{new Date(kb.created_at).toLocaleDateString("pt-BR")}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </SectionCard>
+      )}
+    </div>
+  );
+}
+
 /* ═══ Knowledge Base Tab ═══ */
 function KnowledgeBaseTab({ docs, agentName }: { docs: KBDoc[]; agentName: string }) {
   const [search, setSearch] = useState("");
