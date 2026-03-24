@@ -2417,39 +2417,45 @@ Retorne JSON:
     <div className="space-y-0 animate-in fade-in duration-300">
       {/* War Room header */}
       {running && (
-        <div className="flex items-center gap-4 px-5 py-3 rounded-2xl mb-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(13,18,32,0.95), rgba(15,23,42,0.9))", border: "1px solid rgba(239,68,68,0.15)" }}>
+        <div className={cn("rounded-2xl mb-4 relative overflow-hidden", isMobile ? "px-3 py-2" : "px-5 py-3")} style={{ background: "linear-gradient(135deg, rgba(13,18,32,0.95), rgba(15,23,42,0.9))", border: "1px solid rgba(239,68,68,0.15)" }}>
           <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #EF4444, #F59E0B, transparent)" }} />
-          <div className="flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: "#EF4444", boxShadow: "0 0 12px rgba(239,68,68,0.5)" }} />
-            <span className="text-[14px] font-extrabold tracking-wider" style={{ color: "#F1F5F9" }}>WAR ROOM</span>
-            <span className="text-[15px] font-bold tabular-nums px-3 py-1 rounded-lg" style={{ color: "#F59E0B", background: "rgba(245,158,11,0.08)" }}>{formatTime(elapsedSeconds)}</span>
-          </div>
-          <div className="flex-1 flex items-center justify-center gap-6">
-            {[
-              { label: "Leads", value: animLeads, color: "#3B82F6" },
-              { label: "Fechados", value: animClosed, color: "#10B981" },
-              { label: "Conversão", value: `${conversionRate}%`, color: "#F59E0B" },
-              { label: "Sentimento", value: `${avgSentimento}`, color: sentimentColor(avgSentimento) },
-            ].map(k => (
-              <div key={k.label} className="text-center">
-                <span className="text-[16px] font-extrabold tabular-nums block" style={{ color: k.color }}>{k.value}</span>
-                <span className="text-[8px] uppercase tracking-wider" style={{ color: "#64748B" }}>{k.label}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => exportConversations("txt")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
-              style={{ background: "rgba(16,185,129,0.1)", color: "#10B981", border: "1px solid rgba(16,185,129,0.2)" }}>
-              <Download className="w-3 h-3" /> TXT
-            </button>
-            <button onClick={() => exportConversations("pdf")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
-              style={{ background: "rgba(139,92,246,0.1)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.2)" }}>
-              <FileText className="w-3 h-3" /> PDF
-            </button>
-            <button onClick={stopSimulation} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold transition-all hover:scale-105"
-              style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)" }}>
-              <Square className="w-3 h-3" /> Parar
-            </button>
+          <div className={cn("flex items-center", isMobile ? "flex-wrap gap-2" : "gap-4")}>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: "#EF4444", boxShadow: "0 0 12px rgba(239,68,68,0.5)" }} />
+              <span className={cn("font-extrabold tracking-wider", isMobile ? "text-[11px]" : "text-[14px]")} style={{ color: "#F1F5F9" }}>WAR ROOM</span>
+              <span className={cn("font-bold tabular-nums px-2 py-0.5 rounded-lg", isMobile ? "text-[12px]" : "text-[15px] px-3 py-1")} style={{ color: "#F59E0B", background: "rgba(245,158,11,0.08)" }}>{formatTime(elapsedSeconds)}</span>
+            </div>
+            <div className={cn("flex items-center gap-3", isMobile ? "flex-1 justify-between" : "flex-1 justify-center gap-6")}>
+              {[
+                { label: "Leads", value: animLeads, color: "#3B82F6" },
+                { label: "Fechados", value: animClosed, color: "#10B981" },
+                { label: "Conversão", value: `${conversionRate}%`, color: "#F59E0B" },
+                ...(!isMobile ? [{ label: "Sentimento", value: `${avgSentimento}`, color: sentimentColor(avgSentimento) }] : []),
+              ].map(k => (
+                <div key={k.label} className="text-center">
+                  <span className={cn("font-extrabold tabular-nums block", isMobile ? "text-[13px]" : "text-[16px]")} style={{ color: k.color }}>{k.value}</span>
+                  <span className="text-[8px] uppercase tracking-wider" style={{ color: "#64748B" }}>{k.label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {!isMobile && (
+                <>
+                  <button onClick={() => exportConversations("txt")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
+                    style={{ background: "rgba(16,185,129,0.1)", color: "#10B981", border: "1px solid rgba(16,185,129,0.2)" }}>
+                    <Download className="w-3 h-3" /> TXT
+                  </button>
+                  <button onClick={() => exportConversations("pdf")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
+                    style={{ background: "rgba(139,92,246,0.1)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.2)" }}>
+                    <FileText className="w-3 h-3" /> PDF
+                  </button>
+                </>
+              )}
+              <button onClick={stopSimulation} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
+                style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)" }}>
+                <Square className="w-3 h-3" /> Parar
+              </button>
+            </div>
           </div>
         </div>
       )}
