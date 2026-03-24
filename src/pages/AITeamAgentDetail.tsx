@@ -1,6 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { updateBehaviorPrompt, setAgentTraining, getAgentTraining } from "@/components/ai-team/agentTrainingStore";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft, Send, Zap, Shield, Target, Brain, CheckCircle2, Clock,
   Loader2, Activity, AlertTriangle, Eye, Pause, ChevronDown, ChevronUp,
