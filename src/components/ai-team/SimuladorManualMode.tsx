@@ -169,7 +169,13 @@ export default function SimuladorManualMode() {
     });
   }, []);
 
-  useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
+  useEffect(() => {
+    if (scrollRef.current) {
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current!.scrollHeight, behavior: messages.length > 1 ? "smooth" : "auto" });
+      });
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (messages.length === 0) return;
@@ -438,17 +444,17 @@ export default function SimuladorManualMode() {
 
         {/* ═══════════ CHAT AREA ═══════════ */}
         <div className="flex-1 rounded-2xl flex flex-col overflow-hidden relative" style={{ background: "#0B141A", border: "1px solid rgba(255,255,255,0.06)" }}>
-          {/* Ambient glow */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-24 pointer-events-none" style={{ background: `radial-gradient(ellipse, ${agentColor}08, transparent 70%)` }} />
+        {/* Ambient glow — lightweight */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-24 pointer-events-none" style={{ background: `radial-gradient(ellipse, ${agentColor}06, transparent 70%)`, willChange: "auto" }} />
 
           {/* Chat header */}
-          <div className="flex items-center gap-3 px-4 md:px-5 shrink-0 relative z-10" style={{ height: isMobile ? 60 : 66, background: "linear-gradient(180deg, rgba(31,44,51,0.95), rgba(31,44,51,0.85))", backdropFilter: "blur(12px)" }}>
+          <div className="flex items-center gap-3 px-4 md:px-5 shrink-0 relative z-10" style={{ height: isMobile ? 60 : 66, background: "rgba(31,44,51,0.92)" }}>
             <button
               onClick={() => { if (isMobile) { setPanelTab("agente"); setShowPanel(true); } }}
               className="relative shrink-0"
             >
-              <div className={cn("rounded-2xl flex items-center justify-center font-bold transition-all duration-300", isMobile ? "w-10 h-10 text-sm" : "w-11 h-11 text-base")}
-                style={{ background: `${agentColor}15`, color: agentColor, border: `2px solid ${agentColor}40`, boxShadow: `0 0 20px ${agentColor}15` }}>
+              <div className={cn("rounded-2xl flex items-center justify-center font-bold", isMobile ? "w-10 h-10 text-sm" : "w-11 h-11 text-base")}
+                style={{ background: `${agentColor}15`, color: agentColor, border: `2px solid ${agentColor}40`, transition: "background 0.2s, border-color 0.2s" }}>
                 {selectedAgent.emoji}
               </div>
               <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full" style={{ background: "#25D366", border: "2px solid #1F2C33" }}>
@@ -580,22 +586,24 @@ export default function SimuladorManualMode() {
           </div>
 
           {/* Input */}
-          <div className={cn("flex items-center gap-3 shrink-0", isMobile ? "px-3 py-3" : "px-5 py-3.5")} style={{ background: "rgba(31,44,51,0.6)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+          <div className={cn("flex items-center gap-3 shrink-0", isMobile ? "px-3 py-3" : "px-5 py-3.5")} style={{ background: "rgba(31,44,51,0.7)", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
             <input
               placeholder="Digite como um cliente..."
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               disabled={loading}
-              className={cn("flex-1 rounded-xl outline-none transition-all focus:ring-1", isMobile ? "text-[14px] px-4 py-3" : "text-[14px] px-4 py-3")}
-              style={{ background: "rgba(255,255,255,0.06)", color: "#E9EDEF", border: "1px solid rgba(255,255,255,0.08)" }}
+              autoComplete="off"
+              className={cn("flex-1 rounded-xl outline-none", isMobile ? "text-[14px] px-4 py-3" : "text-[14px] px-4 py-3")}
+              style={{ background: "rgba(255,255,255,0.06)", color: "#E9EDEF", border: "1px solid rgba(255,255,255,0.08)", transition: "border-color 0.15s" }}
             />
             <button onClick={() => handleSend()} disabled={loading || !input.trim()}
-              className="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0"
+              className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 active:scale-90"
               style={{
                 background: input.trim() ? `linear-gradient(135deg, ${agentColor}, ${agentColor}CC)` : "rgba(255,255,255,0.06)",
-                boxShadow: input.trim() ? `0 4px 16px ${agentColor}40` : "none",
+                boxShadow: input.trim() ? `0 4px 12px ${agentColor}30` : "none",
                 transform: input.trim() ? "scale(1)" : "scale(0.95)",
+                transition: "transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease",
               }}>
               <Send className="w-4.5 h-4.5" style={{ color: input.trim() ? "#fff" : "#64748B" }} />
             </button>
