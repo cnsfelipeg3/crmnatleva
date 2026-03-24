@@ -528,29 +528,37 @@ export default function SimuladorAutoMode() {
 
     // ===== Dispatch leads based on mode =====
     if (dispatchMode === "simultaneous") {
-      // All leads start at once — parallel processing
+      // All leads start at once — controlled micro-batches to protect Anthropic token/min limits
       addEvent("#8B5CF6", `⚡ Disparo simultâneo: ${allLeads.length} leads ao mesmo tempo!`, "🚀");
-      const batchSize = Math.min(allLeads.length, 10); // API rate limit protection
+      const batchSize = Math.min(allLeads.length, 3);
       for (let i = 0; i < allLeads.length; i += batchSize) {
         if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
         const batch = allLeads.slice(i, i + batchSize);
-        await Promise.all(batch.map(lead => simulateLead(lead)));
+        await Promise.all(batch.map((lead, index) => new Promise<void>((resolve) => {
+          setTimeout(() => {
+            void simulateLead(lead).finally(() => resolve());
+          }, index * 1200);
+        })));
         if (i + batchSize < allLeads.length) {
-          await new Promise(r => setTimeout(r, 500)); // Small delay between batches for rate limiting
+          await new Promise(r => setTimeout(r, 2200));
         }
       }
     } else if (dispatchMode === "wave") {
-      // Wave mode — process in configurable parallel batches
-      const waveSize = Math.max(2, parallelLeads);
+      // Wave mode — capped parallelism to avoid input-token burst throttling
+      const waveSize = Math.min(Math.max(2, parallelLeads), 3);
       let waveNum = 1;
       for (let i = 0; i < allLeads.length; i += waveSize) {
         if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
         const batch = allLeads.slice(i, i + waveSize);
         addEvent("#06B6D4", `🌊 Onda ${waveNum}: ${batch.length} leads`, "🌊");
-        await Promise.all(batch.map(lead => simulateLead(lead)));
+        await Promise.all(batch.map((lead, index) => new Promise<void>((resolve) => {
+          setTimeout(() => {
+            void simulateLead(lead).finally(() => resolve());
+          }, index * 1000);
+        })));
         waveNum++;
-        if (i + waveSize < allLeads.length && intervalSec > 0) {
-          await new Promise(r => setTimeout(r, intervalSec * 1000));
+        if (i + waveSize < allLeads.length) {
+          await new Promise(r => setTimeout(r, Math.max(intervalSec * 1000, 1800)));
         }
       }
     } else {

@@ -11,11 +11,14 @@ import {
 // ===== API — Roteamento inteligente por tipo de chamada =====
 export type SimCallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep" | "price_image";
 
-const SIMULATOR_MAX_CONCURRENT_REQUESTS = 2;
-const SIMULATOR_REQUEST_GAP_MS = 450;
+const SIMULATOR_MAX_CONCURRENT_REQUESTS = 1;
+const SIMULATOR_REQUEST_GAP_MS = 1200;
+const SIMULATOR_INPUT_TOKEN_BUDGET_PER_MIN = 22000;
+const SIMULATOR_INPUT_WINDOW_MS = 60_000;
 let activeSimulatorRequests = 0;
 let lastSimulatorRequestAt = 0;
 const simulatorRequestQueue: Array<() => void> = [];
+const simulatorTokenUsage: Array<{ timestamp: number; tokens: number }> = [];
 
 function pumpSimulatorQueue() {
   if (activeSimulatorRequests >= SIMULATOR_MAX_CONCURRENT_REQUESTS || simulatorRequestQueue.length === 0) {
@@ -48,15 +51,81 @@ async function withSimulatorRequestSlot<T>(task: () => Promise<T>): Promise<T> {
   }
 }
 
-function compactHistoryForTransport(history: { role: string; content: string }[], retryCount: number) {
-  const maxMessages = retryCount >= 2 ? 8 : 12;
-  const maxCharsPerMessage = retryCount >= 2 ? 700 : 1000;
+function estimateTextTokens(text: string) {
+  return Math.ceil(text.length / 3.5);
+}
+
+function pruneSimulatorTokenUsage(now = Date.now()) {
+  while (simulatorTokenUsage.length > 0 && now - simulatorTokenUsage[0].timestamp > SIMULATOR_INPUT_WINDOW_MS) {
+    simulatorTokenUsage.shift();
+  }
+}
+
+async function waitForSimulatorTokenBudget(estimatedTokens: number) {
+  while (true) {
+    const now = Date.now();
+    pruneSimulatorTokenUsage(now);
+    const usedTokens = simulatorTokenUsage.reduce((sum, entry) => sum + entry.tokens, 0);
+
+    if (usedTokens + estimatedTokens <= SIMULATOR_INPUT_TOKEN_BUDGET_PER_MIN || simulatorTokenUsage.length === 0) {
+      simulatorTokenUsage.push({ timestamp: now, tokens: estimatedTokens });
+      return;
+    }
+
+    const oldest = simulatorTokenUsage[0];
+    const waitMs = Math.max(400, SIMULATOR_INPUT_WINDOW_MS - (now - oldest.timestamp) + 50);
+    await new Promise((resolve) => setTimeout(resolve, waitMs));
+  }
+}
+
+function compactText(text: string, maxChars: number) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  return normalized.length > maxChars ? `${normalized.slice(0, maxChars)}...` : normalized;
+}
+
+function compactSystemPromptForTransport(sysPrompt: string, type: SimCallType, retryCount: number) {
+  const maxCharsByType: Record<SimCallType, number> = {
+    lead: retryCount >= 2 ? 1400 : 2200,
+    agent: retryCount >= 2 ? 1800 : 2600,
+    evaluate: retryCount >= 1 ? 900 : 1400,
+    debrief: retryCount >= 1 ? 1200 : 1800,
+    objection: retryCount >= 2 ? 1200 : 1800,
+    loss: retryCount >= 2 ? 1200 : 1800,
+    deep: retryCount >= 1 ? 1100 : 1600,
+    price_image: 800,
+  };
+
+  return compactText(sysPrompt, maxCharsByType[type]);
+}
+
+function compactHistoryForTransport(history: { role: string; content: string }[], type: SimCallType, retryCount: number) {
+  const maxMessagesByType: Record<SimCallType, number> = {
+    lead: retryCount >= 2 ? 1 : 2,
+    agent: retryCount >= 2 ? 5 : 7,
+    evaluate: 1,
+    debrief: 1,
+    objection: 1,
+    loss: 1,
+    deep: 1,
+    price_image: 1,
+  };
+  const maxCharsPerMessageByType: Record<SimCallType, number> = {
+    lead: retryCount >= 2 ? 650 : 900,
+    agent: retryCount >= 2 ? 500 : 750,
+    evaluate: retryCount >= 1 ? 900 : 1200,
+    debrief: retryCount >= 1 ? 1400 : 2200,
+    objection: 500,
+    loss: 500,
+    deep: retryCount >= 1 ? 1100 : 1700,
+    price_image: 1800,
+  };
+
+  const maxMessages = maxMessagesByType[type];
+  const maxCharsPerMessage = maxCharsPerMessageByType[type];
 
   return history.slice(-maxMessages).map((message) => ({
     role: message.role,
-    content: message.content.length > maxCharsPerMessage
-      ? `${message.content.slice(0, maxCharsPerMessage)}...`
-      : message.content,
+    content: compactText(message.content, maxCharsPerMessage),
   }));
 }
 
@@ -98,16 +167,29 @@ export function pushUniqueSimMessage(
 
 export async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent", agentBehaviorPrompt?: string, _retryCount = 0): Promise<string> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
-  const requestHistory = compactHistoryForTransport(history, _retryCount);
+  const compactSystemPrompt = compactSystemPromptForTransport(sysPrompt, type, _retryCount);
+  const compactAgentBehaviorPrompt = compactText(agentBehaviorPrompt || "", _retryCount >= 2 ? 600 : 1000);
+  const requestHistory = compactHistoryForTransport(history, type, _retryCount);
+  const estimatedInputTokens = estimateTextTokens(
+    compactSystemPrompt + compactAgentBehaviorPrompt + requestHistory.map((item) => item.content).join(" "),
+  );
+
+  await waitForSimulatorTokenBudget(estimatedInputTokens);
 
   const resp = await withSimulatorRequestSlot(() => fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-    body: JSON.stringify({ type, systemPrompt: sysPrompt, history: requestHistory, agentBehaviorPrompt: agentBehaviorPrompt || "", provider: "anthropic" }),
+    body: JSON.stringify({
+      type,
+      systemPrompt: compactSystemPrompt,
+      history: requestHistory,
+      agentBehaviorPrompt: compactAgentBehaviorPrompt,
+      provider: "anthropic",
+    }),
   }));
 
   if (resp.status === 429 && _retryCount < 4) {
-    const delay = 1800 * Math.pow(2, _retryCount) + Math.random() * 900;
+    const delay = 3000 * Math.pow(2, _retryCount) + Math.random() * 1200;
     await new Promise(r => setTimeout(r, delay));
     return callSimulatorAI(sysPrompt, history, type, agentBehaviorPrompt, _retryCount + 1);
   }
