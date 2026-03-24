@@ -1042,7 +1042,7 @@ function ConfigPanel({ node, onUpdate, onClose, onDelete, onDuplicate }: {
 function FlowList({ flows, onSelect, onCreate, onUseTemplate, onDeleteFlow, onArchiveFlow, loading }: {
   flows: any[]; onSelect: (f: any) => void; onCreate: () => void; onUseTemplate: (t: typeof TEMPLATES[0]) => void; onDeleteFlow: (id: string) => void; onArchiveFlow: (id: string, archived: boolean) => void; loading: boolean;
 }) {
-  const [tab, setTab] = useState<"flows" | "templates" | "pipeline" | "metrics">("flows");
+  const [tab, setTab] = useState<"flows" | "templates" | "pipeline" | "metrics" | "livefunnel">("flows");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const navigate = useNavigate();
