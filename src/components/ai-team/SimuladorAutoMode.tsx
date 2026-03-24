@@ -1234,12 +1234,8 @@ Retorne JSON:
                       ))}
                     </div>
                     {dispatchMode === "wave" && (
-                      <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.03)" }}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Leads por onda</span>
-                          <span className="text-[16px] font-extrabold tabular-nums" style={{ color: "#06B6D4" }}>{parallelLeads}</span>
-                        </div>
-                        <Slider min={2} max={Math.min(50, numLeads)} step={1} value={[parallelLeads]} onValueChange={v => setParallelLeads(v[0])} />
+                      <div className="mt-3">
+                        <SimConfigInput label="Leads por onda" value={parallelLeads} onChange={setParallelLeads} min={2} max={Math.min(50, numLeads)} step={1} color="#06B6D4" desc="Quantos leads processados em paralelo por lote" icon="🌊" compact />
                       </div>
                     )}
                   </div>
