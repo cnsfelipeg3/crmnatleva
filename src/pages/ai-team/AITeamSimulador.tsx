@@ -57,8 +57,8 @@ export default function AITeamSimulador() {
       </div>
 
       <div className={cn(
-        "relative z-10 space-y-4 md:space-y-5 mx-auto",
-        isMobile ? "p-3 pb-6" : "p-4 px-6",
+        "relative z-10 space-y-3 mx-auto",
+        isMobile ? "p-3 pb-6" : "p-3 px-4",
         mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
       )} style={{ transition: "opacity 0.4s ease-out, transform 0.4s ease-out" }}>
 
