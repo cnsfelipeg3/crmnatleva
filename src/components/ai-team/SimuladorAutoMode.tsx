@@ -243,9 +243,24 @@ export default function SimuladorAutoMode() {
   const [agentResponseLength, setAgentResponseLength] = useState<"curta" | "media" | "longa">("media");
   const [enableLossNarrative, setEnableLossNarrative] = useState(true);
   const [evalFrequency, setEvalFrequency] = useState<"every" | "every2" | "every3">("every");
+  // Config — Calibração Lead
+  const [leadPatienceCurve, setLeadPatienceCurve] = useState<"linear" | "exponential" | "sudden">("linear");
+  const [initialPatience, setInitialPatience] = useState(80);
+  const [leadToneFormality, setLeadToneFormality] = useState(50); // 0=informal 100=formal
+  const [leadTypingStyle, setLeadTypingStyle] = useState<"natural" | "rapido" | "detalhado">("natural");
+  const [abandonmentSensitivity, setAbandonmentSensitivity] = useState(50); // 0=nunca desiste 100=desiste fácil
+  const [infoRevealSpeed, setInfoRevealSpeed] = useState<"gradual" | "imediato" | "resistente">("gradual");
+  const [leadFollowUpPressure, setLeadFollowUpPressure] = useState(30); // % chance de mandar follow-up
+  const [enableLeadTypos, setEnableLeadTypos] = useState(false);
+  const [enableLeadEmojis, setEnableLeadEmojis] = useState(true);
+  const [enableLeadAudioRef, setEnableLeadAudioRef] = useState(false); // simula "prefiro audio" / "não consigo ler agora"
+  const [leadConversationGoal, setLeadConversationGoal] = useState<"comprar" | "pesquisar" | "comparar" | "aleatorio">("aleatorio");
+  const [maxConversationMinutes, setMaxConversationMinutes] = useState(0); // 0 = sem limite por conversa
+  const [leadReengagementChance, setLeadReengagementChance] = useState(20); // % chance de voltar depois de silêncio
+  const [leadCustomInstructions, setLeadCustomInstructions] = useState("");
   // Config — Presets
   const [presetName, setPresetName] = useState("");
-  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "comportamento" | "avancado" | "presets">("volume");
+  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "lead_behavior" | "comportamento" | "avancado" | "presets">("volume");
 
   // Runtime
   const [phase, setPhase] = useState<Phase>("config");
