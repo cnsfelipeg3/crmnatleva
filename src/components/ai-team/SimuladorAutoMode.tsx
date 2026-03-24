@@ -622,6 +622,26 @@ export default function SimuladorAutoMode() {
             addEvent(lead.perfil.cor, `${lead.nome} enviou múltiplas msgs`, "💬💬");
           }
 
+          // Follow-up pressure: lead sends "???" if configured
+          const fup = (lead as any)._followUpPressure ?? 30;
+          if (fup > 0 && Math.random() * 100 < fup) {
+            const followUps = ["??", "e aí?", "alguém?", "oi?", "tô aguardando", "???", "🙄", "tem alguém aí?", "vou procurar outra agência..."];
+            const fMsg = followUps[Math.floor(Math.random() * followUps.length)];
+            lead.mensagens.push({ role: "client", content: fMsg, timestamp: Date.now() });
+            setLeads([...allLeads]);
+            addEvent("#F59E0B", `${lead.nome}: follow-up "${fMsg}"`, "⏰");
+          }
+
+          // Per-conversation time limit
+          const maxConvMs = ((lead as any)._maxConvMinutes ?? 0) * 60 * 1000;
+          if (maxConvMs > 0 && lead.mensagens.length >= 2) {
+            const convDuration = Date.now() - lead.mensagens[0].timestamp;
+            if (convDuration >= maxConvMs) {
+              addEvent("#8B5CF6", `${lead.nome}: limite de ${(lead as any)._maxConvMinutes}min por conversa`, "⏱️");
+              break;
+            }
+          }
+
           if (speedDelay > 0) await new Promise(r => setTimeout(r, Math.max(100, speedDelay / 2)));
         }
 
