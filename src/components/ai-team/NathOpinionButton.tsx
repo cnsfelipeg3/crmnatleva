@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Crown, Loader2, AlertTriangle, Heart, Shield, Sparkles, TrendingUp, Zap, BookOpen, Users, Scale, Check, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Crown, Loader2, AlertTriangle, Heart, Shield, Sparkles, TrendingUp, Zap, BookOpen, Users, Scale, Check, X, ChevronDown, ChevronUp, ArrowLeft, BarChart3, ThumbsUp, ThumbsDown, Wrench, Target, Clock, User } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -37,8 +37,24 @@ interface ImprovementAction {
   title: string;
   description: string;
   scope: "all_agents" | "specific_agent";
+  targetAgent?: string;
   priority: "alta" | "media" | "baixa";
   selected: boolean;
+  difficulty?: "facil" | "moderada" | "complexa";
+  estimatedImpact?: string;
+}
+
+interface DetailReport {
+  summary: string;
+  dataPoints: string[];
+  impact: string;
+  pros: string[];
+  cons: string[];
+  difficulty: string;
+  difficultyReason: string;
+  implementationStrategy: string[];
+  estimatedTimeframe: string;
+  kpisAffected: string[];
 }
 
 interface NathOpinionButtonProps {
@@ -56,6 +72,9 @@ export default function NathOpinionButton({ messages, context, variant = "header
   const [actionsLoading, setActionsLoading] = useState(false);
   const [actionsExpanded, setActionsExpanded] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [detailAction, setDetailAction] = useState<ImprovementAction | null>(null);
+  const [detailReport, setDetailReport] = useState<DetailReport | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const { toast } = useToast();
 
   const askNath = useCallback(async () => {
@@ -145,21 +164,28 @@ export default function NathOpinionButton({ messages, context, variant = "header
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          question: `Com base na seguinte opinião da CEO Nath sobre uma conversa de atendimento, extraia TODAS as melhorias acionáveis que podem ser aplicadas ao ecossistema de agentes IA.
+          question: `Com base na seguinte opinião da CEO Nath sobre uma conversa de atendimento, extraia melhorias acionáveis para o ecossistema de agentes IA.
 
 OPINIÃO DA NATH:
 ${opinion}
 
+AGENTES DISPONÍVEIS: MAYA (recepção/encantamento), ATLAS (qualificação), HABIBI (especialista Dubai/Egito), NEMO (especialista Maldivas/Ásia), DANTE (especialista Europa), LUNA (propostas/cotações), NERO (objeções/negociação), IRIS (pós-venda/NPS), HUNTER (reativação leads), FINX (financeiro/cobranças), VIGIL (compliance/qualidade), NATH.AI (orquestração).
+
+IMPORTANTE: Gere EXATAMENTE entre 10 e 12 ações. Pelo menos 4 devem ser para agentes ESPECÍFICOS (scope: "specific_agent" com "target_agent" preenchido). O restante pode ser para todos.
+
 Retorne EXATAMENTE um JSON array com objetos contendo:
-- "type": "knowledge_base" (regra para a base de conhecimento do atendimento), "skill" (habilidade técnica nova para os agentes) ou "global_rule" (regra universal obrigatória)
+- "type": "knowledge_base", "skill" ou "global_rule"
 - "title": título curto da melhoria (máx 60 chars)
 - "description": descrição detalhada de como implementar (2-3 linhas)
 - "scope": "all_agents" ou "specific_agent"
+- "target_agent": nome do agente alvo (ex: "MAYA", "NERO") — obrigatório quando scope = "specific_agent"
 - "priority": "alta", "media" ou "baixa"
+- "difficulty": "facil", "moderada" ou "complexa"
+- "estimated_impact": frase curta do impacto esperado (ex: "+15% conversão", "-30% tempo de resposta")
 
-Gere entre 3 e 7 ações concretas. Foque em melhorias que possam ser sistematizadas. Retorne SOMENTE o JSON array, sem texto adicional.`,
+Retorne SOMENTE o JSON array, sem texto adicional.`,
           agentName: "SISTEMA",
-          agentRole: "Você é um analisador de melhorias de processos. Retorne APENAS um JSON array válido, sem markdown, sem explicações. Cada item deve ter: type, title, description, scope, priority.",
+          agentRole: "Você é um analisador de melhorias de processos de uma agência de viagens premium. Retorne APENAS um JSON array válido, sem markdown, sem explicações. Cada item deve ter: type, title, description, scope, target_agent (quando aplicável), priority, difficulty, estimated_impact. Gere 10-12 itens, sendo pelo menos 4 para agentes específicos.",
         }),
       });
 
@@ -205,8 +231,11 @@ Gere entre 3 e 7 ações concretas. Foque em melhorias que possam ser sistematiz
           title: item.title || "Melhoria sem título",
           description: item.description || "",
           scope: item.scope || "all_agents",
+          targetAgent: item.target_agent || undefined,
           priority: item.priority || "media",
-          selected: true, // all selected by default
+          difficulty: item.difficulty || "moderada",
+          estimatedImpact: item.estimated_impact || undefined,
+          selected: true,
         }));
         setActions(mapped);
       } catch {
@@ -281,6 +310,106 @@ Gere entre 3 e 7 ações concretas. Foque em melhorias que possam ser sistematiz
     setApplying(false);
     setActions(prev => prev.map(a => a.selected ? { ...a, selected: false } : a));
   }, [actions, toast]);
+
+  const loadDetailReport = useCallback(async (action: ImprovementAction) => {
+    setDetailAction(action);
+    setDetailReport(null);
+    setDetailLoading(true);
+
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          question: `Gere um relatório detalhado sobre a seguinte melhoria proposta para o ecossistema de agentes IA de uma agência de viagens premium (NatLeva):
+
+MELHORIA: "${action.title}"
+DESCRIÇÃO: ${action.description}
+TIPO: ${action.type === "knowledge_base" ? "Base de Conhecimento" : action.type === "skill" ? "Habilidade do Agente" : "Regra Global"}
+ESCOPO: ${action.scope === "all_agents" ? "Todos os agentes" : `Agente específico: ${action.targetAgent}`}
+PRIORIDADE: ${action.priority}
+
+Retorne EXATAMENTE um JSON com:
+- "summary": resumo executivo em 2-3 frases
+- "data_points": array com 3-5 dados/estatísticas que justificam esta melhoria
+- "impact": parágrafo descrevendo o impacto esperado em métricas
+- "pros": array com 3-5 prós/benefícios
+- "cons": array com 2-4 contras/riscos
+- "difficulty": "Fácil", "Moderada" ou "Complexa"
+- "difficulty_reason": explicação de 1-2 frases da dificuldade
+- "implementation_strategy": array com 4-6 passos de implementação
+- "estimated_timeframe": tempo estimado (ex: "1-2 dias", "1 semana")
+- "kpis_affected": array com 2-4 KPIs impactados
+
+Retorne SOMENTE o JSON, sem markdown.`,
+          agentName: "SISTEMA",
+          agentRole: "Você é um consultor de processos de IA de uma agência de viagens premium. Gere relatórios detalhados e realistas com dados plausíveis. Retorne APENAS JSON válido.",
+        }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        setDetailLoading(false);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "", fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.indexOf("\n")) !== -1) {
+          let line = buf.slice(0, nl);
+          buf = buf.slice(nl + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const json = line.slice(6).trim();
+          if (json === "[DONE]") break;
+          try {
+            const p = JSON.parse(json);
+            const c = p.choices?.[0]?.delta?.content;
+            if (c) fullText += c;
+          } catch {}
+        }
+      }
+
+      let cleaned = fullText.trim().replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+      try {
+        const parsed = JSON.parse(cleaned);
+        setDetailReport({
+          summary: parsed.summary || "",
+          dataPoints: parsed.data_points || [],
+          impact: parsed.impact || "",
+          pros: parsed.pros || [],
+          cons: parsed.cons || [],
+          difficulty: parsed.difficulty || "Moderada",
+          difficultyReason: parsed.difficulty_reason || "",
+          implementationStrategy: parsed.implementation_strategy || [],
+          estimatedTimeframe: parsed.estimated_timeframe || "",
+          kpisAffected: parsed.kpis_affected || [],
+        });
+      } catch {
+        console.warn("[NathDetail] Failed to parse report");
+      }
+    } catch {
+      console.warn("[NathDetail] Connection error");
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  const difficultyConfig: Record<string, { color: string; bg: string }> = {
+    facil: { color: "#10B981", bg: "rgba(16,185,129,0.1)" },
+    moderada: { color: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
+    complexa: { color: "#EF4444", bg: "rgba(239,68,68,0.1)" },
+  };
 
   const typeConfig = {
     knowledge_base: { icon: BookOpen, label: "Base de Conhecimento", color: "#3B82F6", bg: "rgba(59,130,246,0.08)" },
@@ -485,90 +614,265 @@ Gere entre 3 e 7 ações concretas. Foque em melhorias que possam ser sistematiz
                         </div>
                       )}
 
-                      {/* Actions list */}
-                      {!actionsLoading && actions.length > 0 && (
-                        <div className="px-3 py-2 space-y-2">
-                          {actions.map((action) => {
-                            const tc = typeConfig[action.type];
-                            const pc = priorityConfig[action.priority];
-                            const TypeIcon = tc.icon;
-                            return (
-                              <div key={action.id}
-                                className="rounded-xl p-3 transition-all duration-200 cursor-pointer hover:scale-[1.01]"
-                                style={{
-                                  background: action.selected ? tc.bg : "rgba(255,255,255,0.02)",
-                                  border: `1px solid ${action.selected ? tc.color + "25" : "rgba(255,255,255,0.05)"}`,
-                                }}
-                                onClick={() => toggleAction(action.id)}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <div className="pt-0.5">
-                                    <Checkbox
-                                      checked={action.selected}
-                                      onCheckedChange={() => toggleAction(action.id)}
-                                      className="border-gray-600 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
-                                    />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <TypeIcon className="w-3.5 h-3.5 shrink-0" style={{ color: tc.color }} />
-                                      <span className="text-[11px] font-bold truncate" style={{ color: "#E9EDEF" }}>
-                                        {action.title}
-                                      </span>
-                                    </div>
-                                    <p className="text-[10px] leading-relaxed" style={{ color: "#9CA3AF" }}>
-                                      {action.description}
-                                    </p>
-                                    <div className="flex items-center gap-2 mt-2">
-                                      <span className="text-[8px] font-bold px-2 py-0.5 rounded-full uppercase"
-                                        style={{ background: tc.bg, color: tc.color, border: `1px solid ${tc.color}20` }}>
-                                        {tc.label}
-                                      </span>
-                                      <span className="text-[8px] font-bold px-2 py-0.5 rounded-full uppercase"
-                                        style={{ background: `${pc.color}10`, color: pc.color }}>
-                                        {pc.label}
-                                      </span>
-                                      <span className="text-[8px] px-2 py-0.5 rounded-full"
-                                        style={{ background: "rgba(255,255,255,0.04)", color: "#6B7280" }}>
-                                        {action.scope === "all_agents" ? (
-                                          <span className="flex items-center gap-1"><Users className="w-2.5 h-2.5" /> Todos os agentes</span>
-                                        ) : "Agente específico"}
-                                      </span>
-                                    </div>
-                                  </div>
+                      {/* Actions list or Detail view */}
+                      {detailAction ? (
+                        <div className="px-4 py-3 animate-in fade-in slide-in-from-right-3 duration-300">
+                          <button onClick={() => { setDetailAction(null); setDetailReport(null); }}
+                            className="flex items-center gap-1.5 text-[10px] font-bold mb-3 transition-all hover:opacity-80"
+                            style={{ color: "#A855F7" }}>
+                            <ArrowLeft className="w-3.5 h-3.5" /> Voltar ao plano
+                          </button>
+
+                          <div className="rounded-xl p-4 mb-3" style={{
+                            background: "rgba(168,85,247,0.05)",
+                            border: "1px solid rgba(168,85,247,0.12)",
+                          }}>
+                            <div className="flex items-center gap-2 mb-2">
+                              {(() => { const TypeIcon = typeConfig[detailAction.type].icon; return <TypeIcon className="w-4 h-4" style={{ color: typeConfig[detailAction.type].color }} />; })()}
+                              <span className="text-[13px] font-bold" style={{ color: "#E9EDEF" }}>{detailAction.title}</span>
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[8px] font-bold px-2 py-0.5 rounded-full uppercase"
+                                style={{ background: typeConfig[detailAction.type].bg, color: typeConfig[detailAction.type].color }}>
+                                {typeConfig[detailAction.type].label}
+                              </span>
+                              <span className="text-[8px] font-bold px-2 py-0.5 rounded-full uppercase"
+                                style={{ background: `${priorityConfig[detailAction.priority].color}10`, color: priorityConfig[detailAction.priority].color }}>
+                                {priorityConfig[detailAction.priority].label}
+                              </span>
+                              <span className="text-[8px] px-2 py-0.5 rounded-full flex items-center gap-1"
+                                style={{ background: "rgba(255,255,255,0.04)", color: detailAction.targetAgent ? "#A855F7" : "#6B7280" }}>
+                                {detailAction.targetAgent ? (
+                                  <><User className="w-2.5 h-2.5" /> {detailAction.targetAgent}</>
+                                ) : (
+                                  <><Users className="w-2.5 h-2.5" /> Todos os agentes</>
+                                )}
+                              </span>
+                              {detailAction.estimatedImpact && (
+                                <span className="text-[8px] font-bold px-2 py-0.5 rounded-full"
+                                  style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>
+                                  {detailAction.estimatedImpact}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {detailLoading && (
+                            <div className="flex flex-col items-center justify-center py-10 gap-2">
+                              <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#A855F7" }} />
+                              <p className="text-[11px]" style={{ color: "#A78BFA" }}>Gerando relatório detalhado...</p>
+                            </div>
+                          )}
+
+                          {detailReport && (
+                            <div className="space-y-3 animate-in fade-in duration-500">
+                              {/* Summary */}
+                              <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "#7C3AED" }}>Resumo Executivo</p>
+                                <p className="text-[11px] leading-relaxed" style={{ color: "#D1D5DB" }}>{detailReport.summary}</p>
+                              </div>
+
+                              {/* Data Points */}
+                              <div className="rounded-lg p-3" style={{ background: "rgba(59,130,246,0.04)", border: "1px solid rgba(59,130,246,0.1)" }}>
+                                <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1" style={{ color: "#3B82F6" }}>
+                                  <BarChart3 className="w-3 h-3" /> Dados que Sustentam
+                                </p>
+                                <ul className="space-y-1">
+                                  {detailReport.dataPoints.map((dp, i) => (
+                                    <li key={i} className="text-[10px] flex items-start gap-2" style={{ color: "#93C5FD" }}>
+                                      <span className="shrink-0 mt-0.5">📊</span> {dp}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+
+                              {/* Impact */}
+                              <div className="rounded-lg p-3" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.1)" }}>
+                                <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1" style={{ color: "#10B981" }}>
+                                  <Target className="w-3 h-3" /> Impacto Esperado
+                                </p>
+                                <p className="text-[10px] leading-relaxed" style={{ color: "#6EE7B7" }}>{detailReport.impact}</p>
+                              </div>
+
+                              {/* Pros & Cons */}
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="rounded-lg p-3" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.08)" }}>
+                                  <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1" style={{ color: "#10B981" }}>
+                                    <ThumbsUp className="w-3 h-3" /> Prós
+                                  </p>
+                                  <ul className="space-y-1">
+                                    {detailReport.pros.map((p, i) => (
+                                      <li key={i} className="text-[10px] flex items-start gap-1.5" style={{ color: "#A7F3D0" }}>
+                                        <Check className="w-3 h-3 shrink-0 mt-0.5" /> {p}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                                <div className="rounded-lg p-3" style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.08)" }}>
+                                  <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1" style={{ color: "#EF4444" }}>
+                                    <ThumbsDown className="w-3 h-3" /> Contras
+                                  </p>
+                                  <ul className="space-y-1">
+                                    {detailReport.cons.map((c, i) => (
+                                      <li key={i} className="text-[10px] flex items-start gap-1.5" style={{ color: "#FCA5A5" }}>
+                                        <X className="w-3 h-3 shrink-0 mt-0.5" /> {c}
+                                      </li>
+                                    ))}
+                                  </ul>
                                 </div>
                               </div>
-                            );
-                          })}
 
-                          {/* Apply button */}
-                          <div className="pt-2 pb-1 flex items-center justify-between">
-                            <button
-                              onClick={() => setActions(prev => prev.map(a => ({ ...a, selected: !prev.every(x => x.selected) })))}
-                              className="text-[9px] font-bold px-3 py-1.5 rounded-lg transition-all"
-                              style={{ color: "#6B7280" }}>
-                              {actions.every(a => a.selected) ? "Desmarcar tudo" : "Selecionar tudo"}
-                            </button>
-                            <button
-                              onClick={applySelected}
-                              disabled={selectedCount === 0 || applying}
-                              className="flex items-center gap-1.5 text-[11px] font-bold px-4 py-2 rounded-xl transition-all hover:scale-105 disabled:opacity-40"
-                              style={{
-                                background: "linear-gradient(135deg, #10B981, #059669)",
-                                color: "#fff",
-                                boxShadow: "0 4px 15px rgba(16,185,129,0.3)",
-                              }}>
-                              {applying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-                              Aprovar {selectedCount} melhoria{selectedCount !== 1 ? "s" : ""}
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                              {/* Difficulty & Timeframe */}
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                  <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1" style={{ color: "#F59E0B" }}>
+                                    <Wrench className="w-3 h-3" /> Dificuldade
+                                  </p>
+                                  <p className="text-[12px] font-bold mb-1" style={{ color: "#FCD34D" }}>{detailReport.difficulty}</p>
+                                  <p className="text-[9px]" style={{ color: "#9CA3AF" }}>{detailReport.difficultyReason}</p>
+                                </div>
+                                <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                  <p className="text-[9px] font-bold uppercase tracking-widest mb-1.5 flex items-center gap-1" style={{ color: "#8B5CF6" }}>
+                                    <Clock className="w-3 h-3" /> Prazo Estimado
+                                  </p>
+                                  <p className="text-[12px] font-bold" style={{ color: "#C4B5FD" }}>{detailReport.estimatedTimeframe}</p>
+                                </div>
+                              </div>
 
-                      {!actionsLoading && actions.length === 0 && actionsExpanded && !actionsLoading && (
-                        <div className="px-4 py-6 text-center">
-                          <p className="text-[11px]" style={{ color: "#6B7280" }}>Nenhuma ação extraída ainda.</p>
+                              {/* Implementation Strategy */}
+                              <div className="rounded-lg p-3" style={{ background: "rgba(168,85,247,0.04)", border: "1px solid rgba(168,85,247,0.1)" }}>
+                                <p className="text-[9px] font-bold uppercase tracking-widest mb-2 flex items-center gap-1" style={{ color: "#A855F7" }}>
+                                  <TrendingUp className="w-3 h-3" /> Estratégia de Implementação
+                                </p>
+                                <ol className="space-y-1.5">
+                                  {detailReport.implementationStrategy.map((step, i) => (
+                                    <li key={i} className="text-[10px] flex items-start gap-2" style={{ color: "#D8B4FE" }}>
+                                      <span className="shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold mt-0.5"
+                                        style={{ background: "rgba(168,85,247,0.15)", color: "#C084FC" }}>{i + 1}</span>
+                                      {step}
+                                    </li>
+                                  ))}
+                                </ol>
+                              </div>
+
+                              {/* KPIs */}
+                              <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                                <p className="text-[9px] font-bold uppercase tracking-widest mb-2" style={{ color: "#6B7280" }}>KPIs Impactados</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {detailReport.kpisAffected.map((kpi, i) => (
+                                    <span key={i} className="text-[9px] font-medium px-2 py-1 rounded-lg"
+                                      style={{ background: "rgba(168,85,247,0.08)", color: "#C084FC", border: "1px solid rgba(168,85,247,0.15)" }}>
+                                      {kpi}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
+                      ) : (
+                        <>
+                          {/* Actions list */}
+                          {!actionsLoading && actions.length > 0 && (
+                            <div className="px-3 py-2 space-y-2 max-h-[360px] overflow-y-auto">
+                              {actions.map((action) => {
+                                const tc = typeConfig[action.type];
+                                const pc = priorityConfig[action.priority];
+                                const dc = difficultyConfig[action.difficulty || "moderada"];
+                                const TypeIcon = tc.icon;
+                                return (
+                                  <div key={action.id}
+                                    className="rounded-xl p-3 transition-all duration-200 cursor-pointer hover:scale-[1.005]"
+                                    style={{
+                                      background: action.selected ? tc.bg : "rgba(255,255,255,0.02)",
+                                      border: `1px solid ${action.selected ? tc.color + "25" : "rgba(255,255,255,0.05)"}`,
+                                    }}
+                                  >
+                                    <div className="flex items-start gap-3">
+                                      <div className="pt-0.5" onClick={(e) => { e.stopPropagation(); toggleAction(action.id); }}>
+                                        <Checkbox
+                                          checked={action.selected}
+                                          onCheckedChange={() => toggleAction(action.id)}
+                                          className="border-gray-600 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                                        />
+                                      </div>
+                                      <div className="flex-1 min-w-0" onClick={() => loadDetailReport(action)}>
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <TypeIcon className="w-3.5 h-3.5 shrink-0" style={{ color: tc.color }} />
+                                          <span className="text-[11px] font-bold truncate" style={{ color: "#E9EDEF" }}>
+                                            {action.title}
+                                          </span>
+                                        </div>
+                                        <p className="text-[10px] leading-relaxed line-clamp-2" style={{ color: "#9CA3AF" }}>
+                                          {action.description}
+                                        </p>
+                                        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                                          <span className="text-[8px] font-bold px-2 py-0.5 rounded-full uppercase"
+                                            style={{ background: tc.bg, color: tc.color, border: `1px solid ${tc.color}20` }}>
+                                            {tc.label}
+                                          </span>
+                                          <span className="text-[8px] font-bold px-2 py-0.5 rounded-full uppercase"
+                                            style={{ background: `${pc.color}10`, color: pc.color }}>
+                                            {pc.label}
+                                          </span>
+                                          <span className="text-[8px] px-2 py-0.5 rounded-full flex items-center gap-1"
+                                            style={{ background: "rgba(255,255,255,0.04)", color: action.targetAgent ? "#A855F7" : "#6B7280" }}>
+                                            {action.targetAgent ? (
+                                              <><User className="w-2.5 h-2.5" /> {action.targetAgent}</>
+                                            ) : (
+                                              <><Users className="w-2.5 h-2.5" /> Todos</>
+                                            )}
+                                          </span>
+                                          {action.difficulty && (
+                                            <span className="text-[8px] font-bold px-2 py-0.5 rounded-full capitalize"
+                                              style={{ background: dc.bg, color: dc.color }}>
+                                              {action.difficulty}
+                                            </span>
+                                          )}
+                                          {action.estimatedImpact && (
+                                            <span className="text-[8px] font-bold px-2 py-0.5 rounded-full"
+                                              style={{ background: "rgba(16,185,129,0.08)", color: "#10B981" }}>
+                                              {action.estimatedImpact}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+
+                              {/* Apply button */}
+                              <div className="pt-2 pb-1 flex items-center justify-between sticky bottom-0"
+                                style={{ background: "rgba(16,185,129,0.02)" }}>
+                                <button
+                                  onClick={() => setActions(prev => prev.map(a => ({ ...a, selected: !prev.every(x => x.selected) })))}
+                                  className="text-[9px] font-bold px-3 py-1.5 rounded-lg transition-all"
+                                  style={{ color: "#6B7280" }}>
+                                  {actions.every(a => a.selected) ? "Desmarcar tudo" : "Selecionar tudo"}
+                                </button>
+                                <button
+                                  onClick={applySelected}
+                                  disabled={selectedCount === 0 || applying}
+                                  className="flex items-center gap-1.5 text-[11px] font-bold px-4 py-2 rounded-xl transition-all hover:scale-105 disabled:opacity-40"
+                                  style={{
+                                    background: "linear-gradient(135deg, #10B981, #059669)",
+                                    color: "#fff",
+                                    boxShadow: "0 4px 15px rgba(16,185,129,0.3)",
+                                  }}>
+                                  {applying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                  Aprovar {selectedCount} melhoria{selectedCount !== 1 ? "s" : ""}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {!actionsLoading && actions.length === 0 && actionsExpanded && (
+                            <div className="px-4 py-6 text-center">
+                              <p className="text-[11px]" style={{ color: "#6B7280" }}>Nenhuma ação extraída ainda.</p>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
