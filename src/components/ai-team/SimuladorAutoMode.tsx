@@ -1109,70 +1109,92 @@ Retorne JSON:
   if (phase === "config") {
     return (
       <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
-        {/* Full-screen 2-column layout */}
-        <div className={cn("flex", isMobile ? "flex-col gap-3" : "gap-6")} style={{ minHeight: isMobile ? undefined : "calc(100vh - 320px)" }}>
-          {/* Tab Navigation — taller sidebar */}
-          <div className={cn(isMobile ? "flex gap-2 overflow-x-auto pb-2 scrollbar-hide" : "w-[260px] shrink-0 space-y-1.5 sticky top-0 self-start")}>
-            {CONFIG_TABS.map((tab, i) => {
-              const active = configTab === tab.id;
-              const Icon = tab.icon;
-              return (
-                <button key={tab.id} onClick={() => setConfigTab(tab.id)}
-                  className={cn(
-                    "text-left rounded-xl transition-all duration-300 relative group",
-                    isMobile ? "shrink-0 px-3 py-2.5 min-w-[100px]" : "w-full px-4 py-4"
-                  )}
-                  style={{
-                    background: active ? `linear-gradient(135deg, ${tab.color}18, ${tab.color}0A)` : "rgba(255,255,255,0.02)",
-                    border: `1px solid ${active ? `${tab.color}40` : "rgba(255,255,255,0.08)"}`,
-                  }}>
-                  {!isMobile && active && <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full" style={{ background: tab.color }} />}
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <div className={cn("rounded-lg flex items-center justify-center transition-all", isMobile ? "w-6 h-6" : "w-8 h-8")} style={{
-                      background: active ? `${tab.color}20` : "rgba(255,255,255,0.05)",
-                      border: `1px solid ${active ? `${tab.color}35` : "rgba(255,255,255,0.08)"}`,
+        {/* Full-screen 2-column layout — fits viewport */}
+        <div className={cn("flex", isMobile ? "flex-col gap-3" : "gap-4")} style={{ height: isMobile ? undefined : "calc(100vh - 260px)", minHeight: isMobile ? undefined : 400 }}>
+          {/* Tab Navigation — scrollable sidebar that fits viewport */}
+          <div className={cn(
+            isMobile
+              ? "flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
+              : "w-[240px] shrink-0 flex flex-col overflow-hidden"
+          )}>
+            {!isMobile ? (
+              <div className="flex-1 overflow-y-auto space-y-1 pr-1 scrollbar-hide">
+                {CONFIG_TABS.map((tab, i) => {
+                  const active = configTab === tab.id;
+                  const Icon = tab.icon;
+                  return (
+                    <button key={tab.id} onClick={() => setConfigTab(tab.id)}
+                      className="text-left rounded-xl transition-all duration-300 relative group w-full px-3 py-3"
+                      style={{
+                        background: active ? `linear-gradient(135deg, ${tab.color}18, ${tab.color}0A)` : "rgba(255,255,255,0.02)",
+                        border: `1px solid ${active ? `${tab.color}40` : "rgba(255,255,255,0.08)"}`,
+                      }}>
+                      {active && <div className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-r-full" style={{ background: tab.color }} />}
+                      <div className="flex items-center gap-2.5">
+                        <div className="rounded-lg w-7 h-7 flex items-center justify-center shrink-0 transition-all" style={{
+                          background: active ? `${tab.color}20` : "rgba(255,255,255,0.05)",
+                          border: `1px solid ${active ? `${tab.color}35` : "rgba(255,255,255,0.08)"}`,
+                        }}>
+                          <Icon className="w-3.5 h-3.5" style={{ color: active ? tab.color : "#94A3B8" }} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-bold truncate" style={{ color: active ? "#F8FAFC" : "#CBD5E1" }}>{tab.label}</p>
+                          <p className="text-[10px] mt-0.5 leading-snug truncate" style={{ color: active ? tab.color : "#94A3B8" }}>{tab.summary}</p>
+                        </div>
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                          style={{ background: active ? `${tab.color}20` : "rgba(255,255,255,0.05)", color: active ? tab.color : "#94A3B8" }}>
+                          {i + 1}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              CONFIG_TABS.map((tab, i) => {
+                const active = configTab === tab.id;
+                const Icon = tab.icon;
+                return (
+                  <button key={tab.id} onClick={() => setConfigTab(tab.id)}
+                    className="shrink-0 px-3 py-2.5 min-w-[100px] text-left rounded-xl transition-all duration-300 relative"
+                    style={{
+                      background: active ? `linear-gradient(135deg, ${tab.color}18, ${tab.color}0A)` : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${active ? `${tab.color}40` : "rgba(255,255,255,0.08)"}`,
                     }}>
-                      <Icon className={isMobile ? "w-3 h-3" : "w-4 h-4"} style={{ color: active ? tab.color : "#94A3B8" }} />
+                    <div className="flex items-center gap-2">
+                      <div className="rounded-lg w-6 h-6 flex items-center justify-center transition-all" style={{
+                        background: active ? `${tab.color}20` : "rgba(255,255,255,0.05)",
+                      }}>
+                        <Icon className="w-3 h-3" style={{ color: active ? tab.color : "#94A3B8" }} />
+                      </div>
+                      <p className="text-xs font-bold" style={{ color: active ? "#F8FAFC" : "#CBD5E1" }}>{tab.label}</p>
                     </div>
-                    <div>
-                      <p className={cn("font-bold", isMobile ? "text-xs" : "text-sm")} style={{ color: active ? "#F8FAFC" : "#CBD5E1" }}>{tab.label}</p>
-                      {!isMobile && <p className="text-[11px] mt-0.5 leading-snug" style={{ color: active ? tab.color : "#94A3B8" }}>{tab.summary}</p>}
-                    </div>
-                  </div>
-                  {/* Step number — desktop only */}
-                  {!isMobile && (
-                    <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
-                      style={{ background: active ? `${tab.color}20` : "rgba(255,255,255,0.05)", color: active ? tab.color : "#94A3B8" }}>
-                      {i + 1}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
+                  </button>
+                );
+              })
+            )}
 
-            {/* Config Summary Card — desktop only */}
+            {/* Config Summary Card — desktop only, compact */}
             {!isMobile && (
-            <div className="mt-4 rounded-xl p-4 space-y-2" style={{
+            <div className="mt-2 rounded-xl p-3 space-y-1.5 shrink-0" style={{
               background: "linear-gradient(135deg, rgba(16,185,129,0.04), rgba(6,182,212,0.04))",
               border: "1px solid rgba(16,185,129,0.1)",
             }}>
               <p className="text-[10px] uppercase tracking-[0.12em] font-bold" style={{ color: "#10B981" }}>Resumo da Config</p>
-              <div className="space-y-1.5">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                 {[
                   { label: "Leads", value: `${numLeads}`, color: "#3B82F6" },
-                  { label: "Msgs/lead", value: `${msgsPerLead}`, color: "#10B981" },
+                  { label: "Msgs", value: `${msgsPerLead}`, color: "#10B981" },
                   { label: "Duração", value: formatTime(duration), color: "#8B5CF6" },
                   { label: "Objeções", value: `${objectionDensity}%`, color: "#F59E0B" },
                   { label: "Perfis", value: `${selectedProfiles.length || 8}`, color: "#EC4899" },
                   { label: "Paciência", value: `${initialPatience}%`, color: "#EF4444" },
-                  { label: "Abandono", value: `${abandonmentSensitivity}%`, color: "#EF4444" },
                   { label: "Retries", value: `${apiRetries}`, color: "#06B6D4" },
                   { label: "Score mín", value: `${minScoreToPass}`, color: "#10B981" },
-                  { label: "Choque", value: enableSentimentShock ? `R${shockAtRound}` : "Off", color: "#EF4444" },
                 ].map(item => (
                   <div key={item.label} className="flex items-center justify-between">
-                    <span className="text-[11px]" style={{ color: "#94A3B8" }}>{item.label}</span>
-                    <span className="text-xs font-bold tabular-nums" style={{ color: item.color }}>{item.value}</span>
+                    <span className="text-[10px]" style={{ color: "#94A3B8" }}>{item.label}</span>
+                    <span className="text-[11px] font-bold tabular-nums" style={{ color: item.color }}>{item.value}</span>
                   </div>
                 ))}
               </div>
@@ -1180,16 +1202,16 @@ Retorne JSON:
             )}
           </div>
 
-          {/* RIGHT: Content Area — full width */}
+          {/* RIGHT: Content Area — scrollable, fills remaining height */}
           <div className="flex-1 rounded-2xl overflow-hidden relative flex flex-col" style={{
             background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))",
             border: "1px solid rgba(255,255,255,0.06)",
             backdropFilter: "blur(8px)",
           }}>
             {/* Active tab accent line */}
-            <div className="h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${CONFIG_TABS.find(t => t.id === configTab)?.color || "#10B981"}, transparent)` }} />
+            <div className="h-[2px] shrink-0" style={{ background: `linear-gradient(90deg, transparent, ${CONFIG_TABS.find(t => t.id === configTab)?.color || "#10B981"}, transparent)` }} />
 
-            <div className={cn("overflow-y-auto flex-1", isMobile ? "p-4" : "p-6")}>
+            <div className={cn("overflow-y-auto flex-1", isMobile ? "p-4" : "p-5")}>
               {/* ===== VOLUME TAB ===== */}
               {configTab === "volume" && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-3 duration-300">
