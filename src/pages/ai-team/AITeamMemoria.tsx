@@ -266,6 +266,84 @@ export default function AITeamMemoria() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Create Rule Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Nova Regra de Memória</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Nome da Regra *</Label>
+              <Input placeholder="Ex: Não armazenar dados bancários" value={newRule.name} onChange={e => setNewRule(p => ({ ...p, name: e.target.value }))} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold">Descrição</Label>
+              <Textarea placeholder="Descreva o comportamento esperado..." rows={2} value={newRule.description} onChange={e => setNewRule(p => ({ ...p, description: e.target.value }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Prioridade</Label>
+                <Select value={newRule.impact} onValueChange={v => setNewRule(p => ({ ...p, impact: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="crítica">🔴 Crítica</SelectItem>
+                    <SelectItem value="alta">🟠 Alta</SelectItem>
+                    <SelectItem value="média">🔵 Média</SelectItem>
+                    <SelectItem value="baixa">⚪ Baixa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Escopo</Label>
+                <Select value={newRule.scope} onValueChange={v => setNewRule(p => ({ ...p, scope: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os agentes</SelectItem>
+                    <SelectItem value="vendas">Squad Vendas</SelectItem>
+                    <SelectItem value="operacional">Squad Operacional</SelectItem>
+                    <SelectItem value="suporte">Squad Suporte</SelectItem>
+                    <SelectItem value="marketing">Squad Marketing</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Ação</Label>
+                <Select value={newRule.action} onValueChange={v => setNewRule(p => ({ ...p, action: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="memorize">📝 Memorizar dado</SelectItem>
+                    <SelectItem value="block">🚫 Bloquear armazenamento</SelectItem>
+                    <SelectItem value="alert">⚠️ Alertar supervisor</SelectItem>
+                    <SelectItem value="flag">🏁 Sinalizar para revisão</SelectItem>
+                    <SelectItem value="enrich">✨ Enriquecer perfil</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Retenção</Label>
+                <Select value={newRule.retention} onValueChange={v => setNewRule(p => ({ ...p, retention: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="permanent">♾️ Permanente</SelectItem>
+                    <SelectItem value="90d">📅 90 dias</SelectItem>
+                    <SelectItem value="30d">📅 30 dias</SelectItem>
+                    <SelectItem value="7d">📅 7 dias</SelectItem>
+                    <SelectItem value="session">⏱️ Apenas sessão</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>Cancelar</Button>
+            <Button onClick={createRule}>Criar Regra</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
