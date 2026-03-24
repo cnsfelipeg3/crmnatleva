@@ -637,10 +637,11 @@ export default function SimuladorAutoMode() {
           const hasNext = enableTransfers && agentIdx < funnelAgents.length - 1;
           lead.etapaAtual = stages[Math.min(agentIdx, stages.length - 1)];
 
-          // 2. Agent responds
+          // 2. Agent responds — with context compression for long conversations
+          const compressedHistory = compressConversation(lead.mensagens);
           const agentResp = await callSimulatorAI(
             buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength),
-            lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content })), "agent"
+            compressedHistory, "agent"
           );
           lead.mensagens.push({ role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
           setLeads([...allLeads]);
