@@ -182,7 +182,7 @@ export default function SimuladorManualMode() {
         body: JSON.stringify({
           type: "agent",
           systemPrompt: buildManualAgentPrompt(selectedAgent),
-          agentBehaviorPrompt: selectedAgent.behavior_prompt || "",
+          agentBehaviorPrompt: agentBehaviors[selectedAgent.id] || "",
           history: [{ role: "user", content: `[Simulação - Cliente interessado em ${selectedDestino}] ${text}` }],
         }),
       });
