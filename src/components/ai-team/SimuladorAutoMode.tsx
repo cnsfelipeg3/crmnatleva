@@ -645,8 +645,20 @@ export default function SimuladorAutoMode() {
           const hasNext = enableTransfers && agentIdx < funnelAgents.length - 1;
           lead.etapaAtual = stages[Math.min(agentIdx, stages.length - 1)];
 
-          // Agent responds — with context compression for long conversations
-          const compressedHistory = compressConversation(lead.mensagens);
+          // Agent responds — with context compression + chunking for long conversations
+          // Check if we need to chunk before building context
+          if (shouldChunk(lead.mensagens.length)) {
+            const toArchive = lead.mensagens.splice(0, CHUNK_SIZE);
+            const summary = createChunkSummary(toArchive, lead.nome);
+            const chunk: ChunkData = { chunkIndex: (chunksRef.current.get(lead.id) || []).length, messages: toArchive, summary, tokenEstimate: Math.ceil(toArchive.reduce((s, m) => s + m.content.length, 0) / 3.5) };
+            const existingChunks = chunksRef.current.get(lead.id) || [];
+            existingChunks.push(chunk);
+            chunksRef.current.set(lead.id, existingChunks);
+            simPersistence.processChunking(lead);
+            addEvent("#8B5CF6", `📦 ${lead.nome}: bloco ${chunk.chunkIndex + 1} arquivado (${CHUNK_SIZE} msgs resumidas)`, "📦");
+          }
+          const leadChunks = chunksRef.current.get(lead.id) || [];
+          const compressedHistory = leadChunks.length > 0 ? buildActiveContext(lead, leadChunks) : compressConversation(lead.mensagens);
           const agentResp = await callSimulatorAI(
             buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength),
             compressedHistory, "agent"
