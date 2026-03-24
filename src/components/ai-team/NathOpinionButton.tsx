@@ -33,7 +33,7 @@ FORMATO DE RESPOSTA:
 
 interface ImprovementAction {
   id: string;
-  type: "knowledge_base" | "skill" | "global_rule";
+  type: "knowledge_base" | "skill" | "global_rule" | "new_agent";
   title: string;
   description: string;
   scope: "all_agents" | "specific_agent";
@@ -42,6 +42,14 @@ interface ImprovementAction {
   selected: boolean;
   difficulty?: "facil" | "moderada" | "complexa";
   estimatedImpact?: string;
+  // New agent specific fields
+  newAgentName?: string;
+  newAgentEmoji?: string;
+  newAgentRole?: string;
+  newAgentSquad?: string;
+  newAgentStage?: string;
+  newAgentSkills?: string[];
+  newAgentJustification?: string;
 }
 
 interface DetailReport {
