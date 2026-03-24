@@ -1185,24 +1185,19 @@ Retorne JSON:
                       <p className="text-[11px]" style={{ color: "#94A3B8" }}>Configure a escala e duração do teste de estresse</p>
                     </div>
                   </div>
-                  <div className={cn("gap-6", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
-                    {[
-                      { label: "Leads totais", value: numLeads, setter: setNumLeads, min: 1, max: 500, step: 1, color: "#3B82F6", desc: "Quantidade de leads na simulação (até 500)" },
-                      { label: "Mensagens por lead", value: msgsPerLead, setter: setMsgsPerLead, min: 4, max: 500, step: 2, color: "#10B981", desc: "Rodadas de conversa (até 500 — compressão automática)" },
-                      { label: "Intervalo entre leads", value: intervalSec, setter: setIntervalSec, min: 0, max: 60, step: 1, color: "#F59E0B", desc: "Segundos entre entrada de cada lead (0 = simultâneo)", suffix: "s" },
-                      { label: "Duração máxima", value: duration, setter: setDuration, min: 30, max: 86400, step: 30, color: "#8B5CF6", desc: "Tempo limite (até 24h)", format: true },
-                    ].map(s => (
-                      <div key={s.label} className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>{s.label}</span>
-                          <span className="text-[22px] font-extrabold tabular-nums" style={{ color: s.color, textShadow: `0 0 20px ${s.color}20` }}>
-                            {s.format ? (s.value >= 3600 ? `${Math.floor(s.value / 3600)}h${Math.floor((s.value % 3600) / 60)}m` : formatTime(s.value)) : s.value}{s.suffix || ""}
-                          </span>
-                        </div>
-                        <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>{s.desc}</p>
-                        <Slider min={s.min} max={s.max} step={s.step} value={[s.value]} onValueChange={v => s.setter(v[0])} />
-                      </div>
-                    ))}
+                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
+                    <SimConfigInput label="Leads totais" value={numLeads} onChange={setNumLeads} min={1} max={500} step={1} color="#3B82F6" desc="Quantidade de leads na simulação (até 500)" icon="👥" />
+                    <SimConfigInput label="Mensagens por lead" value={msgsPerLead} onChange={setMsgsPerLead} min={4} max={500} step={2} color="#10B981" desc="Rodadas de conversa (até 500 — compressão automática)" icon="💬" />
+                    <SimConfigInput label="Intervalo entre leads" value={intervalSec} onChange={setIntervalSec} min={0} max={60} step={1} color="#F59E0B" desc="Segundos entre entrada de cada lead (0 = simultâneo)" suffix="s" icon="⏱️" />
+                    <SimConfigInput label="Duração máxima" value={duration} onChange={setDuration} min={30} max={86400} step={30} color="#8B5CF6" desc="Tempo limite (até 24h)" icon="⏳"
+                      format={v => v >= 3600 ? `${Math.floor(v / 3600)}h${Math.floor((v % 3600) / 60)}m` : formatTime(v)} />
+                  </div>
+
+                  {/* New: Warm-up & Retry */}
+                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-3")}>
+                    <SimConfigInput label="Warm-up rounds" value={warmupRounds} onChange={setWarmupRounds} min={0} max={5} step={1} color="#06B6D4" desc="Rodadas de aquecimento antes de avaliar" icon="🔥" compact />
+                    <SimConfigInput label="Retentativas API" value={apiRetries} onChange={setApiRetries} min={0} max={5} step={1} color="#EC4899" desc="Tentativas em caso de erro 429/500" icon="🔄" compact />
+                    <SimConfigInput label="Cooldown entre msgs" value={cooldownMs} onChange={setCooldownMs} min={0} max={5000} step={100} color="#F59E0B" desc="ms de pausa entre mensagens" suffix="ms" icon="⏸️" compact />
                   </div>
 
                   {/* Dispatch Mode */}
