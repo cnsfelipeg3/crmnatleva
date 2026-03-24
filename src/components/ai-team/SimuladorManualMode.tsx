@@ -54,7 +54,7 @@ function buildTrainingBlock(agentId: string): string {
   return parts.join("\n");
 }
 
-function buildManualAgentPrompt(agent: typeof AGENTS_V4[0]): string {
+function buildManualAgentPrompt(agent: typeof AGENTS_V4[0], globalRulesBlock: string): string {
   const minTrocas = MIN_TROCAS_MANUAL[agent.id] || 4;
   const roleInstr = AGENT_ROLE_MANUAL[agent.id] || "";
   const trainingBlock = buildTrainingBlock(agent.id);
