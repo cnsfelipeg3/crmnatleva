@@ -414,6 +414,7 @@ export default function AITeamAgentDetail() {
               saveEditing={saveEditing}
               startEditing={startEditing}
               agent={agent}
+              agentId={agentId}
             />
           </TabsContent>
 
