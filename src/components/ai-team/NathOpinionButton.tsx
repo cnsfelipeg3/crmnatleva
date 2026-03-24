@@ -231,8 +231,11 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
           title: item.title || "Melhoria sem título",
           description: item.description || "",
           scope: item.scope || "all_agents",
+          targetAgent: item.target_agent || undefined,
           priority: item.priority || "media",
-          selected: true, // all selected by default
+          difficulty: item.difficulty || "moderada",
+          estimatedImpact: item.estimated_impact || undefined,
+          selected: true,
         }));
         setActions(mapped);
       } catch {
