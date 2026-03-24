@@ -75,6 +75,51 @@ const AI_CONTEXT_FIELDS = [
 ] as const;
 
 type NodeConfig = Record<string, any>;
+type CanvasNodeType = (typeof NODE_LIBRARY)[number]["type"];
+
+const AUTOMATION_NODE_TYPE_TO_CANVAS: Record<string, CanvasNodeType> = {
+  trigger_new_conversation: "trigger",
+  trigger_new_message: "trigger",
+  trigger_stage_change: "trigger",
+  trigger_tag_applied: "trigger",
+  trigger_scheduled: "trigger",
+  send_text: "message",
+  send_media: "message",
+  send_template: "message",
+  question_text: "message",
+  question_buttons: "message",
+  condition_if_else: "condition",
+  action_create_lead: "action_tag",
+  action_apply_tag: "action_tag",
+  action_change_stage: "action_funnel",
+  action_assign: "handoff",
+  action_create_task: "handoff",
+  action_link_vehicle: "action_tag",
+  action_create_proposal: "action_funnel",
+  action_request_kyc: "message",
+  ai_agent: "ai_agent",
+  handoff_pause: "handoff",
+  handoff_transfer: "handoff",
+  handoff_notify: "handoff",
+  util_delay: "message",
+  util_goto: "action_funnel",
+  util_webhook: "action_tag",
+  trigger: "trigger",
+  message: "message",
+  condition: "condition",
+  action_tag: "action_tag",
+  action_funnel: "action_funnel",
+  handoff: "handoff",
+};
+
+const toCanvasNodeType = (nodeType?: string): CanvasNodeType => {
+  return AUTOMATION_NODE_TYPE_TO_CANVAS[nodeType || ""] || "message";
+};
+
+const getPersistedNodeType = (node: Node) => {
+  const data = (node.data || {}) as Record<string, any>;
+  return data.originalNodeType || data.nodeType || node.type || "message";
+};
 
 // ─── TEMPLATES ───
 const TEMPLATES = [
