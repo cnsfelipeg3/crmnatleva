@@ -1590,7 +1590,7 @@ Retorne JSON:
                       <Users className="w-3.5 h-3.5" style={{ color: "#F59E0B" }} />
                       <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Grupo de Viajantes</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div className={cn("grid gap-0 rounded-xl overflow-hidden", isMobile ? "grid-cols-2" : "grid-cols-3")} style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
                       {GRUPOS_LEAD.map((g, i) => {
                         const active = selectedGrupos.includes(g);
                         const grupoIcons: Record<string, string> = { "1 pessoa": "🧍", Casal: "👫", "Família 4 pax": "👨‍👩‍👧‍👦", "Grupo 6 amigos": "👥", "Corporativo 3 pax": "💼", "Casal lua de mel": "💍" };
