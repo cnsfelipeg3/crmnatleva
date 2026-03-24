@@ -162,6 +162,34 @@ export default function AITeamAgentDetail() {
     r.scope === "all" || r.agents.some(a => a.toUpperCase() === agentNameUpper)
   ), [agentNameUpper]);
 
+  // Fetch real improvements from Nath for this agent
+  const { data: nathImprovements = [] } = useQuery({
+    queryKey: ["ai_team_improvements", agentId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_team_improvements")
+        .select("*")
+        .eq("agent_id", agentId!)
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+    enabled: !!agentId,
+  });
+
+  // Fetch Nath-origin strategy knowledge
+  const { data: nathKnowledge = [] } = useQuery({
+    queryKey: ["ai_strategy_knowledge_nath"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_strategy_knowledge")
+        .select("*")
+        .eq("origin_type", "nath_opinion")
+        .eq("is_active", true)
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+  });
+
   const [activeTab, setActiveTab] = useState("overview");
 
   // Edit state
