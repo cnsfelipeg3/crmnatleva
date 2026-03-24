@@ -1232,29 +1232,34 @@ Retorne JSON:
               const Icon = tab.icon;
               return (
                 <button key={tab.id} onClick={() => setConfigTab(tab.id)}
-                  className="w-full text-left px-4 py-3.5 rounded-xl transition-all duration-300 relative group"
+                  className={cn(
+                    "text-left rounded-xl transition-all duration-300 relative group",
+                    isMobile ? "shrink-0 px-3 py-2.5 min-w-[100px]" : "w-full px-4 py-3.5"
+                  )}
                   style={{
                     background: active ? `linear-gradient(135deg, ${tab.color}12, ${tab.color}06)` : "transparent",
-                    border: `1px solid ${active ? `${tab.color}30` : "transparent"}`,
+                    border: `1px solid ${active ? `${tab.color}30` : "rgba(255,255,255,0.06)"}`,
                   }}>
-                  {active && <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full" style={{ background: tab.color }} />}
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{
+                  {!isMobile && active && <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full" style={{ background: tab.color }} />}
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className={cn("rounded-lg flex items-center justify-center transition-all", isMobile ? "w-6 h-6" : "w-8 h-8")} style={{
                       background: active ? `${tab.color}15` : "rgba(255,255,255,0.03)",
                       border: `1px solid ${active ? `${tab.color}25` : "rgba(255,255,255,0.05)"}`,
                     }}>
-                      <Icon className="w-4 h-4" style={{ color: active ? tab.color : "#64748B" }} />
+                      <Icon className={isMobile ? "w-3 h-3" : "w-4 h-4"} style={{ color: active ? tab.color : "#64748B" }} />
                     </div>
                     <div>
-                      <p className="text-[12px] font-bold" style={{ color: active ? "#F1F5F9" : "#94A3B8" }}>{tab.label}</p>
-                      <p className="text-[9px] mt-0.5" style={{ color: active ? tab.color : "#475569" }}>{tab.summary}</p>
+                      <p className={cn("font-bold", isMobile ? "text-[10px]" : "text-[12px]")} style={{ color: active ? "#F1F5F9" : "#94A3B8" }}>{tab.label}</p>
+                      {!isMobile && <p className="text-[9px] mt-0.5" style={{ color: active ? tab.color : "#475569" }}>{tab.summary}</p>}
                     </div>
                   </div>
-                  {/* Step number */}
-                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
-                    style={{ background: active ? `${tab.color}15` : "rgba(255,255,255,0.02)", color: active ? tab.color : "#334155" }}>
-                    {i + 1}
-                  </div>
+                  {/* Step number — desktop only */}
+                  {!isMobile && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
+                      style={{ background: active ? `${tab.color}15` : "rgba(255,255,255,0.02)", color: active ? tab.color : "#334155" }}>
+                      {i + 1}
+                    </div>
+                  )}
                 </button>
               );
             })}
