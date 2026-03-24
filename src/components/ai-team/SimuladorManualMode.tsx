@@ -292,7 +292,7 @@ export default function SimuladorManualMode() {
           type: "evaluate",
           systemPrompt: "Voce e um analista de qualidade de agencia de viagens premium. Gere resumos concisos e acionáveis.",
           history: [{ role: "user", content: `Analise esta conversa entre cliente e agente de viagens e gere um resumo executivo com: 1) Destino/interesse do cliente, 2) Perfil do cliente, 3) Próximos passos sugeridos, 4) Pontos de atenção.\n\nCONVERSA:\n${chatHistory}` }],
-          provider: "lovable",
+          provider: "anthropic",
         }),
       });
       if (!resp.ok) throw new Error("API error");

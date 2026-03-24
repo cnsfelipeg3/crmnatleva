@@ -52,7 +52,7 @@ export async function callSimulatorAI(sysPrompt: string, history: { role: string
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-    body: JSON.stringify({ type, systemPrompt: sysPrompt, history, agentBehaviorPrompt: agentBehaviorPrompt || "", provider: "lovable" }),
+    body: JSON.stringify({ type, systemPrompt: sysPrompt, history, agentBehaviorPrompt: agentBehaviorPrompt || "", provider: "anthropic" }),
   });
   if (resp.status === 429 && _retryCount < 3) {
     const delay = Math.pow(2, _retryCount) * 1000 + Math.random() * 500;

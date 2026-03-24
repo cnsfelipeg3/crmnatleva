@@ -183,7 +183,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { type = "agent", systemPrompt, userPrompt, history, provider = "lovable", agentBehaviorPrompt } = body as {
+    const { type = "agent", systemPrompt, userPrompt, history, provider = "anthropic", agentBehaviorPrompt } = body as {
       type?: CallType;
       systemPrompt?: string;
       userPrompt?: string;
