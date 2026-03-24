@@ -202,6 +202,10 @@ export default function AITeamAgentDetail() {
       restrictions: editRestrictions,
       behaviorPrompt: editBehavior.trim(),
     });
+    // Persist behavior prompt to shared training store so simulator can use it
+    if (editBehavior.trim()) {
+      updateBehaviorPrompt(agent.id, editBehavior.trim());
+    }
     setEditing(false);
     toast({ title: "Agente atualizado", description: `${editName.trim()} editado com sucesso.` });
   }, [agent, editName, editRole, editSector, editLevel, editSkills, editScope, editRestrictions, editBehavior, updateAgent, toast]);
