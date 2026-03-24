@@ -178,7 +178,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/ai-team/academia", icon: Star, label: "Academia" },
               { to: "/ai-team/simulador", icon: MessageSquare, label: "Simulador" },
               { to: "/ai-team/config", icon: Cog, label: "Configurações" },
-              { to: "/implementacao/estrategia-ia", icon: Lightbulb, label: "Estratégia IA" },
+              { to: "/implementacao/estrategia-ia", icon: Shield, label: "⚖️ Regras Globais" },
               { to: "/implementacao/aprendizados-ia", icon: Sparkles, label: "Aprendizados IA" },
               { to: "/implementacao/cerebro-natleva", icon: Zap, label: "Cérebro NatLeva" },
             ].map((item) => renderNavItem(item, true))}

@@ -5,6 +5,7 @@ import NathOpinionButton from "./NathOpinionButton";
 import { Slider } from "@/components/ui/slider";
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining } from "@/components/ai-team/agentTrainingStore";
+import { useGlobalRules, buildGlobalRulesBlock, type GlobalRule } from "@/hooks/useGlobalRules";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useSimulationPersistence } from "@/hooks/useSimulationPersistence";
@@ -272,7 +273,7 @@ REGRAS DE OURO:
 - Celebre conquistas do lead (aniversario, casamento, viagem dos sonhos).
 `;
 
-function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean, enableTransfers: boolean, responseLength: "curta" | "media" | "longa") {
+function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean, enableTransfers: boolean, responseLength: "curta" | "media" | "longa", globalRulesBlock: string = "") {
   const lengthInstr = responseLength === "curta" ? "Responda de forma concisa mas com personalidade." : responseLength === "longa" ? "Responda de forma detalhada (3-5 frases), incluindo detalhes do produto." : "O agente decide o tamanho certo para cada momento da conversa.";
   const minTrocas = MIN_TROCAS_POR_AGENTE[agent.id] || 4;
   const transferInstr = hasNext && enableTransfers ? `\nSOBRE [TRANSFERIR]:
@@ -308,7 +309,7 @@ Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
     trainingBlock = parts.join("\n");
   }
   
-  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${trainingBlock}\n${priceInstr}${transferInstr}${lengthInstr}`;
+  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${trainingBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}${lengthInstr}`;
 }
 
 const SPEED_OPTIONS = [
@@ -433,6 +434,9 @@ function useCountUp(target: number, duration = 500) {
 // ===== COMPONENT =====
 export default function SimuladorAutoMode() {
   const isMobile = useIsMobile();
+  const { data: globalRules = [] } = useGlobalRules();
+  const globalRulesBlockRef = useRef("");
+  useEffect(() => { globalRulesBlockRef.current = buildGlobalRulesBlock(globalRules); }, [globalRules]);
   // Config — Volume
   const [numLeads, setNumLeads] = useState(8);
   const [msgsPerLead, setMsgsPerLead] = useState(14);
@@ -721,7 +725,7 @@ export default function SimuladorAutoMode() {
           const leadChunks = chunksRef.current.get(lead.id) || [];
           const compressedHistory = leadChunks.length > 0 ? buildActiveContext(lead, leadChunks) : compressConversation(lead.mensagens);
           const agentResp = await callSimulatorAI(
-            buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength),
+            buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current),
             compressedHistory, "agent"
           );
           if (!simAtivaRef.current) return;
@@ -819,7 +823,7 @@ export default function SimuladorAutoMode() {
 
             const objCompressed = compressConversation(lead.mensagens);
             const objResp = await callSimulatorAI(
-              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength),
+              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current),
               objCompressed, "agent"
             );
             if (!simAtivaRef.current) return;

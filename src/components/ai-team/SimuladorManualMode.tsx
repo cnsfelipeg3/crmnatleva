@@ -3,6 +3,7 @@ import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown,
 import NathOpinionButton from "./NathOpinionButton";
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining, type AgentTrainingConfig } from "@/components/ai-team/agentTrainingStore";
+import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
@@ -53,7 +54,7 @@ function buildTrainingBlock(agentId: string): string {
   return parts.join("\n");
 }
 
-function buildManualAgentPrompt(agent: typeof AGENTS_V4[0]): string {
+function buildManualAgentPrompt(agent: typeof AGENTS_V4[0], globalRulesBlock: string): string {
   const minTrocas = MIN_TROCAS_MANUAL[agent.id] || 4;
   const roleInstr = AGENT_ROLE_MANUAL[agent.id] || "";
   const trainingBlock = buildTrainingBlock(agent.id);
@@ -72,6 +73,7 @@ REGRAS DE OURO:
 - Celebre conquistas do lead (aniversario, casamento, viagem dos sonhos).
 ${roleInstr}
 ${trainingBlock}
+${globalRulesBlock}
 
 SOBRE [TRANSFERIR]:
 Use [TRANSFERIR] SOMENTE quando TUDO isso for verdade:
@@ -119,6 +121,8 @@ const getAgentColor = (agent: typeof AGENTS_V4[0]) => {
 
 export default function SimuladorManualMode() {
   const isMobile = useIsMobile();
+  const { data: globalRules = [] } = useGlobalRules();
+  const globalRulesBlock = buildGlobalRulesBlock(globalRules);
   const [selectedAgent, setSelectedAgent] = useState(AGENTS_V4[2]);
   const [selectedDestino, setSelectedDestino] = useState("Dubai");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -181,7 +185,7 @@ export default function SimuladorManualMode() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         body: JSON.stringify({
           type: "agent",
-          systemPrompt: buildManualAgentPrompt(selectedAgent),
+          systemPrompt: buildManualAgentPrompt(selectedAgent, globalRulesBlock),
           agentBehaviorPrompt: agentBehaviors[selectedAgent.id] || "",
           history: [{ role: "user", content: `[Simulação - Cliente interessado em ${selectedDestino}] ${text}` }],
           provider: "anthropic",
