@@ -2868,7 +2868,7 @@ Retorne JSON:
               </div>
 
               {/* Score + 3 Dimensões + Summary */}
-              <div className="flex gap-4">
+              <div className={cn(isMobile ? "flex flex-col gap-3" : "flex gap-4")}>
                 <div className="rounded-2xl p-6 text-center relative overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)", minWidth: 180 }}>
                   <div className="relative w-[72px] h-[72px] mx-auto">
                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
