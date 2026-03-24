@@ -149,6 +149,17 @@ export default function ProposalTemplates() {
     },
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: async ({ id, restore }: { id: string; restore: boolean }) => {
+      const { error } = await supabase.from("proposal_templates").update({ is_active: restore }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["proposal_templates"] });
+      toast.success(vars.restore ? "Modelo restaurado!" : "Modelo arquivado!");
+    },
+  });
+
   const openCreate = () => {
     setEditingId(null);
     setForm(defaultForm);
