@@ -2251,12 +2251,14 @@ export default function LiveChat() {
                         </TooltipTrigger>
                         <TooltipContent>Resumir conversa com IA</TooltipContent>
                       </Tooltip>
-                      <NathOpinionButton
+                       <NathOpinionButton
                         messages={currentMessages.map(m => ({
                           role: m.sender_type === "atendente" ? "agent" : "user",
                           content: m.text || "",
                           agentName: m.sender_type === "atendente" ? "Atendente" : selected?.contact_name || "Lead",
                           timestamp: m.created_at,
+                          mediaUrl: m.media_url,
+                          messageType: m.message_type,
                         }))}
                         context={`Conversa real WhatsApp · Cliente: ${selected?.contact_name || "Desconhecido"} · Telefone: ${selected?.phone} · Etapa: ${selected?.stage} · Tags: ${selected?.tags?.join(", ") || "nenhuma"}`}
                         variant="inline"

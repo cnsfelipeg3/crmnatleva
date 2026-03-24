@@ -17,9 +17,11 @@ SUA PERSONALIDADE:
 SEU MAIOR MEDO: Um lead sair da conversa com uma imagem NEGATIVA da NatLeva. A marca carrega seu nome, sua história, seu sonho. Uma experiência ruim não é apenas um número — é pessoal.
 
 COMO VOCÊ ANALISA:
-1. 🛡️ RISCOS À MARCA — O que pode fazer o lead pensar mal da NatLeva? Respostas frias? Demora? Falta de empatia? Erro de informação? Este é SEMPRE o ponto mais importante.
-2. 💎 OPORTUNIDADES — O que o agente está perdendo? Upsell? Conexão emocional? Personalização? O lead deu sinais que não foram aproveitados?
-3. ❤️ HUMANIZAÇÃO — O lead está sendo tratado como pessoa ou como ticket? Existe calor humano? O agente está criando ENCANTAMENTO ou apenas respondendo?
+IMPORTANTE: A conversa pode conter mídias (áudios, imagens, vídeos, documentos, stickers, localizações, contatos). Quando houver indicações como [🎵 ÁUDIO], [📷 IMAGEM], [🎬 VÍDEO], [📄 DOCUMENTO], considere que esse conteúdo FAZ PARTE da conversa e avalie: o agente respondeu adequadamente ao tipo de mídia? Ignorou um áudio importante? Aproveitou uma foto enviada pelo cliente para personalizar a proposta? Mandou material visual adequado?
+
+1. 🛡️ RISCOS À MARCA — O que pode fazer o lead pensar mal da NatLeva? Respostas frias? Demora? Falta de empatia? Erro de informação? Ignorar áudios ou mídias do cliente? Este é SEMPRE o ponto mais importante.
+2. 💎 OPORTUNIDADES — O que o agente está perdendo? Upsell? Conexão emocional? Personalização? O lead deu sinais que não foram aproveitados? Enviou fotos/áudios que indicam interesse específico?
+3. ❤️ HUMANIZAÇÃO — O lead está sendo tratado como pessoa ou como ticket? Existe calor humano? O agente está criando ENCANTAMENTO ou apenas respondendo? Está usando mídias ricas (fotos do destino, áudios pessoais) para encantar?
 4. 📊 ESTRATÉGIA — O timing está correto? O funil está avançando? O agente está conduzindo ou sendo passivo?
 5. 💡 O QUE EU FARIA — Como Nath, o que VOCÊ faria diferente neste momento exato da conversa?
 
@@ -66,7 +68,7 @@ interface DetailReport {
 }
 
 interface NathOpinionButtonProps {
-  messages: { role: string; content: string; agentName?: string; timestamp?: string }[];
+  messages: { role: string; content: string; agentName?: string; timestamp?: string; mediaUrl?: string; messageType?: string }[];
   context?: string;
   variant?: "header" | "inline" | "floating";
   disabled?: boolean;
@@ -98,7 +100,27 @@ export default function NathOpinionButton({ messages, context, variant = "header
 
     const chatHistory = messages.map(m => {
       const label = m.role === "agent" ? `AGENTE (${m.agentName || "IA"})` : "LEAD/CLIENTE";
-      return `${label}: ${m.content}`;
+      const type = m.messageType || "text";
+      let desc = m.content || "";
+      if (type === "audio") {
+        desc = desc ? `[🎵 ÁUDIO] ${desc}` : "[🎵 ÁUDIO enviado — conteúdo de voz não transcrito]";
+      } else if (type === "image") {
+        desc = desc ? `[📷 IMAGEM] ${desc}` : "[📷 IMAGEM enviada]";
+      } else if (type === "video") {
+        desc = desc ? `[🎬 VÍDEO] ${desc}` : "[🎬 VÍDEO enviado]";
+      } else if (type === "document" || type === "file") {
+        desc = desc ? `[📄 DOCUMENTO] ${desc}` : "[📄 DOCUMENTO/ARQUIVO enviado]";
+      } else if (type === "sticker") {
+        desc = "[🏷️ STICKER]";
+      } else if (type === "location") {
+        desc = desc ? `[📍 LOCALIZAÇÃO] ${desc}` : "[📍 LOCALIZAÇÃO compartilhada]";
+      } else if (type === "contact" || type === "vcard") {
+        desc = desc ? `[👤 CONTATO] ${desc}` : "[👤 CARTÃO DE CONTATO compartilhado]";
+      }
+      if (m.mediaUrl && type !== "text") {
+        desc += ` (mídia: ${m.mediaUrl})`;
+      }
+      return `${label}: ${desc}`;
     }).join("\n");
 
     const fullContext = context ? `\nCONTEXTO: ${context}` : "";
