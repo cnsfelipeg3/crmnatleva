@@ -99,7 +99,7 @@ async function generateLeadMsg(lead: LeadInteligente, ultimaMsgAgente: string, i
 // Generate contextual objection
 async function gerarObjecao(lead: LeadInteligente, ultimaMsgAgente: string): Promise<string> {
   const prompt = buildObjecaoPrompt(lead, lead.etapaAtual, ultimaMsgAgente);
-  return callAgent(buildLeadPersona(lead) + buildCalibrationPrompt(lead), [{ role: "user", content: prompt }]);
+  return callSimulatorAI(buildLeadPersona(lead) + buildCalibrationPrompt(lead), [{ role: "user", content: prompt }], "objection");
 }
 
 // Evaluate agent response quality — 3 dimensions
