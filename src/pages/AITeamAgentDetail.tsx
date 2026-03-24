@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { updateBehaviorPrompt, setAgentTraining } from "@/components/ai-team/agentTrainingStore";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import {
   ArrowLeft, Send, Zap, Shield, Target, Brain, CheckCircle2, Clock,
@@ -201,6 +202,10 @@ export default function AITeamAgentDetail() {
       restrictions: editRestrictions,
       behaviorPrompt: editBehavior.trim(),
     });
+    // Persist behavior prompt to shared training store so simulator can use it
+    if (editBehavior.trim()) {
+      updateBehaviorPrompt(agent.id, editBehavior.trim());
+    }
     setEditing(false);
     toast({ title: "Agente atualizado", description: `${editName.trim()} editado com sucesso.` });
   }, [agent, editName, editRole, editSector, editLevel, editSkills, editScope, editRestrictions, editBehavior, updateAgent, toast]);
@@ -409,6 +414,7 @@ export default function AITeamAgentDetail() {
               saveEditing={saveEditing}
               startEditing={startEditing}
               agent={agent}
+              agentId={agentId}
             />
           </TabsContent>
 
@@ -708,7 +714,7 @@ function SkillsTab({ skills, agentName }: { skills: SkillItem[]; agentName: stri
 function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRole, setEditRole,
   editSector, setEditSector, editLevel, setEditLevel, editSkills, setEditSkills,
   editBehavior, setEditBehavior, customSkill, setCustomSkill, toggleItem, addCustomSkill,
-  cancelEditing, saveEditing, startEditing, agent,
+  cancelEditing, saveEditing, startEditing, agent, agentId,
 }: any) {
   const [ruleStates, setRuleStates] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
@@ -724,6 +730,15 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
 
   const displayName = agentName;
 
+  // Persist custom rules to training store
+  const syncRulesToStore = useCallback((rulesArr: RuleItem[]) => {
+    setAgentTraining(agentId, {
+      customRules: rulesArr.map(r => ({
+        id: r.id, name: r.name, description: r.description, active: true, impact: r.impact,
+      })),
+    });
+  }, [agentId]);
+
   const handleSaveRule = useCallback(() => {
     if (!newRule.name.trim()) { sonnerToast.error("Nome da regra é obrigatório"); return; }
     const rule: RuleItem = {
@@ -735,12 +750,14 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
       scope: newRule.scope,
       agents: newRule.scope === "specific" ? [agentName.toUpperCase()] : [],
     };
-    setExtraRules(prev => [...prev, rule]);
+    const updated = [...extraRules, rule];
+    setExtraRules(updated);
     setRuleStates(prev => ({ ...prev, [rule.id]: true }));
     setShowNewRule(false);
     setNewRule({ name: "", description: "", impact: "alta", scope: "specific" });
+    syncRulesToStore(updated);
     sonnerToast.success("Regra criada com sucesso!");
-  }, [newRule, agentName]);
+  }, [newRule, agentName, extraRules, syncRulesToStore]);
 
   const toggleRule = (id: string) => {
     setRuleStates((prev: any) => ({ ...prev, [id]: !prev[id] }));
