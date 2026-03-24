@@ -120,6 +120,8 @@ const getAgentColor = (agent: typeof AGENTS_V4[0]) => {
 
 export default function SimuladorManualMode() {
   const isMobile = useIsMobile();
+  const { data: globalRules = [] } = useGlobalRules();
+  const globalRulesBlock = buildGlobalRulesBlock(globalRules);
   const [selectedAgent, setSelectedAgent] = useState(AGENTS_V4[2]);
   const [selectedDestino, setSelectedDestino] = useState("Dubai");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
