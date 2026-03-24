@@ -2832,6 +2832,64 @@ Retorne JSON:
                 </div>
               </div>
 
+              {/* Diagnóstico da Sessão */}
+              {debrief.diagnosticoSessao && (
+                <div className="rounded-2xl p-5 relative overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(139,92,246,0.15)" }}>
+                  <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #8B5CF6, transparent)" }} />
+                  <p className="text-[15px] uppercase tracking-[0.1em] font-bold mb-3" style={{ color: "#8B5CF6" }}>🔬 Diagnóstico Panorâmico da Sessão</p>
+                  <p className="text-[15px] leading-[1.8]" style={{ color: "#E2E8F0" }}>{debrief.diagnosticoSessao}</p>
+                </div>
+              )}
+
+              {/* Análise Individual de CADA Lead */}
+              {debrief.analiseIndividual && debrief.analiseIndividual.length > 0 && (
+                <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <p className="text-[15px] uppercase tracking-[0.1em] font-bold mb-4" style={{ color: "#06B6D4" }}>👤 Análise Individual por Lead ({debrief.analiseIndividual.length})</p>
+                  <div className={cn("gap-3", isMobile ? "flex flex-col" : "grid grid-cols-2")}>
+                    {debrief.analiseIndividual.map((a, i) => {
+                      const statusColor = a.status === "fechou" ? "#10B981" : a.status === "perdeu" ? "#EF4444" : "#F59E0B";
+                      const statusIcon = a.status === "fechou" ? "✅" : a.status === "perdeu" ? "❌" : "⏳";
+                      return (
+                        <div key={`individual-${i}`} className="rounded-xl p-4 transition-all hover:brightness-110" style={{ background: "rgba(255,255,255,0.015)", border: `1px solid ${statusColor}20` }}>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[15px]">{statusIcon}</span>
+                              <span className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>{a.leadNome}</span>
+                              <span className="text-[15px] px-1.5 py-0.5 rounded" style={{ background: `${statusColor}15`, color: statusColor }}>{a.perfil}</span>
+                            </div>
+                            <span className="text-[18px] font-extrabold tabular-nums" style={{ color: sentimentColor(a.score) }}>{a.score}</span>
+                          </div>
+                          <div className="flex gap-3 mb-2">
+                            {[
+                              { label: "H", val: a.humanizacao, color: "#EC4899" },
+                              { label: "E", val: a.eficacia, color: "#F59E0B" },
+                              { label: "T", val: a.tecnica, color: "#06B6D4" },
+                            ].map(d => (
+                              <div key={d.label} className="flex items-center gap-1">
+                                <span className="text-[11px] font-bold" style={{ color: d.color }}>{d.label}</span>
+                                <div className="w-12 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                                  <div className="h-full rounded-full" style={{ width: `${d.val}%`, background: d.color }} />
+                                </div>
+                                <span className="text-[11px] tabular-nums font-semibold" style={{ color: d.color }}>{d.val}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-[13px] leading-relaxed mb-1.5" style={{ color: "#CBD5E1" }}>{a.diagnostico}</p>
+                          {a.destino && <p className="text-[11px]" style={{ color: "#94A3B8" }}>📍 {a.destino} · 🤖 {a.agenteResponsavel}</p>}
+                          {a.falhasCriticas.length > 0 && (
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              {a.falhasCriticas.slice(0, 2).map((f, fi) => (
+                                <span key={fi} className="text-[11px] px-1.5 py-0.5 rounded" style={{ background: "rgba(239,68,68,0.08)", color: "#EF4444" }}>⚠ {f.slice(0, 60)}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Pontos Fortes */}
               {debrief.pontosFortes.length > 0 && (
                 <div className="rounded-2xl p-5" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
