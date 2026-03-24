@@ -161,6 +161,30 @@ export default function AITeamAgentDetail() {
 
   const [activeTab, setActiveTab] = useState("overview");
 
+  // New Rule dialog
+  const [showNewRule, setShowNewRule] = useState(false);
+  const [newRule, setNewRule] = useState({ name: "", description: "", impact: "alta", scope: "specific" });
+  const [extraRules, setExtraRules] = useState<RuleItem[]>([]);
+
+  const rules = useMemo(() => [...agentRules, ...extraRules], [agentRules, extraRules]);
+
+  const handleSaveRule = useCallback(() => {
+    if (!newRule.name.trim()) { sonnerToast.error("Nome da regra é obrigatório"); return; }
+    const rule: RuleItem = {
+      id: `r-custom-${Date.now()}`,
+      name: newRule.name.trim(),
+      description: newRule.description.trim(),
+      active: true,
+      impact: newRule.impact,
+      scope: newRule.scope,
+      agents: newRule.scope === "specific" ? [agentNameUpper] : [],
+    };
+    setExtraRules(prev => [...prev, rule]);
+    setShowNewRule(false);
+    setNewRule({ name: "", description: "", impact: "alta", scope: "specific" });
+    sonnerToast.success("Regra criada com sucesso!");
+  }, [newRule, agentNameUpper]);
+
   // Edit state
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
