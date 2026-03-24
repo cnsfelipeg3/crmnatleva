@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Brain, Users, Rocket, BookOpen, Wand2, GitBranch, Database, Shield,
-  GraduationCap, MessageSquare, FlaskConical, Settings, Building2, ChevronLeft,
+  GraduationCap, MessageSquare, FlaskConical, Settings, Building2, ChevronLeft, Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -17,6 +17,7 @@ const AI_TEAM_MENUS = [
   { to: "/ai-team/memoria", icon: Database, label: "Memória & Fiscal" },
   { to: "/ai-team/academia", icon: GraduationCap, label: "Academia" },
   { to: "/ai-team/simulador", icon: MessageSquare, label: "Simulador" },
+  { to: "/ai-team/extrato", icon: Receipt, label: "Extrato" },
   { to: "/ai-team/config", icon: Settings, label: "Configurações" },
 ];
 
