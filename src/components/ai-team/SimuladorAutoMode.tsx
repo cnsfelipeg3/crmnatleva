@@ -1995,16 +1995,9 @@ Retorne JSON:
                     ))}
                   </div>
 
-                  {/* Sliders */}
+                  {/* Volatility */}
                    <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Volatilidade emocional</span>
-                        <span className="text-sm font-bold" style={{ color: "#EC4899" }}>{emotionalVolatility}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>0% = lead estável · 100% = extremamente volátil</p>
-                      <Slider min={0} max={100} step={5} value={[emotionalVolatility]} onValueChange={v => setEmotionalVolatility(v[0])} />
-                    </div>
+                    <SimConfigInput label="Volatilidade emocional" value={emotionalVolatility} onChange={setEmotionalVolatility} min={0} max={100} step={5} color="#EC4899" desc="0% = lead estável · 100% = extremamente volátil" suffix="%" icon="🎭" />
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Frequência de avaliação IA</span>
                       <p className="text-[11px] mb-3 mt-1" style={{ color: "#94A3B8" }}>Com que frequência o juiz IA avalia o agente</p>
