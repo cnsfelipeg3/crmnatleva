@@ -14,6 +14,7 @@ import {
   buildAvaliacaoPrompt, buildMensagemPerdaPrompt,
   gerarLeadInteligente, deveInserirObjecao, atualizarEstadoEmocional, devePerdeLead,
 } from "./intelligentLeads";
+import { compressConversation, estimateTokens, BUILT_IN_PRESETS } from "./contextCompression";
 import {
   getAgentPesos, getNivel, buildLiveEvalPrompt, buildDebriefV2Prompt,
   SYSTEM_DEBRIEF_V2, CRITERIOS_AVALIACAO,
