@@ -270,7 +270,7 @@ serve(async (req) => {
     if (provider === "anthropic") {
       const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
       if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
-      return await callAnthropic(ANTHROPIC_API_KEY, messages, config.model, config.stream);
+      return await callAnthropic(ANTHROPIC_API_KEY, messages, config.model, config.stream, config.maxTokens);
     }
 
     // Default: Lovable AI Gateway
