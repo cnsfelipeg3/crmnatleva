@@ -156,6 +156,7 @@ export default function SimuladorManualMode() {
   const [transferNotice, setTransferNotice] = useState<string | null>(null);
   const [currentStage, setCurrentStage] = useState(0);
   const [showPanel, setShowPanel] = useState(false); // mobile bottom sheet
+  const [manualObsSelectedMsg, setManualObsSelectedMsg] = useState<SelectedMessage | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
