@@ -9,7 +9,7 @@ import {
   Cpu, TrendingUp, TrendingDown, Pencil, Save, X, Plus,
   BookOpen, FileText, Image, Video, Music, Link as LinkIcon,
   Wand2, ToggleLeft, Database, Trash2, Upload, Search,
-  GraduationCap, Settings2, MessageSquare, Layers,
+  GraduationCap, Settings2, MessageSquare, Layers, Sparkles,
 } from "lucide-react";
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
 import { getAllV4Agents, getV4InitialTasks } from "@/components/ai-team/agentV4Bridge";
