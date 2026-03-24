@@ -1179,8 +1179,8 @@ Retorne JSON:
                   <div className="flex items-center gap-3 mb-2">
                     <BarChart3 className="w-5 h-5" style={{ color: "#3B82F6" }} />
                     <div>
-                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Volume & Tempo</h3>
-                      <p className="text-[15px]" style={{ color: "#94A3B8" }}>Configure a escala e duração do teste de estresse</p>
+                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Volume & Tempo</h3>
+                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Configure a escala e duração do teste de estresse</p>
                     </div>
                   </div>
                   <div className={cn("gap-6", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
@@ -1192,12 +1192,12 @@ Retorne JSON:
                     ].map(s => (
                       <div key={s.label} className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-[15px] font-semibold" style={{ color: "#E2E8F0" }}>{s.label}</span>
+                          <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>{s.label}</span>
                           <span className="text-[22px] font-extrabold tabular-nums" style={{ color: s.color, textShadow: `0 0 20px ${s.color}20` }}>
                             {s.format ? (s.value >= 3600 ? `${Math.floor(s.value / 3600)}h${Math.floor((s.value % 3600) / 60)}m` : formatTime(s.value)) : s.value}{s.suffix || ""}
                           </span>
                         </div>
-                        <p className="text-[15px] mb-3" style={{ color: "#94A3B8" }}>{s.desc}</p>
+                        <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>{s.desc}</p>
                         <Slider min={s.min} max={s.max} step={s.step} value={[s.value]} onValueChange={v => s.setter(v[0])} />
                       </div>
                     ))}
@@ -1205,8 +1205,8 @@ Retorne JSON:
 
                   {/* Dispatch Mode */}
                   <div className="rounded-xl p-4 mt-2" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                    <p className="text-[15px] font-semibold mb-2" style={{ color: "#E2E8F0" }}>Modo de Disparo</p>
-                    <p className="text-[15px] mb-3" style={{ color: "#94A3B8" }}>Como os leads entram na simulação</p>
+                    <p className="text-sm font-semibold mb-2" style={{ color: "#E2E8F0" }}>Modo de Disparo</p>
+                    <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Como os leads entram na simulação</p>
                     <div className="flex flex-wrap gap-2">
                       {[
                         { id: "sequential" as const, label: "Sequencial", desc: "Um lead por vez", icon: "📋" },
@@ -1220,15 +1220,15 @@ Retorne JSON:
                             border: `1px solid ${dispatchMode === m.id ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)"}`,
                           }}>
                           <span className="text-sm">{m.icon}</span>
-                          <p className="text-[15px] font-bold mt-1" style={{ color: dispatchMode === m.id ? "#3B82F6" : "#94A3B8" }}>{m.label}</p>
-                          <p className="text-[15px]" style={{ color: "#94A3B8" }}>{m.desc}</p>
+                          <p className="text-sm font-bold mt-1" style={{ color: dispatchMode === m.id ? "#3B82F6" : "#94A3B8" }}>{m.label}</p>
+                          <p className="text-[11px]" style={{ color: "#94A3B8" }}>{m.desc}</p>
                         </button>
                       ))}
                     </div>
                     {dispatchMode === "wave" && (
                       <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.03)" }}>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-[15px] font-semibold" style={{ color: "#E2E8F0" }}>Leads por onda</span>
+                          <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Leads por onda</span>
                           <span className="text-[16px] font-extrabold tabular-nums" style={{ color: "#06B6D4" }}>{parallelLeads}</span>
                         </div>
                         <Slider min={2} max={Math.min(50, numLeads)} step={1} value={[parallelLeads]} onValueChange={v => setParallelLeads(v[0])} />
@@ -1241,8 +1241,8 @@ Retorne JSON:
                     <div className="rounded-xl p-3 mt-2 flex items-start gap-2" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.12)" }}>
                       <Brain className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#10B981" }} />
                       <div>
-                        <p className="text-[15px] font-bold" style={{ color: "#10B981" }}>Compressão de Contexto Ativa</p>
-                        <p className="text-[15px]" style={{ color: "#94A3B8" }}>
+                        <p className="text-sm font-bold" style={{ color: "#10B981" }}>Compressão de Contexto Ativa</p>
+                        <p className="text-[11px]" style={{ color: "#94A3B8" }}>
                           Conversas com {msgsPerLead}+ msgs usam resumo inteligente do histórico antigo, 
                           mantendo apenas as últimas 16 mensagens completas. Isso economiza tokens e mantém coerência.
                         </p>
@@ -1259,8 +1259,8 @@ Retorne JSON:
                     <div className="flex items-center gap-3">
                       <User className="w-5 h-5" style={{ color: "#EC4899" }} />
                       <div>
-                        <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Perfis Psicológicos</h3>
-                        <p className="text-[15px]" style={{ color: "#94A3B8" }}>Selecione quais perfis participam · {selectedProfiles.length || "Todos os 8"} ativos</p>
+                        <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Perfis Psicológicos</h3>
+                        <p className="text-[11px]" style={{ color: "#94A3B8" }}>Selecione quais perfis participam · {selectedProfiles.length || "Todos os 8"} ativos</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -1269,7 +1269,7 @@ Retorne JSON:
                         { id: "roundrobin", label: "Round-robin", icon: "🔄" },
                       ].map(m => (
                         <button key={m.id} onClick={() => setProfileMode(m.id as any)}
-                          className="text-[15px] px-3 py-1.5 rounded-lg font-semibold transition-all"
+                          className="text-sm px-3 py-1.5 rounded-lg font-semibold transition-all"
                           style={{
                             background: profileMode === m.id ? "rgba(236,72,153,0.1)" : "rgba(255,255,255,0.02)",
                             border: `1px solid ${profileMode === m.id ? "rgba(236,72,153,0.25)" : "rgba(255,255,255,0.04)"}`,
@@ -1297,10 +1297,10 @@ Retorne JSON:
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="text-[15px] font-bold" style={{ color: active ? "#F1F5F9" : "#64748B" }}>{p.label}</p>
+                              <p className="text-sm font-bold" style={{ color: active ? "#F1F5F9" : "#64748B" }}>{p.label}</p>
                               {active && <div className="w-2 h-2 rounded-full" style={{ background: p.cor }} />}
                             </div>
-                            <p className="text-[15px] mt-0.5 line-clamp-2" style={{ color: "#94A3B8" }}>{p.gatilhosCompra.slice(0, 2).join(" · ")}</p>
+                            <p className="text-[11px] mt-0.5 line-clamp-2" style={{ color: "#94A3B8" }}>{p.gatilhosCompra.slice(0, 2).join(" · ")}</p>
                           </div>
                         </button>
                       );
@@ -1315,8 +1315,8 @@ Retorne JSON:
                   <div className="flex items-center gap-3 mb-2">
                     <MapPin className="w-5 h-5" style={{ color: "#06B6D4" }} />
                     <div>
-                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Cenário dos Leads</h3>
-                      <p className="text-[15px]" style={{ color: "#94A3B8" }}>Destinos, orçamentos, canais e composição de grupo</p>
+                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Cenário dos Leads</h3>
+                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Destinos, orçamentos, canais e composição de grupo</p>
                     </div>
                   </div>
 
@@ -1337,12 +1337,12 @@ Retorne JSON:
                       <div>
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>Destinos</span>
-                            <span className="text-[15px] px-2 py-0.5 rounded-full" style={{ background: "rgba(6,182,212,0.08)", color: "#06B6D4" }}>
+                            <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Destinos</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(6,182,212,0.08)", color: "#06B6D4" }}>
                               {selectedDestinos.length || DESTINOS_LEAD.length} selecionados
                             </span>
                           </div>
-                          <button onClick={() => setSelectedDestinos([])} className="text-[15px] font-semibold px-2 py-1 rounded-lg" style={{ color: "#94A3B8", background: "rgba(255,255,255,0.02)" }}>
+                          <button onClick={() => setSelectedDestinos([])} className="text-sm font-semibold px-2 py-1 rounded-lg" style={{ color: "#94A3B8", background: "rgba(255,255,255,0.02)" }}>
                             {selectedDestinos.length > 0 ? "Limpar" : "Todos"}
                           </button>
                         </div>
@@ -1365,8 +1365,8 @@ Retorne JSON:
                                 </div>
                                 <span className="text-sm">{d.icon}</span>
                                 <div className="min-w-0">
-                                  <p className="text-[15px] font-semibold truncate" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{d.name}</p>
-                                  <p className="text-[15px]" style={{ color: "#94A3B8" }}>{d.region}</p>
+                                  <p className="text-sm font-semibold truncate" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{d.name}</p>
+                                  <p className="text-[11px]" style={{ color: "#94A3B8" }}>{d.region}</p>
                                 </div>
                               </button>
                             );
@@ -1382,7 +1382,7 @@ Retorne JSON:
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <Wallet className="w-3.5 h-3.5" style={{ color: "#10B981" }} />
-                        <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>Faixa de Orçamento</span>
+                        <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Faixa de Orçamento</span>
                       </div>
                       <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
                         {BUDGETS_LEAD.map((b, i) => {
@@ -1401,7 +1401,7 @@ Retorne JSON:
                               }}>
                                 {active && <Check className="w-2.5 h-2.5 text-white" />}
                               </div>
-                              <span className="text-[15px] font-semibold w-24 shrink-0" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{b}</span>
+                              <span className="text-sm font-semibold w-24 shrink-0" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{b}</span>
                               <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
                                 <div className="h-full rounded-full transition-all" style={{ width: `${barWidths[i]}%`, background: active ? "#10B981" : "rgba(255,255,255,0.08)" }} />
                               </div>
@@ -1415,7 +1415,7 @@ Retorne JSON:
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <Radio className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
-                        <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>Origem do Lead</span>
+                        <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Origem do Lead</span>
                       </div>
                       <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
                         {CANAIS_LEAD.map((c, i) => {
@@ -1435,7 +1435,7 @@ Retorne JSON:
                                 {active && <Check className="w-2.5 h-2.5 text-white" />}
                               </div>
                               <span className="text-sm">{canalIcons[c] || "📡"}</span>
-                              <span className="text-[15px] font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{c}</span>
+                              <span className="text-sm font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{c}</span>
                             </button>
                           );
                         })}
@@ -1447,7 +1447,7 @@ Retorne JSON:
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <Users className="w-3.5 h-3.5" style={{ color: "#F59E0B" }} />
-                      <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>Grupo de Viajantes</span>
+                      <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Grupo de Viajantes</span>
                     </div>
                     <div className={cn("grid gap-0 rounded-xl overflow-hidden", isMobile ? "grid-cols-2" : "grid-cols-3")} style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
                       {GRUPOS_LEAD.map((g, i) => {
@@ -1468,7 +1468,7 @@ Retorne JSON:
                               {active && <Check className="w-2.5 h-2.5 text-white" />}
                             </div>
                             <span className="text-sm">{grupoIcons[g] || "👤"}</span>
-                            <span className="text-[15px] font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{g}</span>
+                            <span className="text-sm font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{g}</span>
                           </button>
                         );
                       })}
@@ -1483,8 +1483,8 @@ Retorne JSON:
                   <div className="flex items-center gap-3 mb-2">
                     <Heart className="w-5 h-5" style={{ color: "#EF4444" }} />
                     <div>
-                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Calibração do Lead Fictício</h3>
-                      <p className="text-[15px]" style={{ color: "#94A3B8" }}>Controle fino do comportamento, tom e reações do lead durante a simulação</p>
+                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Calibração do Lead Fictício</h3>
+                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Controle fino do comportamento, tom e reações do lead durante a simulação</p>
                     </div>
                   </div>
 
@@ -1492,26 +1492,26 @@ Retorne JSON:
                   <div className="grid grid-cols-2 gap-4">
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[15px] font-semibold" style={{ color: "#E2E8F0" }}>Paciência inicial</span>
+                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Paciência inicial</span>
                         <span className="text-[20px] font-extrabold tabular-nums" style={{ color: initialPatience >= 70 ? "#10B981" : initialPatience >= 40 ? "#F59E0B" : "#EF4444" }}>{initialPatience}%</span>
                       </div>
-                      <p className="text-[15px] mb-3" style={{ color: "#94A3B8" }}>Nível de paciência com que o lead começa a conversa</p>
+                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Nível de paciência com que o lead começa a conversa</p>
                       <Slider min={10} max={100} step={5} value={[initialPatience]} onValueChange={v => setInitialPatience(v[0])} />
                       <div className="flex justify-between mt-1">
-                        <span className="text-[15px]" style={{ color: "#EF4444" }}>Impaciente</span>
-                        <span className="text-[15px]" style={{ color: "#10B981" }}>Paciente</span>
+                        <span className="text-xs" style={{ color: "#EF4444" }}>Impaciente</span>
+                        <span className="text-xs" style={{ color: "#10B981" }}>Paciente</span>
                       </div>
                     </div>
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[15px] font-semibold" style={{ color: "#E2E8F0" }}>Sensibilidade a abandono</span>
+                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Sensibilidade a abandono</span>
                         <span className="text-[20px] font-extrabold tabular-nums" style={{ color: abandonmentSensitivity >= 70 ? "#EF4444" : abandonmentSensitivity >= 40 ? "#F59E0B" : "#10B981" }}>{abandonmentSensitivity}%</span>
                       </div>
-                      <p className="text-[15px] mb-3" style={{ color: "#94A3B8" }}>Quão facilmente o lead desiste ao receber respostas fracas</p>
+                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Quão facilmente o lead desiste ao receber respostas fracas</p>
                       <Slider min={0} max={100} step={5} value={[abandonmentSensitivity]} onValueChange={v => setAbandonmentSensitivity(v[0])} />
                       <div className="flex justify-between mt-1">
-                        <span className="text-[15px]" style={{ color: "#10B981" }}>Tolerante</span>
-                        <span className="text-[15px]" style={{ color: "#EF4444" }}>Desiste fácil</span>
+                        <span className="text-xs" style={{ color: "#10B981" }}>Tolerante</span>
+                        <span className="text-xs" style={{ color: "#EF4444" }}>Desiste fácil</span>
                       </div>
                     </div>
                   </div>
@@ -1520,7 +1520,7 @@ Retorne JSON:
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <TrendingUp className="w-3.5 h-3.5" style={{ color: "#EF4444" }} />
-                      <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>Curva de perda de paciência</span>
+                      <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Curva de perda de paciência</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       {([
@@ -1535,9 +1535,9 @@ Retorne JSON:
                             border: `1px solid ${leadPatienceCurve === c.id ? "rgba(239,68,68,0.3)" : "rgba(255,255,255,0.04)"}`,
                           }}>
                           <span className="text-lg">{c.icon}</span>
-                          <span className="text-[15px] font-bold" style={{ color: leadPatienceCurve === c.id ? "#F1F5F9" : "#94A3B8" }}>{c.label}</span>
-                          <span className="text-[15px] font-mono tracking-wider" style={{ color: leadPatienceCurve === c.id ? "#EF4444" : "#334155" }}>{c.visual}</span>
-                          <span className="text-[15px]" style={{ color: "#94A3B8" }}>{c.desc}</span>
+                          <span className="text-sm font-bold" style={{ color: leadPatienceCurve === c.id ? "#F1F5F9" : "#94A3B8" }}>{c.label}</span>
+                          <span className="text-[11px] font-mono tracking-wider" style={{ color: leadPatienceCurve === c.id ? "#EF4444" : "#334155" }}>{c.visual}</span>
+                          <span className="text-[11px]" style={{ color: "#94A3B8" }}>{c.desc}</span>
                         </button>
                       ))}
                     </div>
@@ -1547,26 +1547,26 @@ Retorne JSON:
                   <div className="grid grid-cols-2 gap-4">
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[15px] font-semibold" style={{ color: "#E2E8F0" }}>Tom de formalidade</span>
-                        <span className="text-[15px] font-bold" style={{ color: "#8B5CF6" }}>{leadToneFormality}%</span>
+                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Tom de formalidade</span>
+                        <span className="text-sm font-bold" style={{ color: "#8B5CF6" }}>{leadToneFormality}%</span>
                       </div>
-                      <p className="text-[15px] mb-3" style={{ color: "#94A3B8" }}>Como o lead se comunica: informal (gírias, abreviações) vs formal</p>
+                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Como o lead se comunica: informal (gírias, abreviações) vs formal</p>
                       <Slider min={0} max={100} step={10} value={[leadToneFormality]} onValueChange={v => setLeadToneFormality(v[0])} />
                       <div className="flex justify-between mt-1">
-                        <span className="text-[15px]" style={{ color: "#EC4899" }}>🤙 "eae mano"</span>
-                        <span className="text-[15px]" style={{ color: "#3B82F6" }}>🎩 "Prezado(a)"</span>
+                        <span className="text-xs" style={{ color: "#EC4899" }}>🤙 "eae mano"</span>
+                        <span className="text-xs" style={{ color: "#3B82F6" }}>🎩 "Prezado(a)"</span>
                       </div>
                     </div>
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[15px] font-semibold" style={{ color: "#E2E8F0" }}>Follow-up espontâneo</span>
-                        <span className="text-[15px] font-bold" style={{ color: "#F59E0B" }}>{leadFollowUpPressure}%</span>
+                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Follow-up espontâneo</span>
+                        <span className="text-sm font-bold" style={{ color: "#F59E0B" }}>{leadFollowUpPressure}%</span>
                       </div>
-                      <p className="text-[15px] mb-3" style={{ color: "#94A3B8" }}>Chance do lead mandar msg extra pressionando ("e aí?", "???")</p>
+                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Chance do lead mandar msg extra pressionando ("e aí?", "???")</p>
                       <Slider min={0} max={100} step={5} value={[leadFollowUpPressure]} onValueChange={v => setLeadFollowUpPressure(v[0])} />
                       <div className="flex justify-between mt-1">
-                        <span className="text-[15px]" style={{ color: "#10B981" }}>Passivo</span>
-                        <span className="text-[15px]" style={{ color: "#EF4444" }}>Insistente</span>
+                        <span className="text-xs" style={{ color: "#10B981" }}>Passivo</span>
+                        <span className="text-xs" style={{ color: "#EF4444" }}>Insistente</span>
                       </div>
                     </div>
                   </div>
@@ -1575,7 +1575,7 @@ Retorne JSON:
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <MessageSquare className="w-3.5 h-3.5" style={{ color: "#06B6D4" }} />
-                      <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>Estilo de escrita do lead</span>
+                      <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Estilo de escrita do lead</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       {([
@@ -1590,8 +1590,8 @@ Retorne JSON:
                             border: `1px solid ${leadTypingStyle === ts.id ? "rgba(6,182,212,0.3)" : "rgba(255,255,255,0.04)"}`,
                           }}>
                           <span className="text-lg">{ts.icon}</span>
-                          <span className="text-[15px] font-bold" style={{ color: leadTypingStyle === ts.id ? "#E2E8F0" : "#94A3B8" }}>{ts.label}</span>
-                          <span className="text-[15px] italic" style={{ color: "#94A3B8" }}>{ts.example}</span>
+                          <span className="text-sm font-bold" style={{ color: leadTypingStyle === ts.id ? "#E2E8F0" : "#94A3B8" }}>{ts.label}</span>
+                          <span className="text-[11px] italic" style={{ color: "#94A3B8" }}>{ts.example}</span>
                         </button>
                       ))}
                     </div>
@@ -1602,7 +1602,7 @@ Retorne JSON:
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <Search className="w-3.5 h-3.5" style={{ color: "#10B981" }} />
-                        <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>Revelação de informações</span>
+                        <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Revelação de informações</span>
                       </div>
                       <div className="grid grid-cols-1 gap-2">
                         {([
@@ -1618,8 +1618,8 @@ Retorne JSON:
                             }}>
                             <span>{ir.icon}</span>
                             <div>
-                              <p className="text-[15px] font-bold" style={{ color: infoRevealSpeed === ir.id ? "#E2E8F0" : "#94A3B8" }}>{ir.label}</p>
-                              <p className="text-[15px]" style={{ color: "#94A3B8" }}>{ir.desc}</p>
+                              <p className="text-sm font-bold" style={{ color: infoRevealSpeed === ir.id ? "#E2E8F0" : "#94A3B8" }}>{ir.label}</p>
+                              <p className="text-[11px]" style={{ color: "#94A3B8" }}>{ir.desc}</p>
                             </div>
                           </button>
                         ))}
@@ -1628,7 +1628,7 @@ Retorne JSON:
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <Lightbulb className="w-3.5 h-3.5" style={{ color: "#F59E0B" }} />
-                        <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>Objetivo do lead</span>
+                        <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Objetivo do lead</span>
                       </div>
                       <div className="grid grid-cols-1 gap-2">
                         {([
@@ -1645,8 +1645,8 @@ Retorne JSON:
                             }}>
                             <span>{cg.icon}</span>
                             <div>
-                              <p className="text-[15px] font-bold" style={{ color: leadConversationGoal === cg.id ? "#E2E8F0" : "#94A3B8" }}>{cg.label}</p>
-                              <p className="text-[15px]" style={{ color: "#94A3B8" }}>{cg.desc}</p>
+                              <p className="text-sm font-bold" style={{ color: leadConversationGoal === cg.id ? "#E2E8F0" : "#94A3B8" }}>{cg.label}</p>
+                              <p className="text-[11px]" style={{ color: "#94A3B8" }}>{cg.desc}</p>
                             </div>
                           </button>
                         ))}
@@ -1656,7 +1656,7 @@ Retorne JSON:
 
                   {/* Toggles row */}
                   <div className="space-y-2">
-                    <p className="text-[15px] uppercase tracking-[0.1em] font-bold" style={{ color: "#94A3B8" }}>🎭 Traços de personalidade</p>
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#94A3B8" }}>🎭 Traços de personalidade</p>
                     {[
                       { label: "Erros de digitação", desc: "Lead comete typos realistas (\"tbm\", \"vc\", palavras cortadas)", value: enableLeadTypos, setter: setEnableLeadTypos, color: "#EC4899", icon: "✏️" },
                       { label: "Emojis na conversa", desc: "Lead usa emojis naturalmente (😊 🙏 ✈️)", value: enableLeadEmojis, setter: setEnableLeadEmojis, color: "#F59E0B", icon: "😊" },
@@ -1670,8 +1670,8 @@ Retorne JSON:
                         }}>
                         <span className="text-sm">{opt.icon}</span>
                         <div className="flex-1">
-                          <p className="text-[15px] font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
-                          <p className="text-[15px] mt-0.5" style={{ color: "#94A3B8" }}>{opt.desc}</p>
+                          <p className="text-sm font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
+                          <p className="text-[11px] mt-0.5" style={{ color: "#94A3B8" }}>{opt.desc}</p>
                         </div>
                         <div className="w-9 h-5 rounded-full relative transition-all" style={{ background: opt.value ? opt.color : "rgba(255,255,255,0.1)" }}>
                           <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all" style={{ left: opt.value ? 18 : 2, background: "#fff" }} />
@@ -1684,18 +1684,18 @@ Retorne JSON:
                   <div className="grid grid-cols-2 gap-4">
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[15px] font-semibold" style={{ color: "#E2E8F0" }}>Reengajamento</span>
-                        <span className="text-[15px] font-bold" style={{ color: "#06B6D4" }}>{leadReengagementChance}%</span>
+                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Reengajamento</span>
+                        <span className="text-sm font-bold" style={{ color: "#06B6D4" }}>{leadReengagementChance}%</span>
                       </div>
-                      <p className="text-[15px] mb-3" style={{ color: "#94A3B8" }}>Chance do lead voltar após silêncio/desistência parcial</p>
+                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Chance do lead voltar após silêncio/desistência parcial</p>
                       <Slider min={0} max={80} step={5} value={[leadReengagementChance]} onValueChange={v => setLeadReengagementChance(v[0])} />
                     </div>
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[15px] font-semibold" style={{ color: "#E2E8F0" }}>Duração máx por conversa</span>
-                        <span className="text-[15px] font-bold" style={{ color: "#8B5CF6" }}>{maxConversationMinutes === 0 ? "∞" : `${maxConversationMinutes}min`}</span>
+                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Duração máx por conversa</span>
+                        <span className="text-sm font-bold" style={{ color: "#8B5CF6" }}>{maxConversationMinutes === 0 ? "∞" : `${maxConversationMinutes}min`}</span>
                       </div>
-                      <p className="text-[15px] mb-3" style={{ color: "#94A3B8" }}>Limite de tempo por conversa individual (0 = ilimitado)</p>
+                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Limite de tempo por conversa individual (0 = ilimitado)</p>
                       <Slider min={0} max={30} step={1} value={[maxConversationMinutes]} onValueChange={v => setMaxConversationMinutes(v[0])} />
                     </div>
                   </div>
@@ -1704,15 +1704,15 @@ Retorne JSON:
                   <div className="rounded-xl p-4" style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.12)" }}>
                     <div className="flex items-center gap-2 mb-2">
                       <Edit3 className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
-                      <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>Instruções customizadas para o lead</span>
+                      <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Instruções customizadas para o lead</span>
                     </div>
-                    <p className="text-[15px] mb-2" style={{ color: "#94A3B8" }}>Adicione comportamentos específicos que serão injetados no prompt do lead fictício</p>
+                    <p className="text-[11px] mb-2" style={{ color: "#94A3B8" }}>Adicione comportamentos específicos que serão injetados no prompt do lead fictício</p>
                     <textarea
                       value={leadCustomInstructions}
                       onChange={e => setLeadCustomInstructions(e.target.value)}
                       placeholder="Ex: 'Sempre mencione que já viajou com a CVC antes', 'Pergunte sobre seguro viagem', 'Insista em saber sobre cancelamento'..."
                       rows={3}
-                      className="w-full rounded-lg px-3 py-2 text-[15px] outline-none resize-none"
+                      className="w-full rounded-lg px-3 py-2 text-xs outline-none resize-none"
                       style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "#E2E8F0" }}
                     />
                   </div>
@@ -1725,8 +1725,8 @@ Retorne JSON:
                   <div className="flex items-center gap-3 mb-2">
                     <Users className="w-5 h-5" style={{ color: "#8B5CF6" }} />
                     <div>
-                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Seleção de Agentes & Pipeline</h3>
-                      <p className="text-[15px]" style={{ color: "#94A3B8" }}>Escolha quem será testado: um único agente, vários específicos ou o pipeline completo</p>
+                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Seleção de Agentes & Pipeline</h3>
+                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Escolha quem será testado: um único agente, vários específicos ou o pipeline completo</p>
                     </div>
                   </div>
 
@@ -1746,8 +1746,8 @@ Retorne JSON:
                         }}>
                         {funnelMode === m.id && <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background: m.color }} />}
                         <span className="text-xl">{m.icon}</span>
-                        <span className="text-[15px] font-bold" style={{ color: funnelMode === m.id ? "#F1F5F9" : "#94A3B8" }}>{m.label}</span>
-                        <span className="text-[15px] text-center leading-tight" style={{ color: "#94A3B8" }}>{m.desc}</span>
+                        <span className="text-sm font-bold" style={{ color: funnelMode === m.id ? "#F1F5F9" : "#94A3B8" }}>{m.label}</span>
+                        <span className="text-[11px] text-center leading-tight" style={{ color: "#94A3B8" }}>{m.desc}</span>
                       </button>
                     ))}
                   </div>
@@ -1756,7 +1756,7 @@ Retorne JSON:
                   {funnelMode === "individual" && (
                     <div className="space-y-3 animate-in fade-in duration-200">
                       <div className="flex items-center gap-2">
-                        <span className="text-[15px] uppercase tracking-[0.1em] font-bold" style={{ color: "#EC4899" }}>🎯 Selecione o agente para teste individual</span>
+                        <span className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#EC4899" }}>🎯 Selecione o agente para teste individual</span>
                       </div>
                       <div className="space-y-2">
                         {SQUADS.filter(s => s.id !== 'orquestracao').map(squad => {
@@ -1764,7 +1764,7 @@ Retorne JSON:
                           if (squadAgents.length === 0) return null;
                           return (
                             <div key={squad.id}>
-                              <p className="text-[15px] uppercase tracking-[0.1em] font-bold mb-1.5 flex items-center gap-1.5"
+                              <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-1.5 flex items-center gap-1.5"
                                 style={{ color: "#94A3B8" }}>
                                 <span>{squad.emoji}</span> {squad.name}
                               </p>
@@ -1789,14 +1789,14 @@ Retorne JSON:
                                       </div>
                                       <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                          <p className="text-[15px] font-bold" style={{ color: selected ? "#F1F5F9" : "#94A3B8" }}>{a.name}</p>
+                                          <p className="text-sm font-bold" style={{ color: selected ? "#F1F5F9" : "#94A3B8" }}>{a.name}</p>
                                           {selected && <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: c }} />}
                                         </div>
-                                        <p className="text-[15px] truncate" style={{ color: "#94A3B8" }}>{a.role}</p>
+                                        <p className="text-[11px] truncate" style={{ color: "#94A3B8" }}>{a.role}</p>
                                         <div className="flex items-center gap-1.5 mt-1">
-                                          <span className="text-[15px] px-1.5 py-0.5 rounded" style={{ background: `${c}08`, color: c }}>{a.skills[0]}</span>
-                                          <span className="text-[15px]" style={{ color: "#94A3B8" }}>Lv.{a.level}</span>
-                                          <span className="text-[15px]" style={{ color: "#94A3B8" }}>{a.successRate}%</span>
+                                          <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${c}08`, color: c }}>{a.skills[0]}</span>
+                                          <span className="text-[11px]" style={{ color: "#94A3B8" }}>Lv.{a.level}</span>
+                                          <span className="text-[11px]" style={{ color: "#94A3B8" }}>{a.successRate}%</span>
                                         </div>
                                       </div>
                                       {selected && (
@@ -1818,14 +1818,14 @@ Retorne JSON:
                         const c = getAgentColor(agent);
                         return (
                           <div className="rounded-xl p-4 mt-2" style={{ background: `${c}06`, border: `1px solid ${c}20` }}>
-                            <p className="text-[15px] font-bold mb-2" style={{ color: c }}>📋 Detalhes do agente selecionado</p>
+                            <p className="text-sm font-bold mb-2" style={{ color: c }}>📋 Detalhes do agente selecionado</p>
                             <div className="grid grid-cols-3 gap-3">
-                              <div><p className="text-[15px] uppercase" style={{ color: "#94A3B8" }}>Squad</p><p className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>{SQUADS.find(s => s.id === agent.squadId)?.name}</p></div>
-                              <div><p className="text-[15px] uppercase" style={{ color: "#94A3B8" }}>Nível</p><p className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>Lv.{agent.level} ({agent.xp}/{agent.maxXp} XP)</p></div>
-                              <div><p className="text-[15px] uppercase" style={{ color: "#94A3B8" }}>Taxa Sucesso</p><p className="text-[15px] font-bold" style={{ color: "#10B981" }}>{agent.successRate}%</p></div>
+                              <div><p className="text-[10px] uppercase" style={{ color: "#94A3B8" }}>Squad</p><p className="text-[10px] font-bold" style={{ color: "#E2E8F0" }}>{SQUADS.find(s => s.id === agent.squadId)?.name}</p></div>
+                              <div><p className="text-[10px] uppercase" style={{ color: "#94A3B8" }}>Nível</p><p className="text-[10px] font-bold" style={{ color: "#E2E8F0" }}>Lv.{agent.level} ({agent.xp}/{agent.maxXp} XP)</p></div>
+                              <div><p className="text-[10px] uppercase" style={{ color: "#94A3B8" }}>Taxa Sucesso</p><p className="text-[10px] font-bold" style={{ color: "#10B981" }}>{agent.successRate}%</p></div>
                             </div>
                             <div className="flex flex-wrap gap-1.5 mt-2">
-                              {agent.skills.map(s => <span key={s} className="text-[15px] px-2 py-0.5 rounded-full" style={{ background: `${c}10`, color: c, border: `1px solid ${c}20` }}>{s}</span>)}
+                              {agent.skills.map(s => <span key={s} className="text-xs px-2 py-0.5 rounded-full" style={{ background: `${c}10`, color: c, border: `1px solid ${c}20` }}>{s}</span>)}
                             </div>
                           </div>
                         );
@@ -1837,17 +1837,17 @@ Retorne JSON:
                   {funnelMode === "custom" && (
                     <div className="space-y-3 animate-in fade-in duration-200">
                       <div className="flex items-center justify-between">
-                        <span className="text-[15px] uppercase tracking-[0.1em] font-bold" style={{ color: "#8B5CF6" }}>
+                        <span className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#8B5CF6" }}>
                           🔧 Selecione os agentes ({customFunnelAgents.length} selecionados)
                         </span>
                         <div className="flex gap-2">
                           <button onClick={() => setCustomFunnelAgents(AGENTS_V4.map(a => a.id))}
-                            className="text-[15px] font-bold px-2.5 py-1 rounded-lg transition-all"
+                            className="text-sm font-bold px-2.5 py-1 rounded-lg transition-all"
                             style={{ background: "rgba(139,92,246,0.08)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.2)" }}>
                             Todos
                           </button>
                           <button onClick={() => setCustomFunnelAgents([])}
-                            className="text-[15px] font-bold px-2.5 py-1 rounded-lg transition-all"
+                            className="text-sm font-bold px-2.5 py-1 rounded-lg transition-all"
                             style={{ background: "rgba(255,255,255,0.02)", color: "#94A3B8", border: "1px solid rgba(255,255,255,0.04)" }}>
                             Limpar
                           </button>
@@ -1866,7 +1866,7 @@ Retorne JSON:
                                 setCustomFunnelAgents(prev => [...new Set([...prev, ...squadAgentIds])]);
                               }
                             }}
-                              className="text-[15px] font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
+                              className="text-sm font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
                               style={{
                                 background: allSelected ? "rgba(139,92,246,0.12)" : "rgba(255,255,255,0.02)",
                                 border: `1px solid ${allSelected ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.06)"}`,
@@ -1885,7 +1885,7 @@ Retorne JSON:
                           if (squadAgents.length === 0) return null;
                           return (
                             <div key={squad.id}>
-                              <p className="text-[15px] uppercase tracking-[0.12em] font-bold mb-1 flex items-center gap-1" style={{ color: "#94A3B8" }}>
+                              <p className="text-[10px] uppercase tracking-[0.12em] font-bold mb-1 flex items-center gap-1" style={{ color: "#94A3B8" }}>
                                 {squad.emoji} {squad.name}
                               </p>
                               <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
@@ -1907,12 +1907,12 @@ Retorne JSON:
                                       </div>
                                       <span className="text-sm">{a.emoji}</span>
                                       <div className="flex-1 min-w-0">
-                                        <span className="text-[15px] font-bold" style={{ color: active ? "#E2E8F0" : "#64748B" }}>{a.name}</span>
-                                        <span className="text-[15px] ml-2" style={{ color: "#94A3B8" }}>{a.role}</span>
+                                        <span className="text-sm font-bold" style={{ color: active ? "#E2E8F0" : "#64748B" }}>{a.name}</span>
+                                        <span className="text-[11px] ml-2" style={{ color: "#94A3B8" }}>{a.role}</span>
                                       </div>
                                       <div className="flex items-center gap-2 shrink-0">
-                                        <span className="text-[15px] tabular-nums" style={{ color: "#94A3B8" }}>Lv.{a.level}</span>
-                                        <span className="text-[15px] px-1.5 py-0.5 rounded" style={{ background: `${c}10`, color: c }}>{a.successRate}%</span>
+                                        <span className="text-[11px] tabular-nums" style={{ color: "#94A3B8" }}>Lv.{a.level}</span>
+                                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${c}10`, color: c }}>{a.successRate}%</span>
                                       </div>
                                     </button>
                                   );
@@ -1929,7 +1929,7 @@ Retorne JSON:
                   {(funnelMode === "full" || funnelMode === "comercial") && (
                     <div className="animate-in fade-in duration-200">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[15px] uppercase tracking-[0.1em] font-bold" style={{ color: funnelMode === "full" ? "#10B981" : "#F59E0B" }}>
+                        <span className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: funnelMode === "full" ? "#10B981" : "#F59E0B" }}>
                           {funnelMode === "full" ? "🔄 Pipeline completo — agentes que serão testados" : "💼 Squad Comercial — agentes do funil de vendas"}
                         </span>
                       </div>
@@ -1945,14 +1945,14 @@ Retorne JSON:
                                 background: `${c}04`,
                                 borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
                               }}>
-                              <span className="text-[15px] font-bold tabular-nums w-5 text-center" style={{ color: c }}>{i + 1}</span>
+                              <span className="text-sm font-bold tabular-nums w-5 text-center" style={{ color: c }}>{i + 1}</span>
                               <span className="text-sm">{a.emoji}</span>
                               <div className="flex-1">
-                                <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>{a.name}</span>
-                                <span className="text-[15px] ml-2" style={{ color: "#94A3B8" }}>{a.role}</span>
+                                <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>{a.name}</span>
+                                <span className="text-[11px] ml-2" style={{ color: "#94A3B8" }}>{a.role}</span>
                               </div>
-                              <span className="text-[15px] px-1.5 py-0.5 rounded" style={{ background: `${c}10`, color: c }}>{a.successRate}%</span>
-                              {i < arr.length - 1 && <span className="text-[15px]" style={{ color: "#94A3B8" }}>→</span>}
+                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${c}10`, color: c }}>{a.successRate}%</span>
+                              {i < arr.length - 1 && <span className="text-[11px]" style={{ color: "#94A3B8" }}>→</span>}
                             </div>
                           );
                         })}
@@ -1967,16 +1967,16 @@ Retorne JSON:
                   <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[15px] font-semibold" style={{ color: "#E2E8F0" }}>Taxa alvo de conversão</span>
-                        <span className="text-[15px] font-bold" style={{ color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
+                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Taxa alvo de conversão</span>
+                        <span className="text-sm font-bold" style={{ color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
                           {conversionOverride !== null ? `${conversionOverride}%` : "Natural"}
                         </span>
                       </div>
-                      <p className="text-[15px] mb-3" style={{ color: "#94A3B8" }}>Forçar taxa ou deixar natural</p>
+                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Forçar taxa ou deixar natural</p>
                       <div className="flex items-center gap-3">
                         <Slider min={0} max={100} step={5} value={[conversionOverride ?? 50]} onValueChange={v => setConversionOverride(v[0])} disabled={conversionOverride === null} />
                         <button onClick={() => setConversionOverride(conversionOverride === null ? 50 : null)}
-                          className="text-[15px] px-3 py-1.5 rounded-lg shrink-0 font-semibold transition-all"
+                          className="text-sm px-3 py-1.5 rounded-lg shrink-0 font-semibold transition-all"
                           style={{ background: conversionOverride !== null ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.02)", border: `1px solid ${conversionOverride !== null ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
                           {conversionOverride !== null ? "Override" : "Natural"}
                         </button>
@@ -1984,10 +1984,10 @@ Retorne JSON:
                     </div>
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-[15px] font-semibold" style={{ color: "#E2E8F0" }}>Densidade de objeções</span>
-                        <span className="text-[15px] font-bold" style={{ color: "#F59E0B" }}>{objectionDensity}%</span>
+                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Densidade de objeções</span>
+                        <span className="text-sm font-bold" style={{ color: "#F59E0B" }}>{objectionDensity}%</span>
                       </div>
-                      <p className="text-[15px] mb-3" style={{ color: "#94A3B8" }}>Probabilidade de objeções por turno</p>
+                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Probabilidade de objeções por turno</p>
                       <Slider min={0} max={100} step={5} value={[objectionDensity]} onValueChange={v => setObjectionDensity(v[0])} />
                     </div>
                   </div>
@@ -1996,7 +1996,7 @@ Retorne JSON:
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <Clock className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
-                      <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>Velocidade da Simulação</span>
+                      <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Velocidade da Simulação</span>
                     </div>
                     <div className="grid grid-cols-4 gap-2">
                       {SPEED_OPTIONS.map(s => {
@@ -2010,8 +2010,8 @@ Retorne JSON:
                               border: `1px solid ${active ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.04)"}`,
                             }}>
                             <span className="text-lg">{speedIcons[s.id]}</span>
-                            <span className="text-[15px] font-bold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{s.label}</span>
-                            <span className="text-[15px]" style={{ color: "#94A3B8" }}>{s.delay > 0 ? `${s.delay / 1000}s` : "0s"}</span>
+                            <span className="text-sm font-bold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{s.label}</span>
+                            <span className="text-[11px]" style={{ color: "#94A3B8" }}>{s.delay > 0 ? `${s.delay / 1000}s` : "0s"}</span>
                           </button>
                         );
                       })}
@@ -2026,8 +2026,8 @@ Retorne JSON:
                   <div className="flex items-center gap-3 mb-2">
                     <Brain className="w-5 h-5" style={{ color: "#F59E0B" }} />
                     <div>
-                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Motor IA Avançado</h3>
-                      <p className="text-[15px]" style={{ color: "#94A3B8" }}>Controle granular de cada aspecto da simulação</p>
+                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Motor IA Avançado</h3>
+                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Controle granular de cada aspecto da simulação</p>
                     </div>
                   </div>
                   {/* Toggles */}
@@ -2046,8 +2046,8 @@ Retorne JSON:
                         }}>
                         <span className="text-lg">{opt.icon}</span>
                         <div className="flex-1">
-                          <p className="text-[15px] font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
-                          <p className="text-[15px] mt-0.5" style={{ color: "#94A3B8" }}>{opt.desc}</p>
+                          <p className="text-sm font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
+                          <p className="text-[11px] mt-0.5" style={{ color: "#94A3B8" }}>{opt.desc}</p>
                         </div>
                         <div className="w-10 h-6 rounded-full relative transition-all" style={{ background: opt.value ? opt.color : "rgba(255,255,255,0.1)" }}>
                           <div className="absolute top-1 w-4 h-4 rounded-full transition-all" style={{ left: opt.value ? 20 : 4, background: "#fff" }} />
@@ -2060,15 +2060,15 @@ Retorne JSON:
                    <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[15px] font-semibold" style={{ color: "#E2E8F0" }}>Volatilidade emocional</span>
-                        <span className="text-[15px] font-bold" style={{ color: "#EC4899" }}>{emotionalVolatility}%</span>
+                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Volatilidade emocional</span>
+                        <span className="text-sm font-bold" style={{ color: "#EC4899" }}>{emotionalVolatility}%</span>
                       </div>
-                      <p className="text-[15px] mb-3" style={{ color: "#94A3B8" }}>0% = lead estável · 100% = extremamente volátil</p>
+                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>0% = lead estável · 100% = extremamente volátil</p>
                       <Slider min={0} max={100} step={5} value={[emotionalVolatility]} onValueChange={v => setEmotionalVolatility(v[0])} />
                     </div>
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <span className="text-[15px] font-semibold" style={{ color: "#E2E8F0" }}>Frequência de avaliação IA</span>
-                      <p className="text-[15px] mb-3 mt-1" style={{ color: "#94A3B8" }}>Com que frequência o juiz IA avalia o agente</p>
+                      <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Frequência de avaliação IA</span>
+                      <p className="text-[11px] mb-3 mt-1" style={{ color: "#94A3B8" }}>Com que frequência o juiz IA avalia o agente</p>
                       <div className="grid grid-cols-3 gap-2">
                         {([
                           { id: "every" as const, label: "Toda msg", icon: "🔍" },
@@ -2082,7 +2082,7 @@ Retorne JSON:
                               border: `1px solid ${evalFrequency === ef.id ? "rgba(236,72,153,0.3)" : "rgba(255,255,255,0.04)"}`,
                             }}>
                             <span className="text-sm">{ef.icon}</span>
-                            <span className="text-[15px] font-bold" style={{ color: evalFrequency === ef.id ? "#EC4899" : "#64748B" }}>{ef.label}</span>
+                            <span className="text-sm font-bold" style={{ color: evalFrequency === ef.id ? "#EC4899" : "#64748B" }}>{ef.label}</span>
                           </button>
                         ))}
                       </div>
@@ -2093,7 +2093,7 @@ Retorne JSON:
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <MessageSquare className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
-                      <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>Tamanho de resposta do agente</span>
+                      <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Tamanho de resposta do agente</span>
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       {([
@@ -2108,8 +2108,8 @@ Retorne JSON:
                             border: `1px solid ${agentResponseLength === rl.id ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.04)"}`,
                           }}>
                           <span className="text-lg">{rl.icon}</span>
-                          <span className="text-[15px] font-bold" style={{ color: agentResponseLength === rl.id ? "#E2E8F0" : "#94A3B8" }}>{rl.label}</span>
-                          <span className="text-[15px]" style={{ color: "#94A3B8" }}>{rl.desc}</span>
+                          <span className="text-sm font-bold" style={{ color: agentResponseLength === rl.id ? "#E2E8F0" : "#94A3B8" }}>{rl.label}</span>
+                          <span className="text-[11px]" style={{ color: "#94A3B8" }}>{rl.desc}</span>
                         </button>
                       ))}
                     </div>
@@ -2117,7 +2117,7 @@ Retorne JSON:
 
                   {/* Engine features checklist */}
                   <div className="rounded-xl p-4" style={{ background: "rgba(236,72,153,0.04)", border: "1px solid rgba(236,72,153,0.1)" }}>
-                    <p className="text-[15px] font-bold mb-2" style={{ color: "#EC4899" }}>Motor de Leads Inteligentes v3.0</p>
+                    <p className="text-sm font-bold mb-2" style={{ color: "#EC4899" }}>Motor de Leads Inteligentes v3.0</p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1">
                       {[
                         "✅ 8 perfis psicológicos", "✅ Objeções dinâmicas IA",
@@ -2127,7 +2127,7 @@ Retorne JSON:
                         "✅ Transferência agentes", "✅ Presets de config",
                         "✅ Volatilidade emocional", "✅ Freq. avaliação ajustável",
                       ].map(f => (
-                        <p key={f} className="text-[15px]" style={{ color: "#94A3B8" }}>{f}</p>
+                        <p key={f} className="text-[11px]" style={{ color: "#94A3B8" }}>{f}</p>
                       ))}
                     </div>
                   </div>
@@ -2140,25 +2140,25 @@ Retorne JSON:
                   <div className="flex items-center gap-3 mb-2">
                     <BookOpen className="w-5 h-5" style={{ color: "#10B981" }} />
                     <div>
-                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Presets de Configuração</h3>
-                      <p className="text-[15px]" style={{ color: "#94A3B8" }}>Salve e reutilize configurações de teste</p>
+                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Presets de Configuração</h3>
+                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Salve e reutilize configurações de teste</p>
                     </div>
                   </div>
 
                   {/* Built-in presets */}
                   <div>
-                    <p className="text-[15px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#94A3B8" }}>⚡ Cenários pré-configurados</p>
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#94A3B8" }}>⚡ Cenários pré-configurados</p>
                     <div className={cn("grid gap-2", isMobile ? "grid-cols-1" : "grid-cols-2 lg:grid-cols-3")}>
                       {Object.values(BUILT_IN_PRESETS).map(bp => (
                         <button key={bp.name} onClick={() => { loadPreset(bp.config); toast({ title: `${bp.name} aplicado!` }); }}
                           className="flex flex-col items-start gap-1.5 p-4 rounded-xl transition-all hover:scale-[1.02] text-left"
                           style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                          <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>{bp.name}</span>
-                          <span className="text-[15px] leading-tight" style={{ color: "#94A3B8" }}>{bp.description}</span>
+                          <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>{bp.name}</span>
+                          <span className="text-[11px] leading-tight" style={{ color: "#94A3B8" }}>{bp.description}</span>
                           <div className="flex flex-wrap gap-1 mt-1">
-                            <span className="text-[15px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(59,130,246,0.1)", color: "#3B82F6" }}>{bp.config.numLeads} leads</span>
-                            <span className="text-[15px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>{bp.config.msgsPerLead} msgs</span>
-                            <span className="text-[15px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(139,92,246,0.1)", color: "#8B5CF6" }}>
+                            <span className="text-sm px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(59,130,246,0.1)", color: "#3B82F6" }}>{bp.config.numLeads} leads</span>
+                            <span className="text-sm px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>{bp.config.msgsPerLead} msgs</span>
+                            <span className="text-sm px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(139,92,246,0.1)", color: "#8B5CF6" }}>
                               {bp.config.duration >= 3600 ? `${Math.floor(bp.config.duration / 3600)}h` : `${Math.floor(bp.config.duration / 60)}min`}
                             </span>
                           </div>
@@ -2168,11 +2168,11 @@ Retorne JSON:
                       <button onClick={() => { setNumLeads(3); setMsgsPerLead(6); setSpeed("instant"); setDuration(60); setEnableEvaluation(false); toast({ title: "Teste rápido aplicado" }); }}
                         className="flex flex-col items-start gap-1.5 p-4 rounded-xl transition-all hover:scale-[1.02] text-left"
                         style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                        <span className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>🚀 Teste Rápido</span>
-                        <span className="text-[15px]" style={{ color: "#94A3B8" }}>3 leads, 6 msgs, instantâneo</span>
+                        <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>🚀 Teste Rápido</span>
+                        <span className="text-[11px]" style={{ color: "#94A3B8" }}>3 leads, 6 msgs, instantâneo</span>
                         <div className="flex gap-1 mt-1">
-                          <span className="text-[15px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(59,130,246,0.1)", color: "#3B82F6" }}>3 leads</span>
-                          <span className="text-[15px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>6 msgs</span>
+                          <span className="text-sm px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(59,130,246,0.1)", color: "#3B82F6" }}>3 leads</span>
+                          <span className="text-sm px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>6 msgs</span>
                         </div>
                       </button>
                     </div>
@@ -2180,15 +2180,15 @@ Retorne JSON:
 
                   {/* Save preset */}
                   <div className="rounded-xl p-4" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.1)" }}>
-                    <p className="text-[15px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#10B981" }}>💾 Salvar config atual</p>
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#10B981" }}>💾 Salvar config atual</p>
                     <div className="flex gap-2">
                       <input type="text" value={presetName} onChange={e => setPresetName(e.target.value)}
                         placeholder="Nome do preset..."
-                        className="flex-1 h-9 rounded-lg px-3 text-[15px] font-semibold outline-none"
+                        className="flex-1 h-9 rounded-lg px-3 text-sm font-semibold outline-none"
                         style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "#E2E8F0" }} />
                       <button onClick={() => { if (presetName.trim()) { savePreset(presetName.trim()); setPresetName(""); } }}
                         disabled={!presetName.trim()}
-                        className="px-4 h-9 rounded-lg text-[15px] font-bold transition-all"
+                        className="px-4 h-9 rounded-lg text-sm font-bold transition-all"
                         style={{ background: presetName.trim() ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.02)", color: presetName.trim() ? "#10B981" : "#475569", border: `1px solid ${presetName.trim() ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.04)"}` }}>
                         Salvar
                       </button>
@@ -2198,23 +2198,23 @@ Retorne JSON:
                   {/* Saved presets */}
                   {presets.length > 0 && (
                     <div>
-                      <p className="text-[15px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#94A3B8" }}>📂 Presets salvos</p>
+                      <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#94A3B8" }}>📂 Presets salvos</p>
                       <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
                         {presets.map((p, i) => (
                           <div key={p.name} className="flex items-center gap-3 px-4 py-3 transition-all hover:bg-white/[0.02]"
                             style={{ borderBottom: i < presets.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none" }}>
                             <BookOpen className="w-4 h-4 shrink-0" style={{ color: "#10B981" }} />
                             <div className="flex-1 min-w-0">
-                              <p className="text-[15px] font-bold" style={{ color: "#E2E8F0" }}>{p.name}</p>
-                              <p className="text-[15px]" style={{ color: "#94A3B8" }}>
+                              <p className="text-sm font-bold" style={{ color: "#E2E8F0" }}>{p.name}</p>
+                              <p className="text-[11px]" style={{ color: "#94A3B8" }}>
                                 {p.config.numLeads} leads · {p.config.msgsPerLead} msgs · {p.config.speed}
                               </p>
                             </div>
-                            <button onClick={() => loadPreset(p.config)} className="text-[15px] font-bold px-3 py-1.5 rounded-lg transition-all"
+                            <button onClick={() => loadPreset(p.config)} className="text-sm font-bold px-3 py-1.5 rounded-lg transition-all"
                               style={{ background: "rgba(16,185,129,0.08)", color: "#10B981", border: "1px solid rgba(16,185,129,0.2)" }}>
                               Carregar
                             </button>
-                            <button onClick={() => deletePreset(p.name)} className="text-[15px] font-bold px-2 py-1.5 rounded-lg transition-all"
+                            <button onClick={() => deletePreset(p.name)} className="text-sm font-bold px-2 py-1.5 rounded-lg transition-all"
                               style={{ background: "rgba(239,68,68,0.06)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.15)" }}>
                               ✕
                             </button>
@@ -2231,7 +2231,7 @@ Retorne JSON:
                       navigator.clipboard.writeText(JSON.stringify(config, null, 2));
                       toast({ title: "Config copiada para clipboard!" });
                     }}
-                      className="flex items-center justify-center gap-2 p-3 rounded-xl text-[15px] font-bold transition-all"
+                      className="flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-bold transition-all"
                       style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)", color: "#94A3B8" }}>
                       📋 Copiar JSON
                     </button>
@@ -2239,7 +2239,7 @@ Retorne JSON:
                       const input = prompt("Cole o JSON da configuração:");
                       if (input) { try { loadPreset(JSON.parse(input)); } catch { toast({ title: "JSON inválido", variant: "destructive" }); } }
                     }}
-                      className="flex items-center justify-center gap-2 p-3 rounded-xl text-[15px] font-bold transition-all"
+                      className="flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-bold transition-all"
                       style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)", color: "#94A3B8" }}>
                       📥 Importar JSON
                     </button>
@@ -2266,7 +2266,7 @@ Retorne JSON:
                 { icon: "🎯", label: `${selectedProfiles.length || 8} perfis`, color: "#EC4899" },
                 { icon: "⚡", label: SPEED_OPTIONS.find(s => s.id === speed)?.label || "Normal", color: "#F59E0B" },
               ].map(chip => (
-                <span key={chip.label} className="text-[15px] font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0"
+                <span key={chip.label} className="text-sm font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0"
                   style={{ background: `${chip.color}08`, color: chip.color, border: `1px solid ${chip.color}15` }}>
                   {chip.icon} {chip.label}
                 </span>
@@ -2274,7 +2274,7 @@ Retorne JSON:
             </div>
             {/* Start button */}
             <button onClick={runSimulation}
-              className={cn("rounded-xl text-[15px] font-bold transition-all duration-300 relative overflow-hidden shrink-0 hover:scale-[1.03] active:scale-[0.98]", isMobile ? "w-full py-3.5 px-6" : "px-8 py-3")}
+              className={cn("rounded-xl text-sm font-bold transition-all duration-300 relative overflow-hidden shrink-0 hover:scale-[1.03] active:scale-[0.98]", isMobile ? "w-full py-3.5 px-6" : "px-8 py-3")}
               style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 4px 24px rgba(16,185,129,0.3)" }}>
               <Play className="w-4 h-4 inline mr-2" />
               Iniciar Simulação IA
