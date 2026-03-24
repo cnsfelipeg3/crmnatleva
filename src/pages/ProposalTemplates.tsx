@@ -16,8 +16,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ArrowLeft, Plus, Pencil, Trash2, Star, Palette, Type, LayoutTemplate, Eye,
-  GripVertical, Check, Copy,
+  GripVertical, Check, Copy, Archive, ArchiveRestore,
 } from "lucide-react";
 import { toast } from "sonner";
 
