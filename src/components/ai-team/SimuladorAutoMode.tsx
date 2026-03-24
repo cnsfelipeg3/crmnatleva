@@ -612,9 +612,9 @@ export default function SimuladorAutoMode() {
             addEvent("#F59E0B", `⚠️ Objeção de ${lead.nome}: "${objecao.slice(0, 50)}..."`, "🛡️");
 
             // Agent needs to handle objection
-            const objResp = await callAgent(
+            const objResp = await callSimulatorAI(
               buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength),
-              lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content }))
+              lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content })), "agent"
             );
             lead.mensagens.push({ role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
             setLeads([...allLeads]);
