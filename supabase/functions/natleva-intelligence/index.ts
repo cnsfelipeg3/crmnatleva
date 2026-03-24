@@ -73,7 +73,7 @@ function classifyIntent(userMessage: string, hasImages: boolean, forceWebSearch 
   // Advanced calculations / financial modeling
   const calcPatterns = /(calcul|comput|dre|fluxo\s+de\s+caixa|break\s*even|roi\s|payback|margem\s+de\s+contribuição|ponto\s+de\s+equilíbrio|valuation|wacc|tir\b|vpl\b|taxa\s+interna|valor\s+presente|amortização|depreciação|cmv\b|markup|spreadsheet|planilha\s+financeira|modelo\s+financeiro)/i;
   if (calcPatterns.test(msg)) {
-    return { model: "google/gemini-2.5-pro", label: "📐 Motor de Cálculo Avançado", reason: "Cálculos financeiros / modelagem", needsWebSearch, searchQuery };
+    return { model: "openai/gpt-5", label: "📐 Motor de Cálculo Avançado", reason: "Cálculos financeiros / modelagem", needsWebSearch, searchQuery };
   }
 
   // Default: fast model for general queries
