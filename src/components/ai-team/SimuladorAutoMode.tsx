@@ -604,8 +604,8 @@ export default function SimuladorAutoMode() {
       // Build individual lead cards for ALL leads (compact format)
       const fichasIndividuais = leads.map((l, i) => {
         const agentNames = [...new Set(l.mensagens.filter(m => m.agentName).map(m => m.agentName!))];
-        const clientMsgs = l.mensagens.filter(m => m.role === "lead").length;
-        const agentMsgs = l.mensagens.filter(m => m.role === "agente").length;
+        const clientMsgs = l.mensagens.filter(m => m.role === "client").length;
+        const agentMsgs = l.mensagens.filter(m => m.role === "agent").length;
         return `[LEAD ${i + 1}] ${l.nome} | Perfil: ${l.perfil.label} | Destino: ${l.destino} | Budget: R$${(l.ticket / 1000).toFixed(0)}k
 Status: ${l.status} | Sentimento: ${l.sentimentoScore}/100 | Emoção: ${l.estadoEmocional}
 Scores: H${l.scoreHumanizacao} E${l.scoreEficacia} T${l.scoreTecnica}
@@ -613,8 +613,8 @@ Agente(s): ${agentNames.join(", ")} | Msgs: ${clientMsgs} cliente / ${agentMsgs}
 Objeções: ${l.objecoesLancadas.join(", ") || "nenhuma"}
 ${l.motivoPerda ? `Motivo perda: ${l.motivoPerda} (etapa: ${l.etapaPerda})` : ""}
 Conversa resumida:
-${l.mensagens.slice(0, 6).map(m => `${m.role === "lead" ? "CLI" : "AGT"}: ${m.content.slice(0, 100)}`).join("\n")}
-${l.mensagens.length > 12 ? `... (${l.mensagens.length - 12} msgs omitidas) ...\n${l.mensagens.slice(-6).map(m => `${m.role === "lead" ? "CLI" : "AGT"}: ${m.content.slice(0, 100)}`).join("\n")}` : l.mensagens.length > 6 ? l.mensagens.slice(6).map(m => `${m.role === "lead" ? "CLI" : "AGT"}: ${m.content.slice(0, 100)}`).join("\n") : ""}`;
+${l.mensagens.slice(0, 6).map(m => `${m.role === "client" ? "CLI" : "AGT"}: ${m.content.slice(0, 100)}`).join("\n")}
+${l.mensagens.length > 12 ? `... (${l.mensagens.length - 12} msgs omitidas) ...\n${l.mensagens.slice(-6).map(m => `${m.role === "client" ? "CLI" : "AGT"}: ${m.content.slice(0, 100)}`).join("\n")}` : l.mensagens.length > 6 ? l.mensagens.slice(6).map(m => `${m.role === "client" ? "CLI" : "AGT"}: ${m.content.slice(0, 100)}`).join("\n") : ""}`;
       }).join("\n---\n");
 
       // Representative deep samples (best, worst, edge cases)
