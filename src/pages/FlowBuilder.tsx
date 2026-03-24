@@ -593,7 +593,7 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
         </Select>
       </div>
 
-      {provider === "natleva" && (
+      {(provider === "natleva" || provider === "anthropic") && (
         <div>
           <Label className="text-xs font-semibold">Agente da Equipe</Label>
           <Select value={config.agent_id || ""} onValueChange={(v) => {
