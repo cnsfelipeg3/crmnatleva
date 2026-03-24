@@ -3,6 +3,7 @@ import { FlowCRMPipeline } from "@/components/flow/FlowCRMPipeline";
 import { FlowMetrics } from "@/components/flow/FlowMetrics";
 import { FlowSimulator } from "@/components/flow/FlowSimulator";
 import { LiveFunnel } from "@/components/flow/LiveFunnel";
+import { Funnel3DView } from "@/components/flow/Funnel3DView";
 import natlevaLogo from "@/assets/logo-natleva.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
