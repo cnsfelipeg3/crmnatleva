@@ -62,6 +62,7 @@ export interface MensagemLead {
   content: string;
   agentName?: string;
   timestamp: number;
+  imageUrl?: string;
 }
 
 // ═══ OS 8 PERFIS PSICOLÓGICOS COMPLETOS ═══

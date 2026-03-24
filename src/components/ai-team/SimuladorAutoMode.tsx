@@ -20,7 +20,7 @@ import {
 } from "./evaluationFramework";
 
 // ===== API — Roteamento inteligente por tipo de chamada =====
-type SimCallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep";
+type SimCallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep" | "price_image";
 
 async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent"): Promise<string> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
@@ -31,8 +31,8 @@ async function callSimulatorAI(sysPrompt: string, history: { role: string; conte
   });
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-  // Non-streaming types (evaluate, debrief, deep) return JSON directly
-  if (type === "evaluate" || type === "debrief" || type === "deep") {
+  // Non-streaming types return JSON directly
+  if (type === "evaluate" || type === "debrief" || type === "deep" || type === "price_image") {
     const data = await resp.json();
     return data.content || "";
   }
@@ -54,6 +54,56 @@ async function callSimulatorAI(sysPrompt: string, history: { role: string; conte
     }
   }
   return text;
+}
+
+// Detect if agent response mentions sending a price/quote print
+const PRICE_PRINT_PATTERNS = /\b(segue o (print|orçamento|orcamento|preço|preco|valor)|vou (te |lhe )?(enviar|mandar|passar) (o |um )?(print|orçamento|orcamento|screenshot|imagem|foto|tabelinha|cotação|cotacao|proposta|valores)|aqui (está|esta|vai|tá) o (print|orçamento|preço|valor)|conforme solicitado.{0,20}(orçamento|valor|preço)|olha (só )?o (orçamento|preço|valor))\b/i;
+
+function detectsPricePrint(text: string): boolean {
+  return PRICE_PRINT_PATTERNS.test(text);
+}
+
+// Generate a realistic price quote image via AI
+async function generatePriceImage(lead: { nome: string; destino: string; pax: number; orcamento: string; ticket: number; paxLabel: string }): Promise<string | null> {
+  try {
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
+    const basePrice = lead.ticket || Math.floor(Math.random() * 8000 + 3000);
+    const perPerson = Math.round(basePrice / Math.max(1, lead.pax));
+    const hotel3 = Math.round(perPerson * 0.7);
+    const hotel4 = perPerson;
+    const hotel5 = Math.round(perPerson * 1.4);
+
+    const prompt = `Generate a clean, professional WhatsApp-style price quote image for a travel agency called "NatLeva Viagens". 
+Make it look like a real screenshot that a travel agent would send via WhatsApp.
+
+Details to include:
+- Client: ${lead.nome}
+- Destination: ${lead.destino}
+- Travelers: ${lead.pax} ${lead.paxLabel}
+- Package options (show 2-3 options):
+  Option 1: Hotel 3★ - R$ ${hotel3.toLocaleString("pt-BR")}/pessoa (${lead.pax}x = R$ ${(hotel3 * lead.pax).toLocaleString("pt-BR")})
+  Option 2: Hotel 4★ - R$ ${hotel4.toLocaleString("pt-BR")}/pessoa (${lead.pax}x = R$ ${(hotel4 * lead.pax).toLocaleString("pt-BR")})
+  Option 3: Hotel 5★ - R$ ${hotel5.toLocaleString("pt-BR")}/pessoa (${lead.pax}x = R$ ${(hotel5 * lead.pax).toLocaleString("pt-BR")})
+- Include: Aéreo + Hotel + Transfer + Seguro Viagem
+- Period: 7 noites
+- Validity: "Valores válidos por 48h"
+- Add NatLeva logo text and professional formatting
+- Use green/dark theme similar to WhatsApp
+
+Style: Clean table layout, dark background (#0B141A), green accents (#10B981), white text. Make it look like a real agency price card screenshot. NO watermarks. Professional travel agency aesthetic.`;
+
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+      body: JSON.stringify({ type: "price_image", systemPrompt: "You generate professional travel price quote images.", history: [{ role: "user", content: prompt }] }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data.imageUrl || null;
+  } catch (err) {
+    console.error("Price image generation error:", err);
+    return null;
+  }
 }
 
 // Generate lead message using AI with full persona context
@@ -133,7 +183,8 @@ async function gerarMensagemPerda(lead: LeadInteligente): Promise<string> {
 function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean, enableTransfers: boolean, responseLength: "curta" | "media" | "longa") {
   const lengthInstr = responseLength === "curta" ? "Responda em 1 frase apenas." : responseLength === "longa" ? "Responda de forma detalhada (3-5 frases), incluindo detalhes do produto." : "Responda APENAS a ultima mensagem. Breve (1-3 frases).";
   const transferInstr = hasNext && enableTransfers ? "Quando completar objetivo, termine com [TRANSFERIR].\n" : "";
-  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${transferInstr}${lengthInstr}`;
+  const priceInstr = "IMPORTANTE: Quando for hora de enviar valores/orçamento, diga que vai enviar o print com os valores (ex: 'Segue o print com os valores!', 'Vou te enviar o orçamento agora!', 'Olha só o print com as opções de preço!'). Isso é fundamental para a experiência do cliente.\n";
+  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${priceInstr}${transferInstr}${lengthInstr}`;
 }
 
 const SPEED_OPTIONS = [
@@ -528,6 +579,17 @@ export default function SimuladorAutoMode() {
           );
           lead.mensagens.push({ role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
           setLeads([...allLeads]);
+
+          // 2b. Detect price print mention → generate actual image
+          if (detectsPricePrint(agentResp)) {
+            addEvent("#8B5CF6", `📸 ${agent.name} gerando print de preço para ${lead.nome}...`, "🖼️");
+            const priceImg = await generatePriceImage(lead);
+            if (priceImg) {
+              lead.mensagens.push({ role: "agent", content: "📋 Orçamento", agentName: agent.name, timestamp: Date.now(), imageUrl: priceImg });
+              setLeads([...allLeads]);
+              addEvent("#10B981", `✅ Print de preço enviado para ${lead.nome}`, "🖼️");
+            }
+          }
 
           // 3. Evaluate agent response (AI judge) — 3 dimensões — respects evalFrequency
           evalCounter++;
@@ -2526,16 +2588,31 @@ Retorne JSON:
                         <div style={{
                           background: isAgent ? "rgba(31,44,51,0.9)" : "linear-gradient(135deg, #005C4B, #00694D)", color: "#E9EDEF",
                           borderRadius: isAgent ? "4px 16px 16px 16px" : "16px 4px 16px 16px",
-                          maxWidth: "70%", padding: "10px 14px",
+                          maxWidth: "70%", padding: msg.imageUrl ? "4px 4px 4px 4px" : "10px 14px",
+                          overflow: "hidden",
                         }}>
-                          {showName && msg.agentName && <p className="text-[11px] font-bold mb-1" style={{ color: "#53BDEB" }}>{msg.agentName}</p>}
-                          <p className="text-[13px] leading-[1.6]">{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
-                          <div className="flex items-center justify-end gap-1.5 mt-1">
-                            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-                              {new Date(msg.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                            </span>
-                            {!isAgent && <span className="text-[10px]" style={{ color: "#34B7F1" }}>✓✓</span>}
-                          </div>
+                          {showName && msg.agentName && <p className="text-[11px] font-bold mb-1" style={{ color: "#53BDEB", padding: msg.imageUrl ? "6px 10px 0" : undefined }}>{msg.agentName}</p>}
+                          {msg.imageUrl ? (
+                            <div>
+                              <img src={msg.imageUrl} alt="Orçamento" className="rounded-lg w-full max-w-[320px]" style={{ marginBottom: 4 }} />
+                              <div className="flex items-center justify-end gap-1.5 px-2 pb-1">
+                                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                                  {new Date(msg.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                                {!isAgent && <span className="text-[10px]" style={{ color: "#34B7F1" }}>✓✓</span>}
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <p className="text-[13px] leading-[1.6]">{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
+                              <div className="flex items-center justify-end gap-1.5 mt-1">
+                                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                                  {new Date(msg.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                                {!isAgent && <span className="text-[10px]" style={{ color: "#34B7F1" }}>✓✓</span>}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     );
