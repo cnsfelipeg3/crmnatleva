@@ -106,6 +106,8 @@ Seu papel é analisar mensagens de clientes e gerar respostas profissionais para
 
 ${rulesBlock}
 
+${strategyBlock}
+
 ${knowledgeBlock}
 
 ## REGRAS GERAIS
