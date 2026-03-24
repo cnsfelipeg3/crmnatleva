@@ -1135,7 +1135,7 @@ Retorne JSON:
     { id: "perfis" as const, label: "Perfis", icon: User, color: "#EC4899", summary: `${selectedProfiles.length || 8} perfis ativos` },
     { id: "cenario" as const, label: "Cenário", icon: MapPin, color: "#06B6D4", summary: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos` },
     { id: "lead_behavior" as const, label: "Calibração Lead", icon: Heart, color: "#EF4444", summary: `Paciência ${initialPatience}% · ${leadPatienceCurve} · ${abandonmentSensitivity}% sensib.` },
-    { id: "comportamento" as const, label: "Funil & Velocidade", icon: Zap, color: "#8B5CF6", summary: `${SPEED_OPTIONS.find(s => s.id === speed)?.label} · ${funnelMode === "full" ? "Completo" : funnelMode === "comercial" ? "Comercial" : "Custom"}` },
+    { id: "comportamento" as const, label: "Agentes & Funil", icon: Users, color: "#8B5CF6", summary: `${funnelMode === "full" ? "Todos (pipeline)" : funnelMode === "comercial" ? "Squad Comercial" : funnelMode === "individual" ? (customFunnelAgents[0] ? AGENTS_V4.find(a => a.id === customFunnelAgents[0])?.name || "1 agente" : "Nenhum") : `${customFunnelAgents.length} agentes`} · ${SPEED_OPTIONS.find(s => s.id === speed)?.label}` },
     { id: "avancado" as const, label: "Motor IA", icon: Brain, color: "#F59E0B", summary: `${enableEvaluation ? "Aval." : "—"} ${enableTransfers ? "Transf." : "—"} ${agentResponseLength}` },
     { id: "presets" as const, label: "Presets", icon: BookOpen, color: "#10B981", summary: `${presets.length} salvo${presets.length !== 1 ? "s" : ""}` },
   ];
