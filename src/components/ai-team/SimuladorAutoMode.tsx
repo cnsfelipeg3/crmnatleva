@@ -1494,30 +1494,8 @@ Retorne JSON:
 
                   {/* Patience & Abandonment */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Paciência inicial</span>
-                        <span className="text-[20px] font-extrabold tabular-nums" style={{ color: initialPatience >= 70 ? "#10B981" : initialPatience >= 40 ? "#F59E0B" : "#EF4444" }}>{initialPatience}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Nível de paciência com que o lead começa a conversa</p>
-                      <Slider min={10} max={100} step={5} value={[initialPatience]} onValueChange={v => setInitialPatience(v[0])} />
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs" style={{ color: "#EF4444" }}>Impaciente</span>
-                        <span className="text-xs" style={{ color: "#10B981" }}>Paciente</span>
-                      </div>
-                    </div>
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Sensibilidade a abandono</span>
-                        <span className="text-[20px] font-extrabold tabular-nums" style={{ color: abandonmentSensitivity >= 70 ? "#EF4444" : abandonmentSensitivity >= 40 ? "#F59E0B" : "#10B981" }}>{abandonmentSensitivity}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Quão facilmente o lead desiste ao receber respostas fracas</p>
-                      <Slider min={0} max={100} step={5} value={[abandonmentSensitivity]} onValueChange={v => setAbandonmentSensitivity(v[0])} />
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs" style={{ color: "#10B981" }}>Tolerante</span>
-                        <span className="text-xs" style={{ color: "#EF4444" }}>Desiste fácil</span>
-                      </div>
-                    </div>
+                    <SimConfigInput label="Paciência inicial" value={initialPatience} onChange={setInitialPatience} min={10} max={100} step={5} color={initialPatience >= 70 ? "#10B981" : initialPatience >= 40 ? "#F59E0B" : "#EF4444"} desc="Nível de paciência com que o lead começa a conversa" suffix="%" icon="😤" />
+                    <SimConfigInput label="Sensibilidade a abandono" value={abandonmentSensitivity} onChange={setAbandonmentSensitivity} min={0} max={100} step={5} color={abandonmentSensitivity >= 70 ? "#EF4444" : abandonmentSensitivity >= 40 ? "#F59E0B" : "#10B981"} desc="Quão facilmente o lead desiste ao receber respostas fracas" suffix="%" icon="🚪" />
                   </div>
 
                   {/* Patience Curve */}
