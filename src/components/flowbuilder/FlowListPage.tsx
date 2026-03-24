@@ -607,7 +607,7 @@ export function FlowListPage({ onOpenFlow }: Props) {
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => handleDuplicate(flow, e)} title="Duplicar">
                     <Copy className="h-3 w-3" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => handleDelete(flow.id, e)} title="Excluir">
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => confirmDelete(flow, e)} title="Excluir">
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
