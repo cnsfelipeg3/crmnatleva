@@ -12,7 +12,16 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 
-const DESTINOS = ["Dubai", "Orlando", "Europa", "Maldivas", "Caribe", "Japão", "Egito", "Tailândia", "Nova York", "Paris", "Grécia", "Bali", "Cancún", "Lisboa", "Seychelles"];
+const DESTINOS = ["🎲 Aleatório", "Dubai", "Orlando", "Europa", "Maldivas", "Caribe", "Japão", "Egito", "Tailândia", "Nova York", "Paris", "Grécia", "Bali", "Cancún", "Lisboa", "Seychelles"];
+
+const DESTINOS_ALEATORIOS = [
+  "Butão", "Islândia", "Patagônia", "Fiji", "Tanzânia", "Marrocos", "Sri Lanka",
+  "Mongólia", "Noruega", "Croácia", "Nova Zelândia", "Vietnã", "Costa Rica",
+  "Jordânia", "Georgia (Cáucaso)", "Madagascar", "Omã", "Eslovênia", "Quirguistão",
+  "Namíbia", "Laos", "Bermudas", "Açores", "Zanzibar", "Ruanda", "Belize",
+  "Faroe Islands", "Svalbard", "Galápagos", "Reunião", "Tahiti", "Cabo Verde",
+  "Uzbequistão", "Lapônia", "Sardenha", "Sicília", "Montenegro", "Albânia",
+];
 
 const MIN_TROCAS_MANUAL: Record<string, number> = {
   maya: 5, atlas: 6, habibi: 7, nemo: 7, dante: 7, luna: 5, nero: 5, iris: 4,
