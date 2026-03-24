@@ -106,7 +106,7 @@ async function gerarObjecao(lead: LeadInteligente, ultimaMsgAgente: string): Pro
 async function avaliarRespostaAgente(resposta: string, lead: LeadInteligente): Promise<{ nota: number; reacao: string; sentimento: number; motivo: string; humanizacao: number; eficaciaComercial: number; qualidadeTecnica: number }> {
   try {
     const prompt = buildLiveEvalPrompt(resposta, lead.perfil.label, lead.etapaAtual);
-    const result = await callAgent("Voce avalia qualidade de atendimento em 3 dimensões. Retorne SOMENTE JSON válido sem markdown.", [{ role: "user", content: prompt }]);
+    const result = await callSimulatorAI("Voce avalia qualidade de atendimento em 3 dimensões. Retorne SOMENTE JSON válido sem markdown.", [{ role: "user", content: prompt }], "evaluate");
     const jsonMatch = result.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const data = JSON.parse(jsonMatch[0]);
