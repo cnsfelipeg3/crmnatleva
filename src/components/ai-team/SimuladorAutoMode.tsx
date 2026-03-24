@@ -1,9 +1,9 @@
 import { useState, useCallback, useRef, useEffect, Fragment } from "react";
-import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users, BookOpen, Search, FileText, Workflow, Edit3, Download, Bot, CheckCheck } from "lucide-react";
+import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users, BookOpen, Search, FileText, Workflow, Edit3, Download, Bot, CheckCheck, Repeat, Gauge, Timer, Target, Flame, SlidersHorizontal } from "lucide-react";
 import SimulatorObservationsPanel, { type SelectedMessage } from "./SimulatorObservationsPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NathOpinionButton from "./NathOpinionButton";
-import { Slider } from "@/components/ui/slider";
+import SimConfigInput from "./SimConfigInput";
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { useGlobalRules, buildGlobalRulesBlock, type GlobalRule } from "@/hooks/useGlobalRules";
 import { cn } from "@/lib/utils";
