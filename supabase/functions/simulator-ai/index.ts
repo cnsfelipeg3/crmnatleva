@@ -34,14 +34,6 @@ function getModelConfig(type: CallType): { model: string; stream: boolean } {
       return { model: "openai/gpt-5-mini", stream: true };
   }
 }
-    case "lead":
-    case "agent":
-    case "objection":
-    case "loss":
-    default:
-      return { model: "openai/gpt-5-mini", stream: true };
-  }
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
