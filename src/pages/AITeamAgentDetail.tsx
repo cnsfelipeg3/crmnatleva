@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { updateBehaviorPrompt, setAgentTraining } from "@/components/ai-team/agentTrainingStore";
+import { updateBehaviorPrompt, setAgentTraining, getAgentTraining } from "@/components/ai-team/agentTrainingStore";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import {
   ArrowLeft, Send, Zap, Shield, Target, Brain, CheckCircle2, Clock,
@@ -724,7 +724,17 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
 
   const [showNewRule, setShowNewRule] = useState(false);
   const [newRule, setNewRule] = useState({ name: "", description: "", impact: "alta", scope: "specific" });
-  const [extraRules, setExtraRules] = useState<RuleItem[]>([]);
+  
+  // Load persisted custom rules from training store
+  const [extraRules, setExtraRules] = useState<RuleItem[]>(() => {
+    const training = getAgentTraining(agentId);
+    if (!training?.customRules?.length) return [];
+    return training.customRules.map(r => ({
+      ...r,
+      scope: "specific",
+      agents: [agentName.toUpperCase()],
+    }));
+  });
 
   const allRules = useMemo(() => [...rules, ...extraRules], [rules, extraRules]);
 
