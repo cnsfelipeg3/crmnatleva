@@ -1,26 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense, memo } from "react";
 import { MessageSquare, Zap, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import SimuladorAutoMode from "@/components/ai-team/SimuladorAutoMode";
-import SimuladorManualMode from "@/components/ai-team/SimuladorManualMode";
+
+const SimuladorAutoMode = lazy(() => import("@/components/ai-team/SimuladorAutoMode"));
+const SimuladorManualMode = lazy(() => import("@/components/ai-team/SimuladorManualMode"));
 
 type Mode = "manual" | "auto";
 
-function FloatingOrb({ color, size, x, y, delay }: { color: string; size: number; x: string; y: string; delay: number }) {
-  return (
-    <div
-      className="absolute rounded-full pointer-events-none"
-      style={{
-        width: size, height: size, left: x, top: y,
-        background: `radial-gradient(circle, ${color}18, transparent 70%)`,
-        filter: "blur(40px)",
-        animation: `float-orb ${8 + delay}s ease-in-out infinite alternate`,
-        animationDelay: `${delay}s`,
-      }}
-    />
-  );
-}
+const LoadingFallback = memo(() => (
+  <div className="flex items-center justify-center py-32">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-7 h-7 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      <span className="text-xs font-medium" style={{ color: "#64748B" }}>Carregando simulador…</span>
+    </div>
+  </div>
+));
+LoadingFallback.displayName = "LoadingFallback";
 
 export default function AITeamSimulador() {
   const [mode, setMode] = useState<Mode>("manual");
@@ -28,7 +24,7 @@ export default function AITeamSimulador() {
   const [mounted, setMounted] = useState(false);
   const isMobile = useIsMobile();
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { requestAnimationFrame(() => setMounted(true)); }, []);
 
   const handleModeSwitch = (newMode: Mode) => {
     if (newMode === mode) return;
@@ -39,40 +35,44 @@ export default function AITeamSimulador() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ background: "#060A12" }}>
-      {/* Ambient background */}
-      <div className="absolute inset-0 pointer-events-none">
-        <FloatingOrb color="#10B981" size={isMobile ? 250 : 400} x="10%" y="-5%" delay={0} />
-        <FloatingOrb color="#8B5CF6" size={isMobile ? 200 : 350} x="75%" y="5%" delay={2} />
-        {!isMobile && <FloatingOrb color="#06B6D4" size={300} x="50%" y="60%" delay={4} />}
+    <div className="min-h-screen relative overflow-hidden" style={{ background: "#060A12", contain: "layout style paint" }}>
+      {/* Lightweight ambient — no blur, GPU-composited */}
+      <div className="absolute inset-0 pointer-events-none" style={{ contain: "strict" }}>
+        <div className="absolute rounded-full" style={{
+          width: isMobile ? 250 : 400, height: isMobile ? 250 : 400,
+          left: "10%", top: "-5%",
+          background: "radial-gradient(circle, rgba(16,185,129,0.06), transparent 70%)",
+          willChange: "transform", transform: "translateZ(0)",
+        }} />
+        <div className="absolute rounded-full" style={{
+          width: isMobile ? 200 : 350, height: isMobile ? 200 : 350,
+          left: "75%", top: "5%",
+          background: "radial-gradient(circle, rgba(139,92,246,0.05), transparent 70%)",
+          willChange: "transform", transform: "translateZ(0)",
+        }} />
         <div className="absolute inset-0" style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.015) 1px, transparent 0)`,
+          backgroundImage: "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.012) 1px, transparent 0)",
           backgroundSize: "48px 48px",
         }} />
       </div>
 
-      <style>{`
-        @keyframes float-orb {
-          0% { transform: translate(0, 0) scale(1); opacity: 0.6; }
-          50% { transform: translate(20px, -30px) scale(1.1); opacity: 0.8; }
-          100% { transform: translate(-10px, 15px) scale(0.95); opacity: 0.5; }
-        }
-        @keyframes shimmer-line {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(200%); }
-        }
-      `}</style>
-
       <div className={cn(
-        "relative z-10 space-y-4 md:space-y-6 max-w-7xl mx-auto transition-all duration-700",
+        "relative z-10 space-y-4 md:space-y-5 max-w-7xl mx-auto",
         isMobile ? "p-3 pb-6" : "p-6",
-        mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-      )}>
-        {/* Hero Header */}
-        <div className="relative rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #0A1628 0%, #0D1B2A 50%, #0A1628 100%)", border: "1px solid rgba(255,255,255,0.06)" }}>
-          {/* Shimmer line */}
+        mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+      )} style={{ transition: "opacity 0.4s ease-out, transform 0.4s ease-out" }}>
+
+        {/* Header */}
+        <div className="relative rounded-2xl overflow-hidden" style={{
+          background: "linear-gradient(135deg, #0A1628 0%, #0D1B2A 50%, #0A1628 100%)",
+          border: "1px solid rgba(255,255,255,0.06)",
+          contain: "layout style",
+        }}>
+          {/* Top shimmer — CSS-only */}
           <div className="absolute top-0 left-0 right-0 h-px overflow-hidden">
-            <div className="h-full w-1/3" style={{ background: "linear-gradient(90deg, transparent, rgba(16,185,129,0.5), transparent)", animation: "shimmer-line 4s ease-in-out infinite" }} />
+            <div className="h-full w-1/3 shimmer-line" style={{
+              background: "linear-gradient(90deg, transparent, rgba(16,185,129,0.5), transparent)",
+            }} />
           </div>
 
           <div className={cn(
@@ -83,7 +83,7 @@ export default function AITeamSimulador() {
               <div className="relative">
                 <div className={cn("rounded-2xl flex items-center justify-center", isMobile ? "w-10 h-10" : "w-12 h-12")} style={{
                   background: "linear-gradient(135deg, #10B981, #06B6D4)",
-                  boxShadow: "0 0 30px rgba(16,185,129,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
+                  boxShadow: "0 0 24px rgba(16,185,129,0.25), inset 0 1px 0 rgba(255,255,255,0.15)",
                 }}>
                   <Sparkles className={isMobile ? "w-4 h-4 text-white" : "w-5 h-5 text-white"} />
                 </div>
@@ -105,50 +105,59 @@ export default function AITeamSimulador() {
               </div>
             </div>
 
-            {/* Premium pill selector */}
+            {/* Pill selector */}
             <div className="relative rounded-2xl p-1" style={{
               background: "rgba(255,255,255,0.03)",
               border: "1px solid rgba(255,255,255,0.06)",
-              backdropFilter: "blur(12px)",
             }}>
-              {/* Sliding indicator */}
-              <div className="absolute top-1 bottom-1 rounded-xl transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)]"
-                style={{
-                  left: mode === "manual" ? "4px" : "calc(50% + 2px)",
-                  width: "calc(50% - 6px)",
-                  background: mode === "manual"
-                    ? "linear-gradient(135deg, #10B981, #059669)"
-                    : "linear-gradient(135deg, #8B5CF6, #7C3AED)",
-                  boxShadow: mode === "manual"
-                    ? "0 4px 20px rgba(16,185,129,0.35)"
-                    : "0 4px 20px rgba(139,92,246,0.35)",
-                }}
-              />
+              <div className="absolute top-1 bottom-1 rounded-xl" style={{
+                left: mode === "manual" ? "4px" : "calc(50% + 2px)",
+                width: "calc(50% - 6px)",
+                background: mode === "manual"
+                  ? "linear-gradient(135deg, #10B981, #059669)"
+                  : "linear-gradient(135deg, #8B5CF6, #7C3AED)",
+                boxShadow: mode === "manual"
+                  ? "0 4px 16px rgba(16,185,129,0.3)"
+                  : "0 4px 16px rgba(139,92,246,0.3)",
+                transition: "left 0.35s cubic-bezier(0.4,0,0.2,1), background 0.35s ease, box-shadow 0.35s ease",
+              }} />
               <div className="relative flex">
                 <button onClick={() => handleModeSwitch("manual")}
-                  className={cn("flex items-center gap-1.5 rounded-xl font-bold transition-colors duration-300 z-10", isMobile ? "px-4 py-2 text-[12px]" : "px-6 py-2.5 text-[13px]")}
-                  style={{ color: mode === "manual" ? "#fff" : "#64748B" }}>
+                  className={cn("flex items-center gap-1.5 rounded-xl font-bold z-10", isMobile ? "px-4 py-2 text-[12px]" : "px-6 py-2.5 text-[13px]")}
+                  style={{ color: mode === "manual" ? "#fff" : "#64748B", transition: "color 0.25s ease" }}>
                   <MessageSquare className="w-3.5 h-3.5" /> Manual
                 </button>
                 <button onClick={() => handleModeSwitch("auto")}
-                  className={cn("flex items-center gap-1.5 rounded-xl font-bold transition-colors duration-300 z-10", isMobile ? "px-4 py-2 text-[12px]" : "px-6 py-2.5 text-[13px]")}
-                  style={{ color: mode === "auto" ? "#fff" : "#64748B" }}>
+                  className={cn("flex items-center gap-1.5 rounded-xl font-bold z-10", isMobile ? "px-4 py-2 text-[12px]" : "px-6 py-2.5 text-[13px]")}
+                  style={{ color: mode === "auto" ? "#fff" : "#64748B", transition: "color 0.25s ease" }}>
                   <Zap className="w-3.5 h-3.5" /> Automático
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Bottom shimmer line */}
-          <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(16,185,129,0.15), rgba(139,92,246,0.15), transparent)" }} />
+          <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(16,185,129,0.12), rgba(139,92,246,0.12), transparent)" }} />
         </div>
 
-        {/* Content */}
-        <div className="transition-all duration-500" key={mode}>
-          {mode === "manual" && <SimuladorManualMode />}
+        {/* Content — lazy loaded, no key remount */}
+        <Suspense fallback={<LoadingFallback />}>
+          <div style={{ display: mode === "manual" ? "block" : "none", contain: "layout style" }}>
+            <SimuladorManualMode />
+          </div>
           {mode === "auto" && <SimuladorAutoMode />}
-        </div>
+        </Suspense>
       </div>
+
+      <style>{`
+        .shimmer-line {
+          animation: shimmer-slide 4s ease-in-out infinite;
+          will-change: transform;
+        }
+        @keyframes shimmer-slide {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(300%); }
+        }
+      `}</style>
     </div>
   );
 }

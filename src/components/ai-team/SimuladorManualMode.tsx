@@ -598,11 +598,12 @@ export default function SimuladorManualMode() {
               style={{ background: "rgba(255,255,255,0.06)", color: "#E9EDEF", border: "1px solid rgba(255,255,255,0.08)", transition: "border-color 0.15s" }}
             />
             <button onClick={() => handleSend()} disabled={loading || !input.trim()}
-              className="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0"
+              className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 active:scale-90"
               style={{
                 background: input.trim() ? `linear-gradient(135deg, ${agentColor}, ${agentColor}CC)` : "rgba(255,255,255,0.06)",
-                boxShadow: input.trim() ? `0 4px 16px ${agentColor}40` : "none",
+                boxShadow: input.trim() ? `0 4px 12px ${agentColor}30` : "none",
                 transform: input.trim() ? "scale(1)" : "scale(0.95)",
+                transition: "transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease",
               }}>
               <Send className="w-4.5 h-4.5" style={{ color: input.trim() ? "#fff" : "#64748B" }} />
             </button>
