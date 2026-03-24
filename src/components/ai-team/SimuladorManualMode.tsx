@@ -696,14 +696,19 @@ export default function SimuladorManualMode() {
             <div className="rounded-2xl p-4" style={{ background: "rgba(15,20,35,0.75)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <p className="text-[10px] uppercase tracking-[0.12em] font-bold mb-2" style={{ color: "#94A3B8" }}>Destino</p>
               <div className="flex flex-wrap gap-1.5">
-                {DESTINOS.map(d => (
-                  <button key={d} onClick={() => setSelectedDestino(d)}
-                    className="text-[10px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
-                    style={{
-                      background: selectedDestino === d ? "rgba(245,158,11,0.1)" : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${selectedDestino === d ? "rgba(245,158,11,0.35)" : "rgba(255,255,255,0.08)"}`,
-                      color: selectedDestino === d ? "#FCD34D" : "#CBD5E1",
-                    }}>{d}</button>
+                {DESTINOS.map(d => {
+                  const isRandom = d === "🎲 Aleatório";
+                  const isActive = isRandom ? !DESTINOS.slice(1).includes(selectedDestino) : selectedDestino === d;
+                  return (
+                    <button key={d} onClick={() => setSelectedDestino(d)}
+                      className="text-[10px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
+                      style={{
+                        background: isActive ? (isRandom ? "rgba(139,92,246,0.12)" : "rgba(245,158,11,0.1)") : "rgba(255,255,255,0.03)",
+                        border: `1px solid ${isActive ? (isRandom ? "rgba(139,92,246,0.4)" : "rgba(245,158,11,0.35)") : "rgba(255,255,255,0.08)"}`,
+                        color: isActive ? (isRandom ? "#C4B5FD" : "#FCD34D") : "#CBD5E1",
+                      }}>{isRandom && isActive ? `🎲 ${selectedDestino}` : d}</button>
+                  );
+                })}
                 ))}
               </div>
             </div>
