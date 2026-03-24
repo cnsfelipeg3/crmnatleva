@@ -705,6 +705,57 @@ Retorne SOMENTE o JSON, sem markdown.`,
                             </div>
                           </div>
 
+                          {/* New Agent Card - shown when detail is a new_agent */}
+                          {detailAction.type === "new_agent" && detailAction.newAgentName && (
+                            <div className="rounded-xl p-4 mb-3 animate-in fade-in duration-300" style={{
+                              background: "linear-gradient(135deg, rgba(168,85,247,0.08), rgba(236,72,153,0.04))",
+                              border: "1px solid rgba(168,85,247,0.2)",
+                            }}>
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
+                                  style={{ background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.25)" }}>
+                                  {detailAction.newAgentEmoji}
+                                </div>
+                                <div>
+                                  <p className="text-[14px] font-extrabold" style={{ color: "#E9D5FF" }}>{detailAction.newAgentName}</p>
+                                  <p className="text-[10px]" style={{ color: "#A78BFA" }}>{detailAction.newAgentRole}</p>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 mb-3">
+                                <div className="rounded-lg p-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+                                  <p className="text-[8px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "#7C3AED" }}>Squad</p>
+                                  <p className="text-[11px] font-medium capitalize" style={{ color: "#D8B4FE" }}>{detailAction.newAgentSquad}</p>
+                                </div>
+                                <div className="rounded-lg p-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+                                  <p className="text-[8px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "#7C3AED" }}>Etapa do Funil</p>
+                                  <p className="text-[11px] font-medium" style={{ color: "#D8B4FE" }}>{detailAction.newAgentStage}</p>
+                                </div>
+                              </div>
+
+                              {detailAction.newAgentSkills && detailAction.newAgentSkills.length > 0 && (
+                                <div className="mb-3">
+                                  <p className="text-[8px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "#7C3AED" }}>Skills</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {detailAction.newAgentSkills.map((skill, i) => (
+                                      <span key={i} className="text-[9px] font-medium px-2 py-1 rounded-lg"
+                                        style={{ background: "rgba(168,85,247,0.1)", color: "#C084FC", border: "1px solid rgba(168,85,247,0.15)" }}>
+                                        {skill}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {detailAction.newAgentJustification && (
+                                <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(168,85,247,0.08)" }}>
+                                  <p className="text-[8px] font-bold uppercase tracking-widest mb-1" style={{ color: "#7C3AED" }}>Por que este agente é necessário?</p>
+                                  <p className="text-[10px] leading-relaxed" style={{ color: "#D1D5DB" }}>{detailAction.newAgentJustification}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
                           {detailLoading && (
                             <div className="flex flex-col items-center justify-center py-10 gap-2">
                               <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#A855F7" }} />
