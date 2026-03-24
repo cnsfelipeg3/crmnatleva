@@ -398,7 +398,7 @@ export default function AIStrategyKnowledge() {
         if (t && r) results.push({
           category: cat, subcategory: null, title: t, description: desc, rule: r, example: ex,
           priority: p, is_active: active, tags, function_area: funcArea, origin_type: originType,
-          confidence, estimated_impact: impact, context, related_rule_ids: [], status,
+          confidence, estimated_impact: impact, context, related_rule_ids: [], status, created_by: null,
         });
       }
     }
