@@ -213,6 +213,11 @@ export default function AITeamSkills() {
                   ))}
                 </div>
               </div>
+
+              <div>
+                <p className="text-xs font-bold mb-2">Origem</p>
+                <ItemOriginBadge createdAt={selectedSkill.createdAt} createdBy={selectedSkill.createdBy} originType={selectedSkill.originType} />
+              </div>
             </div>
           )}
         </DialogContent>
