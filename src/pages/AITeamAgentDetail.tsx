@@ -440,7 +440,138 @@ export default function AITeamAgentDetail() {
 /* ═══ Knowledge Base Tab ═══ */
 function KnowledgeBaseTab({ docs, agentName }: { docs: KBDoc[]; agentName: string }) {
   const [search, setSearch] = useState("");
+  const [selectedDoc, setSelectedDoc] = useState<KBDoc | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editResumo, setEditResumo] = useState("");
+  const [editTags, setEditTags] = useState("");
+  const [editAgente, setEditAgente] = useState("");
+
   const filtered = docs.filter(d => !search || d.title.toLowerCase().includes(search.toLowerCase()) || d.tags.some(t => t.includes(search.toLowerCase())));
+
+  const openDoc = (doc: KBDoc) => {
+    setSelectedDoc(doc);
+    setEditMode(false);
+    setEditTitle(doc.title);
+    setEditResumo(doc.resumo);
+    setEditTags(doc.tags.join(", "));
+    setEditAgente(doc.agente);
+  };
+
+  const startEdit = () => setEditMode(true);
+
+  const saveEdit = () => {
+    setEditMode(false);
+    if (selectedDoc) {
+      setSelectedDoc({ ...selectedDoc, title: editTitle, resumo: editResumo, tags: editTags.split(",").map(t => t.trim()).filter(Boolean), agente: editAgente });
+    }
+    sonnerToast.success("Documento atualizado!");
+  };
+
+  if (selectedDoc) {
+    const TipoIcon = TIPO_ICONS[selectedDoc.tipo] || FileText;
+    return (
+      <div className="space-y-4 animate-fade-in">
+        <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => setSelectedDoc(null)}>
+          <ArrowLeft className="w-4 h-4" /> Voltar à lista
+        </Button>
+
+        <div className="rounded-xl border border-border/50 bg-card p-5 md:p-6 space-y-5">
+          {/* Header */}
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <TipoIcon className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              {editMode ? (
+                <Input value={editTitle} onChange={(e: any) => setEditTitle(e.target.value)} className="text-lg font-bold" />
+              ) : (
+                <h2 className="text-lg font-bold text-foreground">{selectedDoc.title}</h2>
+              )}
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                <Badge variant="outline" className={cn("text-[9px]",
+                  selectedDoc.status === "processado" ? "text-emerald-400 border-emerald-500/30" :
+                  selectedDoc.status === "processando" ? "text-amber-400 border-amber-500/30" :
+                  "text-red-400 border-red-500/30"
+                )}>{selectedDoc.status}</Badge>
+                <span>{selectedDoc.tipo.toUpperCase()}</span>
+                <span>·</span>
+                <span>{selectedDoc.size}</span>
+                <span>·</span>
+                <span>{selectedDoc.chunks} chunks</span>
+                <span>·</span>
+                <span>Atualizado: {selectedDoc.updatedAt}</span>
+              </div>
+            </div>
+            {!editMode ? (
+              <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={startEdit}>
+                <Pencil className="w-3.5 h-3.5" /> Editar
+              </Button>
+            ) : (
+              <div className="flex gap-2 shrink-0">
+                <Button variant="ghost" size="sm" onClick={() => setEditMode(false)}>Cancelar</Button>
+                <Button size="sm" className="gap-1.5" onClick={saveEdit}>
+                  <Save className="w-3.5 h-3.5" /> Salvar
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Details grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Resumo / Conteúdo</label>
+              {editMode ? (
+                <Textarea value={editResumo} onChange={(e: any) => setEditResumo(e.target.value)} rows={4} className="text-sm" />
+              ) : (
+                <p className="text-sm text-foreground/80 bg-muted/30 rounded-lg p-3 border border-border/30 leading-relaxed">{selectedDoc.resumo}</p>
+              )}
+            </div>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Tags</label>
+                {editMode ? (
+                  <Input value={editTags} onChange={(e: any) => setEditTags(e.target.value)} placeholder="Separar com vírgula" className="text-sm" />
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedDoc.tags.map(t => (
+                      <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Agente Vinculado</label>
+                {editMode ? (
+                  <Input value={editAgente} onChange={(e: any) => setEditAgente(e.target.value)} className="text-sm" />
+                ) : (
+                  <Badge variant="outline" className="text-xs">{selectedDoc.agente}</Badge>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Processamento</label>
+                <div className="text-sm text-foreground/70 space-y-1">
+                  <p><span className="text-muted-foreground">Tipo:</span> {selectedDoc.tipo.toUpperCase()}</p>
+                  <p><span className="text-muted-foreground">Chunks gerados:</span> {selectedDoc.chunks}</p>
+                  <p><span className="text-muted-foreground">Tamanho:</span> {selectedDoc.size}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 pt-2 border-t border-border/30">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <Database className="w-3.5 h-3.5" /> Reprocessar Chunks
+            </Button>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs text-red-400 hover:text-red-300 hover:border-red-500/30">
+              <Trash2 className="w-3.5 h-3.5" /> Remover
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -462,14 +593,14 @@ function KnowledgeBaseTab({ docs, agentName }: { docs: KBDoc[]; agentName: strin
         {filtered.map(doc => {
           const TipoIcon = TIPO_ICONS[doc.tipo] || FileText;
           return (
-            <div key={doc.id} className="rounded-xl border border-border/50 bg-card p-4 hover:border-primary/30 transition-colors cursor-pointer group">
+            <div key={doc.id} onClick={() => openDoc(doc)} className="rounded-xl border border-border/50 bg-card p-4 hover:border-primary/30 transition-all cursor-pointer group hover:shadow-md">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
                   <TipoIcon className="w-5 h-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="text-sm font-semibold text-foreground truncate">{doc.title}</h4>
+                    <h4 className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">{doc.title}</h4>
                     <Badge variant="outline" className={cn("text-[9px]",
                       doc.status === "processado" ? "text-emerald-400 border-emerald-500/30" :
                       doc.status === "processando" ? "text-amber-400 border-amber-500/30" :
@@ -490,6 +621,7 @@ function KnowledgeBaseTab({ docs, agentName }: { docs: KBDoc[]; agentName: strin
                     ))}
                   </div>
                 </div>
+                <ChevronDown className="w-4 h-4 text-muted-foreground/40 shrink-0 group-hover:text-primary transition-colors rotate-[-90deg]" />
               </div>
             </div>
           );
