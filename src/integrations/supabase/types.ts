@@ -874,6 +874,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_team_audit_log: {
+        Row: {
+          action_type: string
+          agent_id: string | null
+          agent_name: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          description: string
+          details: Json | null
+          entity_id: string | null
+          entity_name: string | null
+          entity_type: string
+          id: string
+          performed_by: string | null
+        }
+        Insert: {
+          action_type: string
+          agent_id?: string | null
+          agent_name?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          description: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          performed_by?: string | null
+        }
+        Update: {
+          action_type?: string
+          agent_id?: string | null
+          agent_name?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          description?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          performed_by?: string | null
+        }
+        Relationships: []
+      }
       ai_team_improvements: {
         Row: {
           agent_id: string
