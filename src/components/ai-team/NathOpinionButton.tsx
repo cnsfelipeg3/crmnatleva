@@ -37,8 +37,24 @@ interface ImprovementAction {
   title: string;
   description: string;
   scope: "all_agents" | "specific_agent";
+  targetAgent?: string;
   priority: "alta" | "media" | "baixa";
   selected: boolean;
+  difficulty?: "facil" | "moderada" | "complexa";
+  estimatedImpact?: string;
+}
+
+interface DetailReport {
+  summary: string;
+  dataPoints: string[];
+  impact: string;
+  pros: string[];
+  cons: string[];
+  difficulty: string;
+  difficultyReason: string;
+  implementationStrategy: string[];
+  estimatedTimeframe: string;
+  kpisAffected: string[];
 }
 
 interface NathOpinionButtonProps {
