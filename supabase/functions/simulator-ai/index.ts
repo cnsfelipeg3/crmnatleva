@@ -63,6 +63,7 @@ async function callAnthropic(
   messages: Array<{ role: string; content: string }>,
   model: string,
   stream: boolean,
+  maxTokens: number = 1200,
 ): Promise<Response> {
   const systemMsg = messages.find(m => m.role === "system");
   const userMessages = messages.filter(m => m.role !== "system").map(m => ({
@@ -79,7 +80,7 @@ async function callAnthropic(
     },
     body: JSON.stringify({
       model,
-      max_tokens: 4096,
+      max_tokens: maxTokens,
       system: systemMsg?.content || "",
       messages: userMessages,
       stream,

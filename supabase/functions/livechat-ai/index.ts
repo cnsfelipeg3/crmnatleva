@@ -146,8 +146,8 @@ ${contextBlock}`;
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "claude-opus-4-5",
-          max_tokens: 4096,
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1500,
           system: systemPrompt,
           messages: messages.map((m: any) => ({ role: m.role === "system" ? "user" : m.role, content: m.content })),
         }),
