@@ -87,7 +87,7 @@ export default function NatLevaLoader() {
 
       {/* Logo & text */}
       <div className="relative z-10 flex flex-col items-center gap-4 mt-2 logo-section">
-        <img src={logoImg} alt="NatLeva" className="h-8 sm:h-10 object-contain opacity-80" />
+        <img src={logoImg} alt="NatLeva" className="h-8 sm:h-10 object-contain opacity-90" style={{ filter: "brightness(0) invert(1)" }} />
         <div className="flex items-center gap-2">
           <p className="text-sm sm:text-base font-light tracking-[0.2em]"
             style={{ color: "hsl(158,12%,60%)" }}>
