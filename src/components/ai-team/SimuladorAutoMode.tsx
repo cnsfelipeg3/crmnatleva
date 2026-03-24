@@ -1181,7 +1181,7 @@ Retorne JSON:
           </div>
 
           {/* RIGHT: Content Area — full width */}
-          <div className="flex-1 rounded-2xl overflow-hidden relative" style={{
+          <div className="flex-1 rounded-2xl overflow-hidden relative flex flex-col" style={{
             background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))",
             border: "1px solid rgba(255,255,255,0.06)",
             backdropFilter: "blur(8px)",
