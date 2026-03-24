@@ -309,7 +309,7 @@ Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
     trainingBlock = parts.join("\n");
   }
   
-  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${trainingBlock}\n${priceInstr}${transferInstr}${lengthInstr}`;
+  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${trainingBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}${lengthInstr}`;
 }
 
 const SPEED_OPTIONS = [
