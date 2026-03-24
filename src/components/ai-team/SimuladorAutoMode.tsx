@@ -7,6 +7,8 @@ import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining } from "@/components/ai-team/agentTrainingStore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useSimulationPersistence } from "@/hooks/useSimulationPersistence";
+import { buildActiveContext, shouldChunk, createChunkSummary, type SimEvent, type ChunkData, CHUNK_SIZE, createMetricsSnapshot, buildLeadContextSummary } from "./simulationEngine";
 import {
   type LeadInteligente, type MensagemLead, type PerfilPsicologico,
   PERFIS_INTELIGENTES, DESTINOS_LEAD, BUDGETS_LEAD, CANAIS_LEAD, GRUPOS_LEAD, ETAPAS_FUNIL,
