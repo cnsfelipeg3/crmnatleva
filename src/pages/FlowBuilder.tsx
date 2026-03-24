@@ -563,12 +563,20 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
   const [agents, setAgents] = useState<any[]>([]);
   useEffect(() => {
     supabase.from("ai_integrations").select("id, name, provider, model, status")
-      .eq("status", "active").then(({ data }) => setIntegrations(data || []));
+      .eq("status", "ativo").then(({ data }) => {
+        if (!data || data.length === 0) {
+          // Fallback: also try "active" status
+          supabase.from("ai_integrations").select("id, name, provider, model, status")
+            .eq("status", "active").then(({ data: d2 }) => setIntegrations(d2 || []));
+        } else {
+          setIntegrations(data);
+        }
+      });
     supabase.from("ai_team_agents").select("id, name, emoji, role, squad_id, is_active")
       .eq("is_active", true).order("name").then(({ data }) => setAgents(data || []));
   }, []);
 
-  const provider = config.provider || "natleva";
+  const provider = config.provider || "anthropic";
   const contextFields = config.context_fields || AI_CONTEXT_FIELDS.map((f) => f.key);
 
   return (
