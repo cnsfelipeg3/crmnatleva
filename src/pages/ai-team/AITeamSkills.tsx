@@ -147,6 +147,7 @@ export default function AITeamSkills() {
                 <span key={a} className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{a}</span>
               ))}
             </div>
+            <ItemOriginBadge createdAt={skill.createdAt} createdBy={skill.createdBy} originType={skill.originType} className="mt-2" />
           </div>
         ))}
       </div>
