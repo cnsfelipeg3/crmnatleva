@@ -262,6 +262,7 @@ function AppRoutes() {
             <Route path="academia" element={<AITeamAcademia />} />
             <Route path="simulador" element={<AITeamSimulador />} />
             <Route path="laboratorio" element={<Navigate to="/ai-team/simulador" replace />} />
+            <Route path="extrato" element={<AITeamExtrato />} />
             <Route path="config" element={<AITeamConfig />} />
             <Route path="agent/:agentId" element={<AITeamAgentDetail />} />
           </Route>
