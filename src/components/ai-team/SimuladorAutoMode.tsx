@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users, BookOpen, Search, FileText, Workflow, Edit3, Download } from "lucide-react";
+import NathOpinionButton from "./NathOpinionButton";
 import { Slider } from "@/components/ui/slider";
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { cn } from "@/lib/utils";
@@ -2493,10 +2494,15 @@ Retorne JSON:
                             boxShadow: i === idx ? `0 0 6px ${selectedLead.perfil.cor}80` : "none",
                           }} />
                           {i < ETAPAS_FUNIL.length - 1 && <div className="w-2 h-px" style={{ background: i < idx ? "#10B98160" : "rgba(255,255,255,0.06)" }} />}
-                        </div>
-                      );
-                    })}
-                  </div>
+                         </div>
+                       );
+                     })}
+                   </div>
+                   <NathOpinionButton
+                     messages={selectedLead.mensagens.map(m => ({ role: m.role, content: m.content, agentName: m.agentName, timestamp: String(m.timestamp) }))}
+                     context={`Destino: ${selectedLead.destino} · Perfil: ${selectedLead.perfil.label} · Sentimento: ${selectedLead.sentimentoScore}/100 · Paciência: ${selectedLead.pacienciaRestante}% · Etapa: ${selectedLead.etapaAtual} · Ocasião: ${selectedLead.ocasiao}`}
+                     variant="inline"
+                   />
                 </div>
                 {/* Messages */}
                 <div ref={chatRef} className="flex-1 overflow-y-auto p-5 space-y-2" style={{ background: "#0B141A" }}>
