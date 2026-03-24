@@ -7,6 +7,8 @@ import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining } from "@/components/ai-team/agentTrainingStore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useSimulationPersistence } from "@/hooks/useSimulationPersistence";
+import { buildActiveContext, shouldChunk, createChunkSummary, type SimEvent, type ChunkData, CHUNK_SIZE, createMetricsSnapshot, buildLeadContextSummary } from "./simulationEngine";
 import {
   type LeadInteligente, type MensagemLead, type PerfilPsicologico,
   PERFIS_INTELIGENTES, DESTINOS_LEAD, BUDGETS_LEAD, CANAIS_LEAD, GRUPOS_LEAD, ETAPAS_FUNIL,
@@ -25,13 +27,19 @@ import {
 // ===== API — Roteamento inteligente por tipo de chamada =====
 type SimCallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep" | "price_image";
 
-async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent", agentBehaviorPrompt?: string): Promise<string> {
+async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent", agentBehaviorPrompt?: string, _retryCount = 0): Promise<string> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
     body: JSON.stringify({ type, systemPrompt: sysPrompt, history, agentBehaviorPrompt: agentBehaviorPrompt || "", provider: "anthropic" }),
   });
+  // Retry with exponential backoff on rate limit (429)
+  if (resp.status === 429 && _retryCount < 3) {
+    const delay = Math.pow(2, _retryCount) * 1000 + Math.random() * 500;
+    await new Promise(r => setTimeout(r, delay));
+    return callSimulatorAI(sysPrompt, history, type, agentBehaviorPrompt, _retryCount + 1);
+  }
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
   // Non-streaming types return JSON directly
@@ -437,7 +445,8 @@ export default function SimuladorAutoMode() {
   const abortRef = useRef(false);
   const simAtivaRef = useRef(false);
   const { toast } = useToast();
-
+  const simPersistence = useSimulationPersistence();
+  const chunksRef = useRef<Map<string, ChunkData[]>>(new Map());
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
   const closedLeads = leads.filter(l => l.status === "fechou");
   const lostLeads = leads.filter(l => l.status === "perdeu");
@@ -523,8 +532,14 @@ export default function SimuladorAutoMode() {
   const runSimulation = useCallback(async () => {
     setPhase("running"); setRunning(true); setLeads([]); setEvents([]); setElapsedSeconds(0);
     setSelectedLeadId(null); setDebrief(null); abortRef.current = false; simAtivaRef.current = true;
+    chunksRef.current = new Map();
 
     timerRef.current = setInterval(() => setElapsedSeconds(p => p + 1), 1000);
+
+    // Start DB persistence
+    const simConfig = { numLeads, msgsPerLead, intervalSec, duration, speed, dispatchMode, parallelLeads, objectionDensity, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, funnelMode };
+    const leadsRef_local = { current: [] as LeadInteligente[] };
+    const simId = await simPersistence.startSimulation(simConfig, () => leadsRef_local.current);
 
     const profiles = selectedProfiles.length > 0
       ? PERFIS_INTELIGENTES.filter(p => selectedProfiles.includes(p.tipo))
@@ -596,7 +611,13 @@ export default function SimuladorAutoMode() {
       allLeads.push(lead);
     }
     setLeads([...allLeads]);
+    leadsRef_local.current = allLeads;
     if (allLeads.length > 0) setSelectedLeadId(allLeads[0].id);
+
+    // Register all leads in DB
+    for (const lead of allLeads) {
+      await simPersistence.registerLead(lead);
+    }
 
     // ===== Per-lead simulation logic (extracted for parallel use) =====
     const simulateLead = async (lead: LeadInteligente) => {
@@ -604,6 +625,7 @@ export default function SimuladorAutoMode() {
       if (isDurationExceeded()) return;
 
       addEvent("#3B82F6", `${lead.perfil.emoji} ${lead.nome} entrou via ${lead.origem} · ${lead.destino} · ${lead.paxLabel}`, "📥");
+      simPersistence.bufferEvent({ id: crypto.randomUUID(), type: "lead_created", leadId: lead.id, payload: { profile: lead.perfil.tipo, destino: lead.destino }, timestamp: Date.now() });
 
       try {
         const firstMsg = await generateLeadMsg(lead, "", true);
@@ -629,8 +651,20 @@ export default function SimuladorAutoMode() {
           const hasNext = enableTransfers && agentIdx < funnelAgents.length - 1;
           lead.etapaAtual = stages[Math.min(agentIdx, stages.length - 1)];
 
-          // Agent responds — with context compression for long conversations
-          const compressedHistory = compressConversation(lead.mensagens);
+          // Agent responds — with context compression + chunking for long conversations
+          // Check if we need to chunk before building context
+          if (shouldChunk(lead.mensagens.length)) {
+            const toArchive = lead.mensagens.splice(0, CHUNK_SIZE);
+            const summary = createChunkSummary(toArchive, lead.nome);
+            const chunk: ChunkData = { chunkIndex: (chunksRef.current.get(lead.id) || []).length, messages: toArchive, summary, tokenEstimate: Math.ceil(toArchive.reduce((s, m) => s + m.content.length, 0) / 3.5) };
+            const existingChunks = chunksRef.current.get(lead.id) || [];
+            existingChunks.push(chunk);
+            chunksRef.current.set(lead.id, existingChunks);
+            simPersistence.processChunking(lead);
+            addEvent("#8B5CF6", `📦 ${lead.nome}: bloco ${chunk.chunkIndex + 1} arquivado (${CHUNK_SIZE} msgs resumidas)`, "📦");
+          }
+          const leadChunks = chunksRef.current.get(lead.id) || [];
+          const compressedHistory = leadChunks.length > 0 ? buildActiveContext(lead, leadChunks) : compressConversation(lead.mensagens);
           const agentResp = await callSimulatorAI(
             buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength),
             compressedHistory, "agent"
@@ -797,11 +831,14 @@ export default function SimuladorAutoMode() {
             addEvent("#EF4444", `${lead.nome} perdido em ${lead.etapaAtual} · ${lead.perfil.label}`, "📉");
           }
           setLeads(prev => [...prev]);
+          // Persist final lead state to DB
+          simPersistence.updateLeadState(lead);
         }
       } catch (err) {
         console.error("Lead sim error:", err);
         lead.status = "perdeu"; lead.motivoPerda = "Erro de sistema";
         setLeads(prev => [...prev]);
+        simPersistence.updateLeadState(lead);
       }
     };
 
@@ -848,8 +885,23 @@ export default function SimuladorAutoMode() {
     setPhase("report");
     const elapsed = Math.round((Date.now() - simStartTime) / 1000);
     const wasTimeout = elapsed >= duration;
+
+    // Finalize DB persistence
+    const finalClosed = allLeads.filter(l => l.status === "fechou");
+    const finalLost = allLeads.filter(l => l.status === "perdeu");
+    const finalRevenue = finalClosed.reduce((s, l) => s + l.ticket, 0);
+    const finalConv = allLeads.length > 0 ? Math.round((finalClosed.length / allLeads.length) * 100) : 0;
+    simPersistence.finishSimulation({
+      leadsClosed: finalClosed.length,
+      leadsLost: finalLost.length,
+      conversionRate: finalConv,
+      totalRevenue: finalRevenue,
+      scoreGeral: 0,
+      durationSeconds: elapsed,
+    });
+
     toast({ title: wasTimeout ? "Simulação encerrada por tempo!" : "Simulação concluída!", description: `${allLeads.length} leads processados em ${formatTime(elapsed)}` });
-  }, [numLeads, msgsPerLead, intervalSec, duration, parallelLeads, dispatchMode, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, initialPatience, leadPatienceCurve, abandonmentSensitivity, leadToneFormality, leadTypingStyle, leadFollowUpPressure, infoRevealSpeed, enableLeadTypos, enableLeadEmojis, enableLeadAudioRef, leadConversationGoal, maxConversationMinutes, leadReengagementChance, leadCustomInstructions, toast]);
+  }, [numLeads, msgsPerLead, intervalSec, duration, parallelLeads, dispatchMode, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, initialPatience, leadPatienceCurve, abandonmentSensitivity, leadToneFormality, leadTypingStyle, leadFollowUpPressure, infoRevealSpeed, enableLeadTypos, enableLeadEmojis, enableLeadAudioRef, leadConversationGoal, maxConversationMinutes, leadReengagementChance, leadCustomInstructions, toast, simPersistence]);
 
   const stopSimulation = () => stopSimulationRef.current();
 
