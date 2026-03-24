@@ -219,9 +219,20 @@ export default function ProposalTemplates() {
             <p className="text-sm text-muted-foreground">Configure os templates padrão para suas propostas</p>
           </div>
         </div>
-        <Button onClick={() => navigate("/propostas/modelos/novo")} className="gap-2">
-          <Plus className="w-4 h-4" /> Novo Modelo
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={showArchived ? "secondary" : "outline"}
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setShowArchived(!showArchived)}
+          >
+            <Archive className="w-4 h-4" />
+            {showArchived ? "Arquivados" : "Arquivados"}
+          </Button>
+          <Button onClick={() => navigate("/propostas/modelos/novo")} className="gap-2">
+            <Plus className="w-4 h-4" /> Novo Modelo
+          </Button>
+        </div>
       </div>
 
       {/* Templates grid */}
