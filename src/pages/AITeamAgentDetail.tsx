@@ -713,10 +713,70 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
               </div>
             );
           })}
-          <Button variant="outline" size="sm" className="gap-1.5 mt-2">
+          <Button variant="outline" size="sm" className="gap-1.5 mt-2" onClick={() => setShowNewRule(true)}>
             <Plus className="w-3.5 h-3.5" /> Nova Regra
           </Button>
         </div>
+
+        {/* New Rule Dialog */}
+        {showNewRule && (
+          <div className="mt-4 p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-3 animate-fade-in">
+            <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Shield className="w-4 h-4 text-primary" /> Nova Regra para {displayName}
+            </h4>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Nome da Regra *</label>
+              <Input
+                placeholder="Ex: Limite de desconto 10%"
+                value={newRule.name}
+                onChange={(e: any) => setNewRule({ ...newRule, name: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Descrição</label>
+              <Textarea
+                placeholder="Descreva o que essa regra faz..."
+                value={newRule.description}
+                onChange={(e: any) => setNewRule({ ...newRule, description: e.target.value })}
+                rows={2}
+                className="mt-1"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Impacto</label>
+                <Select value={newRule.impact} onValueChange={(v) => setNewRule({ ...newRule, impact: v })}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="crítica">Crítica</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="média">Média</SelectItem>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Escopo</label>
+                <Select value={newRule.scope} onValueChange={(v) => setNewRule({ ...newRule, scope: v })}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="specific">Apenas {displayName}</SelectItem>
+                    <SelectItem value="all">Global (todos agentes)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="ghost" size="sm" onClick={() => { setShowNewRule(false); setNewRule({ name: "", description: "", impact: "alta", scope: "specific" }); }}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={handleSaveRule} disabled={!newRule.name.trim()} className="gap-1.5">
+                <Save className="w-3.5 h-3.5" /> Salvar Regra
+              </Button>
+            </div>
+          </div>
+        )}
       </SectionCard>
     </div>
   );
