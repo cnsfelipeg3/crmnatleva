@@ -530,22 +530,22 @@ export default function SimuladorAutoMode() {
     if (dispatchMode === "simultaneous") {
       // All leads start at once — controlled micro-batches to protect Anthropic token/min limits
       addEvent("#8B5CF6", `⚡ Disparo simultâneo: ${allLeads.length} leads ao mesmo tempo!`, "🚀");
-      const batchSize = Math.min(allLeads.length, 3);
+      const batchSize = Math.min(allLeads.length, 2);
       for (let i = 0; i < allLeads.length; i += batchSize) {
         if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
         const batch = allLeads.slice(i, i + batchSize);
         await Promise.all(batch.map((lead, index) => new Promise<void>((resolve) => {
           setTimeout(() => {
             void simulateLead(lead).finally(() => resolve());
-          }, index * 1200);
+          }, index * 1800);
         })));
         if (i + batchSize < allLeads.length) {
-          await new Promise(r => setTimeout(r, 2200));
+          await new Promise(r => setTimeout(r, 3200));
         }
       }
     } else if (dispatchMode === "wave") {
       // Wave mode — capped parallelism to avoid input-token burst throttling
-      const waveSize = Math.min(Math.max(2, parallelLeads), 3);
+      const waveSize = Math.min(Math.max(2, parallelLeads), 2);
       let waveNum = 1;
       for (let i = 0; i < allLeads.length; i += waveSize) {
         if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
@@ -554,11 +554,11 @@ export default function SimuladorAutoMode() {
         await Promise.all(batch.map((lead, index) => new Promise<void>((resolve) => {
           setTimeout(() => {
             void simulateLead(lead).finally(() => resolve());
-          }, index * 1000);
+          }, index * 1600);
         })));
         waveNum++;
         if (i + waveSize < allLeads.length) {
-          await new Promise(r => setTimeout(r, Math.max(intervalSec * 1000, 1800)));
+          await new Promise(r => setTimeout(r, Math.max(intervalSec * 1000, 2800)));
         }
       }
     } else {
