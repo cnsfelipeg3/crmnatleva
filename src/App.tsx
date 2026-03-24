@@ -126,11 +126,9 @@ const MediaLibrary = lazy(() => import("@/pages/MediaLibrary"));
 
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
-const OperacaoFlowBuilder = lazy(() => import("@/pages/operacao/OperacaoFlowBuilder"));
 const OperacaoIntegracoes = lazy(() => import("@/pages/operacao/OperacaoIntegracoes"));
 
 const OperacaoTagsPipeline = lazy(() => import("@/pages/operacao/OperacaoTagsPipeline"));
-const OperacaoSimulador = lazy(() => import("@/pages/operacao/OperacaoSimulador"));
 const OperacaoLogs = lazy(() => import("@/pages/operacao/OperacaoLogs"));
 
 const queryClient = new QueryClient({
@@ -196,7 +194,7 @@ function AppRoutes() {
           <Route path="/livechat" element={<LiveChat />} />
           <Route path="/livechat/integration" element={<WhatsAppIntegration />} />
           <Route path="/livechat/whatsapp-qr" element={<WhatsAppQRConnect />} />
-          <Route path="/livechat/flows" element={<FlowBuilder />} />
+          <Route path="/livechat/flows" element={<Navigate to="/ai-team/workflow" replace />} />
           <Route path="/livechat/integrations" element={<AIIntegrations />} />
           <Route path="/livechat/knowledge-base" element={<AIKnowledgeBase />} />
           <Route path="/livechat/import-chatguru" element={<ImportChatGuru />} />
@@ -269,11 +267,11 @@ function AppRoutes() {
 
           {/* Operação Diária */}
           <Route path="/operacao/inbox" element={<OperacaoInbox />} />
-          <Route path="/operacao/flows" element={<OperacaoFlowBuilder />} />
+          <Route path="/operacao/flows" element={<Navigate to="/ai-team/workflow" replace />} />
           <Route path="/operacao/integracoes" element={<OperacaoIntegracoes />} />
           
           <Route path="/operacao/pipeline" element={<OperacaoTagsPipeline />} />
-          <Route path="/operacao/simulador" element={<OperacaoSimulador />} />
+          <Route path="/operacao/simulador" element={<Navigate to="/ai-team/simulador" replace />} />
           <Route path="/operacao/logs" element={<OperacaoLogs />} />
 
           {/* Mídias */}
