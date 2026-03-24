@@ -702,6 +702,13 @@ export default function SimuladorManualMode() {
                 ))}
               </div>
             </div>
+
+            {/* Observations Panel */}
+            <SimulatorObservationsPanel
+              selectedMessage={manualObsSelectedMsg}
+              onClearSelectedMessage={() => setManualObsSelectedMsg(null)}
+              className="min-h-[250px]"
+            />
           </div>
         )}
       </div>
