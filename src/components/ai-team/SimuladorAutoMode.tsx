@@ -418,7 +418,9 @@ export default function SimuladorAutoMode() {
       ? AGENTS_V4.filter(a => ["comercial", "atendimento"].includes(a.squadId)).slice(0, 6)
       : funnelMode === "comercial"
         ? AGENTS_V4.filter(a => a.squadId === "comercial")
-        : customFunnelAgents.map(id => AGENTS_V4.find(a => a.id === id)!).filter(Boolean);
+        : funnelMode === "individual"
+          ? customFunnelAgents.slice(0, 1).map(id => AGENTS_V4.find(a => a.id === id)!).filter(Boolean)
+          : customFunnelAgents.map(id => AGENTS_V4.find(a => a.id === id)!).filter(Boolean);
 
     if (funnelAgents.length === 0) {
       toast({ title: "Selecione agentes para o funil", variant: "destructive" });
