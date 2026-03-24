@@ -1311,7 +1311,7 @@ Retorne JSON:
                       <p className="text-[11px]" style={{ color: "#64748B" }}>Configure a escala e duração do teste de estresse</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className={cn("gap-6", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                     {[
                       { label: "Leads simultâneos", value: numLeads, setter: setNumLeads, min: 1, max: 100, step: 1, color: "#3B82F6", desc: "Quantidade de leads que entram na simulação" },
                       { label: "Mensagens por lead", value: msgsPerLead, setter: setMsgsPerLead, min: 4, max: 40, step: 2, color: "#10B981", desc: "Rodadas de conversa entre agente e lead" },
