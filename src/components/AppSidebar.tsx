@@ -209,7 +209,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
             {[
               { to: "/operacao/inbox", icon: Inbox, label: "WhatsApp" },
-              { to: "/operacao/flows", icon: GitBranch, label: "Flow Builder" },
               { to: "/operacao/integracoes", icon: Plug, label: "Integrações" },
               { to: "/operacao/pipeline", icon: Tag, label: "Tags & Pipeline" },
               { to: "/operacao/simulador", icon: TestTube, label: "Simulador" },

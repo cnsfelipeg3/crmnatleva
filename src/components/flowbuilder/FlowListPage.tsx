@@ -603,11 +603,11 @@ export function FlowListPage({ onOpenFlow }: Props) {
                     ))}
                   </div>
                 </div>
-                <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                <div className="flex gap-0.5 shrink-0">
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => handleDuplicate(flow, e)} title="Duplicar">
                     <Copy className="h-3 w-3" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => confirmDelete(flow, e)} title="Excluir">
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:bg-destructive/10" onClick={(e) => confirmDelete(flow, e)} title="Excluir">
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
