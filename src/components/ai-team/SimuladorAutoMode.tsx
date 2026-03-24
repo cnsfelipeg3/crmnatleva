@@ -264,7 +264,7 @@ export default function SimuladorAutoMode() {
   const [conversionOverride, setConversionOverride] = useState<number | null>(null);
   const [objectionDensity, setObjectionDensity] = useState(50);
   const [speed, setSpeed] = useState("normal");
-  const [funnelMode, setFunnelMode] = useState<"full" | "comercial" | "custom">("full");
+  const [funnelMode, setFunnelMode] = useState<"full" | "comercial" | "custom" | "individual">("full");
   const [customFunnelAgents, setCustomFunnelAgents] = useState<string[]>([]);
   // Config — Motor IA
   const [enableEvaluation, setEnableEvaluation] = useState(true);
