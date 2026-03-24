@@ -825,11 +825,14 @@ export default function SimuladorAutoMode() {
             addEvent("#EF4444", `${lead.nome} perdido em ${lead.etapaAtual} · ${lead.perfil.label}`, "📉");
           }
           setLeads(prev => [...prev]);
+          // Persist final lead state to DB
+          simPersistence.updateLeadState(lead);
         }
       } catch (err) {
         console.error("Lead sim error:", err);
         lead.status = "perdeu"; lead.motivoPerda = "Erro de sistema";
         setLeads(prev => [...prev]);
+        simPersistence.updateLeadState(lead);
       }
     };
 
