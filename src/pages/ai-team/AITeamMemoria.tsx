@@ -52,9 +52,32 @@ export default function AITeamMemoria() {
   const [retentionDays, setRetentionDays] = useState([90]);
   const [rules, setRules] = useState(MEMORY_RULES);
 
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newRule, setNewRule] = useState({ name: "", description: "", impact: "média" as string, scope: "all" as string, action: "memorize" as string, retention: "permanent" as string });
+
   const toggleRule = (id: string) => {
     setRules(prev => prev.map(r => r.id === id ? { ...r, active: !r.active } : r));
     toast.success("Regra atualizada");
+  };
+
+  const deleteRule = (id: string) => {
+    setRules(prev => prev.filter(r => r.id !== id));
+    toast.success("Regra removida");
+  };
+
+  const createRule = () => {
+    if (!newRule.name.trim()) { toast.error("Nome da regra é obrigatório"); return; }
+    const rule = {
+      id: `r-${Date.now()}`,
+      name: newRule.name.trim(),
+      description: newRule.description.trim() || "Sem descrição",
+      active: true,
+      impact: newRule.impact,
+    };
+    setRules(prev => [...prev, rule]);
+    setNewRule({ name: "", description: "", impact: "média", scope: "all", action: "memorize", retention: "permanent" });
+    setShowCreateDialog(false);
+    toast.success("Regra criada com sucesso!");
   };
 
   const activeRules = rules.filter(r => r.active).length;
