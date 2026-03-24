@@ -459,12 +459,19 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
         )}
         {/* AI status */}
         {data.nodeType === "ai_agent" && (
-          <div className="mt-1.5 flex items-center gap-1.5">
-            <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", data.config?.send_mode === "auto" ? "bg-green-400" : "bg-amber-400")} />
-            <span className="text-[9px] text-muted-foreground">{data.config?.persona || "sdr"} · {data.config?.objective || "qualificar"}</span>
-            <Badge variant={data.config?.send_mode === "auto" ? "default" : "secondary"} className="text-[7px] h-3.5 px-1">
-              {data.config?.send_mode === "auto" ? "AUTO" : data.config?.send_mode === "suggest" ? "SUGESTÃO" : "APROVAÇÃO"}
-            </Badge>
+          <div className="mt-1.5 space-y-1">
+            {data.config?.agent_name && (
+              <div className="text-[9px] font-semibold text-primary truncate">
+                🤖 {data.config.agent_name}
+              </div>
+            )}
+            <div className="flex items-center gap-1.5">
+              <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", data.config?.send_mode === "auto" ? "bg-green-400" : "bg-amber-400")} />
+              <span className="text-[9px] text-muted-foreground">{data.config?.persona || "sdr"} · {data.config?.objective || "qualificar"}</span>
+              <Badge variant={data.config?.send_mode === "auto" ? "default" : "secondary"} className="text-[7px] h-3.5 px-1">
+                {data.config?.send_mode === "auto" ? "AUTO" : data.config?.send_mode === "suggest" ? "SUGESTÃO" : "APROVAÇÃO"}
+              </Badge>
+            </div>
           </div>
         )}
         {/* Handoff pause indicator */}
