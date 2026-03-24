@@ -2276,9 +2276,9 @@ Retorne JSON:
             </div>
             {/* Start button */}
             <button onClick={runSimulation}
-              className={cn("rounded-xl text-sm font-bold transition-all duration-300 relative overflow-hidden shrink-0 hover:scale-[1.03] active:scale-[0.98]", isMobile ? "w-full py-3.5 px-6" : "px-8 py-3")}
-              style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 4px 24px rgba(16,185,129,0.3)" }}>
-              <Play className="w-4 h-4 inline mr-2" />
+              className={cn("rounded-2xl text-sm font-extrabold tracking-wide transition-all duration-300 relative overflow-hidden shrink-0 hover:scale-[1.04] active:scale-[0.97]", isMobile ? "w-full py-4 px-8" : "px-12 py-4")}
+              style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 6px 32px rgba(16,185,129,0.35), 0 2px 8px rgba(16,185,129,0.2)" }}>
+              <Play className="w-5 h-5 inline mr-2" />
               Iniciar Simulação IA
             </button>
           </div>
