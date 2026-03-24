@@ -88,7 +88,7 @@ export default function AITeamConfig() {
                 <Bot className="w-8 h-8 text-primary" />
                 <div>
                   <p className="text-sm font-bold">Lovable AI Gateway</p>
-                  <p className="text-xs text-muted-foreground">google/gemini-3-flash-preview</p>
+                  <p className="text-xs text-muted-foreground">openai/gpt-5 + openai/gpt-5-mini</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
