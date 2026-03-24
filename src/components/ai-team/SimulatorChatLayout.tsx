@@ -225,7 +225,7 @@ export default function SimulatorChatLayout({
         <div className="py-4 space-y-3">
           {messages.length === 0 && emptyContent}
           {messages.map((msg, idx) => (
-            <ChatBubble key={msg.id} msg={msg} messages={messages} index={idx} />
+            <ChatBubble key={msg.id} msg={msg} messages={messages} index={idx} onClick={onMessageClick ? () => onMessageClick(msg) : undefined} isSelected={selectedMessageTimestamp === msg.timestamp} />
           ))}
           {loading && <TypingIndicator />}
           <div ref={messagesEndRef} />
