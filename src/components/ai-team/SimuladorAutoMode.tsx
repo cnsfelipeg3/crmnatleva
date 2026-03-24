@@ -1,9 +1,9 @@
 import { useState, useCallback, useRef, useEffect, Fragment } from "react";
-import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users, BookOpen, Search, FileText, Workflow, Edit3, Download, Bot, CheckCheck } from "lucide-react";
+import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users, BookOpen, Search, FileText, Workflow, Edit3, Download, Bot, CheckCheck, Repeat, Gauge, Timer, Target, Flame, SlidersHorizontal } from "lucide-react";
 import SimulatorObservationsPanel, { type SelectedMessage } from "./SimulatorObservationsPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NathOpinionButton from "./NathOpinionButton";
-import { Slider } from "@/components/ui/slider";
+import SimConfigInput from "./SimConfigInput";
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { useGlobalRules, buildGlobalRulesBlock, type GlobalRule } from "@/hooks/useGlobalRules";
 import { cn } from "@/lib/utils";
@@ -101,9 +101,20 @@ export default function SimuladorAutoMode() {
   const [maxConversationMinutes, setMaxConversationMinutes] = useState(0); // 0 = sem limite por conversa
   const [leadReengagementChance, setLeadReengagementChance] = useState(20); // % chance de voltar depois de silêncio
   const [leadCustomInstructions, setLeadCustomInstructions] = useState("");
+  // Config — Volume Avançado
+  const [warmupRounds, setWarmupRounds] = useState(0);
+  const [apiRetries, setApiRetries] = useState(2);
+  const [cooldownMs, setCooldownMs] = useState(0);
+  const [minScoreToPass, setMinScoreToPass] = useState(60);
+  const [maxConcurrentChats, setMaxConcurrentChats] = useState(3);
+  const [autoRetryOnLoss, setAutoRetryOnLoss] = useState(false);
+  const [enableSentimentShock, setEnableSentimentShock] = useState(false);
+  const [shockAtRound, setShockAtRound] = useState(4);
+  const [enableAgentFatigue, setEnableAgentFatigue] = useState(false);
+  const [fatigueThreshold, setFatigueThreshold] = useState(20);
   // Config — Presets
   const [presetName, setPresetName] = useState("");
-  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "lead_behavior" | "comportamento" | "avancado" | "presets">("volume");
+  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "lead_behavior" | "comportamento" | "avancado" | "stress" | "presets">("volume");
 
   // Runtime
   const [phase, setPhase] = useState<Phase>("config");
@@ -1090,6 +1101,7 @@ Retorne JSON:
     { id: "lead_behavior" as const, label: "Calibração Lead", icon: Heart, color: "#EF4444", summary: `Paciência ${initialPatience}% · ${leadPatienceCurve} · ${abandonmentSensitivity}% sensib.` },
     { id: "comportamento" as const, label: "Agentes & Funil", icon: Users, color: "#8B5CF6", summary: `${funnelMode === "full" ? "Todos (pipeline)" : funnelMode === "comercial" ? "Squad Comercial" : funnelMode === "individual" ? (customFunnelAgents[0] ? AGENTS_V4.find(a => a.id === customFunnelAgents[0])?.name || "1 agente" : "Nenhum") : `${customFunnelAgents.length} agentes`} · ${SPEED_OPTIONS.find(s => s.id === speed)?.label}` },
     { id: "avancado" as const, label: "Motor IA", icon: Brain, color: "#F59E0B", summary: `${enableEvaluation ? "Aval." : "—"} ${enableTransfers ? "Transf." : "—"} ${agentResponseLength}` },
+    { id: "stress" as const, label: "Teste de Estresse", icon: Flame, color: "#EF4444", summary: `Score mín ${minScoreToPass} · ${enableSentimentShock ? "Choque ativo" : "Sem choque"} · ${enableAgentFatigue ? "Fadiga ON" : "Sem fadiga"}` },
     { id: "presets" as const, label: "Presets", icon: BookOpen, color: "#10B981", summary: `${presets.length} salvo${presets.length !== 1 ? "s" : ""}` },
   ];
 
@@ -1154,6 +1166,9 @@ Retorne JSON:
                   { label: "Perfis", value: `${selectedProfiles.length || 8}`, color: "#EC4899" },
                   { label: "Paciência", value: `${initialPatience}%`, color: "#EF4444" },
                   { label: "Abandono", value: `${abandonmentSensitivity}%`, color: "#EF4444" },
+                  { label: "Retries", value: `${apiRetries}`, color: "#06B6D4" },
+                  { label: "Score mín", value: `${minScoreToPass}`, color: "#10B981" },
+                  { label: "Choque", value: enableSentimentShock ? `R${shockAtRound}` : "Off", color: "#EF4444" },
                 ].map(item => (
                   <div key={item.label} className="flex items-center justify-between">
                     <span className="text-[11px]" style={{ color: "#94A3B8" }}>{item.label}</span>
@@ -1185,24 +1200,19 @@ Retorne JSON:
                       <p className="text-[11px]" style={{ color: "#94A3B8" }}>Configure a escala e duração do teste de estresse</p>
                     </div>
                   </div>
-                  <div className={cn("gap-6", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
-                    {[
-                      { label: "Leads totais", value: numLeads, setter: setNumLeads, min: 1, max: 500, step: 1, color: "#3B82F6", desc: "Quantidade de leads na simulação (até 500)" },
-                      { label: "Mensagens por lead", value: msgsPerLead, setter: setMsgsPerLead, min: 4, max: 500, step: 2, color: "#10B981", desc: "Rodadas de conversa (até 500 — compressão automática)" },
-                      { label: "Intervalo entre leads", value: intervalSec, setter: setIntervalSec, min: 0, max: 60, step: 1, color: "#F59E0B", desc: "Segundos entre entrada de cada lead (0 = simultâneo)", suffix: "s" },
-                      { label: "Duração máxima", value: duration, setter: setDuration, min: 30, max: 86400, step: 30, color: "#8B5CF6", desc: "Tempo limite (até 24h)", format: true },
-                    ].map(s => (
-                      <div key={s.label} className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>{s.label}</span>
-                          <span className="text-[22px] font-extrabold tabular-nums" style={{ color: s.color, textShadow: `0 0 20px ${s.color}20` }}>
-                            {s.format ? (s.value >= 3600 ? `${Math.floor(s.value / 3600)}h${Math.floor((s.value % 3600) / 60)}m` : formatTime(s.value)) : s.value}{s.suffix || ""}
-                          </span>
-                        </div>
-                        <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>{s.desc}</p>
-                        <Slider min={s.min} max={s.max} step={s.step} value={[s.value]} onValueChange={v => s.setter(v[0])} />
-                      </div>
-                    ))}
+                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
+                    <SimConfigInput label="Leads totais" value={numLeads} onChange={setNumLeads} min={1} max={500} step={1} color="#3B82F6" desc="Quantidade de leads na simulação (até 500)" icon="👥" />
+                    <SimConfigInput label="Mensagens por lead" value={msgsPerLead} onChange={setMsgsPerLead} min={4} max={500} step={2} color="#10B981" desc="Rodadas de conversa (até 500 — compressão automática)" icon="💬" />
+                    <SimConfigInput label="Intervalo entre leads" value={intervalSec} onChange={setIntervalSec} min={0} max={60} step={1} color="#F59E0B" desc="Segundos entre entrada de cada lead (0 = simultâneo)" suffix="s" icon="⏱️" />
+                    <SimConfigInput label="Duração máxima" value={duration} onChange={setDuration} min={30} max={86400} step={30} color="#8B5CF6" desc="Tempo limite (até 24h)" icon="⏳"
+                      format={v => v >= 3600 ? `${Math.floor(v / 3600)}h${Math.floor((v % 3600) / 60)}m` : formatTime(v)} />
+                  </div>
+
+                  {/* New: Warm-up & Retry */}
+                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-3")}>
+                    <SimConfigInput label="Warm-up rounds" value={warmupRounds} onChange={setWarmupRounds} min={0} max={5} step={1} color="#06B6D4" desc="Rodadas de aquecimento antes de avaliar" icon="🔥" compact />
+                    <SimConfigInput label="Retentativas API" value={apiRetries} onChange={setApiRetries} min={0} max={5} step={1} color="#EC4899" desc="Tentativas em caso de erro 429/500" icon="🔄" compact />
+                    <SimConfigInput label="Cooldown entre msgs" value={cooldownMs} onChange={setCooldownMs} min={0} max={5000} step={100} color="#F59E0B" desc="ms de pausa entre mensagens" suffix="ms" icon="⏸️" compact />
                   </div>
 
                   {/* Dispatch Mode */}
@@ -1228,12 +1238,8 @@ Retorne JSON:
                       ))}
                     </div>
                     {dispatchMode === "wave" && (
-                      <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.03)" }}>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Leads por onda</span>
-                          <span className="text-[16px] font-extrabold tabular-nums" style={{ color: "#06B6D4" }}>{parallelLeads}</span>
-                        </div>
-                        <Slider min={2} max={Math.min(50, numLeads)} step={1} value={[parallelLeads]} onValueChange={v => setParallelLeads(v[0])} />
+                      <div className="mt-3">
+                        <SimConfigInput label="Leads por onda" value={parallelLeads} onChange={setParallelLeads} min={2} max={Math.min(50, numLeads)} step={1} color="#06B6D4" desc="Quantos leads processados em paralelo por lote" icon="🌊" compact />
                       </div>
                     )}
                   </div>
@@ -1492,30 +1498,8 @@ Retorne JSON:
 
                   {/* Patience & Abandonment */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Paciência inicial</span>
-                        <span className="text-[20px] font-extrabold tabular-nums" style={{ color: initialPatience >= 70 ? "#10B981" : initialPatience >= 40 ? "#F59E0B" : "#EF4444" }}>{initialPatience}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Nível de paciência com que o lead começa a conversa</p>
-                      <Slider min={10} max={100} step={5} value={[initialPatience]} onValueChange={v => setInitialPatience(v[0])} />
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs" style={{ color: "#EF4444" }}>Impaciente</span>
-                        <span className="text-xs" style={{ color: "#10B981" }}>Paciente</span>
-                      </div>
-                    </div>
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Sensibilidade a abandono</span>
-                        <span className="text-[20px] font-extrabold tabular-nums" style={{ color: abandonmentSensitivity >= 70 ? "#EF4444" : abandonmentSensitivity >= 40 ? "#F59E0B" : "#10B981" }}>{abandonmentSensitivity}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Quão facilmente o lead desiste ao receber respostas fracas</p>
-                      <Slider min={0} max={100} step={5} value={[abandonmentSensitivity]} onValueChange={v => setAbandonmentSensitivity(v[0])} />
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs" style={{ color: "#10B981" }}>Tolerante</span>
-                        <span className="text-xs" style={{ color: "#EF4444" }}>Desiste fácil</span>
-                      </div>
-                    </div>
+                    <SimConfigInput label="Paciência inicial" value={initialPatience} onChange={setInitialPatience} min={10} max={100} step={5} color={initialPatience >= 70 ? "#10B981" : initialPatience >= 40 ? "#F59E0B" : "#EF4444"} desc="Nível de paciência com que o lead começa a conversa" suffix="%" icon="😤" />
+                    <SimConfigInput label="Sensibilidade a abandono" value={abandonmentSensitivity} onChange={setAbandonmentSensitivity} min={0} max={100} step={5} color={abandonmentSensitivity >= 70 ? "#EF4444" : abandonmentSensitivity >= 40 ? "#F59E0B" : "#10B981"} desc="Quão facilmente o lead desiste ao receber respostas fracas" suffix="%" icon="🚪" />
                   </div>
 
                   {/* Patience Curve */}
@@ -1547,30 +1531,8 @@ Retorne JSON:
 
                   {/* Communication Style */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Tom de formalidade</span>
-                        <span className="text-sm font-bold" style={{ color: "#8B5CF6" }}>{leadToneFormality}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Como o lead se comunica: informal (gírias, abreviações) vs formal</p>
-                      <Slider min={0} max={100} step={10} value={[leadToneFormality]} onValueChange={v => setLeadToneFormality(v[0])} />
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs" style={{ color: "#EC4899" }}>🤙 "eae mano"</span>
-                        <span className="text-xs" style={{ color: "#3B82F6" }}>🎩 "Prezado(a)"</span>
-                      </div>
-                    </div>
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Follow-up espontâneo</span>
-                        <span className="text-sm font-bold" style={{ color: "#F59E0B" }}>{leadFollowUpPressure}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Chance do lead mandar msg extra pressionando ("e aí?", "???")</p>
-                      <Slider min={0} max={100} step={5} value={[leadFollowUpPressure]} onValueChange={v => setLeadFollowUpPressure(v[0])} />
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs" style={{ color: "#10B981" }}>Passivo</span>
-                        <span className="text-xs" style={{ color: "#EF4444" }}>Insistente</span>
-                      </div>
-                    </div>
+                    <SimConfigInput label="Tom de formalidade" value={leadToneFormality} onChange={setLeadToneFormality} min={0} max={100} step={10} color="#8B5CF6" desc="Informal (gírias, abreviações) → Formal (Prezado/a)" suffix="%" icon="🎩" />
+                    <SimConfigInput label="Follow-up espontâneo" value={leadFollowUpPressure} onChange={setLeadFollowUpPressure} min={0} max={100} step={5} color="#F59E0B" desc="Chance do lead mandar msg extra ('e aí?', '???')" suffix="%" icon="📲" />
                   </div>
 
                   {/* Typing style */}
@@ -1684,22 +1646,9 @@ Retorne JSON:
 
                   {/* Advanced: re-engagement + max conv time + custom instructions */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Reengajamento</span>
-                        <span className="text-sm font-bold" style={{ color: "#06B6D4" }}>{leadReengagementChance}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Chance do lead voltar após silêncio/desistência parcial</p>
-                      <Slider min={0} max={80} step={5} value={[leadReengagementChance]} onValueChange={v => setLeadReengagementChance(v[0])} />
-                    </div>
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Duração máx por conversa</span>
-                        <span className="text-sm font-bold" style={{ color: "#8B5CF6" }}>{maxConversationMinutes === 0 ? "∞" : `${maxConversationMinutes}min`}</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Limite de tempo por conversa individual (0 = ilimitado)</p>
-                      <Slider min={0} max={30} step={1} value={[maxConversationMinutes]} onValueChange={v => setMaxConversationMinutes(v[0])} />
-                    </div>
+                    <SimConfigInput label="Reengajamento" value={leadReengagementChance} onChange={setLeadReengagementChance} min={0} max={80} step={5} color="#06B6D4" desc="Chance do lead voltar após silêncio/desistência parcial" suffix="%" icon="🔁" />
+                    <SimConfigInput label="Duração máx por conversa" value={maxConversationMinutes} onChange={setMaxConversationMinutes} min={0} max={30} step={1} color="#8B5CF6" desc="Limite por conversa individual (0 = ilimitado)" suffix="min" icon="⏱️"
+                      format={v => v === 0 ? "∞" : `${v}min`} />
                   </div>
 
                   {/* Custom instructions */}
@@ -1970,13 +1919,12 @@ Retorne JSON:
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Taxa alvo de conversão</span>
-                        <span className="text-sm font-bold" style={{ color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
-                          {conversionOverride !== null ? `${conversionOverride}%` : "Natural"}
-                        </span>
                       </div>
                       <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Forçar taxa ou deixar natural</p>
                       <div className="flex items-center gap-3">
-                        <Slider min={0} max={100} step={5} value={[conversionOverride ?? 50]} onValueChange={v => setConversionOverride(v[0])} disabled={conversionOverride === null} />
+                        {conversionOverride !== null && (
+                          <SimConfigInput label="" value={conversionOverride} onChange={setConversionOverride} min={0} max={100} step={5} color="#10B981" suffix="%" compact />
+                        )}
                         <button onClick={() => setConversionOverride(conversionOverride === null ? 50 : null)}
                           className="text-sm px-3 py-1.5 rounded-lg shrink-0 font-semibold transition-all"
                           style={{ background: conversionOverride !== null ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.02)", border: `1px solid ${conversionOverride !== null ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
@@ -1984,14 +1932,7 @@ Retorne JSON:
                         </button>
                       </div>
                     </div>
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Densidade de objeções</span>
-                        <span className="text-sm font-bold" style={{ color: "#F59E0B" }}>{objectionDensity}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Probabilidade de objeções por turno</p>
-                      <Slider min={0} max={100} step={5} value={[objectionDensity]} onValueChange={v => setObjectionDensity(v[0])} />
-                    </div>
+                    <SimConfigInput label="Densidade de objeções" value={objectionDensity} onChange={setObjectionDensity} min={0} max={100} step={5} color="#F59E0B" desc="Probabilidade de objeções por turno" suffix="%" icon="🛡️" />
                   </div>
 
                   {/* Speed */}
@@ -2058,16 +1999,9 @@ Retorne JSON:
                     ))}
                   </div>
 
-                  {/* Sliders */}
+                  {/* Volatility */}
                    <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Volatilidade emocional</span>
-                        <span className="text-sm font-bold" style={{ color: "#EC4899" }}>{emotionalVolatility}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>0% = lead estável · 100% = extremamente volátil</p>
-                      <Slider min={0} max={100} step={5} value={[emotionalVolatility]} onValueChange={v => setEmotionalVolatility(v[0])} />
-                    </div>
+                    <SimConfigInput label="Volatilidade emocional" value={emotionalVolatility} onChange={setEmotionalVolatility} min={0} max={100} step={5} color="#EC4899" desc="0% = lead estável · 100% = extremamente volátil" suffix="%" icon="🎭" />
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Frequência de avaliação IA</span>
                       <p className="text-[11px] mb-3 mt-1" style={{ color: "#94A3B8" }}>Com que frequência o juiz IA avalia o agente</p>
@@ -2130,6 +2064,78 @@ Retorne JSON:
                         "✅ Volatilidade emocional", "✅ Freq. avaliação ajustável",
                       ].map(f => (
                         <p key={f} className="text-[11px]" style={{ color: "#94A3B8" }}>{f}</p>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ===== STRESS TEST TAB ===== */}
+              {configTab === "stress" && (
+                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Flame className="w-5 h-5" style={{ color: "#EF4444" }} />
+                    <div>
+                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Teste de Estresse</h3>
+                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Cenários extremos para encontrar limites dos agentes</p>
+                    </div>
+                  </div>
+
+                  {/* Scoring thresholds */}
+                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
+                    <SimConfigInput label="Score mínimo para aprovação" value={minScoreToPass} onChange={setMinScoreToPass} min={0} max={100} step={5} color="#10B981" desc="Abaixo deste score, o agente é reprovado no debrief" suffix="pts" icon="🎯" />
+                    <SimConfigInput label="Chats concorrentes máx" value={maxConcurrentChats} onChange={setMaxConcurrentChats} min={1} max={20} step={1} color="#3B82F6" desc="Quantos chats simultâneos por agente" icon="📱" />
+                  </div>
+
+                  {/* Sentiment shock */}
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#94A3B8" }}>⚡ Eventos de estresse</p>
+                    {[
+                      { label: "Choque de sentimento", desc: "No round N, o lead muda de humor abruptamente (feliz → furioso)", value: enableSentimentShock, setter: setEnableSentimentShock, color: "#EF4444", icon: "💥" },
+                      { label: "Fadiga do agente", desc: "Após N atendimentos, qualidade do agente cai (simula cansaço)", value: enableAgentFatigue, setter: setEnableAgentFatigue, color: "#F59E0B", icon: "😴" },
+                      { label: "Re-rodar lead perdido", desc: "Leads perdidos são reinseridos com agente diferente", value: autoRetryOnLoss, setter: setAutoRetryOnLoss, color: "#8B5CF6", icon: "🔄" },
+                    ].map(opt => (
+                      <button key={opt.label} onClick={() => opt.setter(!opt.value)}
+                        className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-left transition-all"
+                        style={{
+                          background: opt.value ? `${opt.color}06` : "rgba(255,255,255,0.015)",
+                          border: `1px solid ${opt.value ? `${opt.color}25` : "rgba(255,255,255,0.04)"}`,
+                        }}>
+                        <span className="text-lg">{opt.icon}</span>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
+                          <p className="text-[11px] mt-0.5" style={{ color: "#94A3B8" }}>{opt.desc}</p>
+                        </div>
+                        <div className="w-10 h-6 rounded-full relative transition-all" style={{ background: opt.value ? opt.color : "rgba(255,255,255,0.1)" }}>
+                          <div className="absolute top-1 w-4 h-4 rounded-full transition-all" style={{ left: opt.value ? 20 : 4, background: "#fff" }} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Conditional params */}
+                  {enableSentimentShock && (
+                    <SimConfigInput label="Choque no round" value={shockAtRound} onChange={setShockAtRound} min={2} max={20} step={1} color="#EF4444" desc="Em qual rodada ocorre a mudança brusca de sentimento" icon="💥" compact />
+                  )}
+                  {enableAgentFatigue && (
+                    <SimConfigInput label="Fadiga após N atendimentos" value={fatigueThreshold} onChange={setFatigueThreshold} min={5} max={100} step={5} color="#F59E0B" desc="Número de atendimentos até o agente mostrar cansaço" icon="😴" compact />
+                  )}
+
+                  {/* Stress presets */}
+                  <div className="rounded-xl p-4" style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.12)" }}>
+                    <p className="text-sm font-bold mb-3" style={{ color: "#EF4444" }}>🔥 Cenários prontos de estresse</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { label: "Carga Leve", desc: "5 leads, sem choque", action: () => { setNumLeads(5); setMsgsPerLead(10); setEnableSentimentShock(false); setEnableAgentFatigue(false); } },
+                        { label: "Carga Média", desc: "20 leads + choque round 5", action: () => { setNumLeads(20); setMsgsPerLead(16); setEnableSentimentShock(true); setShockAtRound(5); setEnableAgentFatigue(false); } },
+                        { label: "Carga Extrema", desc: "50 leads + fadiga + choque", action: () => { setNumLeads(50); setMsgsPerLead(20); setEnableSentimentShock(true); setShockAtRound(3); setEnableAgentFatigue(true); setFatigueThreshold(10); setDispatchMode("simultaneous"); } },
+                      ].map(s => (
+                        <button key={s.label} onClick={() => { s.action(); toast({ title: `${s.label} aplicado!` }); }}
+                          className="flex flex-col items-start gap-1 p-3 rounded-xl transition-all hover:scale-[1.02] text-left"
+                          style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                          <span className="text-sm font-bold" style={{ color: "#F1F5F9" }}>{s.label}</span>
+                          <span className="text-[11px]" style={{ color: "#94A3B8" }}>{s.desc}</span>
+                        </button>
                       ))}
                     </div>
                   </div>
