@@ -309,7 +309,6 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
           });
           applied++;
         } else if (action.type === "skill") {
-          // Insert as improvement suggestion for all agents or first active agent
           const { data: agents } = await supabase
             .from("ai_team_agents")
             .select("id")
@@ -327,6 +326,23 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
               approved_at: new Date().toISOString(),
             });
           }
+          applied++;
+        } else if (action.type === "new_agent" && action.newAgentName) {
+          const agentId = action.newAgentName.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
+          await supabase.from("ai_team_agents").insert({
+            id: agentId,
+            name: action.newAgentName,
+            emoji: action.newAgentEmoji || "🤖",
+            role: action.newAgentRole || action.description,
+            squad_id: action.newAgentSquad || "comercial",
+            skills: action.newAgentSkills || [],
+            level: 1,
+            xp: 0,
+            max_xp: 100,
+            status: "idle",
+            is_active: true,
+            persona: action.newAgentJustification || "",
+          });
           applied++;
         }
       } catch (err) {
