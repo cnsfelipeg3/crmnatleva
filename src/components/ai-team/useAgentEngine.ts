@@ -75,6 +75,11 @@ export function useAgentEngine(baseAgents: Agent[], baseTasks: Task[]): UseAgent
       agents: s.agents.map(a => a.id === agentId ? { ...a, ...updates } : a),
     };
     setSnapshot(stateRef.current);
+
+    // Persist overrides to localStorage
+    const overrides = loadOverrides();
+    overrides[agentId] = { ...(overrides[agentId] || {}), ...updates };
+    saveOverrides(overrides);
   }, []);
 
   const removeTask = useCallback((taskId: string, action: "approve" | "ignore") => {
