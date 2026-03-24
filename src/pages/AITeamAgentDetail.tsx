@@ -713,7 +713,7 @@ function SkillsTab({ skills, agentName }: { skills: SkillItem[]; agentName: stri
 function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRole, setEditRole,
   editSector, setEditSector, editLevel, setEditLevel, editSkills, setEditSkills,
   editBehavior, setEditBehavior, customSkill, setCustomSkill, toggleItem, addCustomSkill,
-  cancelEditing, saveEditing, startEditing, agent,
+  cancelEditing, saveEditing, startEditing, agent, agentId,
 }: any) {
   const [ruleStates, setRuleStates] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
@@ -729,6 +729,16 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
 
   const displayName = agentName;
 
+  // Persist custom rules to training store
+  const syncRulesToStore = useCallback((rulesArr: RuleItem[]) => {
+    const { setAgentTraining } = require("@/components/ai-team/agentTrainingStore");
+    setAgentTraining(agentId, {
+      customRules: rulesArr.map(r => ({
+        id: r.id, name: r.name, description: r.description, active: true, impact: r.impact,
+      })),
+    });
+  }, [agentId]);
+
   const handleSaveRule = useCallback(() => {
     if (!newRule.name.trim()) { sonnerToast.error("Nome da regra é obrigatório"); return; }
     const rule: RuleItem = {
@@ -740,12 +750,14 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
       scope: newRule.scope,
       agents: newRule.scope === "specific" ? [agentName.toUpperCase()] : [],
     };
-    setExtraRules(prev => [...prev, rule]);
+    const updated = [...extraRules, rule];
+    setExtraRules(updated);
     setRuleStates(prev => ({ ...prev, [rule.id]: true }));
     setShowNewRule(false);
     setNewRule({ name: "", description: "", impact: "alta", scope: "specific" });
+    syncRulesToStore(updated);
     sonnerToast.success("Regra criada com sucesso!");
-  }, [newRule, agentName]);
+  }, [newRule, agentName, extraRules, syncRulesToStore]);
 
   const toggleRule = (id: string) => {
     setRuleStates((prev: any) => ({ ...prev, [id]: !prev[id] }));
