@@ -64,12 +64,25 @@ async function callAnthropic(
   model: string,
   stream: boolean,
   maxTokens: number = 1200,
+  retryCount: number = 0,
 ): Promise<Response> {
   const systemMsg = messages.find(m => m.role === "system");
-  const userMessages = messages.filter(m => m.role !== "system").map(m => ({
-    role: m.role === "system" ? "user" as const : m.role as "user" | "assistant",
-    content: m.content,
-  }));
+  const nonSystemMessages = messages.filter(m => m.role !== "system");
+
+  const compactMessages = nonSystemMessages.map((m, index) => {
+    const content = typeof m.content === "string"
+      ? (m.content.length > 1200 ? `${m.content.slice(0, 1200)}...` : m.content)
+      : m.content;
+
+    return {
+      role: m.role === "system" ? "user" as const : m.role as "user" | "assistant",
+      content,
+    };
+  });
+
+  const compactSystem = systemMsg?.content
+    ? (systemMsg.content.length > 2500 ? `${systemMsg.content.slice(0, 2500)}...` : systemMsg.content)
+    : "";
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -81,8 +94,8 @@ async function callAnthropic(
     body: JSON.stringify({
       model,
       max_tokens: maxTokens,
-      system: systemMsg?.content || "",
-      messages: userMessages,
+      system: compactSystem,
+      messages: compactMessages,
       stream,
     }),
   });
@@ -91,8 +104,15 @@ async function callAnthropic(
     const status = response.status;
     const t = await response.text();
     console.error("Anthropic API error:", status, t);
+
+    if (status === 429 && retryCount < 4) {
+      const delayMs = Math.min(12000, 1200 * Math.pow(2, retryCount)) + Math.floor(Math.random() * 500);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+      return callAnthropic(apiKey, messages, model, stream, Math.max(300, Math.floor(maxTokens * 0.8)), retryCount + 1);
+    }
+
     if (status === 429) {
-      return new Response(JSON.stringify({ error: "Rate limit Anthropic excedido." }), {
+      return new Response(JSON.stringify({ error: "Rate limit Anthropic excedido. Aguarde alguns segundos e tente novamente." }), {
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

@@ -210,7 +210,9 @@ export default function SimuladorManualMode() {
       });
 
       if (!resp.ok || !resp.body) {
-        const errorData = resp.status === 429 ? "Rate limit excedido. Aguarde." : resp.status === 402 ? "Créditos insuficientes." : "Erro na comunicação.";
+        const errorData = resp.status === 429
+          ? "Anthropic está temporariamente no limite. Aguarde alguns segundos e tente novamente."
+          : resp.status === 402 ? "Créditos insuficientes." : "Erro na comunicação.";
         setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "agent", content: errorData, timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name }]);
         setLoading(false); return;
       }
