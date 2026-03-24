@@ -605,7 +605,13 @@ export default function SimuladorAutoMode() {
       allLeads.push(lead);
     }
     setLeads([...allLeads]);
+    leadsRef_local.current = allLeads;
     if (allLeads.length > 0) setSelectedLeadId(allLeads[0].id);
+
+    // Register all leads in DB
+    for (const lead of allLeads) {
+      await simPersistence.registerLead(lead);
+    }
 
     // ===== Per-lead simulation logic (extracted for parallel use) =====
     const simulateLead = async (lead: LeadInteligente) => {
@@ -613,6 +619,7 @@ export default function SimuladorAutoMode() {
       if (isDurationExceeded()) return;
 
       addEvent("#3B82F6", `${lead.perfil.emoji} ${lead.nome} entrou via ${lead.origem} · ${lead.destino} · ${lead.paxLabel}`, "📥");
+      simPersistence.bufferEvent({ type: "lead_created", leadId: lead.id, payload: { profile: lead.perfil.tipo, destino: lead.destino } } as SimEvent);
 
       try {
         const firstMsg = await generateLeadMsg(lead, "", true);
