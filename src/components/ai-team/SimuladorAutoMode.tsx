@@ -2494,10 +2494,15 @@ Retorne JSON:
                             boxShadow: i === idx ? `0 0 6px ${selectedLead.perfil.cor}80` : "none",
                           }} />
                           {i < ETAPAS_FUNIL.length - 1 && <div className="w-2 h-px" style={{ background: i < idx ? "#10B98160" : "rgba(255,255,255,0.06)" }} />}
-                        </div>
-                      );
-                    })}
-                  </div>
+                         </div>
+                       );
+                     })}
+                   </div>
+                   <NathOpinionButton
+                     messages={selectedLead.mensagens.map(m => ({ role: m.role, content: m.content, agentName: m.agentName, timestamp: m.timestamp }))}
+                     context={`Destino: ${selectedLead.destino} · Perfil: ${selectedLead.perfil.label} · Sentimento: ${selectedLead.sentimentoScore}/100 · Paciência: ${selectedLead.pacienciaRestante}% · Etapa: ${selectedLead.etapaAtual} · Ocasião: ${selectedLead.ocasiao}`}
+                     variant="inline"
+                   />
                 </div>
                 {/* Messages */}
                 <div ref={chatRef} className="flex-1 overflow-y-auto p-5 space-y-2" style={{ background: "#0B141A" }}>
