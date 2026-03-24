@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
-import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
+import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining, type AgentTrainingConfig } from "@/components/ai-team/agentTrainingStore";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -135,6 +136,18 @@ export default function SimuladorManualMode() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // Load behavior_prompt from DB for all agents
+  const [agentBehaviors, setAgentBehaviors] = useState<Record<string, string>>({});
+  useEffect(() => {
+    supabase.from("ai_team_agents").select("id, behavior_prompt").then(({ data }) => {
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((a: any) => { if (a.behavior_prompt) map[a.id] = a.behavior_prompt; });
+        setAgentBehaviors(map);
+      }
+    });
+  }, []);
+
   useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
 
   useEffect(() => {
@@ -169,6 +182,7 @@ export default function SimuladorManualMode() {
         body: JSON.stringify({
           type: "agent",
           systemPrompt: buildManualAgentPrompt(selectedAgent),
+          agentBehaviorPrompt: agentBehaviors[selectedAgent.id] || "",
           history: [{ role: "user", content: `[Simulação - Cliente interessado em ${selectedDestino}] ${text}` }],
         }),
       });

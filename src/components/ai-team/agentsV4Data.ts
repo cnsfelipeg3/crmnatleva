@@ -25,6 +25,7 @@ export interface AgentV4 {
   tasksToday: number;
   persona: string;
   pipelinePosition?: number; // for commercial squad ordering
+  behavior_prompt?: string; // behavioral directives from DB
 }
 
 export const SQUADS: Squad[] = [

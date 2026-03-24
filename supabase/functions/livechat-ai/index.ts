@@ -33,8 +33,25 @@ serve(async (req) => {
       .from("ai_config")
       .select("config_key, config_value");
 
+    // Fetch strategy rules (behavioral directives)
+    const { data: strategyRules } = await sb
+      .from("ai_strategy_knowledge")
+      .select("title, rule, category")
+      .eq("is_active", true)
+      .eq("status", "validado")
+      .gte("priority", 8)
+      .order("priority", { ascending: false })
+      .limit(10);
+
     const config: Record<string, string> = {};
     (configData || []).forEach((c: any) => { config[c.config_key] = c.config_value; });
+
+    // Build strategy rules block
+    let strategyBlock = "";
+    if (strategyRules && strategyRules.length > 0) {
+      const ruleTexts = strategyRules.map((r: any) => `· ${r.title}: ${r.rule}`).join("\n");
+      strategyBlock = `\n## REGRAS ESTRATÉGICAS OBRIGATÓRIAS\n${ruleTexts}\n`;
+    }
 
     // Build knowledge base context
     let knowledgeBlock = "";
@@ -88,6 +105,8 @@ ${closingTemplate ? `- Template de encerramento: ${closingTemplate}` : ""}
 Seu papel é analisar mensagens de clientes e gerar respostas profissionais para os vendedores enviarem.
 
 ${rulesBlock}
+
+${strategyBlock}
 
 ${knowledgeBlock}
 

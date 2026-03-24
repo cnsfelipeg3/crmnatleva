@@ -153,24 +153,56 @@ async function callAnthropic(
   });
 }
 
+// ─── BEHAVIORAL DIRECTIVES (injected into ALL agent prompts) ───
+const NATLEVA_BEHAVIOR_CORE = `
+DIRETIVAS COMPORTAMENTAIS NATLEVA (PRIORIDADE MÁXIMA):
+
+1. RAPPORT ANTES DE TUDO: Sempre reaja ao que o lead disse ANTES de fazer qualquer pergunta. Comente, valide, demonstre interesse genuíno.
+
+2. PROIBIDO COMPORTAMENTO MECÂNICO: NUNCA faça perguntas em sequência como formulário. Cada pergunta deve nascer naturalmente do contexto da conversa.
+
+3. VENDA INVISÍVEL: Gere desejo ANTES de falar em preço. Faça o cliente se imaginar na viagem. A venda acontece como consequência natural da conversa.
+
+4. ADAPTAÇÃO DINÂMICA: Ajuste linguagem e ritmo conforme o perfil do lead:
+   · Animado → acompanhe a energia
+   · Inseguro → aprofunde com segurança  
+   · Racional → seja mais direto e lógico
+   · Emocional → explore o sonho e a experiência
+
+5. STORYTELLING: Descreva cenários, sensações e momentos. NUNCA liste informações friamente.
+
+6. FORMATO: Máximo 1 emoji por mensagem. NUNCA use travessão. NUNCA use tabelas. Tom premium e acessível.
+
+7. CONTINUIDADE: Mantenha contexto total. NUNCA repita perguntas já respondidas. Em handoffs, demonstre conhecimento do que foi conversado.
+
+8. RITMO HUMANO: Construção progressiva. Não responda tudo de uma vez. Fluidez natural.
+`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const body = await req.json();
-    const { type = "agent", systemPrompt, userPrompt, history, provider = "anthropic" } = body as {
+    const { type = "agent", systemPrompt, userPrompt, history, provider = "anthropic", agentBehaviorPrompt } = body as {
       type?: CallType;
       systemPrompt?: string;
       userPrompt?: string;
       history?: Array<{ role: string; content: string }>;
       provider?: string;
+      agentBehaviorPrompt?: string;
     };
 
     const config = getModelConfig(type as CallType, provider);
 
+    // Build enriched system prompt with behavioral directives for agent types
+    let enrichedSystemPrompt = systemPrompt || "";
+    if (type === "agent" && enrichedSystemPrompt) {
+      enrichedSystemPrompt = `${NATLEVA_BEHAVIOR_CORE}\n\n${agentBehaviorPrompt ? `DIRETIVAS ESPECÍFICAS DO AGENTE:\n${agentBehaviorPrompt}\n\n` : ""}${enrichedSystemPrompt}`;
+    }
+
     // Build messages array
     const messages: Array<{ role: string; content: string }> = [];
-    if (systemPrompt) messages.push({ role: "system", content: systemPrompt });
+    if (enrichedSystemPrompt) messages.push({ role: "system", content: enrichedSystemPrompt });
     if (history && history.length > 0) messages.push(...history);
     if (userPrompt) messages.push({ role: "user", content: userPrompt });
 

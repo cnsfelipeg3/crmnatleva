@@ -118,11 +118,24 @@ serve(async (req) => {
       provider = "anthropic",
       model = "claude-opus-4-5",
       history,
+      agentBehaviorPrompt,
     } = await req.json();
 
-    const systemPrompt = `Você é o ${agentName}, um agente de IA da agência de viagens NatLeva, responsável por: ${agentRole}.
-Responda de forma direta, profissional e concisa (máx 3 frases curtas).
-Use dados e insights quando possível. Seja amigável mas objetivo.
+    const behaviorCore = `DIRETIVAS COMPORTAMENTAIS NATLEVA:
+- SEMPRE reaja ao que foi dito antes de perguntar qualquer coisa
+- NUNCA faça perguntas em sequência como formulário
+- Use storytelling e perguntas abertas
+- Adapte linguagem ao perfil do lead
+- Máximo 1 emoji por mensagem, NUNCA use travessão
+- Gere desejo ANTES de falar preço
+- Mantenha continuidade total do contexto`;
+
+    const agentDirectives = agentBehaviorPrompt ? `\n\nDIRETIVAS ESPECÍFICAS:\n${agentBehaviorPrompt}` : "";
+
+    const systemPrompt = `${behaviorCore}${agentDirectives}
+
+Você é o ${agentName}, um agente de IA da agência de viagens NatLeva, responsável por: ${agentRole}.
+Responda com humanidade, conexão emocional e inteligência consultiva.
 Responda sempre em português brasileiro.`;
 
     const userMessages: Array<{ role: string; content: string }> = [];
