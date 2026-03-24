@@ -73,6 +73,7 @@ REGRAS DE OURO:
 - Celebre conquistas do lead (aniversario, casamento, viagem dos sonhos).
 ${roleInstr}
 ${trainingBlock}
+${globalRulesBlock}
 
 SOBRE [TRANSFERIR]:
 Use [TRANSFERIR] SOMENTE quando TUDO isso for verdade:
