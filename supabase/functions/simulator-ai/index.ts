@@ -124,10 +124,10 @@ async function callAnthropic(
     const t = await response.text();
     console.error("Anthropic API error:", status, t);
 
-    if (status === 429 && retryCount < 4) {
-      const delayMs = Math.min(12000, 1200 * Math.pow(2, retryCount)) + Math.floor(Math.random() * 500);
+    if (status === 429 && retryCount < 5) {
+      const delayMs = Math.min(20000, 2500 * Math.pow(2, retryCount)) + Math.floor(Math.random() * 1200);
       await new Promise(resolve => setTimeout(resolve, delayMs));
-      return callAnthropic(apiKey, messages, model, stream, Math.max(300, Math.floor(maxTokens * 0.8)), retryCount + 1);
+      return callAnthropic(apiKey, messages, model, stream, Math.max(250, Math.floor(maxTokens * 0.6)), retryCount + 1);
     }
 
     if (status === 429) {
