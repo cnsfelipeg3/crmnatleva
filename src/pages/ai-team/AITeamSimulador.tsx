@@ -81,7 +81,7 @@ export default function AITeamSimulador() {
           )}>
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className={cn("rounded-2xl flex items-center justify-center", isMobile ? "w-10 h-10" : "w-12 h-12")} style={{
+                <div className={cn("rounded-xl flex items-center justify-center", isMobile ? "w-9 h-9" : "w-10 h-10")} style={{
                   background: "linear-gradient(135deg, #10B981, #06B6D4)",
                   boxShadow: "0 0 24px rgba(16,185,129,0.25), inset 0 1px 0 rgba(255,255,255,0.15)",
                 }}>
