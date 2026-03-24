@@ -173,7 +173,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/ai-team/evolution", icon: Sparkles, label: "Evolution Engine" },
               { to: "/ai-team/conhecimento", icon: BookOpen, label: "Conhecimento" },
               { to: "/ai-team/skills", icon: Zap, label: "Skills" },
-              { to: "/ai-team/workflow", icon: GitBranch, label: "Workflow" },
+              { to: "/ai-team/workflow", icon: GitBranch, label: "Flow Builder" },
               { to: "/ai-team/memoria", icon: Database, label: "Memória & Fiscal" },
               { to: "/ai-team/academia", icon: Star, label: "Academia" },
               { to: "/ai-team/simulador", icon: MessageSquare, label: "Simulador" },
@@ -209,7 +209,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
             {[
               { to: "/operacao/inbox", icon: Inbox, label: "WhatsApp" },
-              { to: "/operacao/flows", icon: GitBranch, label: "Flow Builder" },
               { to: "/operacao/integracoes", icon: Plug, label: "Integrações" },
               { to: "/operacao/pipeline", icon: Tag, label: "Tags & Pipeline" },
               { to: "/operacao/simulador", icon: TestTube, label: "Simulador" },
