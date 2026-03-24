@@ -164,21 +164,28 @@ export default function NathOpinionButton({ messages, context, variant = "header
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
-          question: `Com base na seguinte opinião da CEO Nath sobre uma conversa de atendimento, extraia TODAS as melhorias acionáveis que podem ser aplicadas ao ecossistema de agentes IA.
+          question: `Com base na seguinte opinião da CEO Nath sobre uma conversa de atendimento, extraia melhorias acionáveis para o ecossistema de agentes IA.
 
 OPINIÃO DA NATH:
 ${opinion}
 
+AGENTES DISPONÍVEIS: MAYA (recepção/encantamento), ATLAS (qualificação), HABIBI (especialista Dubai/Egito), NEMO (especialista Maldivas/Ásia), DANTE (especialista Europa), LUNA (propostas/cotações), NERO (objeções/negociação), IRIS (pós-venda/NPS), HUNTER (reativação leads), FINX (financeiro/cobranças), VIGIL (compliance/qualidade), NATH.AI (orquestração).
+
+IMPORTANTE: Gere EXATAMENTE entre 10 e 12 ações. Pelo menos 4 devem ser para agentes ESPECÍFICOS (scope: "specific_agent" com "target_agent" preenchido). O restante pode ser para todos.
+
 Retorne EXATAMENTE um JSON array com objetos contendo:
-- "type": "knowledge_base" (regra para a base de conhecimento do atendimento), "skill" (habilidade técnica nova para os agentes) ou "global_rule" (regra universal obrigatória)
+- "type": "knowledge_base", "skill" ou "global_rule"
 - "title": título curto da melhoria (máx 60 chars)
 - "description": descrição detalhada de como implementar (2-3 linhas)
 - "scope": "all_agents" ou "specific_agent"
+- "target_agent": nome do agente alvo (ex: "MAYA", "NERO") — obrigatório quando scope = "specific_agent"
 - "priority": "alta", "media" ou "baixa"
+- "difficulty": "facil", "moderada" ou "complexa"
+- "estimated_impact": frase curta do impacto esperado (ex: "+15% conversão", "-30% tempo de resposta")
 
-Gere entre 3 e 7 ações concretas. Foque em melhorias que possam ser sistematizadas. Retorne SOMENTE o JSON array, sem texto adicional.`,
+Retorne SOMENTE o JSON array, sem texto adicional.`,
           agentName: "SISTEMA",
-          agentRole: "Você é um analisador de melhorias de processos. Retorne APENAS um JSON array válido, sem markdown, sem explicações. Cada item deve ter: type, title, description, scope, priority.",
+          agentRole: "Você é um analisador de melhorias de processos de uma agência de viagens premium. Retorne APENAS um JSON array válido, sem markdown, sem explicações. Cada item deve ter: type, title, description, scope, target_agent (quando aplicável), priority, difficulty, estimated_impact. Gere 10-12 itens, sendo pelo menos 4 para agentes específicos.",
         }),
       });
 
