@@ -1264,7 +1264,8 @@ Retorne JSON:
               );
             })}
 
-            {/* Config Summary Card */}
+            {/* Config Summary Card — desktop only */}
+            {!isMobile && (
             <div className="mt-4 rounded-xl p-4 space-y-2" style={{
               background: "linear-gradient(135deg, rgba(16,185,129,0.04), rgba(6,182,212,0.04))",
               border: "1px solid rgba(16,185,129,0.1)",
@@ -1287,6 +1288,7 @@ Retorne JSON:
                 ))}
               </div>
             </div>
+            )}
           </div>
 
           {/* RIGHT: Content Area */}
