@@ -925,7 +925,211 @@ Retorne JSON:
   const sentimentColor = (s: number) => s >= 70 ? "#10B981" : s >= 40 ? "#F59E0B" : "#EF4444";
   const sentimentLabel = (s: number) => s >= 80 ? "Empolgado" : s >= 60 ? "Satisfeito" : s >= 40 ? "Neutro" : s >= 20 ? "Impaciente" : "Desistindo";
 
-  // ===== CONFIG TABS =====
+  // ===== EXPORT FUNCTIONS =====
+  const exportConversations = useCallback((format: "txt" | "pdf") => {
+    if (leads.length === 0) return;
+
+    const timestamp = new Date().toLocaleString("pt-BR");
+    const dateFile = new Date().toISOString().slice(0, 10);
+
+    if (format === "txt") {
+      const lines: string[] = [];
+      lines.push("╔══════════════════════════════════════════════════════════════╗");
+      lines.push("║           RELATÓRIO DE SIMULAÇÃO — NATLEVA AI              ║");
+      lines.push("╚══════════════════════════════════════════════════════════════╝");
+      lines.push("");
+      lines.push(`📅 Data: ${timestamp}`);
+      lines.push(`⏱️ Duração: ${formatTime(elapsedSeconds)}`);
+      lines.push(`👥 Total de leads: ${leads.length}`);
+      lines.push(`✅ Fechados: ${closedLeads.length}`);
+      lines.push(`❌ Perdidos: ${lostLeads.length}`);
+      lines.push(`📊 Conversão: ${conversionRate}%`);
+      lines.push(`💰 Receita total: R$${totalReceita.toLocaleString("pt-BR")}`);
+      lines.push(`🎯 Ticket médio: R$${ticketMedio.toLocaleString("pt-BR")}`);
+      lines.push(`😊 Sentimento médio: ${avgSentimento}/100`);
+      lines.push("");
+      lines.push("┌──────────────────────────────────────────────────────────────┐");
+      lines.push("│  📊 SCORECARD — 3 DIMENSÕES                                │");
+      lines.push("├──────────────────────────────────────────────────────────────┤");
+      lines.push(`│  ❤️ Humanização:       ${"█".repeat(Math.round(avgHumanizacao / 5))}${"░".repeat(20 - Math.round(avgHumanizacao / 5))}  ${avgHumanizacao}/100  │`);
+      lines.push(`│  🎯 Eficácia Comercial: ${"█".repeat(Math.round(avgEficacia / 5))}${"░".repeat(20 - Math.round(avgEficacia / 5))}  ${avgEficacia}/100  │`);
+      lines.push(`│  🔧 Qualidade Técnica:  ${"█".repeat(Math.round(avgTecnica / 5))}${"░".repeat(20 - Math.round(avgTecnica / 5))}  ${avgTecnica}/100  │`);
+      lines.push("└──────────────────────────────────────────────────────────────┘");
+      lines.push("");
+
+      leads.forEach((lead, idx) => {
+        lines.push("═".repeat(64));
+        lines.push(`📱 CONVERSA ${idx + 1}/${leads.length}`);
+        lines.push("═".repeat(64));
+        lines.push(`👤 Lead: ${lead.nome}`);
+        lines.push(`🧠 Perfil: ${lead.perfil.emoji} ${lead.perfil.label}`);
+        lines.push(`✈️ Destino: ${lead.destino}`);
+        lines.push(`💰 Orçamento: ${lead.orcamento}`);
+        lines.push(`👥 Grupo: ${lead.paxLabel}`);
+        lines.push(`📱 Canal: ${lead.origem}`);
+        lines.push(`📍 Resultado: ${lead.status === "fechou" ? `✅ FECHOU — R$${(lead.ticket / 1000).toFixed(0)}k` : lead.status === "perdeu" ? `❌ PERDEU em ${lead.etapaPerda || "N/A"}` : "⏳ Ativo"}`);
+        if (lead.motivoPerda) lines.push(`💬 Motivo: ${lead.motivoPerda.slice(0, 120)}`);
+        lines.push(`❤️ Sentimento final: ${lead.sentimentoScore}/100 (${sentimentLabel(lead.sentimentoScore)})`);
+        lines.push(`🔋 Paciência final: ${lead.pacienciaRestante}/100`);
+        lines.push("");
+        lines.push("─".repeat(50));
+        lines.push("  MENSAGENS");
+        lines.push("─".repeat(50));
+        lines.push("");
+
+        lead.mensagens.forEach(msg => {
+          const time = new Date(msg.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+          if (msg.role === "client") {
+            lines.push(`  ┌─ 👤 ${lead.nome} · ${time}`);
+            lines.push(`  │ ${msg.content}`);
+            lines.push(`  └─`);
+          } else {
+            lines.push(`  ┌─ 🤖 ${msg.agentName || "Agente"} · ${time}`);
+            lines.push(`  │ ${msg.content}`);
+            lines.push(`  └─`);
+          }
+          lines.push("");
+        });
+
+        if (lead.objecoesLancadas.length > 0) {
+          lines.push(`  ⚠️ Objeções: ${lead.objecoesLancadas.join(", ")}`);
+          lines.push("");
+        }
+      });
+
+      lines.push("");
+      lines.push("═".repeat(64));
+      lines.push("Gerado automaticamente pelo Simulador NatLeva AI");
+      lines.push(`${timestamp}`);
+
+      const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `simulacao-natleva-${dateFile}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "📄 Conversa exportada em TXT!" });
+
+    } else if (format === "pdf") {
+      // Generate rich HTML and print to PDF
+      const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Simulação NatLeva AI — ${dateFile}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: #0F172A; color: #E2E8F0; padding: 40px; font-size: 13px; line-height: 1.6; }
+  .header { text-align: center; margin-bottom: 40px; padding: 30px; background: linear-gradient(135deg, #0A1628, #1E293B); border-radius: 16px; border: 1px solid rgba(255,255,255,0.06); }
+  .header h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 4px; background: linear-gradient(135deg, #10B981, #06B6D4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header .subtitle { color: #64748B; font-size: 12px; }
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 30px; }
+  .stat-card { background: #1E293B; border-radius: 12px; padding: 16px; text-align: center; border: 1px solid rgba(255,255,255,0.04); }
+  .stat-value { font-size: 28px; font-weight: 800; }
+  .stat-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: #64748B; margin-top: 2px; }
+  .dimensions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 30px; }
+  .dim-card { background: #1E293B; border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.04); }
+  .dim-label { font-size: 10px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.08em; }
+  .dim-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); margin-top: 8px; overflow: hidden; }
+  .dim-fill { height: 100%; border-radius: 3px; }
+  .dim-score { font-size: 22px; font-weight: 800; margin-top: 6px; }
+  .conversation { margin-bottom: 30px; background: #1E293B; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.04); page-break-inside: avoid; }
+  .conv-header { padding: 16px 20px; background: linear-gradient(135deg, rgba(16,185,129,0.06), rgba(6,182,212,0.04)); border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; align-items: center; justify-content: space-between; }
+  .conv-header .lead-name { font-size: 15px; font-weight: 700; }
+  .conv-header .lead-meta { font-size: 10px; color: #64748B; }
+  .conv-result { font-size: 11px; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
+  .conv-result.won { background: rgba(16,185,129,0.12); color: #10B981; }
+  .conv-result.lost { background: rgba(239,68,68,0.12); color: #EF4444; }
+  .messages { padding: 16px 20px; }
+  .msg { margin-bottom: 12px; max-width: 80%; }
+  .msg.client { margin-left: auto; }
+  .msg.agent { margin-right: auto; }
+  .msg-bubble { padding: 10px 14px; border-radius: 12px; font-size: 12px; line-height: 1.5; }
+  .msg.client .msg-bubble { background: #065F46; color: #D1FAE5; border-bottom-right-radius: 4px; }
+  .msg.agent .msg-bubble { background: #1E293B; color: #E2E8F0; border: 1px solid rgba(255,255,255,0.06); border-bottom-left-radius: 4px; }
+  .msg-sender { font-size: 9px; font-weight: 700; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .msg.client .msg-sender { text-align: right; color: #34D399; }
+  .msg.agent .msg-sender { color: #60A5FA; }
+  .msg-time { font-size: 8px; color: #475569; margin-top: 2px; }
+  .msg.client .msg-time { text-align: right; }
+  .conv-footer { padding: 10px 20px; background: rgba(0,0,0,0.2); font-size: 10px; color: #64748B; display: flex; gap: 16px; flex-wrap: wrap; }
+  .conv-footer span { display: flex; align-items: center; gap: 4px; }
+  .footer { text-align: center; margin-top: 40px; color: #475569; font-size: 10px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.04); }
+  @media print { body { background: #0F172A !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>✨ Simulação NatLeva AI</h1>
+    <div class="subtitle">${timestamp} · Duração: ${formatTime(elapsedSeconds)}</div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-value" style="color:#3B82F6">${leads.length}</div><div class="stat-label">Leads</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#10B981">${closedLeads.length}</div><div class="stat-label">Fechados</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#F59E0B">${conversionRate}%</div><div class="stat-label">Conversão</div></div>
+    <div class="stat-card"><div class="stat-value" style="color:#8B5CF6">R$${(totalReceita / 1000).toFixed(0)}k</div><div class="stat-label">Receita</div></div>
+  </div>
+
+  <div class="dimensions">
+    <div class="dim-card"><div class="dim-label">❤️ Humanização</div><div class="dim-score" style="color:#EC4899">${avgHumanizacao}</div><div class="dim-bar"><div class="dim-fill" style="width:${avgHumanizacao}%;background:#EC4899"></div></div></div>
+    <div class="dim-card"><div class="dim-label">🎯 Eficácia</div><div class="dim-score" style="color:#F59E0B">${avgEficacia}</div><div class="dim-bar"><div class="dim-fill" style="width:${avgEficacia}%;background:#F59E0B"></div></div></div>
+    <div class="dim-card"><div class="dim-label">🔧 Técnica</div><div class="dim-score" style="color:#3B82F6">${avgTecnica}</div><div class="dim-bar"><div class="dim-fill" style="width:${avgTecnica}%;background:#3B82F6"></div></div></div>
+  </div>
+
+  ${leads.map((lead, idx) => `
+  <div class="conversation">
+    <div class="conv-header">
+      <div>
+        <div class="lead-name">${lead.perfil.emoji} ${lead.nome}</div>
+        <div class="lead-meta">${lead.perfil.label} · ${lead.destino} · ${lead.orcamento} · ${lead.paxLabel} · via ${lead.origem}</div>
+      </div>
+      <div class="conv-result ${lead.status === "fechou" ? "won" : "lost"}">
+        ${lead.status === "fechou" ? `✅ Fechou R$${(lead.ticket / 1000).toFixed(0)}k` : lead.status === "perdeu" ? `❌ Perdeu (${lead.etapaPerda || "N/A"})` : "⏳ Ativo"}
+      </div>
+    </div>
+    <div class="messages">
+      ${lead.mensagens.map(msg => {
+        const time = new Date(msg.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+        return `<div class="msg ${msg.role === "client" ? "client" : "agent"}">
+          <div class="msg-sender">${msg.role === "client" ? lead.nome : msg.agentName || "Agente"}</div>
+          <div class="msg-bubble">${msg.content.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+          <div class="msg-time">${time}</div>
+        </div>`;
+      }).join("")}
+    </div>
+    <div class="conv-footer">
+      <span>❤️ Sentimento: ${lead.sentimentoScore}/100</span>
+      <span>🔋 Paciência: ${lead.pacienciaRestante}/100</span>
+      <span>📊 H:${lead.scoreHumanizacao} E:${lead.scoreEficacia} T:${lead.scoreTecnica}</span>
+      ${lead.objecoesLancadas.length > 0 ? `<span>⚠️ Objeções: ${lead.objecoesLancadas.join(", ")}</span>` : ""}
+      ${lead.motivoPerda ? `<span>💬 ${lead.motivoPerda.slice(0, 80)}...</span>` : ""}
+    </div>
+  </div>`).join("")}
+
+  <div class="footer">
+    Gerado pelo Simulador NatLeva AI · ${timestamp}
+  </div>
+</body>
+</html>`;
+
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const printWin = window.open(url, "_blank");
+      if (printWin) {
+        printWin.onload = () => {
+          setTimeout(() => {
+            printWin.print();
+          }, 800);
+        };
+      }
+      URL.revokeObjectURL(url);
+      toast({ title: "🖨️ PDF aberto para impressão!" });
+    }
+  }, [leads, closedLeads, lostLeads, elapsedSeconds, conversionRate, totalReceita, ticketMedio, avgSentimento, avgHumanizacao, avgEficacia, avgTecnica, toast]);
+
   const CONFIG_TABS = [
     { id: "volume" as const, label: "Volume & Tempo", icon: BarChart3, color: "#3B82F6", summary: `${numLeads} leads · ${msgsPerLead} msgs · ${formatTime(duration)}` },
     { id: "perfis" as const, label: "Perfis", icon: User, color: "#EC4899", summary: `${selectedProfiles.length || 8} perfis ativos` },
