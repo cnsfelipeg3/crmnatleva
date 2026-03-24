@@ -1855,6 +1855,9 @@ Retorne JSON:
                 { icon: "🧠", label: enableEvaluation ? `Aval. ${evalFrequency === "every" ? "100%" : evalFrequency === "every2" ? "50%" : "33%"}` : "Aval. off", color: "#EC4899" },
                 { icon: "🔄", label: enableTransfers ? "Transf. on" : "Transf. off", color: "#06B6D4" },
                 { icon: "💥", label: `Vol. ${emotionalVolatility}%`, color: "#EF4444" },
+                { icon: "❤️", label: `Pac. ${initialPatience}%`, color: "#EF4444" },
+                { icon: "📉", label: leadPatienceCurve, color: "#EC4899" },
+                { icon: "🎯", label: leadConversationGoal === "aleatorio" ? "Mix" : leadConversationGoal, color: "#F59E0B" },
               ].map(chip => (
                 <span key={chip.label} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0"
                   style={{ background: `${chip.color}08`, color: chip.color, border: `1px solid ${chip.color}15` }}>
