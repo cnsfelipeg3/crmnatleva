@@ -104,10 +104,17 @@ export function FlowListPage({ onOpenFlow }: Props) {
     toast({ title: "Fluxo criado", description: `"${newName}" está pronto para edição.` });
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const confirmDelete = (flow: Flow, e: React.MouseEvent) => {
     e.stopPropagation();
-    await supabase.from("flows").delete().eq("id", id);
-    setFlows(prev => prev.filter(f => f.id !== id));
+    setDeleteFlowId(flow.id);
+    setDeleteFlowName(flow.name);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteFlowId) return;
+    await supabase.from("flows").delete().eq("id", deleteFlowId);
+    setFlows(prev => prev.filter(f => f.id !== deleteFlowId));
+    setDeleteFlowId(null);
     toast({ title: "Fluxo excluído" });
   };
 
