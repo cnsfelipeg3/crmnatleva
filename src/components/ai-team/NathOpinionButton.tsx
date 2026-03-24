@@ -98,7 +98,27 @@ export default function NathOpinionButton({ messages, context, variant = "header
 
     const chatHistory = messages.map(m => {
       const label = m.role === "agent" ? `AGENTE (${m.agentName || "IA"})` : "LEAD/CLIENTE";
-      return `${label}: ${m.content}`;
+      const type = m.messageType || "text";
+      let desc = m.content || "";
+      if (type === "audio") {
+        desc = desc ? `[🎵 ÁUDIO] ${desc}` : "[🎵 ÁUDIO enviado — conteúdo de voz não transcrito]";
+      } else if (type === "image") {
+        desc = desc ? `[📷 IMAGEM] ${desc}` : "[📷 IMAGEM enviada]";
+      } else if (type === "video") {
+        desc = desc ? `[🎬 VÍDEO] ${desc}` : "[🎬 VÍDEO enviado]";
+      } else if (type === "document" || type === "file") {
+        desc = desc ? `[📄 DOCUMENTO] ${desc}` : "[📄 DOCUMENTO/ARQUIVO enviado]";
+      } else if (type === "sticker") {
+        desc = "[🏷️ STICKER]";
+      } else if (type === "location") {
+        desc = desc ? `[📍 LOCALIZAÇÃO] ${desc}` : "[📍 LOCALIZAÇÃO compartilhada]";
+      } else if (type === "contact" || type === "vcard") {
+        desc = desc ? `[👤 CONTATO] ${desc}` : "[👤 CARTÃO DE CONTATO compartilhado]";
+      }
+      if (m.mediaUrl && type !== "text") {
+        desc += ` (mídia: ${m.mediaUrl})`;
+      }
+      return `${label}: ${desc}`;
     }).join("\n");
 
     const fullContext = context ? `\nCONTEXTO: ${context}` : "";
