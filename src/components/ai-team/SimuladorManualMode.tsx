@@ -710,7 +710,6 @@ export default function SimuladorManualMode() {
                   );
                 })}
               </div>
-              </div>
             </div>
 
             {/* Sessions */}
