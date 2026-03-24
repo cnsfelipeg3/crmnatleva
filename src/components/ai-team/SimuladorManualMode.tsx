@@ -133,7 +133,15 @@ export default function SimuladorManualMode() {
   const { data: globalRules = [] } = useGlobalRules();
   const globalRulesBlock = buildGlobalRulesBlock(globalRules);
   const [selectedAgent, setSelectedAgent] = useState(AGENTS_V4[2]);
-  const [selectedDestino, setSelectedDestino] = useState("Dubai");
+  const [selectedDestino, setSelectedDestinoRaw] = useState("Dubai");
+  const setSelectedDestino = (d: string) => {
+    if (d === "🎲 Aleatório") {
+      const random = DESTINOS_ALEATORIOS[Math.floor(Math.random() * DESTINOS_ALEATORIOS.length)];
+      setSelectedDestinoRaw(random);
+    } else {
+      setSelectedDestinoRaw(d);
+    }
+  };
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
