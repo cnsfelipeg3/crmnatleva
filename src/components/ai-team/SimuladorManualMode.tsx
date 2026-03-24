@@ -343,17 +343,24 @@ export default function SimuladorManualMode() {
         {/* RIGHT PANEL */}
         <div className="w-[300px] shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar">
           {/* Actions */}
-          <div className="flex gap-2">
-            <button onClick={generateSummary} disabled={messages.length < 2}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all duration-300 hover:scale-[1.02]"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: messages.length < 2 ? "#334155" : "#94A3B8" }}>
-              <FileText className="w-3.5 h-3.5" /> Resumo IA
-            </button>
-            <button onClick={resetChat}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all duration-300 hover:scale-[1.02]"
-              style={{ background: `${agentColor}08`, border: `1px solid ${agentColor}20`, color: agentColor }}>
-              <RotateCcw className="w-3.5 h-3.5" /> Nova
-            </button>
+          <div className="space-y-2">
+            <NathOpinionButton
+              messages={messages.map(m => ({ role: m.role === "user" ? "user" : "agent", content: m.content, agentName: m.agentName, timestamp: m.timestamp }))}
+              context={`Destino: ${selectedDestino} · Agente: ${selectedAgent.name} (${selectedAgent.role})`}
+              variant="floating"
+            />
+            <div className="flex gap-2">
+              <button onClick={generateSummary} disabled={messages.length < 2}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all duration-300 hover:scale-[1.02]"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: messages.length < 2 ? "#334155" : "#94A3B8" }}>
+                <FileText className="w-3.5 h-3.5" /> Resumo IA
+              </button>
+              <button onClick={resetChat}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all duration-300 hover:scale-[1.02]"
+                style={{ background: `${agentColor}08`, border: `1px solid ${agentColor}20`, color: agentColor }}>
+                <RotateCcw className="w-3.5 h-3.5" /> Nova
+              </button>
+            </div>
           </div>
 
           {/* Agent info card */}
