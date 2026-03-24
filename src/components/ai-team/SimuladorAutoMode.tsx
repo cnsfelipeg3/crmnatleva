@@ -1427,7 +1427,7 @@ Retorne JSON:
                             {selectedDestinos.length > 0 ? "Limpar" : "Todos"}
                           </button>
                         </div>
-                        <div className="grid grid-cols-5 gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                        <div className={cn("grid gap-0 rounded-xl overflow-hidden", isMobile ? "grid-cols-2" : "grid-cols-5")} style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
                           {DESTINO_DATA.map((d, i) => {
                             const active = selectedDestinos.length === 0 || selectedDestinos.includes(d.name);
                             return (
