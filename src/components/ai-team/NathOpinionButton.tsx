@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Crown, Loader2, AlertTriangle, Heart, Shield, Sparkles, TrendingUp, Zap, BookOpen, Users, Scale, Check, X, ChevronDown, ChevronUp, ArrowLeft, BarChart3, ThumbsUp, ThumbsDown, Wrench, Target, Clock, User } from "lucide-react";
+import { Crown, Loader2, AlertTriangle, Heart, Shield, Sparkles, TrendingUp, Zap, BookOpen, Users, Scale, Check, X, ChevronDown, ChevronUp, ArrowLeft, BarChart3, ThumbsUp, ThumbsDown, Wrench, Target, Clock, User, Bot, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
