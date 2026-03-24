@@ -1154,8 +1154,8 @@ Retorne JSON:
                   { label: "Abandono", value: `${abandonmentSensitivity}%`, color: "#EF4444" },
                 ].map(item => (
                   <div key={item.label} className="flex items-center justify-between">
-                    <span className="text-[15px]" style={{ color: "#94A3B8" }}>{item.label}</span>
-                    <span className="text-[15px] font-bold tabular-nums" style={{ color: item.color }}>{item.value}</span>
+                    <span className="text-[11px]" style={{ color: "#94A3B8" }}>{item.label}</span>
+                    <span className="text-xs font-bold tabular-nums" style={{ color: item.color }}>{item.value}</span>
                   </div>
                 ))}
               </div>
