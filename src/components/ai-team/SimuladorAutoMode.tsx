@@ -2280,17 +2280,17 @@ Retorne JSON:
           </div>
         </div>
 
-        {/* CTA Bar — sticky bottom */}
-        <div className="mt-6 rounded-2xl overflow-hidden relative sticky bottom-4 z-20" style={{
+        {/* CTA Bar — sticky bottom, compact */}
+        <div className="mt-3 rounded-xl overflow-hidden relative sticky bottom-2 z-20" style={{
           background: "linear-gradient(135deg, rgba(13,18,32,0.98), rgba(13,18,32,0.9))",
           border: "1px solid rgba(16,185,129,0.2)",
-          boxShadow: "0 -8px 32px rgba(0,0,0,0.4)",
+          boxShadow: "0 -4px 24px rgba(0,0,0,0.4)",
           backdropFilter: "blur(12px)",
         }}>
-          <div className={cn("h-[2px]")} style={{ background: "linear-gradient(90deg, #10B981, #06B6D4, #8B5CF6)" }} />
-          <div className={cn("flex items-center gap-4", isMobile ? "flex-col px-4 py-4" : "gap-6 px-8 py-5")}>
+          <div className="h-[2px]" style={{ background: "linear-gradient(90deg, #10B981, #06B6D4, #8B5CF6)" }} />
+          <div className={cn("flex items-center gap-3", isMobile ? "flex-col px-3 py-3" : "px-5 py-3")}>
             {/* Config chips */}
-            <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-hide w-full">
+            <div className="flex-1 flex items-center gap-1.5 overflow-x-auto scrollbar-hide w-full">
               {[
                 { icon: "👥", label: `${numLeads} leads`, color: "#3B82F6" },
                 { icon: "💬", label: `${msgsPerLead} msgs`, color: "#10B981" },
@@ -2298,7 +2298,7 @@ Retorne JSON:
                 { icon: "🎯", label: `${selectedProfiles.length || 8} perfis`, color: "#EC4899" },
                 { icon: "⚡", label: SPEED_OPTIONS.find(s => s.id === speed)?.label || "Normal", color: "#F59E0B" },
               ].map(chip => (
-                <span key={chip.label} className="text-sm font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0"
+                <span key={chip.label} className="text-xs font-semibold px-2 py-1 rounded-lg whitespace-nowrap shrink-0"
                   style={{ background: `${chip.color}08`, color: chip.color, border: `1px solid ${chip.color}15` }}>
                   {chip.icon} {chip.label}
                 </span>
@@ -2306,9 +2306,9 @@ Retorne JSON:
             </div>
             {/* Start button */}
             <button onClick={runSimulation}
-              className={cn("rounded-2xl text-sm font-extrabold tracking-wide transition-all duration-300 relative overflow-hidden shrink-0 hover:scale-[1.04] active:scale-[0.97]", isMobile ? "w-full py-4 px-8" : "px-12 py-4")}
-              style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 6px 32px rgba(16,185,129,0.35), 0 2px 8px rgba(16,185,129,0.2)" }}>
-              <Play className="w-5 h-5 inline mr-2" />
+              className={cn("rounded-xl text-sm font-extrabold tracking-wide transition-all duration-300 relative overflow-hidden shrink-0 hover:scale-[1.03] active:scale-[0.97]", isMobile ? "w-full py-3 px-6" : "px-8 py-3")}
+              style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 4px 20px rgba(16,185,129,0.3)" }}>
+              <Play className="w-4 h-4 inline mr-1.5" />
               Iniciar Simulação IA
             </button>
           </div>
