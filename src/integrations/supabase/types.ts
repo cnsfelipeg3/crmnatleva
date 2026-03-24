@@ -1915,6 +1915,57 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_chunks: {
+        Row: {
+          chunk_index: number
+          created_at: string
+          id: string
+          lead_id: string
+          message_count: number | null
+          messages: Json
+          simulation_id: string
+          summary: string | null
+          token_estimate: number | null
+        }
+        Insert: {
+          chunk_index?: number
+          created_at?: string
+          id?: string
+          lead_id: string
+          message_count?: number | null
+          messages?: Json
+          simulation_id: string
+          summary?: string | null
+          token_estimate?: number | null
+        }
+        Update: {
+          chunk_index?: number
+          created_at?: string
+          id?: string
+          lead_id?: string
+          message_count?: number | null
+          messages?: Json
+          simulation_id?: string
+          summary?: string | null
+          token_estimate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_chunks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "simulated_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_chunks_simulation_id_fkey"
+            columns: ["simulation_id"]
+            isOneToOne: false
+            referencedRelation: "simulations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_messages: {
         Row: {
           content: string
@@ -3569,6 +3620,62 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      metrics_snapshots: {
+        Row: {
+          active_leads: number | null
+          avg_eficacia: number | null
+          avg_humanizacao: number | null
+          avg_sentimento: number | null
+          avg_tecnica: number | null
+          bottleneck_stage: string | null
+          closed_leads: number | null
+          id: string
+          leads_by_stage: Json | null
+          lost_leads: number | null
+          revenue_so_far: number | null
+          simulation_id: string
+          snapshot_at: string
+        }
+        Insert: {
+          active_leads?: number | null
+          avg_eficacia?: number | null
+          avg_humanizacao?: number | null
+          avg_sentimento?: number | null
+          avg_tecnica?: number | null
+          bottleneck_stage?: string | null
+          closed_leads?: number | null
+          id?: string
+          leads_by_stage?: Json | null
+          lost_leads?: number | null
+          revenue_so_far?: number | null
+          simulation_id: string
+          snapshot_at?: string
+        }
+        Update: {
+          active_leads?: number | null
+          avg_eficacia?: number | null
+          avg_humanizacao?: number | null
+          avg_sentimento?: number | null
+          avg_tecnica?: number | null
+          bottleneck_stage?: string | null
+          closed_leads?: number | null
+          id?: string
+          leads_by_stage?: Json | null
+          lost_leads?: number | null
+          revenue_so_far?: number | null
+          simulation_id?: string
+          snapshot_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "metrics_snapshots_simulation_id_fkey"
+            columns: ["simulation_id"]
+            isOneToOne: false
+            referencedRelation: "simulations"
             referencedColumns: ["id"]
           },
         ]
@@ -5472,6 +5579,182 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      simulated_leads: {
+        Row: {
+          context_summary: Json | null
+          created_at: string
+          destino: string | null
+          estado_emocional: string | null
+          etapa_atual: string | null
+          id: string
+          lead_name: string
+          motivo_perda: string | null
+          orcamento: string | null
+          paciencia: number | null
+          pax: number | null
+          profile_type: string
+          score_eficacia: number | null
+          score_humanizacao: number | null
+          score_tecnica: number | null
+          sentimento_score: number | null
+          simulation_id: string
+          status: string
+          ticket: number | null
+          total_chunks: number | null
+          total_messages: number | null
+          updated_at: string
+        }
+        Insert: {
+          context_summary?: Json | null
+          created_at?: string
+          destino?: string | null
+          estado_emocional?: string | null
+          etapa_atual?: string | null
+          id?: string
+          lead_name: string
+          motivo_perda?: string | null
+          orcamento?: string | null
+          paciencia?: number | null
+          pax?: number | null
+          profile_type: string
+          score_eficacia?: number | null
+          score_humanizacao?: number | null
+          score_tecnica?: number | null
+          sentimento_score?: number | null
+          simulation_id: string
+          status?: string
+          ticket?: number | null
+          total_chunks?: number | null
+          total_messages?: number | null
+          updated_at?: string
+        }
+        Update: {
+          context_summary?: Json | null
+          created_at?: string
+          destino?: string | null
+          estado_emocional?: string | null
+          etapa_atual?: string | null
+          id?: string
+          lead_name?: string
+          motivo_perda?: string | null
+          orcamento?: string | null
+          paciencia?: number | null
+          pax?: number | null
+          profile_type?: string
+          score_eficacia?: number | null
+          score_humanizacao?: number | null
+          score_tecnica?: number | null
+          sentimento_score?: number | null
+          simulation_id?: string
+          status?: string
+          ticket?: number | null
+          total_chunks?: number | null
+          total_messages?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulated_leads_simulation_id_fkey"
+            columns: ["simulation_id"]
+            isOneToOne: false
+            referencedRelation: "simulations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      simulation_events: {
+        Row: {
+          agent_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          lead_id: string | null
+          payload: Json | null
+          simulation_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          lead_id?: string | null
+          payload?: Json | null
+          simulation_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          lead_id?: string | null
+          payload?: Json | null
+          simulation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "simulation_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "simulated_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "simulation_events_simulation_id_fkey"
+            columns: ["simulation_id"]
+            isOneToOne: false
+            referencedRelation: "simulations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      simulations: {
+        Row: {
+          config: Json
+          conversion_rate: number | null
+          created_at: string
+          debrief: Json | null
+          duration_seconds: number | null
+          finished_at: string | null
+          id: string
+          leads_closed: number
+          leads_lost: number
+          score_geral: number | null
+          status: string
+          total_leads: number
+          total_revenue: number | null
+        }
+        Insert: {
+          config?: Json
+          conversion_rate?: number | null
+          created_at?: string
+          debrief?: Json | null
+          duration_seconds?: number | null
+          finished_at?: string | null
+          id?: string
+          leads_closed?: number
+          leads_lost?: number
+          score_geral?: number | null
+          status?: string
+          total_leads?: number
+          total_revenue?: number | null
+        }
+        Update: {
+          config?: Json
+          conversion_rate?: number | null
+          created_at?: string
+          debrief?: Json | null
+          duration_seconds?: number | null
+          finished_at?: string | null
+          id?: string
+          leads_closed?: number
+          leads_lost?: number
+          score_geral?: number | null
+          status?: string
+          total_leads?: number
+          total_revenue?: number | null
+        }
+        Relationships: []
       }
       supplier_miles_programs: {
         Row: {
