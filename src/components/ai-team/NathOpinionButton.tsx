@@ -311,6 +311,106 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
     setActions(prev => prev.map(a => a.selected ? { ...a, selected: false } : a));
   }, [actions, toast]);
 
+  const loadDetailReport = useCallback(async (action: ImprovementAction) => {
+    setDetailAction(action);
+    setDetailReport(null);
+    setDetailLoading(true);
+
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          question: `Gere um relatório detalhado sobre a seguinte melhoria proposta para o ecossistema de agentes IA de uma agência de viagens premium (NatLeva):
+
+MELHORIA: "${action.title}"
+DESCRIÇÃO: ${action.description}
+TIPO: ${action.type === "knowledge_base" ? "Base de Conhecimento" : action.type === "skill" ? "Habilidade do Agente" : "Regra Global"}
+ESCOPO: ${action.scope === "all_agents" ? "Todos os agentes" : `Agente específico: ${action.targetAgent}`}
+PRIORIDADE: ${action.priority}
+
+Retorne EXATAMENTE um JSON com:
+- "summary": resumo executivo em 2-3 frases
+- "data_points": array com 3-5 dados/estatísticas que justificam esta melhoria
+- "impact": parágrafo descrevendo o impacto esperado em métricas
+- "pros": array com 3-5 prós/benefícios
+- "cons": array com 2-4 contras/riscos
+- "difficulty": "Fácil", "Moderada" ou "Complexa"
+- "difficulty_reason": explicação de 1-2 frases da dificuldade
+- "implementation_strategy": array com 4-6 passos de implementação
+- "estimated_timeframe": tempo estimado (ex: "1-2 dias", "1 semana")
+- "kpis_affected": array com 2-4 KPIs impactados
+
+Retorne SOMENTE o JSON, sem markdown.`,
+          agentName: "SISTEMA",
+          agentRole: "Você é um consultor de processos de IA de uma agência de viagens premium. Gere relatórios detalhados e realistas com dados plausíveis. Retorne APENAS JSON válido.",
+        }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        setDetailLoading(false);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "", fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.indexOf("\n")) !== -1) {
+          let line = buf.slice(0, nl);
+          buf = buf.slice(nl + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const json = line.slice(6).trim();
+          if (json === "[DONE]") break;
+          try {
+            const p = JSON.parse(json);
+            const c = p.choices?.[0]?.delta?.content;
+            if (c) fullText += c;
+          } catch {}
+        }
+      }
+
+      let cleaned = fullText.trim().replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+      try {
+        const parsed = JSON.parse(cleaned);
+        setDetailReport({
+          summary: parsed.summary || "",
+          dataPoints: parsed.data_points || [],
+          impact: parsed.impact || "",
+          pros: parsed.pros || [],
+          cons: parsed.cons || [],
+          difficulty: parsed.difficulty || "Moderada",
+          difficultyReason: parsed.difficulty_reason || "",
+          implementationStrategy: parsed.implementation_strategy || [],
+          estimatedTimeframe: parsed.estimated_timeframe || "",
+          kpisAffected: parsed.kpis_affected || [],
+        });
+      } catch {
+        console.warn("[NathDetail] Failed to parse report");
+      }
+    } catch {
+      console.warn("[NathDetail] Connection error");
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
+  const difficultyConfig: Record<string, { color: string; bg: string }> = {
+    facil: { color: "#10B981", bg: "rgba(16,185,129,0.1)" },
+    moderada: { color: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
+    complexa: { color: "#EF4444", bg: "rgba(239,68,68,0.1)" },
+  };
+
   const typeConfig = {
     knowledge_base: { icon: BookOpen, label: "Base de Conhecimento", color: "#3B82F6", bg: "rgba(59,130,246,0.08)" },
     skill: { icon: Sparkles, label: "Habilidade do Agente", color: "#10B981", bg: "rgba(16,185,129,0.08)" },
