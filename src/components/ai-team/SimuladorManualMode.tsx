@@ -586,7 +586,7 @@ export default function SimuladorManualMode() {
           </div>
 
           {/* Input */}
-          <div className={cn("flex items-center gap-3 shrink-0", isMobile ? "px-3 py-3" : "px-5 py-3.5")} style={{ background: "rgba(31,44,51,0.6)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+          <div className={cn("flex items-center gap-3 shrink-0", isMobile ? "px-3 py-3" : "px-5 py-3.5")} style={{ background: "rgba(31,44,51,0.7)", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
             <input
               placeholder="Digite como um cliente..."
               value={input}
