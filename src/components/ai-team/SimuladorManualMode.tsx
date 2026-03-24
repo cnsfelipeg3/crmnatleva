@@ -625,35 +625,37 @@ export default function SimuladorManualMode() {
             </div>
 
             {/* Agent profile card */}
-            <div className="rounded-2xl p-5 relative overflow-hidden" style={{ background: "linear-gradient(145deg, rgba(15,20,35,0.95), rgba(15,20,35,0.75))", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${agentColor}, transparent)` }} />
-              <div className="flex items-center gap-3.5 mb-4">
-                <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl relative shrink-0"
-                  style={{ background: `${agentColor}12`, border: `2px solid ${agentColor}25` }}>
-                  {selectedAgent.emoji}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[16px] font-bold leading-tight" style={{ color: "#F1F5F9" }}>{selectedAgent.name}</p>
-                  <p className="text-[12px] mt-1 leading-tight" style={{ color: "#94A3B8" }}>{selectedAgent.role}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="text-center p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <p className="text-[16px] font-extrabold tabular-nums" style={{ color: "#10B981" }}>{selectedAgent.successRate}%</p>
-                  <p className="text-[9px] uppercase tracking-wider mt-1 font-semibold" style={{ color: "#64748B" }}>Sucesso</p>
-                </div>
-                <div className="text-center p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <p className="text-[16px] font-extrabold tabular-nums" style={{ color: "#F1F5F9" }}>{selectedAgent.tasksToday}</p>
-                  <p className="text-[9px] uppercase tracking-wider mt-1 font-semibold" style={{ color: "#64748B" }}>Tarefas</p>
-                </div>
-                <div className="text-center p-3 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <p className="text-[16px] font-extrabold tabular-nums" style={{ color: agentColor }}>Lv.{selectedAgent.level}</p>
-                  <p className="text-[9px] uppercase tracking-wider mt-1 font-semibold" style={{ color: "#64748B" }}>Nível</p>
+            <div className="rounded-2xl relative" style={{ background: "linear-gradient(145deg, rgba(15,20,35,0.95), rgba(15,20,35,0.75))", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="absolute top-0 left-0 right-0 h-[2px] rounded-t-2xl" style={{ background: `linear-gradient(90deg, transparent, ${agentColor}, transparent)` }} />
+              <div className="p-4 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-xl flex items-center justify-center text-lg shrink-0"
+                    style={{ background: `${agentColor}15`, border: `1.5px solid ${agentColor}30` }}>
+                    {selectedAgent.emoji}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[15px] font-bold tracking-wide truncate" style={{ color: "#F1F5F9" }}>{selectedAgent.name}</p>
+                    <p className="text-[11px] mt-0.5 truncate" style={{ color: "#94A3B8" }}>{selectedAgent.role}</p>
+                  </div>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-1.5 mt-4">
+              <div className="grid grid-cols-3 gap-px mx-4 mb-3 rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                <div className="text-center py-2.5" style={{ background: "rgba(15,20,35,0.9)" }}>
+                  <p className="text-[14px] font-extrabold tabular-nums" style={{ color: "#10B981" }}>{selectedAgent.successRate}%</p>
+                  <p className="text-[8px] uppercase tracking-wider mt-0.5 font-semibold" style={{ color: "#64748B" }}>Sucesso</p>
+                </div>
+                <div className="text-center py-2.5" style={{ background: "rgba(15,20,35,0.9)" }}>
+                  <p className="text-[14px] font-extrabold tabular-nums" style={{ color: "#F1F5F9" }}>{selectedAgent.tasksToday}</p>
+                  <p className="text-[8px] uppercase tracking-wider mt-0.5 font-semibold" style={{ color: "#64748B" }}>Tarefas</p>
+                </div>
+                <div className="text-center py-2.5" style={{ background: "rgba(15,20,35,0.9)" }}>
+                  <p className="text-[14px] font-extrabold tabular-nums" style={{ color: agentColor }}>Lv.{selectedAgent.level}</p>
+                  <p className="text-[8px] uppercase tracking-wider mt-0.5 font-semibold" style={{ color: "#64748B" }}>Nível</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5 px-4 pb-4">
                 {selectedAgent.skills.slice(0, 4).map(s => (
-                  <span key={s} className="text-[10px] px-2.5 py-1 rounded-lg font-medium" style={{ background: "rgba(255,255,255,0.04)", color: "#CBD5E1", border: "1px solid rgba(255,255,255,0.06)" }}>{s}</span>
+                  <span key={s} className="text-[9px] px-2 py-0.5 rounded-md font-medium" style={{ background: "rgba(255,255,255,0.04)", color: "#94A3B8", border: "1px solid rgba(255,255,255,0.06)" }}>{s}</span>
                 ))}
               </div>
             </div>
