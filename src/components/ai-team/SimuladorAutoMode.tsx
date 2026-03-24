@@ -526,6 +526,24 @@ export default function SimuladorAutoMode() {
             const adjustedNota = Math.round(avaliacao.nota * volatilityMult + (50 * (1 - volatilityMult / 2)));
             const updatedLead = atualizarEstadoEmocional(lead, adjustedNota, avaliacao.reacao, avaliacao.sentimento);
             Object.assign(lead, updatedLead);
+            // Apply patience curve from calibration
+            const curve = (lead as any)._patienceCurve || "linear";
+            const abSens = ((lead as any)._abandonSensitivity ?? 50) / 100;
+            if (curve === "exponential") {
+              // Exponential: patience drops slowly at first, then fast
+              const ratio = 1 - (lead.pacienciaRestante / initialPatience);
+              const extraDrain = Math.floor(ratio * ratio * 15 * (1 + abSens));
+              lead.pacienciaRestante = Math.max(0, lead.pacienciaRestante - extraDrain);
+            } else if (curve === "sudden") {
+              // Sudden: patience stable until threshold, then collapses
+              if (lead.pacienciaRestante < 40 && adjustedNota < 60) {
+                lead.pacienciaRestante = Math.max(0, lead.pacienciaRestante - Math.floor(25 * (1 + abSens)));
+              }
+            } else {
+              // Linear: steady drain amplified by abandonment sensitivity
+              const drain = Math.floor(5 * (1 + abSens));
+              if (adjustedNota < 50) lead.pacienciaRestante = Math.max(0, lead.pacienciaRestante - drain);
+            }
             lead.scoreHumanizacao = lead.scoreHumanizacao > 0 ? Math.round((lead.scoreHumanizacao + avaliacao.humanizacao) / 2) : avaliacao.humanizacao;
             lead.scoreEficacia = lead.scoreEficacia > 0 ? Math.round((lead.scoreEficacia + avaliacao.eficaciaComercial) / 2) : avaliacao.eficaciaComercial;
             lead.scoreTecnica = lead.scoreTecnica > 0 ? Math.round((lead.scoreTecnica + avaliacao.qualidadeTecnica) / 2) : avaliacao.qualidadeTecnica;
