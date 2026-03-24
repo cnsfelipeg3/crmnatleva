@@ -20,14 +20,12 @@ const corsHeaders = {
 
 type CallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep";
 
-function getModelConfig(type: CallType): { model: string; reasoning?: { effort: string }; stream: boolean } {
+function getModelConfig(type: CallType): { model: string; stream: boolean } {
   switch (type) {
     case "evaluate":
-      return { model: "openai/gpt-5", reasoning: { effort: "medium" }, stream: false };
     case "debrief":
-      return { model: "openai/gpt-5", reasoning: { effort: "high" }, stream: false };
     case "deep":
-      return { model: "openai/gpt-5", reasoning: { effort: "high" }, stream: false };
+      return { model: "openai/gpt-5", stream: false };
     case "lead":
     case "agent":
     case "objection":
@@ -78,9 +76,6 @@ serve(async (req) => {
       messages,
       stream: config.stream,
     };
-    if (config.reasoning) {
-      requestBody.reasoning = config.reasoning;
-    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
