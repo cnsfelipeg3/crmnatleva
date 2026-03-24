@@ -69,16 +69,35 @@ async function callAnthropic(
   const systemMsg = messages.find(m => m.role === "system");
   const nonSystemMessages = messages.filter(m => m.role !== "system");
 
-  const compactMessages = nonSystemMessages.map((m, index) => {
+  // Sanitize: ensure alternating roles (Anthropic rejects consecutive same-role)
+  const sanitized: Array<{ role: "user" | "assistant"; content: string }> = [];
+  for (const m of nonSystemMessages) {
+    const role: "user" | "assistant" = (m.role === "assistant") ? "assistant" : "user";
     const content = typeof m.content === "string"
       ? (m.content.length > 1200 ? `${m.content.slice(0, 1200)}...` : m.content)
-      : m.content;
+      : String(m.content);
 
-    return {
-      role: m.role === "system" ? "user" as const : m.role as "user" | "assistant",
-      content,
-    };
-  });
+    if (!content || content.trim() === "") continue;
+
+    // Merge consecutive same-role messages
+    if (sanitized.length > 0 && sanitized[sanitized.length - 1].role === role) {
+      sanitized[sanitized.length - 1].content += "\n\n" + content;
+    } else {
+      sanitized.push({ role, content });
+    }
+  }
+
+  // Anthropic requires first message to be "user"
+  if (sanitized.length > 0 && sanitized[0].role !== "user") {
+    sanitized.unshift({ role: "user", content: "Início da conversa." });
+  }
+
+  // Ensure non-empty
+  if (sanitized.length === 0) {
+    sanitized.push({ role: "user", content: "Olá" });
+  }
+
+  const compactMessages = sanitized;
 
   const compactSystem = systemMsg?.content
     ? (systemMsg.content.length > 2500 ? `${systemMsg.content.slice(0, 2500)}...` : systemMsg.content)
