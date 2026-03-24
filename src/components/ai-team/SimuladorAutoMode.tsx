@@ -1716,16 +1716,251 @@ Retorne JSON:
                 </div>
               )}
 
-              {/* ===== COMPORTAMENTO TAB ===== */}
+              {/* ===== AGENTES & FUNIL TAB ===== */}
               {configTab === "comportamento" && (
                 <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
                   <div className="flex items-center gap-3 mb-2">
-                    <Zap className="w-5 h-5" style={{ color: "#8B5CF6" }} />
+                    <Users className="w-5 h-5" style={{ color: "#8B5CF6" }} />
                     <div>
-                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Comportamento & Funil</h3>
-                      <p className="text-[11px]" style={{ color: "#64748B" }}>Conversão, objeções, velocidade e agentes do pipeline</p>
+                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Seleção de Agentes & Pipeline</h3>
+                      <p className="text-[11px]" style={{ color: "#64748B" }}>Escolha quem será testado: um único agente, vários específicos ou o pipeline completo</p>
                     </div>
                   </div>
+
+                  {/* Mode selector — 4 options */}
+                  <div className="grid grid-cols-4 gap-2">
+                    {([
+                      { id: "individual" as const, label: "Individual", desc: "Teste 1 agente isolado", icon: "🎯", color: "#EC4899" },
+                      { id: "custom" as const, label: "Específicos", desc: "Selecione vários agentes", icon: "🔧", color: "#8B5CF6" },
+                      { id: "comercial" as const, label: "Squad Comercial", desc: "Pipeline de vendas completo", icon: "💼", color: "#F59E0B" },
+                      { id: "full" as const, label: "Todos (Pipeline)", desc: "Comercial + Atendimento", icon: "🔄", color: "#10B981" },
+                    ] as const).map(m => (
+                      <button key={m.id} onClick={() => { setFunnelMode(m.id); if (m.id !== "custom" && m.id !== "individual") setCustomFunnelAgents([]); }}
+                        className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl transition-all duration-200 relative overflow-hidden group"
+                        style={{
+                          background: funnelMode === m.id ? `${m.color}10` : "rgba(255,255,255,0.015)",
+                          border: `1px solid ${funnelMode === m.id ? `${m.color}35` : "rgba(255,255,255,0.04)"}`,
+                        }}>
+                        {funnelMode === m.id && <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background: m.color }} />}
+                        <span className="text-xl">{m.icon}</span>
+                        <span className="text-[11px] font-bold" style={{ color: funnelMode === m.id ? "#F1F5F9" : "#94A3B8" }}>{m.label}</span>
+                        <span className="text-[8px] text-center leading-tight" style={{ color: "#475569" }}>{m.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* INDIVIDUAL MODE — single agent selector */}
+                  {funnelMode === "individual" && (
+                    <div className="space-y-3 animate-in fade-in duration-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#EC4899" }}>🎯 Selecione o agente para teste individual</span>
+                      </div>
+                      <div className="space-y-2">
+                        {SQUADS.filter(s => s.id !== 'orquestracao').map(squad => {
+                          const squadAgents = AGENTS_V4.filter(a => a.squadId === squad.id);
+                          if (squadAgents.length === 0) return null;
+                          return (
+                            <div key={squad.id}>
+                              <p className="text-[9px] uppercase tracking-[0.1em] font-bold mb-1.5 flex items-center gap-1.5"
+                                style={{ color: "#64748B" }}>
+                                <span>{squad.emoji}</span> {squad.name}
+                              </p>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                {squadAgents.map(a => {
+                                  const selected = customFunnelAgents[0] === a.id;
+                                  const c = getAgentColor(a);
+                                  return (
+                                    <button key={a.id} onClick={() => setCustomFunnelAgents([a.id])}
+                                      className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-left transition-all duration-200 relative overflow-hidden"
+                                      style={{
+                                        background: selected ? `${c}12` : "rgba(255,255,255,0.015)",
+                                        border: `1.5px solid ${selected ? c : "rgba(255,255,255,0.04)"}`,
+                                        boxShadow: selected ? `0 0 20px ${c}15` : "none",
+                                      }}>
+                                      {selected && <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: c }} />}
+                                      <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0" style={{
+                                        background: selected ? `${c}20` : "rgba(255,255,255,0.03)",
+                                        border: `1px solid ${selected ? `${c}30` : "rgba(255,255,255,0.06)"}`,
+                                      }}>
+                                        {a.emoji}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                          <p className="text-[12px] font-bold" style={{ color: selected ? "#F1F5F9" : "#94A3B8" }}>{a.name}</p>
+                                          {selected && <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: c }} />}
+                                        </div>
+                                        <p className="text-[9px] truncate" style={{ color: "#475569" }}>{a.role}</p>
+                                        <div className="flex items-center gap-1.5 mt-1">
+                                          <span className="text-[8px] px-1.5 py-0.5 rounded" style={{ background: `${c}08`, color: c }}>{a.skills[0]}</span>
+                                          <span className="text-[8px]" style={{ color: "#334155" }}>Lv.{a.level}</span>
+                                          <span className="text-[8px]" style={{ color: "#334155" }}>{a.successRate}%</span>
+                                        </div>
+                                      </div>
+                                      {selected && (
+                                        <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: c }}>
+                                          <Check className="w-3.5 h-3.5 text-white" />
+                                        </div>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {customFunnelAgents.length > 0 && (() => {
+                        const agent = AGENTS_V4.find(a => a.id === customFunnelAgents[0]);
+                        if (!agent) return null;
+                        const c = getAgentColor(agent);
+                        return (
+                          <div className="rounded-xl p-4 mt-2" style={{ background: `${c}06`, border: `1px solid ${c}20` }}>
+                            <p className="text-[10px] font-bold mb-2" style={{ color: c }}>📋 Detalhes do agente selecionado</p>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div><p className="text-[8px] uppercase" style={{ color: "#64748B" }}>Squad</p><p className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>{SQUADS.find(s => s.id === agent.squadId)?.name}</p></div>
+                              <div><p className="text-[8px] uppercase" style={{ color: "#64748B" }}>Nível</p><p className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Lv.{agent.level} ({agent.xp}/{agent.maxXp} XP)</p></div>
+                              <div><p className="text-[8px] uppercase" style={{ color: "#64748B" }}>Taxa Sucesso</p><p className="text-[11px] font-bold" style={{ color: "#10B981" }}>{agent.successRate}%</p></div>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {agent.skills.map(s => <span key={s} className="text-[8px] px-2 py-0.5 rounded-full" style={{ background: `${c}10`, color: c, border: `1px solid ${c}20` }}>{s}</span>)}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+
+                  {/* CUSTOM MODE — multi-select by squad */}
+                  {funnelMode === "custom" && (
+                    <div className="space-y-3 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#8B5CF6" }}>
+                          🔧 Selecione os agentes ({customFunnelAgents.length} selecionados)
+                        </span>
+                        <div className="flex gap-1.5">
+                          <button onClick={() => setCustomFunnelAgents(AGENTS_V4.map(a => a.id))}
+                            className="text-[9px] font-bold px-2.5 py-1 rounded-lg transition-all"
+                            style={{ background: "rgba(139,92,246,0.08)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.2)" }}>
+                            Todos
+                          </button>
+                          <button onClick={() => setCustomFunnelAgents([])}
+                            className="text-[9px] font-bold px-2.5 py-1 rounded-lg transition-all"
+                            style={{ background: "rgba(255,255,255,0.02)", color: "#64748B", border: "1px solid rgba(255,255,255,0.04)" }}>
+                            Limpar
+                          </button>
+                        </div>
+                      </div>
+                      {/* Squad quick-select buttons */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {SQUADS.filter(s => s.id !== 'orquestracao').map(squad => {
+                          const squadAgentIds = AGENTS_V4.filter(a => a.squadId === squad.id).map(a => a.id);
+                          const allSelected = squadAgentIds.every(id => customFunnelAgents.includes(id));
+                          return (
+                            <button key={squad.id} onClick={() => {
+                              if (allSelected) {
+                                setCustomFunnelAgents(prev => prev.filter(id => !squadAgentIds.includes(id)));
+                              } else {
+                                setCustomFunnelAgents(prev => [...new Set([...prev, ...squadAgentIds])]);
+                              }
+                            }}
+                              className="text-[9px] font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
+                              style={{
+                                background: allSelected ? "rgba(139,92,246,0.12)" : "rgba(255,255,255,0.02)",
+                                border: `1px solid ${allSelected ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.06)"}`,
+                                color: allSelected ? "#8B5CF6" : "#64748B",
+                              }}>
+                              {squad.emoji} {squad.name}
+                              {allSelected && <Check className="w-3 h-3" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {/* Agent grid */}
+                      <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1" style={{ scrollbarWidth: "thin" }}>
+                        {SQUADS.filter(s => s.id !== 'orquestracao').map(squad => {
+                          const squadAgents = AGENTS_V4.filter(a => a.squadId === squad.id);
+                          if (squadAgents.length === 0) return null;
+                          return (
+                            <div key={squad.id}>
+                              <p className="text-[8px] uppercase tracking-[0.12em] font-bold mb-1 flex items-center gap-1" style={{ color: "#475569" }}>
+                                {squad.emoji} {squad.name}
+                              </p>
+                              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                                {squadAgents.map((a, i) => {
+                                  const active = customFunnelAgents.includes(a.id);
+                                  const c = getAgentColor(a);
+                                  return (
+                                    <button key={a.id} onClick={() => toggleMulti(customFunnelAgents, a.id, setCustomFunnelAgents)}
+                                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
+                                      style={{
+                                        background: active ? `${c}08` : "transparent",
+                                        borderBottom: i < squadAgents.length - 1 ? "1px solid rgba(255,255,255,0.02)" : "none",
+                                      }}>
+                                      <div className="w-5 h-5 rounded flex items-center justify-center shrink-0 transition-all" style={{
+                                        background: active ? c : "rgba(255,255,255,0.04)",
+                                        border: `1px solid ${active ? c : "rgba(255,255,255,0.08)"}`,
+                                      }}>
+                                        {active && <Check className="w-3 h-3 text-white" />}
+                                      </div>
+                                      <span className="text-sm">{a.emoji}</span>
+                                      <div className="flex-1 min-w-0">
+                                        <span className="text-[11px] font-bold" style={{ color: active ? "#E2E8F0" : "#64748B" }}>{a.name}</span>
+                                        <span className="text-[9px] ml-2" style={{ color: "#475569" }}>{a.role}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <span className="text-[8px] tabular-nums" style={{ color: "#475569" }}>Lv.{a.level}</span>
+                                        <span className="text-[8px] px-1.5 py-0.5 rounded" style={{ background: `${c}10`, color: c }}>{a.successRate}%</span>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* FULL / COMERCIAL preview */}
+                  {(funnelMode === "full" || funnelMode === "comercial") && (
+                    <div className="animate-in fade-in duration-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: funnelMode === "full" ? "#10B981" : "#F59E0B" }}>
+                          {funnelMode === "full" ? "🔄 Pipeline completo — agentes que serão testados" : "💼 Squad Comercial — agentes do funil de vendas"}
+                        </span>
+                      </div>
+                      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                        {(funnelMode === "full"
+                          ? AGENTS_V4.filter(a => ["comercial", "atendimento"].includes(a.squadId)).slice(0, 6)
+                          : AGENTS_V4.filter(a => a.squadId === "comercial")
+                        ).map((a, i, arr) => {
+                          const c = getAgentColor(a);
+                          return (
+                            <div key={a.id} className="flex items-center gap-3 px-4 py-2.5"
+                              style={{
+                                background: `${c}04`,
+                                borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
+                              }}>
+                              <span className="text-[11px] font-bold tabular-nums w-5 text-center" style={{ color: c }}>{i + 1}</span>
+                              <span className="text-sm">{a.emoji}</span>
+                              <div className="flex-1">
+                                <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>{a.name}</span>
+                                <span className="text-[9px] ml-2" style={{ color: "#475569" }}>{a.role}</span>
+                              </div>
+                              <span className="text-[8px] px-1.5 py-0.5 rounded" style={{ background: `${c}10`, color: c }}>{a.successRate}%</span>
+                              {i < arr.length - 1 && <span className="text-[8px]" style={{ color: "#334155" }}>→</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Divider */}
+                  <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
+
+                  {/* Speed + Objections + Conversion — compacted */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-2">
@@ -1734,7 +1969,7 @@ Retorne JSON:
                           {conversionOverride !== null ? `${conversionOverride}%` : "Natural"}
                         </span>
                       </div>
-                      <p className="text-[9px] mb-3" style={{ color: "#475569" }}>Forçar uma taxa específica ou deixar natural</p>
+                      <p className="text-[9px] mb-3" style={{ color: "#475569" }}>Forçar taxa ou deixar natural</p>
                       <div className="flex items-center gap-3">
                         <Slider min={0} max={100} step={5} value={[conversionOverride ?? 50]} onValueChange={v => setConversionOverride(v[0])} disabled={conversionOverride === null} />
                         <button onClick={() => setConversionOverride(conversionOverride === null ? 50 : null)}
@@ -1753,6 +1988,7 @@ Retorne JSON:
                       <Slider min={0} max={100} step={5} value={[objectionDensity]} onValueChange={v => setObjectionDensity(v[0])} />
                     </div>
                   </div>
+
                   {/* Speed */}
                   <div>
                     <div className="flex items-center gap-2 mb-2">
@@ -1765,64 +2001,18 @@ Retorne JSON:
                         const speedIcons: Record<string, string> = { lenta: "🐢", normal: "⚡", rapida: "🚀", instant: "💥" };
                         return (
                           <button key={s.id} onClick={() => setSpeed(s.id)}
-                            className="flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all"
+                            className="flex flex-col items-center gap-1 p-2.5 rounded-xl transition-all"
                             style={{
                               background: active ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.015)",
                               border: `1px solid ${active ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.04)"}`,
                             }}>
                             <span className="text-lg">{speedIcons[s.id]}</span>
-                            <span className="text-[11px] font-bold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{s.label}</span>
+                            <span className="text-[10px] font-bold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{s.label}</span>
                             <span className="text-[8px]" style={{ color: "#475569" }}>{s.delay > 0 ? `${s.delay / 1000}s` : "0s"}</span>
                           </button>
                         );
                       })}
                     </div>
-                  </div>
-                  {/* Funnel agents */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
-                      <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Agentes do Funil</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2 mb-3">
-                      {[{ id: "full", label: "Funil completo", desc: "Comercial + Atendimento", icon: "🔄" }, { id: "comercial", label: "Só comercial", desc: "Squad comercial", icon: "💰" }, { id: "custom", label: "Personalizado", desc: "Escolha manual", icon: "⚙️" }].map(m => (
-                        <button key={m.id} onClick={() => setFunnelMode(m.id as any)}
-                          className="flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all"
-                          style={{
-                            background: funnelMode === m.id ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.015)",
-                            border: `1px solid ${funnelMode === m.id ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.04)"}`,
-                          }}>
-                          <span className="text-lg">{m.icon}</span>
-                          <span className="text-[11px] font-bold" style={{ color: funnelMode === m.id ? "#E2E8F0" : "#94A3B8" }}>{m.label}</span>
-                          <span className="text-[8px]" style={{ color: "#475569" }}>{m.desc}</span>
-                        </button>
-                      ))}
-                    </div>
-                    {funnelMode === "custom" && (
-                      <div className="rounded-xl overflow-hidden animate-in fade-in duration-200" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-                        {AGENTS_V4.map((a, i) => {
-                          const active = customFunnelAgents.includes(a.id); const c = getAgentColor(a);
-                          return (
-                            <button key={a.id} onClick={() => toggleMulti(customFunnelAgents, a.id, setCustomFunnelAgents)}
-                              className="w-full flex items-center gap-3 px-3 py-2 text-left transition-all duration-200 hover:bg-white/[0.02]"
-                              style={{
-                                background: active ? `${c}08` : "transparent",
-                                borderBottom: i < AGENTS_V4.length - 1 ? "1px solid rgba(255,255,255,0.02)" : "none",
-                              }}>
-                              <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
-                                background: active ? c : "rgba(255,255,255,0.04)",
-                                border: `1px solid ${active ? c : "rgba(255,255,255,0.08)"}`,
-                              }}>
-                                {active && <Check className="w-2.5 h-2.5 text-white" />}
-                              </div>
-                              <span className="text-sm">{a.emoji}</span>
-                              <span className="text-[10px] font-semibold" style={{ color: active ? "#E2E8F0" : "#64748B" }}>{a.name}</span>
-                              <span className="text-[8px] ml-auto px-1.5 py-0.5 rounded" style={{ background: `${c}10`, color: c }}>{a.role.split(" ")[0]}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
