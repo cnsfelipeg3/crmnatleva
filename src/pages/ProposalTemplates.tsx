@@ -294,7 +294,9 @@ export default function ProposalTemplates() {
                   </Badge>
                 )}
                 {!t.is_active && (
-                  <Badge variant="secondary" className="absolute top-2 left-2 text-[10px]">Inativo</Badge>
+                  <Badge variant="secondary" className="absolute top-2 left-2 text-[10px] gap-1">
+                    <Archive className="w-3 h-3" /> Arquivado
+                  </Badge>
                 )}
               </div>
 
