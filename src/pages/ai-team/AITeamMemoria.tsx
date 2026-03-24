@@ -166,6 +166,12 @@ export default function AITeamMemoria() {
         </TabsContent>
 
         <TabsContent value="rules" className="mt-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs text-muted-foreground">{rules.length} regras configuradas · {activeRules} ativas</p>
+            <Button size="sm" onClick={() => setShowCreateDialog(true)} className="gap-1.5">
+              <Plus className="w-3.5 h-3.5" /> Nova Regra
+            </Button>
+          </div>
           <div className="space-y-3">
             {rules.map(rule => (
               <div key={rule.id} className="rounded-xl border border-border/40 bg-card p-4 flex items-center gap-4">
@@ -174,13 +180,16 @@ export default function AITeamMemoria() {
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium">{rule.name}</p>
                     <Badge variant="outline" className={cn("text-[9px]",
-                      rule.impact === "crítica" ? "text-red-500" :
+                      rule.impact === "crítica" ? "text-destructive" :
                       rule.impact === "alta" ? "text-amber-500" :
-                      rule.impact === "média" ? "text-blue-500" : "text-muted-foreground"
+                      rule.impact === "média" ? "text-primary" : "text-muted-foreground"
                     )}>{rule.impact}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">{rule.description}</p>
                 </div>
+                <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteRule(rule.id)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
               </div>
             ))}
           </div>
