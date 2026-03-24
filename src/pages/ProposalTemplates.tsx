@@ -248,18 +248,26 @@ export default function ProposalTemplates() {
             </Card>
           ))}
         </div>
-      ) : !templates?.length ? (
+      ) : (() => {
+        const filtered = templates?.filter(t => showArchived ? !t.is_active : t.is_active) || [];
+        return !filtered.length ? (
         <Card className="p-12 text-center">
           <LayoutTemplate className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground font-medium">Nenhum modelo configurado</p>
-          <p className="text-sm text-muted-foreground/60 mt-1">Crie seu primeiro template para padronizar suas propostas</p>
-          <Button onClick={() => navigate("/propostas/modelos/novo")} className="mt-4 gap-2">
-            <Plus className="w-4 h-4" /> Criar modelo
-          </Button>
+          <p className="text-muted-foreground font-medium">
+            {showArchived ? "Nenhum modelo arquivado" : "Nenhum modelo configurado"}
+          </p>
+          <p className="text-sm text-muted-foreground/60 mt-1">
+            {showArchived ? "Modelos arquivados aparecerão aqui" : "Crie seu primeiro template para padronizar suas propostas"}
+          </p>
+          {!showArchived && (
+            <Button onClick={() => navigate("/propostas/modelos/novo")} className="mt-4 gap-2">
+              <Plus className="w-4 h-4" /> Criar modelo
+            </Button>
+          )}
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {templates.map((t) => (
+          {filtered.map((t) => (
             <Card
               key={t.id}
               className={`group hover:shadow-md transition-all overflow-hidden ${
