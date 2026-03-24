@@ -1453,8 +1453,23 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
     }, 1200);
   }, [nodes, edges]);
 
+  const deleteFlow = useCallback(async (id: string) => {
+    await supabase.from("automation_edges").delete().eq("flow_id", id);
+    await supabase.from("automation_nodes").delete().eq("flow_id", id);
+    await supabase.from("automation_flows").delete().eq("id", id);
+    setFlows(prev => prev.filter(f => f.id !== id));
+    toast.success("Fluxo excluído");
+  }, []);
+
+  const archiveFlow = useCallback(async (id: string, isArchived: boolean) => {
+    const newStatus = isArchived ? "draft" : "archived";
+    await supabase.from("automation_flows").update({ status: newStatus, updated_at: new Date().toISOString() }).eq("id", id);
+    setFlows(prev => prev.map(f => f.id === id ? { ...f, status: newStatus } : f));
+    toast.success(isArchived ? "Fluxo restaurado" : "Fluxo arquivado");
+  }, []);
+
   if (!showCanvas) {
-    return <FlowList flows={flows} onSelect={loadFlow} onCreate={createNewFlow} onUseTemplate={useTemplate} loading={false} />;
+    return <FlowList flows={flows} onSelect={loadFlow} onCreate={createNewFlow} onUseTemplate={useTemplate} onDeleteFlow={deleteFlow} onArchiveFlow={archiveFlow} loading={false} />;
   }
 
   return (
