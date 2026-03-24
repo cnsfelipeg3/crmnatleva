@@ -173,7 +173,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/ai-team/evolution", icon: Sparkles, label: "Evolution Engine" },
               { to: "/ai-team/conhecimento", icon: BookOpen, label: "Conhecimento" },
               { to: "/ai-team/skills", icon: Zap, label: "Skills" },
-              { to: "/ai-team/workflow", icon: GitBranch, label: "Workflow" },
+              { to: "/ai-team/workflow", icon: GitBranch, label: "Flow Builder" },
               { to: "/ai-team/memoria", icon: Database, label: "Memória & Fiscal" },
               { to: "/ai-team/academia", icon: Star, label: "Academia" },
               { to: "/ai-team/simulador", icon: MessageSquare, label: "Simulador" },
