@@ -181,11 +181,49 @@ async function gerarMensagemPerda(lead: LeadInteligente): Promise<string> {
   return callSimulatorAI(buildLeadPersona(lead) + buildCalibrationPrompt(lead), [{ role: "user", content: prompt }], "loss");
 }
 
+const MIN_TROCAS_POR_AGENTE: Record<string, number> = {
+  maya: 5, atlas: 6, habibi: 7, nemo: 7, dante: 7, luna: 5, nero: 5, iris: 4,
+};
+
+const AGENT_ROLE_INSTRUCTIONS: Record<string, string> = {
+  maya: `\nSEU PAPEL: voce e o primeiro contato. Nao qualifica — ENCANTA.\nAntes de qualquer dado, crie conexao com a PESSOA.\nPergunte a ocasiao, o que imaginam, o que os animou.\nSo transfira quando o lead estiver animado e curioso pelo que vem.`,
+  atlas: `\nSEU PAPEL: qualifica sem parecer interrogatorio.\nDescubra orcamento, datas e grupo no fluxo natural — nao em perguntas diretas.\nIdentifique o perfil (familia, VIP, pechincheiro, lua de mel) e adapte o tom.\nSo transfira com: destino + orcamento + datas + ocasiao confirmados.`,
+  habibi: `\nSEU PAPEL: faca o lead SONHAR com a viagem.\nNao apresente roteiro — conte uma historia que ele quer viver.\nInclua ao menos 1 experiencia exclusiva que ele nao ia encontrar pesquisando.\nPergunte o que ele imagina, sonha, quer sentir.\nSo transfira quando demonstrar animacao com algo especifico.`,
+  nemo: `\nSEU PAPEL: faca o lead SONHAR com a viagem.\nNao apresente roteiro — conte uma historia que ele quer viver.\nInclua ao menos 1 experiencia exclusiva que ele nao ia encontrar pesquisando.\nPergunte o que ele imagina, sonha, quer sentir.\nSo transfira quando demonstrar animacao com algo especifico.`,
+  dante: `\nSEU PAPEL: faca o lead SONHAR com a viagem.\nNao apresente roteiro — conte uma historia que ele quer viver.\nInclua ao menos 1 experiencia exclusiva que ele nao ia encontrar pesquisando.\nPergunte o que ele imagina, sonha, quer sentir.\nSo transfira quando demonstrar animacao com algo especifico.`,
+  luna: `\nSEU PAPEL: a proposta e o culminar de tudo que foi conversado.\nCada item deve conectar com algo que o lead disse antes.\nApresente valor como experiencia, nao como custo.\nAbra espaco para o lead reagir antes de avancar.`,
+  nero: `\nSEU PAPEL: voce e o mais paciente de todos.\nA ultima objecao e a mais importante — nunca desista nela.\nPergunte o que esta por tras da objecao antes de responder.\nUse argumento de valor ANTES de qualquer desconto.\nSo transfira para IRIS depois de SIM claro e sem ressalvas.`,
+  iris: `\nSEU PAPEL: a venda foi feita. Agora crie um fa.\nConfirme detalhes com cuidado e entusiasmo genuino.\nDemonstre que a NatLeva vai cuidar de tudo.\nPlante a semente da proxima viagem e da indicacao.`,
+};
+
+const FILOSOFIA_NATLEVA = `
+FILOSOFIA DE ATENDIMENTO NATLEVA:
+Voce esta em uma conversa, nao em um formulario. Seu objetivo NAO e coletar dados e passar adiante. Seu objetivo E fazer este lead querer continuar a conversa.
+
+REGRAS DE OURO:
+- Nunca encerre sem pergunta aberta ou elemento que convide resposta
+- Antes de qualquer dado, crie conexao. Interesse genuino pela pessoa.
+- Se o lead falou algo pessoal (ocasiao, sonho, familia), volte a isso.
+- Faca ao menos 1 pergunta que nao era necessaria — so curiosidade.
+- Celebre conquistas do lead (aniversario, casamento, viagem dos sonhos).
+`;
+
 function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean, enableTransfers: boolean, responseLength: "curta" | "media" | "longa") {
-  const lengthInstr = responseLength === "curta" ? "Responda em 1 frase apenas." : responseLength === "longa" ? "Responda de forma detalhada (3-5 frases), incluindo detalhes do produto." : "Responda APENAS a ultima mensagem. Breve (1-3 frases).";
-  const transferInstr = hasNext && enableTransfers ? "Quando completar objetivo, termine com [TRANSFERIR].\n" : "";
+  const lengthInstr = responseLength === "curta" ? "Responda de forma concisa mas com personalidade." : responseLength === "longa" ? "Responda de forma detalhada (3-5 frases), incluindo detalhes do produto." : "O agente decide o tamanho certo para cada momento da conversa.";
+  const minTrocas = MIN_TROCAS_POR_AGENTE[agent.id] || 4;
+  const transferInstr = hasNext && enableTransfers ? `\nSOBRE [TRANSFERIR]:
+Use [TRANSFERIR] SOMENTE quando TUDO isso for verdade:
+1. Voce teve ao menos ${minTrocas} trocas reais com este lead
+2. O lead demonstrou entusiasmo genuino — nao apenas respondeu, se engajou
+3. A proxima pergunta natural do lead e algo que so o proximo agente responde melhor
+4. A transferencia beneficia o lead, nao e uma saida operacional
+
+Se qualquer condicao faltar: continue a conversa. Aprofunde. Instigue. Surpreenda.
+[TRANSFERIR] e resultado de conversa bem feita, nunca atalho.
+Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
   const priceInstr = "IMPORTANTE: Quando for hora de enviar valores/orçamento, diga que vai enviar o print com os valores (ex: 'Segue o print com os valores!', 'Vou te enviar o orçamento agora!', 'Olha só o print com as opções de preço!'). Isso é fundamental para a experiência do cliente.\n";
-  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${priceInstr}${transferInstr}${lengthInstr}`;
+  const roleInstr = AGENT_ROLE_INSTRUCTIONS[agent.id] || "";
+  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${priceInstr}${transferInstr}${lengthInstr}`;
 }
 
 const SPEED_OPTIONS = [
