@@ -1376,16 +1376,16 @@ Retorne JSON:
                   </div>
                   <div className={cn("gap-6", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                     {[
-                      { label: "Leads simultâneos", value: numLeads, setter: setNumLeads, min: 1, max: 100, step: 1, color: "#3B82F6", desc: "Quantidade de leads que entram na simulação" },
-                      { label: "Mensagens por lead", value: msgsPerLead, setter: setMsgsPerLead, min: 4, max: 40, step: 2, color: "#10B981", desc: "Rodadas de conversa entre agente e lead" },
-                      { label: "Intervalo entre leads", value: intervalSec, setter: setIntervalSec, min: 0, max: 30, step: 1, color: "#F59E0B", desc: "Segundos entre entrada de cada lead", suffix: "s" },
-                      { label: "Duração máxima", value: duration, setter: setDuration, min: 30, max: 1800, step: 30, color: "#8B5CF6", desc: "Tempo limite da simulação", format: true },
+                      { label: "Leads totais", value: numLeads, setter: setNumLeads, min: 1, max: 500, step: 1, color: "#3B82F6", desc: "Quantidade de leads na simulação (até 500)" },
+                      { label: "Mensagens por lead", value: msgsPerLead, setter: setMsgsPerLead, min: 4, max: 500, step: 2, color: "#10B981", desc: "Rodadas de conversa (até 500 — compressão automática)" },
+                      { label: "Intervalo entre leads", value: intervalSec, setter: setIntervalSec, min: 0, max: 60, step: 1, color: "#F59E0B", desc: "Segundos entre entrada de cada lead (0 = simultâneo)", suffix: "s" },
+                      { label: "Duração máxima", value: duration, setter: setDuration, min: 30, max: 86400, step: 30, color: "#8B5CF6", desc: "Tempo limite (até 24h)", format: true },
                     ].map(s => (
                       <div key={s.label} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-[12px] font-semibold" style={{ color: "#E2E8F0" }}>{s.label}</span>
                           <span className="text-[22px] font-extrabold tabular-nums" style={{ color: s.color, textShadow: `0 0 20px ${s.color}20` }}>
-                            {s.format ? formatTime(s.value) : s.value}{s.suffix || ""}
+                            {s.format ? (s.value >= 3600 ? `${Math.floor(s.value / 3600)}h${Math.floor((s.value % 3600) / 60)}m` : formatTime(s.value)) : s.value}{s.suffix || ""}
                           </span>
                         </div>
                         <p className="text-[9px] mb-3" style={{ color: "#475569" }}>{s.desc}</p>
@@ -1393,6 +1393,53 @@ Retorne JSON:
                       </div>
                     ))}
                   </div>
+
+                  {/* Dispatch Mode */}
+                  <div className="rounded-xl p-4 mt-2" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                    <p className="text-[12px] font-semibold mb-2" style={{ color: "#E2E8F0" }}>Modo de Disparo</p>
+                    <p className="text-[9px] mb-3" style={{ color: "#475569" }}>Como os leads entram na simulação</p>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: "sequential" as const, label: "Sequencial", desc: "Um lead por vez", icon: "📋" },
+                        { id: "simultaneous" as const, label: "Simultâneo", desc: "Todos ao mesmo tempo", icon: "⚡" },
+                        { id: "wave" as const, label: "Ondas", desc: "Lotes paralelos", icon: "🌊" },
+                      ].map(m => (
+                        <button key={m.id} onClick={() => setDispatchMode(m.id)}
+                          className="flex-1 min-w-[100px] text-left rounded-xl px-3 py-2.5 transition-all"
+                          style={{
+                            background: dispatchMode === m.id ? "rgba(59,130,246,0.08)" : "rgba(255,255,255,0.01)",
+                            border: `1px solid ${dispatchMode === m.id ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)"}`,
+                          }}>
+                          <span className="text-sm">{m.icon}</span>
+                          <p className="text-[11px] font-bold mt-1" style={{ color: dispatchMode === m.id ? "#3B82F6" : "#94A3B8" }}>{m.label}</p>
+                          <p className="text-[8px]" style={{ color: "#475569" }}>{m.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                    {dispatchMode === "wave" && (
+                      <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.03)" }}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Leads por onda</span>
+                          <span className="text-[16px] font-extrabold tabular-nums" style={{ color: "#06B6D4" }}>{parallelLeads}</span>
+                        </div>
+                        <Slider min={2} max={Math.min(50, numLeads)} step={1} value={[parallelLeads]} onValueChange={v => setParallelLeads(v[0])} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Context Compression Info */}
+                  {msgsPerLead > 20 && (
+                    <div className="rounded-xl p-3 mt-2 flex items-start gap-2" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.12)" }}>
+                      <Brain className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#10B981" }} />
+                      <div>
+                        <p className="text-[10px] font-bold" style={{ color: "#10B981" }}>Compressão de Contexto Ativa</p>
+                        <p className="text-[9px]" style={{ color: "#64748B" }}>
+                          Conversas com {msgsPerLead}+ msgs usam resumo inteligente do histórico antigo, 
+                          mantendo apenas as últimas 16 mensagens completas. Isso economiza tokens e mantém coerência.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
