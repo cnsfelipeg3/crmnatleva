@@ -580,6 +580,17 @@ export default function SimuladorAutoMode() {
           lead.mensagens.push({ role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
           setLeads([...allLeads]);
 
+          // 2b. Detect price print mention → generate actual image
+          if (detectsPricePrint(agentResp)) {
+            addEvent("#8B5CF6", `📸 ${agent.name} gerando print de preço para ${lead.nome}...`, "🖼️");
+            const priceImg = await generatePriceImage(lead);
+            if (priceImg) {
+              lead.mensagens.push({ role: "agent", content: "📋 Orçamento", agentName: agent.name, timestamp: Date.now(), imageUrl: priceImg });
+              setLeads([...allLeads]);
+              addEvent("#10B981", `✅ Print de preço enviado para ${lead.nome}`, "🖼️");
+            }
+          }
+
           // 3. Evaluate agent response (AI judge) — 3 dimensões — respects evalFrequency
           evalCounter++;
           if (enableEvaluation && evalCounter % evalEvery === 0) {
