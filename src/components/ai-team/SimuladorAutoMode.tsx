@@ -2703,6 +2703,16 @@ Retorne JSON:
               <p className="text-[13px]" style={{ color: "#64748B" }}>NATH.AI analisando simulação com leads inteligentes...</p>
             </div>
           )}
+          {!debriefLoading && !debrief && (
+            <div className="flex flex-col items-center justify-center py-16 gap-4">
+              <AlertTriangle className="w-8 h-8" style={{ color: "#F59E0B" }} />
+              <p className="text-[13px]" style={{ color: "#94A3B8" }}>O debrief não foi gerado. Clique abaixo para tentar novamente.</p>
+              <button onClick={generateDebrief} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-bold transition-all hover:scale-[1.03]"
+                style={{ background: "linear-gradient(135deg, rgba(139,92,246,0.15), rgba(99,102,241,0.15))", border: "1px solid rgba(139,92,246,0.25)", color: "#8B5CF6" }}>
+                <Brain className="w-4 h-4" /> Gerar Debrief IA
+              </button>
+            </div>
+          )}
           {debrief && (
             <>
               {/* Header */}
