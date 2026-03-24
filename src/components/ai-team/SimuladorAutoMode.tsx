@@ -526,8 +526,14 @@ export default function SimuladorAutoMode() {
   const runSimulation = useCallback(async () => {
     setPhase("running"); setRunning(true); setLeads([]); setEvents([]); setElapsedSeconds(0);
     setSelectedLeadId(null); setDebrief(null); abortRef.current = false; simAtivaRef.current = true;
+    chunksRef.current = new Map();
 
     timerRef.current = setInterval(() => setElapsedSeconds(p => p + 1), 1000);
+
+    // Start DB persistence
+    const simConfig = { numLeads, msgsPerLead, intervalSec, duration, speed, dispatchMode, parallelLeads, objectionDensity, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, funnelMode };
+    const leadsRef_local = { current: [] as LeadInteligente[] };
+    const simId = await simPersistence.startSimulation(simConfig, () => leadsRef_local.current);
 
     const profiles = selectedProfiles.length > 0
       ? PERFIS_INTELIGENTES.filter(p => selectedProfiles.includes(p.tipo))
