@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Crown, Loader2, AlertTriangle, Heart, Shield, Sparkles, TrendingUp, Zap, BookOpen, Users, Scale, Check, X, ChevronDown, ChevronUp, ArrowLeft, BarChart3, ThumbsUp, ThumbsDown, Wrench, Target, Clock, User } from "lucide-react";
+import { Crown, Loader2, AlertTriangle, Heart, Shield, Sparkles, TrendingUp, Zap, BookOpen, Users, Scale, Check, X, ChevronDown, ChevronUp, ArrowLeft, BarChart3, ThumbsUp, ThumbsDown, Wrench, Target, Clock, User, Bot, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
@@ -33,7 +33,7 @@ FORMATO DE RESPOSTA:
 
 interface ImprovementAction {
   id: string;
-  type: "knowledge_base" | "skill" | "global_rule";
+  type: "knowledge_base" | "skill" | "global_rule" | "new_agent";
   title: string;
   description: string;
   scope: "all_agents" | "specific_agent";
@@ -42,6 +42,14 @@ interface ImprovementAction {
   selected: boolean;
   difficulty?: "facil" | "moderada" | "complexa";
   estimatedImpact?: string;
+  // New agent specific fields
+  newAgentName?: string;
+  newAgentEmoji?: string;
+  newAgentRole?: string;
+  newAgentSquad?: string;
+  newAgentStage?: string;
+  newAgentSkills?: string[];
+  newAgentJustification?: string;
 }
 
 interface DetailReport {
@@ -171,21 +179,37 @@ ${opinion}
 
 AGENTES DISPONÍVEIS: MAYA (recepção/encantamento), ATLAS (qualificação), HABIBI (especialista Dubai/Egito), NEMO (especialista Maldivas/Ásia), DANTE (especialista Europa), LUNA (propostas/cotações), NERO (objeções/negociação), IRIS (pós-venda/NPS), HUNTER (reativação leads), FINX (financeiro/cobranças), VIGIL (compliance/qualidade), NATH.AI (orquestração).
 
-IMPORTANTE: Gere EXATAMENTE entre 10 e 12 ações. Pelo menos 4 devem ser para agentes ESPECÍFICOS (scope: "specific_agent" com "target_agent" preenchido). O restante pode ser para todos.
+SQUADS: orquestracao, comercial, atendimento, financeiro, operacional, demanda, retencao.
 
-Retorne EXATAMENTE um JSON array com objetos contendo:
-- "type": "knowledge_base", "skill" ou "global_rule"
-- "title": título curto da melhoria (máx 60 chars)
-- "description": descrição detalhada de como implementar (2-3 linhas)
+ETAPAS DO FUNIL: Primeiro Contato → Qualificação → Proposta → Negociação → Fechamento → Pós-Venda.
+
+IMPORTANTE:
+1. Gere entre 10 e 14 ações no total.
+2. Pelo menos 4 devem ser para agentes ESPECÍFICOS.
+3. Inclua pelo menos 1-2 sugestões de NOVOS AGENTES (type: "new_agent") que ainda não existem e que melhorariam a operação. Para cada novo agente, detalhe: nome sugerido, emoji, função, squad, etapa do funil em que atuaria, skills e justificativa completa.
+
+Retorne EXATAMENTE um JSON array. Cada item DEVE ter:
+- "type": "knowledge_base", "skill", "global_rule" ou "new_agent"
+- "title": título curto (máx 60 chars)
+- "description": descrição detalhada (2-3 linhas)
 - "scope": "all_agents" ou "specific_agent"
-- "target_agent": nome do agente alvo (ex: "MAYA", "NERO") — obrigatório quando scope = "specific_agent"
+- "target_agent": nome do agente alvo (quando scope = "specific_agent")
 - "priority": "alta", "media" ou "baixa"
 - "difficulty": "facil", "moderada" ou "complexa"
-- "estimated_impact": frase curta do impacto esperado (ex: "+15% conversão", "-30% tempo de resposta")
+- "estimated_impact": frase curta do impacto esperado
+
+Para itens type="new_agent", inclua TAMBÉM:
+- "new_agent_name": nome do agente sugerido (ex: "KEEPER", "COMPASS")
+- "new_agent_emoji": emoji representativo
+- "new_agent_role": função detalhada do agente (1-2 frases)
+- "new_agent_squad": squad ideal (orquestracao, comercial, atendimento, financeiro, operacional, demanda, retencao)
+- "new_agent_stage": etapa do funil onde atuaria
+- "new_agent_skills": array com 3-5 habilidades-chave
+- "new_agent_justification": parágrafo explicando por que este agente é necessário, qual gap ele preenche e como melhora a operação
 
 Retorne SOMENTE o JSON array, sem texto adicional.`,
           agentName: "SISTEMA",
-          agentRole: "Você é um analisador de melhorias de processos de uma agência de viagens premium. Retorne APENAS um JSON array válido, sem markdown, sem explicações. Cada item deve ter: type, title, description, scope, target_agent (quando aplicável), priority, difficulty, estimated_impact. Gere 10-12 itens, sendo pelo menos 4 para agentes específicos.",
+          agentRole: "Você é um arquiteto de sistemas de agentes IA de uma agência de viagens premium (NatLeva). Retorne APENAS um JSON array válido, sem markdown. Gere 10-14 itens incluindo 1-2 sugestões de novos agentes. Seja criativo e realista nas sugestões de novos agentes — eles devem preencher gaps reais na operação.",
         }),
       });
 
@@ -230,12 +254,19 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
           type: item.type || "knowledge_base",
           title: item.title || "Melhoria sem título",
           description: item.description || "",
-          scope: item.scope || "all_agents",
+          scope: item.type === "new_agent" ? "all_agents" : (item.scope || "all_agents"),
           targetAgent: item.target_agent || undefined,
           priority: item.priority || "media",
           difficulty: item.difficulty || "moderada",
           estimatedImpact: item.estimated_impact || undefined,
           selected: true,
+          newAgentName: item.new_agent_name || undefined,
+          newAgentEmoji: item.new_agent_emoji || "🤖",
+          newAgentRole: item.new_agent_role || undefined,
+          newAgentSquad: item.new_agent_squad || undefined,
+          newAgentStage: item.new_agent_stage || undefined,
+          newAgentSkills: item.new_agent_skills || undefined,
+          newAgentJustification: item.new_agent_justification || undefined,
         }));
         setActions(mapped);
       } catch {
@@ -278,7 +309,6 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
           });
           applied++;
         } else if (action.type === "skill") {
-          // Insert as improvement suggestion for all agents or first active agent
           const { data: agents } = await supabase
             .from("ai_team_agents")
             .select("id")
@@ -297,15 +327,36 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
             });
           }
           applied++;
+        } else if (action.type === "new_agent" && action.newAgentName) {
+          const agentId = action.newAgentName.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
+          await supabase.from("ai_team_agents").insert({
+            id: agentId,
+            name: action.newAgentName,
+            emoji: action.newAgentEmoji || "🤖",
+            role: action.newAgentRole || action.description,
+            squad_id: action.newAgentSquad || "comercial",
+            skills: action.newAgentSkills || [],
+            level: 1,
+            xp: 0,
+            max_xp: 100,
+            status: "idle",
+            is_active: true,
+            persona: action.newAgentJustification || "",
+          });
+          applied++;
         }
       } catch (err) {
         console.warn("[NathAction] Failed to apply:", action.title, err);
       }
     }
 
+    const newAgentCount = selected.filter(a => a.type === "new_agent").length;
+    const desc = newAgentCount > 0
+      ? `Inclui ${newAgentCount} novo${newAgentCount > 1 ? "s" : ""} agente${newAgentCount > 1 ? "s" : ""} criado${newAgentCount > 1 ? "s" : ""}.`
+      : "As ações foram salvas na base de conhecimento e nos agentes.";
     toast({
       title: `✅ ${applied} melhoria${applied > 1 ? "s" : ""} aplicada${applied > 1 ? "s" : ""}!`,
-      description: "As ações foram salvas na base de conhecimento e nos agentes.",
+      description: desc,
     });
     setApplying(false);
     setActions(prev => prev.map(a => a.selected ? { ...a, selected: false } : a));
@@ -411,10 +462,11 @@ Retorne SOMENTE o JSON, sem markdown.`,
     complexa: { color: "#EF4444", bg: "rgba(239,68,68,0.1)" },
   };
 
-  const typeConfig = {
+  const typeConfig: Record<string, { icon: any; label: string; color: string; bg: string }> = {
     knowledge_base: { icon: BookOpen, label: "Base de Conhecimento", color: "#3B82F6", bg: "rgba(59,130,246,0.08)" },
     skill: { icon: Sparkles, label: "Habilidade do Agente", color: "#10B981", bg: "rgba(16,185,129,0.08)" },
     global_rule: { icon: Scale, label: "Regra Global", color: "#F59E0B", bg: "rgba(245,158,11,0.08)" },
+    new_agent: { icon: Bot, label: "Novo Agente", color: "#A855F7", bg: "rgba(168,85,247,0.08)" },
   };
 
   const priorityConfig = {
@@ -657,6 +709,57 @@ Retorne SOMENTE o JSON, sem markdown.`,
                             </div>
                           </div>
 
+                          {/* New Agent Card - shown when detail is a new_agent */}
+                          {detailAction.type === "new_agent" && detailAction.newAgentName && (
+                            <div className="rounded-xl p-4 mb-3 animate-in fade-in duration-300" style={{
+                              background: "linear-gradient(135deg, rgba(168,85,247,0.08), rgba(236,72,153,0.04))",
+                              border: "1px solid rgba(168,85,247,0.2)",
+                            }}>
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
+                                  style={{ background: "rgba(168,85,247,0.12)", border: "1px solid rgba(168,85,247,0.25)" }}>
+                                  {detailAction.newAgentEmoji}
+                                </div>
+                                <div>
+                                  <p className="text-[14px] font-extrabold" style={{ color: "#E9D5FF" }}>{detailAction.newAgentName}</p>
+                                  <p className="text-[10px]" style={{ color: "#A78BFA" }}>{detailAction.newAgentRole}</p>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 mb-3">
+                                <div className="rounded-lg p-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+                                  <p className="text-[8px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "#7C3AED" }}>Squad</p>
+                                  <p className="text-[11px] font-medium capitalize" style={{ color: "#D8B4FE" }}>{detailAction.newAgentSquad}</p>
+                                </div>
+                                <div className="rounded-lg p-2" style={{ background: "rgba(255,255,255,0.03)" }}>
+                                  <p className="text-[8px] font-bold uppercase tracking-widest mb-0.5" style={{ color: "#7C3AED" }}>Etapa do Funil</p>
+                                  <p className="text-[11px] font-medium" style={{ color: "#D8B4FE" }}>{detailAction.newAgentStage}</p>
+                                </div>
+                              </div>
+
+                              {detailAction.newAgentSkills && detailAction.newAgentSkills.length > 0 && (
+                                <div className="mb-3">
+                                  <p className="text-[8px] font-bold uppercase tracking-widest mb-1.5" style={{ color: "#7C3AED" }}>Skills</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {detailAction.newAgentSkills.map((skill, i) => (
+                                      <span key={i} className="text-[9px] font-medium px-2 py-1 rounded-lg"
+                                        style={{ background: "rgba(168,85,247,0.1)", color: "#C084FC", border: "1px solid rgba(168,85,247,0.15)" }}>
+                                        {skill}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {detailAction.newAgentJustification && (
+                                <div className="rounded-lg p-3" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(168,85,247,0.08)" }}>
+                                  <p className="text-[8px] font-bold uppercase tracking-widest mb-1" style={{ color: "#7C3AED" }}>Por que este agente é necessário?</p>
+                                  <p className="text-[10px] leading-relaxed" style={{ color: "#D1D5DB" }}>{detailAction.newAgentJustification}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
                           {detailLoading && (
                             <div className="flex flex-col items-center justify-center py-10 gap-2">
                               <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#A855F7" }} />
@@ -798,14 +901,26 @@ Retorne SOMENTE o JSON, sem markdown.`,
                                       </div>
                                       <div className="flex-1 min-w-0" onClick={() => loadDetailReport(action)}>
                                         <div className="flex items-center gap-2 mb-1">
-                                          <TypeIcon className="w-3.5 h-3.5 shrink-0" style={{ color: tc.color }} />
+                                          {action.type === "new_agent" && action.newAgentEmoji ? (
+                                            <span className="text-sm">{action.newAgentEmoji}</span>
+                                          ) : (
+                                            <TypeIcon className="w-3.5 h-3.5 shrink-0" style={{ color: tc.color }} />
+                                          )}
                                           <span className="text-[11px] font-bold truncate" style={{ color: "#E9EDEF" }}>
-                                            {action.title}
+                                            {action.type === "new_agent" && action.newAgentName
+                                              ? `Criar agente: ${action.newAgentName}`
+                                              : action.title}
                                           </span>
                                         </div>
-                                        <p className="text-[10px] leading-relaxed line-clamp-2" style={{ color: "#9CA3AF" }}>
-                                          {action.description}
-                                        </p>
+                                        {action.type === "new_agent" && action.newAgentRole ? (
+                                          <p className="text-[10px] leading-relaxed line-clamp-2" style={{ color: "#C4B5FD" }}>
+                                            {action.newAgentRole}
+                                          </p>
+                                        ) : (
+                                          <p className="text-[10px] leading-relaxed line-clamp-2" style={{ color: "#9CA3AF" }}>
+                                            {action.description}
+                                          </p>
+                                        )}
                                         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                                           <span className="text-[8px] font-bold px-2 py-0.5 rounded-full uppercase"
                                             style={{ background: tc.bg, color: tc.color, border: `1px solid ${tc.color}20` }}>
@@ -815,14 +930,33 @@ Retorne SOMENTE o JSON, sem markdown.`,
                                             style={{ background: `${pc.color}10`, color: pc.color }}>
                                             {pc.label}
                                           </span>
-                                          <span className="text-[8px] px-2 py-0.5 rounded-full flex items-center gap-1"
-                                            style={{ background: "rgba(255,255,255,0.04)", color: action.targetAgent ? "#A855F7" : "#6B7280" }}>
-                                            {action.targetAgent ? (
-                                              <><User className="w-2.5 h-2.5" /> {action.targetAgent}</>
-                                            ) : (
-                                              <><Users className="w-2.5 h-2.5" /> Todos</>
-                                            )}
-                                          </span>
+                                          {action.type === "new_agent" ? (
+                                            <>
+                                              {action.newAgentSquad && (
+                                                <span className="text-[8px] px-2 py-0.5 rounded-full capitalize flex items-center gap-1"
+                                                  style={{ background: "rgba(168,85,247,0.08)", color: "#C084FC" }}>
+                                                  <Bot className="w-2.5 h-2.5" /> {action.newAgentSquad}
+                                                </span>
+                                              )}
+                                              {action.newAgentStage && (
+                                                <span className="text-[8px] px-2 py-0.5 rounded-full flex items-center gap-1"
+                                                  style={{ background: "rgba(236,72,153,0.08)", color: "#F472B6" }}>
+                                                  {action.newAgentStage}
+                                                </span>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <>
+                                              <span className="text-[8px] px-2 py-0.5 rounded-full flex items-center gap-1"
+                                                style={{ background: "rgba(255,255,255,0.04)", color: action.targetAgent ? "#A855F7" : "#6B7280" }}>
+                                                {action.targetAgent ? (
+                                                  <><User className="w-2.5 h-2.5" /> {action.targetAgent}</>
+                                                ) : (
+                                                  <><Users className="w-2.5 h-2.5" /> Todos</>
+                                                )}
+                                              </span>
+                                            </>
+                                          )}
                                           {action.difficulty && (
                                             <span className="text-[8px] font-bold px-2 py-0.5 rounded-full capitalize"
                                               style={{ background: dc.bg, color: dc.color }}>
