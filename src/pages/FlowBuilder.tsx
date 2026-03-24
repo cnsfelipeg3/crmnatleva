@@ -532,6 +532,36 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
         </Select>
       </div>
 
+      {provider === "natleva" && (
+        <div>
+          <Label className="text-xs font-semibold">Agente da Equipe</Label>
+          <Select value={config.agent_id || ""} onValueChange={(v) => {
+            updateConfig("agent_id", v);
+            const agent = agents.find(a => a.id === v);
+            if (agent) updateConfig("agent_name", agent.name);
+          }}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione o agente..." /></SelectTrigger>
+            <SelectContent>
+              {agents.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.emoji} {a.name} — <span className="text-muted-foreground">{a.role}</span>
+                </SelectItem>
+              ))}
+              {agents.length === 0 && (
+                <div className="px-2 py-3 text-xs text-muted-foreground text-center">
+                  Nenhum agente ativo encontrado.
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+          {config.agent_id && (
+            <p className="text-[10px] text-muted-foreground mt-1">
+              O agente usará sua personalidade e conhecimento treinados.
+            </p>
+          )}
+        </div>
+      )}
+
       {provider !== "natleva" && provider !== "n8n" && (
         <div>
           <Label className="text-xs">Credencial / Integração</Label>
