@@ -10,11 +10,11 @@ const corsHeaders = {
 // 🧠 ORQUESTRADOR DE MODELOS — NATLEVA INTELLIGENCE 2.0
 // ═══════════════════════════════════════════
 // Roteamento inteligente multi-model:
-//   - Texto estratégico / análise → gemini-2.5-flash (rápido, custo-eficiente)
-//   - Análise complexa / planos detalhados → gemini-2.5-pro (máxima qualidade)
+//   - Texto estratégico / análise → openai/gpt-5 (raciocínio profundo)
+//   - Análise complexa / planos detalhados → openai/gpt-5 + reasoning high
 //   - Geração de imagem → gemini-2.5-flash-image
-//   - Leitura de imagem / OCR → gemini-2.5-flash (multimodal)
-//   - Cálculos / dados estruturados → gemini-2.5-pro (raciocínio avançado)
+//   - Leitura de imagem / OCR → openai/gpt-5-mini (multimodal)
+//   - Cálculos / dados estruturados → openai/gpt-5 (raciocínio avançado)
 
 type ModelRoute = {
   model: string;
