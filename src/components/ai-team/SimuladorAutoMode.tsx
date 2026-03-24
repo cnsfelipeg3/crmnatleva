@@ -1915,13 +1915,12 @@ Retorne JSON:
                     <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Taxa alvo de conversão</span>
-                        <span className="text-sm font-bold" style={{ color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
-                          {conversionOverride !== null ? `${conversionOverride}%` : "Natural"}
-                        </span>
                       </div>
                       <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Forçar taxa ou deixar natural</p>
                       <div className="flex items-center gap-3">
-                        <Slider min={0} max={100} step={5} value={[conversionOverride ?? 50]} onValueChange={v => setConversionOverride(v[0])} disabled={conversionOverride === null} />
+                        {conversionOverride !== null && (
+                          <SimConfigInput label="" value={conversionOverride} onChange={setConversionOverride} min={0} max={100} step={5} color="#10B981" suffix="%" compact />
+                        )}
                         <button onClick={() => setConversionOverride(conversionOverride === null ? 50 : null)}
                           className="text-sm px-3 py-1.5 rounded-lg shrink-0 font-semibold transition-all"
                           style={{ background: conversionOverride !== null ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.02)", border: `1px solid ${conversionOverride !== null ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
@@ -1929,14 +1928,7 @@ Retorne JSON:
                         </button>
                       </div>
                     </div>
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Densidade de objeções</span>
-                        <span className="text-sm font-bold" style={{ color: "#F59E0B" }}>{objectionDensity}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Probabilidade de objeções por turno</p>
-                      <Slider min={0} max={100} step={5} value={[objectionDensity]} onValueChange={v => setObjectionDensity(v[0])} />
-                    </div>
+                    <SimConfigInput label="Densidade de objeções" value={objectionDensity} onChange={setObjectionDensity} min={0} max={100} step={5} color="#F59E0B" desc="Probabilidade de objeções por turno" suffix="%" icon="🛡️" />
                   </div>
 
                   {/* Speed */}
