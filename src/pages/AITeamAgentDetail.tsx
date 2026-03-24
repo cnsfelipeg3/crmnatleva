@@ -732,7 +732,6 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
 
   // Persist custom rules to training store
   const syncRulesToStore = useCallback((rulesArr: RuleItem[]) => {
-    const { setAgentTraining } = require("@/components/ai-team/agentTrainingStore");
     setAgentTraining(agentId, {
       customRules: rulesArr.map(r => ({
         id: r.id, name: r.name, description: r.description, active: true, impact: r.impact,
