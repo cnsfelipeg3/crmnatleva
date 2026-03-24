@@ -273,7 +273,7 @@ REGRAS DE OURO:
 - Celebre conquistas do lead (aniversario, casamento, viagem dos sonhos).
 `;
 
-function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean, enableTransfers: boolean, responseLength: "curta" | "media" | "longa") {
+function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean, enableTransfers: boolean, responseLength: "curta" | "media" | "longa", globalRulesBlock: string = "") {
   const lengthInstr = responseLength === "curta" ? "Responda de forma concisa mas com personalidade." : responseLength === "longa" ? "Responda de forma detalhada (3-5 frases), incluindo detalhes do produto." : "O agente decide o tamanho certo para cada momento da conversa.";
   const minTrocas = MIN_TROCAS_POR_AGENTE[agent.id] || 4;
   const transferInstr = hasNext && enableTransfers ? `\nSOBRE [TRANSFERIR]:
