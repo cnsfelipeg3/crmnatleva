@@ -27,13 +27,19 @@ import {
 // ===== API — Roteamento inteligente por tipo de chamada =====
 type SimCallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep" | "price_image";
 
-async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent", agentBehaviorPrompt?: string): Promise<string> {
+async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent", agentBehaviorPrompt?: string, _retryCount = 0): Promise<string> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
     body: JSON.stringify({ type, systemPrompt: sysPrompt, history, agentBehaviorPrompt: agentBehaviorPrompt || "", provider: "anthropic" }),
   });
+  // Retry with exponential backoff on rate limit (429)
+  if (resp.status === 429 && _retryCount < 3) {
+    const delay = Math.pow(2, _retryCount) * 1000 + Math.random() * 500;
+    await new Promise(r => setTimeout(r, delay));
+    return callSimulatorAI(sysPrompt, history, type, agentBehaviorPrompt, _retryCount + 1);
+  }
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
   // Non-streaming types return JSON directly
