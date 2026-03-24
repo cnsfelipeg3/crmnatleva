@@ -2684,7 +2684,7 @@ Retorne JSON:
           </div>
 
           {/* RIGHT: KPIs + Feed */}
-          {running && (
+          {running && !isMobile && (
             <div className="w-[240px] shrink-0 space-y-3 overflow-y-auto custom-scrollbar">
               {[
                 { label: "Leads", value: animLeads, color: "#3B82F6", icon: "👥" },
