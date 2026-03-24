@@ -1527,30 +1527,8 @@ Retorne JSON:
 
                   {/* Communication Style */}
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Tom de formalidade</span>
-                        <span className="text-sm font-bold" style={{ color: "#8B5CF6" }}>{leadToneFormality}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Como o lead se comunica: informal (gírias, abreviações) vs formal</p>
-                      <Slider min={0} max={100} step={10} value={[leadToneFormality]} onValueChange={v => setLeadToneFormality(v[0])} />
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs" style={{ color: "#EC4899" }}>🤙 "eae mano"</span>
-                        <span className="text-xs" style={{ color: "#3B82F6" }}>🎩 "Prezado(a)"</span>
-                      </div>
-                    </div>
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Follow-up espontâneo</span>
-                        <span className="text-sm font-bold" style={{ color: "#F59E0B" }}>{leadFollowUpPressure}%</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Chance do lead mandar msg extra pressionando ("e aí?", "???")</p>
-                      <Slider min={0} max={100} step={5} value={[leadFollowUpPressure]} onValueChange={v => setLeadFollowUpPressure(v[0])} />
-                      <div className="flex justify-between mt-1">
-                        <span className="text-xs" style={{ color: "#10B981" }}>Passivo</span>
-                        <span className="text-xs" style={{ color: "#EF4444" }}>Insistente</span>
-                      </div>
-                    </div>
+                    <SimConfigInput label="Tom de formalidade" value={leadToneFormality} onChange={setLeadToneFormality} min={0} max={100} step={10} color="#8B5CF6" desc="Informal (gírias, abreviações) → Formal (Prezado/a)" suffix="%" icon="🎩" />
+                    <SimConfigInput label="Follow-up espontâneo" value={leadFollowUpPressure} onChange={setLeadFollowUpPressure} min={0} max={100} step={5} color="#F59E0B" desc="Chance do lead mandar msg extra ('e aí?', '???')" suffix="%" icon="📲" />
                   </div>
 
                   {/* Typing style */}
