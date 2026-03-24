@@ -989,6 +989,8 @@ Retorne JSON:
                   { label: "Duração", value: formatTime(duration), color: "#8B5CF6" },
                   { label: "Objeções", value: `${objectionDensity}%`, color: "#F59E0B" },
                   { label: "Perfis", value: `${selectedProfiles.length || 8}`, color: "#EC4899" },
+                  { label: "Paciência", value: `${initialPatience}%`, color: "#EF4444" },
+                  { label: "Abandono", value: `${abandonmentSensitivity}%`, color: "#EF4444" },
                 ].map(item => (
                   <div key={item.label} className="flex items-center justify-between">
                     <span className="text-[9px]" style={{ color: "#64748B" }}>{item.label}</span>
