@@ -185,7 +185,7 @@ export default function SimuladorManualMode() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         body: JSON.stringify({
           type: "agent",
-          systemPrompt: buildManualAgentPrompt(selectedAgent),
+          systemPrompt: buildManualAgentPrompt(selectedAgent, globalRulesBlock),
           agentBehaviorPrompt: agentBehaviors[selectedAgent.id] || "",
           history: [{ role: "user", content: `[Simulação - Cliente interessado em ${selectedDestino}] ${text}` }],
           provider: "anthropic",
