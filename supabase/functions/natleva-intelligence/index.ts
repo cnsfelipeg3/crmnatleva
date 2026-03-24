@@ -33,7 +33,7 @@ function classifyIntent(userMessage: string, hasImages: boolean, forceWebSearch 
 
   // Image analysis / OCR
   if (hasImages) {
-    return { model: "google/gemini-2.5-flash", label: "👁️ Visão Computacional", reason: "Análise de imagem/OCR", needsWebSearch: false };
+    return { model: "openai/gpt-5-mini", label: "👁️ Visão Computacional", reason: "Análise de imagem/OCR", needsWebSearch: false };
   }
 
   // ── Web search detection (ULTRA AGRESSIVO — detecta qualquer necessidade de dados externos) ──
