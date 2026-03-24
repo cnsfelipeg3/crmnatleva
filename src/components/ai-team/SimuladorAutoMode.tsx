@@ -522,9 +522,9 @@ export default function SimuladorAutoMode() {
           lead.etapaAtual = stages[Math.min(agentIdx, stages.length - 1)];
 
           // 2. Agent responds
-          const agentResp = await callAgent(
+          const agentResp = await callSimulatorAI(
             buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength),
-            lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content }))
+            lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content })), "agent"
           );
           lead.mensagens.push({ role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
           setLeads([...allLeads]);
