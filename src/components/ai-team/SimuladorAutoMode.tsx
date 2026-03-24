@@ -2323,24 +2323,16 @@ Retorne JSON:
           background: "linear-gradient(135deg, rgba(13,18,32,0.95), rgba(13,18,32,0.8))",
           border: "1px solid rgba(16,185,129,0.15)",
         }}>
-          <div className="h-[2px]" style={{ background: "linear-gradient(90deg, #10B981, #06B6D4, #8B5CF6)" }} />
-          <div className="flex items-center gap-6 px-6 py-4">
+          <div className={cn("h-[2px]")} style={{ background: "linear-gradient(90deg, #10B981, #06B6D4, #8B5CF6)" }} />
+          <div className={cn("flex items-center gap-4", isMobile ? "flex-col px-4 py-4" : "gap-6 px-6 py-4")}>
             {/* Config chips */}
-            <div className="flex-1 flex items-center gap-3 overflow-x-auto">
+            <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-hide w-full">
               {[
                 { icon: "👥", label: `${numLeads} leads`, color: "#3B82F6" },
                 { icon: "💬", label: `${msgsPerLead} msgs`, color: "#10B981" },
                 { icon: "⏱️", label: formatTime(duration), color: "#8B5CF6" },
                 { icon: "🎯", label: `${selectedProfiles.length || 8} perfis`, color: "#EC4899" },
-                { icon: "🤖", label: funnelMode === "individual" ? (AGENTS_V4.find(a => a.id === customFunnelAgents[0])?.name || "—") : funnelMode === "custom" ? `${customFunnelAgents.length} agentes` : funnelMode === "comercial" ? "Comercial" : "Pipeline", color: "#8B5CF6" },
-                { icon: "🌍", label: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos`, color: "#06B6D4" },
                 { icon: "⚡", label: SPEED_OPTIONS.find(s => s.id === speed)?.label || "Normal", color: "#F59E0B" },
-                { icon: "🧠", label: enableEvaluation ? `Aval. ${evalFrequency === "every" ? "100%" : evalFrequency === "every2" ? "50%" : "33%"}` : "Aval. off", color: "#EC4899" },
-                { icon: "🔄", label: enableTransfers ? "Transf. on" : "Transf. off", color: "#06B6D4" },
-                { icon: "💥", label: `Vol. ${emotionalVolatility}%`, color: "#EF4444" },
-                { icon: "❤️", label: `Pac. ${initialPatience}%`, color: "#EF4444" },
-                { icon: "📉", label: leadPatienceCurve, color: "#EC4899" },
-                { icon: "🎯", label: leadConversationGoal === "aleatorio" ? "Mix" : leadConversationGoal, color: "#F59E0B" },
               ].map(chip => (
                 <span key={chip.label} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0"
                   style={{ background: `${chip.color}08`, color: chip.color, border: `1px solid ${chip.color}15` }}>
@@ -2350,7 +2342,7 @@ Retorne JSON:
             </div>
             {/* Start button */}
             <button onClick={runSimulation}
-              className="px-8 py-3 rounded-xl text-[13px] font-bold transition-all duration-300 relative overflow-hidden shrink-0 hover:scale-[1.03] active:scale-[0.98]"
+              className={cn("rounded-xl text-[13px] font-bold transition-all duration-300 relative overflow-hidden shrink-0 hover:scale-[1.03] active:scale-[0.98]", isMobile ? "w-full py-3.5 px-6" : "px-8 py-3")}
               style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 4px 24px rgba(16,185,129,0.3)" }}>
               <Play className="w-4 h-4 inline mr-2" />
               Iniciar Simulação IA
