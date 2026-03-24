@@ -619,7 +619,7 @@ export default function SimuladorAutoMode() {
       if (isDurationExceeded()) return;
 
       addEvent("#3B82F6", `${lead.perfil.emoji} ${lead.nome} entrou via ${lead.origem} · ${lead.destino} · ${lead.paxLabel}`, "📥");
-      simPersistence.bufferEvent({ type: "lead_created", leadId: lead.id, payload: { profile: lead.perfil.tipo, destino: lead.destino } } as SimEvent);
+      simPersistence.bufferEvent({ id: crypto.randomUUID(), type: "lead_created", leadId: lead.id, payload: { profile: lead.perfil.tipo, destino: lead.destino }, timestamp: Date.now() });
 
       try {
         const firstMsg = await generateLeadMsg(lead, "", true);
