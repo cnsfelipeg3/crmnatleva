@@ -269,11 +269,11 @@ function AppRoutes() {
 
           {/* Operação Diária */}
           <Route path="/operacao/inbox" element={<OperacaoInbox />} />
-          <Route path="/operacao/flows" element={<OperacaoFlowBuilder />} />
+          <Route path="/operacao/flows" element={<Navigate to="/ai-team/workflow" replace />} />
           <Route path="/operacao/integracoes" element={<OperacaoIntegracoes />} />
           
           <Route path="/operacao/pipeline" element={<OperacaoTagsPipeline />} />
-          <Route path="/operacao/simulador" element={<OperacaoSimulador />} />
+          <Route path="/operacao/simulador" element={<Navigate to="/ai-team/simulador" replace />} />
           <Route path="/operacao/logs" element={<OperacaoLogs />} />
 
           {/* Mídias */}
