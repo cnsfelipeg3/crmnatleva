@@ -1106,7 +1106,7 @@ Retorne JSON:
                 <button key={tab.id} onClick={() => setConfigTab(tab.id)}
                   className={cn(
                     "text-left rounded-xl transition-all duration-300 relative group",
-                    isMobile ? "shrink-0 px-3 py-2.5 min-w-[100px]" : "w-full px-4 py-3.5"
+                    isMobile ? "shrink-0 px-3 py-2.5 min-w-[100px]" : "w-full px-4 py-4"
                   )}
                   style={{
                     background: active ? `linear-gradient(135deg, ${tab.color}18, ${tab.color}0A)` : "rgba(255,255,255,0.02)",
