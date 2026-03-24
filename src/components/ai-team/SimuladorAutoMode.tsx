@@ -2462,70 +2462,52 @@ Retorne JSON:
 
       {/* Report tabs */}
       {phase === "report" && !running && (
-        <div className="flex items-center gap-3 mb-5 rounded-2xl px-5 py-3 relative overflow-hidden" style={{
+        <div className={cn("mb-4 rounded-2xl relative overflow-hidden", isMobile ? "px-3 py-2" : "px-5 py-3")} style={{
           background: "linear-gradient(135deg, rgba(13,18,32,0.95), rgba(15,23,42,0.9))",
           border: "1px solid rgba(255,255,255,0.06)",
         }}>
           <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, #3B82F6, #10B981, #8B5CF6)" }} />
-          {/* Workflow stepper */}
-          <div className="flex items-center gap-2 mr-4">
-            {[
-              { label: "Simulação", icon: "✓", done: true },
-              { label: "Análise", icon: reportTab === "numeros" ? "●" : "✓", done: reportTab !== "numeros" },
-              { label: "Debrief", icon: reportTab === "debrief" ? "●" : (reportTab === "numeros" ? "○" : "○"), done: false },
-            ].map((step, i) => (
-              <div key={step.label} className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold" style={{
-                    background: step.done ? "#10B981" : "rgba(255,255,255,0.06)",
-                    color: step.done ? "#000" : "#64748B",
-                  }}>{step.icon}</div>
-                  <span className="text-[9px] font-semibold" style={{ color: step.done ? "#10B981" : "#64748B" }}>{step.label}</span>
-                </div>
-                {i < 2 && <div className="w-6 h-px" style={{ background: "rgba(255,255,255,0.1)" }} />}
-              </div>
-            ))}
-          </div>
-          <div className="h-6 w-px mx-2" style={{ background: "rgba(255,255,255,0.06)" }} />
-          {/* Tab buttons */}
-          <div className="flex items-center gap-1.5 flex-1">
-            {(["numeros", "conversas", "debrief"] as ReportTab[]).map(t => {
-              const active = reportTab === t;
-              const accent = t === "debrief" ? "#8B5CF6" : t === "numeros" ? "#3B82F6" : "#10B981";
-              const icons = { numeros: "📊", conversas: "💬", debrief: "🧠" };
-              const labels = { numeros: "Números", conversas: "Conversas", debrief: "Debrief IA" };
-              return (
-                <button key={t} onClick={() => setReportTab(t)}
-                  className="text-[11px] px-4 py-2 rounded-xl font-bold transition-all duration-300"
-                  style={{
-                    background: active ? `${accent}12` : "transparent",
-                    border: `1px solid ${active ? `${accent}30` : "transparent"}`,
-                    color: active ? accent : "#64748B",
-                  }}>
-                  {icons[t]} {labels[t]}
-                </button>
-              );
-            })}
-          </div>
-          {/* Export + Nova Simulação */}
-          <div className="flex items-center gap-2">
-            <button onClick={() => exportConversations("txt")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
-              style={{ background: "rgba(16,185,129,0.08)", color: "#10B981", border: "1px solid rgba(16,185,129,0.15)" }}>
-              <Download className="w-3 h-3" /> Exportar TXT
-            </button>
-            <button onClick={() => exportConversations("pdf")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
-              style={{ background: "rgba(139,92,246,0.08)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.15)" }}>
-              <FileText className="w-3 h-3" /> Exportar PDF
-            </button>
-            <button onClick={() => { if (leads.length > 0 && !confirm("Tem certeza? Os dados da simulação atual serão perdidos.")) return; setPhase("config"); setLeads([]); setDebrief(null); setEvents([]); setElapsedSeconds(0); }}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-bold transition-all hover:scale-[1.03]"
-              style={{
-                background: "linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,182,212,0.1))",
-                border: "1px solid rgba(16,185,129,0.2)",
-                color: "#10B981",
-              }}>
-              <Play className="w-3.5 h-3.5" /> Nova Simulação
-            </button>
+          <div className={cn("flex items-center", isMobile ? "flex-col gap-2" : "gap-3")}>
+            {/* Tab buttons */}
+            <div className={cn("flex items-center gap-1.5", isMobile ? "w-full" : "flex-1")}>
+              {(["numeros", "conversas", "debrief"] as ReportTab[]).map(t => {
+                const active = reportTab === t;
+                const accent = t === "debrief" ? "#8B5CF6" : t === "numeros" ? "#3B82F6" : "#10B981";
+                const icons = { numeros: "📊", conversas: "💬", debrief: "🧠" };
+                const labels = { numeros: "Números", conversas: "Conversas", debrief: "Debrief" };
+                return (
+                  <button key={t} onClick={() => setReportTab(t)}
+                    className={cn("font-bold rounded-xl transition-all duration-300", isMobile ? "flex-1 text-[10px] px-2 py-2" : "text-[11px] px-4 py-2")}
+                    style={{
+                      background: active ? `${accent}12` : "transparent",
+                      border: `1px solid ${active ? `${accent}30` : "transparent"}`,
+                      color: active ? accent : "#64748B",
+                    }}>
+                    {icons[t]} {labels[t]}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Export + Nova Simulação */}
+            <div className={cn("flex items-center gap-1.5", isMobile ? "w-full" : "")}>
+              <button onClick={() => exportConversations("txt")} className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[9px] font-bold transition-all"
+                style={{ background: "rgba(16,185,129,0.08)", color: "#10B981", border: "1px solid rgba(16,185,129,0.15)" }}>
+                <Download className="w-3 h-3" /> TXT
+              </button>
+              <button onClick={() => exportConversations("pdf")} className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[9px] font-bold transition-all"
+                style={{ background: "rgba(139,92,246,0.08)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.15)" }}>
+                <FileText className="w-3 h-3" /> PDF
+              </button>
+              <button onClick={() => { if (leads.length > 0 && !confirm("Tem certeza? Os dados da simulação atual serão perdidos.")) return; setPhase("config"); setLeads([]); setDebrief(null); setEvents([]); setElapsedSeconds(0); }}
+                className={cn("flex items-center gap-1.5 rounded-xl font-bold transition-all", isMobile ? "flex-1 justify-center text-[10px] px-3 py-2" : "text-[11px] px-5 py-2.5 hover:scale-[1.03]")}
+                style={{
+                  background: "linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,182,212,0.1))",
+                  border: "1px solid rgba(16,185,129,0.2)",
+                  color: "#10B981",
+                }}>
+                <Play className="w-3.5 h-3.5" /> Nova
+              </button>
+            </div>
           </div>
         </div>
       )}
