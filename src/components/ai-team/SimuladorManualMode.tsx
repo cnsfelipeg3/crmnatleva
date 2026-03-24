@@ -169,7 +169,13 @@ export default function SimuladorManualMode() {
     });
   }, []);
 
-  useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
+  useEffect(() => {
+    if (scrollRef.current) {
+      requestAnimationFrame(() => {
+        scrollRef.current?.scrollTo({ top: scrollRef.current!.scrollHeight, behavior: messages.length > 1 ? "smooth" : "auto" });
+      });
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (messages.length === 0) return;
