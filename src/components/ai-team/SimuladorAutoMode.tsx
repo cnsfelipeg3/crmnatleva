@@ -47,8 +47,39 @@ async function callAgent(sysPrompt: string, history: { role: string; content: st
 }
 
 // Generate lead message using AI with full persona context
+function buildCalibrationPrompt(lead: LeadInteligente): string {
+  const l = lead as any;
+  const parts: string[] = [];
+  // Tone
+  const tone = l._toneFormality ?? 50;
+  if (tone < 30) parts.push("Use linguagem BEM informal: gírias, abreviações (vc, tb, tmj, blz), sem pontuação formal.");
+  else if (tone > 70) parts.push("Use linguagem formal e educada. Trate por 'você/senhor(a)', frases completas, boa gramática.");
+  // Typing style
+  if (l._typingStyle === "rapido") parts.push("Escreva mensagens MUITO curtas (1-5 palavras), direto ao ponto.");
+  else if (l._typingStyle === "detalhado") parts.push("Escreva textos longos e detalhados com contexto completo.");
+  // Typos
+  if (l._enableTypos) parts.push("Cometa erros de digitação realistas: 'tbm', 'vc', 'pq', letras trocadas ocasionalmente.");
+  // Emojis
+  if (l._enableEmojis) parts.push("Use emojis naturalmente (😊 🙏 ✈️ ❤️) — de 1 a 3 por mensagem.");
+  else parts.push("NÃO use emojis.");
+  // Audio refs
+  if (l._enableAudioRef && Math.random() < 0.2) parts.push("Em algum momento mencione que prefere mandar áudio ou que não consegue ler textos longos agora.");
+  // Conversation goal
+  const goal = l._conversationGoal || "comprar";
+  if (goal === "pesquisar") parts.push("Você está APENAS pesquisando. Não tem pressa, faça muitas perguntas mas não avance para fechamento.");
+  else if (goal === "comparar") parts.push("Você está comparando com concorrentes. Mencione que viu preços em outros lugares. Peça para baterem ofertas.");
+  // Info reveal
+  if (l._infoRevealSpeed === "resistente") parts.push("NÃO revele informações pessoais facilmente. Exija confiança e boas respostas primeiro.");
+  else if (l._infoRevealSpeed === "imediato") parts.push("Dê todas as informações logo na primeira mensagem: datas, orçamento, nº de pessoas, destino preferido.");
+  // Follow-up pressure
+  if ((l._followUpPressure ?? 30) > 60) parts.push("Seja INSISTENTE: se não receber resposta detalhada, mande follow-up do tipo '??', 'e aí?', 'alguém?'.");
+  // Custom
+  if (l._customInstructions) parts.push(`INSTRUÇÃO ESPECIAL: ${l._customInstructions}`);
+  return parts.length > 0 ? "\n\nCALIBRAÇÃO DE COMPORTAMENTO:\n" + parts.join("\n") : "";
+}
+
 async function generateLeadMsg(lead: LeadInteligente, ultimaMsgAgente: string, isFirst: boolean): Promise<string> {
-  const sysPrompt = buildLeadPersona(lead);
+  const sysPrompt = buildLeadPersona(lead) + buildCalibrationPrompt(lead);
   const userPrompt = isFirst
     ? buildFirstMessagePrompt(lead)
     : buildConversaContext(lead.mensagens, ultimaMsgAgente, lead.etapaAtual, lead);
@@ -58,7 +89,7 @@ async function generateLeadMsg(lead: LeadInteligente, ultimaMsgAgente: string, i
 // Generate contextual objection
 async function gerarObjecao(lead: LeadInteligente, ultimaMsgAgente: string): Promise<string> {
   const prompt = buildObjecaoPrompt(lead, lead.etapaAtual, ultimaMsgAgente);
-  return callAgent(buildLeadPersona(lead), [{ role: "user", content: prompt }]);
+  return callAgent(buildLeadPersona(lead) + buildCalibrationPrompt(lead), [{ role: "user", content: prompt }]);
 }
 
 // Evaluate agent response quality — 3 dimensions
@@ -86,7 +117,7 @@ async function avaliarRespostaAgente(resposta: string, lead: LeadInteligente): P
 // Generate motivated loss message
 async function gerarMensagemPerda(lead: LeadInteligente): Promise<string> {
   const prompt = buildMensagemPerdaPrompt(lead, lead.etapaAtual);
-  return callAgent(buildLeadPersona(lead), [{ role: "user", content: prompt }]);
+  return callAgent(buildLeadPersona(lead) + buildCalibrationPrompt(lead), [{ role: "user", content: prompt }]);
 }
 
 function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean, enableTransfers: boolean, responseLength: "curta" | "media" | "longa") {
@@ -243,9 +274,24 @@ export default function SimuladorAutoMode() {
   const [agentResponseLength, setAgentResponseLength] = useState<"curta" | "media" | "longa">("media");
   const [enableLossNarrative, setEnableLossNarrative] = useState(true);
   const [evalFrequency, setEvalFrequency] = useState<"every" | "every2" | "every3">("every");
+  // Config — Calibração Lead
+  const [leadPatienceCurve, setLeadPatienceCurve] = useState<"linear" | "exponential" | "sudden">("linear");
+  const [initialPatience, setInitialPatience] = useState(80);
+  const [leadToneFormality, setLeadToneFormality] = useState(50); // 0=informal 100=formal
+  const [leadTypingStyle, setLeadTypingStyle] = useState<"natural" | "rapido" | "detalhado">("natural");
+  const [abandonmentSensitivity, setAbandonmentSensitivity] = useState(50); // 0=nunca desiste 100=desiste fácil
+  const [infoRevealSpeed, setInfoRevealSpeed] = useState<"gradual" | "imediato" | "resistente">("gradual");
+  const [leadFollowUpPressure, setLeadFollowUpPressure] = useState(30); // % chance de mandar follow-up
+  const [enableLeadTypos, setEnableLeadTypos] = useState(false);
+  const [enableLeadEmojis, setEnableLeadEmojis] = useState(true);
+  const [enableLeadAudioRef, setEnableLeadAudioRef] = useState(false); // simula "prefiro audio" / "não consigo ler agora"
+  const [leadConversationGoal, setLeadConversationGoal] = useState<"comprar" | "pesquisar" | "comparar" | "aleatorio">("aleatorio");
+  const [maxConversationMinutes, setMaxConversationMinutes] = useState(0); // 0 = sem limite por conversa
+  const [leadReengagementChance, setLeadReengagementChance] = useState(20); // % chance de voltar depois de silêncio
+  const [leadCustomInstructions, setLeadCustomInstructions] = useState("");
   // Config — Presets
   const [presetName, setPresetName] = useState("");
-  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "comportamento" | "avancado" | "presets">("volume");
+  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "lead_behavior" | "comportamento" | "avancado" | "presets">("volume");
 
   // Runtime
   const [phase, setPhase] = useState<Phase>("config");
@@ -316,7 +362,7 @@ export default function SimuladorAutoMode() {
   };
   const [presets, setPresets] = useState(loadPresets);
   const savePreset = (name: string) => {
-    const config = { numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency };
+    const config = { numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, leadPatienceCurve, initialPatience, leadToneFormality, leadTypingStyle, abandonmentSensitivity, infoRevealSpeed, leadFollowUpPressure, enableLeadTypos, enableLeadEmojis, enableLeadAudioRef, leadConversationGoal, maxConversationMinutes, leadReengagementChance, leadCustomInstructions };
     const updated = [...presets.filter(p => p.name !== name), { name, config }];
     localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(updated));
     setPresets(updated);
@@ -332,6 +378,13 @@ export default function SimuladorAutoMode() {
     setEnableTransfers(config.enableTransfers ?? true); setEmotionalVolatility(config.emotionalVolatility ?? 50);
     setAgentResponseLength(config.agentResponseLength ?? "media"); setEnableLossNarrative(config.enableLossNarrative ?? true);
     setEvalFrequency(config.evalFrequency ?? "every");
+    setLeadPatienceCurve(config.leadPatienceCurve ?? "linear"); setInitialPatience(config.initialPatience ?? 80);
+    setLeadToneFormality(config.leadToneFormality ?? 50); setLeadTypingStyle(config.leadTypingStyle ?? "natural");
+    setAbandonmentSensitivity(config.abandonmentSensitivity ?? 50); setInfoRevealSpeed(config.infoRevealSpeed ?? "gradual");
+    setLeadFollowUpPressure(config.leadFollowUpPressure ?? 30); setEnableLeadTypos(config.enableLeadTypos ?? false);
+    setEnableLeadEmojis(config.enableLeadEmojis ?? true); setEnableLeadAudioRef(config.enableLeadAudioRef ?? false);
+    setLeadConversationGoal(config.leadConversationGoal ?? "aleatorio"); setMaxConversationMinutes(config.maxConversationMinutes ?? 0);
+    setLeadReengagementChance(config.leadReengagementChance ?? 20); setLeadCustomInstructions(config.leadCustomInstructions ?? "");
     toast({ title: "Preset carregado!" });
   };
   const deletePreset = (name: string) => {
@@ -404,10 +457,25 @@ export default function SimuladorAutoMode() {
       // Apply objection density from config
       lead.temObjecao = Math.random() * 100 < objectionDensity;
 
-      // Apply emotional volatility — affects patience drain
+      // Apply lead behavior calibration
+      lead.pacienciaRestante = initialPatience;
       if (emotionalVolatility > 70) {
-        lead.pacienciaRestante = Math.max(30, lead.pacienciaRestante - Math.floor((emotionalVolatility - 50) * 0.5));
+        lead.pacienciaRestante = Math.max(20, lead.pacienciaRestante - Math.floor((emotionalVolatility - 50) * 0.5));
       }
+      // Apply abandonment sensitivity to patience drain rate
+      (lead as any)._abandonSensitivity = abandonmentSensitivity;
+      (lead as any)._patienceCurve = leadPatienceCurve;
+      (lead as any)._toneFormality = leadToneFormality;
+      (lead as any)._typingStyle = leadTypingStyle;
+      (lead as any)._followUpPressure = leadFollowUpPressure;
+      (lead as any)._infoRevealSpeed = infoRevealSpeed;
+      (lead as any)._enableTypos = enableLeadTypos;
+      (lead as any)._enableEmojis = enableLeadEmojis;
+      (lead as any)._enableAudioRef = enableLeadAudioRef;
+      (lead as any)._conversationGoal = leadConversationGoal === "aleatorio" ? ["comprar","pesquisar","comparar"][Math.floor(Math.random()*3)] : leadConversationGoal;
+      (lead as any)._maxConvMinutes = maxConversationMinutes;
+      (lead as any)._reengagementChance = leadReengagementChance;
+      (lead as any)._customInstructions = leadCustomInstructions;
 
       allLeads.push(lead);
       setLeads([...allLeads]);
@@ -458,6 +526,24 @@ export default function SimuladorAutoMode() {
             const adjustedNota = Math.round(avaliacao.nota * volatilityMult + (50 * (1 - volatilityMult / 2)));
             const updatedLead = atualizarEstadoEmocional(lead, adjustedNota, avaliacao.reacao, avaliacao.sentimento);
             Object.assign(lead, updatedLead);
+            // Apply patience curve from calibration
+            const curve = (lead as any)._patienceCurve || "linear";
+            const abSens = ((lead as any)._abandonSensitivity ?? 50) / 100;
+            if (curve === "exponential") {
+              // Exponential: patience drops slowly at first, then fast
+              const ratio = 1 - (lead.pacienciaRestante / initialPatience);
+              const extraDrain = Math.floor(ratio * ratio * 15 * (1 + abSens));
+              lead.pacienciaRestante = Math.max(0, lead.pacienciaRestante - extraDrain);
+            } else if (curve === "sudden") {
+              // Sudden: patience stable until threshold, then collapses
+              if (lead.pacienciaRestante < 40 && adjustedNota < 60) {
+                lead.pacienciaRestante = Math.max(0, lead.pacienciaRestante - Math.floor(25 * (1 + abSens)));
+              }
+            } else {
+              // Linear: steady drain amplified by abandonment sensitivity
+              const drain = Math.floor(5 * (1 + abSens));
+              if (adjustedNota < 50) lead.pacienciaRestante = Math.max(0, lead.pacienciaRestante - drain);
+            }
             lead.scoreHumanizacao = lead.scoreHumanizacao > 0 ? Math.round((lead.scoreHumanizacao + avaliacao.humanizacao) / 2) : avaliacao.humanizacao;
             lead.scoreEficacia = lead.scoreEficacia > 0 ? Math.round((lead.scoreEficacia + avaliacao.eficaciaComercial) / 2) : avaliacao.eficaciaComercial;
             lead.scoreTecnica = lead.scoreTecnica > 0 ? Math.round((lead.scoreTecnica + avaliacao.qualidadeTecnica) / 2) : avaliacao.qualidadeTecnica;
@@ -536,6 +622,26 @@ export default function SimuladorAutoMode() {
             addEvent(lead.perfil.cor, `${lead.nome} enviou múltiplas msgs`, "💬💬");
           }
 
+          // Follow-up pressure: lead sends "???" if configured
+          const fup = (lead as any)._followUpPressure ?? 30;
+          if (fup > 0 && Math.random() * 100 < fup) {
+            const followUps = ["??", "e aí?", "alguém?", "oi?", "tô aguardando", "???", "🙄", "tem alguém aí?", "vou procurar outra agência..."];
+            const fMsg = followUps[Math.floor(Math.random() * followUps.length)];
+            lead.mensagens.push({ role: "client", content: fMsg, timestamp: Date.now() });
+            setLeads([...allLeads]);
+            addEvent("#F59E0B", `${lead.nome}: follow-up "${fMsg}"`, "⏰");
+          }
+
+          // Per-conversation time limit
+          const maxConvMs = ((lead as any)._maxConvMinutes ?? 0) * 60 * 1000;
+          if (maxConvMs > 0 && lead.mensagens.length >= 2) {
+            const convDuration = Date.now() - lead.mensagens[0].timestamp;
+            if (convDuration >= maxConvMs) {
+              addEvent("#8B5CF6", `${lead.nome}: limite de ${(lead as any)._maxConvMinutes}min por conversa`, "⏱️");
+              break;
+            }
+          }
+
           if (speedDelay > 0) await new Promise(r => setTimeout(r, Math.max(100, speedDelay / 2)));
         }
 
@@ -585,7 +691,7 @@ export default function SimuladorAutoMode() {
     const elapsed = Math.round((Date.now() - simStartTime) / 1000);
     const wasTimeout = elapsed >= duration;
     toast({ title: wasTimeout ? "Simulação encerrada por tempo!" : "Simulação concluída!", description: `${allLeads.length} leads processados em ${formatTime(elapsed)}` });
-  }, [numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, toast]);
+  }, [numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, initialPatience, leadPatienceCurve, abandonmentSensitivity, leadToneFormality, leadTypingStyle, leadFollowUpPressure, infoRevealSpeed, enableLeadTypos, enableLeadEmojis, enableLeadAudioRef, leadConversationGoal, maxConversationMinutes, leadReengagementChance, leadCustomInstructions, toast]);
 
   const stopSimulation = () => stopSimulationRef.current();
 
@@ -824,6 +930,7 @@ Retorne JSON:
     { id: "volume" as const, label: "Volume & Tempo", icon: BarChart3, color: "#3B82F6", summary: `${numLeads} leads · ${msgsPerLead} msgs · ${formatTime(duration)}` },
     { id: "perfis" as const, label: "Perfis", icon: User, color: "#EC4899", summary: `${selectedProfiles.length || 8} perfis ativos` },
     { id: "cenario" as const, label: "Cenário", icon: MapPin, color: "#06B6D4", summary: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos` },
+    { id: "lead_behavior" as const, label: "Calibração Lead", icon: Heart, color: "#EF4444", summary: `Paciência ${initialPatience}% · ${leadPatienceCurve} · ${abandonmentSensitivity}% sensib.` },
     { id: "comportamento" as const, label: "Funil & Velocidade", icon: Zap, color: "#8B5CF6", summary: `${SPEED_OPTIONS.find(s => s.id === speed)?.label} · ${funnelMode === "full" ? "Completo" : funnelMode === "comercial" ? "Comercial" : "Custom"}` },
     { id: "avancado" as const, label: "Motor IA", icon: Brain, color: "#F59E0B", summary: `${enableEvaluation ? "Aval." : "—"} ${enableTransfers ? "Transf." : "—"} ${agentResponseLength}` },
     { id: "presets" as const, label: "Presets", icon: BookOpen, color: "#10B981", summary: `${presets.length} salvo${presets.length !== 1 ? "s" : ""}` },
@@ -882,6 +989,8 @@ Retorne JSON:
                   { label: "Duração", value: formatTime(duration), color: "#8B5CF6" },
                   { label: "Objeções", value: `${objectionDensity}%`, color: "#F59E0B" },
                   { label: "Perfis", value: `${selectedProfiles.length || 8}`, color: "#EC4899" },
+                  { label: "Paciência", value: `${initialPatience}%`, color: "#EF4444" },
+                  { label: "Abandono", value: `${abandonmentSensitivity}%`, color: "#EF4444" },
                 ].map(item => (
                   <div key={item.label} className="flex items-center justify-between">
                     <span className="text-[9px]" style={{ color: "#64748B" }}>{item.label}</span>
@@ -1155,6 +1264,248 @@ Retorne JSON:
                         );
                       })}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ===== LEAD BEHAVIOR TAB ===== */}
+              {configTab === "lead_behavior" && (
+                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Heart className="w-5 h-5" style={{ color: "#EF4444" }} />
+                    <div>
+                      <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Calibração do Lead Fictício</h3>
+                      <p className="text-[11px]" style={{ color: "#64748B" }}>Controle fino do comportamento, tom e reações do lead durante a simulação</p>
+                    </div>
+                  </div>
+
+                  {/* Patience & Abandonment */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Paciência inicial</span>
+                        <span className="text-[20px] font-extrabold tabular-nums" style={{ color: initialPatience >= 70 ? "#10B981" : initialPatience >= 40 ? "#F59E0B" : "#EF4444" }}>{initialPatience}%</span>
+                      </div>
+                      <p className="text-[9px] mb-3" style={{ color: "#475569" }}>Nível de paciência com que o lead começa a conversa</p>
+                      <Slider min={10} max={100} step={5} value={[initialPatience]} onValueChange={v => setInitialPatience(v[0])} />
+                      <div className="flex justify-between mt-1">
+                        <span className="text-[8px]" style={{ color: "#EF4444" }}>Impaciente</span>
+                        <span className="text-[8px]" style={{ color: "#10B981" }}>Paciente</span>
+                      </div>
+                    </div>
+                    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Sensibilidade a abandono</span>
+                        <span className="text-[20px] font-extrabold tabular-nums" style={{ color: abandonmentSensitivity >= 70 ? "#EF4444" : abandonmentSensitivity >= 40 ? "#F59E0B" : "#10B981" }}>{abandonmentSensitivity}%</span>
+                      </div>
+                      <p className="text-[9px] mb-3" style={{ color: "#475569" }}>Quão facilmente o lead desiste ao receber respostas fracas</p>
+                      <Slider min={0} max={100} step={5} value={[abandonmentSensitivity]} onValueChange={v => setAbandonmentSensitivity(v[0])} />
+                      <div className="flex justify-between mt-1">
+                        <span className="text-[8px]" style={{ color: "#10B981" }}>Tolerante</span>
+                        <span className="text-[8px]" style={{ color: "#EF4444" }}>Desiste fácil</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Patience Curve */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <TrendingUp className="w-3.5 h-3.5" style={{ color: "#EF4444" }} />
+                      <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Curva de perda de paciência</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        { id: "linear" as const, label: "Linear", desc: "Perde paciência de forma constante", icon: "📉", visual: "━━━━━━━━" },
+                        { id: "exponential" as const, label: "Exponencial", desc: "Começa tolerante, depois desaba", icon: "📈", visual: "━━━━━╲╲╲" },
+                        { id: "sudden" as const, label: "Abrupta", desc: "Mantém paciência até estourar de repente", icon: "💥", visual: "━━━━━━━╲" },
+                      ]).map(c => (
+                        <button key={c.id} onClick={() => setLeadPatienceCurve(c.id)}
+                          className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl transition-all text-center"
+                          style={{
+                            background: leadPatienceCurve === c.id ? "rgba(239,68,68,0.08)" : "rgba(255,255,255,0.015)",
+                            border: `1px solid ${leadPatienceCurve === c.id ? "rgba(239,68,68,0.3)" : "rgba(255,255,255,0.04)"}`,
+                          }}>
+                          <span className="text-lg">{c.icon}</span>
+                          <span className="text-[11px] font-bold" style={{ color: leadPatienceCurve === c.id ? "#F1F5F9" : "#94A3B8" }}>{c.label}</span>
+                          <span className="text-[8px] font-mono tracking-wider" style={{ color: leadPatienceCurve === c.id ? "#EF4444" : "#334155" }}>{c.visual}</span>
+                          <span className="text-[8px]" style={{ color: "#475569" }}>{c.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Communication Style */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Tom de formalidade</span>
+                        <span className="text-[15px] font-bold" style={{ color: "#8B5CF6" }}>{leadToneFormality}%</span>
+                      </div>
+                      <p className="text-[9px] mb-3" style={{ color: "#475569" }}>Como o lead se comunica: informal (gírias, abreviações) vs formal</p>
+                      <Slider min={0} max={100} step={10} value={[leadToneFormality]} onValueChange={v => setLeadToneFormality(v[0])} />
+                      <div className="flex justify-between mt-1">
+                        <span className="text-[8px]" style={{ color: "#EC4899" }}>🤙 "eae mano"</span>
+                        <span className="text-[8px]" style={{ color: "#3B82F6" }}>🎩 "Prezado(a)"</span>
+                      </div>
+                    </div>
+                    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Follow-up espontâneo</span>
+                        <span className="text-[15px] font-bold" style={{ color: "#F59E0B" }}>{leadFollowUpPressure}%</span>
+                      </div>
+                      <p className="text-[9px] mb-3" style={{ color: "#475569" }}>Chance do lead mandar msg extra pressionando ("e aí?", "???")</p>
+                      <Slider min={0} max={100} step={5} value={[leadFollowUpPressure]} onValueChange={v => setLeadFollowUpPressure(v[0])} />
+                      <div className="flex justify-between mt-1">
+                        <span className="text-[8px]" style={{ color: "#10B981" }}>Passivo</span>
+                        <span className="text-[8px]" style={{ color: "#EF4444" }}>Insistente</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Typing style */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageSquare className="w-3.5 h-3.5" style={{ color: "#06B6D4" }} />
+                      <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Estilo de escrita do lead</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        { id: "rapido" as const, label: "Rápido", desc: "Msgs curtas, direto ao ponto", icon: "⚡", example: "\"quanto?\"" },
+                        { id: "natural" as const, label: "Natural", desc: "Conversacional, parágrafos curtos", icon: "💬", example: "\"Oi! Queria saber sobre...\"" },
+                        { id: "detalhado" as const, label: "Detalhista", desc: "Textos longos, muita informação", icon: "📝", example: "\"Bom dia! Preciso de um pacote completo incluindo...\"" },
+                      ]).map(ts => (
+                        <button key={ts.id} onClick={() => setLeadTypingStyle(ts.id)}
+                          className="flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all text-center"
+                          style={{
+                            background: leadTypingStyle === ts.id ? "rgba(6,182,212,0.08)" : "rgba(255,255,255,0.015)",
+                            border: `1px solid ${leadTypingStyle === ts.id ? "rgba(6,182,212,0.3)" : "rgba(255,255,255,0.04)"}`,
+                          }}>
+                          <span className="text-lg">{ts.icon}</span>
+                          <span className="text-[11px] font-bold" style={{ color: leadTypingStyle === ts.id ? "#E2E8F0" : "#94A3B8" }}>{ts.label}</span>
+                          <span className="text-[8px] italic" style={{ color: "#475569" }}>{ts.example}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Info reveal + conversation goal */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Search className="w-3.5 h-3.5" style={{ color: "#10B981" }} />
+                        <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Revelação de informações</span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-1.5">
+                        {([
+                          { id: "imediato" as const, label: "Imediato", desc: "Dá todas as infos na 1ª msg", icon: "📢" },
+                          { id: "gradual" as const, label: "Gradual", desc: "Revela aos poucos conforme perguntado", icon: "🧩" },
+                          { id: "resistente" as const, label: "Resistente", desc: "Omite dados, exige confiança primeiro", icon: "🔒" },
+                        ]).map(ir => (
+                          <button key={ir.id} onClick={() => setInfoRevealSpeed(ir.id)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all"
+                            style={{
+                              background: infoRevealSpeed === ir.id ? "rgba(16,185,129,0.06)" : "rgba(255,255,255,0.015)",
+                              border: `1px solid ${infoRevealSpeed === ir.id ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`,
+                            }}>
+                            <span>{ir.icon}</span>
+                            <div>
+                              <p className="text-[10px] font-bold" style={{ color: infoRevealSpeed === ir.id ? "#E2E8F0" : "#94A3B8" }}>{ir.label}</p>
+                              <p className="text-[8px]" style={{ color: "#475569" }}>{ir.desc}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Lightbulb className="w-3.5 h-3.5" style={{ color: "#F59E0B" }} />
+                        <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Objetivo do lead</span>
+                      </div>
+                      <div className="grid grid-cols-1 gap-1.5">
+                        {([
+                          { id: "comprar" as const, label: "Quer comprar", desc: "Intenção real de fechar", icon: "🎯" },
+                          { id: "pesquisar" as const, label: "Só pesquisando", desc: "Coleta informação, sem pressa", icon: "🔍" },
+                          { id: "comparar" as const, label: "Comparando preços", desc: "Tem concorrente, quer melhor oferta", icon: "⚖️" },
+                          { id: "aleatorio" as const, label: "Aleatório", desc: "Mix realista de intenções", icon: "🎲" },
+                        ]).map(cg => (
+                          <button key={cg.id} onClick={() => setLeadConversationGoal(cg.id)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all"
+                            style={{
+                              background: leadConversationGoal === cg.id ? "rgba(245,158,11,0.06)" : "rgba(255,255,255,0.015)",
+                              border: `1px solid ${leadConversationGoal === cg.id ? "rgba(245,158,11,0.25)" : "rgba(255,255,255,0.04)"}`,
+                            }}>
+                            <span>{cg.icon}</span>
+                            <div>
+                              <p className="text-[10px] font-bold" style={{ color: leadConversationGoal === cg.id ? "#E2E8F0" : "#94A3B8" }}>{cg.label}</p>
+                              <p className="text-[8px]" style={{ color: "#475569" }}>{cg.desc}</p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Toggles row */}
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#64748B" }}>🎭 Traços de personalidade</p>
+                    {[
+                      { label: "Erros de digitação", desc: "Lead comete typos realistas (\"tbm\", \"vc\", palavras cortadas)", value: enableLeadTypos, setter: setEnableLeadTypos, color: "#EC4899", icon: "✏️" },
+                      { label: "Emojis na conversa", desc: "Lead usa emojis naturalmente (😊 🙏 ✈️)", value: enableLeadEmojis, setter: setEnableLeadEmojis, color: "#F59E0B", icon: "😊" },
+                      { label: "Referências a áudio", desc: "Lead menciona 'prefiro mandar áudio' ou 'não consigo ler agora'", value: enableLeadAudioRef, setter: setEnableLeadAudioRef, color: "#8B5CF6", icon: "🎤" },
+                    ].map(opt => (
+                      <button key={opt.label} onClick={() => opt.setter(!opt.value)}
+                        className="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl text-left transition-all"
+                        style={{
+                          background: opt.value ? `${opt.color}06` : "rgba(255,255,255,0.015)",
+                          border: `1px solid ${opt.value ? `${opt.color}25` : "rgba(255,255,255,0.04)"}`,
+                        }}>
+                        <span className="text-sm">{opt.icon}</span>
+                        <div className="flex-1">
+                          <p className="text-[10px] font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
+                          <p className="text-[8px] mt-0.5" style={{ color: "#475569" }}>{opt.desc}</p>
+                        </div>
+                        <div className="w-9 h-5 rounded-full relative transition-all" style={{ background: opt.value ? opt.color : "rgba(255,255,255,0.1)" }}>
+                          <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all" style={{ left: opt.value ? 18 : 2, background: "#fff" }} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Advanced: re-engagement + max conv time + custom instructions */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Reengajamento</span>
+                        <span className="text-[15px] font-bold" style={{ color: "#06B6D4" }}>{leadReengagementChance}%</span>
+                      </div>
+                      <p className="text-[9px] mb-3" style={{ color: "#475569" }}>Chance do lead voltar após silêncio/desistência parcial</p>
+                      <Slider min={0} max={80} step={5} value={[leadReengagementChance]} onValueChange={v => setLeadReengagementChance(v[0])} />
+                    </div>
+                    <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Duração máx por conversa</span>
+                        <span className="text-[15px] font-bold" style={{ color: "#8B5CF6" }}>{maxConversationMinutes === 0 ? "∞" : `${maxConversationMinutes}min`}</span>
+                      </div>
+                      <p className="text-[9px] mb-3" style={{ color: "#475569" }}>Limite de tempo por conversa individual (0 = ilimitado)</p>
+                      <Slider min={0} max={30} step={1} value={[maxConversationMinutes]} onValueChange={v => setMaxConversationMinutes(v[0])} />
+                    </div>
+                  </div>
+
+                  {/* Custom instructions */}
+                  <div className="rounded-xl p-4" style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.12)" }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Edit3 className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
+                      <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Instruções customizadas para o lead</span>
+                    </div>
+                    <p className="text-[8px] mb-2" style={{ color: "#475569" }}>Adicione comportamentos específicos que serão injetados no prompt do lead fictício</p>
+                    <textarea
+                      value={leadCustomInstructions}
+                      onChange={e => setLeadCustomInstructions(e.target.value)}
+                      placeholder="Ex: 'Sempre mencione que já viajou com a CVC antes', 'Pergunte sobre seguro viagem', 'Insista em saber sobre cancelamento'..."
+                      rows={3}
+                      className="w-full rounded-lg px-3 py-2 text-[11px] outline-none resize-none"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "#E2E8F0" }}
+                    />
                   </div>
                 </div>
               )}
@@ -1506,6 +1857,9 @@ Retorne JSON:
                 { icon: "🧠", label: enableEvaluation ? `Aval. ${evalFrequency === "every" ? "100%" : evalFrequency === "every2" ? "50%" : "33%"}` : "Aval. off", color: "#EC4899" },
                 { icon: "🔄", label: enableTransfers ? "Transf. on" : "Transf. off", color: "#06B6D4" },
                 { icon: "💥", label: `Vol. ${emotionalVolatility}%`, color: "#EF4444" },
+                { icon: "❤️", label: `Pac. ${initialPatience}%`, color: "#EF4444" },
+                { icon: "📉", label: leadPatienceCurve, color: "#EC4899" },
+                { icon: "🎯", label: leadConversationGoal === "aleatorio" ? "Mix" : leadConversationGoal, color: "#F59E0B" },
               ].map(chip => (
                 <span key={chip.label} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0"
                   style={{ background: `${chip.color}08`, color: chip.color, border: `1px solid ${chip.color}15` }}>
