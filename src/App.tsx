@@ -126,11 +126,9 @@ const MediaLibrary = lazy(() => import("@/pages/MediaLibrary"));
 
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
-const OperacaoFlowBuilder = lazy(() => import("@/pages/operacao/OperacaoFlowBuilder"));
 const OperacaoIntegracoes = lazy(() => import("@/pages/operacao/OperacaoIntegracoes"));
 
 const OperacaoTagsPipeline = lazy(() => import("@/pages/operacao/OperacaoTagsPipeline"));
-const OperacaoSimulador = lazy(() => import("@/pages/operacao/OperacaoSimulador"));
 const OperacaoLogs = lazy(() => import("@/pages/operacao/OperacaoLogs"));
 
 const queryClient = new QueryClient({
