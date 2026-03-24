@@ -739,10 +739,11 @@ export default function SimuladorAutoMode() {
             setLeads([...allLeads]);
             addEvent("#F59E0B", `⚠️ Objeção de ${lead.nome}: "${objecao.slice(0, 50)}..."`, "🛡️");
 
-            // Agent needs to handle objection
+            // Agent needs to handle objection — with context compression
+            const objCompressed = compressConversation(lead.mensagens);
             const objResp = await callSimulatorAI(
               buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength),
-              lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content })), "agent"
+              objCompressed, "agent"
             );
             lead.mensagens.push({ role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
             setLeads([...allLeads]);
