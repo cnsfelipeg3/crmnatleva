@@ -24,19 +24,26 @@ const corsHeaders = {
 
 type CallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep" | "price_image";
 
-function getModelConfig(type: CallType, provider: string): { model: string; stream: boolean } {
+function getModelConfig(type: CallType, provider: string): { model: string; stream: boolean; maxTokens: number } {
   if (type === "price_image") {
-    return { model: "google/gemini-3.1-flash-image-preview", stream: false };
+    return { model: "google/gemini-3.1-flash-image-preview", stream: false, maxTokens: 1024 };
   }
 
   if (provider === "anthropic") {
     switch (type) {
+      // Heavy reasoning → Opus (worth the cost)
       case "evaluate":
       case "debrief":
       case "deep":
-        return { model: "claude-opus-4-5", stream: false };
+        return { model: "claude-sonnet-4-20250514", stream: false, maxTokens: 3000 };
+      // Fast conversational → Sonnet (15x cheaper than Opus, still excellent)
+      case "lead":
+      case "objection":
+      case "loss":
+        return { model: "claude-sonnet-4-20250514", stream: true, maxTokens: 800 };
+      case "agent":
       default:
-        return { model: "claude-opus-4-5", stream: true };
+        return { model: "claude-sonnet-4-20250514", stream: true, maxTokens: 1200 };
     }
   }
 
@@ -45,9 +52,9 @@ function getModelConfig(type: CallType, provider: string): { model: string; stre
     case "evaluate":
     case "debrief":
     case "deep":
-      return { model: "openai/gpt-5", stream: false };
+      return { model: "openai/gpt-5", stream: false, maxTokens: 3000 };
     default:
-      return { model: "openai/gpt-5-mini", stream: true };
+      return { model: "openai/gpt-5-mini", stream: true, maxTokens: 1200 };
   }
 }
 
@@ -56,6 +63,7 @@ async function callAnthropic(
   messages: Array<{ role: string; content: string }>,
   model: string,
   stream: boolean,
+  maxTokens: number = 1200,
 ): Promise<Response> {
   const systemMsg = messages.find(m => m.role === "system");
   const userMessages = messages.filter(m => m.role !== "system").map(m => ({
@@ -72,7 +80,7 @@ async function callAnthropic(
     },
     body: JSON.stringify({
       model,
-      max_tokens: 4096,
+      max_tokens: maxTokens,
       system: systemMsg?.content || "",
       messages: userMessages,
       stream,
@@ -262,7 +270,7 @@ serve(async (req) => {
     if (provider === "anthropic") {
       const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
       if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
-      return await callAnthropic(ANTHROPIC_API_KEY, messages, config.model, config.stream);
+      return await callAnthropic(ANTHROPIC_API_KEY, messages, config.model, config.stream, config.maxTokens);
     }
 
     // Default: Lovable AI Gateway

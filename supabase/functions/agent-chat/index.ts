@@ -116,7 +116,7 @@ serve(async (req) => {
       agentName,
       agentRole,
       provider = "anthropic",
-      model = "claude-opus-4-5",
+      model = "claude-sonnet-4-20250514",
       history,
       agentBehaviorPrompt,
     } = await req.json();
