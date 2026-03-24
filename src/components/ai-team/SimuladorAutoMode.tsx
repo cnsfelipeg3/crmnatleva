@@ -823,7 +823,7 @@ export default function SimuladorAutoMode() {
 
             const objCompressed = compressConversation(lead.mensagens);
             const objResp = await callSimulatorAI(
-              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength),
+              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current),
               objCompressed, "agent"
             );
             if (!simAtivaRef.current) return;
