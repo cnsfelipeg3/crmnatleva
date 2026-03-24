@@ -2926,7 +2926,7 @@ Retorne JSON:
                               <span className="text-[10px] font-bold" style={{ color: dim.color }}>{dim.label}</span>
                               <span className="text-[10px] font-extrabold ml-auto" style={{ color: dim.color }}>{dimData.score}</span>
                             </div>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 pl-4">
+                            <div className={cn("gap-x-4 gap-y-1 pl-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                               {dim.criterioIds.map(cId => {
                                 const criterio = dimData.criterios[cId];
                                 const nome = CRITERIOS_AVALIACAO.find(c => c.id === cId)?.nome || cId;
