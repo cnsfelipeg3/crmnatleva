@@ -1127,7 +1127,7 @@ Retorne JSON:
                   </div>
                   {/* Step number — desktop only */}
                   {!isMobile && (
-                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[15px] font-bold"
+                    <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold"
                       style={{ background: active ? `${tab.color}20` : "rgba(255,255,255,0.05)", color: active ? tab.color : "#94A3B8" }}>
                       {i + 1}
                     </div>
