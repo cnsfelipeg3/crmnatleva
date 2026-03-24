@@ -2355,23 +2355,36 @@ Retorne JSON:
                     </div>
                   </div>
 
-                  {/* Quick presets */}
+                  {/* Built-in presets */}
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#64748B" }}>⚡ Presets rápidos</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { label: "Teste rápido", desc: "3 leads, 6 msgs, instantâneo", icon: "🚀", apply: () => { setNumLeads(3); setMsgsPerLead(6); setSpeed("instant"); setDuration(60); setEnableEvaluation(false); } },
-                        { label: "Estresse máximo", desc: "20 leads, 30 msgs, todos perfis", icon: "🔥", apply: () => { setNumLeads(20); setMsgsPerLead(30); setDuration(600); setObjectionDensity(80); setEmotionalVolatility(80); setSelectedProfiles([]); } },
-                        { label: "Qualidade total", desc: "5 leads, 20 msgs, avaliação completa", icon: "🏆", apply: () => { setNumLeads(5); setMsgsPerLead(20); setSpeed("normal"); setEnableEvaluation(true); setEvalFrequency("every"); setAgentResponseLength("longa"); setEnableLossNarrative(true); } },
-                      ].map(qp => (
-                        <button key={qp.label} onClick={() => { qp.apply(); toast({ title: `Preset "${qp.label}" aplicado` }); }}
-                          className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all hover:scale-[1.02]"
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#64748B" }}>⚡ Cenários pré-configurados</p>
+                    <div className={cn("grid gap-2", isMobile ? "grid-cols-1" : "grid-cols-2 lg:grid-cols-3")}>
+                      {Object.values(BUILT_IN_PRESETS).map(bp => (
+                        <button key={bp.name} onClick={() => { loadPreset(bp.config); toast({ title: `${bp.name} aplicado!` }); }}
+                          className="flex flex-col items-start gap-1.5 p-4 rounded-xl transition-all hover:scale-[1.02] text-left"
                           style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                          <span className="text-2xl">{qp.icon}</span>
-                          <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>{qp.label}</span>
-                          <span className="text-[8px] text-center" style={{ color: "#475569" }}>{qp.desc}</span>
+                          <span className="text-[14px] font-bold" style={{ color: "#E2E8F0" }}>{bp.name}</span>
+                          <span className="text-[9px] leading-tight" style={{ color: "#64748B" }}>{bp.description}</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(59,130,246,0.1)", color: "#3B82F6" }}>{bp.config.numLeads} leads</span>
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>{bp.config.msgsPerLead} msgs</span>
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(139,92,246,0.1)", color: "#8B5CF6" }}>
+                              {bp.config.duration >= 3600 ? `${Math.floor(bp.config.duration / 3600)}h` : `${Math.floor(bp.config.duration / 60)}min`}
+                            </span>
+                          </div>
                         </button>
                       ))}
+                      {/* Legacy quick presets */}
+                      <button onClick={() => { setNumLeads(3); setMsgsPerLead(6); setSpeed("instant"); setDuration(60); setEnableEvaluation(false); toast({ title: "Teste rápido aplicado" }); }}
+                        className="flex flex-col items-start gap-1.5 p-4 rounded-xl transition-all hover:scale-[1.02] text-left"
+                        style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                        <span className="text-[14px] font-bold" style={{ color: "#E2E8F0" }}>🚀 Teste Rápido</span>
+                        <span className="text-[9px]" style={{ color: "#64748B" }}>3 leads, 6 msgs, instantâneo</span>
+                        <div className="flex gap-1 mt-1">
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(59,130,246,0.1)", color: "#3B82F6" }}>3 leads</span>
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>6 msgs</span>
+                        </div>
+                      </button>
                     </div>
                   </div>
 
