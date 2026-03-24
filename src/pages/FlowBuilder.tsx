@@ -563,12 +563,20 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
   const [agents, setAgents] = useState<any[]>([]);
   useEffect(() => {
     supabase.from("ai_integrations").select("id, name, provider, model, status")
-      .eq("status", "active").then(({ data }) => setIntegrations(data || []));
+      .eq("status", "ativo").then(({ data }) => {
+        if (!data || data.length === 0) {
+          // Fallback: also try "active" status
+          supabase.from("ai_integrations").select("id, name, provider, model, status")
+            .eq("status", "active").then(({ data: d2 }) => setIntegrations(d2 || []));
+        } else {
+          setIntegrations(data);
+        }
+      });
     supabase.from("ai_team_agents").select("id, name, emoji, role, squad_id, is_active")
       .eq("is_active", true).order("name").then(({ data }) => setAgents(data || []));
   }, []);
 
-  const provider = config.provider || "natleva";
+  const provider = config.provider || "anthropic";
   const contextFields = config.context_fields || AI_CONTEXT_FIELDS.map((f) => f.key);
 
   return (
@@ -585,7 +593,7 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
         </Select>
       </div>
 
-      {provider === "natleva" && (
+      {(provider === "natleva" || provider === "anthropic") && (
         <div>
           <Label className="text-xs font-semibold">Agente da Equipe</Label>
           <Select value={config.agent_id || ""} onValueChange={(v) => {
@@ -615,7 +623,24 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
         </div>
       )}
 
-      {provider !== "natleva" && provider !== "n8n" && (
+      {provider === "anthropic" && (
+        <div>
+          <Label className="text-xs font-semibold">Modelo Anthropic</Label>
+          <Select value={config.model || "claude-opus-4-5"} onValueChange={(v) => updateConfig("model", v)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="claude-opus-4-5">Claude Opus 4.5 (Recomendado)</SelectItem>
+              <SelectItem value="claude-sonnet-4-20250514">Claude Sonnet 4</SelectItem>
+              <SelectItem value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (Rápido)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-[9px] text-muted-foreground mt-1">
+            Opus 4.5: conversas complexas · Sonnet: análises · Haiku: tarefas simples
+          </p>
+        </div>
+      )}
+
+      {provider !== "natleva" && provider !== "anthropic" && provider !== "n8n" && (
         <div>
           <Label className="text-xs">Credencial / Integração</Label>
           <Select value={config.integration_id || ""} onValueChange={(v) => updateConfig("integration_id", v)}>

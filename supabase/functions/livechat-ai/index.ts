@@ -10,9 +10,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, clientContext } = await req.json();
+    const { messages, clientContext, provider: reqProvider } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!LOVABLE_API_KEY && !ANTHROPIC_API_KEY) throw new Error("No AI API key configured");
 
     // Fetch knowledge base and rules from DB
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -113,41 +114,79 @@ Responda SEMPRE em JSON válido com esta estrutura:
 
 ${contextBlock}`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-5",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
-        temperature: 0.7,
-      }),
-    });
+    // Determine provider: prefer Anthropic if key exists, else Lovable
+    const useAnthropic = (reqProvider === "anthropic" || (!reqProvider && ANTHROPIC_API_KEY));
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Tente novamente em alguns segundos." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione créditos ao workspace." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Erro na IA" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    let data;
+    if (useAnthropic && ANTHROPIC_API_KEY) {
+      const anthropicResponse = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-opus-4-5",
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: messages.map((m: any) => ({ role: m.role === "system" ? "user" : m.role, content: m.content })),
+        }),
       });
-    }
 
-    const data = await response.json();
+      if (!anthropicResponse.ok) {
+        const status = anthropicResponse.status;
+        const t = await anthropicResponse.text();
+        console.error("Anthropic error:", status, t);
+        if (status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit Anthropic excedido." }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        return new Response(JSON.stringify({ error: "Erro na Anthropic" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const anthropicData = await anthropicResponse.json();
+      data = { choices: [{ message: { content: anthropicData.content?.[0]?.text || "" } }] };
+    } else {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-5",
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...messages,
+          ],
+          temperature: 0.7,
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded." }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (response.status === 402) {
+          return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const t = await response.text();
+        console.error("AI gateway error:", response.status, t);
+        return new Response(JSON.stringify({ error: "Erro na IA" }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      data = await response.json();
+    }
     const content = data.choices?.[0]?.message?.content || "";
 
     // Try to parse JSON from the response

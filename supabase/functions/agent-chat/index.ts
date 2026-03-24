@@ -2,21 +2,152 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+/**
+ * agent-chat — Supports both Lovable AI Gateway and direct Anthropic API.
+ * Provider selection: pass `provider` in the request body.
+ *   - "anthropic" → uses ANTHROPIC_API_KEY with Anthropic Messages API
+ *   - default     → uses LOVABLE_API_KEY with Lovable AI Gateway
+ */
+
+async function callAnthropic(
+  apiKey: string,
+  systemPrompt: string,
+  messages: Array<{ role: string; content: string }>,
+  model: string,
+): Promise<Response> {
+  // Anthropic Messages API format
+  const anthropicMessages = messages.map(m => ({
+    role: m.role === "system" ? "user" : m.role,
+    content: m.content,
+  }));
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages: anthropicMessages,
+      stream: true,
+    }),
+  });
+
+  if (!response.ok) {
+    const status = response.status;
+    const t = await response.text();
+    console.error("Anthropic API error:", status, t);
+    if (status === 429) {
+      return new Response(JSON.stringify({ error: "Rate limit Anthropic excedido." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ error: "Erro na API Anthropic" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  // Transform Anthropic SSE to OpenAI-compatible SSE
+  const reader = response.body!.getReader();
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      let buffer = "";
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          let newlineIdx;
+          while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+            const line = buffer.slice(0, newlineIdx).trim();
+            buffer = buffer.slice(newlineIdx + 1);
+
+            if (!line.startsWith("data: ")) continue;
+            const jsonStr = line.slice(6);
+            if (jsonStr === "[DONE]") {
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              continue;
+            }
+
+            try {
+              const evt = JSON.parse(jsonStr);
+              if (evt.type === "content_block_delta" && evt.delta?.text) {
+                // Convert to OpenAI format
+                const openAiChunk = {
+                  choices: [{ delta: { content: evt.delta.text }, index: 0 }],
+                };
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(openAiChunk)}\n\n`));
+              } else if (evt.type === "message_stop") {
+                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+              }
+            } catch { /* ignore parse errors */ }
+          }
+        }
+      } catch (e) {
+        console.error("Stream transform error:", e);
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+  });
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { question, agentName, agentRole } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const {
+      question,
+      agentName,
+      agentRole,
+      provider = "anthropic",
+      model = "claude-opus-4-5",
+      history,
+    } = await req.json();
 
     const systemPrompt = `Você é o ${agentName}, um agente de IA da agência de viagens NatLeva, responsável por: ${agentRole}.
 Responda de forma direta, profissional e concisa (máx 3 frases curtas).
 Use dados e insights quando possível. Seja amigável mas objetivo.
 Responda sempre em português brasileiro.`;
+
+    const userMessages: Array<{ role: string; content: string }> = [];
+    if (history && history.length > 0) {
+      userMessages.push(...history);
+    }
+    if (question) {
+      userMessages.push({ role: "user", content: question });
+    }
+
+    // Route to Anthropic
+    if (provider === "anthropic") {
+      const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+      if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
+      return await callAnthropic(ANTHROPIC_API_KEY, systemPrompt, userMessages, model);
+    }
+
+    // Fallback to Lovable AI Gateway
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    const messages = [
+      { role: "system", content: systemPrompt },
+      ...userMessages,
+    ];
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -25,11 +156,8 @@ Responda sempre em português brasileiro.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "openai/gpt-5-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: question },
-        ],
+        model: model || "openai/gpt-5-mini",
+        messages,
         stream: true,
       }),
     });
@@ -37,7 +165,7 @@ Responda sempre em português brasileiro.`;
     if (!response.ok) {
       const status = response.status;
       if (status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit excedido. Tente novamente." }), {
+        return new Response(JSON.stringify({ error: "Rate limit excedido." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
