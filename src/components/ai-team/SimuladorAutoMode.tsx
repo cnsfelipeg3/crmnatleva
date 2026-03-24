@@ -1275,26 +1275,26 @@ Retorne JSON:
                     isMobile ? "shrink-0 px-3 py-2.5 min-w-[100px]" : "w-full px-4 py-3.5"
                   )}
                   style={{
-                    background: active ? `linear-gradient(135deg, ${tab.color}12, ${tab.color}06)` : "transparent",
-                    border: `1px solid ${active ? `${tab.color}30` : "rgba(255,255,255,0.06)"}`,
+                    background: active ? `linear-gradient(135deg, ${tab.color}18, ${tab.color}0A)` : "rgba(255,255,255,0.02)",
+                    border: `1px solid ${active ? `${tab.color}40` : "rgba(255,255,255,0.08)"}`,
                   }}>
                   {!isMobile && active && <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full" style={{ background: tab.color }} />}
                   <div className="flex items-center gap-2 md:gap-3">
                     <div className={cn("rounded-lg flex items-center justify-center transition-all", isMobile ? "w-6 h-6" : "w-8 h-8")} style={{
-                      background: active ? `${tab.color}15` : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${active ? `${tab.color}25` : "rgba(255,255,255,0.05)"}`,
+                      background: active ? `${tab.color}20` : "rgba(255,255,255,0.05)",
+                      border: `1px solid ${active ? `${tab.color}35` : "rgba(255,255,255,0.08)"}`,
                     }}>
-                      <Icon className={isMobile ? "w-3 h-3" : "w-4 h-4"} style={{ color: active ? tab.color : "#64748B" }} />
+                      <Icon className={isMobile ? "w-3 h-3" : "w-4 h-4"} style={{ color: active ? tab.color : "#94A3B8" }} />
                     </div>
                     <div>
-                      <p className={cn("font-bold", isMobile ? "text-[10px]" : "text-[12px]")} style={{ color: active ? "#F1F5F9" : "#94A3B8" }}>{tab.label}</p>
-                      {!isMobile && <p className="text-[9px] mt-0.5" style={{ color: active ? tab.color : "#475569" }}>{tab.summary}</p>}
+                      <p className={cn("font-bold", isMobile ? "text-[10px]" : "text-[12px]")} style={{ color: active ? "#F8FAFC" : "#CBD5E1" }}>{tab.label}</p>
+                      {!isMobile && <p className="text-[9px] mt-0.5" style={{ color: active ? tab.color : "#94A3B8" }}>{tab.summary}</p>}
                     </div>
                   </div>
                   {/* Step number — desktop only */}
                   {!isMobile && (
                     <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
-                      style={{ background: active ? `${tab.color}15` : "rgba(255,255,255,0.02)", color: active ? tab.color : "#334155" }}>
+                      style={{ background: active ? `${tab.color}20` : "rgba(255,255,255,0.05)", color: active ? tab.color : "#94A3B8" }}>
                       {i + 1}
                     </div>
                   )}
