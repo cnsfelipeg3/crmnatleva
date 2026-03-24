@@ -1101,6 +1101,7 @@ Retorne JSON:
     { id: "lead_behavior" as const, label: "Calibração Lead", icon: Heart, color: "#EF4444", summary: `Paciência ${initialPatience}% · ${leadPatienceCurve} · ${abandonmentSensitivity}% sensib.` },
     { id: "comportamento" as const, label: "Agentes & Funil", icon: Users, color: "#8B5CF6", summary: `${funnelMode === "full" ? "Todos (pipeline)" : funnelMode === "comercial" ? "Squad Comercial" : funnelMode === "individual" ? (customFunnelAgents[0] ? AGENTS_V4.find(a => a.id === customFunnelAgents[0])?.name || "1 agente" : "Nenhum") : `${customFunnelAgents.length} agentes`} · ${SPEED_OPTIONS.find(s => s.id === speed)?.label}` },
     { id: "avancado" as const, label: "Motor IA", icon: Brain, color: "#F59E0B", summary: `${enableEvaluation ? "Aval." : "—"} ${enableTransfers ? "Transf." : "—"} ${agentResponseLength}` },
+    { id: "stress" as const, label: "Teste de Estresse", icon: Flame, color: "#EF4444", summary: `Score mín ${minScoreToPass} · ${enableSentimentShock ? "Choque ativo" : "Sem choque"} · ${enableAgentFatigue ? "Fadiga ON" : "Sem fadiga"}` },
     { id: "presets" as const, label: "Presets", icon: BookOpen, color: "#10B981", summary: `${presets.length} salvo${presets.length !== 1 ? "s" : ""}` },
   ];
 
