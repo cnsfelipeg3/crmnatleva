@@ -75,6 +75,51 @@ const AI_CONTEXT_FIELDS = [
 ] as const;
 
 type NodeConfig = Record<string, any>;
+type CanvasNodeType = (typeof NODE_LIBRARY)[number]["type"];
+
+const AUTOMATION_NODE_TYPE_TO_CANVAS: Record<string, CanvasNodeType> = {
+  trigger_new_conversation: "trigger",
+  trigger_new_message: "trigger",
+  trigger_stage_change: "trigger",
+  trigger_tag_applied: "trigger",
+  trigger_scheduled: "trigger",
+  send_text: "message",
+  send_media: "message",
+  send_template: "message",
+  question_text: "message",
+  question_buttons: "message",
+  condition_if_else: "condition",
+  action_create_lead: "action_tag",
+  action_apply_tag: "action_tag",
+  action_change_stage: "action_funnel",
+  action_assign: "handoff",
+  action_create_task: "handoff",
+  action_link_vehicle: "action_tag",
+  action_create_proposal: "action_funnel",
+  action_request_kyc: "message",
+  ai_agent: "ai_agent",
+  handoff_pause: "handoff",
+  handoff_transfer: "handoff",
+  handoff_notify: "handoff",
+  util_delay: "message",
+  util_goto: "action_funnel",
+  util_webhook: "action_tag",
+  trigger: "trigger",
+  message: "message",
+  condition: "condition",
+  action_tag: "action_tag",
+  action_funnel: "action_funnel",
+  handoff: "handoff",
+};
+
+const toCanvasNodeType = (nodeType?: string): CanvasNodeType => {
+  return AUTOMATION_NODE_TYPE_TO_CANVAS[nodeType || ""] || "message";
+};
+
+const getPersistedNodeType = (node: Node) => {
+  const data = (node.data || {}) as Record<string, any>;
+  return data.originalNodeType || data.nodeType || node.type || "message";
+};
 
 // ─── TEMPLATES ───
 const TEMPLATES = [
@@ -1300,12 +1345,14 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
   };
 
   const buildEdge = (source: string, target: string, sourceHandle: string, label?: string): Edge => {
-    const isYes = sourceHandle === "yes";
-    const isNo = sourceHandle === "no";
+    const normalizedSourceHandle = sourceHandle || "out";
+    const isYes = normalizedSourceHandle === "yes";
+    const isNo = normalizedSourceHandle === "no";
     return {
       id: `e-${source}-${target}-${Date.now()}`,
-      source, target,
-      sourceHandle: sourceHandle || "out",
+      source,
+      target,
+      sourceHandle: normalizedSourceHandle,
       targetHandle: "target",
       type: "smart",
       label,
@@ -1320,8 +1367,16 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
     const { data: nodesData } = await supabase.from("automation_nodes").select("*").eq("flow_id", flow.id);
     const { data: edgesData } = await supabase.from("automation_edges").select("*").eq("flow_id", flow.id);
     setNodes((nodesData || []).map((n: any) => ({
-      id: n.id, type: n.node_type, position: { x: n.position_x, y: n.position_y },
-      data: { label: n.label, nodeType: n.node_type, config: n.config, description: getNodeDescription(n.node_type, n.config) },
+      id: n.id,
+      type: toCanvasNodeType(n.node_type),
+      position: { x: n.position_x, y: n.position_y },
+      data: {
+        label: n.label,
+        nodeType: toCanvasNodeType(n.node_type),
+        originalNodeType: n.node_type,
+        config: n.config,
+        description: getNodeDescription(toCanvasNodeType(n.node_type), n.config),
+      },
     })));
     setEdges((edgesData || []).map((e: any) => buildEdge(e.source_node_id, e.target_node_id, e.source_handle || "out", e.label)));
     setSelectedNode(null); setShowCanvas(true);
@@ -1337,7 +1392,13 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
     setCurrentFlow(null); setFlowName(template.name); setFlowDesc(template.description); setFlowStatus("draft");
     setNodes(template.nodes.map((n) => ({
       id: n.id, type: n.type, position: n.position,
-      data: { label: n.label, nodeType: n.type, config: n.config, description: getNodeDescription(n.type, n.config) },
+      data: {
+        label: n.label,
+        nodeType: n.type,
+        originalNodeType: n.type,
+        config: n.config,
+        description: getNodeDescription(n.type, n.config),
+      },
     })));
     setEdges(template.edges.map((e) => buildEdge(e.source, e.target, (e as any).sourceHandle || "out", (e as any).label)));
     setSelectedNode(null); setShowCanvas(true);
@@ -1361,9 +1422,12 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
         const isValidUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
         const nodeRows = nodes.map((n) => ({
           id: isValidUUID(n.id) ? n.id : undefined,
-          flow_id: flowId, node_type: (n.data as any)?.nodeType || n.type || "trigger",
-          label: (n.data as any)?.label || "", config: (n.data as any)?.config || {},
-          position_x: n.position.x, position_y: n.position.y,
+          flow_id: flowId,
+          node_type: getPersistedNodeType(n),
+          label: (n.data as any)?.label || "",
+          config: (n.data as any)?.config || {},
+          position_x: n.position.x,
+          position_y: n.position.y,
         }));
         const { data: savedNodes, error: nErr } = await supabase.from("automation_nodes").insert(nodeRows).select();
         if (nErr) throw nErr;
@@ -1371,8 +1435,12 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
         nodeRows.forEach((_, i) => { idMap[nodes[i].id] = savedNodes![i].id; });
         if (edges.length > 0) {
           const edgeRows = edges.map((e) => ({
-            flow_id: flowId, source_node_id: idMap[e.source] || e.source, target_node_id: idMap[e.target] || e.target,
-            source_handle: e.sourceHandle, target_handle: e.targetHandle, label: e.label as string || null,
+            flow_id: flowId,
+            source_node_id: idMap[e.source] || e.source,
+            target_node_id: idMap[e.target] || e.target,
+            source_handle: e.sourceHandle,
+            target_handle: e.targetHandle,
+            label: e.label as string || null,
           }));
           const { error: eErr } = await supabase.from("automation_edges").insert(edgeRows);
           if (eErr) throw eErr;
