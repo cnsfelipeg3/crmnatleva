@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { FlowCRMPipeline } from "@/components/flow/FlowCRMPipeline";
 import { FlowMetrics } from "@/components/flow/FlowMetrics";
 import { FlowSimulator } from "@/components/flow/FlowSimulator";
+import { LiveFunnel } from "@/components/flow/LiveFunnel";
 import natlevaLogo from "@/assets/logo-natleva.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -1041,7 +1042,7 @@ function ConfigPanel({ node, onUpdate, onClose, onDelete, onDuplicate }: {
 function FlowList({ flows, onSelect, onCreate, onUseTemplate, onDeleteFlow, onArchiveFlow, loading }: {
   flows: any[]; onSelect: (f: any) => void; onCreate: () => void; onUseTemplate: (t: typeof TEMPLATES[0]) => void; onDeleteFlow: (id: string) => void; onArchiveFlow: (id: string, archived: boolean) => void; loading: boolean;
 }) {
-  const [tab, setTab] = useState<"flows" | "templates" | "pipeline" | "metrics">("flows");
+  const [tab, setTab] = useState<"flows" | "templates" | "pipeline" | "metrics" | "livefunnel">("flows");
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const navigate = useNavigate();
@@ -1065,10 +1066,12 @@ function FlowList({ flows, onSelect, onCreate, onUseTemplate, onDeleteFlow, onAr
         <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-3", tab === "templates" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("templates")}>Templates</button>
         <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-3", tab === "pipeline" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("pipeline")}>📊 Pipeline CRM</button>
         <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-3", tab === "metrics" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("metrics")}>📈 Métricas</button>
+        <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-3", tab === "livefunnel" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("livefunnel")}>🔴 Funil Vivo</button>
       </div>
 
       {tab === "pipeline" && <FlowCRMPipeline />}
       {tab === "metrics" && <FlowMetrics />}
+      {tab === "livefunnel" && <LiveFunnel onClose={() => setTab("flows")} />}
 
       {(tab === "flows" || tab === "templates") && (
       <ScrollArea className="flex-1 p-3">
