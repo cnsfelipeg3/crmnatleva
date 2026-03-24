@@ -1121,8 +1121,8 @@ Retorne JSON:
                       <Icon className={isMobile ? "w-3 h-3" : "w-4 h-4"} style={{ color: active ? tab.color : "#94A3B8" }} />
                     </div>
                     <div>
-                      <p className={cn("font-bold", isMobile ? "text-[15px]" : "text-[15px]")} style={{ color: active ? "#F8FAFC" : "#CBD5E1" }}>{tab.label}</p>
-                      {!isMobile && <p className="text-[15px] mt-0.5" style={{ color: active ? tab.color : "#94A3B8" }}>{tab.summary}</p>}
+                      <p className={cn("font-bold", isMobile ? "text-xs" : "text-sm")} style={{ color: active ? "#F8FAFC" : "#CBD5E1" }}>{tab.label}</p>
+                      {!isMobile && <p className="text-[11px] mt-0.5 leading-snug" style={{ color: active ? tab.color : "#94A3B8" }}>{tab.summary}</p>}
                     </div>
                   </div>
                   {/* Step number — desktop only */}
