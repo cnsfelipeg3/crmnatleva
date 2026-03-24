@@ -623,7 +623,24 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
         </div>
       )}
 
-      {provider !== "natleva" && provider !== "n8n" && (
+      {provider === "anthropic" && (
+        <div>
+          <Label className="text-xs font-semibold">Modelo Anthropic</Label>
+          <Select value={config.model || "claude-opus-4-5"} onValueChange={(v) => updateConfig("model", v)}>
+            <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="claude-opus-4-5">Claude Opus 4.5 (Recomendado)</SelectItem>
+              <SelectItem value="claude-sonnet-4-20250514">Claude Sonnet 4</SelectItem>
+              <SelectItem value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (Rápido)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-[9px] text-muted-foreground mt-1">
+            Opus 4.5: conversas complexas · Sonnet: análises · Haiku: tarefas simples
+          </p>
+        </div>
+      )}
+
+      {provider !== "natleva" && provider !== "anthropic" && provider !== "n8n" && (
         <div>
           <Label className="text-xs">Credencial / Integração</Label>
           <Select value={config.integration_id || ""} onValueChange={(v) => updateConfig("integration_id", v)}>
