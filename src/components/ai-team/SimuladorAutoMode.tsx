@@ -830,11 +830,14 @@ export default function SimuladorAutoMode() {
           });
         });
       }
-    } catch { toast({ title: "Erro ao gerar debrief", variant: "destructive" }); }
+    } catch (err) {
+      console.error("Debrief generation error:", err);
+      toast({ title: "Erro ao gerar debrief IA", description: "Tente novamente clicando em 'Debrief IA'.", variant: "destructive" });
+    }
     finally { setDebriefLoading(false); }
   }, [leads, closedLeads, lostLeads, totalReceita, totalObjecoes, totalContornadas, avgSentimento, conversionRate, ticketMedio, toast]);
 
-  useEffect(() => { if (phase === "report" && !debrief && !debriefLoading) generateDebrief(); }, [phase]);
+  useEffect(() => { if (phase === "report" && !debrief && !debriefLoading) generateDebrief(); }, [phase, generateDebrief]);
 
   // Deep analysis for a single improvement
   const runDeepAnalysis = useCallback(async (improvementId: string) => {
