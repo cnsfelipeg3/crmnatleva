@@ -507,9 +507,12 @@ const nodeTypes: NodeTypes = {
 // ─── AI AGENT CONFIG ───
 function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateConfig: (key: string, value: any) => void }) {
   const [integrations, setIntegrations] = useState<any[]>([]);
+  const [agents, setAgents] = useState<any[]>([]);
   useEffect(() => {
     supabase.from("ai_integrations").select("id, name, provider, model, status")
       .eq("status", "active").then(({ data }) => setIntegrations(data || []));
+    supabase.from("ai_team_agents").select("id, name, emoji, role, squad_id, is_active")
+      .eq("is_active", true).order("name").then(({ data }) => setAgents(data || []));
   }, []);
 
   const provider = config.provider || "natleva";
