@@ -4,6 +4,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import NathOpinionButton from "./NathOpinionButton";
 import { Slider } from "@/components/ui/slider";
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
+import { getAgentTraining } from "@/components/ai-team/agentTrainingStore";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import {
