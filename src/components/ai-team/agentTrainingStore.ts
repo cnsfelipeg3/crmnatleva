@@ -31,14 +31,16 @@ export function getAgentTraining(agentId: string): AgentTrainingConfig | null {
 
 export function setAgentTraining(agentId: string, config: Partial<AgentTrainingConfig>) {
   const store = load();
-  store[agentId] = {
+  const existing = store[agentId] || {
     behaviorPrompt: "",
     customRules: [],
     disabledRuleIds: [],
     disabledSkillIds: [],
     knowledgeSummaries: [],
     updatedAt: new Date().toISOString(),
-    ...(store[agentId] || {}),
+  };
+  store[agentId] = {
+    ...existing,
     ...config,
     updatedAt: new Date().toISOString(),
   };
