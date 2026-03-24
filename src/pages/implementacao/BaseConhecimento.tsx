@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { ItemOriginBadge } from "@/components/ai-team/ItemOriginBadge";
 
 export default function BaseConhecimento() {
   const [items, setItems] = useState<any[]>([]);

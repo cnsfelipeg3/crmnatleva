@@ -20,6 +20,7 @@ import {
   CheckCircle2, Clock, AlertCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ItemOriginBadge } from "@/components/ai-team/ItemOriginBadge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";

@@ -32,6 +32,9 @@ interface Skill {
   description: string;
   examples: string[];
   trend: number;
+  createdAt?: string;
+  createdBy?: string;
+  originType?: string;
 }
 
 const INITIAL_SKILLS: Skill[] = [
