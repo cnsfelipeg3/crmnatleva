@@ -77,7 +77,7 @@ function classifyIntent(userMessage: string, hasImages: boolean, forceWebSearch 
   }
 
   // Default: fast model for general queries
-  return { model: "google/gemini-2.5-flash", label: needsWebSearch ? "🔍 Busca + IA" : "⚡ Motor Rápido", reason: needsWebSearch ? "Consulta com busca na web" : "Consulta geral", needsWebSearch, searchQuery };
+  return { model: "openai/gpt-5-mini", label: needsWebSearch ? "🔍 Busca + IA" : "⚡ Motor Rápido", reason: needsWebSearch ? "Consulta com busca na web" : "Consulta geral", needsWebSearch, searchQuery };
 }
 
 // Extract URLs from text
