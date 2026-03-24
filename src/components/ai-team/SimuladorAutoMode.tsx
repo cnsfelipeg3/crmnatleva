@@ -434,6 +434,8 @@ function useCountUp(target: number, duration = 500) {
 // ===== COMPONENT =====
 export default function SimuladorAutoMode() {
   const isMobile = useIsMobile();
+  const { data: globalRules = [] } = useGlobalRules();
+  const globalRulesBlockRef = useRef("");
   // Config — Volume
   const [numLeads, setNumLeads] = useState(8);
   const [msgsPerLead, setMsgsPerLead] = useState(14);
