@@ -2,7 +2,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Brain, Users, Rocket, BookOpen, Wand2, GitBranch, Database, Shield,
-  GraduationCap, MessageSquare, FlaskConical, Settings, Building2, ChevronLeft,
+  GraduationCap, MessageSquare, FlaskConical, Settings, Building2, ChevronLeft, Receipt,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
