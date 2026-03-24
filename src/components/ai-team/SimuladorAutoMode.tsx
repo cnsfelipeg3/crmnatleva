@@ -19,16 +19,25 @@ import {
   saveHistoricoAvaliacao, loadHistoricoAvaliacoes,
 } from "./evaluationFramework";
 
-// ===== API =====
-async function callAgent(sysPrompt: string, history: { role: string; content: string }[]): Promise<string> {
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
-  const lastMsg = history[history.length - 1]?.content || "";
+// ===== API — Roteamento inteligente por tipo de chamada =====
+type SimCallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep";
+
+async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent"): Promise<string> {
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-    body: JSON.stringify({ question: lastMsg, agentName: "SIMULADOR", agentRole: sysPrompt }),
+    body: JSON.stringify({ type, systemPrompt: sysPrompt, history }),
   });
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+  // Non-streaming types (evaluate, debrief, deep) return JSON directly
+  if (type === "evaluate" || type === "debrief" || type === "deep") {
+    const data = await resp.json();
+    return data.content || "";
+  }
+
+  // Streaming types (lead, agent, objection, loss)
   let text = "";
   if (resp.body) {
     const reader = resp.body.getReader(); const decoder = new TextDecoder(); let buf = "";
@@ -84,20 +93,20 @@ async function generateLeadMsg(lead: LeadInteligente, ultimaMsgAgente: string, i
   const userPrompt = isFirst
     ? buildFirstMessagePrompt(lead)
     : buildConversaContext(lead.mensagens, ultimaMsgAgente, lead.etapaAtual, lead);
-  return callAgent(sysPrompt, [{ role: "user", content: userPrompt }]);
+  return callSimulatorAI(sysPrompt, [{ role: "user", content: userPrompt }], "lead");
 }
 
 // Generate contextual objection
 async function gerarObjecao(lead: LeadInteligente, ultimaMsgAgente: string): Promise<string> {
   const prompt = buildObjecaoPrompt(lead, lead.etapaAtual, ultimaMsgAgente);
-  return callAgent(buildLeadPersona(lead) + buildCalibrationPrompt(lead), [{ role: "user", content: prompt }]);
+  return callSimulatorAI(buildLeadPersona(lead) + buildCalibrationPrompt(lead), [{ role: "user", content: prompt }], "objection");
 }
 
 // Evaluate agent response quality — 3 dimensions
 async function avaliarRespostaAgente(resposta: string, lead: LeadInteligente): Promise<{ nota: number; reacao: string; sentimento: number; motivo: string; humanizacao: number; eficaciaComercial: number; qualidadeTecnica: number }> {
   try {
     const prompt = buildLiveEvalPrompt(resposta, lead.perfil.label, lead.etapaAtual);
-    const result = await callAgent("Voce avalia qualidade de atendimento em 3 dimensões. Retorne SOMENTE JSON válido sem markdown.", [{ role: "user", content: prompt }]);
+    const result = await callSimulatorAI("Voce avalia qualidade de atendimento em 3 dimensões. Retorne SOMENTE JSON válido sem markdown.", [{ role: "user", content: prompt }], "evaluate");
     const jsonMatch = result.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const data = JSON.parse(jsonMatch[0]);
@@ -118,7 +127,7 @@ async function avaliarRespostaAgente(resposta: string, lead: LeadInteligente): P
 // Generate motivated loss message
 async function gerarMensagemPerda(lead: LeadInteligente): Promise<string> {
   const prompt = buildMensagemPerdaPrompt(lead, lead.etapaAtual);
-  return callAgent(buildLeadPersona(lead) + buildCalibrationPrompt(lead), [{ role: "user", content: prompt }]);
+  return callSimulatorAI(buildLeadPersona(lead) + buildCalibrationPrompt(lead), [{ role: "user", content: prompt }], "loss");
 }
 
 function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean, enableTransfers: boolean, responseLength: "curta" | "media" | "longa") {
@@ -513,9 +522,9 @@ export default function SimuladorAutoMode() {
           lead.etapaAtual = stages[Math.min(agentIdx, stages.length - 1)];
 
           // 2. Agent responds
-          const agentResp = await callAgent(
+          const agentResp = await callSimulatorAI(
             buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength),
-            lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content }))
+            lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content })), "agent"
           );
           lead.mensagens.push({ role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
           setLeads([...allLeads]);
@@ -603,9 +612,9 @@ export default function SimuladorAutoMode() {
             addEvent("#F59E0B", `⚠️ Objeção de ${lead.nome}: "${objecao.slice(0, 50)}..."`, "🛡️");
 
             // Agent needs to handle objection
-            const objResp = await callAgent(
+            const objResp = await callSimulatorAI(
               buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength),
-              lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content }))
+              lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content })), "agent"
             );
             lead.mensagens.push({ role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
             setLeads([...allLeads]);
@@ -738,7 +747,7 @@ export default function SimuladorAutoMode() {
         agentesUsados,
       });
 
-      const resp = await callAgent(SYSTEM_DEBRIEF_V2, [{ role: "user", content: prompt }]);
+      const resp = await callSimulatorAI(SYSTEM_DEBRIEF_V2, [{ role: "user", content: prompt }], "debrief");
       const jsonMatch = resp.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const data = JSON.parse(jsonMatch[0]);
@@ -862,7 +871,7 @@ Retorne JSON:
   "recomendacao": "APROVAR|AVALIAR|REJEITAR",
   "confianca": 0-100
 }`;
-      const resp = await callAgent("Voce e NATH.AI analista senior. Retorne SOMENTE JSON.", [{ role: "user", content: prompt }]);
+      const resp = await callSimulatorAI("Voce e NATH.AI analista senior. Retorne SOMENTE JSON.", [{ role: "user", content: prompt }], "deep");
       const jsonMatch = resp.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const analysis: DeepAnalysis = JSON.parse(jsonMatch[0]);
