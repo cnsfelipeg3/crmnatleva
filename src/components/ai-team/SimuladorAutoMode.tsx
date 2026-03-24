@@ -597,16 +597,45 @@ export default function SimuladorAutoMode() {
 
   const stopSimulation = () => stopSimulationRef.current();
 
-  // Generate debrief — V2 com 12 critérios
+  // Generate debrief — V2 com 12 critérios + análise individual de TODOS os leads
   const generateDebrief = useCallback(async () => {
     setDebriefLoading(true);
     try {
-      const sampleConvos = leads.slice(0, 8).map(l => ({
+      // Build individual lead cards for ALL leads (compact format)
+      const fichasIndividuais = leads.map((l, i) => {
+        const agentNames = [...new Set(l.mensagens.filter(m => m.agentName).map(m => m.agentName!))];
+        const clientMsgs = l.mensagens.filter(m => m.role === "lead").length;
+        const agentMsgs = l.mensagens.filter(m => m.role === "agente").length;
+        return `[LEAD ${i + 1}] ${l.nome} | Perfil: ${l.perfil.label} | Destino: ${l.destino} | Budget: R$${(l.ticket / 1000).toFixed(0)}k
+Status: ${l.status} | Sentimento: ${l.sentimentoScore}/100 | Emoção: ${l.estadoEmocional}
+Scores: H${l.scoreHumanizacao} E${l.scoreEficacia} T${l.scoreTecnica}
+Agente(s): ${agentNames.join(", ")} | Msgs: ${clientMsgs} cliente / ${agentMsgs} agente
+Objeções: ${l.objecoesLancadas.join(", ") || "nenhuma"}
+${l.motivoPerda ? `Motivo perda: ${l.motivoPerda} (etapa: ${l.etapaPerda})` : ""}
+Conversa resumida:
+${l.mensagens.slice(0, 6).map(m => `${m.role === "lead" ? "CLI" : "AGT"}: ${m.content.slice(0, 100)}`).join("\n")}
+${l.mensagens.length > 12 ? `... (${l.mensagens.length - 12} msgs omitidas) ...\n${l.mensagens.slice(-6).map(m => `${m.role === "lead" ? "CLI" : "AGT"}: ${m.content.slice(0, 100)}`).join("\n")}` : l.mensagens.length > 6 ? l.mensagens.slice(6).map(m => `${m.role === "lead" ? "CLI" : "AGT"}: ${m.content.slice(0, 100)}`).join("\n") : ""}`;
+      }).join("\n---\n");
+
+      // Representative deep samples (best, worst, edge cases)
+      const sortedByScore = [...leads].sort((a, b) => {
+        const scoreA = (a.scoreHumanizacao + a.scoreEficacia + a.scoreTecnica) / 3;
+        const scoreB = (b.scoreHumanizacao + b.scoreEficacia + b.scoreTecnica) / 3;
+        return scoreB - scoreA;
+      });
+      const sampleLeads = [
+        ...sortedByScore.slice(0, 2), // best
+        ...sortedByScore.slice(-2),   // worst
+        ...leads.filter(l => l.status === "perdeu").slice(0, 2), // losses
+      ];
+      const uniqueSamples = [...new Map(sampleLeads.map(l => [l.id, l])).values()].slice(0, 6);
+
+      const sampleConvos = uniqueSamples.map(l => ({
         name: l.nome, profile: l.perfil.label, destino: l.destino, status: l.status,
         sentimento: l.sentimentoScore, emocao: l.estadoEmocional, motivoPerda: l.motivoPerda,
         objecoes: l.objecoesLancadas, etapaPerda: l.etapaPerda,
         dimensoes: { h: l.scoreHumanizacao, e: l.scoreEficacia, t: l.scoreTecnica },
-        msgs: l.mensagens.slice(0, 12).map(m => `${m.role}: ${m.content.slice(0, 120)}`).join("\n"),
+        msgs: l.mensagens.slice(0, 16).map(m => `${m.role}: ${m.content.slice(0, 150)}`).join("\n"),
       }));
 
       const pResumo = PERFIS_INTELIGENTES.map(p => {
@@ -618,7 +647,6 @@ export default function SimuladorAutoMode() {
       const topObjs = leads.flatMap(l => l.objecoesLancadas).reduce((acc, o) => { acc[o] = (acc[o] || 0) + 1; return acc; }, {} as Record<string, number>);
       const topObjsStr = Object.entries(topObjs).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `"${k}" (${v}x)`).join(", ");
 
-      // Collect unique agent names used
       const agentesUsados = [...new Set(leads.flatMap(l => l.mensagens.filter(m => m.agentName).map(m => m.agentName!)))];
 
       const prompt = buildDebriefV2Prompt({
@@ -632,9 +660,10 @@ export default function SimuladorAutoMode() {
         totalContornadas,
         performancePorPerfil: pResumo,
         topObjecoes: topObjsStr,
-        perdasMotivadas: lostLeads.slice(0, 5).map(l => `${l.perfil.label} em ${l.etapaPerda}: ${l.motivoPerda?.slice(0, 80)}`).join(" | "),
+        perdasMotivadas: lostLeads.slice(0, 8).map(l => `${l.perfil.label} em ${l.etapaPerda}: ${l.motivoPerda?.slice(0, 80)}`).join(" | "),
         amostraConversas: JSON.stringify(sampleConvos),
         agentesUsados,
+        fichasIndividuais,
       });
 
       const resp = await callSimulatorAI(SYSTEM_DEBRIEF_V2, [{ role: "user", content: prompt }], "debrief");
@@ -642,7 +671,6 @@ export default function SimuladorAutoMode() {
       if (jsonMatch) {
         const data = JSON.parse(jsonMatch[0]);
 
-        // Parse dimensões
         const parseDimensao = (dim: any, pesoKey: string): DimensaoScore => {
           if (!dim) return { score: 50, peso_agente: 35, criterios: {} };
           const criterios: Record<string, CriterioScore> = {};
@@ -660,12 +688,30 @@ export default function SimuladorAutoMode() {
           qualidadeTecnica: parseDimensao(data.dimensoes?.qualidadeTecnica, "qualidadeTecnica"),
         };
 
+        // Parse individual analyses
+        const analiseIndividual = (data.analiseIndividual || []).map((a: any) => ({
+          leadNome: a.leadNome || "",
+          perfil: a.perfil || "",
+          destino: a.destino || "",
+          status: a.status || "ativo",
+          score: a.score || 50,
+          humanizacao: a.humanizacao || 50,
+          eficacia: a.eficacia || 50,
+          tecnica: a.tecnica || 50,
+          diagnostico: a.diagnostico || "",
+          pontosFortes: a.pontosFortes || [],
+          falhasCriticas: a.falhasCriticas || [],
+          agenteResponsavel: a.agenteResponsavel || "",
+        }));
+
         const debriefResult: DebriefData = {
           scoreGeral: data.scoreGeral || 0,
           resumoExecutivo: data.resumoExecutivo || data.resumo_executivo || "",
           fraseNathAI: data.fraseNathAI || "",
           pontosFortes: data.pontosFortes || data.pontos_fortes || [],
           dimensoes,
+          analiseIndividual,
+          diagnosticoSessao: data.diagnosticoSessao || "",
           melhorias: (data.melhorias || []).map((m: any, i: number) => ({
             id: `imp-${Date.now()}-${i}`,
             titulo: m.titulo || "",
