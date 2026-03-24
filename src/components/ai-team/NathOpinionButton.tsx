@@ -350,9 +350,13 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
       }
     }
 
+    const newAgentCount = selected.filter(a => a.type === "new_agent").length;
+    const desc = newAgentCount > 0
+      ? `Inclui ${newAgentCount} novo${newAgentCount > 1 ? "s" : ""} agente${newAgentCount > 1 ? "s" : ""} criado${newAgentCount > 1 ? "s" : ""}.`
+      : "As ações foram salvas na base de conhecimento e nos agentes.";
     toast({
       title: `✅ ${applied} melhoria${applied > 1 ? "s" : ""} aplicada${applied > 1 ? "s" : ""}!`,
-      description: "As ações foram salvas na base de conhecimento e nos agentes.",
+      description: desc,
     });
     setApplying(false);
     setActions(prev => prev.map(a => a.selected ? { ...a, selected: false } : a));
