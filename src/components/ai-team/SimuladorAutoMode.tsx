@@ -101,9 +101,20 @@ export default function SimuladorAutoMode() {
   const [maxConversationMinutes, setMaxConversationMinutes] = useState(0); // 0 = sem limite por conversa
   const [leadReengagementChance, setLeadReengagementChance] = useState(20); // % chance de voltar depois de silêncio
   const [leadCustomInstructions, setLeadCustomInstructions] = useState("");
+  // Config — Volume Avançado
+  const [warmupRounds, setWarmupRounds] = useState(0);
+  const [apiRetries, setApiRetries] = useState(2);
+  const [cooldownMs, setCooldownMs] = useState(0);
+  const [minScoreToPass, setMinScoreToPass] = useState(60);
+  const [maxConcurrentChats, setMaxConcurrentChats] = useState(3);
+  const [autoRetryOnLoss, setAutoRetryOnLoss] = useState(false);
+  const [enableSentimentShock, setEnableSentimentShock] = useState(false);
+  const [shockAtRound, setShockAtRound] = useState(4);
+  const [enableAgentFatigue, setEnableAgentFatigue] = useState(false);
+  const [fatigueThreshold, setFatigueThreshold] = useState(20);
   // Config — Presets
   const [presetName, setPresetName] = useState("");
-  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "lead_behavior" | "comportamento" | "avancado" | "presets">("volume");
+  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "lead_behavior" | "comportamento" | "avancado" | "stress" | "presets">("volume");
 
   // Runtime
   const [phase, setPhase] = useState<Phase>("config");
