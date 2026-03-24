@@ -1181,7 +1181,7 @@ Retorne JSON:
           </div>
 
           {/* RIGHT: Content Area — full width */}
-          <div className="flex-1 rounded-2xl overflow-hidden relative" style={{
+          <div className="flex-1 rounded-2xl overflow-hidden relative flex flex-col" style={{
             background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))",
             border: "1px solid rgba(255,255,255,0.06)",
             backdropFilter: "blur(8px)",
@@ -1189,7 +1189,7 @@ Retorne JSON:
             {/* Active tab accent line */}
             <div className="h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${CONFIG_TABS.find(t => t.id === configTab)?.color || "#10B981"}, transparent)` }} />
 
-            <div className={cn("overflow-y-auto", isMobile ? "p-4" : "p-6")} style={{ maxHeight: isMobile ? "60vh" : 500 }}>
+            <div className={cn("overflow-y-auto flex-1", isMobile ? "p-4" : "p-6")}>
               {/* ===== VOLUME TAB ===== */}
               {configTab === "volume" && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-3 duration-300">
