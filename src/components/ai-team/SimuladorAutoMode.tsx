@@ -2785,16 +2785,20 @@ Retorne JSON:
               const avgS = pLeads.length > 0 ? Math.round(pLeads.reduce((s, l) => s + l.sentimentoScore, 0) / pLeads.length) : 0;
               if (pLeads.length === 0) return null;
               return (
-                <div key={p.tipo} className="flex items-center gap-3 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                  <span className="text-sm">{p.emoji}</span>
-                  <span className="text-[11px] font-bold w-24" style={{ color: p.cor }}>{p.label}</span>
-                  <span className="text-[10px] w-12 text-center" style={{ color: "#64748B" }}>{pLeads.length}</span>
-                  <span className="text-[10px] w-12 text-center font-semibold" style={{ color: "#10B981" }}>{pClosed.length}✓</span>
-                  <span className="text-[10px] w-12 text-center" style={{ color: sentimentColor(avgS) }}>♥{avgS}</span>
-                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
-                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${rate}%`, background: `linear-gradient(90deg, ${rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444"}, ${rate >= 50 ? "#06D6A0" : rate >= 30 ? "#FBBF24" : "#F87171"})` }} />
+                <div key={p.tipo} className={cn("py-2.5", isMobile ? "flex flex-col gap-1" : "flex items-center gap-3")} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{p.emoji}</span>
+                    <span className="text-[11px] font-bold" style={{ color: p.cor }}>{p.label}</span>
+                    <span className="text-[10px] ml-auto" style={{ color: "#64748B" }}>{pLeads.length} leads</span>
+                    <span className="text-[10px] font-semibold" style={{ color: "#10B981" }}>{pClosed.length}✓</span>
+                    <span className="text-[10px]" style={{ color: sentimentColor(avgS) }}>♥{avgS}</span>
                   </div>
-                  <span className="text-[12px] font-extrabold tabular-nums w-12 text-right" style={{ color: rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444" }}>{rate}%</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${rate}%`, background: `linear-gradient(90deg, ${rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444"}, ${rate >= 50 ? "#06D6A0" : rate >= 30 ? "#FBBF24" : "#F87171"})` }} />
+                    </div>
+                    <span className="text-[12px] font-extrabold tabular-nums w-12 text-right" style={{ color: rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444" }}>{rate}%</span>
+                  </div>
                 </div>
               );
             })}
