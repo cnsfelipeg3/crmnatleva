@@ -725,7 +725,7 @@ export default function SimuladorAutoMode() {
           const leadChunks = chunksRef.current.get(lead.id) || [];
           const compressedHistory = leadChunks.length > 0 ? buildActiveContext(lead, leadChunks) : compressConversation(lead.mensagens);
           const agentResp = await callSimulatorAI(
-            buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength),
+            buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current),
             compressedHistory, "agent"
           );
           if (!simAtivaRef.current) return;
