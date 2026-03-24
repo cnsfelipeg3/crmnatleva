@@ -3,6 +3,16 @@ import { createInitialState, tick, type EngineState, type EngineAgent, type Agen
 import { addMemory, createDecisionMemory, createEmptyMemory } from "./agentMemory";
 import type { Agent, Task } from "./mockData";
 
+const AGENT_OVERRIDES_KEY = "natleva_agent_overrides_v1";
+
+function loadOverrides(): Record<string, Partial<Agent>> {
+  try { return JSON.parse(localStorage.getItem(AGENT_OVERRIDES_KEY) || "{}"); } catch { return {}; }
+}
+
+function saveOverrides(overrides: Record<string, Partial<Agent>>) {
+  localStorage.setItem(AGENT_OVERRIDES_KEY, JSON.stringify(overrides));
+}
+
 interface UseAgentEngineReturn {
   agents: EngineAgent[];
   tasks: Task[];
@@ -18,7 +28,13 @@ export function useAgentEngine(baseAgents: Agent[], baseTasks: Task[]): UseAgent
 
   useEffect(() => {
     const now = Date.now();
-    const initial = createInitialState(baseAgents, baseTasks, now);
+    // Apply persisted overrides to base agents
+    const overrides = loadOverrides();
+    const hydratedAgents = baseAgents.map(a => {
+      const ov = overrides[a.id];
+      return ov ? { ...a, ...ov } : a;
+    });
+    const initial = createInitialState(hydratedAgents, baseTasks, now);
     stateRef.current = initial;
     setSnapshot(initial);
   }, []);
