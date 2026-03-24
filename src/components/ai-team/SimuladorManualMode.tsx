@@ -83,13 +83,14 @@ export default function SimuladorManualMode() {
     setLoading(true);
 
     try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
       const resp = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         body: JSON.stringify({
-          question: `[Simulação - Cliente interessado em ${selectedDestino}] ${text}`,
-          agentName: selectedAgent.name, agentRole: selectedAgent.persona,
+          type: "agent",
+          systemPrompt: selectedAgent.persona + `\nVoce conversa como ${selectedAgent.name} (${selectedAgent.role}) da agencia NatLeva pelo WhatsApp. Breve (1-3 frases).`,
+          history: [{ role: "user", content: `[Simulação - Cliente interessado em ${selectedDestino}] ${text}` }],
         }),
       });
 
