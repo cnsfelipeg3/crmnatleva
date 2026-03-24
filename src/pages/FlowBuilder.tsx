@@ -459,12 +459,19 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
         )}
         {/* AI status */}
         {data.nodeType === "ai_agent" && (
-          <div className="mt-1.5 flex items-center gap-1.5">
-            <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", data.config?.send_mode === "auto" ? "bg-green-400" : "bg-amber-400")} />
-            <span className="text-[9px] text-muted-foreground">{data.config?.persona || "sdr"} · {data.config?.objective || "qualificar"}</span>
-            <Badge variant={data.config?.send_mode === "auto" ? "default" : "secondary"} className="text-[7px] h-3.5 px-1">
-              {data.config?.send_mode === "auto" ? "AUTO" : data.config?.send_mode === "suggest" ? "SUGESTÃO" : "APROVAÇÃO"}
-            </Badge>
+          <div className="mt-1.5 space-y-1">
+            {data.config?.agent_name && (
+              <div className="text-[9px] font-semibold text-primary truncate">
+                🤖 {data.config.agent_name}
+              </div>
+            )}
+            <div className="flex items-center gap-1.5">
+              <div className={cn("w-1.5 h-1.5 rounded-full animate-pulse", data.config?.send_mode === "auto" ? "bg-green-400" : "bg-amber-400")} />
+              <span className="text-[9px] text-muted-foreground">{data.config?.persona || "sdr"} · {data.config?.objective || "qualificar"}</span>
+              <Badge variant={data.config?.send_mode === "auto" ? "default" : "secondary"} className="text-[7px] h-3.5 px-1">
+                {data.config?.send_mode === "auto" ? "AUTO" : data.config?.send_mode === "suggest" ? "SUGESTÃO" : "APROVAÇÃO"}
+              </Badge>
+            </div>
           </div>
         )}
         {/* Handoff pause indicator */}
@@ -507,9 +514,12 @@ const nodeTypes: NodeTypes = {
 // ─── AI AGENT CONFIG ───
 function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateConfig: (key: string, value: any) => void }) {
   const [integrations, setIntegrations] = useState<any[]>([]);
+  const [agents, setAgents] = useState<any[]>([]);
   useEffect(() => {
     supabase.from("ai_integrations").select("id, name, provider, model, status")
       .eq("status", "active").then(({ data }) => setIntegrations(data || []));
+    supabase.from("ai_team_agents").select("id, name, emoji, role, squad_id, is_active")
+      .eq("is_active", true).order("name").then(({ data }) => setAgents(data || []));
   }, []);
 
   const provider = config.provider || "natleva";
@@ -528,6 +538,36 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
           </SelectContent>
         </Select>
       </div>
+
+      {provider === "natleva" && (
+        <div>
+          <Label className="text-xs font-semibold">Agente da Equipe</Label>
+          <Select value={config.agent_id || ""} onValueChange={(v) => {
+            updateConfig("agent_id", v);
+            const agent = agents.find(a => a.id === v);
+            if (agent) updateConfig("agent_name", agent.name);
+          }}>
+            <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione o agente..." /></SelectTrigger>
+            <SelectContent>
+              {agents.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.emoji} {a.name} — <span className="text-muted-foreground">{a.role}</span>
+                </SelectItem>
+              ))}
+              {agents.length === 0 && (
+                <div className="px-2 py-3 text-xs text-muted-foreground text-center">
+                  Nenhum agente ativo encontrado.
+                </div>
+              )}
+            </SelectContent>
+          </Select>
+          {config.agent_id && (
+            <p className="text-[10px] text-muted-foreground mt-1">
+              O agente usará sua personalidade e conhecimento treinados.
+            </p>
+          )}
+        </div>
+      )}
 
       {provider !== "natleva" && provider !== "n8n" && (
         <div>
