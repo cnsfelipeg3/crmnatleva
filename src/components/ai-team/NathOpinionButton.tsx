@@ -179,21 +179,37 @@ ${opinion}
 
 AGENTES DISPONÍVEIS: MAYA (recepção/encantamento), ATLAS (qualificação), HABIBI (especialista Dubai/Egito), NEMO (especialista Maldivas/Ásia), DANTE (especialista Europa), LUNA (propostas/cotações), NERO (objeções/negociação), IRIS (pós-venda/NPS), HUNTER (reativação leads), FINX (financeiro/cobranças), VIGIL (compliance/qualidade), NATH.AI (orquestração).
 
-IMPORTANTE: Gere EXATAMENTE entre 10 e 12 ações. Pelo menos 4 devem ser para agentes ESPECÍFICOS (scope: "specific_agent" com "target_agent" preenchido). O restante pode ser para todos.
+SQUADS: orquestracao, comercial, atendimento, financeiro, operacional, demanda, retencao.
 
-Retorne EXATAMENTE um JSON array com objetos contendo:
-- "type": "knowledge_base", "skill" ou "global_rule"
-- "title": título curto da melhoria (máx 60 chars)
-- "description": descrição detalhada de como implementar (2-3 linhas)
+ETAPAS DO FUNIL: Primeiro Contato → Qualificação → Proposta → Negociação → Fechamento → Pós-Venda.
+
+IMPORTANTE:
+1. Gere entre 10 e 14 ações no total.
+2. Pelo menos 4 devem ser para agentes ESPECÍFICOS.
+3. Inclua pelo menos 1-2 sugestões de NOVOS AGENTES (type: "new_agent") que ainda não existem e que melhorariam a operação. Para cada novo agente, detalhe: nome sugerido, emoji, função, squad, etapa do funil em que atuaria, skills e justificativa completa.
+
+Retorne EXATAMENTE um JSON array. Cada item DEVE ter:
+- "type": "knowledge_base", "skill", "global_rule" ou "new_agent"
+- "title": título curto (máx 60 chars)
+- "description": descrição detalhada (2-3 linhas)
 - "scope": "all_agents" ou "specific_agent"
-- "target_agent": nome do agente alvo (ex: "MAYA", "NERO") — obrigatório quando scope = "specific_agent"
+- "target_agent": nome do agente alvo (quando scope = "specific_agent")
 - "priority": "alta", "media" ou "baixa"
 - "difficulty": "facil", "moderada" ou "complexa"
-- "estimated_impact": frase curta do impacto esperado (ex: "+15% conversão", "-30% tempo de resposta")
+- "estimated_impact": frase curta do impacto esperado
+
+Para itens type="new_agent", inclua TAMBÉM:
+- "new_agent_name": nome do agente sugerido (ex: "KEEPER", "COMPASS")
+- "new_agent_emoji": emoji representativo
+- "new_agent_role": função detalhada do agente (1-2 frases)
+- "new_agent_squad": squad ideal (orquestracao, comercial, atendimento, financeiro, operacional, demanda, retencao)
+- "new_agent_stage": etapa do funil onde atuaria
+- "new_agent_skills": array com 3-5 habilidades-chave
+- "new_agent_justification": parágrafo explicando por que este agente é necessário, qual gap ele preenche e como melhora a operação
 
 Retorne SOMENTE o JSON array, sem texto adicional.`,
           agentName: "SISTEMA",
-          agentRole: "Você é um analisador de melhorias de processos de uma agência de viagens premium. Retorne APENAS um JSON array válido, sem markdown, sem explicações. Cada item deve ter: type, title, description, scope, target_agent (quando aplicável), priority, difficulty, estimated_impact. Gere 10-12 itens, sendo pelo menos 4 para agentes específicos.",
+          agentRole: "Você é um arquiteto de sistemas de agentes IA de uma agência de viagens premium (NatLeva). Retorne APENAS um JSON array válido, sem markdown. Gere 10-14 itens incluindo 1-2 sugestões de novos agentes. Seja criativo e realista nas sugestões de novos agentes — eles devem preencher gaps reais na operação.",
         }),
       });
 
