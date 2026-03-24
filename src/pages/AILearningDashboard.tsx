@@ -318,10 +318,7 @@ export default function AILearningDashboard() {
                             📍 {FUNCTION_LABELS[p.function_area] || p.function_area}
                           </span>
                         )}
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {new Date(p.updated_at).toLocaleDateString("pt-BR")}
-                        </span>
+                        <ItemOriginBadge createdAt={p.created_at} originType={p.data_source || "learned"} />
                       </div>
                       {(p.tags || []).length > 0 && (
                         <div className="flex gap-1 flex-wrap mt-1.5">
