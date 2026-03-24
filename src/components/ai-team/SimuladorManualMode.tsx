@@ -456,6 +456,17 @@ export default function SimuladorManualMode() {
             inputValue={input}
             onInputChange={setInput}
             onSend={() => handleSend()}
+            onMessageClick={(msg) => {
+              setManualObsSelectedMsg({
+                content: msg.content,
+                role: msg.role === "agent" ? "agent" : "client",
+                agentName: msg.agentName,
+                leadId: "manual",
+                leadName: "Cliente Manual",
+                timestamp: new Date(msg.timestamp).getTime(),
+              });
+            }}
+            selectedMessageTimestamp={manualObsSelectedMsg ? new Date(manualObsSelectedMsg.timestamp).toISOString() : undefined}
             inputPlaceholder="Digite como um cliente..."
             headerContent={
               <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
