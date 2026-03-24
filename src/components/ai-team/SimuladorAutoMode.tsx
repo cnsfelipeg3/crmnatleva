@@ -747,7 +747,7 @@ export default function SimuladorAutoMode() {
         agentesUsados,
       });
 
-      const resp = await callAgent(SYSTEM_DEBRIEF_V2, [{ role: "user", content: prompt }]);
+      const resp = await callSimulatorAI(SYSTEM_DEBRIEF_V2, [{ role: "user", content: prompt }], "debrief");
       const jsonMatch = resp.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const data = JSON.parse(jsonMatch[0]);
