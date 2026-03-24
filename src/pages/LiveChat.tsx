@@ -43,6 +43,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { initPersistence, persistConversation, persistMessages, loadPersistedMessages } from "@/hooks/useChatPersistence";
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
+import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 
