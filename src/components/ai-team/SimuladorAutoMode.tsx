@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, Fragment } from "react";
 import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users, BookOpen, Search, FileText, Workflow, Edit3, Download, Bot, CheckCheck } from "lucide-react";
+import SimulatorObservationsPanel, { type SelectedMessage } from "./SimulatorObservationsPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NathOpinionButton from "./NathOpinionButton";
 import { Slider } from "@/components/ui/slider";
@@ -116,6 +117,7 @@ export default function SimuladorAutoMode() {
   const [debriefLoading, setDebriefLoading] = useState(false);
   const [leadFilter, setLeadFilter] = useState<"all" | "ativo" | "fechou" | "perdeu">("all");
   const [expandedMelhoriaId, setExpandedMelhoriaId] = useState<string | null>(null);
+  const [observationSelectedMsg, setObservationSelectedMsg] = useState<SelectedMessage | null>(null);
 
   const chatRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -2520,8 +2522,23 @@ Retorne JSON:
                           )}
                           <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
                             <div className={cn(
-                              "group relative max-w-[70%]"
-                            )}>
+                              "group relative max-w-[70%] cursor-pointer transition-all",
+                              observationSelectedMsg?.timestamp === msg.timestamp && observationSelectedMsg?.content === msg.content
+                                ? "ring-2 ring-amber-500/50 rounded-2xl"
+                                : "hover:brightness-110"
+                            )}
+                              onClick={() => {
+                                if (!selectedLead) return;
+                                setObservationSelectedMsg({
+                                  content: cleanContent,
+                                  role: msg.role === "agent" ? "agent" : "client",
+                                  agentName: msg.agentName,
+                                  leadId: selectedLead.id,
+                                  leadName: selectedLead.nome,
+                                  timestamp: msg.timestamp,
+                                });
+                              }}
+                            >
                               <div className={cn(
                                 "rounded-2xl px-4 py-2.5",
                                 isUser
@@ -2633,6 +2650,12 @@ Retorne JSON:
                   ))}
                 </div>
               </div>
+              {/* Observations Panel */}
+              <SimulatorObservationsPanel
+                selectedMessage={observationSelectedMsg}
+                onClearSelectedMessage={() => setObservationSelectedMsg(null)}
+                className="min-h-[280px]"
+              />
             </div>
           )}
         </div>

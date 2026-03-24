@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
 import SimulatorChatLayout, { type SimChatMessage } from "./SimulatorChatLayout";
+import SimulatorObservationsPanel, { type SelectedMessage } from "./SimulatorObservationsPanel";
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining, type AgentTrainingConfig } from "@/components/ai-team/agentTrainingStore";
 import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
@@ -155,6 +156,7 @@ export default function SimuladorManualMode() {
   const [transferNotice, setTransferNotice] = useState<string | null>(null);
   const [currentStage, setCurrentStage] = useState(0);
   const [showPanel, setShowPanel] = useState(false); // mobile bottom sheet
+  const [manualObsSelectedMsg, setManualObsSelectedMsg] = useState<SelectedMessage | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -454,6 +456,17 @@ export default function SimuladorManualMode() {
             inputValue={input}
             onInputChange={setInput}
             onSend={() => handleSend()}
+            onMessageClick={(msg) => {
+              setManualObsSelectedMsg({
+                content: msg.content,
+                role: msg.role === "agent" ? "agent" : "client",
+                agentName: msg.agentName,
+                leadId: "manual",
+                leadName: "Cliente Manual",
+                timestamp: new Date(msg.timestamp).getTime(),
+              });
+            }}
+            selectedMessageTimestamp={manualObsSelectedMsg ? new Date(manualObsSelectedMsg.timestamp).toISOString() : undefined}
             inputPlaceholder="Digite como um cliente..."
             headerContent={
               <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
@@ -689,6 +702,13 @@ export default function SimuladorManualMode() {
                 ))}
               </div>
             </div>
+
+            {/* Observations Panel */}
+            <SimulatorObservationsPanel
+              selectedMessage={manualObsSelectedMsg}
+              onClearSelectedMessage={() => setManualObsSelectedMsg(null)}
+              className="min-h-[250px]"
+            />
           </div>
         )}
       </div>

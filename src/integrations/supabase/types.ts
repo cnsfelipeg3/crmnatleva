@@ -5708,6 +5708,57 @@ export type Database = {
           },
         ]
       }
+      simulation_observations: {
+        Row: {
+          agent_id: string | null
+          agent_name: string | null
+          converted_at: string | null
+          converted_to: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          lead_id: string | null
+          lead_name: string | null
+          message_content: string | null
+          message_role: string | null
+          observation_text: string
+          scope: string
+          simulation_id: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          agent_name?: string | null
+          converted_at?: string | null
+          converted_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id?: string | null
+          lead_name?: string | null
+          message_content?: string | null
+          message_role?: string | null
+          observation_text: string
+          scope?: string
+          simulation_id?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          agent_name?: string | null
+          converted_at?: string | null
+          converted_to?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lead_id?: string | null
+          lead_name?: string | null
+          message_content?: string | null
+          message_role?: string | null
+          observation_text?: string
+          scope?: string
+          simulation_id?: string | null
+        }
+        Relationships: []
+      }
       simulations: {
         Row: {
           config: Json
