@@ -10,11 +10,11 @@ const corsHeaders = {
 // 🧠 ORQUESTRADOR DE MODELOS — NATLEVA INTELLIGENCE 2.0
 // ═══════════════════════════════════════════
 // Roteamento inteligente multi-model:
-//   - Texto estratégico / análise → gemini-2.5-flash (rápido, custo-eficiente)
-//   - Análise complexa / planos detalhados → gemini-2.5-pro (máxima qualidade)
+//   - Texto estratégico / análise → openai/gpt-5 (raciocínio profundo)
+//   - Análise complexa / planos detalhados → openai/gpt-5 + reasoning high
 //   - Geração de imagem → gemini-2.5-flash-image
-//   - Leitura de imagem / OCR → gemini-2.5-flash (multimodal)
-//   - Cálculos / dados estruturados → gemini-2.5-pro (raciocínio avançado)
+//   - Leitura de imagem / OCR → openai/gpt-5-mini (multimodal)
+//   - Cálculos / dados estruturados → openai/gpt-5 (raciocínio avançado)
 
 type ModelRoute = {
   model: string;
@@ -33,7 +33,7 @@ function classifyIntent(userMessage: string, hasImages: boolean, forceWebSearch 
 
   // Image analysis / OCR
   if (hasImages) {
-    return { model: "google/gemini-2.5-flash", label: "👁️ Visão Computacional", reason: "Análise de imagem/OCR", needsWebSearch: false };
+    return { model: "openai/gpt-5-mini", label: "👁️ Visão Computacional", reason: "Análise de imagem/OCR", needsWebSearch: false };
   }
 
   // ── Web search detection (ULTRA AGRESSIVO — detecta qualquer necessidade de dados externos) ──
@@ -67,17 +67,17 @@ function classifyIntent(userMessage: string, hasImages: boolean, forceWebSearch 
   // Complex analysis / strategic planning / detailed reports
   const complexPatterns = /(plano\s+(estratégico|de\s+ação|completo|detalhado|90\s+dias|anual)|análise\s+(profunda|completa|detalhada|cross|cruzada|swot|financeira\s+completa)|relatório\s+(executivo|completo|detalhado|gerencial)|projeção|forecast|previsão|cenário|simulação|simul|monte\s+um\s+plano|crie\s+um\s+programa|elabore|desenvolva\s+uma?\s+estratégia|business\s+plan|due\s+diligence|auditoria\s+completa|benchmark|comparativo\s+completo)/i;
   if (complexPatterns.test(msg) || msg.length > 500) {
-    return { model: "google/gemini-2.5-pro", label: "🧠 Motor Estratégico Pro", reason: "Análise complexa / planejamento estratégico", needsWebSearch, searchQuery };
+    return { model: "openai/gpt-5", label: "🧠 Motor Estratégico Pro", reason: "Análise complexa / planejamento estratégico", needsWebSearch, searchQuery };
   }
 
   // Advanced calculations / financial modeling
   const calcPatterns = /(calcul|comput|dre|fluxo\s+de\s+caixa|break\s*even|roi\s|payback|margem\s+de\s+contribuição|ponto\s+de\s+equilíbrio|valuation|wacc|tir\b|vpl\b|taxa\s+interna|valor\s+presente|amortização|depreciação|cmv\b|markup|spreadsheet|planilha\s+financeira|modelo\s+financeiro)/i;
   if (calcPatterns.test(msg)) {
-    return { model: "google/gemini-2.5-pro", label: "📐 Motor de Cálculo Avançado", reason: "Cálculos financeiros / modelagem", needsWebSearch, searchQuery };
+    return { model: "openai/gpt-5", label: "📐 Motor de Cálculo Avançado", reason: "Cálculos financeiros / modelagem", needsWebSearch, searchQuery };
   }
 
   // Default: fast model for general queries
-  return { model: "google/gemini-2.5-flash", label: needsWebSearch ? "🔍 Busca + IA" : "⚡ Motor Rápido", reason: needsWebSearch ? "Consulta com busca na web" : "Consulta geral", needsWebSearch, searchQuery };
+  return { model: "openai/gpt-5-mini", label: needsWebSearch ? "🔍 Busca + IA" : "⚡ Motor Rápido", reason: needsWebSearch ? "Consulta com busca na web" : "Consulta geral", needsWebSearch, searchQuery };
 }
 
 // Extract URLs from text
@@ -603,6 +603,7 @@ ${attachmentContext}${urlContext}${learningContext}${webSearchContext}`;
         model: route.model,
         messages: aiMessages,
         stream: true,
+        ...(route.model === "openai/gpt-5" ? { reasoning: { effort: "high" } } : {}),
       }),
     });
 
