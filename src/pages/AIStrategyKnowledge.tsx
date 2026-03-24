@@ -98,6 +98,7 @@ interface StrategyRule {
   context: string | null;
   related_rule_ids: string[];
   status: string;
+  created_by: string | null;
 }
 
 const emptyRule: Omit<StrategyRule, "id" | "created_at" | "updated_at"> = {
