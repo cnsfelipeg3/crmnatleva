@@ -29,7 +29,7 @@ async function callSimulatorAI(sysPrompt: string, history: { role: string; conte
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-    body: JSON.stringify({ type, systemPrompt: sysPrompt, history, agentBehaviorPrompt: agentBehaviorPrompt || "" }),
+    body: JSON.stringify({ type, systemPrompt: sysPrompt, history, agentBehaviorPrompt: agentBehaviorPrompt || "", provider: "anthropic" }),
   });
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
