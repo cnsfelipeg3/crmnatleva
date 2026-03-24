@@ -2248,6 +2248,7 @@ Retorne JSON:
                 { icon: "💬", label: `${msgsPerLead} msgs`, color: "#10B981" },
                 { icon: "⏱️", label: formatTime(duration), color: "#8B5CF6" },
                 { icon: "🎯", label: `${selectedProfiles.length || 8} perfis`, color: "#EC4899" },
+                { icon: "🤖", label: funnelMode === "individual" ? (AGENTS_V4.find(a => a.id === customFunnelAgents[0])?.name || "—") : funnelMode === "custom" ? `${customFunnelAgents.length} agentes` : funnelMode === "comercial" ? "Comercial" : "Pipeline", color: "#8B5CF6" },
                 { icon: "🌍", label: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos`, color: "#06B6D4" },
                 { icon: "⚡", label: SPEED_OPTIONS.find(s => s.id === speed)?.label || "Normal", color: "#F59E0B" },
                 { icon: "🧠", label: enableEvaluation ? `Aval. ${evalFrequency === "every" ? "100%" : evalFrequency === "every2" ? "50%" : "33%"}` : "Aval. off", color: "#EC4899" },
