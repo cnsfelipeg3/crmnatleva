@@ -20,6 +20,7 @@ import {
   CheckCircle2, Clock, AlertCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ItemOriginBadge } from "@/components/ai-team/ItemOriginBadge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -97,6 +98,7 @@ interface StrategyRule {
   context: string | null;
   related_rule_ids: string[];
   status: string;
+  created_by: string | null;
 }
 
 const emptyRule: Omit<StrategyRule, "id" | "created_at" | "updated_at"> = {
@@ -116,6 +118,7 @@ const emptyRule: Omit<StrategyRule, "id" | "created_at" | "updated_at"> = {
   context: null,
   related_rule_ids: [],
   status: "active",
+  created_by: null,
 };
 
 export default function AIStrategyKnowledge() {
@@ -395,7 +398,7 @@ export default function AIStrategyKnowledge() {
         if (t && r) results.push({
           category: cat, subcategory: null, title: t, description: desc, rule: r, example: ex,
           priority: p, is_active: active, tags, function_area: funcArea, origin_type: originType,
-          confidence, estimated_impact: impact, context, related_rule_ids: [], status,
+          confidence, estimated_impact: impact, context, related_rule_ids: [], status, created_by: null,
         });
       }
     }
@@ -584,6 +587,7 @@ export default function AIStrategyKnowledge() {
                             </div>
                           )}
                         </div>
+                        <ItemOriginBadge createdAt={r.created_at} createdBy={r.created_by} originType={r.origin_type} className="mt-1.5" />
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <Switch checked={r.is_active} onCheckedChange={() => toggleActive(r)} />

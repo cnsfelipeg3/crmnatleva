@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { ItemOriginBadge } from "@/components/ai-team/ItemOriginBadge";
 
 export default function BaseConhecimento() {
   const [items, setItems] = useState<any[]>([]);
@@ -69,6 +70,7 @@ export default function BaseConhecimento() {
               {item.description && (
                 <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
               )}
+              <ItemOriginBadge createdAt={item.created_at} createdBy={item.uploaded_by} originType="manual" />
             </Card>
           ))}
         </div>
