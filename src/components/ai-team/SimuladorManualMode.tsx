@@ -167,31 +167,22 @@ export default function SimuladorManualMode() {
     if (messages.length < 2) { toast({ title: "Conversa muito curta", variant: "destructive" }); return; }
     setSummaryOpen(true); setSummaryLoading(true); setSummaryText("");
     try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
       const chatHistory = messages.map(m => `${m.role === "user" ? "CLIENTE" : `AGENTE (${m.agentName || selectedAgent.name})`}: ${m.content}`).join("\n");
       const resp = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         body: JSON.stringify({
-          question: `Analise esta conversa entre cliente e agente de viagens e gere um resumo executivo com: 1) Destino/interesse do cliente, 2) Perfil do cliente, 3) Próximos passos sugeridos, 4) Pontos de atenção.\n\nCONVERSA:\n${chatHistory}`,
-          agentName: "RESUMO", agentRole: "Voce e um analista de qualidade de agencia de viagens premium. Gere resumos concisos e acionáveis.",
+          type: "evaluate",
+          systemPrompt: "Voce e um analista de qualidade de agencia de viagens premium. Gere resumos concisos e acionáveis.",
+          history: [{ role: "user", content: `Analise esta conversa entre cliente e agente de viagens e gere um resumo executivo com: 1) Destino/interesse do cliente, 2) Perfil do cliente, 3) Próximos passos sugeridos, 4) Pontos de atenção.\n\nCONVERSA:\n${chatHistory}` }],
         }),
       });
-      if (!resp.ok || !resp.body) throw new Error("API error");
-      const reader = resp.body.getReader(); const decoder = new TextDecoder();
-      let buf = "", text = "";
-      while (true) {
-        const { done, value } = await reader.read(); if (done) break;
-        buf += decoder.decode(value, { stream: true }); let nl: number;
-        while ((nl = buf.indexOf("\n")) !== -1) {
-          let line = buf.slice(0, nl); buf = buf.slice(nl + 1);
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (!line.startsWith("data: ")) continue;
-          const json = line.slice(6).trim(); if (json === "[DONE]") break;
-          try { const p = JSON.parse(json); const c = p.choices?.[0]?.delta?.content; if (c) { text += c; setSummaryText(text); } } catch {}
-        }
-      }
-      if (!text) setSummaryText("Não foi possível gerar o resumo.");
+      if (!resp.ok) throw new Error("API error");
+      const data = await resp.json();
+      const text = data.content || "";
+      if (text) setSummaryText(text);
+      else setSummaryText("Não foi possível gerar o resumo.");
     } catch { setSummaryText("Erro ao gerar resumo. Tente novamente."); } finally { setSummaryLoading(false); }
   }, [messages, selectedAgent, toast]);
 
