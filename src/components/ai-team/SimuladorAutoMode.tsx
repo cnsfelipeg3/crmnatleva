@@ -93,7 +93,7 @@ async function generateLeadMsg(lead: LeadInteligente, ultimaMsgAgente: string, i
   const userPrompt = isFirst
     ? buildFirstMessagePrompt(lead)
     : buildConversaContext(lead.mensagens, ultimaMsgAgente, lead.etapaAtual, lead);
-  return callAgent(sysPrompt, [{ role: "user", content: userPrompt }]);
+  return callSimulatorAI(sysPrompt, [{ role: "user", content: userPrompt }], "lead");
 }
 
 // Generate contextual objection
