@@ -2067,6 +2067,78 @@ Retorne JSON:
                 </div>
               )}
 
+              {/* ===== STRESS TEST TAB ===== */}
+              {configTab === "stress" && (
+                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Flame className="w-5 h-5" style={{ color: "#EF4444" }} />
+                    <div>
+                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Teste de Estresse</h3>
+                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Cenários extremos para encontrar limites dos agentes</p>
+                    </div>
+                  </div>
+
+                  {/* Scoring thresholds */}
+                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
+                    <SimConfigInput label="Score mínimo para aprovação" value={minScoreToPass} onChange={setMinScoreToPass} min={0} max={100} step={5} color="#10B981" desc="Abaixo deste score, o agente é reprovado no debrief" suffix="pts" icon="🎯" />
+                    <SimConfigInput label="Chats concorrentes máx" value={maxConcurrentChats} onChange={setMaxConcurrentChats} min={1} max={20} step={1} color="#3B82F6" desc="Quantos chats simultâneos por agente" icon="📱" />
+                  </div>
+
+                  {/* Sentiment shock */}
+                  <div className="space-y-2">
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#94A3B8" }}>⚡ Eventos de estresse</p>
+                    {[
+                      { label: "Choque de sentimento", desc: "No round N, o lead muda de humor abruptamente (feliz → furioso)", value: enableSentimentShock, setter: setEnableSentimentShock, color: "#EF4444", icon: "💥" },
+                      { label: "Fadiga do agente", desc: "Após N atendimentos, qualidade do agente cai (simula cansaço)", value: enableAgentFatigue, setter: setEnableAgentFatigue, color: "#F59E0B", icon: "😴" },
+                      { label: "Re-rodar lead perdido", desc: "Leads perdidos são reinseridos com agente diferente", value: autoRetryOnLoss, setter: setAutoRetryOnLoss, color: "#8B5CF6", icon: "🔄" },
+                    ].map(opt => (
+                      <button key={opt.label} onClick={() => opt.setter(!opt.value)}
+                        className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-left transition-all"
+                        style={{
+                          background: opt.value ? `${opt.color}06` : "rgba(255,255,255,0.015)",
+                          border: `1px solid ${opt.value ? `${opt.color}25` : "rgba(255,255,255,0.04)"}`,
+                        }}>
+                        <span className="text-lg">{opt.icon}</span>
+                        <div className="flex-1">
+                          <p className="text-sm font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
+                          <p className="text-[11px] mt-0.5" style={{ color: "#94A3B8" }}>{opt.desc}</p>
+                        </div>
+                        <div className="w-10 h-6 rounded-full relative transition-all" style={{ background: opt.value ? opt.color : "rgba(255,255,255,0.1)" }}>
+                          <div className="absolute top-1 w-4 h-4 rounded-full transition-all" style={{ left: opt.value ? 20 : 4, background: "#fff" }} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Conditional params */}
+                  {enableSentimentShock && (
+                    <SimConfigInput label="Choque no round" value={shockAtRound} onChange={setShockAtRound} min={2} max={20} step={1} color="#EF4444" desc="Em qual rodada ocorre a mudança brusca de sentimento" icon="💥" compact />
+                  )}
+                  {enableAgentFatigue && (
+                    <SimConfigInput label="Fadiga após N atendimentos" value={fatigueThreshold} onChange={setFatigueThreshold} min={5} max={100} step={5} color="#F59E0B" desc="Número de atendimentos até o agente mostrar cansaço" icon="😴" compact />
+                  )}
+
+                  {/* Stress presets */}
+                  <div className="rounded-xl p-4" style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.12)" }}>
+                    <p className="text-sm font-bold mb-3" style={{ color: "#EF4444" }}>🔥 Cenários prontos de estresse</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { label: "Carga Leve", desc: "5 leads, sem choque", action: () => { setNumLeads(5); setMsgsPerLead(10); setEnableSentimentShock(false); setEnableAgentFatigue(false); } },
+                        { label: "Carga Média", desc: "20 leads + choque round 5", action: () => { setNumLeads(20); setMsgsPerLead(16); setEnableSentimentShock(true); setShockAtRound(5); setEnableAgentFatigue(false); } },
+                        { label: "Carga Extrema", desc: "50 leads + fadiga + choque", action: () => { setNumLeads(50); setMsgsPerLead(20); setEnableSentimentShock(true); setShockAtRound(3); setEnableAgentFatigue(true); setFatigueThreshold(10); setDispatchMode("simultaneous"); } },
+                      ].map(s => (
+                        <button key={s.label} onClick={() => { s.action(); toast({ title: `${s.label} aplicado!` }); }}
+                          className="flex flex-col items-start gap-1 p-3 rounded-xl transition-all hover:scale-[1.02] text-left"
+                          style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                          <span className="text-sm font-bold" style={{ color: "#F1F5F9" }}>{s.label}</span>
+                          <span className="text-[11px]" style={{ color: "#94A3B8" }}>{s.desc}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* ===== PRESETS TAB ===== */}
               {configTab === "presets" && (
                 <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
