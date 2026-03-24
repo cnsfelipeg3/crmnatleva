@@ -1458,7 +1458,7 @@ Retorne JSON:
                   })()}
 
                   {/* Budget + Canal side by side */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                     {/* Budget */}
                     <div>
                       <div className="flex items-center gap-2 mb-2">
