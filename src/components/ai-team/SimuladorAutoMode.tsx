@@ -2650,6 +2650,12 @@ Retorne JSON:
                   ))}
                 </div>
               </div>
+              {/* Observations Panel */}
+              <SimulatorObservationsPanel
+                selectedMessage={observationSelectedMsg}
+                onClearSelectedMessage={() => setObservationSelectedMsg(null)}
+                className="min-h-[280px]"
+              />
             </div>
           )}
         </div>
