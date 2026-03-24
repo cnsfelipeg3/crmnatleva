@@ -76,6 +76,7 @@ export default function ProposalTemplates() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(defaultForm);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ["proposal_templates"],
