@@ -1590,7 +1590,7 @@ Retorne JSON:
                       <Users className="w-3.5 h-3.5" style={{ color: "#F59E0B" }} />
                       <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>Grupo de Viajantes</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                    <div className={cn("grid gap-0 rounded-xl overflow-hidden", isMobile ? "grid-cols-2" : "grid-cols-3")} style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
                       {GRUPOS_LEAD.map((g, i) => {
                         const active = selectedGrupos.includes(g);
                         const grupoIcons: Record<string, string> = { "1 pessoa": "🧍", Casal: "👫", "Família 4 pax": "👨‍👩‍👧‍👦", "Grupo 6 amigos": "👥", "Corporativo 3 pax": "💼", "Casal lua de mel": "💍" };
@@ -1909,7 +1909,7 @@ Retorne JSON:
                                 style={{ color: "#64748B" }}>
                                 <span>{squad.emoji}</span> {squad.name}
                               </p>
-                              <div className="grid grid-cols-2 gap-1.5">
+                              <div className={cn("gap-1.5", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                                 {squadAgents.map(a => {
                                   const selected = customFunnelAgents[0] === a.id;
                                   const c = getAgentColor(a);
@@ -2105,7 +2105,7 @@ Retorne JSON:
                   <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
 
                   {/* Speed + Objections + Conversion — compacted */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                     <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Taxa alvo de conversão</span>
@@ -2198,7 +2198,7 @@ Retorne JSON:
                   </div>
 
                   {/* Sliders */}
-                  <div className="grid grid-cols-2 gap-4">
+                   <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                     <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Volatilidade emocional</span>
@@ -2417,118 +2417,106 @@ Retorne JSON:
     <div className="space-y-0 animate-in fade-in duration-300">
       {/* War Room header */}
       {running && (
-        <div className="flex items-center gap-4 px-5 py-3 rounded-2xl mb-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(13,18,32,0.95), rgba(15,23,42,0.9))", border: "1px solid rgba(239,68,68,0.15)" }}>
+        <div className={cn("rounded-2xl mb-4 relative overflow-hidden", isMobile ? "px-3 py-2" : "px-5 py-3")} style={{ background: "linear-gradient(135deg, rgba(13,18,32,0.95), rgba(15,23,42,0.9))", border: "1px solid rgba(239,68,68,0.15)" }}>
           <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #EF4444, #F59E0B, transparent)" }} />
-          <div className="flex items-center gap-3">
-            <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: "#EF4444", boxShadow: "0 0 12px rgba(239,68,68,0.5)" }} />
-            <span className="text-[14px] font-extrabold tracking-wider" style={{ color: "#F1F5F9" }}>WAR ROOM</span>
-            <span className="text-[15px] font-bold tabular-nums px-3 py-1 rounded-lg" style={{ color: "#F59E0B", background: "rgba(245,158,11,0.08)" }}>{formatTime(elapsedSeconds)}</span>
-          </div>
-          <div className="flex-1 flex items-center justify-center gap-6">
-            {[
-              { label: "Leads", value: animLeads, color: "#3B82F6" },
-              { label: "Fechados", value: animClosed, color: "#10B981" },
-              { label: "Conversão", value: `${conversionRate}%`, color: "#F59E0B" },
-              { label: "Sentimento", value: `${avgSentimento}`, color: sentimentColor(avgSentimento) },
-            ].map(k => (
-              <div key={k.label} className="text-center">
-                <span className="text-[16px] font-extrabold tabular-nums block" style={{ color: k.color }}>{k.value}</span>
-                <span className="text-[8px] uppercase tracking-wider" style={{ color: "#64748B" }}>{k.label}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            <button onClick={() => exportConversations("txt")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
-              style={{ background: "rgba(16,185,129,0.1)", color: "#10B981", border: "1px solid rgba(16,185,129,0.2)" }}>
-              <Download className="w-3 h-3" /> TXT
-            </button>
-            <button onClick={() => exportConversations("pdf")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
-              style={{ background: "rgba(139,92,246,0.1)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.2)" }}>
-              <FileText className="w-3 h-3" /> PDF
-            </button>
-            <button onClick={stopSimulation} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-bold transition-all hover:scale-105"
-              style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)" }}>
-              <Square className="w-3 h-3" /> Parar
-            </button>
+          <div className={cn("flex items-center", isMobile ? "flex-wrap gap-2" : "gap-4")}>
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: "#EF4444", boxShadow: "0 0 12px rgba(239,68,68,0.5)" }} />
+              <span className={cn("font-extrabold tracking-wider", isMobile ? "text-[11px]" : "text-[14px]")} style={{ color: "#F1F5F9" }}>WAR ROOM</span>
+              <span className={cn("font-bold tabular-nums px-2 py-0.5 rounded-lg", isMobile ? "text-[12px]" : "text-[15px] px-3 py-1")} style={{ color: "#F59E0B", background: "rgba(245,158,11,0.08)" }}>{formatTime(elapsedSeconds)}</span>
+            </div>
+            <div className={cn("flex items-center gap-3", isMobile ? "flex-1 justify-between" : "flex-1 justify-center gap-6")}>
+              {[
+                { label: "Leads", value: animLeads, color: "#3B82F6" },
+                { label: "Fechados", value: animClosed, color: "#10B981" },
+                { label: "Conversão", value: `${conversionRate}%`, color: "#F59E0B" },
+                ...(!isMobile ? [{ label: "Sentimento", value: `${avgSentimento}`, color: sentimentColor(avgSentimento) }] : []),
+              ].map(k => (
+                <div key={k.label} className="text-center">
+                  <span className={cn("font-extrabold tabular-nums block", isMobile ? "text-[13px]" : "text-[16px]")} style={{ color: k.color }}>{k.value}</span>
+                  <span className="text-[8px] uppercase tracking-wider" style={{ color: "#64748B" }}>{k.label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {!isMobile && (
+                <>
+                  <button onClick={() => exportConversations("txt")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
+                    style={{ background: "rgba(16,185,129,0.1)", color: "#10B981", border: "1px solid rgba(16,185,129,0.2)" }}>
+                    <Download className="w-3 h-3" /> TXT
+                  </button>
+                  <button onClick={() => exportConversations("pdf")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
+                    style={{ background: "rgba(139,92,246,0.1)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.2)" }}>
+                    <FileText className="w-3 h-3" /> PDF
+                  </button>
+                </>
+              )}
+              <button onClick={stopSimulation} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
+                style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)" }}>
+                <Square className="w-3 h-3" /> Parar
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Report tabs */}
       {phase === "report" && !running && (
-        <div className="flex items-center gap-3 mb-5 rounded-2xl px-5 py-3 relative overflow-hidden" style={{
+        <div className={cn("mb-4 rounded-2xl relative overflow-hidden", isMobile ? "px-3 py-2" : "px-5 py-3")} style={{
           background: "linear-gradient(135deg, rgba(13,18,32,0.95), rgba(15,23,42,0.9))",
           border: "1px solid rgba(255,255,255,0.06)",
         }}>
           <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: "linear-gradient(90deg, #3B82F6, #10B981, #8B5CF6)" }} />
-          {/* Workflow stepper */}
-          <div className="flex items-center gap-2 mr-4">
-            {[
-              { label: "Simulação", icon: "✓", done: true },
-              { label: "Análise", icon: reportTab === "numeros" ? "●" : "✓", done: reportTab !== "numeros" },
-              { label: "Debrief", icon: reportTab === "debrief" ? "●" : (reportTab === "numeros" ? "○" : "○"), done: false },
-            ].map((step, i) => (
-              <div key={step.label} className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold" style={{
-                    background: step.done ? "#10B981" : "rgba(255,255,255,0.06)",
-                    color: step.done ? "#000" : "#64748B",
-                  }}>{step.icon}</div>
-                  <span className="text-[9px] font-semibold" style={{ color: step.done ? "#10B981" : "#64748B" }}>{step.label}</span>
-                </div>
-                {i < 2 && <div className="w-6 h-px" style={{ background: "rgba(255,255,255,0.1)" }} />}
-              </div>
-            ))}
-          </div>
-          <div className="h-6 w-px mx-2" style={{ background: "rgba(255,255,255,0.06)" }} />
-          {/* Tab buttons */}
-          <div className="flex items-center gap-1.5 flex-1">
-            {(["numeros", "conversas", "debrief"] as ReportTab[]).map(t => {
-              const active = reportTab === t;
-              const accent = t === "debrief" ? "#8B5CF6" : t === "numeros" ? "#3B82F6" : "#10B981";
-              const icons = { numeros: "📊", conversas: "💬", debrief: "🧠" };
-              const labels = { numeros: "Números", conversas: "Conversas", debrief: "Debrief IA" };
-              return (
-                <button key={t} onClick={() => setReportTab(t)}
-                  className="text-[11px] px-4 py-2 rounded-xl font-bold transition-all duration-300"
-                  style={{
-                    background: active ? `${accent}12` : "transparent",
-                    border: `1px solid ${active ? `${accent}30` : "transparent"}`,
-                    color: active ? accent : "#64748B",
-                  }}>
-                  {icons[t]} {labels[t]}
-                </button>
-              );
-            })}
-          </div>
-          {/* Export + Nova Simulação */}
-          <div className="flex items-center gap-2">
-            <button onClick={() => exportConversations("txt")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
-              style={{ background: "rgba(16,185,129,0.08)", color: "#10B981", border: "1px solid rgba(16,185,129,0.15)" }}>
-              <Download className="w-3 h-3" /> Exportar TXT
-            </button>
-            <button onClick={() => exportConversations("pdf")} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all hover:scale-105"
-              style={{ background: "rgba(139,92,246,0.08)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.15)" }}>
-              <FileText className="w-3 h-3" /> Exportar PDF
-            </button>
-            <button onClick={() => { if (leads.length > 0 && !confirm("Tem certeza? Os dados da simulação atual serão perdidos.")) return; setPhase("config"); setLeads([]); setDebrief(null); setEvents([]); setElapsedSeconds(0); }}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-bold transition-all hover:scale-[1.03]"
-              style={{
-                background: "linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,182,212,0.1))",
-                border: "1px solid rgba(16,185,129,0.2)",
-                color: "#10B981",
-              }}>
-              <Play className="w-3.5 h-3.5" /> Nova Simulação
-            </button>
+          <div className={cn("flex items-center", isMobile ? "flex-col gap-2" : "gap-3")}>
+            {/* Tab buttons */}
+            <div className={cn("flex items-center gap-1.5", isMobile ? "w-full" : "flex-1")}>
+              {(["numeros", "conversas", "debrief"] as ReportTab[]).map(t => {
+                const active = reportTab === t;
+                const accent = t === "debrief" ? "#8B5CF6" : t === "numeros" ? "#3B82F6" : "#10B981";
+                const icons = { numeros: "📊", conversas: "💬", debrief: "🧠" };
+                const labels = { numeros: "Números", conversas: "Conversas", debrief: "Debrief" };
+                return (
+                  <button key={t} onClick={() => setReportTab(t)}
+                    className={cn("font-bold rounded-xl transition-all duration-300", isMobile ? "flex-1 text-[10px] px-2 py-2" : "text-[11px] px-4 py-2")}
+                    style={{
+                      background: active ? `${accent}12` : "transparent",
+                      border: `1px solid ${active ? `${accent}30` : "transparent"}`,
+                      color: active ? accent : "#64748B",
+                    }}>
+                    {icons[t]} {labels[t]}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Export + Nova Simulação */}
+            <div className={cn("flex items-center gap-1.5", isMobile ? "w-full" : "")}>
+              <button onClick={() => exportConversations("txt")} className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[9px] font-bold transition-all"
+                style={{ background: "rgba(16,185,129,0.08)", color: "#10B981", border: "1px solid rgba(16,185,129,0.15)" }}>
+                <Download className="w-3 h-3" /> TXT
+              </button>
+              <button onClick={() => exportConversations("pdf")} className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[9px] font-bold transition-all"
+                style={{ background: "rgba(139,92,246,0.08)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.15)" }}>
+                <FileText className="w-3 h-3" /> PDF
+              </button>
+              <button onClick={() => { if (leads.length > 0 && !confirm("Tem certeza? Os dados da simulação atual serão perdidos.")) return; setPhase("config"); setLeads([]); setDebrief(null); setEvents([]); setElapsedSeconds(0); }}
+                className={cn("flex items-center gap-1.5 rounded-xl font-bold transition-all", isMobile ? "flex-1 justify-center text-[10px] px-3 py-2" : "text-[11px] px-5 py-2.5 hover:scale-[1.03]")}
+                style={{
+                  background: "linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,182,212,0.1))",
+                  border: "1px solid rgba(16,185,129,0.2)",
+                  color: "#10B981",
+                }}>
+                <Play className="w-3.5 h-3.5" /> Nova
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* 3-column layout */}
       {(running || (phase === "report" && reportTab === "conversas")) && (
-        <div className="flex gap-4" style={{ height: "calc(100vh - 300px)", minHeight: 500 }}>
+        <div className={cn(isMobile ? "flex flex-col gap-2" : "flex gap-4")} style={{ height: isMobile ? "auto" : "calc(100vh - 300px)", minHeight: isMobile ? undefined : 500 }}>
           {/* LEFT: Lead list */}
-          <div className="w-[280px] shrink-0 rounded-2xl overflow-hidden flex flex-col" style={{ background: "rgba(11,20,26,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className={cn("rounded-2xl overflow-hidden flex flex-col", isMobile ? "max-h-[35vh]" : "w-[280px] shrink-0")} style={{ background: "rgba(11,20,26,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
               <span className="text-[13px] font-bold" style={{ color: "#F1F5F9" }}>Leads Inteligentes</span>
               <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg" style={{ background: "rgba(37,211,102,0.1)", color: "#25D366" }}>
@@ -2589,7 +2577,7 @@ Retorne JSON:
           </div>
 
           {/* CENTER: Chat */}
-          <div className="flex-1 rounded-2xl flex flex-col overflow-hidden" style={{ background: "rgba(11,20,26,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className={cn("flex-1 rounded-2xl flex flex-col overflow-hidden", isMobile && "min-h-[40vh]")} style={{ background: "rgba(11,20,26,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
             {selectedLead ? (
               <>
                 <div className="flex items-center gap-3 px-5 shrink-0 relative" style={{ height: 64, background: "linear-gradient(180deg, rgba(31,44,51,0.95), rgba(31,44,51,0.8))" }}>
@@ -2696,7 +2684,7 @@ Retorne JSON:
           </div>
 
           {/* RIGHT: KPIs + Feed */}
-          {running && (
+          {running && !isMobile && (
             <div className="w-[240px] shrink-0 space-y-3 overflow-y-auto custom-scrollbar">
               {[
                 { label: "Leads", value: animLeads, color: "#3B82F6", icon: "👥" },
@@ -2767,7 +2755,7 @@ Retorne JSON:
       {/* Report: Números */}
       {phase === "report" && !running && reportTab === "numeros" && (
         <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+          <div className={cn("grid gap-3", isMobile ? "grid-cols-2" : "grid-cols-4 md:grid-cols-8")}>
             {[
               { label: "Leads", value: leads.length, color: "#3B82F6" },
               { label: "Fechados", value: closedLeads.length, color: "#10B981" },
@@ -2797,16 +2785,20 @@ Retorne JSON:
               const avgS = pLeads.length > 0 ? Math.round(pLeads.reduce((s, l) => s + l.sentimentoScore, 0) / pLeads.length) : 0;
               if (pLeads.length === 0) return null;
               return (
-                <div key={p.tipo} className="flex items-center gap-3 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                  <span className="text-sm">{p.emoji}</span>
-                  <span className="text-[11px] font-bold w-24" style={{ color: p.cor }}>{p.label}</span>
-                  <span className="text-[10px] w-12 text-center" style={{ color: "#64748B" }}>{pLeads.length}</span>
-                  <span className="text-[10px] w-12 text-center font-semibold" style={{ color: "#10B981" }}>{pClosed.length}✓</span>
-                  <span className="text-[10px] w-12 text-center" style={{ color: sentimentColor(avgS) }}>♥{avgS}</span>
-                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
-                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${rate}%`, background: `linear-gradient(90deg, ${rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444"}, ${rate >= 50 ? "#06D6A0" : rate >= 30 ? "#FBBF24" : "#F87171"})` }} />
+                <div key={p.tipo} className={cn("py-2.5", isMobile ? "flex flex-col gap-1" : "flex items-center gap-3")} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{p.emoji}</span>
+                    <span className="text-[11px] font-bold" style={{ color: p.cor }}>{p.label}</span>
+                    <span className="text-[10px] ml-auto" style={{ color: "#64748B" }}>{pLeads.length} leads</span>
+                    <span className="text-[10px] font-semibold" style={{ color: "#10B981" }}>{pClosed.length}✓</span>
+                    <span className="text-[10px]" style={{ color: sentimentColor(avgS) }}>♥{avgS}</span>
                   </div>
-                  <span className="text-[12px] font-extrabold tabular-nums w-12 text-right" style={{ color: rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444" }}>{rate}%</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${rate}%`, background: `linear-gradient(90deg, ${rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444"}, ${rate >= 50 ? "#06D6A0" : rate >= 30 ? "#FBBF24" : "#F87171"})` }} />
+                    </div>
+                    <span className="text-[12px] font-extrabold tabular-nums w-12 text-right" style={{ color: rate >= 50 ? "#10B981" : rate >= 30 ? "#F59E0B" : "#EF4444" }}>{rate}%</span>
+                  </div>
                 </div>
               );
             })}
@@ -2880,7 +2872,7 @@ Retorne JSON:
               </div>
 
               {/* Score + 3 Dimensões + Summary */}
-              <div className="flex gap-4">
+              <div className={cn(isMobile ? "flex flex-col gap-3" : "flex gap-4")}>
                 <div className="rounded-2xl p-6 text-center relative overflow-hidden" style={{ background: "rgba(13,18,32,0.9)", border: "1px solid rgba(255,255,255,0.06)", minWidth: 180 }}>
                   <div className="relative w-[72px] h-[72px] mx-auto">
                     <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
@@ -2938,7 +2930,7 @@ Retorne JSON:
                               <span className="text-[10px] font-bold" style={{ color: dim.color }}>{dim.label}</span>
                               <span className="text-[10px] font-extrabold ml-auto" style={{ color: dim.color }}>{dimData.score}</span>
                             </div>
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 pl-4">
+                            <div className={cn("gap-x-4 gap-y-1 pl-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                               {dim.criterioIds.map(cId => {
                                 const criterio = dimData.criterios[cId];
                                 const nome = CRITERIOS_AVALIACAO.find(c => c.id === cId)?.nome || cId;
