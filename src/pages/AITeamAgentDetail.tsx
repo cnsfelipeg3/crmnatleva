@@ -694,9 +694,9 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
       </SectionCard>
 
       {/* Rules */}
-      <SectionCard title={`Regras Ativas · ${rules.length}`} icon={Shield}>
+      <SectionCard title={`Regras Ativas · ${allRules.length}`} icon={Shield}>
         <div className="space-y-2">
-          {rules.map((rule: RuleItem) => {
+          {allRules.map((rule: RuleItem) => {
             const active = ruleStates[rule.id] ?? rule.active;
             return (
               <div key={rule.id} className={cn(
