@@ -20,7 +20,7 @@ import {
 } from "./evaluationFramework";
 
 // ===== API — Roteamento inteligente por tipo de chamada =====
-type SimCallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep";
+type SimCallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep" | "price_image";
 
 async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent"): Promise<string> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
@@ -31,8 +31,8 @@ async function callSimulatorAI(sysPrompt: string, history: { role: string; conte
   });
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-  // Non-streaming types (evaluate, debrief, deep) return JSON directly
-  if (type === "evaluate" || type === "debrief" || type === "deep") {
+  // Non-streaming types return JSON directly
+  if (type === "evaluate" || type === "debrief" || type === "deep" || type === "price_image") {
     const data = await resp.json();
     return data.content || "";
   }
@@ -54,6 +54,56 @@ async function callSimulatorAI(sysPrompt: string, history: { role: string; conte
     }
   }
   return text;
+}
+
+// Detect if agent response mentions sending a price/quote print
+const PRICE_PRINT_PATTERNS = /\b(segue o (print|orçamento|orcamento|preço|preco|valor)|vou (te |lhe )?(enviar|mandar|passar) (o |um )?(print|orçamento|orcamento|screenshot|imagem|foto|tabelinha|cotação|cotacao|proposta|valores)|aqui (está|esta|vai|tá) o (print|orçamento|preço|valor)|conforme solicitado.{0,20}(orçamento|valor|preço)|olha (só )?o (orçamento|preço|valor))\b/i;
+
+function detectsPricePrint(text: string): boolean {
+  return PRICE_PRINT_PATTERNS.test(text);
+}
+
+// Generate a realistic price quote image via AI
+async function generatePriceImage(lead: { nome: string; destino: string; pax: number; orcamento: string; ticket: number; paxLabel: string }): Promise<string | null> {
+  try {
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
+    const basePrice = lead.ticket || Math.floor(Math.random() * 8000 + 3000);
+    const perPerson = Math.round(basePrice / Math.max(1, lead.pax));
+    const hotel3 = Math.round(perPerson * 0.7);
+    const hotel4 = perPerson;
+    const hotel5 = Math.round(perPerson * 1.4);
+
+    const prompt = `Generate a clean, professional WhatsApp-style price quote image for a travel agency called "NatLeva Viagens". 
+Make it look like a real screenshot that a travel agent would send via WhatsApp.
+
+Details to include:
+- Client: ${lead.nome}
+- Destination: ${lead.destino}
+- Travelers: ${lead.pax} ${lead.paxLabel}
+- Package options (show 2-3 options):
+  Option 1: Hotel 3★ - R$ ${hotel3.toLocaleString("pt-BR")}/pessoa (${lead.pax}x = R$ ${(hotel3 * lead.pax).toLocaleString("pt-BR")})
+  Option 2: Hotel 4★ - R$ ${hotel4.toLocaleString("pt-BR")}/pessoa (${lead.pax}x = R$ ${(hotel4 * lead.pax).toLocaleString("pt-BR")})
+  Option 3: Hotel 5★ - R$ ${hotel5.toLocaleString("pt-BR")}/pessoa (${lead.pax}x = R$ ${(hotel5 * lead.pax).toLocaleString("pt-BR")})
+- Include: Aéreo + Hotel + Transfer + Seguro Viagem
+- Period: 7 noites
+- Validity: "Valores válidos por 48h"
+- Add NatLeva logo text and professional formatting
+- Use green/dark theme similar to WhatsApp
+
+Style: Clean table layout, dark background (#0B141A), green accents (#10B981), white text. Make it look like a real agency price card screenshot. NO watermarks. Professional travel agency aesthetic.`;
+
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+      body: JSON.stringify({ type: "price_image", systemPrompt: "You generate professional travel price quote images.", history: [{ role: "user", content: prompt }] }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    return data.imageUrl || null;
+  } catch (err) {
+    console.error("Price image generation error:", err);
+    return null;
+  }
 }
 
 // Generate lead message using AI with full persona context
