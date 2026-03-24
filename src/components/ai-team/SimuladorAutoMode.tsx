@@ -2577,7 +2577,7 @@ Retorne JSON:
           </div>
 
           {/* CENTER: Chat */}
-          <div className="flex-1 rounded-2xl flex flex-col overflow-hidden" style={{ background: "rgba(11,20,26,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className={cn("flex-1 rounded-2xl flex flex-col overflow-hidden", isMobile && "min-h-[40vh]")} style={{ background: "rgba(11,20,26,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
             {selectedLead ? (
               <>
                 <div className="flex items-center gap-3 px-5 shrink-0 relative" style={{ height: 64, background: "linear-gradient(180deg, rgba(31,44,51,0.95), rgba(31,44,51,0.8))" }}>
