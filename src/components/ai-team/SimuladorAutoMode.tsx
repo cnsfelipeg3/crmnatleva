@@ -1909,7 +1909,7 @@ Retorne JSON:
                                 style={{ color: "#64748B" }}>
                                 <span>{squad.emoji}</span> {squad.name}
                               </p>
-                              <div className="grid grid-cols-2 gap-1.5">
+                              <div className={cn("gap-1.5", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                                 {squadAgents.map(a => {
                                   const selected = customFunnelAgents[0] === a.id;
                                   const c = getAgentColor(a);
