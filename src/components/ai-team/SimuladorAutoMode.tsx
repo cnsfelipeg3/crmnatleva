@@ -1292,7 +1292,7 @@ Retorne JSON:
   }, [leads, closedLeads, lostLeads, elapsedSeconds, conversionRate, totalReceita, ticketMedio, avgSentimento, avgHumanizacao, avgEficacia, avgTecnica, toast]);
 
   const CONFIG_TABS = [
-    { id: "volume" as const, label: "Volume & Tempo", icon: BarChart3, color: "#3B82F6", summary: `${numLeads} leads · ${msgsPerLead} msgs · ${formatTime(duration)}` },
+    { id: "volume" as const, label: "Volume & Tempo", icon: BarChart3, color: "#3B82F6", summary: `${numLeads} leads · ${msgsPerLead} msgs · ${duration >= 3600 ? Math.floor(duration / 3600) + "h" : formatTime(duration)} · ${dispatchMode === "simultaneous" ? "simultâneo" : dispatchMode === "wave" ? "ondas" : "seq."}` },
     { id: "perfis" as const, label: "Perfis", icon: User, color: "#EC4899", summary: `${selectedProfiles.length || 8} perfis ativos` },
     { id: "cenario" as const, label: "Cenário", icon: MapPin, color: "#06B6D4", summary: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos` },
     { id: "lead_behavior" as const, label: "Calibração Lead", icon: Heart, color: "#EF4444", summary: `Paciência ${initialPatience}% · ${leadPatienceCurve} · ${abandonmentSensitivity}% sensib.` },
