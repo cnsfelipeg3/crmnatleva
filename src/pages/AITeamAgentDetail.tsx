@@ -608,6 +608,32 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
     return map;
   });
 
+  const [showNewRule, setShowNewRule] = useState(false);
+  const [newRule, setNewRule] = useState({ name: "", description: "", impact: "alta", scope: "specific" });
+  const [extraRules, setExtraRules] = useState<RuleItem[]>([]);
+
+  const allRules = useMemo(() => [...rules, ...extraRules], [rules, extraRules]);
+
+  const displayName = agentName;
+
+  const handleSaveRule = useCallback(() => {
+    if (!newRule.name.trim()) { sonnerToast.error("Nome da regra é obrigatório"); return; }
+    const rule: RuleItem = {
+      id: `r-custom-${Date.now()}`,
+      name: newRule.name.trim(),
+      description: newRule.description.trim(),
+      active: true,
+      impact: newRule.impact,
+      scope: newRule.scope,
+      agents: newRule.scope === "specific" ? [agentName.toUpperCase()] : [],
+    };
+    setExtraRules(prev => [...prev, rule]);
+    setRuleStates(prev => ({ ...prev, [rule.id]: true }));
+    setShowNewRule(false);
+    setNewRule({ name: "", description: "", impact: "alta", scope: "specific" });
+    sonnerToast.success("Regra criada com sucesso!");
+  }, [newRule, agentName]);
+
   const toggleRule = (id: string) => {
     setRuleStates((prev: any) => ({ ...prev, [id]: !prev[id] }));
     sonnerToast.success("Regra atualizada");
