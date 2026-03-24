@@ -584,6 +584,7 @@ export default function AIStrategyKnowledge() {
                             </div>
                           )}
                         </div>
+                        <ItemOriginBadge createdAt={r.created_at} createdBy={r.created_by} originType={r.origin_type} className="mt-1.5" />
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <Switch checked={r.is_active} onCheckedChange={() => toggleActive(r)} />
