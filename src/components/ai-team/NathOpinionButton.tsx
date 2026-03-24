@@ -66,7 +66,7 @@ interface DetailReport {
 }
 
 interface NathOpinionButtonProps {
-  messages: { role: string; content: string; agentName?: string; timestamp?: string }[];
+  messages: { role: string; content: string; agentName?: string; timestamp?: string; mediaUrl?: string; messageType?: string }[];
   context?: string;
   variant?: "header" | "inline" | "floating";
   disabled?: boolean;
