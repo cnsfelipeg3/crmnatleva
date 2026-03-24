@@ -224,7 +224,28 @@ Se qualquer condicao faltar: continue a conversa. Aprofunde. Instigue. Surpreend
 Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
   const priceInstr = "IMPORTANTE: Quando for hora de enviar valores/orçamento, diga que vai enviar o print com os valores (ex: 'Segue o print com os valores!', 'Vou te enviar o orçamento agora!', 'Olha só o print com as opções de preço!'). Isso é fundamental para a experiência do cliente.\n";
   const roleInstr = AGENT_ROLE_INSTRUCTIONS[agent.id] || "";
-  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${priceInstr}${transferInstr}${lengthInstr}`;
+  
+  // Inject training data from shared store
+  const training = getAgentTraining(agent.id);
+  let trainingBlock = "";
+  if (training) {
+    const parts: string[] = [];
+    if (training.behaviorPrompt) {
+      parts.push(`\n=== DIRETIVAS COMPORTAMENTAIS (configuradas pela gestão — PRIORIDADE MÁXIMA) ===\nVocê DEVE seguir rigorosamente estas instruções:\n${training.behaviorPrompt}`);
+    }
+    if (training.customRules && training.customRules.length > 0) {
+      const activeRules = training.customRules.filter(r => r.active);
+      if (activeRules.length > 0) {
+        parts.push(`\n=== REGRAS ESPECÍFICAS ===\n${activeRules.map(r => `- [${r.impact.toUpperCase()}] ${r.name}: ${r.description}`).join("\n")}`);
+      }
+    }
+    if (training.knowledgeSummaries && training.knowledgeSummaries.length > 0) {
+      parts.push(`\n=== BASE DE CONHECIMENTO ===\n${training.knowledgeSummaries.join("\n")}`);
+    }
+    trainingBlock = parts.join("\n");
+  }
+  
+  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${trainingBlock}\n${priceInstr}${transferInstr}${lengthInstr}`;
 }
 
 const SPEED_OPTIONS = [
