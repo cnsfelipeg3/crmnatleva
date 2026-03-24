@@ -1094,11 +1094,11 @@ Retorne JSON:
   // ===== RENDER: CONFIG =====
   if (phase === "config") {
     return (
-      <div className="animate-in fade-in slide-in-from-bottom-3 duration-500" style={{ maxWidth: 1100 }}>
-        {/* Mobile: horizontal scroll tabs. Desktop: 2-column */}
-        <div className={cn("flex", isMobile ? "flex-col gap-3" : "gap-5")} style={{ minHeight: isMobile ? undefined : 520 }}>
-          {/* Tab Navigation */}
-          <div className={cn(isMobile ? "flex gap-2 overflow-x-auto pb-2 scrollbar-hide" : "w-[220px] shrink-0 space-y-1.5")}>
+      <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
+        {/* Full-screen 2-column layout */}
+        <div className={cn("flex", isMobile ? "flex-col gap-3" : "gap-6")} style={{ minHeight: isMobile ? undefined : "calc(100vh - 320px)" }}>
+          {/* Tab Navigation — taller sidebar */}
+          <div className={cn(isMobile ? "flex gap-2 overflow-x-auto pb-2 scrollbar-hide" : "w-[260px] shrink-0 space-y-1.5 sticky top-0 self-start")}>
             {CONFIG_TABS.map((tab, i) => {
               const active = configTab === tab.id;
               const Icon = tab.icon;
