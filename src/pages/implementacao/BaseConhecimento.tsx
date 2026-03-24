@@ -69,6 +69,7 @@ export default function BaseConhecimento() {
               {item.description && (
                 <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
               )}
+              <ItemOriginBadge createdAt={item.created_at} createdBy={item.uploaded_by} originType="manual" />
             </Card>
           ))}
         </div>
