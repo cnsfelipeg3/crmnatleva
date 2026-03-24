@@ -1,7 +1,9 @@
 import { useState, useCallback } from "react";
-import { Crown, Loader2, AlertTriangle, Heart, Shield, Sparkles, TrendingUp } from "lucide-react";
+import { Crown, Loader2, AlertTriangle, Heart, Shield, Sparkles, TrendingUp, Zap, BookOpen, Users, Scale, Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const NATH_SYSTEM_PROMPT = `Você é NATH — Natália, CEO, fundadora, idealizadora e coração da NatLeva, agência de viagens premium que carrega o SEU nome. Você trata a NatLeva como um cristal precioso.
 
@@ -29,9 +31,19 @@ FORMATO DE RESPOSTA:
 - Comece SEMPRE com sua leitura emocional da situação ("Olhando essa conversa, meu instinto diz..." / "Isso me preocupa porque..." / "Adorei ver que...")
 - NÃO use tabelas, NÃO use listas com bullets. Escreva como uma CEO falando com sua equipe.`;
 
+interface ImprovementAction {
+  id: string;
+  type: "knowledge_base" | "skill" | "global_rule";
+  title: string;
+  description: string;
+  scope: "all_agents" | "specific_agent";
+  priority: "alta" | "media" | "baixa";
+  selected: boolean;
+}
+
 interface NathOpinionButtonProps {
   messages: { role: string; content: string; agentName?: string; timestamp?: string }[];
-  context?: string; // extra context like destination, profile, etc.
+  context?: string;
   variant?: "header" | "inline" | "floating";
   disabled?: boolean;
 }
@@ -40,6 +52,10 @@ export default function NathOpinionButton({ messages, context, variant = "header
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [opinion, setOpinion] = useState("");
+  const [actions, setActions] = useState<ImprovementAction[]>([]);
+  const [actionsLoading, setActionsLoading] = useState(false);
+  const [actionsExpanded, setActionsExpanded] = useState(false);
+  const [applying, setApplying] = useState(false);
   const { toast } = useToast();
 
   const askNath = useCallback(async () => {
@@ -50,6 +66,8 @@ export default function NathOpinionButton({ messages, context, variant = "header
     setOpen(true);
     setLoading(true);
     setOpinion("");
+    setActions([]);
+    setActionsExpanded(false);
 
     const chatHistory = messages.map(m => {
       const label = m.role === "agent" ? `AGENTE (${m.agentName || "IA"})` : "LEAD/CLIENTE";
@@ -74,9 +92,9 @@ export default function NathOpinionButton({ messages, context, variant = "header
       });
 
       if (!resp.ok || !resp.body) {
-        if (resp.status === 429) { setOpinion("Estou sobrecarregada agora... tente novamente em instantes. 💜"); }
-        else if (resp.status === 402) { setOpinion("Créditos de IA insuficientes. Recarregue para continuar."); }
-        else { setOpinion("Não consegui analisar agora. Tente novamente."); }
+        if (resp.status === 429) setOpinion("Estou sobrecarregada agora... tente novamente em instantes. 💜");
+        else if (resp.status === 402) setOpinion("Créditos de IA insuficientes. Recarregue para continuar.");
+        else setOpinion("Não consegui analisar agora. Tente novamente.");
         setLoading(false);
         return;
       }
@@ -112,6 +130,169 @@ export default function NathOpinionButton({ messages, context, variant = "header
       setLoading(false);
     }
   }, [messages, context, toast]);
+
+  const extractActions = useCallback(async () => {
+    setActionsLoading(true);
+    setActionsExpanded(true);
+    setActions([]);
+
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          question: `Com base na seguinte opinião da CEO Nath sobre uma conversa de atendimento, extraia TODAS as melhorias acionáveis que podem ser aplicadas ao ecossistema de agentes IA.
+
+OPINIÃO DA NATH:
+${opinion}
+
+Retorne EXATAMENTE um JSON array com objetos contendo:
+- "type": "knowledge_base" (regra para a base de conhecimento do atendimento), "skill" (habilidade técnica nova para os agentes) ou "global_rule" (regra universal obrigatória)
+- "title": título curto da melhoria (máx 60 chars)
+- "description": descrição detalhada de como implementar (2-3 linhas)
+- "scope": "all_agents" ou "specific_agent"
+- "priority": "alta", "media" ou "baixa"
+
+Gere entre 3 e 7 ações concretas. Foque em melhorias que possam ser sistematizadas. Retorne SOMENTE o JSON array, sem texto adicional.`,
+          agentName: "SISTEMA",
+          agentRole: "Você é um analisador de melhorias de processos. Retorne APENAS um JSON array válido, sem markdown, sem explicações. Cada item deve ter: type, title, description, scope, priority.",
+        }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        toast({ title: "Erro ao extrair ações", variant: "destructive" });
+        setActionsLoading(false);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "", fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buf.indexOf("\n")) !== -1) {
+          let line = buf.slice(0, nl);
+          buf = buf.slice(nl + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const json = line.slice(6).trim();
+          if (json === "[DONE]") break;
+          try {
+            const p = JSON.parse(json);
+            const c = p.choices?.[0]?.delta?.content;
+            if (c) fullText += c;
+          } catch {}
+        }
+      }
+
+      // Parse JSON from response (might be wrapped in markdown code blocks)
+      let cleaned = fullText.trim();
+      cleaned = cleaned.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+      
+      try {
+        const parsed: any[] = JSON.parse(cleaned);
+        const mapped: ImprovementAction[] = parsed.map((item, i) => ({
+          id: `action-${Date.now()}-${i}`,
+          type: item.type || "knowledge_base",
+          title: item.title || "Melhoria sem título",
+          description: item.description || "",
+          scope: item.scope || "all_agents",
+          priority: item.priority || "media",
+          selected: true, // all selected by default
+        }));
+        setActions(mapped);
+      } catch {
+        toast({ title: "Erro ao processar ações", description: "A IA retornou um formato inesperado.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro de conexão", variant: "destructive" });
+    } finally {
+      setActionsLoading(false);
+    }
+  }, [opinion, toast]);
+
+  const toggleAction = (id: string) => {
+    setActions(prev => prev.map(a => a.id === id ? { ...a, selected: !a.selected } : a));
+  };
+
+  const applySelected = useCallback(async () => {
+    const selected = actions.filter(a => a.selected);
+    if (selected.length === 0) {
+      toast({ title: "Nenhuma ação selecionada", variant: "destructive" });
+      return;
+    }
+
+    setApplying(true);
+    let applied = 0;
+
+    for (const action of selected) {
+      try {
+        if (action.type === "knowledge_base" || action.type === "global_rule") {
+          await supabase.from("ai_strategy_knowledge").insert({
+            title: action.title,
+            rule: action.description,
+            category: action.type === "global_rule" ? "regra_global" : "atendimento",
+            description: `Gerado pela Opinião da Nath · ${new Date().toLocaleDateString("pt-BR")}`,
+            priority: action.priority === "alta" ? 1 : action.priority === "media" ? 5 : 10,
+            is_active: true,
+            origin_type: "nath_opinion",
+            tags: ["nath", "auto_gerado", action.scope === "all_agents" ? "global" : "especifico"],
+            status: "active",
+          });
+          applied++;
+        } else if (action.type === "skill") {
+          // Insert as improvement suggestion for all agents or first active agent
+          const { data: agents } = await supabase
+            .from("ai_team_agents")
+            .select("id")
+            .eq("is_active", true)
+            .limit(action.scope === "all_agents" ? 21 : 1);
+
+          for (const agent of agents || []) {
+            await supabase.from("ai_team_improvements").insert({
+              agent_id: agent.id,
+              title: action.title,
+              description: action.description,
+              category: "skill",
+              status: "approved",
+              impact_score: action.priority === "alta" ? 90 : action.priority === "media" ? 60 : 30,
+              approved_at: new Date().toISOString(),
+            });
+          }
+          applied++;
+        }
+      } catch (err) {
+        console.warn("[NathAction] Failed to apply:", action.title, err);
+      }
+    }
+
+    toast({
+      title: `✅ ${applied} melhoria${applied > 1 ? "s" : ""} aplicada${applied > 1 ? "s" : ""}!`,
+      description: "As ações foram salvas na base de conhecimento e nos agentes.",
+    });
+    setApplying(false);
+    setActions(prev => prev.map(a => a.selected ? { ...a, selected: false } : a));
+  }, [actions, toast]);
+
+  const typeConfig = {
+    knowledge_base: { icon: BookOpen, label: "Base de Conhecimento", color: "#3B82F6", bg: "rgba(59,130,246,0.08)" },
+    skill: { icon: Sparkles, label: "Habilidade do Agente", color: "#10B981", bg: "rgba(16,185,129,0.08)" },
+    global_rule: { icon: Scale, label: "Regra Global", color: "#F59E0B", bg: "rgba(245,158,11,0.08)" },
+  };
+
+  const priorityConfig = {
+    alta: { color: "#EF4444", label: "Alta" },
+    media: { color: "#F59E0B", label: "Média" },
+    baixa: { color: "#6B7280", label: "Baixa" },
+  };
 
   // Button variants
   const buttonEl = variant === "floating" ? (
@@ -155,12 +336,14 @@ export default function NathOpinionButton({ messages, context, variant = "header
     </button>
   );
 
+  const selectedCount = actions.filter(a => a.selected).length;
+
   return (
     <>
       {buttonEl}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-xl p-0 overflow-hidden" style={{
+        <DialogContent className="max-w-2xl p-0 overflow-hidden" style={{
           background: "linear-gradient(145deg, #0D0B1A, #1A0F2E, #120B20)",
           border: "1px solid rgba(168,85,247,0.15)",
           boxShadow: "0 25px 80px rgba(168,85,247,0.15), 0 0 0 1px rgba(0,0,0,0.3)",
@@ -192,7 +375,6 @@ export default function NathOpinionButton({ messages, context, variant = "header
               </DialogTitle>
             </DialogHeader>
 
-            {/* Context pills */}
             <div className="flex items-center gap-2 mt-3 flex-wrap">
               {[
                 { icon: Shield, label: "Guardiã da Marca", color: "#EF4444" },
@@ -209,7 +391,7 @@ export default function NathOpinionButton({ messages, context, variant = "header
           </div>
 
           {/* Body */}
-          <div className="px-6 py-5 max-h-[420px] overflow-y-auto">
+          <div className="px-6 py-5 max-h-[520px] overflow-y-auto">
             {loading && !opinion && (
               <div className="flex flex-col items-center justify-center py-12 gap-3 animate-in fade-in duration-500">
                 <div className="relative">
@@ -226,7 +408,7 @@ export default function NathOpinionButton({ messages, context, variant = "header
             )}
             {opinion && (
               <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                {/* Chat bubble style */}
+                {/* Chat bubble */}
                 <div className="relative rounded-2xl p-5" style={{
                   background: "linear-gradient(135deg, rgba(168,85,247,0.06), rgba(236,72,153,0.03))",
                   border: "1px solid rgba(168,85,247,0.1)",
@@ -241,7 +423,7 @@ export default function NathOpinionButton({ messages, context, variant = "header
                   )}
                 </div>
 
-                {/* Signature */}
+                {/* Action buttons row */}
                 {!loading && (
                   <div className="flex items-center justify-between mt-4 pt-3" style={{ borderTop: "1px solid rgba(168,85,247,0.06)" }}>
                     <div className="flex items-center gap-2">
@@ -250,11 +432,145 @@ export default function NathOpinionButton({ messages, context, variant = "header
                         Nath · CEO NatLeva
                       </span>
                     </div>
-                    <button onClick={askNath}
-                      className="text-[9px] font-bold px-3 py-1.5 rounded-lg transition-all hover:scale-105"
-                      style={{ background: "rgba(168,85,247,0.08)", color: "#A855F7", border: "1px solid rgba(168,85,247,0.15)" }}>
-                      Pedir nova análise
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button onClick={extractActions} disabled={actionsLoading}
+                        className="flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all hover:scale-105"
+                        style={{
+                          background: "linear-gradient(135deg, rgba(16,185,129,0.12), rgba(59,130,246,0.08))",
+                          color: "#10B981",
+                          border: "1px solid rgba(16,185,129,0.2)",
+                        }}>
+                        {actionsLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                        Converter em Ação
+                      </button>
+                      <button onClick={askNath}
+                        className="text-[9px] font-bold px-3 py-1.5 rounded-lg transition-all hover:scale-105"
+                        style={{ background: "rgba(168,85,247,0.08)", color: "#A855F7", border: "1px solid rgba(168,85,247,0.15)" }}>
+                        Nova análise
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions Panel */}
+                {actionsExpanded && (
+                  <div className="mt-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
+                    <div className="rounded-xl overflow-hidden" style={{
+                      background: "rgba(16,185,129,0.03)",
+                      border: "1px solid rgba(16,185,129,0.1)",
+                    }}>
+                      {/* Actions header */}
+                      <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(16,185,129,0.08)" }}>
+                        <div className="flex items-center gap-2">
+                          <Zap className="w-4 h-4" style={{ color: "#10B981" }} />
+                          <span className="text-[12px] font-bold" style={{ color: "#10B981" }}>
+                            Plano de Melhoria
+                          </span>
+                          {actions.length > 0 && (
+                            <span className="text-[9px] px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.12)", color: "#10B981" }}>
+                              {selectedCount}/{actions.length} selecionadas
+                            </span>
+                          )}
+                        </div>
+                        <button onClick={() => setActionsExpanded(!actionsExpanded)}>
+                          {actionsExpanded ? <ChevronUp className="w-4 h-4" style={{ color: "#6B7280" }} /> : <ChevronDown className="w-4 h-4" style={{ color: "#6B7280" }} />}
+                        </button>
+                      </div>
+
+                      {/* Loading state */}
+                      {actionsLoading && (
+                        <div className="flex flex-col items-center justify-center py-8 gap-2">
+                          <Loader2 className="w-5 h-5 animate-spin" style={{ color: "#10B981" }} />
+                          <p className="text-[11px]" style={{ color: "#6EE7B7" }}>Extraindo melhorias da opinião da Nath...</p>
+                        </div>
+                      )}
+
+                      {/* Actions list */}
+                      {!actionsLoading && actions.length > 0 && (
+                        <div className="px-3 py-2 space-y-2">
+                          {actions.map((action) => {
+                            const tc = typeConfig[action.type];
+                            const pc = priorityConfig[action.priority];
+                            const TypeIcon = tc.icon;
+                            return (
+                              <div key={action.id}
+                                className="rounded-xl p-3 transition-all duration-200 cursor-pointer hover:scale-[1.01]"
+                                style={{
+                                  background: action.selected ? tc.bg : "rgba(255,255,255,0.02)",
+                                  border: `1px solid ${action.selected ? tc.color + "25" : "rgba(255,255,255,0.05)"}`,
+                                }}
+                                onClick={() => toggleAction(action.id)}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className="pt-0.5">
+                                    <Checkbox
+                                      checked={action.selected}
+                                      onCheckedChange={() => toggleAction(action.id)}
+                                      className="border-gray-600 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                                    />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <TypeIcon className="w-3.5 h-3.5 shrink-0" style={{ color: tc.color }} />
+                                      <span className="text-[11px] font-bold truncate" style={{ color: "#E9EDEF" }}>
+                                        {action.title}
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] leading-relaxed" style={{ color: "#9CA3AF" }}>
+                                      {action.description}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                      <span className="text-[8px] font-bold px-2 py-0.5 rounded-full uppercase"
+                                        style={{ background: tc.bg, color: tc.color, border: `1px solid ${tc.color}20` }}>
+                                        {tc.label}
+                                      </span>
+                                      <span className="text-[8px] font-bold px-2 py-0.5 rounded-full uppercase"
+                                        style={{ background: `${pc.color}10`, color: pc.color }}>
+                                        {pc.label}
+                                      </span>
+                                      <span className="text-[8px] px-2 py-0.5 rounded-full"
+                                        style={{ background: "rgba(255,255,255,0.04)", color: "#6B7280" }}>
+                                        {action.scope === "all_agents" ? (
+                                          <span className="flex items-center gap-1"><Users className="w-2.5 h-2.5" /> Todos os agentes</span>
+                                        ) : "Agente específico"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {/* Apply button */}
+                          <div className="pt-2 pb-1 flex items-center justify-between">
+                            <button
+                              onClick={() => setActions(prev => prev.map(a => ({ ...a, selected: !prev.every(x => x.selected) })))}
+                              className="text-[9px] font-bold px-3 py-1.5 rounded-lg transition-all"
+                              style={{ color: "#6B7280" }}>
+                              {actions.every(a => a.selected) ? "Desmarcar tudo" : "Selecionar tudo"}
+                            </button>
+                            <button
+                              onClick={applySelected}
+                              disabled={selectedCount === 0 || applying}
+                              className="flex items-center gap-1.5 text-[11px] font-bold px-4 py-2 rounded-xl transition-all hover:scale-105 disabled:opacity-40"
+                              style={{
+                                background: "linear-gradient(135deg, #10B981, #059669)",
+                                color: "#fff",
+                                boxShadow: "0 4px 15px rgba(16,185,129,0.3)",
+                              }}>
+                              {applying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                              Aprovar {selectedCount} melhoria{selectedCount !== 1 ? "s" : ""}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {!actionsLoading && actions.length === 0 && actionsExpanded && !actionsLoading && (
+                        <div className="px-4 py-6 text-center">
+                          <p className="text-[11px]" style={{ color: "#6B7280" }}>Nenhuma ação extraída ainda.</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
