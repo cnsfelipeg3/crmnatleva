@@ -953,19 +953,25 @@ function ConfigPanel({ node, onUpdate, onClose, onDelete, onDuplicate }: {
 }
 
 // ─── FLOW LIST ───
-function FlowList({ flows, onSelect, onCreate, onUseTemplate, loading }: {
-  flows: any[]; onSelect: (f: any) => void; onCreate: () => void; onUseTemplate: (t: typeof TEMPLATES[0]) => void; loading: boolean;
+function FlowList({ flows, onSelect, onCreate, onUseTemplate, onDeleteFlow, onArchiveFlow, loading }: {
+  flows: any[]; onSelect: (f: any) => void; onCreate: () => void; onUseTemplate: (t: typeof TEMPLATES[0]) => void; onDeleteFlow: (id: string) => void; onArchiveFlow: (id: string, archived: boolean) => void; loading: boolean;
 }) {
   const [tab, setTab] = useState<"flows" | "templates" | "pipeline" | "metrics">("flows");
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
   const navigate = useNavigate();
+
+  const activeFlows = flows.filter(f => f.status !== "archived");
+  const archivedFlows = flows.filter(f => f.status === "archived");
+  const displayFlows = showArchived ? archivedFlows : activeFlows;
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 p-4 border-b bg-card">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/livechat")}><ChevronLeft className="w-4 h-4" /></Button>
-        <h1 className="font-bold text-lg">🧩 Automação / Agentes</h1>
+        <Button variant="ghost" size="icon" onClick={() => navigate("/ai-team")}><ChevronLeft className="w-4 h-4" /></Button>
+        <h1 className="font-bold text-lg">🧩 Flow Builder</h1>
         <div className="flex-1" />
-        <Button variant="outline" size="sm" onClick={() => navigate("/livechat/integrations")} className="text-xs">
+        <Button variant="outline" size="sm" onClick={() => navigate("/ai-team/config")} className="text-xs">
           <Plug className="w-3 h-3 mr-1" /> Integrações IA
         </Button>
       </div>
@@ -983,19 +989,65 @@ function FlowList({ flows, onSelect, onCreate, onUseTemplate, loading }: {
       <ScrollArea className="flex-1 p-3">
         {tab === "flows" ? (
           <div className="space-y-2">
-            <Button onClick={onCreate} className="w-full mb-3" size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Fluxo</Button>
+            <Button onClick={onCreate} className="w-full mb-2" size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Fluxo</Button>
+
+            {/* Toggle archived */}
+            <div className="flex items-center justify-between mb-2">
+              <button
+                className={cn("text-xs font-medium transition-colors", showArchived ? "text-primary" : "text-muted-foreground hover:text-foreground")}
+                onClick={() => setShowArchived(!showArchived)}
+              >
+                {showArchived ? `📦 Arquivados (${archivedFlows.length})` : `📂 Ativos (${activeFlows.length})`}
+                {!showArchived && archivedFlows.length > 0 && (
+                  <span className="ml-1.5 text-[10px] text-muted-foreground">• {archivedFlows.length} arquivado{archivedFlows.length > 1 ? "s" : ""}</span>
+                )}
+              </button>
+              {showArchived && (
+                <button className="text-[10px] text-muted-foreground hover:text-foreground" onClick={() => setShowArchived(false)}>
+                  ← Voltar aos ativos
+                </button>
+              )}
+            </div>
+
             {loading && <p className="text-xs text-muted-foreground text-center py-4">Carregando...</p>}
-            {!loading && flows.length === 0 && <p className="text-xs text-muted-foreground text-center py-8">Nenhum fluxo criado.<br/>Comece com um template!</p>}
-            {flows.map((f) => (
-              <Card key={f.id} className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all" onClick={() => onSelect(f)}>
+            {!loading && displayFlows.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-8">
+                {showArchived ? "Nenhum fluxo arquivado." : "Nenhum fluxo criado.\nComece com um template!"}
+              </p>
+            )}
+            {displayFlows.map((f) => (
+              <Card key={f.id} className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all group" onClick={() => onSelect(f)}>
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-sm">{f.name}</span>
-                    <Badge variant={f.status === "active" ? "default" : f.status === "paused" ? "secondary" : "outline"} className="text-[10px]">
-                      {f.status === "active" ? "🟢 Ativo" : f.status === "paused" ? "⏸ Pausado" : "🟡 Rascunho"}
-                    </Badge>
+                    <span className="font-medium text-sm flex-1 min-w-0 truncate">{f.name}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge variant={f.status === "active" ? "default" : f.status === "paused" ? "secondary" : f.status === "archived" ? "outline" : "outline"} className="text-[10px]">
+                        {f.status === "active" ? "🟢 Ativo" : f.status === "paused" ? "⏸ Pausado" : f.status === "archived" ? "📦 Arquivado" : "🟡 Rascunho"}
+                      </Badge>
+                    </div>
                   </div>
                   {f.description && <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{f.description}</p>}
+                  
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1 mt-2 pt-2 border-t border-border/50">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[10px] px-2 text-muted-foreground hover:text-foreground"
+                      onClick={(e) => { e.stopPropagation(); onArchiveFlow(f.id, f.status === "archived"); }}
+                    >
+                      {f.status === "archived" ? "📂 Restaurar" : "📦 Arquivar"}
+                    </Button>
+                    <div className="flex-1" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[10px] px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget({ id: f.id, name: f.name }); }}
+                    >
+                      <Trash2 className="w-3 h-3 mr-1" /> Excluir
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -1017,6 +1069,26 @@ function FlowList({ flows, onSelect, onCreate, onUseTemplate, loading }: {
           </div>
         )}
       </ScrollArea>
+      )}
+
+      {/* Delete confirmation dialog */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setDeleteTarget(null)}>
+          <div className="bg-card border border-border rounded-xl shadow-2xl p-5 max-w-sm w-full mx-4 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="space-y-2">
+              <h3 className="font-bold text-base">Excluir fluxo?</h3>
+              <p className="text-sm text-muted-foreground">
+                Tem certeza que deseja excluir <span className="font-bold text-foreground">"{deleteTarget.name}"</span>? Essa ação é irreversível e todos os nós e conexões serão perdidos.
+              </p>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setDeleteTarget(null)}>Cancelar</Button>
+              <Button variant="destructive" size="sm" onClick={() => { onDeleteFlow(deleteTarget.id); setDeleteTarget(null); }}>
+                Sim, excluir
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
