@@ -593,8 +593,9 @@ export default function SimuladorManualMode() {
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               disabled={loading}
-              className={cn("flex-1 rounded-xl outline-none transition-all focus:ring-1", isMobile ? "text-[14px] px-4 py-3" : "text-[14px] px-4 py-3")}
-              style={{ background: "rgba(255,255,255,0.06)", color: "#E9EDEF", border: "1px solid rgba(255,255,255,0.08)" }}
+              autoComplete="off"
+              className={cn("flex-1 rounded-xl outline-none", isMobile ? "text-[14px] px-4 py-3" : "text-[14px] px-4 py-3")}
+              style={{ background: "rgba(255,255,255,0.06)", color: "#E9EDEF", border: "1px solid rgba(255,255,255,0.08)", transition: "border-color 0.15s" }}
             />
             <button onClick={() => handleSend()} disabled={loading || !input.trim()}
               className="w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0"
