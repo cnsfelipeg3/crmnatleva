@@ -67,7 +67,7 @@ function classifyIntent(userMessage: string, hasImages: boolean, forceWebSearch 
   // Complex analysis / strategic planning / detailed reports
   const complexPatterns = /(plano\s+(estratégico|de\s+ação|completo|detalhado|90\s+dias|anual)|análise\s+(profunda|completa|detalhada|cross|cruzada|swot|financeira\s+completa)|relatório\s+(executivo|completo|detalhado|gerencial)|projeção|forecast|previsão|cenário|simulação|simul|monte\s+um\s+plano|crie\s+um\s+programa|elabore|desenvolva\s+uma?\s+estratégia|business\s+plan|due\s+diligence|auditoria\s+completa|benchmark|comparativo\s+completo)/i;
   if (complexPatterns.test(msg) || msg.length > 500) {
-    return { model: "google/gemini-2.5-pro", label: "🧠 Motor Estratégico Pro", reason: "Análise complexa / planejamento estratégico", needsWebSearch, searchQuery };
+    return { model: "openai/gpt-5", label: "🧠 Motor Estratégico Pro", reason: "Análise complexa / planejamento estratégico", needsWebSearch, searchQuery };
   }
 
   // Advanced calculations / financial modeling
