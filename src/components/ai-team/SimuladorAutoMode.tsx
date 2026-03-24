@@ -2250,13 +2250,15 @@ Retorne JSON:
           </div>
         </div>
 
-        {/* CTA Bar */}
-        <div className="mt-5 rounded-2xl overflow-hidden relative" style={{
-          background: "linear-gradient(135deg, rgba(13,18,32,0.95), rgba(13,18,32,0.8))",
-          border: "1px solid rgba(16,185,129,0.15)",
+        {/* CTA Bar — sticky bottom */}
+        <div className="mt-6 rounded-2xl overflow-hidden relative sticky bottom-4 z-20" style={{
+          background: "linear-gradient(135deg, rgba(13,18,32,0.98), rgba(13,18,32,0.9))",
+          border: "1px solid rgba(16,185,129,0.2)",
+          boxShadow: "0 -8px 32px rgba(0,0,0,0.4)",
+          backdropFilter: "blur(12px)",
         }}>
           <div className={cn("h-[2px]")} style={{ background: "linear-gradient(90deg, #10B981, #06B6D4, #8B5CF6)" }} />
-          <div className={cn("flex items-center gap-4", isMobile ? "flex-col px-4 py-4" : "gap-6 px-6 py-4")}>
+          <div className={cn("flex items-center gap-4", isMobile ? "flex-col px-4 py-4" : "gap-6 px-8 py-5")}>
             {/* Config chips */}
             <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-hide w-full">
               {[
