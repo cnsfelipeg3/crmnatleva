@@ -343,6 +343,13 @@ export default function ProposalTemplates() {
                     </Button>
                   )}
                   <Button
+                    variant="ghost" size="sm" className="h-8 gap-1 text-xs"
+                    title={t.is_active ? "Arquivar" : "Restaurar"}
+                    onClick={() => archiveMutation.mutate({ id: t.id, restore: !t.is_active })}
+                  >
+                    {t.is_active ? <Archive className="w-3.5 h-3.5" /> : <ArchiveRestore className="w-3.5 h-3.5" />}
+                  </Button>
+                  <Button
                     variant="ghost" size="sm" className="h-8 text-xs text-destructive hover:text-destructive"
                     onClick={() => setDeleteConfirm(t.id)}
                   >
@@ -353,7 +360,8 @@ export default function ProposalTemplates() {
             </Card>
           ))}
         </div>
-      )}
+      );
+      })()}
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
