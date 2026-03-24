@@ -448,7 +448,7 @@ export default function SimuladorManualMode() {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-24 pointer-events-none" style={{ background: `radial-gradient(ellipse, ${agentColor}06, transparent 70%)`, willChange: "auto" }} />
 
           {/* Chat header */}
-          <div className="flex items-center gap-3 px-4 md:px-5 shrink-0 relative z-10" style={{ height: isMobile ? 60 : 66, background: "linear-gradient(180deg, rgba(31,44,51,0.95), rgba(31,44,51,0.85))", backdropFilter: "blur(12px)" }}>
+          <div className="flex items-center gap-3 px-4 md:px-5 shrink-0 relative z-10" style={{ height: isMobile ? 60 : 66, background: "rgba(31,44,51,0.92)" }}>
             <button
               onClick={() => { if (isMobile) { setPanelTab("agente"); setShowPanel(true); } }}
               className="relative shrink-0"
