@@ -16,8 +16,12 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ArrowLeft, Plus, Pencil, Trash2, Star, Palette, Type, LayoutTemplate, Eye,
-  GripVertical, Check, Copy,
+  GripVertical, Check, Copy, Archive, ArchiveRestore,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -72,6 +76,7 @@ export default function ProposalTemplates() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(defaultForm);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ["proposal_templates"],
@@ -144,6 +149,17 @@ export default function ProposalTemplates() {
     },
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: async ({ id, restore }: { id: string; restore: boolean }) => {
+      const { error } = await supabase.from("proposal_templates").update({ is_active: restore }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["proposal_templates"] });
+      toast.success(vars.restore ? "Modelo restaurado!" : "Modelo arquivado!");
+    },
+  });
+
   const openCreate = () => {
     setEditingId(null);
     setForm(defaultForm);
@@ -203,9 +219,20 @@ export default function ProposalTemplates() {
             <p className="text-sm text-muted-foreground">Configure os templates padrão para suas propostas</p>
           </div>
         </div>
-        <Button onClick={() => navigate("/propostas/modelos/novo")} className="gap-2">
-          <Plus className="w-4 h-4" /> Novo Modelo
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={showArchived ? "secondary" : "outline"}
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setShowArchived(!showArchived)}
+          >
+            <Archive className="w-4 h-4" />
+            {showArchived ? "Arquivados" : "Arquivados"}
+          </Button>
+          <Button onClick={() => navigate("/propostas/modelos/novo")} className="gap-2">
+            <Plus className="w-4 h-4" /> Novo Modelo
+          </Button>
+        </div>
       </div>
 
       {/* Templates grid */}
@@ -221,18 +248,26 @@ export default function ProposalTemplates() {
             </Card>
           ))}
         </div>
-      ) : !templates?.length ? (
+      ) : (() => {
+        const filtered = templates?.filter(t => showArchived ? !t.is_active : t.is_active) || [];
+        return !filtered.length ? (
         <Card className="p-12 text-center">
           <LayoutTemplate className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground font-medium">Nenhum modelo configurado</p>
-          <p className="text-sm text-muted-foreground/60 mt-1">Crie seu primeiro template para padronizar suas propostas</p>
-          <Button onClick={() => navigate("/propostas/modelos/novo")} className="mt-4 gap-2">
-            <Plus className="w-4 h-4" /> Criar modelo
-          </Button>
+          <p className="text-muted-foreground font-medium">
+            {showArchived ? "Nenhum modelo arquivado" : "Nenhum modelo configurado"}
+          </p>
+          <p className="text-sm text-muted-foreground/60 mt-1">
+            {showArchived ? "Modelos arquivados aparecerão aqui" : "Crie seu primeiro template para padronizar suas propostas"}
+          </p>
+          {!showArchived && (
+            <Button onClick={() => navigate("/propostas/modelos/novo")} className="mt-4 gap-2">
+              <Plus className="w-4 h-4" /> Criar modelo
+            </Button>
+          )}
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {templates.map((t) => (
+          {filtered.map((t) => (
             <Card
               key={t.id}
               className={`group hover:shadow-md transition-all overflow-hidden ${
@@ -259,7 +294,9 @@ export default function ProposalTemplates() {
                   </Badge>
                 )}
                 {!t.is_active && (
-                  <Badge variant="secondary" className="absolute top-2 left-2 text-[10px]">Inativo</Badge>
+                  <Badge variant="secondary" className="absolute top-2 left-2 text-[10px] gap-1">
+                    <Archive className="w-3 h-3" /> Arquivado
+                  </Badge>
                 )}
               </div>
 
@@ -308,6 +345,13 @@ export default function ProposalTemplates() {
                     </Button>
                   )}
                   <Button
+                    variant="ghost" size="sm" className="h-8 gap-1 text-xs"
+                    title={t.is_active ? "Arquivar" : "Restaurar"}
+                    onClick={() => archiveMutation.mutate({ id: t.id, restore: !t.is_active })}
+                  >
+                    {t.is_active ? <Archive className="w-3.5 h-3.5" /> : <ArchiveRestore className="w-3.5 h-3.5" />}
+                  </Button>
+                  <Button
                     variant="ghost" size="sm" className="h-8 text-xs text-destructive hover:text-destructive"
                     onClick={() => setDeleteConfirm(t.id)}
                   >
@@ -318,7 +362,8 @@ export default function ProposalTemplates() {
             </Card>
           ))}
         </div>
-      )}
+      );
+      })()}
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
