@@ -4,6 +4,9 @@ import {
   ArrowLeft, Send, Zap, Shield, Target, Brain, CheckCircle2, Clock,
   Loader2, Activity, AlertTriangle, Eye, Pause, ChevronDown, ChevronUp,
   Cpu, TrendingUp, TrendingDown, Pencil, Save, X, Plus,
+  BookOpen, FileText, Image, Video, Music, Link as LinkIcon,
+  Wand2, ToggleLeft, Database, Trash2, Upload, Search,
+  GraduationCap, Settings2, MessageSquare, Layers,
 } from "lucide-react";
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
 import { getAllV4Agents, getV4InitialTasks } from "@/components/ai-team/agentV4Bridge";
@@ -19,18 +22,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 
 const baseAgents = getAllV4Agents();
 const baseTasks = getV4InitialTasks();
 
-const STATUS_MAP: Record<string, { label: string; icon: React.ElementType; badge: string; border: string; text: string }> = {
-  idle:       { label: "Aguardando",         icon: Pause,         badge: "bg-zinc-500/15 text-zinc-400 border-zinc-500/25",   border: "border-zinc-500/20", text: "text-zinc-400" },
-  analyzing:  { label: "Analisando",         icon: Activity,      badge: "bg-blue-500/15 text-blue-400 border-blue-500/25",   border: "border-blue-500/20", text: "text-blue-400" },
-  suggesting: { label: "Sugerindo",          icon: Brain,         badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/25", border: "border-emerald-500/20", text: "text-emerald-400" },
-  waiting:    { label: "Aguardando Decisão", icon: Eye,           badge: "bg-amber-500/15 text-amber-400 border-amber-500/25", border: "border-amber-500/20", text: "text-amber-400" },
-  alert:      { label: "Alerta",             icon: AlertTriangle, badge: "bg-red-500/15 text-red-400 border-red-500/25",       border: "border-red-500/20", text: "text-red-400" },
+const STATUS_MAP: Record<string, { label: string; icon: React.ElementType; badge: string }> = {
+  idle:       { label: "Aguardando",         icon: Pause,         badge: "bg-zinc-500/15 text-zinc-400 border-zinc-500/25" },
+  analyzing:  { label: "Analisando",         icon: Activity,      badge: "bg-blue-500/15 text-blue-400 border-blue-500/25" },
+  suggesting: { label: "Sugerindo",          icon: Brain,         badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/25" },
+  waiting:    { label: "Aguardando Decisão", icon: Eye,           badge: "bg-amber-500/15 text-amber-400 border-amber-500/25" },
+  alert:      { label: "Alerta",             icon: AlertTriangle, badge: "bg-red-500/15 text-red-400 border-red-500/25" },
 };
 
 const LEVEL_LABELS: Record<AgentLevel, string> = { basic: "Básico", intermediate: "Intermediário", advanced: "Avançado" };
@@ -42,12 +48,87 @@ const PRIORITY_MAP: Record<string, { label: string; class: string; dot: string }
 };
 
 const KANBAN_COLS = [
-  { key: "todo",  label: "A Fazer",      icon: Clock,        statuses: ["detected", "suggested", "pending"] as string[], accent: "border-l-amber-500/60" },
-  { key: "doing", label: "Em Execução",  icon: Loader2,      statuses: ["analyzing", "in_progress"] as string[],        accent: "border-l-blue-500/60" },
-  { key: "done",  label: "Concluídas",   icon: CheckCircle2, statuses: ["done"] as string[],                            accent: "border-l-emerald-500/60" },
+  { key: "todo",  label: "A Fazer",     icon: Clock,        statuses: ["detected", "suggested", "pending"] as string[], accent: "border-l-amber-500/60" },
+  { key: "doing", label: "Em Execução", icon: Loader2,      statuses: ["analyzing", "in_progress"] as string[],        accent: "border-l-blue-500/60" },
+  { key: "done",  label: "Concluídas",  icon: CheckCircle2, statuses: ["done"] as string[],                            accent: "border-l-emerald-500/60" },
 ];
 
-const MAX_VISIBLE = 4;
+// ═══ Mock data for knowledge/skills/rules per agent ═══
+
+interface KBDoc {
+  id: string; title: string; tipo: string; tags: string[]; agente: string;
+  resumo: string; chunks: number; updatedAt: string; status: "processado" | "processando" | "erro"; size: string;
+}
+
+const ALL_KB_DOCS: KBDoc[] = [
+  { id: "1", title: "Catálogo Dubai 2026", tipo: "pdf", tags: ["dubai", "hotéis"], agente: "HABIBI", resumo: "Guia completo de hotéis 5 estrelas e experiências VIP em Dubai.", chunks: 5, updatedAt: "22/03/2026", status: "processado", size: "2.4 MB" },
+  { id: "2", title: "Política de Preços Orlando", tipo: "pdf", tags: ["orlando", "preços"], agente: "NEMO", resumo: "Tabela de preços e markups para pacotes Orlando e Disney.", chunks: 3, updatedAt: "20/03/2026", status: "processado", size: "890 KB" },
+  { id: "3", title: "Script de Boas-vindas WhatsApp", tipo: "texto", tags: ["script", "boas-vindas"], agente: "MAYA", resumo: "Modelo de primeiro contato via WhatsApp com variações por perfil.", chunks: 2, updatedAt: "21/03/2026", status: "processado", size: "12 KB" },
+  { id: "4", title: "Roteiros Europa Premium", tipo: "pdf", tags: ["europa", "itália"], agente: "DANTE", resumo: "Roteiros detalhados para Itália, França e Espanha premium.", chunks: 8, updatedAt: "19/03/2026", status: "processado", size: "5.1 MB" },
+  { id: "5", title: "FAQ Objeções de Preço", tipo: "texto", tags: ["objeções", "preço"], agente: "Todos", resumo: "Banco de respostas para as 15 objeções de preço mais frequentes.", chunks: 4, updatedAt: "23/03/2026", status: "processado", size: "28 KB" },
+  { id: "6", title: "Guia Maldivas 2026", tipo: "pdf", tags: ["maldivas", "resorts"], agente: "HABIBI", resumo: "Os 10 melhores resorts overwater das Maldivas.", chunks: 6, updatedAt: "17/03/2026", status: "processando", size: "3.8 MB" },
+  { id: "7", title: "Tabela de Fornecedores", tipo: "pdf", tags: ["fornecedores"], agente: "OPEX", resumo: "Lista completa de fornecedores homologados.", chunks: 3, updatedAt: "15/03/2026", status: "processado", size: "1.2 MB" },
+  { id: "8", title: "Manual de Compliance CADASTUR", tipo: "pdf", tags: ["compliance", "fiscal"], agente: "VIGIL", resumo: "Regras e orientações de compliance para turismo.", chunks: 4, updatedAt: "18/03/2026", status: "processado", size: "1.8 MB" },
+  { id: "9", title: "Playbook Negociação Avançada", tipo: "texto", tags: ["negociação", "fechamento"], agente: "NERO", resumo: "Técnicas avançadas de fechamento e superação de objeções.", chunks: 3, updatedAt: "22/03/2026", status: "processado", size: "45 KB" },
+  { id: "10", title: "Guia Pós-Venda NatLeva", tipo: "texto", tags: ["pós-venda", "fidelização"], agente: "IRIS", resumo: "Framework de acompanhamento pós-viagem e recompra.", chunks: 2, updatedAt: "21/03/2026", status: "processado", size: "18 KB" },
+  { id: "11", title: "Política Financeira 2026", tipo: "pdf", tags: ["financeiro", "cobrança"], agente: "FINX", resumo: "Regras de parcelamento, NF e prazos de pagamento.", chunks: 5, updatedAt: "20/03/2026", status: "processado", size: "2.1 MB" },
+  { id: "12", title: "Script de Qualificação BANT", tipo: "texto", tags: ["qualificação", "BANT"], agente: "ATLAS", resumo: "Perguntas estratégicas para qualificação de leads.", chunks: 2, updatedAt: "19/03/2026", status: "processado", size: "15 KB" },
+];
+
+interface SkillItem {
+  id: string; name: string; category: string; level: string; successRate: number;
+  uses: number; active: boolean; agents: string[]; description: string;
+}
+
+const ALL_SKILLS: SkillItem[] = [
+  { id: "s1", name: "Quebra de objeção de preço", category: "vendas", level: "avançado", successRate: 72, uses: 234, active: true, agents: ["NERO", "LUNA", "ATLAS"], description: "Técnicas para contornar objeções com foco em valor." },
+  { id: "s2", name: "Upsell de experiências", category: "upsell", level: "intermediário", successRate: 65, uses: 156, active: true, agents: ["HABIBI", "NEMO", "DANTE"], description: "Ofertar experiências premium no momento certo." },
+  { id: "s3", name: "Acolhimento empático", category: "relacionamento", level: "básico", successRate: 91, uses: 412, active: true, agents: ["MAYA", "IRIS"], description: "Primeiro contato com tom humano e personalizado." },
+  { id: "s4", name: "Criação de urgência", category: "vendas", level: "avançado", successRate: 58, uses: 89, active: true, agents: ["NERO"], description: "Criar urgência real baseada em disponibilidade." },
+  { id: "s5", name: "Follow-up inteligente", category: "relacionamento", level: "intermediário", successRate: 77, uses: 198, active: true, agents: ["ATLAS", "LUNA", "IRIS"], description: "Timing e conteúdo de follow-up por perfil." },
+  { id: "s6", name: "Resolução de reclamação", category: "suporte", level: "intermediário", successRate: 83, uses: 67, active: true, agents: ["ATHOS"], description: "Framework de resolução: escutar, resolver, surpreender." },
+  { id: "s7", name: "Storytelling por destino", category: "comunicação", level: "avançado", successRate: 69, uses: 145, active: true, agents: ["LUNA", "HABIBI", "DANTE", "NEMO"], description: "Narrar experiências como história envolvente." },
+  { id: "s8", name: "Qualificação BANT", category: "vendas", level: "básico", successRate: 88, uses: 302, active: true, agents: ["ATLAS"], description: "Qualificar lead por Budget, Authority, Need, Timeline." },
+  { id: "s9", name: "Reativação de lead frio", category: "relacionamento", level: "intermediário", successRate: 42, uses: 78, active: true, agents: ["AEGIS", "NURTURE"], description: "Reaquecer leads inativos com abordagem estratégica." },
+  { id: "s10", name: "Análise de margem", category: "financeiro", level: "avançado", successRate: 94, uses: 120, active: true, agents: ["SAGE", "FINX"], description: "Calcular e otimizar margens por produto/destino." },
+  { id: "s11", name: "Concierge VIP", category: "atendimento", level: "avançado", successRate: 96, uses: 85, active: true, agents: ["ZARA"], description: "Organização de experiências exclusivas e reservas especiais." },
+  { id: "s12", name: "Detecção de churn", category: "retenção", level: "intermediário", successRate: 78, uses: 55, active: true, agents: ["AEGIS"], description: "Identificar sinais de abandono antes que aconteça." },
+];
+
+interface RuleItem {
+  id: string; name: string; description: string; active: boolean;
+  impact: string; scope: string; agents: string[];
+}
+
+const ALL_RULES: RuleItem[] = [
+  { id: "r1", name: "Sem repetição de ofertas", description: "Não repete a mesma proposta ao cliente num período de 30 dias", active: true, impact: "alta", scope: "all", agents: [] },
+  { id: "r2", name: "Rastrear promessas", description: "Registra promessas feitas durante conversas para follow-up", active: true, impact: "alta", scope: "all", agents: [] },
+  { id: "r3", name: "Dados sensíveis (LGPD)", description: "Não armazena CPF, dados bancários ou senhas na memória", active: true, impact: "crítica", scope: "all", agents: [] },
+  { id: "r4", name: "Limite de desconto 15%", description: "Desconto máximo sem aprovação gerencial é 15%", active: true, impact: "alta", scope: "specific", agents: ["NERO", "LUNA"] },
+  { id: "r5", name: "Follow-up obrigatório 48h", description: "Todo lead qualificado deve receber follow-up em até 48h", active: true, impact: "alta", scope: "specific", agents: ["ATLAS", "MAYA"] },
+  { id: "r6", name: "Upsell apenas após rapport", description: "Só oferece upgrades após identificar perfil e orçamento", active: true, impact: "média", scope: "specific", agents: ["HABIBI", "NEMO", "DANTE"] },
+  { id: "r7", name: "Tom formal em cotações", description: "Propostas devem usar tom formal e profissional", active: true, impact: "média", scope: "specific", agents: ["LUNA"] },
+  { id: "r8", name: "Verificar CADASTUR", description: "Validar compliance CADASTUR em toda comunicação oficial", active: true, impact: "crítica", scope: "specific", agents: ["VIGIL"] },
+  { id: "r9", name: "NPS obrigatório pós-viagem", description: "Enviar pesquisa NPS entre 3-7 dias após retorno", active: true, impact: "média", scope: "specific", agents: ["IRIS"] },
+  { id: "r10", name: "Alerta churn >60 dias", description: "Clientes sem interação >60 dias devem receber alerta", active: true, impact: "alta", scope: "specific", agents: ["AEGIS", "NURTURE"] },
+];
+
+const TIPO_ICONS: Record<string, typeof FileText> = {
+  pdf: FileText, texto: FileText, imagem: Image, video: Video, link: LinkIcon, audio: Music,
+};
+
+const LEVEL_COLORS: Record<string, string> = {
+  "básico": "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+  "intermediário": "text-blue-400 bg-blue-500/10 border-blue-500/20",
+  "avançado": "text-purple-400 bg-purple-500/10 border-purple-500/20",
+};
+
+const IMPACT_COLORS: Record<string, string> = {
+  "crítica": "text-red-400 bg-red-500/10",
+  "alta": "text-amber-400 bg-amber-500/10",
+  "média": "text-blue-400 bg-blue-500/10",
+  "baixa": "text-zinc-400 bg-zinc-500/10",
+};
 
 export default function AITeamAgentDetail() {
   const { agentId } = useParams<{ agentId: string }>();
@@ -61,6 +142,26 @@ export default function AITeamAgentDetail() {
   const agentTasks = useMemo(() => tasks.filter(t => t.sourceAgentId === agentId), [tasks, agentId]);
   const agentEvents = useMemo(() => events.filter(e => e.agentId === agentId).slice(0, 15), [events, agentId]);
 
+  const agentNameUpper = (v4?.name ?? agent?.name ?? "").toUpperCase();
+
+  // Filter knowledge docs for this agent
+  const agentDocs = useMemo(() => ALL_KB_DOCS.filter(d =>
+    d.agente === agentNameUpper || d.agente === "Todos"
+  ), [agentNameUpper]);
+
+  // Filter skills for this agent
+  const agentSkills = useMemo(() => ALL_SKILLS.filter(s =>
+    s.agents.some(a => a.toUpperCase() === agentNameUpper)
+  ), [agentNameUpper]);
+
+  // Filter rules for this agent
+  const agentRules = useMemo(() => ALL_RULES.filter(r =>
+    r.scope === "all" || r.agents.some(a => a.toUpperCase() === agentNameUpper)
+  ), [agentNameUpper]);
+
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Edit state
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState("");
@@ -83,6 +184,7 @@ export default function AITeamAgentDetail() {
     setEditRestrictions([...agent.restrictions]);
     setEditBehavior(agent.behaviorPrompt);
     setEditing(true);
+    setActiveTab("behavior");
   }, [agent]);
 
   const cancelEditing = useCallback(() => setEditing(false), []);
@@ -131,23 +233,32 @@ export default function AITeamAgentDetail() {
   const displayName = v4?.name ?? agent.name;
   const displayEmoji = v4?.emoji ?? agent.emoji;
 
+  const TAB_ITEMS = [
+    { id: "overview", label: "Visão Geral", icon: Activity, count: agentTasks.length },
+    { id: "knowledge", label: "Conhecimento", icon: BookOpen, count: agentDocs.length },
+    { id: "skills", label: "Skills", icon: Zap, count: agentSkills.length },
+    { id: "behavior", label: "Regras & Comportamento", icon: Shield, count: agentRules.length },
+    { id: "memory", label: "Memória", icon: Brain, count: 0 },
+    { id: "terminal", label: "Terminal", icon: MessageSquare, count: 0 },
+  ];
+
   return (
     <div className="min-h-screen pb-12">
       {/* ═══ HEADER ═══ */}
       <div className="border-b border-border/50 bg-card/30 backdrop-blur-sm sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center gap-4 flex-wrap">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4">
+          <div className="flex items-center gap-3 md:gap-4 flex-wrap">
             <Button variant="ghost" size="sm" onClick={() => navigate("/ai-team")} className="gap-1.5 text-muted-foreground">
-              <ArrowLeft className="w-4 h-4" /> AI Team
+              <ArrowLeft className="w-4 h-4" /> <span className="hidden sm:inline">AI Team</span>
             </Button>
-            <div className="h-5 w-px bg-border" />
+            <div className="h-5 w-px bg-border hidden sm:block" />
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <span className="text-2xl">{displayEmoji}</span>
               <div className="min-w-0">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-lg font-bold tracking-wide">{displayName}</h1>
-                  <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border", st.badge)}>
-                    <StatusIcon className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                  <h1 className="text-base md:text-lg font-bold tracking-wide">{displayName}</h1>
+                  <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] md:text-xs font-semibold border", st.badge)}>
+                    <StatusIcon className="w-3 h-3" />
                     {st.label}
                   </span>
                   {squad && (
@@ -156,7 +267,7 @@ export default function AITeamAgentDetail() {
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">
                   {v4?.role ?? agent.role}
                   {v4 && <> · Lv.{v4.level} · {v4.successRate}% taxa</>}
                 </p>
@@ -164,13 +275,11 @@ export default function AITeamAgentDetail() {
             </div>
             {!editing ? (
               <Button variant="outline" size="sm" onClick={startEditing} className="gap-1.5">
-                <Pencil className="w-4 h-4" /> Editar
+                <Pencil className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Editar</span>
               </Button>
             ) : (
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={cancelEditing} className="gap-1.5">
-                  <X className="w-4 h-4" /> Cancelar
-                </Button>
+                <Button variant="ghost" size="sm" onClick={cancelEditing}><X className="w-4 h-4" /></Button>
                 <Button size="sm" onClick={saveEditing} disabled={!editName.trim() || !editRole.trim()} className="gap-1.5">
                   <Save className="w-4 h-4" /> Salvar
                 </Button>
@@ -180,83 +289,333 @@ export default function AITeamAgentDetail() {
         </div>
       </div>
 
-      {/* ═══ CONTENT ═══ */}
-      <div className="max-w-7xl mx-auto px-6 pt-6 space-y-6">
-        {/* V4 Stats bar */}
+      <div className="max-w-7xl mx-auto px-4 md:px-6 pt-4 md:pt-6">
+        {/* Stats bar */}
         {v4 && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-2 md:gap-3 mb-4">
             <MiniStat label="Nível" value={v4.level} />
             <MiniStat label="XP" value={`${v4.xp.toLocaleString()}/${v4.maxXp.toLocaleString()}`} />
-            <MiniStat label="Taxa de Sucesso" value={`${v4.successRate}%`} />
-            <MiniStat label="Tarefas Hoje" value={v4.tasksToday} />
-            <MiniStat label="Missões Ativas" value={agentTasks.filter(t => t.status !== "done").length} />
+            <MiniStat label="Taxa" value={`${v4.successRate}%`} />
+            <MiniStat label="Tarefas" value={v4.tasksToday} />
+            <MiniStat label="Missões" value={agentTasks.filter(t => t.status !== "done").length} />
           </div>
         )}
 
         {/* XP Progress */}
         {v4 && (
-          <div className="rounded-xl border border-border/50 bg-card p-4">
+          <div className="rounded-xl border border-border/50 bg-card p-3 md:p-4 mb-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold text-muted-foreground">Progresso para Lv.{v4.level + 1}</span>
-              <span className="text-xs text-muted-foreground">{Math.round((v4.xp / v4.maxXp) * 100)}%</span>
+              <span className="text-[10px] md:text-xs font-bold text-muted-foreground">Progresso para Lv.{v4.level + 1}</span>
+              <span className="text-[10px] md:text-xs text-muted-foreground">{Math.round((v4.xp / v4.maxXp) * 100)}%</span>
             </div>
             <Progress value={(v4.xp / v4.maxXp) * 100} className="h-2" />
           </div>
         )}
 
-        {/* Status + Info */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="lg:col-span-2">
-            <SectionCard title="Status Operacional" icon={Activity}>
-              <p className="text-base text-foreground/80 leading-relaxed">
-                {agent.currentThought || v4?.persona || "Aguardando novas demandas."}
-              </p>
-              {agent.lastAction && (
-                <p className="text-sm text-muted-foreground mt-3">
-                  Última ação: <span className="text-foreground/60">{agent.lastAction}</span>
-                </p>
-              )}
-            </SectionCard>
+        {/* ═══ TRAINING CENTER TABS ═══ */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="border-b border-border/50 mb-4 -mx-4 md:-mx-6 px-4 md:px-6">
+            <TabsList className="bg-transparent h-auto p-0 gap-0 w-full overflow-x-auto flex justify-start">
+              {TAB_ITEMS.map(tab => {
+                const Icon = tab.icon;
+                return (
+                  <TabsTrigger
+                    key={tab.id}
+                    value={tab.id}
+                    className={cn(
+                      "rounded-none border-b-2 border-transparent px-3 md:px-4 py-2.5 text-xs md:text-sm font-medium transition-all",
+                      "data-[state=active]:border-primary data-[state=active]:text-foreground",
+                      "text-muted-foreground hover:text-foreground/70 gap-1.5 shrink-0"
+                    )}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span className="sm:hidden">{tab.label.split(" ")[0]}</span>
+                    {tab.count > 0 && (
+                      <span className="text-[9px] bg-muted px-1.5 py-0.5 rounded-full">{tab.count}</span>
+                    )}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
           </div>
-          <div>
-            <SectionCard title="Skills" icon={Zap}>
-              <div className="flex flex-wrap gap-1.5">
-                {(v4?.skills ?? agent.skills).map(s => (
-                  <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
-                ))}
-              </div>
-            </SectionCard>
-          </div>
-        </div>
 
-        {/* Edit panel */}
-        {editing && (
-          <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-6 space-y-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Pencil className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-bold text-primary uppercase tracking-wider">Editar Agente</h3>
+          {/* ═══ TAB: VISÃO GERAL ═══ */}
+          <TabsContent value="overview" className="space-y-4 mt-0">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="lg:col-span-2">
+                <SectionCard title="Status Operacional" icon={Activity}>
+                  <p className="text-sm md:text-base text-foreground/80 leading-relaxed">
+                    {agent.currentThought || v4?.persona || "Aguardando novas demandas."}
+                  </p>
+                  {agent.lastAction && (
+                    <p className="text-xs md:text-sm text-muted-foreground mt-3">
+                      Última ação: <span className="text-foreground/60">{agent.lastAction}</span>
+                    </p>
+                  )}
+                </SectionCard>
+              </div>
+              <SectionCard title="Skills Ativas" icon={Zap}>
+                <div className="flex flex-wrap gap-1.5">
+                  {(v4?.skills ?? agent.skills).map(s => (
+                    <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                  ))}
+                </div>
+              </SectionCard>
             </div>
+
+            <SectionCard title={`Missões · ${agentTasks.length}`} icon={Target}>
+              <MissionBoard tasks={agentTasks} />
+            </SectionCard>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <SectionCard title="Log de Atividade" icon={Clock}>
+                <ActivityLog events={agentEvents} />
+              </SectionCard>
+              <SectionCard title="Persona & Descrição" icon={Brain}>
+                <p className="text-sm text-foreground/70 leading-relaxed italic">
+                  "{v4?.persona ?? agent.role}"
+                </p>
+              </SectionCard>
+            </div>
+          </TabsContent>
+
+          {/* ═══ TAB: KNOWLEDGE BASE ═══ */}
+          <TabsContent value="knowledge" className="space-y-4 mt-0">
+            <KnowledgeBaseTab docs={agentDocs} agentName={displayName} />
+          </TabsContent>
+
+          {/* ═══ TAB: SKILLS ═══ */}
+          <TabsContent value="skills" className="space-y-4 mt-0">
+            <SkillsTab skills={agentSkills} agentName={displayName} />
+          </TabsContent>
+
+          {/* ═══ TAB: BEHAVIOR & RULES ═══ */}
+          <TabsContent value="behavior" className="space-y-4 mt-0">
+            <BehaviorTab
+              rules={agentRules}
+              agentName={displayName}
+              editing={editing}
+              editName={editName} setEditName={setEditName}
+              editRole={editRole} setEditRole={setEditRole}
+              editSector={editSector} setEditSector={setEditSector}
+              editLevel={editLevel} setEditLevel={setEditLevel}
+              editSkills={editSkills} setEditSkills={setEditSkills}
+              editBehavior={editBehavior} setEditBehavior={setEditBehavior}
+              customSkill={customSkill} setCustomSkill={setCustomSkill}
+              toggleItem={toggleItem}
+              addCustomSkill={addCustomSkill}
+              cancelEditing={cancelEditing}
+              saveEditing={saveEditing}
+              startEditing={startEditing}
+              agent={agent}
+            />
+          </TabsContent>
+
+          {/* ═══ TAB: MEMORY ═══ */}
+          <TabsContent value="memory" className="space-y-4 mt-0">
+            {agent.memory && (agent.memory.learnedPatterns.length > 0 || Object.keys(agent.memory.preferences).length > 0 || agent.memory.shortTerm.length > 0) ? (
+              <IntelligenceSection memory={agent.memory} />
+            ) : (
+              <div className="rounded-xl border border-border/50 bg-card p-8 text-center">
+                <Brain className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">Nenhum dado de memória registrado ainda.</p>
+                <p className="text-xs text-muted-foreground/50 mt-1">A memória será populada conforme o agente processa tarefas e decisões.</p>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ═══ TAB: TERMINAL ═══ */}
+          <TabsContent value="terminal" className="mt-0">
+            <SectionCard title={`Terminal · ${displayName}`} icon={MessageSquare}>
+              <CommandTerminal agentName={displayName} agentId={agent.id} agentRole={v4?.persona ?? agent.role} />
+            </SectionCard>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
+/* ═══ Knowledge Base Tab ═══ */
+function KnowledgeBaseTab({ docs, agentName }: { docs: KBDoc[]; agentName: string }) {
+  const [search, setSearch] = useState("");
+  const filtered = docs.filter(d => !search || d.title.toLowerCase().includes(search.toLowerCase()) || d.tags.some(t => t.includes(search.toLowerCase())));
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input placeholder="Buscar na base de conhecimento..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 text-sm" />
+        </div>
+        <Button size="sm" className="gap-1.5 shrink-0">
+          <Upload className="w-3.5 h-3.5" /> Adicionar
+        </Button>
+      </div>
+
+      <div className="text-xs text-muted-foreground">
+        {filtered.length} documento{filtered.length !== 1 ? "s" : ""} na base de <span className="font-semibold text-foreground">{agentName}</span>
+      </div>
+
+      <div className="grid gap-3">
+        {filtered.map(doc => {
+          const TipoIcon = TIPO_ICONS[doc.tipo] || FileText;
+          return (
+            <div key={doc.id} className="rounded-xl border border-border/50 bg-card p-4 hover:border-primary/30 transition-colors cursor-pointer group">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <TipoIcon className="w-5 h-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-sm font-semibold text-foreground truncate">{doc.title}</h4>
+                    <Badge variant="outline" className={cn("text-[9px]",
+                      doc.status === "processado" ? "text-emerald-400 border-emerald-500/30" :
+                      doc.status === "processando" ? "text-amber-400 border-amber-500/30" :
+                      "text-red-400 border-red-500/30"
+                    )}>{doc.status}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{doc.resumo}</p>
+                  <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground/60">
+                    <span>{doc.size}</span>
+                    <span>·</span>
+                    <span>{doc.chunks} chunks</span>
+                    <span>·</span>
+                    <span>{doc.updatedAt}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {doc.tags.map(t => (
+                      <Badge key={t} variant="secondary" className="text-[9px] px-1.5 py-0">{t}</Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {filtered.length === 0 && (
+          <div className="text-center py-8">
+            <BookOpen className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Nenhum documento encontrado.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══ Skills Tab ═══ */
+function SkillsTab({ skills, agentName }: { skills: SkillItem[]; agentName: string }) {
+  const [skillStates, setSkillStates] = useState<Record<string, boolean>>(() => {
+    const map: Record<string, boolean> = {};
+    skills.forEach(s => { map[s.id] = s.active; });
+    return map;
+  });
+
+  const toggleSkill = (id: string) => {
+    setSkillStates(prev => ({ ...prev, [id]: !prev[id] }));
+    sonnerToast.success("Skill atualizada");
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          {skills.length} skill{skills.length !== 1 ? "s" : ""} atribuídas a <span className="font-semibold text-foreground">{agentName}</span>
+        </p>
+        <Button size="sm" variant="outline" className="gap-1.5">
+          <Plus className="w-3.5 h-3.5" /> Nova Skill
+        </Button>
+      </div>
+
+      <div className="grid gap-3">
+        {skills.map(skill => {
+          const active = skillStates[skill.id] ?? skill.active;
+          return (
+            <div key={skill.id} className={cn(
+              "rounded-xl border bg-card p-4 transition-all",
+              active ? "border-border/50" : "border-border/30 opacity-60"
+            )}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Zap className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <h4 className="text-sm font-semibold text-foreground">{skill.name}</h4>
+                    <Badge className={cn("text-[9px] border", LEVEL_COLORS[skill.level] || "")}>{skill.level}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{skill.description}</p>
+                  <div className="flex items-center gap-4 mt-3">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${skill.successRate}%` }} />
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">{skill.successRate}%</span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">{skill.uses} usos</span>
+                    <span className="text-[10px] text-muted-foreground capitalize">{skill.category}</span>
+                  </div>
+                </div>
+                <Switch checked={active} onCheckedChange={() => toggleSkill(skill.id)} />
+              </div>
+            </div>
+          );
+        })}
+        {skills.length === 0 && (
+          <div className="text-center py-8">
+            <Zap className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Nenhuma skill atribuída a este agente.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══ Behavior & Rules Tab ═══ */
+function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRole, setEditRole,
+  editSector, setEditSector, editLevel, setEditLevel, editSkills, setEditSkills,
+  editBehavior, setEditBehavior, customSkill, setCustomSkill, toggleItem, addCustomSkill,
+  cancelEditing, saveEditing, startEditing, agent,
+}: any) {
+  const [ruleStates, setRuleStates] = useState<Record<string, boolean>>(() => {
+    const map: Record<string, boolean> = {};
+    rules.forEach((r: RuleItem) => { map[r.id] = r.active; });
+    return map;
+  });
+
+  const toggleRule = (id: string) => {
+    setRuleStates((prev: any) => ({ ...prev, [id]: !prev[id] }));
+    sonnerToast.success("Regra atualizada");
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Behavior Prompt */}
+      <SectionCard title="Diretiva Comportamental" icon={Settings2}>
+        {editing ? (
+          <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Nome</label>
-                <Input value={editName} onChange={e => setEditName(e.target.value)} />
+                <Input value={editName} onChange={(e: any) => setEditName(e.target.value)} />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Função</label>
-                <Input value={editRole} onChange={e => setEditRole(e.target.value)} />
+                <Input value={editRole} onChange={(e: any) => setEditRole(e.target.value)} />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Setor</label>
                 <Select value={editSector} onValueChange={setEditSector}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {sectorOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    {sectorOptions.map((s: string) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">Nível</label>
-                <Select value={editLevel} onValueChange={v => setEditLevel(v as AgentLevel)}>
+                <Select value={editLevel} onValueChange={(v: any) => setEditLevel(v as AgentLevel)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {(Object.entries(LEVEL_LABELS) as [AgentLevel, string][]).map(([k, v]) => (
@@ -269,7 +628,7 @@ export default function AITeamAgentDetail() {
             <div className="space-y-3">
               <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Habilidades</label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {defaultSkills.map(s => (
+                {defaultSkills.map((s: string) => (
                   <label key={s} className="flex items-center gap-2 text-sm cursor-pointer">
                     <Checkbox checked={editSkills.includes(s)} onCheckedChange={() => toggleItem(editSkills, s, setEditSkills)} />
                     {s}
@@ -277,17 +636,17 @@ export default function AITeamAgentDetail() {
                 ))}
               </div>
               <div className="flex gap-2 max-w-sm">
-                <Input placeholder="Nova habilidade..." value={customSkill} onChange={e => setCustomSkill(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && (e.preventDefault(), addCustomSkill())} className="text-sm" />
+                <Input placeholder="Nova habilidade..." value={customSkill} onChange={(e: any) => setCustomSkill(e.target.value)}
+                  onKeyDown={(e: any) => e.key === "Enter" && (e.preventDefault(), addCustomSkill())} className="text-sm" />
                 <Button size="sm" variant="outline" onClick={addCustomSkill} disabled={!customSkill.trim()}>
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Diretiva Comportamental</label>
-              <Textarea placeholder="Ex: Seja crítico, focado em performance." value={editBehavior}
-                onChange={e => setEditBehavior(e.target.value)} rows={3} />
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Prompt Comportamental</label>
+              <Textarea placeholder="Ex: Seja proativo, foque em experiências premium..." value={editBehavior}
+                onChange={(e: any) => setEditBehavior(e.target.value)} rows={4} className="font-mono text-xs" />
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button variant="ghost" size="sm" onClick={cancelEditing}>Cancelar</Button>
@@ -296,28 +655,45 @@ export default function AITeamAgentDetail() {
               </Button>
             </div>
           </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-foreground/70 leading-relaxed font-mono bg-muted/30 rounded-lg p-4 border border-border/30">
+              {agent?.behaviorPrompt || "Nenhuma diretiva configurada. Clique em Editar para definir."}
+            </p>
+            <Button variant="outline" size="sm" onClick={startEditing} className="gap-1.5">
+              <Pencil className="w-3.5 h-3.5" /> Editar Comportamento
+            </Button>
+          </div>
         )}
+      </SectionCard>
 
-        {/* Missions */}
-        <SectionCard title={`Missões · ${agentTasks.length}`} icon={Target}>
-          <MissionBoard tasks={agentTasks} />
-        </SectionCard>
-
-        {/* Log + Terminal */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <SectionCard title="Log de Atividade" icon={Clock}>
-            <ActivityLog events={agentEvents} />
-          </SectionCard>
-          <SectionCard title="Terminal de Comando" icon={Send}>
-            <CommandTerminal agentName={displayName} agentId={agent.id} agentRole={v4?.persona ?? agent.role} />
-          </SectionCard>
+      {/* Rules */}
+      <SectionCard title={`Regras Ativas · ${rules.length}`} icon={Shield}>
+        <div className="space-y-2">
+          {rules.map((rule: RuleItem) => {
+            const active = ruleStates[rule.id] ?? rule.active;
+            return (
+              <div key={rule.id} className={cn(
+                "flex items-center gap-3 p-3 rounded-lg border transition-all",
+                active ? "border-border/50 bg-card" : "border-border/20 bg-muted/20 opacity-60"
+              )}>
+                <Switch checked={active} onCheckedChange={() => toggleRule(rule.id)} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-foreground">{rule.name}</span>
+                    <Badge className={cn("text-[9px]", IMPACT_COLORS[rule.impact] || "")}>{rule.impact}</Badge>
+                    {rule.scope === "all" && <Badge variant="outline" className="text-[9px]">Global</Badge>}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{rule.description}</p>
+                </div>
+              </div>
+            );
+          })}
+          <Button variant="outline" size="sm" className="gap-1.5 mt-2">
+            <Plus className="w-3.5 h-3.5" /> Nova Regra
+          </Button>
         </div>
-
-        {/* Intelligence */}
-        {agent.memory && (agent.memory.learnedPatterns.length > 0 || Object.keys(agent.memory.preferences).length > 0 || agent.memory.shortTerm.length > 0) && (
-          <IntelligenceSection memory={agent.memory} />
-        )}
-      </div>
+      </SectionCard>
     </div>
   );
 }
@@ -326,8 +702,8 @@ export default function AITeamAgentDetail() {
 
 function SectionCard({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-5">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="rounded-xl border border-border/50 bg-card p-4 md:p-5">
+      <div className="flex items-center gap-2 mb-3 md:mb-4">
         <Icon className="w-4 h-4 text-muted-foreground" />
         <h3 className="text-xs font-bold tracking-[0.1em] text-muted-foreground uppercase">{title}</h3>
       </div>
@@ -338,9 +714,9 @@ function SectionCard({ title, icon: Icon, children }: { title: string; icon: Rea
 
 function MiniStat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-xl border border-border/50 bg-card p-3 text-center">
-      <p className="text-xl font-bold">{value}</p>
-      <p className="text-[10px] text-muted-foreground mt-0.5">{label}</p>
+    <div className="rounded-xl border border-border/50 bg-card p-2.5 md:p-3 text-center">
+      <p className="text-lg md:text-xl font-bold">{value}</p>
+      <p className="text-[9px] md:text-[10px] text-muted-foreground mt-0.5">{label}</p>
     </div>
   );
 }
@@ -356,8 +732,8 @@ function MissionBoard({ tasks }: { tasks: Task[] }) {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {columns.map(col => {
         const Icon = col.icon;
-        const visible = col.tasks.slice(0, MAX_VISIBLE);
-        const overflow = col.tasks.length - MAX_VISIBLE;
+        const visible = col.tasks.slice(0, 4);
+        const overflow = col.tasks.length - 4;
         const isDone = col.key === "done";
         return (
           <div key={col.key}>
@@ -401,7 +777,7 @@ function ActivityLog({ events }: { events: AgentEvent[] }) {
         const hh = String(time.getHours()).padStart(2, "0");
         const mm = String(time.getMinutes()).padStart(2, "0");
         return (
-          <div key={evt.id} className={cn("flex items-start gap-3 py-2 px-3 rounded-lg font-mono text-sm", i === 0 ? "bg-muted/50" : "hover:bg-muted/20")}>
+          <div key={evt.id} className={cn("flex items-start gap-3 py-2 px-3 rounded-lg font-mono text-xs md:text-sm", i === 0 ? "bg-muted/50" : "hover:bg-muted/20")}>
             <span className="text-muted-foreground/40 shrink-0 text-xs mt-0.5">[{hh}:{mm}]</span>
             <span className={cn("leading-relaxed", i === 0 ? "text-foreground/70" : "text-muted-foreground/60")}>{evt.message}</span>
             {evt.severity === "high" && <span className="text-red-400 text-xs shrink-0 mt-0.5">●</span>}
@@ -495,7 +871,7 @@ function CommandTerminal({ agentName, agentId, agentRole }: { agentName: string;
   return (
     <div className="space-y-3">
       {chat.length > 0 && (
-        <div className="space-y-2 max-h-48 overflow-y-auto">
+        <div className="space-y-2 max-h-64 overflow-y-auto">
           {chat.map((m, i) => (
             <div key={`chat-${m.role}-${i}`} className={cn("text-sm font-mono px-3 py-2 rounded-lg max-w-[90%]",
               m.role === "user" ? "ml-auto text-foreground/60 bg-muted/50 border border-border/40" : "text-primary/70 bg-primary/5 border border-primary/10"
