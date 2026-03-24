@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { updateBehaviorPrompt, setAgentTraining } from "@/components/ai-team/agentTrainingStore";
+import { updateBehaviorPrompt, setAgentTraining, getAgentTraining } from "@/components/ai-team/agentTrainingStore";
 import { useMemo, useState, useCallback, useRef, useEffect } from "react";
 import {
   ArrowLeft, Send, Zap, Shield, Target, Brain, CheckCircle2, Clock,
