@@ -183,7 +183,8 @@ async function gerarMensagemPerda(lead: LeadInteligente): Promise<string> {
 function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean, enableTransfers: boolean, responseLength: "curta" | "media" | "longa") {
   const lengthInstr = responseLength === "curta" ? "Responda em 1 frase apenas." : responseLength === "longa" ? "Responda de forma detalhada (3-5 frases), incluindo detalhes do produto." : "Responda APENAS a ultima mensagem. Breve (1-3 frases).";
   const transferInstr = hasNext && enableTransfers ? "Quando completar objetivo, termine com [TRANSFERIR].\n" : "";
-  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${transferInstr}${lengthInstr}`;
+  const priceInstr = "IMPORTANTE: Quando for hora de enviar valores/orçamento, diga que vai enviar o print com os valores (ex: 'Segue o print com os valores!', 'Vou te enviar o orçamento agora!', 'Olha só o print com as opções de preço!'). Isso é fundamental para a experiência do cliente.\n";
+  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${priceInstr}${transferInstr}${lengthInstr}`;
 }
 
 const SPEED_OPTIONS = [
