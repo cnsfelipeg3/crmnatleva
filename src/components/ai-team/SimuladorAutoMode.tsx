@@ -2500,7 +2500,7 @@ Retorne JSON:
                   <div className="py-4 space-y-3">
                     {selectedLead.mensagens.map((msg, i) => {
                       const isAgent = msg.role === "agent";
-                      const isUser = msg.role === "user";
+                      const isUser = msg.role === "client";
                       const showName = isAgent && (i === 0 || selectedLead.mensagens[i - 1]?.role !== "agent" || selectedLead.mensagens[i - 1]?.agentName !== msg.agentName);
                       const cleanContent = msg.content.replace("[TRANSFERIR]", "").trim();
                       const ts = new Date(msg.timestamp);
