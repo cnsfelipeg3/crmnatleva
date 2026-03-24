@@ -439,7 +439,8 @@ export default function SimuladorAutoMode() {
   const abortRef = useRef(false);
   const simAtivaRef = useRef(false);
   const { toast } = useToast();
-
+  const simPersistence = useSimulationPersistence();
+  const chunksRef = useRef<Map<string, ChunkData[]>>(new Map());
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
   const closedLeads = leads.filter(l => l.status === "fechou");
   const lostLeads = leads.filter(l => l.status === "perdeu");
