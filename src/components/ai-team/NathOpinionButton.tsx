@@ -72,6 +72,9 @@ export default function NathOpinionButton({ messages, context, variant = "header
   const [actionsLoading, setActionsLoading] = useState(false);
   const [actionsExpanded, setActionsExpanded] = useState(false);
   const [applying, setApplying] = useState(false);
+  const [detailAction, setDetailAction] = useState<ImprovementAction | null>(null);
+  const [detailReport, setDetailReport] = useState<DetailReport | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const { toast } = useToast();
 
   const askNath = useCallback(async () => {
