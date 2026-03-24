@@ -19,16 +19,25 @@ import {
   saveHistoricoAvaliacao, loadHistoricoAvaliacoes,
 } from "./evaluationFramework";
 
-// ===== API =====
-async function callAgent(sysPrompt: string, history: { role: string; content: string }[]): Promise<string> {
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
-  const lastMsg = history[history.length - 1]?.content || "";
+// ===== API — Roteamento inteligente por tipo de chamada =====
+type SimCallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep";
+
+async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent"): Promise<string> {
+  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
   const resp = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-    body: JSON.stringify({ question: lastMsg, agentName: "SIMULADOR", agentRole: sysPrompt }),
+    body: JSON.stringify({ type, systemPrompt: sysPrompt, history }),
   });
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+  // Non-streaming types (evaluate, debrief, deep) return JSON directly
+  if (type === "evaluate" || type === "debrief" || type === "deep") {
+    const data = await resp.json();
+    return data.content || "";
+  }
+
+  // Streaming types (lead, agent, objection, loss)
   let text = "";
   if (resp.body) {
     const reader = resp.body.getReader(); const decoder = new TextDecoder(); let buf = "";
