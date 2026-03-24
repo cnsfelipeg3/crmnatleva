@@ -184,6 +184,7 @@ export default function SimuladorManualMode() {
           systemPrompt: buildManualAgentPrompt(selectedAgent),
           agentBehaviorPrompt: agentBehaviors[selectedAgent.id] || "",
           history: [{ role: "user", content: `[Simulação - Cliente interessado em ${selectedDestino}] ${text}` }],
+          provider: "anthropic",
         }),
       });
 
