@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin } from "lucide-react";
+import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -40,6 +41,7 @@ const getAgentColor = (agent: typeof AGENTS_V4[0]) => {
 };
 
 export default function SimuladorManualMode() {
+  const isMobile = useIsMobile();
   const [selectedAgent, setSelectedAgent] = useState(AGENTS_V4[2]);
   const [selectedDestino, setSelectedDestino] = useState("Dubai");
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -53,6 +55,7 @@ export default function SimuladorManualMode() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [transferNotice, setTransferNotice] = useState<string | null>(null);
   const [currentStage, setCurrentStage] = useState(0);
+  const [showPanel, setShowPanel] = useState(false); // mobile bottom sheet
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -155,6 +158,7 @@ export default function SimuladorManualMode() {
     if (agent) setSelectedAgent(agent);
     setSelectedDestino(session.destino);
     toast({ title: "Sessão carregada", description: session.agentName });
+    setShowPanel(false);
   };
 
   const deleteSession = (id: string) => {
@@ -188,45 +192,192 @@ export default function SimuladorManualMode() {
 
   const agentColor = getAgentColor(selectedAgent);
 
+  // ===== MOBILE PANEL (Bottom Sheet) =====
+  const MobilePanel = () => (
+    <div className={cn(
+      "fixed inset-0 z-50 transition-all duration-300",
+      showPanel ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+    )}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPanel(false)} />
+      <div className={cn(
+        "absolute bottom-0 left-0 right-0 rounded-t-3xl transition-transform duration-300 max-h-[85vh] overflow-hidden flex flex-col",
+        showPanel ? "translate-y-0" : "translate-y-full"
+      )} style={{ background: "#0D1220", border: "1px solid rgba(255,255,255,0.06)" }}>
+        {/* Handle */}
+        <div className="flex items-center justify-center pt-3 pb-2 shrink-0">
+          <div className="w-10 h-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+        </div>
+        {/* Tabs: Agente | Destino | Sessões */}
+        <div className="px-4 pb-3 flex gap-2 shrink-0">
+          {["agente", "destino", "sessoes"].map(t => (
+            <button key={t} onClick={() => setPanelTab(t as any)}
+              className="flex-1 text-[11px] font-bold py-2 rounded-xl transition-all"
+              style={{
+                background: panelTab === t ? `${agentColor}12` : "rgba(255,255,255,0.03)",
+                border: `1px solid ${panelTab === t ? `${agentColor}30` : "rgba(255,255,255,0.04)"}`,
+                color: panelTab === t ? agentColor : "#64748B",
+              }}>
+              {t === "agente" ? "🤖 Agente" : t === "destino" ? "✈️ Destino" : "📋 Sessões"}
+            </button>
+          ))}
+        </div>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-4 pb-6">
+          {panelTab === "agente" && (
+            <div className="space-y-3">
+              {/* Squad filter */}
+              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                <button onClick={() => setActiveSquad("all")} className="text-[9px] px-2.5 py-1.5 rounded-lg font-semibold shrink-0 transition-all"
+                  style={{ background: activeSquad === "all" ? "rgba(16,185,129,0.1)" : "transparent", border: `1px solid ${activeSquad === "all" ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.06)"}`, color: activeSquad === "all" ? "#10B981" : "#64748B" }}>
+                  Todos
+                </button>
+                {SQUADS.map(s => (
+                  <button key={s.id} onClick={() => setActiveSquad(s.id)} className="text-[9px] px-2.5 py-1.5 rounded-lg font-semibold shrink-0 transition-all"
+                    style={{ background: activeSquad === s.id ? "rgba(16,185,129,0.1)" : "transparent", border: `1px solid ${activeSquad === s.id ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.06)"}`, color: activeSquad === s.id ? "#10B981" : "#64748B" }}>
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+              {/* Agent list */}
+              <div className="space-y-1.5">
+                {filteredAgents.map(a => {
+                  const c = getAgentColor(a);
+                  const active = selectedAgent.id === a.id;
+                  return (
+                    <button key={a.id} onClick={() => { setSelectedAgent(a); setShowPanel(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-200"
+                      style={{
+                        background: active ? `${c}08` : "rgba(255,255,255,0.015)",
+                        border: `1px solid ${active ? `${c}30` : "rgba(255,255,255,0.04)"}`,
+                      }}>
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0"
+                        style={{ background: `${c}12`, color: c }}>{a.emoji}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[12px] font-bold" style={{ color: active ? c : "#E2E8F0" }}>{a.name}</p>
+                        <p className="text-[10px]" style={{ color: "#64748B" }}>{a.role} · Lv.{a.level}</p>
+                      </div>
+                      <span className="text-[10px] font-bold" style={{ color: "#10B981" }}>{a.successRate}%</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {panelTab === "destino" && (
+            <div className="grid grid-cols-3 gap-2">
+              {DESTINOS.map(d => (
+                <button key={d} onClick={() => { setSelectedDestino(d); setShowPanel(false); }}
+                  className="text-[11px] px-3 py-3 rounded-xl font-medium transition-all text-center"
+                  style={{
+                    background: selectedDestino === d ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.02)",
+                    border: `1px solid ${selectedDestino === d ? "rgba(245,158,11,0.3)" : "rgba(255,255,255,0.04)"}`,
+                    color: selectedDestino === d ? "#F59E0B" : "#94A3B8",
+                  }}>{d}</button>
+              ))}
+            </div>
+          )}
+          {panelTab === "sessoes" && (
+            <div className="space-y-2">
+              {sessions.length === 0 && <p className="text-[12px] text-center py-8" style={{ color: "#334155" }}>Nenhuma sessão salva</p>}
+              {sessions.slice(0, 15).map(s => (
+                <div key={s.id} onClick={() => loadSession(s)}
+                  className="rounded-xl p-3 cursor-pointer transition-all"
+                  style={{
+                    background: s.id === currentSessionId ? "rgba(16,185,129,0.05)" : "rgba(255,255,255,0.015)",
+                    border: `1px solid ${s.id === currentSessionId ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.03)"}`,
+                  }}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{s.agentEmoji}</span>
+                    <span className="text-[11px] font-bold flex-1 truncate" style={{ color: "#E2E8F0" }}>{s.agentName}</span>
+                    <span className="text-[10px] font-medium" style={{ color: "#F59E0B" }}>{s.destino}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1 pl-7">
+                    <span className="text-[10px]" style={{ color: "#475569" }}>
+                      {new Date(s.updatedAt).toLocaleDateString("pt-BR")} · {s.messages.length} msgs
+                    </span>
+                    <button onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
+                      className="text-[10px] w-6 h-6 rounded flex items-center justify-center hover:bg-red-500/10 transition-colors" style={{ color: "#EF4444" }}>×</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const [panelTab, setPanelTab] = useState<"agente" | "destino" | "sessoes">("agente");
+
   return (
     <>
-      <div className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500" style={{ height: "calc(100vh - 220px)", minHeight: 550 }}>
+      <div className={cn(
+        "flex animate-in fade-in slide-in-from-bottom-2 duration-500",
+        isMobile ? "flex-col" : "gap-4"
+      )} style={{ height: isMobile ? "calc(100vh - 160px)" : "calc(100vh - 220px)", minHeight: isMobile ? 400 : 550 }}>
         {/* CENTER — Chat */}
         <div className="flex-1 rounded-2xl flex flex-col overflow-hidden relative" style={{ background: "#0B141A", border: "1px solid rgba(255,255,255,0.06)" }}>
           {/* Ambient top glow */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-20 pointer-events-none" style={{ background: `radial-gradient(ellipse, ${agentColor}10, transparent 70%)` }} />
 
           {/* Chat header */}
-          <div className="flex items-center gap-3 px-5 shrink-0 relative z-10" style={{ height: 62, background: "linear-gradient(180deg, rgba(31,44,51,0.95), rgba(31,44,51,0.8))", backdropFilter: "blur(12px)" }}>
-            <div className="relative">
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-sm font-bold transition-all duration-300"
+          <div className="flex items-center gap-2.5 px-3 md:px-5 shrink-0 relative z-10" style={{ height: isMobile ? 56 : 62, background: "linear-gradient(180deg, rgba(31,44,51,0.95), rgba(31,44,51,0.8))", backdropFilter: "blur(12px)" }}>
+            <button
+              onClick={() => { if (isMobile) { setPanelTab("agente"); setShowPanel(true); } }}
+              className="relative"
+            >
+              <div className={cn("rounded-2xl flex items-center justify-center font-bold transition-all duration-300", isMobile ? "w-9 h-9 text-xs" : "w-10 h-10 text-sm")}
                 style={{ background: `${agentColor}15`, color: agentColor, border: `2px solid ${agentColor}40`, boxShadow: `0 0 20px ${agentColor}15` }}>
                 {selectedAgent.emoji}
               </div>
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full" style={{ background: "#25D366", border: "2px solid #1F2C33" }}>
                 <span className="absolute inset-0 rounded-full animate-ping" style={{ background: "#25D366", opacity: 0.4 }} />
               </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[14px] font-bold" style={{ color: "#F1F5F9" }}>{selectedAgent.name}</p>
+            </button>
+            <div className="flex-1 min-w-0" onClick={() => { if (isMobile) { setPanelTab("agente"); setShowPanel(true); } }}>
               <div className="flex items-center gap-1.5">
-                <MapPin className="w-3 h-3" style={{ color: "#F59E0B" }} />
-                <p className="text-[11px]" style={{ color: "#8696A0" }}>Especialista {selectedDestino} · Lv.{selectedAgent.level}</p>
+                <p className={cn("font-bold truncate", isMobile ? "text-[13px]" : "text-[14px]")} style={{ color: "#F1F5F9" }}>{selectedAgent.name}</p>
+                {isMobile && <ChevronDown className="w-3 h-3 shrink-0" style={{ color: "#64748B" }} />}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <MapPin className="w-3 h-3 shrink-0" style={{ color: "#F59E0B" }} />
+                <p className="text-[10px] md:text-[11px] truncate" style={{ color: "#8696A0" }}>
+                  {isMobile ? selectedDestino : `Especialista ${selectedDestino} · Lv.${selectedAgent.level}`}
+                </p>
               </div>
             </div>
-            {/* Funnel stage bar */}
-            <div className="flex items-center gap-1.5 bg-black/20 px-3 py-1.5 rounded-full">
-              {FUNNEL_STAGES.map((stage, i) => (
-                <div key={i} className="flex items-center gap-1" title={stage}>
-                  <div className="w-2.5 h-2.5 rounded-full transition-all duration-500 relative" style={{
-                    background: i < currentStage ? "#10B981" : i === currentStage ? agentColor : "rgba(255,255,255,0.08)",
-                    boxShadow: i === currentStage ? `0 0 8px ${agentColor}80` : "none",
-                  }}>
-                    {i === currentStage && <div className="absolute inset-0 rounded-full animate-ping" style={{ background: agentColor, opacity: 0.3 }} />}
-                  </div>
-                  {i < FUNNEL_STAGES.length - 1 && <div className="w-3 h-px" style={{ background: i < currentStage ? "#10B98160" : "rgba(255,255,255,0.06)" }} />}
+
+            {/* Actions (mobile: compact) */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {isMobile ? (
+                <>
+                  <button onClick={generateSummary} disabled={messages.length < 2}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
+                    style={{ background: "rgba(255,255,255,0.05)", opacity: messages.length < 2 ? 0.3 : 1 }}>
+                    <FileText className="w-3.5 h-3.5" style={{ color: "#94A3B8" }} />
+                  </button>
+                  <button onClick={resetChat}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
+                    style={{ background: `${agentColor}08` }}>
+                    <RotateCcw className="w-3.5 h-3.5" style={{ color: agentColor }} />
+                  </button>
+                </>
+              ) : (
+                /* Funnel stage bar - desktop only */
+                <div className="flex items-center gap-1.5 bg-black/20 px-3 py-1.5 rounded-full">
+                  {FUNNEL_STAGES.map((stage, i) => (
+                    <div key={i} className="flex items-center gap-1" title={stage}>
+                      <div className="w-2.5 h-2.5 rounded-full transition-all duration-500 relative" style={{
+                        background: i < currentStage ? "#10B981" : i === currentStage ? agentColor : "rgba(255,255,255,0.08)",
+                        boxShadow: i === currentStage ? `0 0 8px ${agentColor}80` : "none",
+                      }}>
+                        {i === currentStage && <div className="absolute inset-0 rounded-full animate-ping" style={{ background: agentColor, opacity: 0.3 }} />}
+                      </div>
+                      {i < FUNNEL_STAGES.length - 1 && <div className="w-3 h-px" style={{ background: i < currentStage ? "#10B98160" : "rgba(255,255,255,0.06)" }} />}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
@@ -240,27 +391,27 @@ export default function SimuladorManualMode() {
           )}
 
           {/* Messages */}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-5 space-y-2" style={{ background: "#0B141A" }}>
+          <div ref={scrollRef} className={cn("flex-1 overflow-y-auto space-y-2", isMobile ? "p-3" : "p-5")} style={{ background: "#0B141A" }}>
             {messages.length === 0 && (
-              <div className="text-center py-16 space-y-5 animate-in fade-in zoom-in-95 duration-700">
-                <div className="relative w-20 h-20 mx-auto">
+              <div className={cn("text-center space-y-4 animate-in fade-in zoom-in-95 duration-700", isMobile ? "py-10" : "py-16 space-y-5")}>
+                <div className={cn("relative mx-auto", isMobile ? "w-16 h-16" : "w-20 h-20")}>
                   <div className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle, ${agentColor}15, transparent)` }} />
                   <div className="absolute inset-2 rounded-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                    <span className="text-3xl">{selectedAgent.emoji}</span>
+                    <span className={isMobile ? "text-2xl" : "text-3xl"}>{selectedAgent.emoji}</span>
                   </div>
                 </div>
                 <div>
-                  <p className="text-[15px] font-semibold" style={{ color: "#E9EDEF" }}>
+                  <p className={cn("font-semibold", isMobile ? "text-[14px]" : "text-[15px]")} style={{ color: "#E9EDEF" }}>
                     Converse com {selectedAgent.name}
                   </p>
                   <p className="text-[12px] mt-1" style={{ color: "#64748B" }}>
                     Simule um cliente interessado em {selectedDestino}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2 justify-center max-w-md mx-auto">
+                <div className={cn("flex flex-wrap gap-2 justify-center mx-auto", isMobile ? "max-w-[320px]" : "max-w-md")}>
                   {SUGGESTION_CHIPS.map(chip => (
                     <button key={chip} onClick={() => handleSend(chip)}
-                      className="text-[11px] px-4 py-2 rounded-xl transition-all duration-300 hover:scale-[1.03] hover:border-opacity-60"
+                      className="text-[11px] px-3 md:px-4 py-2 rounded-xl transition-all duration-300 hover:scale-[1.03] hover:border-opacity-60"
                       style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "#94A3B8" }}>
                       {chip}
                     </button>
@@ -278,14 +429,14 @@ export default function SimuladorManualMode() {
                     background: isAgent ? "rgba(31,44,51,0.9)" : "linear-gradient(135deg, #005C4B, #00694D)",
                     color: "#E9EDEF",
                     borderRadius: isAgent ? "4px 16px 16px 16px" : "16px 4px 16px 16px",
-                    maxWidth: "68%", padding: "10px 14px",
+                    maxWidth: isMobile ? "82%" : "68%", padding: isMobile ? "8px 12px" : "10px 14px",
                     boxShadow: isAgent ? "0 2px 8px rgba(0,0,0,0.15)" : "0 2px 12px rgba(0,92,75,0.25)",
                     backdropFilter: "blur(8px)",
                   }}>
                     {showName && msg.agentName && (
                       <p className="text-[11px] font-bold mb-1" style={{ color: agentColor }}>{msg.agentName}</p>
                     )}
-                    <p className="text-[13px] leading-[1.6]">{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
+                    <p className={cn("leading-[1.6]", isMobile ? "text-[12px]" : "text-[13px]")}>{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
                     <div className="flex items-center justify-end gap-1.5 mt-1">
                       <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
                         {new Date(msg.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
@@ -310,18 +461,18 @@ export default function SimuladorManualMode() {
           </div>
 
           {/* Input */}
-          <div className="flex items-center gap-3 px-4 py-3 shrink-0" style={{ background: "rgba(31,44,51,0.6)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+          <div className={cn("flex items-center gap-2 shrink-0", isMobile ? "px-3 py-2.5" : "px-4 py-3 gap-3")} style={{ background: "rgba(31,44,51,0.6)", backdropFilter: "blur(12px)", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
             <input
               placeholder="Digite como um cliente..."
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
               disabled={loading}
-              className="flex-1 text-[13px] px-4 py-2.5 rounded-xl outline-none transition-all focus:ring-1"
+              className={cn("flex-1 rounded-xl outline-none transition-all focus:ring-1", isMobile ? "text-[13px] px-3 py-2.5" : "text-[13px] px-4 py-2.5")}
               style={{ background: "rgba(255,255,255,0.05)", color: "#E9EDEF", border: "1px solid rgba(255,255,255,0.06)", boxShadow: "inset 0 1px 2px rgba(0,0,0,0.2)" }}
             />
             <button onClick={() => handleSend()} disabled={loading || !input.trim()}
-              className="w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 shrink-0"
+              className={cn("rounded-xl flex items-center justify-center transition-all duration-300 shrink-0", isMobile ? "w-10 h-10" : "w-10 h-10")}
               style={{
                 background: input.trim() ? `linear-gradient(135deg, ${agentColor}, ${agentColor}CC)` : "rgba(255,255,255,0.05)",
                 boxShadow: input.trim() ? `0 4px 16px ${agentColor}40` : "none",
@@ -332,156 +483,161 @@ export default function SimuladorManualMode() {
           </div>
         </div>
 
-        {/* RIGHT PANEL */}
-        <div className="w-[300px] shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar">
-          {/* Actions */}
-          <div className="space-y-2">
-            <NathOpinionButton
-              messages={messages.map(m => ({ role: m.role === "user" ? "user" : "agent", content: m.content, agentName: m.agentName, timestamp: m.timestamp }))}
-              context={`Destino: ${selectedDestino} · Agente: ${selectedAgent.name} (${selectedAgent.role})`}
-              variant="floating"
-            />
-            <div className="flex gap-2">
-              <button onClick={generateSummary} disabled={messages.length < 2}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all duration-300 hover:scale-[1.02]"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: messages.length < 2 ? "#334155" : "#94A3B8" }}>
-                <FileText className="w-3.5 h-3.5" /> Resumo IA
-              </button>
-              <button onClick={resetChat}
-                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all duration-300 hover:scale-[1.02]"
-                style={{ background: `${agentColor}08`, border: `1px solid ${agentColor}20`, color: agentColor }}>
-                <RotateCcw className="w-3.5 h-3.5" /> Nova
-              </button>
-            </div>
-          </div>
-
-          {/* Agent info card */}
-          <div className="rounded-2xl p-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(12px)" }}>
-            <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${agentColor}, transparent)` }} />
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold relative"
-                style={{ background: `${agentColor}12`, border: `2px solid ${agentColor}30`, boxShadow: `0 0 24px ${agentColor}10` }}>
-                {selectedAgent.emoji}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-bold" style={{ color: "#F1F5F9" }}>{selectedAgent.name}</p>
-                <p className="text-[11px]" style={{ color: "#64748B" }}>{selectedAgent.role}</p>
-              </div>
-              <span className="text-[10px] font-bold px-2 py-1 rounded-lg" style={{ background: `${agentColor}10`, color: agentColor, border: `1px solid ${agentColor}20` }}>
-                <Trophy className="w-3 h-3 inline mr-0.5" />Lv.{selectedAgent.level}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="text-center p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                <p className="text-[14px] font-extrabold tabular-nums" style={{ color: "#10B981" }}>{selectedAgent.successRate}%</p>
-                <p className="text-[9px] uppercase tracking-wider" style={{ color: "#64748B" }}>Sucesso</p>
-              </div>
-              <div className="text-center p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                <p className="text-[14px] font-extrabold tabular-nums" style={{ color: "#F1F5F9" }}>{selectedAgent.tasksToday}</p>
-                <p className="text-[9px] uppercase tracking-wider" style={{ color: "#64748B" }}>Tarefas</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-1 mt-3">
-              {selectedAgent.skills.slice(0, 4).map(s => (
-                <span key={s} className="text-[9px] px-2 py-0.5 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", color: "#94A3B8", border: "1px solid rgba(255,255,255,0.05)" }}>{s}</span>
-              ))}
-            </div>
-          </div>
-
-          {/* Squad filter + agents */}
-          <div className="rounded-2xl p-4" style={{ background: "rgba(13,18,32,0.7)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
-            <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2.5" style={{ color: "#64748B" }}>Agentes</p>
-            <div className="flex gap-1 flex-wrap mb-3">
-              <button onClick={() => setActiveSquad("all")} className="text-[9px] px-2.5 py-1 rounded-lg font-semibold transition-all"
-                style={{ background: activeSquad === "all" ? `rgba(16,185,129,0.1)` : "transparent", border: `1px solid ${activeSquad === "all" ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.06)"}`, color: activeSquad === "all" ? "#10B981" : "#64748B" }}>
-                Todos
-              </button>
-              {SQUADS.map(s => (
-                <button key={s.id} onClick={() => setActiveSquad(s.id)} className="text-[9px] px-2.5 py-1 rounded-lg font-semibold transition-all"
-                  style={{ background: activeSquad === s.id ? `rgba(16,185,129,0.1)` : "transparent", border: `1px solid ${activeSquad === s.id ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.06)"}`, color: activeSquad === s.id ? "#10B981" : "#64748B" }}>
-                  {s.name}
+        {/* RIGHT PANEL — Desktop only */}
+        {!isMobile && (
+          <div className="w-[300px] shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar">
+            {/* Actions */}
+            <div className="space-y-2">
+              <NathOpinionButton
+                messages={messages.map(m => ({ role: m.role === "user" ? "user" : "agent", content: m.content, agentName: m.agentName, timestamp: m.timestamp }))}
+                context={`Destino: ${selectedDestino} · Agente: ${selectedAgent.name} (${selectedAgent.role})`}
+                variant="floating"
+              />
+              <div className="flex gap-2">
+                <button onClick={generateSummary} disabled={messages.length < 2}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all duration-300 hover:scale-[1.02]"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", color: messages.length < 2 ? "#334155" : "#94A3B8" }}>
+                  <FileText className="w-3.5 h-3.5" /> Resumo IA
                 </button>
-              ))}
+                <button onClick={resetChat}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all duration-300 hover:scale-[1.02]"
+                  style={{ background: `${agentColor}08`, border: `1px solid ${agentColor}20`, color: agentColor }}>
+                  <RotateCcw className="w-3.5 h-3.5" /> Nova
+                </button>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-1.5 max-h-[200px] overflow-y-auto custom-scrollbar">
-              {filteredAgents.map(a => {
-                const c = getAgentColor(a);
-                const active = selectedAgent.id === a.id;
-                return (
-                  <button key={a.id} onClick={() => setSelectedAgent(a)}
-                    className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-left transition-all duration-300"
-                    style={{
-                      background: active ? `${c}08` : "rgba(255,255,255,0.015)",
-                      border: `1px solid ${active ? `${c}30` : "rgba(255,255,255,0.04)"}`,
-                      boxShadow: active ? `0 0 12px ${c}10` : "none",
-                    }}>
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] shrink-0"
-                      style={{ background: `${c}12`, color: c }}>{a.emoji}</div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-semibold truncate" style={{ color: active ? c : "#E2E8F0" }}>{a.name}</p>
-                      <p className="text-[8px] truncate" style={{ color: "#64748B" }}>Lv.{a.level}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
 
-          {/* Destinos */}
-          <div className="rounded-2xl p-4" style={{ background: "rgba(13,18,32,0.7)", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2.5" style={{ color: "#64748B" }}>Destino</p>
-            <div className="flex flex-wrap gap-1.5">
-              {DESTINOS.map(d => (
-                <button key={d} onClick={() => setSelectedDestino(d)}
-                  className="text-[10px] px-3 py-1.5 rounded-lg font-medium transition-all duration-300"
-                  style={{
-                    background: selectedDestino === d ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.02)",
-                    border: `1px solid ${selectedDestino === d ? "rgba(245,158,11,0.3)" : "rgba(255,255,255,0.04)"}`,
-                    color: selectedDestino === d ? "#F59E0B" : "#64748B",
-                    boxShadow: selectedDestino === d ? "0 0 8px rgba(245,158,11,0.1)" : "none",
-                  }}>{d}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* Sessions */}
-          <div className="rounded-2xl p-4" style={{ background: "rgba(13,18,32,0.7)", border: "1px solid rgba(255,255,255,0.06)" }}>
-            <div className="flex items-center justify-between mb-2.5">
-              <p className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#64748B" }}>Sessões</p>
-              <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", color: "#64748B" }}>{sessions.length}</span>
-            </div>
-            <div className="space-y-1.5 max-h-[180px] overflow-y-auto custom-scrollbar">
-              {sessions.length === 0 && <p className="text-[11px] text-center py-6" style={{ color: "#334155" }}>Nenhuma sessão salva</p>}
-              {sessions.slice(0, 10).map(s => (
-                <div key={s.id} onClick={() => loadSession(s)}
-                  className="rounded-xl p-2.5 cursor-pointer transition-all duration-300 hover:scale-[1.01]"
-                  style={{
-                    background: s.id === currentSessionId ? `rgba(16,185,129,0.05)` : "rgba(255,255,255,0.015)",
-                    border: `1px solid ${s.id === currentSessionId ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.03)"}`,
-                  }}>
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg flex items-center justify-center text-[9px] font-bold"
-                      style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>{s.agentName[0]}</div>
-                    <span className="text-[10px] font-semibold flex-1 truncate" style={{ color: "#E2E8F0" }}>{s.agentName}</span>
-                    <span className="text-[9px] font-medium" style={{ color: "#F59E0B" }}>{s.destino}</span>
-                  </div>
-                  <div className="flex items-center justify-between mt-1 pl-8">
-                    <span className="text-[9px]" style={{ color: "#475569" }}>
-                      {new Date(s.updatedAt).toLocaleDateString("pt-BR")} · {s.messages.length} msgs
-                    </span>
-                    <button onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
-                      className="text-[9px] w-5 h-5 rounded flex items-center justify-center hover:bg-red-500/10 transition-colors" style={{ color: "#EF4444" }}>×</button>
-                  </div>
+            {/* Agent info card */}
+            <div className="rounded-2xl p-4 relative overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(12px)" }}>
+              <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${agentColor}, transparent)` }} />
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold relative"
+                  style={{ background: `${agentColor}12`, border: `2px solid ${agentColor}30`, boxShadow: `0 0 24px ${agentColor}10` }}>
+                  {selectedAgent.emoji}
                 </div>
-              ))}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[14px] font-bold" style={{ color: "#F1F5F9" }}>{selectedAgent.name}</p>
+                  <p className="text-[11px]" style={{ color: "#64748B" }}>{selectedAgent.role}</p>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-1 rounded-lg" style={{ background: `${agentColor}10`, color: agentColor, border: `1px solid ${agentColor}20` }}>
+                  <Trophy className="w-3 h-3 inline mr-0.5" />Lv.{selectedAgent.level}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="text-center p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                  <p className="text-[14px] font-extrabold tabular-nums" style={{ color: "#10B981" }}>{selectedAgent.successRate}%</p>
+                  <p className="text-[9px] uppercase tracking-wider" style={{ color: "#64748B" }}>Sucesso</p>
+                </div>
+                <div className="text-center p-2 rounded-xl" style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                  <p className="text-[14px] font-extrabold tabular-nums" style={{ color: "#F1F5F9" }}>{selectedAgent.tasksToday}</p>
+                  <p className="text-[9px] uppercase tracking-wider" style={{ color: "#64748B" }}>Tarefas</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1 mt-3">
+                {selectedAgent.skills.slice(0, 4).map(s => (
+                  <span key={s} className="text-[9px] px-2 py-0.5 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", color: "#94A3B8", border: "1px solid rgba(255,255,255,0.05)" }}>{s}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Squad filter + agents */}
+            <div className="rounded-2xl p-4" style={{ background: "rgba(13,18,32,0.7)", border: "1px solid rgba(255,255,255,0.06)", backdropFilter: "blur(8px)" }}>
+              <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2.5" style={{ color: "#64748B" }}>Agentes</p>
+              <div className="flex gap-1 flex-wrap mb-3">
+                <button onClick={() => setActiveSquad("all")} className="text-[9px] px-2.5 py-1 rounded-lg font-semibold transition-all"
+                  style={{ background: activeSquad === "all" ? "rgba(16,185,129,0.1)" : "transparent", border: `1px solid ${activeSquad === "all" ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.06)"}`, color: activeSquad === "all" ? "#10B981" : "#64748B" }}>
+                  Todos
+                </button>
+                {SQUADS.map(s => (
+                  <button key={s.id} onClick={() => setActiveSquad(s.id)} className="text-[9px] px-2.5 py-1 rounded-lg font-semibold transition-all"
+                    style={{ background: activeSquad === s.id ? "rgba(16,185,129,0.1)" : "transparent", border: `1px solid ${activeSquad === s.id ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.06)"}`, color: activeSquad === s.id ? "#10B981" : "#64748B" }}>
+                    {s.name}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 max-h-[200px] overflow-y-auto custom-scrollbar">
+                {filteredAgents.map(a => {
+                  const c = getAgentColor(a);
+                  const active = selectedAgent.id === a.id;
+                  return (
+                    <button key={a.id} onClick={() => setSelectedAgent(a)}
+                      className="flex items-center gap-2 px-2.5 py-2 rounded-xl text-left transition-all duration-300"
+                      style={{
+                        background: active ? `${c}08` : "rgba(255,255,255,0.015)",
+                        border: `1px solid ${active ? `${c}30` : "rgba(255,255,255,0.04)"}`,
+                        boxShadow: active ? `0 0 12px ${c}10` : "none",
+                      }}>
+                      <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] shrink-0"
+                        style={{ background: `${c}12`, color: c }}>{a.emoji}</div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold truncate" style={{ color: active ? c : "#E2E8F0" }}>{a.name}</p>
+                        <p className="text-[8px] truncate" style={{ color: "#64748B" }}>Lv.{a.level}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Destinos */}
+            <div className="rounded-2xl p-4" style={{ background: "rgba(13,18,32,0.7)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2.5" style={{ color: "#64748B" }}>Destino</p>
+              <div className="flex flex-wrap gap-1.5">
+                {DESTINOS.map(d => (
+                  <button key={d} onClick={() => setSelectedDestino(d)}
+                    className="text-[10px] px-3 py-1.5 rounded-lg font-medium transition-all duration-300"
+                    style={{
+                      background: selectedDestino === d ? "rgba(245,158,11,0.08)" : "rgba(255,255,255,0.02)",
+                      border: `1px solid ${selectedDestino === d ? "rgba(245,158,11,0.3)" : "rgba(255,255,255,0.04)"}`,
+                      color: selectedDestino === d ? "#F59E0B" : "#64748B",
+                      boxShadow: selectedDestino === d ? "0 0 8px rgba(245,158,11,0.1)" : "none",
+                    }}>{d}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Sessions */}
+            <div className="rounded-2xl p-4" style={{ background: "rgba(13,18,32,0.7)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center justify-between mb-2.5">
+                <p className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#64748B" }}>Sessões</p>
+                <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", color: "#64748B" }}>{sessions.length}</span>
+              </div>
+              <div className="space-y-1.5 max-h-[180px] overflow-y-auto custom-scrollbar">
+                {sessions.length === 0 && <p className="text-[11px] text-center py-6" style={{ color: "#334155" }}>Nenhuma sessão salva</p>}
+                {sessions.slice(0, 10).map(s => (
+                  <div key={s.id} onClick={() => loadSession(s)}
+                    className="rounded-xl p-2.5 cursor-pointer transition-all duration-300 hover:scale-[1.01]"
+                    style={{
+                      background: s.id === currentSessionId ? "rgba(16,185,129,0.05)" : "rgba(255,255,255,0.015)",
+                      border: `1px solid ${s.id === currentSessionId ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.03)"}`,
+                    }}>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg flex items-center justify-center text-[9px] font-bold"
+                        style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>{s.agentName[0]}</div>
+                      <span className="text-[10px] font-semibold flex-1 truncate" style={{ color: "#E2E8F0" }}>{s.agentName}</span>
+                      <span className="text-[9px] font-medium" style={{ color: "#F59E0B" }}>{s.destino}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-1 pl-8">
+                      <span className="text-[9px]" style={{ color: "#475569" }}>
+                        {new Date(s.updatedAt).toLocaleDateString("pt-BR")} · {s.messages.length} msgs
+                      </span>
+                      <button onClick={(e) => { e.stopPropagation(); deleteSession(s.id); }}
+                        className="text-[9px] w-5 h-5 rounded flex items-center justify-center hover:bg-red-500/10 transition-colors" style={{ color: "#EF4444" }}>×</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {/* Mobile bottom sheet */}
+      {isMobile && <MobilePanel />}
 
       {/* Summary dialog */}
       <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
-        <DialogContent className="max-w-lg" style={{ background: "linear-gradient(135deg, #0D1220, #111827)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <DialogContent className={cn("border-0", isMobile ? "max-w-[95vw] rounded-2xl" : "max-w-lg")} style={{ background: "linear-gradient(135deg, #0D1220, #111827)", border: "1px solid rgba(255,255,255,0.08)" }}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2" style={{ color: "#F1F5F9" }}>
               <FileText className="w-5 h-5" style={{ color: "#10B981" }} /> Resumo da Conversa

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users, BookOpen, Search, FileText, Workflow, Edit3, Download } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import NathOpinionButton from "./NathOpinionButton";
 import { Slider } from "@/components/ui/slider";
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
@@ -308,6 +309,7 @@ function useCountUp(target: number, duration = 500) {
 
 // ===== COMPONENT =====
 export default function SimuladorAutoMode() {
+  const isMobile = useIsMobile();
   // Config — Volume
   const [numLeads, setNumLeads] = useState(8);
   const [msgsPerLead, setMsgsPerLead] = useState(14);
@@ -1221,43 +1223,49 @@ Retorne JSON:
   if (phase === "config") {
     return (
       <div className="animate-in fade-in slide-in-from-bottom-3 duration-500" style={{ maxWidth: 1100 }}>
-        {/* 2-column: Tabs + Content */}
-        <div className="flex gap-5" style={{ minHeight: 520 }}>
-          {/* LEFT: Tab Navigation */}
-          <div className="w-[220px] shrink-0 space-y-1.5">
+        {/* Mobile: horizontal scroll tabs. Desktop: 2-column */}
+        <div className={cn("flex", isMobile ? "flex-col gap-3" : "gap-5")} style={{ minHeight: isMobile ? undefined : 520 }}>
+          {/* Tab Navigation */}
+          <div className={cn(isMobile ? "flex gap-2 overflow-x-auto pb-2 scrollbar-hide" : "w-[220px] shrink-0 space-y-1.5")}>
             {CONFIG_TABS.map((tab, i) => {
               const active = configTab === tab.id;
               const Icon = tab.icon;
               return (
                 <button key={tab.id} onClick={() => setConfigTab(tab.id)}
-                  className="w-full text-left px-4 py-3.5 rounded-xl transition-all duration-300 relative group"
+                  className={cn(
+                    "text-left rounded-xl transition-all duration-300 relative group",
+                    isMobile ? "shrink-0 px-3 py-2.5 min-w-[100px]" : "w-full px-4 py-3.5"
+                  )}
                   style={{
                     background: active ? `linear-gradient(135deg, ${tab.color}12, ${tab.color}06)` : "transparent",
-                    border: `1px solid ${active ? `${tab.color}30` : "transparent"}`,
+                    border: `1px solid ${active ? `${tab.color}30` : "rgba(255,255,255,0.06)"}`,
                   }}>
-                  {active && <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full" style={{ background: tab.color }} />}
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center transition-all" style={{
+                  {!isMobile && active && <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full" style={{ background: tab.color }} />}
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className={cn("rounded-lg flex items-center justify-center transition-all", isMobile ? "w-6 h-6" : "w-8 h-8")} style={{
                       background: active ? `${tab.color}15` : "rgba(255,255,255,0.03)",
                       border: `1px solid ${active ? `${tab.color}25` : "rgba(255,255,255,0.05)"}`,
                     }}>
-                      <Icon className="w-4 h-4" style={{ color: active ? tab.color : "#64748B" }} />
+                      <Icon className={isMobile ? "w-3 h-3" : "w-4 h-4"} style={{ color: active ? tab.color : "#64748B" }} />
                     </div>
                     <div>
-                      <p className="text-[12px] font-bold" style={{ color: active ? "#F1F5F9" : "#94A3B8" }}>{tab.label}</p>
-                      <p className="text-[9px] mt-0.5" style={{ color: active ? tab.color : "#475569" }}>{tab.summary}</p>
+                      <p className={cn("font-bold", isMobile ? "text-[10px]" : "text-[12px]")} style={{ color: active ? "#F1F5F9" : "#94A3B8" }}>{tab.label}</p>
+                      {!isMobile && <p className="text-[9px] mt-0.5" style={{ color: active ? tab.color : "#475569" }}>{tab.summary}</p>}
                     </div>
                   </div>
-                  {/* Step number */}
-                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
-                    style={{ background: active ? `${tab.color}15` : "rgba(255,255,255,0.02)", color: active ? tab.color : "#334155" }}>
-                    {i + 1}
-                  </div>
+                  {/* Step number — desktop only */}
+                  {!isMobile && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
+                      style={{ background: active ? `${tab.color}15` : "rgba(255,255,255,0.02)", color: active ? tab.color : "#334155" }}>
+                      {i + 1}
+                    </div>
+                  )}
                 </button>
               );
             })}
 
-            {/* Config Summary Card */}
+            {/* Config Summary Card — desktop only */}
+            {!isMobile && (
             <div className="mt-4 rounded-xl p-4 space-y-2" style={{
               background: "linear-gradient(135deg, rgba(16,185,129,0.04), rgba(6,182,212,0.04))",
               border: "1px solid rgba(16,185,129,0.1)",
@@ -1280,6 +1288,7 @@ Retorne JSON:
                 ))}
               </div>
             </div>
+            )}
           </div>
 
           {/* RIGHT: Content Area */}
@@ -1291,7 +1300,7 @@ Retorne JSON:
             {/* Active tab accent line */}
             <div className="h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${CONFIG_TABS.find(t => t.id === configTab)?.color || "#10B981"}, transparent)` }} />
 
-            <div className="p-6 overflow-y-auto" style={{ maxHeight: 500 }}>
+            <div className={cn("overflow-y-auto", isMobile ? "p-4" : "p-6")} style={{ maxHeight: isMobile ? "60vh" : 500 }}>
               {/* ===== VOLUME TAB ===== */}
               {configTab === "volume" && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-3 duration-300">
@@ -1302,7 +1311,7 @@ Retorne JSON:
                       <p className="text-[11px]" style={{ color: "#64748B" }}>Configure a escala e duração do teste de estresse</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className={cn("gap-6", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                     {[
                       { label: "Leads simultâneos", value: numLeads, setter: setNumLeads, min: 1, max: 100, step: 1, color: "#3B82F6", desc: "Quantidade de leads que entram na simulação" },
                       { label: "Mensagens por lead", value: msgsPerLead, setter: setMsgsPerLead, min: 4, max: 40, step: 2, color: "#10B981", desc: "Rodadas de conversa entre agente e lead" },
@@ -1418,7 +1427,7 @@ Retorne JSON:
                             {selectedDestinos.length > 0 ? "Limpar" : "Todos"}
                           </button>
                         </div>
-                        <div className="grid grid-cols-5 gap-0 rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
+                        <div className={cn("grid gap-0 rounded-xl overflow-hidden", isMobile ? "grid-cols-2" : "grid-cols-5")} style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
                           {DESTINO_DATA.map((d, i) => {
                             const active = selectedDestinos.length === 0 || selectedDestinos.includes(d.name);
                             return (
@@ -1449,7 +1458,7 @@ Retorne JSON:
                   })()}
 
                   {/* Budget + Canal side by side */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                     {/* Budget */}
                     <div>
                       <div className="flex items-center gap-2 mb-2">
@@ -2314,24 +2323,16 @@ Retorne JSON:
           background: "linear-gradient(135deg, rgba(13,18,32,0.95), rgba(13,18,32,0.8))",
           border: "1px solid rgba(16,185,129,0.15)",
         }}>
-          <div className="h-[2px]" style={{ background: "linear-gradient(90deg, #10B981, #06B6D4, #8B5CF6)" }} />
-          <div className="flex items-center gap-6 px-6 py-4">
+          <div className={cn("h-[2px]")} style={{ background: "linear-gradient(90deg, #10B981, #06B6D4, #8B5CF6)" }} />
+          <div className={cn("flex items-center gap-4", isMobile ? "flex-col px-4 py-4" : "gap-6 px-6 py-4")}>
             {/* Config chips */}
-            <div className="flex-1 flex items-center gap-3 overflow-x-auto">
+            <div className="flex-1 flex items-center gap-2 overflow-x-auto scrollbar-hide w-full">
               {[
                 { icon: "👥", label: `${numLeads} leads`, color: "#3B82F6" },
                 { icon: "💬", label: `${msgsPerLead} msgs`, color: "#10B981" },
                 { icon: "⏱️", label: formatTime(duration), color: "#8B5CF6" },
                 { icon: "🎯", label: `${selectedProfiles.length || 8} perfis`, color: "#EC4899" },
-                { icon: "🤖", label: funnelMode === "individual" ? (AGENTS_V4.find(a => a.id === customFunnelAgents[0])?.name || "—") : funnelMode === "custom" ? `${customFunnelAgents.length} agentes` : funnelMode === "comercial" ? "Comercial" : "Pipeline", color: "#8B5CF6" },
-                { icon: "🌍", label: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos`, color: "#06B6D4" },
                 { icon: "⚡", label: SPEED_OPTIONS.find(s => s.id === speed)?.label || "Normal", color: "#F59E0B" },
-                { icon: "🧠", label: enableEvaluation ? `Aval. ${evalFrequency === "every" ? "100%" : evalFrequency === "every2" ? "50%" : "33%"}` : "Aval. off", color: "#EC4899" },
-                { icon: "🔄", label: enableTransfers ? "Transf. on" : "Transf. off", color: "#06B6D4" },
-                { icon: "💥", label: `Vol. ${emotionalVolatility}%`, color: "#EF4444" },
-                { icon: "❤️", label: `Pac. ${initialPatience}%`, color: "#EF4444" },
-                { icon: "📉", label: leadPatienceCurve, color: "#EC4899" },
-                { icon: "🎯", label: leadConversationGoal === "aleatorio" ? "Mix" : leadConversationGoal, color: "#F59E0B" },
               ].map(chip => (
                 <span key={chip.label} className="text-[10px] font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap shrink-0"
                   style={{ background: `${chip.color}08`, color: chip.color, border: `1px solid ${chip.color}15` }}>
@@ -2341,7 +2342,7 @@ Retorne JSON:
             </div>
             {/* Start button */}
             <button onClick={runSimulation}
-              className="px-8 py-3 rounded-xl text-[13px] font-bold transition-all duration-300 relative overflow-hidden shrink-0 hover:scale-[1.03] active:scale-[0.98]"
+              className={cn("rounded-xl text-[13px] font-bold transition-all duration-300 relative overflow-hidden shrink-0 hover:scale-[1.03] active:scale-[0.98]", isMobile ? "w-full py-3.5 px-6" : "px-8 py-3")}
               style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 4px 24px rgba(16,185,129,0.3)" }}>
               <Play className="w-4 h-4 inline mr-2" />
               Iniciar Simulação IA
