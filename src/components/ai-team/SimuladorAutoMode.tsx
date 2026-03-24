@@ -27,6 +27,42 @@ import {
 // ===== API — Roteamento inteligente por tipo de chamada =====
 type SimCallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep" | "price_image";
 
+function normalizeSimMessage(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function hasRecentDuplicateMessage(
+  lead: LeadInteligente,
+  role: MensagemLead["role"],
+  content: string,
+  windowSize = 6,
+) {
+  const normalized = normalizeSimMessage(content);
+  if (!normalized) return true;
+
+  return lead.mensagens
+    .slice(-windowSize)
+    .some((message) => message.role === role && normalizeSimMessage(message.content) === normalized);
+}
+
+function pushUniqueSimMessage(
+  lead: LeadInteligente,
+  message: MensagemLead,
+  options?: { windowSize?: number },
+) {
+  if (hasRecentDuplicateMessage(lead, message.role, message.content, options?.windowSize)) {
+    return false;
+  }
+
+  lead.mensagens.push(message);
+  return true;
+}
+
 async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent", agentBehaviorPrompt?: string, _retryCount = 0): Promise<string> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
   const resp = await fetch(url, {
@@ -149,11 +185,29 @@ function buildCalibrationPrompt(lead: LeadInteligente): string {
   return parts.length > 0 ? "\n\nCALIBRAÇÃO DE COMPORTAMENTO:\n" + parts.join("\n") : "";
 }
 
-async function generateLeadMsg(lead: LeadInteligente, ultimaMsgAgente: string, isFirst: boolean): Promise<string> {
+async function generateLeadMsg(
+  lead: LeadInteligente,
+  ultimaMsgAgente: string,
+  isFirst: boolean,
+  options?: { avoidRecentDuplicates?: boolean }
+): Promise<string> {
   const sysPrompt = buildLeadPersona(lead) + buildCalibrationPrompt(lead);
-  const userPrompt = isFirst
+  const duplicateGuard = options?.avoidRecentDuplicates
+    ? (() => {
+        const recentClientMessages = lead.mensagens
+          .filter((message) => message.role === "client")
+          .slice(-4)
+          .map((message) => `- ${message.content}`)
+          .join("\n");
+
+        return recentClientMessages
+          ? `\n\nREGRA CRÍTICA DE NATURALIDADE:\nNÃO repita nenhuma destas mensagens recentes quase com as mesmas palavras:\n${recentClientMessages}\nCrie uma continuação NOVA, humana e coerente.`
+          : "";
+      })()
+    : "";
+  const userPrompt = (isFirst
     ? buildFirstMessagePrompt(lead)
-    : buildConversaContext(lead.mensagens, ultimaMsgAgente, lead.etapaAtual, lead);
+    : buildConversaContext(lead.mensagens, ultimaMsgAgente, lead.etapaAtual, lead)) + duplicateGuard;
   return callSimulatorAI(sysPrompt, [{ role: "user", content: userPrompt }], "lead");
 }
 
@@ -630,7 +684,8 @@ export default function SimuladorAutoMode() {
       try {
         const firstMsg = await generateLeadMsg(lead, "", true);
         if (!simAtivaRef.current) return;
-        lead.mensagens.push({ role: "client", content: firstMsg, timestamp: Date.now() });
+        const addedFirstMsg = pushUniqueSimMessage(lead, { role: "client", content: firstMsg, timestamp: Date.now() });
+        if (!addedFirstMsg) return;
         setLeads(prev => [...prev]);
         addEvent(lead.perfil.cor, `${lead.nome}: "${firstMsg.slice(0, 50)}..."`, "💬");
 
@@ -670,8 +725,8 @@ export default function SimuladorAutoMode() {
             compressedHistory, "agent"
           );
           if (!simAtivaRef.current) return;
-          lead.mensagens.push({ role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
-          setLeads(prev => [...prev]);
+          const addedAgentResp = pushUniqueSimMessage(lead, { role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
+          if (addedAgentResp) setLeads(prev => [...prev]);
 
           // Detect price print mention → generate actual image
           if (detectsPricePrint(agentResp)) {
@@ -721,7 +776,7 @@ export default function SimuladorAutoMode() {
             if (devePerdeLead(lead)) {
               if (enableLossNarrative) {
                 const lossMsg = await gerarMensagemPerda(lead);
-                lead.mensagens.push({ role: "client", content: lossMsg, timestamp: Date.now() });
+                pushUniqueSimMessage(lead, { role: "client", content: lossMsg, timestamp: Date.now() });
                 lead.motivoPerda = lossMsg;
               } else {
                 lead.motivoPerda = `Paciência esgotada (${lead.pacienciaRestante})`;
@@ -753,12 +808,14 @@ export default function SimuladorAutoMode() {
           if (deveInserirObjecao(lead, lead.etapaAtual, turno)) {
             const objecao = await gerarObjecao(lead, agentResp);
             if (!simAtivaRef.current) return;
-            lead.mensagens.push({ role: "client", content: objecao, timestamp: Date.now() });
+            const addedObjection = pushUniqueSimMessage(lead, { role: "client", content: objecao, timestamp: Date.now() });
             if (lead.objecoesPendentes.length > 0) {
               lead.objecoesLancadas.push(lead.objecoesPendentes.shift()!);
             }
-            setLeads(prev => [...prev]);
-            addEvent("#F59E0B", `⚠️ Objeção de ${lead.nome}: "${objecao.slice(0, 50)}..."`, "🛡️");
+            if (addedObjection) {
+              setLeads(prev => [...prev]);
+              addEvent("#F59E0B", `⚠️ Objeção de ${lead.nome}: "${objecao.slice(0, 50)}..."`, "🛡️");
+            }
 
             const objCompressed = compressConversation(lead.mensagens);
             const objResp = await callSimulatorAI(
@@ -766,24 +823,26 @@ export default function SimuladorAutoMode() {
               objCompressed, "agent"
             );
             if (!simAtivaRef.current) return;
-            lead.mensagens.push({ role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
-            setLeads(prev => [...prev]);
+            const addedObjectionResp = pushUniqueSimMessage(lead, { role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
+            if (addedObjectionResp) setLeads(prev => [...prev]);
             continue;
           }
 
           // Generate contextual lead response via AI
-          const clientResp = await generateLeadMsg(lead, agentResp, false);
+          const clientResp = await generateLeadMsg(lead, agentResp, false, { avoidRecentDuplicates: true });
           if (!simAtivaRef.current) return;
-          lead.mensagens.push({ role: "client", content: clientResp, timestamp: Date.now() });
-          setLeads(prev => [...prev]);
+          const addedClientResp = pushUniqueSimMessage(lead, { role: "client", content: clientResp, timestamp: Date.now() });
+          if (addedClientResp) setLeads(prev => [...prev]);
 
           // Multi-message behavior
           if (enableMultiMsg && Math.random() < lead.probabilidadeMultiMensagem) {
-            const extraMsg = await generateLeadMsg(lead, agentResp, false);
+            const extraMsg = await generateLeadMsg(lead, agentResp, false, { avoidRecentDuplicates: true });
             if (simAtivaRef.current) {
-              lead.mensagens.push({ role: "client", content: extraMsg, timestamp: Date.now() });
-              setLeads(prev => [...prev]);
-              addEvent(lead.perfil.cor, `${lead.nome} enviou múltiplas msgs`, "💬💬");
+              const addedExtraMsg = pushUniqueSimMessage(lead, { role: "client", content: extraMsg, timestamp: Date.now() }, { windowSize: 8 });
+              if (addedExtraMsg) {
+                setLeads(prev => [...prev]);
+                addEvent(lead.perfil.cor, `${lead.nome} enviou múltiplas msgs`, "💬💬");
+              }
             }
           }
 
@@ -792,9 +851,11 @@ export default function SimuladorAutoMode() {
           if (fup > 0 && Math.random() * 100 < fup) {
             const followUps = ["??", "e aí?", "alguém?", "oi?", "tô aguardando", "???", "🙄", "tem alguém aí?", "vou procurar outra agência..."];
             const fMsg = followUps[Math.floor(Math.random() * followUps.length)];
-            lead.mensagens.push({ role: "client", content: fMsg, timestamp: Date.now() });
-            setLeads(prev => [...prev]);
-            addEvent("#F59E0B", `${lead.nome}: follow-up "${fMsg}"`, "⏰");
+            const addedFollowUp = pushUniqueSimMessage(lead, { role: "client", content: fMsg, timestamp: Date.now() }, { windowSize: 10 });
+            if (addedFollowUp) {
+              setLeads(prev => [...prev]);
+              addEvent("#F59E0B", `${lead.nome}: follow-up "${fMsg}"`, "⏰");
+            }
           }
 
           // Per-conversation time limit
@@ -822,7 +883,7 @@ export default function SimuladorAutoMode() {
           } else {
             if (enableLossNarrative) {
               const lossMsg = await gerarMensagemPerda(lead);
-              lead.mensagens.push({ role: "client", content: lossMsg, timestamp: Date.now() });
+                pushUniqueSimMessage(lead, { role: "client", content: lossMsg, timestamp: Date.now() });
               lead.motivoPerda = lossMsg;
             } else {
               lead.motivoPerda = "Não converteu";
