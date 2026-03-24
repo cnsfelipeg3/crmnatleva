@@ -117,7 +117,7 @@ async function avaliarRespostaAgente(resposta: string, lead: LeadInteligente): P
 // Generate motivated loss message
 async function gerarMensagemPerda(lead: LeadInteligente): Promise<string> {
   const prompt = buildMensagemPerdaPrompt(lead, lead.etapaAtual);
-  return callAgent(buildLeadPersona(lead), [{ role: "user", content: prompt }]);
+  return callAgent(buildLeadPersona(lead) + buildCalibrationPrompt(lead), [{ role: "user", content: prompt }]);
 }
 
 function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean, enableTransfers: boolean, responseLength: "curta" | "media" | "longa") {
