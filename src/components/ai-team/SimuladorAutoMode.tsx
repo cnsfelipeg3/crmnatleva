@@ -2755,7 +2755,7 @@ Retorne JSON:
       {/* Report: Números */}
       {phase === "report" && !running && reportTab === "numeros" && (
         <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
-          <div className="grid grid-cols-4 md:grid-cols-8 gap-3">
+          <div className={cn("grid gap-3", isMobile ? "grid-cols-2" : "grid-cols-4 md:grid-cols-8")}>
             {[
               { label: "Leads", value: leads.length, color: "#3B82F6" },
               { label: "Fechados", value: closedLeads.length, color: "#10B981" },
