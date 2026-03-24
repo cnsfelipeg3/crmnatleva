@@ -2588,16 +2588,31 @@ Retorne JSON:
                         <div style={{
                           background: isAgent ? "rgba(31,44,51,0.9)" : "linear-gradient(135deg, #005C4B, #00694D)", color: "#E9EDEF",
                           borderRadius: isAgent ? "4px 16px 16px 16px" : "16px 4px 16px 16px",
-                          maxWidth: "70%", padding: "10px 14px",
+                          maxWidth: "70%", padding: msg.imageUrl ? "4px 4px 4px 4px" : "10px 14px",
+                          overflow: "hidden",
                         }}>
-                          {showName && msg.agentName && <p className="text-[11px] font-bold mb-1" style={{ color: "#53BDEB" }}>{msg.agentName}</p>}
-                          <p className="text-[13px] leading-[1.6]">{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
-                          <div className="flex items-center justify-end gap-1.5 mt-1">
-                            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-                              {new Date(msg.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                            </span>
-                            {!isAgent && <span className="text-[10px]" style={{ color: "#34B7F1" }}>✓✓</span>}
-                          </div>
+                          {showName && msg.agentName && <p className="text-[11px] font-bold mb-1" style={{ color: "#53BDEB", padding: msg.imageUrl ? "6px 10px 0" : undefined }}>{msg.agentName}</p>}
+                          {msg.imageUrl ? (
+                            <div>
+                              <img src={msg.imageUrl} alt="Orçamento" className="rounded-lg w-full max-w-[320px]" style={{ marginBottom: 4 }} />
+                              <div className="flex items-center justify-end gap-1.5 px-2 pb-1">
+                                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                                  {new Date(msg.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                                {!isAgent && <span className="text-[10px]" style={{ color: "#34B7F1" }}>✓✓</span>}
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <p className="text-[13px] leading-[1.6]">{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
+                              <div className="flex items-center justify-end gap-1.5 mt-1">
+                                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+                                  {new Date(msg.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                                {!isAgent && <span className="text-[10px]" style={{ color: "#34B7F1" }}>✓✓</span>}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     );
