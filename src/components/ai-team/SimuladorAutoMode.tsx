@@ -47,8 +47,39 @@ async function callAgent(sysPrompt: string, history: { role: string; content: st
 }
 
 // Generate lead message using AI with full persona context
+function buildCalibrationPrompt(lead: LeadInteligente): string {
+  const l = lead as any;
+  const parts: string[] = [];
+  // Tone
+  const tone = l._toneFormality ?? 50;
+  if (tone < 30) parts.push("Use linguagem BEM informal: gírias, abreviações (vc, tb, tmj, blz), sem pontuação formal.");
+  else if (tone > 70) parts.push("Use linguagem formal e educada. Trate por 'você/senhor(a)', frases completas, boa gramática.");
+  // Typing style
+  if (l._typingStyle === "rapido") parts.push("Escreva mensagens MUITO curtas (1-5 palavras), direto ao ponto.");
+  else if (l._typingStyle === "detalhado") parts.push("Escreva textos longos e detalhados com contexto completo.");
+  // Typos
+  if (l._enableTypos) parts.push("Cometa erros de digitação realistas: 'tbm', 'vc', 'pq', letras trocadas ocasionalmente.");
+  // Emojis
+  if (l._enableEmojis) parts.push("Use emojis naturalmente (😊 🙏 ✈️ ❤️) — de 1 a 3 por mensagem.");
+  else parts.push("NÃO use emojis.");
+  // Audio refs
+  if (l._enableAudioRef && Math.random() < 0.2) parts.push("Em algum momento mencione que prefere mandar áudio ou que não consegue ler textos longos agora.");
+  // Conversation goal
+  const goal = l._conversationGoal || "comprar";
+  if (goal === "pesquisar") parts.push("Você está APENAS pesquisando. Não tem pressa, faça muitas perguntas mas não avance para fechamento.");
+  else if (goal === "comparar") parts.push("Você está comparando com concorrentes. Mencione que viu preços em outros lugares. Peça para baterem ofertas.");
+  // Info reveal
+  if (l._infoRevealSpeed === "resistente") parts.push("NÃO revele informações pessoais facilmente. Exija confiança e boas respostas primeiro.");
+  else if (l._infoRevealSpeed === "imediato") parts.push("Dê todas as informações logo na primeira mensagem: datas, orçamento, nº de pessoas, destino preferido.");
+  // Follow-up pressure
+  if ((l._followUpPressure ?? 30) > 60) parts.push("Seja INSISTENTE: se não receber resposta detalhada, mande follow-up do tipo '??', 'e aí?', 'alguém?'.");
+  // Custom
+  if (l._customInstructions) parts.push(`INSTRUÇÃO ESPECIAL: ${l._customInstructions}`);
+  return parts.length > 0 ? "\n\nCALIBRAÇÃO DE COMPORTAMENTO:\n" + parts.join("\n") : "";
+}
+
 async function generateLeadMsg(lead: LeadInteligente, ultimaMsgAgente: string, isFirst: boolean): Promise<string> {
-  const sysPrompt = buildLeadPersona(lead);
+  const sysPrompt = buildLeadPersona(lead) + buildCalibrationPrompt(lead);
   const userPrompt = isFirst
     ? buildFirstMessagePrompt(lead)
     : buildConversaContext(lead.mensagens, ultimaMsgAgente, lead.etapaAtual, lead);
