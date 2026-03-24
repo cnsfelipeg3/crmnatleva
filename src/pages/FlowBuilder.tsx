@@ -1066,10 +1066,12 @@ function FlowList({ flows, onSelect, onCreate, onUseTemplate, onDeleteFlow, onAr
         <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-3", tab === "templates" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("templates")}>Templates</button>
         <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-3", tab === "pipeline" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("pipeline")}>📊 Pipeline CRM</button>
         <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-3", tab === "metrics" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("metrics")}>📈 Métricas</button>
+        <button className={cn("flex-1 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap px-3", tab === "livefunnel" ? "border-primary text-primary" : "border-transparent text-muted-foreground")} onClick={() => setTab("livefunnel")}>🔴 Funil Vivo</button>
       </div>
 
       {tab === "pipeline" && <FlowCRMPipeline />}
       {tab === "metrics" && <FlowMetrics />}
+      {tab === "livefunnel" && <LiveFunnel onClose={() => setTab("flows")} />}
 
       {(tab === "flows" || tab === "templates") && (
       <ScrollArea className="flex-1 p-3">
