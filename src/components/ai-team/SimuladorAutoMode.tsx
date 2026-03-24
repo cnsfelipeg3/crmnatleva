@@ -558,14 +558,8 @@ export default function SimuladorAutoMode() {
     const allLeads: LeadInteligente[] = [];
     const grupos = selectedGrupos.length > 0 ? selectedGrupos : GRUPOS_LEAD;
 
+    // ===== Create all leads upfront =====
     for (let i = 0; i < numLeads; i++) {
-      if (!simAtivaRef.current || abortRef.current) break;
-      // ★ ENFORCE DURATION LIMIT
-      if (isDurationExceeded()) {
-        addEvent("#F59E0B", `⏱️ Tempo limite (${formatTime(duration)}) atingido — encerrando simulação`, "⏰");
-        break;
-      }
-
       const perfil = profileMode === "roundrobin"
         ? profiles[i % profiles.length]
         : profiles[Math.floor(Math.random() * profiles.length)];
@@ -577,20 +571,14 @@ export default function SimuladorAutoMode() {
         grupo: grupos[Math.floor(Math.random() * grupos.length)],
       });
 
-      // Apply conversion override
       if (conversionOverride !== null) {
         lead.ticket = Math.random() * 100 < conversionOverride ? (8000 + Math.floor(Math.random() * 42000)) : 0;
       }
-
-      // Apply objection density from config
       lead.temObjecao = Math.random() * 100 < objectionDensity;
-
-      // Apply lead behavior calibration
       lead.pacienciaRestante = initialPatience;
       if (emotionalVolatility > 70) {
         lead.pacienciaRestante = Math.max(20, lead.pacienciaRestante - Math.floor((emotionalVolatility - 50) * 0.5));
       }
-      // Apply abandonment sensitivity to patience drain rate
       (lead as any)._abandonSensitivity = abandonmentSensitivity;
       (lead as any)._patienceCurve = leadPatienceCurve;
       (lead as any)._toneFormality = leadToneFormality;
@@ -606,20 +594,25 @@ export default function SimuladorAutoMode() {
       (lead as any)._customInstructions = leadCustomInstructions;
 
       allLeads.push(lead);
-      setLeads([...allLeads]);
-      if (i === 0) setSelectedLeadId(lead.id);
+    }
+    setLeads([...allLeads]);
+    if (allLeads.length > 0) setSelectedLeadId(allLeads[0].id);
+
+    // ===== Per-lead simulation logic (extracted for parallel use) =====
+    const simulateLead = async (lead: LeadInteligente) => {
+      if (!simAtivaRef.current || abortRef.current) return;
+      if (isDurationExceeded()) return;
 
       addEvent("#3B82F6", `${lead.perfil.emoji} ${lead.nome} entrou via ${lead.origem} · ${lead.destino} · ${lead.paxLabel}`, "📥");
 
       try {
-        // 1. Generate first client message via AI
         const firstMsg = await generateLeadMsg(lead, "", true);
+        if (!simAtivaRef.current) return;
         lead.mensagens.push({ role: "client", content: firstMsg, timestamp: Date.now() });
-        setLeads([...allLeads]);
+        setLeads(prev => [...prev]);
         addEvent(lead.perfil.cor, `${lead.nome}: "${firstMsg.slice(0, 50)}..."`, "💬");
 
         const stages = ETAPAS_FUNIL.map(e => e.id);
-        // ★ FIX: use msgsPerLead directly — NO artificial cap
         const rounds = Math.floor(msgsPerLead / 2);
         let agentIdx = 0;
         let forceLoss = false;
@@ -627,7 +620,6 @@ export default function SimuladorAutoMode() {
 
         for (let r = 0; r < rounds; r++) {
           if (!simAtivaRef.current || abortRef.current || forceLoss) break;
-          // ★ ENFORCE DURATION LIMIT per round
           if (isDurationExceeded()) {
             addEvent("#F59E0B", `⏱️ Tempo esgotado durante conversa com ${lead.nome}`, "⏰");
             break;
@@ -637,57 +629,54 @@ export default function SimuladorAutoMode() {
           const hasNext = enableTransfers && agentIdx < funnelAgents.length - 1;
           lead.etapaAtual = stages[Math.min(agentIdx, stages.length - 1)];
 
-          // 2. Agent responds — with context compression for long conversations
+          // Agent responds — with context compression for long conversations
           const compressedHistory = compressConversation(lead.mensagens);
           const agentResp = await callSimulatorAI(
             buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength),
             compressedHistory, "agent"
           );
+          if (!simAtivaRef.current) return;
           lead.mensagens.push({ role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
-          setLeads([...allLeads]);
+          setLeads(prev => [...prev]);
 
-          // 2b. Detect price print mention → generate actual image
+          // Detect price print mention → generate actual image
           if (detectsPricePrint(agentResp)) {
             addEvent("#8B5CF6", `📸 ${agent.name} gerando print de preço para ${lead.nome}...`, "🖼️");
             const priceImg = await generatePriceImage(lead);
-            if (priceImg) {
+            if (priceImg && simAtivaRef.current) {
               lead.mensagens.push({ role: "agent", content: "📋 Orçamento", agentName: agent.name, timestamp: Date.now(), imageUrl: priceImg });
-              setLeads([...allLeads]);
+              setLeads(prev => [...prev]);
               addEvent("#10B981", `✅ Print de preço enviado para ${lead.nome}`, "🖼️");
             }
           }
 
-          // 3. Evaluate agent response (AI judge) — 3 dimensões — respects evalFrequency
+          // Evaluate agent response
           evalCounter++;
           if (enableEvaluation && evalCounter % evalEvery === 0) {
             const avaliacao = await avaliarRespostaAgente(agentResp, lead);
-            // Apply emotional volatility to sentiment impact
+            if (!simAtivaRef.current) return;
             const volatilityMult = emotionalVolatility / 50;
             const adjustedNota = Math.round(avaliacao.nota * volatilityMult + (50 * (1 - volatilityMult / 2)));
             const updatedLead = atualizarEstadoEmocional(lead, adjustedNota, avaliacao.reacao, avaliacao.sentimento);
             Object.assign(lead, updatedLead);
-            // Apply patience curve from calibration
             const curve = (lead as any)._patienceCurve || "linear";
             const abSens = ((lead as any)._abandonSensitivity ?? 50) / 100;
             if (curve === "exponential") {
-              // Exponential: patience drops slowly at first, then fast
               const ratio = 1 - (lead.pacienciaRestante / initialPatience);
               const extraDrain = Math.floor(ratio * ratio * 15 * (1 + abSens));
               lead.pacienciaRestante = Math.max(0, lead.pacienciaRestante - extraDrain);
             } else if (curve === "sudden") {
-              // Sudden: patience stable until threshold, then collapses
               if (lead.pacienciaRestante < 40 && adjustedNota < 60) {
                 lead.pacienciaRestante = Math.max(0, lead.pacienciaRestante - Math.floor(25 * (1 + abSens)));
               }
             } else {
-              // Linear: steady drain amplified by abandonment sensitivity
               const drain = Math.floor(5 * (1 + abSens));
               if (adjustedNota < 50) lead.pacienciaRestante = Math.max(0, lead.pacienciaRestante - drain);
             }
             lead.scoreHumanizacao = lead.scoreHumanizacao > 0 ? Math.round((lead.scoreHumanizacao + avaliacao.humanizacao) / 2) : avaliacao.humanizacao;
             lead.scoreEficacia = lead.scoreEficacia > 0 ? Math.round((lead.scoreEficacia + avaliacao.eficaciaComercial) / 2) : avaliacao.eficaciaComercial;
             lead.scoreTecnica = lead.scoreTecnica > 0 ? Math.round((lead.scoreTecnica + avaliacao.qualidadeTecnica) / 2) : avaliacao.qualidadeTecnica;
-            setLeads([...allLeads]);
+            setLeads(prev => [...prev]);
 
             if (avaliacao.nota < 40) {
               addEvent("#F59E0B", `${lead.nome}: ${avaliacao.reacao} (H:${avaliacao.humanizacao} E:${avaliacao.eficaciaComercial} T:${avaliacao.qualidadeTecnica})`, "😤");
@@ -695,7 +684,6 @@ export default function SimuladorAutoMode() {
               addEvent("#10B981", `${lead.nome}: ${avaliacao.reacao} (H:${avaliacao.humanizacao} E:${avaliacao.eficaciaComercial} T:${avaliacao.qualidadeTecnica})`, "😊");
             }
 
-            // Check if lead gives up
             if (devePerdeLead(lead)) {
               if (enableLossNarrative) {
                 const lossMsg = await gerarMensagemPerda(lead);
@@ -704,10 +692,8 @@ export default function SimuladorAutoMode() {
               } else {
                 lead.motivoPerda = `Paciência esgotada (${lead.pacienciaRestante})`;
               }
-              lead.status = "perdeu";
-              lead.resultadoFinal = "perdeu";
-              lead.etapaPerda = lead.etapaAtual;
-              setLeads([...allLeads]);
+              lead.status = "perdeu"; lead.resultadoFinal = "perdeu"; lead.etapaPerda = lead.etapaAtual;
+              setLeads(prev => [...prev]);
               addEvent("#EF4444", `❌ ${lead.nome} DESISTIU em ${lead.etapaAtual}: "${(lead.motivoPerda || "").slice(0, 60)}..."`, "💔");
               forceLoss = true;
               break;
@@ -728,48 +714,52 @@ export default function SimuladorAutoMode() {
           if (speedDelay > 0) await new Promise(r => setTimeout(r, speedDelay));
           if (r >= rounds - 1 || abortRef.current) break;
 
-          // 4. Check for dynamic objection
+          // Check for dynamic objection
           const turno = r + 1;
           if (deveInserirObjecao(lead, lead.etapaAtual, turno)) {
             const objecao = await gerarObjecao(lead, agentResp);
+            if (!simAtivaRef.current) return;
             lead.mensagens.push({ role: "client", content: objecao, timestamp: Date.now() });
             if (lead.objecoesPendentes.length > 0) {
               lead.objecoesLancadas.push(lead.objecoesPendentes.shift()!);
             }
-            setLeads([...allLeads]);
+            setLeads(prev => [...prev]);
             addEvent("#F59E0B", `⚠️ Objeção de ${lead.nome}: "${objecao.slice(0, 50)}..."`, "🛡️");
 
-            // Agent needs to handle objection — with context compression
             const objCompressed = compressConversation(lead.mensagens);
             const objResp = await callSimulatorAI(
               buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength),
               objCompressed, "agent"
             );
+            if (!simAtivaRef.current) return;
             lead.mensagens.push({ role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
-            setLeads([...allLeads]);
+            setLeads(prev => [...prev]);
             continue;
           }
 
-          // 5. Generate contextual lead response via AI
+          // Generate contextual lead response via AI
           const clientResp = await generateLeadMsg(lead, agentResp, false);
+          if (!simAtivaRef.current) return;
           lead.mensagens.push({ role: "client", content: clientResp, timestamp: Date.now() });
-          setLeads([...allLeads]);
+          setLeads(prev => [...prev]);
 
           // Multi-message behavior
           if (enableMultiMsg && Math.random() < lead.probabilidadeMultiMensagem) {
             const extraMsg = await generateLeadMsg(lead, agentResp, false);
-            lead.mensagens.push({ role: "client", content: extraMsg, timestamp: Date.now() });
-            setLeads([...allLeads]);
-            addEvent(lead.perfil.cor, `${lead.nome} enviou múltiplas msgs`, "💬💬");
+            if (simAtivaRef.current) {
+              lead.mensagens.push({ role: "client", content: extraMsg, timestamp: Date.now() });
+              setLeads(prev => [...prev]);
+              addEvent(lead.perfil.cor, `${lead.nome} enviou múltiplas msgs`, "💬💬");
+            }
           }
 
-          // Follow-up pressure: lead sends "???" if configured
+          // Follow-up pressure
           const fup = (lead as any)._followUpPressure ?? 30;
           if (fup > 0 && Math.random() * 100 < fup) {
             const followUps = ["??", "e aí?", "alguém?", "oi?", "tô aguardando", "???", "🙄", "tem alguém aí?", "vou procurar outra agência..."];
             const fMsg = followUps[Math.floor(Math.random() * followUps.length)];
             lead.mensagens.push({ role: "client", content: fMsg, timestamp: Date.now() });
-            setLeads([...allLeads]);
+            setLeads(prev => [...prev]);
             addEvent("#F59E0B", `${lead.nome}: follow-up "${fMsg}"`, "⏰");
           }
 
@@ -793,9 +783,7 @@ export default function SimuladorAutoMode() {
             : lead.ticket > 0;
 
           if (willClose) {
-            lead.status = "fechou";
-            lead.resultadoFinal = "fechou";
-            lead.etapaAtual = "fechamento";
+            lead.status = "fechou"; lead.resultadoFinal = "fechou"; lead.etapaAtual = "fechamento";
             addEvent("#EAB308", `🎉 ${lead.nome} FECHOU · R$${(lead.ticket / 1000).toFixed(0)}k · ${lead.perfil.label}`, "🏆");
           } else {
             if (enableLossNarrative) {
@@ -805,24 +793,53 @@ export default function SimuladorAutoMode() {
             } else {
               lead.motivoPerda = "Não converteu";
             }
-            lead.status = "perdeu";
-            lead.resultadoFinal = "perdeu";
-            lead.etapaPerda = lead.etapaAtual;
+            lead.status = "perdeu"; lead.resultadoFinal = "perdeu"; lead.etapaPerda = lead.etapaAtual;
             addEvent("#EF4444", `${lead.nome} perdido em ${lead.etapaAtual} · ${lead.perfil.label}`, "📉");
           }
-          setLeads([...allLeads]);
+          setLeads(prev => [...prev]);
         }
       } catch (err) {
         console.error("Lead sim error:", err);
-        lead.status = "perdeu";
-        lead.motivoPerda = "Erro de sistema";
-        setLeads([...allLeads]);
+        lead.status = "perdeu"; lead.motivoPerda = "Erro de sistema";
+        setLeads(prev => [...prev]);
       }
+    };
 
-      // ★ ENFORCE intervalSec exactly as configured
-      if (i < numLeads - 1 && !abortRef.current) {
-        const delayMs = intervalSec * 1000;
-        if (delayMs > 0) await new Promise(r => setTimeout(r, delayMs));
+    // ===== Dispatch leads based on mode =====
+    if (dispatchMode === "simultaneous") {
+      // All leads start at once — parallel processing
+      addEvent("#8B5CF6", `⚡ Disparo simultâneo: ${allLeads.length} leads ao mesmo tempo!`, "🚀");
+      const batchSize = Math.min(allLeads.length, 10); // API rate limit protection
+      for (let i = 0; i < allLeads.length; i += batchSize) {
+        if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
+        const batch = allLeads.slice(i, i + batchSize);
+        await Promise.all(batch.map(lead => simulateLead(lead)));
+        if (i + batchSize < allLeads.length) {
+          await new Promise(r => setTimeout(r, 500)); // Small delay between batches for rate limiting
+        }
+      }
+    } else if (dispatchMode === "wave") {
+      // Wave mode — process in configurable parallel batches
+      const waveSize = Math.max(2, parallelLeads);
+      let waveNum = 1;
+      for (let i = 0; i < allLeads.length; i += waveSize) {
+        if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
+        const batch = allLeads.slice(i, i + waveSize);
+        addEvent("#06B6D4", `🌊 Onda ${waveNum}: ${batch.length} leads`, "🌊");
+        await Promise.all(batch.map(lead => simulateLead(lead)));
+        waveNum++;
+        if (i + waveSize < allLeads.length && intervalSec > 0) {
+          await new Promise(r => setTimeout(r, intervalSec * 1000));
+        }
+      }
+    } else {
+      // Sequential — original behavior
+      for (let i = 0; i < allLeads.length; i++) {
+        if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
+        await simulateLead(allLeads[i]);
+        if (i < allLeads.length - 1 && !abortRef.current && intervalSec > 0) {
+          await new Promise(r => setTimeout(r, intervalSec * 1000));
+        }
       }
     }
 
