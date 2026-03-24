@@ -2522,8 +2522,23 @@ Retorne JSON:
                           )}
                           <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
                             <div className={cn(
-                              "group relative max-w-[70%]"
-                            )}>
+                              "group relative max-w-[70%] cursor-pointer transition-all",
+                              observationSelectedMsg?.timestamp === msg.timestamp && observationSelectedMsg?.content === msg.content
+                                ? "ring-2 ring-amber-500/50 rounded-2xl"
+                                : "hover:brightness-110"
+                            )}
+                              onClick={() => {
+                                if (!selectedLead) return;
+                                setObservationSelectedMsg({
+                                  content: cleanContent,
+                                  role: msg.role === "agent" ? "agent" : "client",
+                                  agentName: msg.agentName,
+                                  leadId: selectedLead.id,
+                                  leadName: selectedLead.nome,
+                                  timestamp: msg.timestamp,
+                                });
+                              }}
+                            >
                               <div className={cn(
                                 "rounded-2xl px-4 py-2.5",
                                 isUser
