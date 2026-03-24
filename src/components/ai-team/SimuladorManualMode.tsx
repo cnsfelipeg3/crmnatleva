@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
+import SimulatorChatLayout, { type SimChatMessage } from "./SimulatorChatLayout";
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining, type AgentTrainingConfig } from "@/components/ai-team/agentTrainingStore";
 import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
@@ -443,171 +444,100 @@ export default function SimuladorManualMode() {
       )} style={{ height: isMobile ? "calc(100vh - 160px)" : "calc(100vh - 220px)", minHeight: isMobile ? 400 : 550 }}>
 
         {/* ═══════════ CHAT AREA ═══════════ */}
-        <div className="flex-1 rounded-2xl flex flex-col overflow-hidden relative" style={{ background: "#0B141A", border: "1px solid rgba(255,255,255,0.06)" }}>
-        {/* Ambient glow — lightweight */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-24 pointer-events-none" style={{ background: `radial-gradient(ellipse, ${agentColor}06, transparent 70%)`, willChange: "auto" }} />
-
-          {/* Chat header */}
-          <div className="flex items-center gap-3 px-4 md:px-5 shrink-0 relative z-10" style={{ height: isMobile ? 60 : 66, background: "rgba(31,44,51,0.92)" }}>
-            <button
-              onClick={() => { if (isMobile) { setPanelTab("agente"); setShowPanel(true); } }}
-              className="relative shrink-0"
-            >
-              <div className={cn("rounded-2xl flex items-center justify-center font-bold", isMobile ? "w-10 h-10 text-sm" : "w-11 h-11 text-base")}
-                style={{ background: `${agentColor}15`, color: agentColor, border: `2px solid ${agentColor}40`, transition: "background 0.2s, border-color 0.2s" }}>
-                {selectedAgent.emoji}
-              </div>
-              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full" style={{ background: "#25D366", border: "2px solid #1F2C33" }}>
-                <span className="absolute inset-0 rounded-full animate-ping" style={{ background: "#25D366", opacity: 0.4 }} />
-              </span>
-            </button>
-            <div className="flex-1 min-w-0" onClick={() => { if (isMobile) { setPanelTab("agente"); setShowPanel(true); } }}>
-              <div className="flex items-center gap-2">
-                <p className={cn("font-bold truncate", isMobile ? "text-[14px]" : "text-[15px]")} style={{ color: "#F1F5F9" }}>{selectedAgent.name}</p>
-                {isMobile && <ChevronDown className="w-3.5 h-3.5 shrink-0" style={{ color: "#94A3B8" }} />}
-              </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <MapPin className="w-3 h-3 shrink-0" style={{ color: "#F59E0B" }} />
-                <p className={cn("truncate", isMobile ? "text-[11px]" : "text-[12px]")} style={{ color: "#94A3B8" }}>
-                  {isMobile ? `${selectedDestino} · Lv.${selectedAgent.level}` : `Especialista ${selectedDestino} · Lv.${selectedAgent.level} · ${selectedAgent.role}`}
-                </p>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2 shrink-0">
-              {isMobile ? (
-                <>
-                  <button onClick={generateSummary} disabled={messages.length < 2}
-                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-                    style={{ background: "rgba(255,255,255,0.06)", opacity: messages.length < 2 ? 0.3 : 1 }}>
-                    <FileText className="w-4 h-4" style={{ color: "#CBD5E1" }} />
-                  </button>
-                  <button onClick={resetChat}
-                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-                    style={{ background: `${agentColor}10` }}>
-                    <RotateCcw className="w-4 h-4" style={{ color: agentColor }} />
-                  </button>
-                </>
-              ) : (
-                <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl" style={{ background: "rgba(0,0,0,0.25)" }}>
-                  {FUNNEL_STAGES.map((stage, i) => (
-                    <div key={i} className="flex items-center gap-1" title={stage}>
-                      <div className="w-2.5 h-2.5 rounded-full transition-all duration-500 relative" style={{
-                        background: i < currentStage ? "#10B981" : i === currentStage ? agentColor : "rgba(255,255,255,0.1)",
-                        boxShadow: i === currentStage ? `0 0 8px ${agentColor}80` : "none",
-                      }}>
-                        {i === currentStage && <div className="absolute inset-0 rounded-full animate-ping" style={{ background: agentColor, opacity: 0.3 }} />}
-                      </div>
-                      {i < FUNNEL_STAGES.length - 1 && <div className="w-4 h-px" style={{ background: i < currentStage ? "#10B98160" : "rgba(255,255,255,0.06)" }} />}
-                    </div>
-                  ))}
+        <div className="flex-1 min-w-0 min-h-0">
+          <SimulatorChatLayout
+            messages={messages.map(m => ({
+              ...m,
+              role: m.role as "user" | "agent",
+            } as SimChatMessage))}
+            loading={loading}
+            inputValue={input}
+            onInputChange={setInput}
+            onSend={() => handleSend()}
+            inputPlaceholder="Digite como um cliente..."
+            headerContent={
+              <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                <button
+                  onClick={() => { if (isMobile) { setPanelTab("agente"); setShowPanel(true); } }}
+                  className="relative shrink-0"
+                >
+                  <div className={cn("rounded-full flex items-center justify-center font-bold bg-secondary", isMobile ? "w-9 h-9 text-sm" : "w-10 h-10 text-base")}>
+                    {selectedAgent.emoji}
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-card">
+                    <span className="absolute inset-0 rounded-full animate-ping bg-emerald-500 opacity-40" />
+                  </span>
+                </button>
+                <div className="flex-1 min-w-0" onClick={() => { if (isMobile) { setPanelTab("agente"); setShowPanel(true); } }}>
+                  <div className="flex items-center gap-2">
+                    <p className={cn("font-bold truncate text-foreground", isMobile ? "text-sm" : "text-[15px]")}>{selectedAgent.name}</p>
+                    {isMobile && <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <MapPin className="w-3 h-3 shrink-0 text-amber-500" />
+                    <p className={cn("truncate text-muted-foreground", isMobile ? "text-[11px]" : "text-xs")}>
+                      {isMobile ? `${selectedDestino} · Lv.${selectedAgent.level}` : `Especialista ${selectedDestino} · Lv.${selectedAgent.level} · ${selectedAgent.role}`}
+                    </p>
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Transfer notice */}
-          {transferNotice && (
-            <div className="flex items-center justify-center py-2.5 animate-in fade-in zoom-in-95 duration-300" style={{ background: "rgba(6,182,212,0.06)" }}>
-              <div className="flex items-center gap-2 text-[12px] font-medium px-4 py-1.5 rounded-full" style={{ background: "rgba(6,182,212,0.08)", color: "#22D3EE", border: "1px solid rgba(6,182,212,0.15)" }}>
-                <Plane className="w-3.5 h-3.5" /> {transferNotice}
+                <div className="flex items-center gap-2 shrink-0">
+                  {isMobile ? (
+                    <>
+                      <button onClick={generateSummary} disabled={messages.length < 2}
+                        className="w-9 h-9 rounded-xl flex items-center justify-center transition-all bg-secondary/50 disabled:opacity-30">
+                        <FileText className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      <button onClick={resetChat}
+                        className="w-9 h-9 rounded-xl flex items-center justify-center transition-all bg-primary/10">
+                        <RotateCcw className="w-4 h-4 text-primary" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-secondary/30">
+                      {FUNNEL_STAGES.map((stage, i) => (
+                        <div key={i} className="flex items-center gap-1" title={stage}>
+                          <div className={cn("w-2.5 h-2.5 rounded-full transition-all duration-500", i < currentStage ? "bg-emerald-500" : i === currentStage ? "bg-primary" : "bg-muted")} />
+                          {i < FUNNEL_STAGES.length - 1 && <div className={cn("w-4 h-px", i < currentStage ? "bg-emerald-500/40" : "bg-muted")} />}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* Messages */}
-          <div ref={scrollRef} className={cn("flex-1 overflow-y-auto", isMobile ? "p-3 space-y-2.5" : "p-5 space-y-3")} style={{ background: "#0B141A" }}>
-            {messages.length === 0 && (
+            }
+            bannerContent={transferNotice ? (
+              <div className="flex items-center justify-center py-2.5 animate-in fade-in zoom-in-95 duration-300 bg-accent/30">
+                <div className="flex items-center gap-2 text-xs font-medium px-4 py-1.5 rounded-full bg-accent text-accent-foreground border border-border">
+                  <Plane className="w-3.5 h-3.5" /> {transferNotice}
+                </div>
+              </div>
+            ) : undefined}
+            emptyContent={
               <div className={cn("text-center animate-in fade-in zoom-in-95 duration-700", isMobile ? "py-12 space-y-5" : "py-20 space-y-6")}>
                 <div className={cn("relative mx-auto", isMobile ? "w-18 h-18" : "w-24 h-24")}>
-                  <div className="absolute inset-0 rounded-full" style={{ background: `radial-gradient(circle, ${agentColor}12, transparent)` }} />
-                  <div className={cn("absolute rounded-full flex items-center justify-center", isMobile ? "inset-2" : "inset-3")} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className={cn("absolute rounded-full flex items-center justify-center bg-secondary/50 border border-border", isMobile ? "inset-2" : "inset-3")}>
                     <span className={isMobile ? "text-3xl" : "text-4xl"}>{selectedAgent.emoji}</span>
                   </div>
                 </div>
                 <div>
-                  <p className={cn("font-semibold", isMobile ? "text-[15px]" : "text-[17px]")} style={{ color: "#E9EDEF" }}>
+                  <p className={cn("font-semibold text-foreground", isMobile ? "text-[15px]" : "text-[17px]")}>
                     Converse com {selectedAgent.name}
                   </p>
-                  <p className={cn("mt-1.5", isMobile ? "text-[12px]" : "text-[13px]")} style={{ color: "#94A3B8" }}>
+                  <p className={cn("mt-1.5 text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
                     Simule um cliente interessado em {selectedDestino}
                   </p>
                 </div>
                 <div className={cn("flex flex-wrap gap-2.5 justify-center mx-auto", isMobile ? "max-w-[340px]" : "max-w-lg")}>
                   {SUGGESTION_CHIPS.map(chip => (
                     <button key={chip} onClick={() => handleSend(chip)}
-                      className={cn("rounded-xl transition-all duration-300 hover:scale-[1.03]", isMobile ? "text-[12px] px-3.5 py-2.5" : "text-[13px] px-4 py-2.5")}
-                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#CBD5E1" }}>
+                      className={cn("rounded-xl transition-all duration-300 hover:scale-[1.03] bg-secondary/50 border border-border text-foreground", isMobile ? "text-xs px-3.5 py-2.5" : "text-sm px-4 py-2.5")}>
                       {chip}
                     </button>
                   ))}
                 </div>
               </div>
-            )}
-            {messages.map((msg, i) => {
-              const isAgent = msg.role === "agent";
-              const showName = isAgent && (i === 0 || messages[i - 1]?.role !== "agent" || messages[i - 1]?.agentId !== msg.agentId);
-              return (
-                <div key={msg.id}
-                  className={cn("flex animate-in duration-300", isAgent ? "justify-start slide-in-from-left-3" : "justify-end slide-in-from-right-3")}>
-                  <div className="relative" style={{
-                    background: isAgent ? "rgba(31,44,51,0.9)" : "linear-gradient(135deg, #005C4B, #00694D)",
-                    color: "#E9EDEF",
-                    borderRadius: isAgent ? "4px 18px 18px 18px" : "18px 4px 18px 18px",
-                    maxWidth: isMobile ? "82%" : "68%", padding: isMobile ? "10px 14px" : "12px 16px",
-                    boxShadow: isAgent ? "0 2px 8px rgba(0,0,0,0.15)" : "0 2px 12px rgba(0,92,75,0.25)",
-                  }}>
-                    {showName && msg.agentName && (
-                      <p className="text-[12px] font-bold mb-1.5" style={{ color: agentColor }}>{msg.agentName}</p>
-                    )}
-                    <p className={cn("leading-[1.65]", isMobile ? "text-[13px]" : "text-[14px]")}>{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
-                    <div className="flex items-center justify-end gap-1.5 mt-1.5">
-                      <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.4)" }}>
-                        {new Date(msg.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                      {!isAgent && <span className="text-[10px]" style={{ color: "#34B7F1" }}>✓✓</span>}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-            {loading && (
-              <div className="flex animate-in slide-in-from-left-3 duration-300">
-                <div className="px-5 py-3.5 rounded-2xl" style={{ background: "rgba(31,44,51,0.9)" }}>
-                  <div className="flex gap-1.5">
-                    {[0, 1, 2].map(i => (
-                      <div key={i} className="w-2 h-2 rounded-full animate-bounce" style={{ background: agentColor, animationDelay: `${i * 200}ms`, opacity: 0.7 }} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Input */}
-          <div className={cn("flex items-center gap-3 shrink-0", isMobile ? "px-3 py-3" : "px-5 py-3.5")} style={{ background: "rgba(31,44,51,0.7)", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-            <input
-              placeholder="Digite como um cliente..."
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              disabled={loading}
-              autoComplete="off"
-              className={cn("flex-1 rounded-xl outline-none", isMobile ? "text-[14px] px-4 py-3" : "text-[14px] px-4 py-3")}
-              style={{ background: "rgba(255,255,255,0.06)", color: "#E9EDEF", border: "1px solid rgba(255,255,255,0.08)", transition: "border-color 0.15s" }}
-            />
-            <button onClick={() => handleSend()} disabled={loading || !input.trim()}
-              className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 active:scale-90"
-              style={{
-                background: input.trim() ? `linear-gradient(135deg, ${agentColor}, ${agentColor}CC)` : "rgba(255,255,255,0.06)",
-                boxShadow: input.trim() ? `0 4px 12px ${agentColor}30` : "none",
-                transform: input.trim() ? "scale(1)" : "scale(0.95)",
-                transition: "transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease",
-              }}>
-              <Send className="w-4.5 h-4.5" style={{ color: input.trim() ? "#fff" : "#64748B" }} />
-            </button>
-          </div>
+            }
+          />
         </div>
 
         {/* ═══════════ RIGHT PANEL — Desktop only ═══════════ */}

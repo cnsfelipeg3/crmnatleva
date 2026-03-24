@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users, BookOpen, Search, FileText, Workflow, Edit3, Download } from "lucide-react";
+import { useState, useCallback, useRef, useEffect, Fragment } from "react";
+import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users, BookOpen, Search, FileText, Workflow, Edit3, Download, Bot, CheckCheck } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NathOpinionButton from "./NathOpinionButton";
 import { Slider } from "@/components/ui/slider";
@@ -2448,109 +2448,121 @@ Retorne JSON:
             </div>
           </div>
 
-          {/* CENTER: Chat */}
-          <div className={cn("flex-1 rounded-2xl flex flex-col overflow-hidden", isMobile && "min-h-[40vh]")} style={{ background: "rgba(11,20,26,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          {/* CENTER: Chat — identical to OperacaoInbox layout */}
+          <div className={cn("flex-1 rounded-2xl flex flex-col overflow-hidden border border-border bg-background", isMobile && "min-h-[40vh]")}>
             {selectedLead ? (
               <>
-                <div className="flex items-center gap-3 px-5 shrink-0 relative" style={{ height: 64, background: "linear-gradient(180deg, rgba(31,44,51,0.95), rgba(31,44,51,0.8))" }}>
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold"
-                    style={{ background: `${selectedLead.perfil.cor}12`, color: selectedLead.perfil.cor, border: `1px solid ${selectedLead.perfil.cor}20` }}>
-                    {selectedLead.perfil.emoji}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>{selectedLead.nome}</p>
-                    <p className="text-[15px]" style={{ color: "#94A3B8" }}>{selectedLead.destino} · {selectedLead.perfil.label} · {selectedLead.ocasiao}</p>
-                  </div>
-                  {/* Sentiment gauge */}
-                  <div className="flex items-center gap-2">
-                    <div className="text-center">
-                      <div className="flex items-center gap-1">
-                        <Heart className="w-3 h-3" style={{ color: sentimentColor(selectedLead.sentimentoScore) }} />
-                        <span className="text-[15px] font-bold tabular-nums" style={{ color: sentimentColor(selectedLead.sentimentoScore) }}>{selectedLead.sentimentoScore}</span>
-                      </div>
-                      <p className="text-[15px]" style={{ color: "#94A3B8" }}>{sentimentLabel(selectedLead.sentimentoScore)}</p>
+                {/* Chat header — inbox style */}
+                <div className="flex items-center justify-between px-2 md:px-4 py-2 md:py-2.5 border-b border-border bg-card/50 shrink-0">
+                  <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                    <div className="h-9 w-9 rounded-full bg-secondary flex items-center justify-center text-sm font-bold shrink-0">
+                      {selectedLead.perfil.emoji}
                     </div>
-                    <div className="text-center">
-                      <div className="flex items-center gap-1">
-                        <Shield className="w-3 h-3" style={{ color: selectedLead.pacienciaRestante > 50 ? "#10B981" : "#EF4444" }} />
-                        <span className="text-[15px] font-bold tabular-nums" style={{ color: selectedLead.pacienciaRestante > 50 ? "#10B981" : "#EF4444" }}>{selectedLead.pacienciaRestante}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-bold truncate text-foreground">{selectedLead.nome}</span>
                       </div>
-                      <p className="text-[15px]" style={{ color: "#94A3B8" }}>Paciência</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{selectedLead.destino} · {selectedLead.perfil.label} · {selectedLead.ocasiao}</p>
                     </div>
                   </div>
-                  {/* Stage */}
-                  <div className="flex items-center gap-1 bg-black/20 px-2.5 py-1.5 rounded-full">
-                    {ETAPAS_FUNIL.map((e, i) => {
-                      const idx = ETAPAS_FUNIL.findIndex(et => et.id === selectedLead.etapaAtual);
-                      return (
-                        <div key={e.id} className="flex items-center gap-0.5" title={e.label}>
-                          <div className="w-2 h-2 rounded-full transition-all" style={{
-                            background: i < idx ? "#10B981" : i === idx ? selectedLead.perfil.cor : "rgba(255,255,255,0.08)",
-                            boxShadow: i === idx ? `0 0 6px ${selectedLead.perfil.cor}80` : "none",
-                          }} />
-                          {i < ETAPAS_FUNIL.length - 1 && <div className="w-2 h-px" style={{ background: i < idx ? "#10B98160" : "rgba(255,255,255,0.06)" }} />}
-                         </div>
-                       );
-                     })}
-                   </div>
-                   <NathOpinionButton
-                     messages={selectedLead.mensagens.map(m => ({ role: m.role, content: m.content, agentName: m.agentName, timestamp: String(m.timestamp) }))}
-                     context={`Destino: ${selectedLead.destino} · Perfil: ${selectedLead.perfil.label} · Sentimento: ${selectedLead.sentimentoScore}/100 · Paciência: ${selectedLead.pacienciaRestante}% · Etapa: ${selectedLead.etapaAtual} · Ocasião: ${selectedLead.ocasiao}`}
-                     variant="inline"
-                   />
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Sentiment */}
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-secondary/50">
+                      <Heart className="w-3 h-3" style={{ color: sentimentColor(selectedLead.sentimentoScore) }} />
+                      <span className="text-[10px] font-bold tabular-nums" style={{ color: sentimentColor(selectedLead.sentimentoScore) }}>{selectedLead.sentimentoScore}</span>
+                    </div>
+                    {/* Patience */}
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-secondary/50">
+                      <Shield className="w-3 h-3" style={{ color: selectedLead.pacienciaRestante > 50 ? "#10B981" : "#EF4444" }} />
+                      <span className="text-[10px] font-bold tabular-nums" style={{ color: selectedLead.pacienciaRestante > 50 ? "#10B981" : "#EF4444" }}>{selectedLead.pacienciaRestante}</span>
+                    </div>
+                    {/* Stage dots */}
+                    <div className="flex items-center gap-1 bg-secondary/30 px-2.5 py-1.5 rounded-full">
+                      {ETAPAS_FUNIL.map((e, i) => {
+                        const idx = ETAPAS_FUNIL.findIndex(et => et.id === selectedLead.etapaAtual);
+                        return (
+                          <div key={e.id} className="flex items-center gap-0.5" title={e.label}>
+                            <div className={cn("w-2 h-2 rounded-full transition-all", i < idx ? "bg-emerald-500" : i === idx ? "bg-primary" : "bg-muted")} />
+                            {i < ETAPAS_FUNIL.length - 1 && <div className={cn("w-2 h-px", i < idx ? "bg-emerald-500/40" : "bg-muted")} />}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <NathOpinionButton
+                      messages={selectedLead.mensagens.map(m => ({ role: m.role, content: m.content, agentName: m.agentName, timestamp: String(m.timestamp) }))}
+                      context={`Destino: ${selectedLead.destino} · Perfil: ${selectedLead.perfil.label} · Sentimento: ${selectedLead.sentimentoScore}/100 · Paciência: ${selectedLead.pacienciaRestante}% · Etapa: ${selectedLead.etapaAtual} · Ocasião: ${selectedLead.ocasiao}`}
+                      variant="inline"
+                    />
+                  </div>
                 </div>
-                {/* Messages */}
-                <div ref={chatRef} className="flex-1 overflow-y-auto p-5 space-y-2" style={{ background: "#0B141A" }}>
-                  {selectedLead.mensagens.map((msg, i) => {
-                    const isAgent = msg.role === "agent";
-                    const showName = isAgent && (i === 0 || selectedLead.mensagens[i - 1]?.role !== "agent" || selectedLead.mensagens[i - 1]?.agentName !== msg.agentName);
-                    return (
-                      <div key={`msg-${msg.timestamp}-${i}`} className={cn("flex gap-2 animate-in duration-300", isAgent ? "justify-start slide-in-from-left-3" : "justify-end slide-in-from-right-3")}>
-                        <div style={{
-                          background: isAgent ? "rgba(31,44,51,0.9)" : "linear-gradient(135deg, #005C4B, #00694D)", color: "#E9EDEF",
-                          borderRadius: isAgent ? "4px 16px 16px 16px" : "16px 4px 16px 16px",
-                          maxWidth: "70%", padding: msg.imageUrl ? "4px 4px 4px 4px" : "10px 14px",
-                          overflow: "hidden",
-                        }}>
-                          {showName && msg.agentName && <p className="text-[15px] font-bold mb-1" style={{ color: "#53BDEB", padding: msg.imageUrl ? "6px 10px 0" : undefined }}>{msg.agentName}</p>}
-                          {msg.imageUrl ? (
-                            <div>
-                              <img src={msg.imageUrl} alt="Orçamento" className="rounded-lg w-full max-w-[320px]" style={{ marginBottom: 4 }} />
-                              <div className="flex items-center justify-end gap-1.5 px-2 pb-1">
-                                <span className="text-[15px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-                                  {new Date(msg.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                                {!isAgent && <span className="text-[15px]" style={{ color: "#34B7F1" }}>✓✓</span>}
+                {/* Messages — inbox identical bubble style */}
+                <div ref={chatRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 md:px-4">
+                  <div className="py-4 space-y-3">
+                    {selectedLead.mensagens.map((msg, i) => {
+                      const isAgent = msg.role === "agent";
+                      const isUser = msg.role === "client";
+                      const showName = isAgent && (i === 0 || selectedLead.mensagens[i - 1]?.role !== "agent" || selectedLead.mensagens[i - 1]?.agentName !== msg.agentName);
+                      const cleanContent = msg.content.replace("[TRANSFERIR]", "").trim();
+                      const ts = new Date(msg.timestamp);
+                      const prevTs = i > 0 ? new Date(selectedLead.mensagens[i - 1].timestamp) : null;
+                      const showDate = i === 0 || (prevTs && ts.toDateString() !== prevTs.toDateString());
+
+                      return (
+                        <Fragment key={`msg-${msg.timestamp}-${i}`}>
+                          {showDate && (
+                            <div className="flex justify-center my-4">
+                              <span className="bg-secondary/80 text-muted-foreground text-[10px] font-medium px-3 py-1.5 rounded-full">
+                                {ts.toDateString() === new Date().toDateString() ? "Hoje" : ts.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                              </span>
+                            </div>
+                          )}
+                          <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                            <div className={cn(
+                              "group relative max-w-[70%]"
+                            )}>
+                              <div className={cn(
+                                "rounded-2xl px-4 py-2.5",
+                                isUser
+                                  ? "bg-primary text-primary-foreground rounded-br-md"
+                                  : "bg-secondary text-secondary-foreground rounded-bl-md"
+                              )}>
+                                {showName && msg.agentName && (
+                                  <p className="text-[10px] font-bold text-primary mb-1">{msg.agentName}</p>
+                                )}
+                                {msg.imageUrl ? (
+                                  <div>
+                                    <img src={msg.imageUrl} alt="Orçamento" className="rounded-lg max-w-[250px] max-h-[300px] object-cover mb-1" />
+                                    {cleanContent && <p className="text-sm leading-relaxed mt-1">{cleanContent}</p>}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{cleanContent}</p>
+                                )}
+                                <div className="flex items-center justify-end gap-1 mt-1">
+                                  <span className="text-[9px] opacity-60">
+                                    {ts.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                                  </span>
+                                  {isUser && <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" style={{ filter: 'drop-shadow(0 0 1px rgba(83,189,235,0.5))' }} />}
+                                </div>
                               </div>
                             </div>
-                          ) : (
-                            <>
-                              <p className="text-[15px] leading-[1.6]">{msg.content.replace("[TRANSFERIR]", "").trim()}</p>
-                              <div className="flex items-center justify-end gap-1.5 mt-1">
-                                <span className="text-[15px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-                                  {new Date(msg.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                                </span>
-                                {!isAgent && <span className="text-[15px]" style={{ color: "#34B7F1" }}>✓✓</span>}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                          </div>
+                        </Fragment>
+                      );
+                    })}
+                  </div>
                 </div>
-                {/* Lead info bar */}
+                {/* Lead loss info */}
                 {selectedLead.motivoPerda && (
-                  <div className="px-5 py-2 flex items-center gap-2" style={{ background: "rgba(239,68,68,0.05)", borderTop: "1px solid rgba(239,68,68,0.1)" }}>
-                    <AlertTriangle className="w-3.5 h-3.5" style={{ color: "#EF4444" }} />
-                    <p className="text-[15px]" style={{ color: "#EF4444" }}>Perda: {selectedLead.motivoPerda.slice(0, 100)}</p>
+                  <div className="px-4 py-2 flex items-center gap-2 border-t border-destructive/20 bg-destructive/5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
+                    <p className="text-xs text-destructive">Perda: {selectedLead.motivoPerda.slice(0, 100)}</p>
                   </div>
                 )}
               </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center gap-3" style={{ background: "#0B141A" }}>
-                <Brain className="w-10 h-10" style={{ color: "rgba(255,255,255,0.05)" }} />
-                <p className="text-[15px]" style={{ color: "#94A3B8" }}>Selecione um lead para ver a conversa</p>
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 bg-background">
+                <Brain className="w-10 h-10 text-muted-foreground/20" />
+                <p className="text-sm text-muted-foreground">Selecione um lead para ver a conversa</p>
               </div>
             )}
           </div>
