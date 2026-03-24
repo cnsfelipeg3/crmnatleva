@@ -1142,7 +1142,7 @@ Retorne JSON:
               background: "linear-gradient(135deg, rgba(16,185,129,0.04), rgba(6,182,212,0.04))",
               border: "1px solid rgba(16,185,129,0.1)",
             }}>
-              <p className="text-[15px] uppercase tracking-[0.12em] font-bold" style={{ color: "#10B981" }}>Resumo da Config</p>
+              <p className="text-[10px] uppercase tracking-[0.12em] font-bold" style={{ color: "#10B981" }}>Resumo da Config</p>
               <div className="space-y-1.5">
                 {[
                   { label: "Leads", value: `${numLeads}`, color: "#3B82F6" },
