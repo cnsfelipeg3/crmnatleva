@@ -11,6 +11,55 @@ import {
 // ===== API — Roteamento inteligente por tipo de chamada =====
 export type SimCallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep" | "price_image";
 
+const SIMULATOR_MAX_CONCURRENT_REQUESTS = 2;
+const SIMULATOR_REQUEST_GAP_MS = 450;
+let activeSimulatorRequests = 0;
+let lastSimulatorRequestAt = 0;
+const simulatorRequestQueue: Array<() => void> = [];
+
+function pumpSimulatorQueue() {
+  if (activeSimulatorRequests >= SIMULATOR_MAX_CONCURRENT_REQUESTS || simulatorRequestQueue.length === 0) {
+    return;
+  }
+
+  const now = Date.now();
+  const waitMs = Math.max(0, lastSimulatorRequestAt + SIMULATOR_REQUEST_GAP_MS - now);
+  if (waitMs > 0) {
+    setTimeout(pumpSimulatorQueue, waitMs);
+    return;
+  }
+
+  activeSimulatorRequests += 1;
+  lastSimulatorRequestAt = Date.now();
+  simulatorRequestQueue.shift()?.();
+}
+
+async function withSimulatorRequestSlot<T>(task: () => Promise<T>): Promise<T> {
+  await new Promise<void>((resolve) => {
+    simulatorRequestQueue.push(resolve);
+    pumpSimulatorQueue();
+  });
+
+  try {
+    return await task();
+  } finally {
+    activeSimulatorRequests = Math.max(0, activeSimulatorRequests - 1);
+    pumpSimulatorQueue();
+  }
+}
+
+function compactHistoryForTransport(history: { role: string; content: string }[], retryCount: number) {
+  const maxMessages = retryCount >= 2 ? 8 : 12;
+  const maxCharsPerMessage = retryCount >= 2 ? 700 : 1000;
+
+  return history.slice(-maxMessages).map((message) => ({
+    role: message.role,
+    content: message.content.length > maxCharsPerMessage
+      ? `${message.content.slice(0, maxCharsPerMessage)}...`
+      : message.content,
+  }));
+}
+
 export function normalizeSimMessage(text: string): string {
   return text
     .normalize("NFD")
@@ -49,16 +98,20 @@ export function pushUniqueSimMessage(
 
 export async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent", agentBehaviorPrompt?: string, _retryCount = 0): Promise<string> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
-  const resp = await fetch(url, {
+  const requestHistory = compactHistoryForTransport(history, _retryCount);
+
+  const resp = await withSimulatorRequestSlot(() => fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-    body: JSON.stringify({ type, systemPrompt: sysPrompt, history, agentBehaviorPrompt: agentBehaviorPrompt || "", provider: "anthropic" }),
-  });
-  if (resp.status === 429 && _retryCount < 3) {
-    const delay = Math.pow(2, _retryCount) * 1000 + Math.random() * 500;
+    body: JSON.stringify({ type, systemPrompt: sysPrompt, history: requestHistory, agentBehaviorPrompt: agentBehaviorPrompt || "", provider: "anthropic" }),
+  }));
+
+  if (resp.status === 429 && _retryCount < 4) {
+    const delay = 1800 * Math.pow(2, _retryCount) + Math.random() * 900;
     await new Promise(r => setTimeout(r, delay));
     return callSimulatorAI(sysPrompt, history, type, agentBehaviorPrompt, _retryCount + 1);
   }
+
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
   if (type === "evaluate" || type === "debrief" || type === "deep" || type === "price_image") {
