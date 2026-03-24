@@ -453,8 +453,8 @@ export default function SimuladorManualMode() {
               onClick={() => { if (isMobile) { setPanelTab("agente"); setShowPanel(true); } }}
               className="relative shrink-0"
             >
-              <div className={cn("rounded-2xl flex items-center justify-center font-bold transition-all duration-300", isMobile ? "w-10 h-10 text-sm" : "w-11 h-11 text-base")}
-                style={{ background: `${agentColor}15`, color: agentColor, border: `2px solid ${agentColor}40`, boxShadow: `0 0 20px ${agentColor}15` }}>
+              <div className={cn("rounded-2xl flex items-center justify-center font-bold", isMobile ? "w-10 h-10 text-sm" : "w-11 h-11 text-base")}
+                style={{ background: `${agentColor}15`, color: agentColor, border: `2px solid ${agentColor}40`, transition: "background 0.2s, border-color 0.2s" }}>
                 {selectedAgent.emoji}
               </div>
               <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full" style={{ background: "#25D366", border: "2px solid #1F2C33" }}>
