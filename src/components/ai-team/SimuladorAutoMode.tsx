@@ -1166,6 +1166,9 @@ Retorne JSON:
                   { label: "Perfis", value: `${selectedProfiles.length || 8}`, color: "#EC4899" },
                   { label: "Paciência", value: `${initialPatience}%`, color: "#EF4444" },
                   { label: "Abandono", value: `${abandonmentSensitivity}%`, color: "#EF4444" },
+                  { label: "Retries", value: `${apiRetries}`, color: "#06B6D4" },
+                  { label: "Score mín", value: `${minScoreToPass}`, color: "#10B981" },
+                  { label: "Choque", value: enableSentimentShock ? `R${shockAtRound}` : "Off", color: "#EF4444" },
                 ].map(item => (
                   <div key={item.label} className="flex items-center justify-between">
                     <span className="text-[11px]" style={{ color: "#94A3B8" }}>{item.label}</span>
