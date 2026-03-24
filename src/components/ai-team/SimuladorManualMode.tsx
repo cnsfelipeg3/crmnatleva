@@ -136,6 +136,18 @@ export default function SimuladorManualMode() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // Load behavior_prompt from DB for all agents
+  const [agentBehaviors, setAgentBehaviors] = useState<Record<string, string>>({});
+  useEffect(() => {
+    supabase.from("ai_team_agents").select("id, behavior_prompt").then(({ data }) => {
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((a: any) => { if (a.behavior_prompt) map[a.id] = a.behavior_prompt; });
+        setAgentBehaviors(map);
+      }
+    });
+  }, []);
+
   useEffect(() => { scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight); }, [messages]);
 
   useEffect(() => {
