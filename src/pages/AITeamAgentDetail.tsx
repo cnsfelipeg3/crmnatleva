@@ -416,6 +416,11 @@ export default function AITeamAgentDetail() {
             </div>
           </TabsContent>
 
+          {/* ═══ TAB: MELHORIAS DA NATH ═══ */}
+          <TabsContent value="improvements" className="space-y-4 mt-0">
+            <NathImprovementsTab improvements={nathImprovements} knowledge={nathKnowledge} agentName={displayName} />
+          </TabsContent>
+
           {/* ═══ TAB: KNOWLEDGE BASE ═══ */}
           <TabsContent value="knowledge" className="space-y-4 mt-0">
             <KnowledgeBaseTab docs={agentDocs} agentName={displayName} />
