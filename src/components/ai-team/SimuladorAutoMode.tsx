@@ -331,7 +331,7 @@ export default function SimuladorAutoMode() {
   };
   const [presets, setPresets] = useState(loadPresets);
   const savePreset = (name: string) => {
-    const config = { numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency };
+    const config = { numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, leadPatienceCurve, initialPatience, leadToneFormality, leadTypingStyle, abandonmentSensitivity, infoRevealSpeed, leadFollowUpPressure, enableLeadTypos, enableLeadEmojis, enableLeadAudioRef, leadConversationGoal, maxConversationMinutes, leadReengagementChance, leadCustomInstructions };
     const updated = [...presets.filter(p => p.name !== name), { name, config }];
     localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(updated));
     setPresets(updated);
@@ -347,6 +347,13 @@ export default function SimuladorAutoMode() {
     setEnableTransfers(config.enableTransfers ?? true); setEmotionalVolatility(config.emotionalVolatility ?? 50);
     setAgentResponseLength(config.agentResponseLength ?? "media"); setEnableLossNarrative(config.enableLossNarrative ?? true);
     setEvalFrequency(config.evalFrequency ?? "every");
+    setLeadPatienceCurve(config.leadPatienceCurve ?? "linear"); setInitialPatience(config.initialPatience ?? 80);
+    setLeadToneFormality(config.leadToneFormality ?? 50); setLeadTypingStyle(config.leadTypingStyle ?? "natural");
+    setAbandonmentSensitivity(config.abandonmentSensitivity ?? 50); setInfoRevealSpeed(config.infoRevealSpeed ?? "gradual");
+    setLeadFollowUpPressure(config.leadFollowUpPressure ?? 30); setEnableLeadTypos(config.enableLeadTypos ?? false);
+    setEnableLeadEmojis(config.enableLeadEmojis ?? true); setEnableLeadAudioRef(config.enableLeadAudioRef ?? false);
+    setLeadConversationGoal(config.leadConversationGoal ?? "aleatorio"); setMaxConversationMinutes(config.maxConversationMinutes ?? 0);
+    setLeadReengagementChance(config.leadReengagementChance ?? 20); setLeadCustomInstructions(config.leadCustomInstructions ?? "");
     toast({ title: "Preset carregado!" });
   };
   const deletePreset = (name: string) => {
