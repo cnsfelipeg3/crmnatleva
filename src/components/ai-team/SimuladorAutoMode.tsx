@@ -426,10 +426,25 @@ export default function SimuladorAutoMode() {
       // Apply objection density from config
       lead.temObjecao = Math.random() * 100 < objectionDensity;
 
-      // Apply emotional volatility — affects patience drain
+      // Apply lead behavior calibration
+      lead.pacienciaRestante = initialPatience;
       if (emotionalVolatility > 70) {
-        lead.pacienciaRestante = Math.max(30, lead.pacienciaRestante - Math.floor((emotionalVolatility - 50) * 0.5));
+        lead.pacienciaRestante = Math.max(20, lead.pacienciaRestante - Math.floor((emotionalVolatility - 50) * 0.5));
       }
+      // Apply abandonment sensitivity to patience drain rate
+      (lead as any)._abandonSensitivity = abandonmentSensitivity;
+      (lead as any)._patienceCurve = leadPatienceCurve;
+      (lead as any)._toneFormality = leadToneFormality;
+      (lead as any)._typingStyle = leadTypingStyle;
+      (lead as any)._followUpPressure = leadFollowUpPressure;
+      (lead as any)._infoRevealSpeed = infoRevealSpeed;
+      (lead as any)._enableTypos = enableLeadTypos;
+      (lead as any)._enableEmojis = enableLeadEmojis;
+      (lead as any)._enableAudioRef = enableLeadAudioRef;
+      (lead as any)._conversationGoal = leadConversationGoal === "aleatorio" ? ["comprar","pesquisar","comparar"][Math.floor(Math.random()*3)] : leadConversationGoal;
+      (lead as any)._maxConvMinutes = maxConversationMinutes;
+      (lead as any)._reengagementChance = leadReengagementChance;
+      (lead as any)._customInstructions = leadCustomInstructions;
 
       allLeads.push(lead);
       setLeads([...allLeads]);
