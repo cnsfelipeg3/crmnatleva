@@ -37,6 +37,10 @@ interface SimulatorChatLayoutProps {
   contactName?: string;
   inputPlaceholder?: string;
   disabled?: boolean;
+  /** Click handler for message bubbles (for observation linking) */
+  onMessageClick?: (msg: SimChatMessage) => void;
+  /** Timestamp of currently selected message for highlight */
+  selectedMessageTimestamp?: string;
 }
 
 // ─── Helpers (same as inbox) ───
