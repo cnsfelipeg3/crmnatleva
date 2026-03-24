@@ -92,8 +92,8 @@ function Linkify({ text }: { text: string }) {
 
 // ─── Message Bubble — identical to inbox ───
 const ChatBubble = memo(function ChatBubble({
-  msg, messages, index,
-}: { msg: SimChatMessage; messages: SimChatMessage[]; index: number }) {
+  msg, messages, index, onClick, isSelected,
+}: { msg: SimChatMessage; messages: SimChatMessage[]; index: number; onClick?: () => void; isSelected?: boolean }) {
   const showDate = shouldShowDateSeparator(messages, index);
   const isAgent = msg.role === "agent";
   const isSystem = msg.role === "system";
@@ -121,7 +121,14 @@ const ChatBubble = memo(function ChatBubble({
             <span className="text-[9px] text-muted-foreground">{formatMsgTime(msg.timestamp)}</span>
           </div>
         ) : (
-          <div className="group relative max-w-[70%]">
+          <div
+            className={cn(
+              "group relative max-w-[70%] transition-all",
+              onClick ? "cursor-pointer hover:brightness-110" : "",
+              isSelected ? "ring-2 ring-amber-500/50 rounded-2xl" : ""
+            )}
+            onClick={onClick}
+          >
             <div className={cn(
               "rounded-2xl px-4 py-2.5",
               isUser
@@ -149,7 +156,7 @@ const ChatBubble = memo(function ChatBubble({
       </div>
     </Fragment>
   );
-}, (prev, next) => prev.msg.id === next.msg.id && prev.msg.content === next.msg.content && prev.index === next.index);
+}, (prev, next) => prev.msg.id === next.msg.id && prev.msg.content === next.msg.content && prev.index === next.index && prev.isSelected === next.isSelected);
 
 // ─── Typing Indicator — same as inbox ───
 function TypingIndicator() {
