@@ -879,8 +879,23 @@ export default function SimuladorAutoMode() {
     setPhase("report");
     const elapsed = Math.round((Date.now() - simStartTime) / 1000);
     const wasTimeout = elapsed >= duration;
+
+    // Finalize DB persistence
+    const finalClosed = allLeads.filter(l => l.status === "fechou");
+    const finalLost = allLeads.filter(l => l.status === "perdeu");
+    const finalRevenue = finalClosed.reduce((s, l) => s + l.ticket, 0);
+    const finalConv = allLeads.length > 0 ? Math.round((finalClosed.length / allLeads.length) * 100) : 0;
+    simPersistence.finishSimulation({
+      leadsClosed: finalClosed.length,
+      leadsLost: finalLost.length,
+      conversionRate: finalConv,
+      totalRevenue: finalRevenue,
+      scoreGeral: 0,
+      durationSeconds: elapsed,
+    });
+
     toast({ title: wasTimeout ? "Simulação encerrada por tempo!" : "Simulação concluída!", description: `${allLeads.length} leads processados em ${formatTime(elapsed)}` });
-  }, [numLeads, msgsPerLead, intervalSec, duration, parallelLeads, dispatchMode, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, initialPatience, leadPatienceCurve, abandonmentSensitivity, leadToneFormality, leadTypingStyle, leadFollowUpPressure, infoRevealSpeed, enableLeadTypos, enableLeadEmojis, enableLeadAudioRef, leadConversationGoal, maxConversationMinutes, leadReengagementChance, leadCustomInstructions, toast]);
+  }, [numLeads, msgsPerLead, intervalSec, duration, parallelLeads, dispatchMode, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, initialPatience, leadPatienceCurve, abandonmentSensitivity, leadToneFormality, leadTypingStyle, leadFollowUpPressure, infoRevealSpeed, enableLeadTypos, enableLeadEmojis, enableLeadAudioRef, leadConversationGoal, maxConversationMinutes, leadReengagementChance, leadCustomInstructions, toast, simPersistence]);
 
   const stopSimulation = () => stopSimulationRef.current();
 
