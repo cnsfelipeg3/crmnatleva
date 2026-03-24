@@ -15,7 +15,7 @@ import {
   BarChart3, Clock, Search, Filter, Tag,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { ItemOriginBadge } from "@/components/ai-team/ItemOriginBadge";
+import { ItemOriginBadge, isFromNath, NathOriginTag } from "@/components/ai-team/ItemOriginBadge";
 
 interface LearnedPattern {
   id: string;
