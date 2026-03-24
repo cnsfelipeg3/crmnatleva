@@ -1189,7 +1189,7 @@ Retorne JSON:
             {/* Active tab accent line */}
             <div className="h-[2px]" style={{ background: `linear-gradient(90deg, transparent, ${CONFIG_TABS.find(t => t.id === configTab)?.color || "#10B981"}, transparent)` }} />
 
-            <div className={cn("overflow-y-auto", isMobile ? "p-4" : "p-6")} style={{ maxHeight: isMobile ? "60vh" : 500 }}>
+            <div className={cn("overflow-y-auto flex-1", isMobile ? "p-4" : "p-6")}>
               {/* ===== VOLUME TAB ===== */}
               {configTab === "volume" && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-right-3 duration-300">
