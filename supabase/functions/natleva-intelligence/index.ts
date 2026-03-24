@@ -603,6 +603,7 @@ ${attachmentContext}${urlContext}${learningContext}${webSearchContext}`;
         model: route.model,
         messages: aiMessages,
         stream: true,
+        ...(route.model === "openai/gpt-5" ? { reasoning: { effort: "high" } } : {}),
       }),
     });
 
