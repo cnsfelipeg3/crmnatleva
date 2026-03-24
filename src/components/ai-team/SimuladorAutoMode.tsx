@@ -1223,10 +1223,10 @@ Retorne JSON:
   if (phase === "config") {
     return (
       <div className="animate-in fade-in slide-in-from-bottom-3 duration-500" style={{ maxWidth: 1100 }}>
-        {/* 2-column: Tabs + Content */}
-        <div className="flex gap-5" style={{ minHeight: 520 }}>
-          {/* LEFT: Tab Navigation */}
-          <div className="w-[220px] shrink-0 space-y-1.5">
+        {/* Mobile: horizontal scroll tabs. Desktop: 2-column */}
+        <div className={cn("flex", isMobile ? "flex-col gap-3" : "gap-5")} style={{ minHeight: isMobile ? undefined : 520 }}>
+          {/* Tab Navigation */}
+          <div className={cn(isMobile ? "flex gap-2 overflow-x-auto pb-2 scrollbar-hide" : "w-[220px] shrink-0 space-y-1.5")}>
             {CONFIG_TABS.map((tab, i) => {
               const active = configTab === tab.id;
               const Icon = tab.icon;
