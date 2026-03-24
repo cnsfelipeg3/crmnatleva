@@ -5,6 +5,7 @@ import NathOpinionButton from "./NathOpinionButton";
 import { Slider } from "@/components/ui/slider";
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining } from "@/components/ai-team/agentTrainingStore";
+import { useGlobalRules, buildGlobalRulesBlock, type GlobalRule } from "@/hooks/useGlobalRules";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useSimulationPersistence } from "@/hooks/useSimulationPersistence";
