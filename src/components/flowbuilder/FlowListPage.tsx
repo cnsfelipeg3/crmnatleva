@@ -67,6 +67,10 @@ export function FlowListPage({ onOpenFlow }: Props) {
   const [editingRuleData, setEditingRuleData] = useState<{ label: string; keywords: string; flowId: string; excludeKeyword: string; excludeMessage: string }>({ label: "", keywords: "", flowId: "", excludeKeyword: "", excludeMessage: "" });
   const flowNameRef = useRef<HTMLInputElement>(null);
 
+  // Delete confirmation
+  const [deleteFlowId, setDeleteFlowId] = useState<string | null>(null);
+  const [deleteFlowName, setDeleteFlowName] = useState("");
+
   useEffect(() => { fetchFlows(); fetchRouterRules(); }, []);
 
   useEffect(() => {
