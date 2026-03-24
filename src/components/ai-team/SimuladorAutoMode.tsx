@@ -14,6 +14,7 @@ import {
   buildAvaliacaoPrompt, buildMensagemPerdaPrompt,
   gerarLeadInteligente, deveInserirObjecao, atualizarEstadoEmocional, devePerdeLead,
 } from "./intelligentLeads";
+import { compressConversation, estimateTokens, BUILT_IN_PRESETS } from "./contextCompression";
 import {
   getAgentPesos, getNivel, buildLiveEvalPrompt, buildDebriefV2Prompt,
   SYSTEM_DEBRIEF_V2, CRITERIOS_AVALIACAO,
@@ -375,6 +376,8 @@ export default function SimuladorAutoMode() {
   const [msgsPerLead, setMsgsPerLead] = useState(14);
   const [intervalSec, setIntervalSec] = useState(1);
   const [duration, setDuration] = useState(180);
+  const [parallelLeads, setParallelLeads] = useState(1); // How many leads to process simultaneously
+  const [dispatchMode, setDispatchMode] = useState<"sequential" | "simultaneous" | "wave">("sequential");
   // Config — Perfis
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
   const [profileMode, setProfileMode] = useState<"random" | "roundrobin">("random");
@@ -555,14 +558,8 @@ export default function SimuladorAutoMode() {
     const allLeads: LeadInteligente[] = [];
     const grupos = selectedGrupos.length > 0 ? selectedGrupos : GRUPOS_LEAD;
 
+    // ===== Create all leads upfront =====
     for (let i = 0; i < numLeads; i++) {
-      if (!simAtivaRef.current || abortRef.current) break;
-      // ★ ENFORCE DURATION LIMIT
-      if (isDurationExceeded()) {
-        addEvent("#F59E0B", `⏱️ Tempo limite (${formatTime(duration)}) atingido — encerrando simulação`, "⏰");
-        break;
-      }
-
       const perfil = profileMode === "roundrobin"
         ? profiles[i % profiles.length]
         : profiles[Math.floor(Math.random() * profiles.length)];
@@ -574,20 +571,14 @@ export default function SimuladorAutoMode() {
         grupo: grupos[Math.floor(Math.random() * grupos.length)],
       });
 
-      // Apply conversion override
       if (conversionOverride !== null) {
         lead.ticket = Math.random() * 100 < conversionOverride ? (8000 + Math.floor(Math.random() * 42000)) : 0;
       }
-
-      // Apply objection density from config
       lead.temObjecao = Math.random() * 100 < objectionDensity;
-
-      // Apply lead behavior calibration
       lead.pacienciaRestante = initialPatience;
       if (emotionalVolatility > 70) {
         lead.pacienciaRestante = Math.max(20, lead.pacienciaRestante - Math.floor((emotionalVolatility - 50) * 0.5));
       }
-      // Apply abandonment sensitivity to patience drain rate
       (lead as any)._abandonSensitivity = abandonmentSensitivity;
       (lead as any)._patienceCurve = leadPatienceCurve;
       (lead as any)._toneFormality = leadToneFormality;
@@ -603,20 +594,25 @@ export default function SimuladorAutoMode() {
       (lead as any)._customInstructions = leadCustomInstructions;
 
       allLeads.push(lead);
-      setLeads([...allLeads]);
-      if (i === 0) setSelectedLeadId(lead.id);
+    }
+    setLeads([...allLeads]);
+    if (allLeads.length > 0) setSelectedLeadId(allLeads[0].id);
+
+    // ===== Per-lead simulation logic (extracted for parallel use) =====
+    const simulateLead = async (lead: LeadInteligente) => {
+      if (!simAtivaRef.current || abortRef.current) return;
+      if (isDurationExceeded()) return;
 
       addEvent("#3B82F6", `${lead.perfil.emoji} ${lead.nome} entrou via ${lead.origem} · ${lead.destino} · ${lead.paxLabel}`, "📥");
 
       try {
-        // 1. Generate first client message via AI
         const firstMsg = await generateLeadMsg(lead, "", true);
+        if (!simAtivaRef.current) return;
         lead.mensagens.push({ role: "client", content: firstMsg, timestamp: Date.now() });
-        setLeads([...allLeads]);
+        setLeads(prev => [...prev]);
         addEvent(lead.perfil.cor, `${lead.nome}: "${firstMsg.slice(0, 50)}..."`, "💬");
 
         const stages = ETAPAS_FUNIL.map(e => e.id);
-        // ★ FIX: use msgsPerLead directly — NO artificial cap
         const rounds = Math.floor(msgsPerLead / 2);
         let agentIdx = 0;
         let forceLoss = false;
@@ -624,7 +620,6 @@ export default function SimuladorAutoMode() {
 
         for (let r = 0; r < rounds; r++) {
           if (!simAtivaRef.current || abortRef.current || forceLoss) break;
-          // ★ ENFORCE DURATION LIMIT per round
           if (isDurationExceeded()) {
             addEvent("#F59E0B", `⏱️ Tempo esgotado durante conversa com ${lead.nome}`, "⏰");
             break;
@@ -634,56 +629,54 @@ export default function SimuladorAutoMode() {
           const hasNext = enableTransfers && agentIdx < funnelAgents.length - 1;
           lead.etapaAtual = stages[Math.min(agentIdx, stages.length - 1)];
 
-          // 2. Agent responds
+          // Agent responds — with context compression for long conversations
+          const compressedHistory = compressConversation(lead.mensagens);
           const agentResp = await callSimulatorAI(
             buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength),
-            lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content })), "agent"
+            compressedHistory, "agent"
           );
+          if (!simAtivaRef.current) return;
           lead.mensagens.push({ role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
-          setLeads([...allLeads]);
+          setLeads(prev => [...prev]);
 
-          // 2b. Detect price print mention → generate actual image
+          // Detect price print mention → generate actual image
           if (detectsPricePrint(agentResp)) {
             addEvent("#8B5CF6", `📸 ${agent.name} gerando print de preço para ${lead.nome}...`, "🖼️");
             const priceImg = await generatePriceImage(lead);
-            if (priceImg) {
+            if (priceImg && simAtivaRef.current) {
               lead.mensagens.push({ role: "agent", content: "📋 Orçamento", agentName: agent.name, timestamp: Date.now(), imageUrl: priceImg });
-              setLeads([...allLeads]);
+              setLeads(prev => [...prev]);
               addEvent("#10B981", `✅ Print de preço enviado para ${lead.nome}`, "🖼️");
             }
           }
 
-          // 3. Evaluate agent response (AI judge) — 3 dimensões — respects evalFrequency
+          // Evaluate agent response
           evalCounter++;
           if (enableEvaluation && evalCounter % evalEvery === 0) {
             const avaliacao = await avaliarRespostaAgente(agentResp, lead);
-            // Apply emotional volatility to sentiment impact
+            if (!simAtivaRef.current) return;
             const volatilityMult = emotionalVolatility / 50;
             const adjustedNota = Math.round(avaliacao.nota * volatilityMult + (50 * (1 - volatilityMult / 2)));
             const updatedLead = atualizarEstadoEmocional(lead, adjustedNota, avaliacao.reacao, avaliacao.sentimento);
             Object.assign(lead, updatedLead);
-            // Apply patience curve from calibration
             const curve = (lead as any)._patienceCurve || "linear";
             const abSens = ((lead as any)._abandonSensitivity ?? 50) / 100;
             if (curve === "exponential") {
-              // Exponential: patience drops slowly at first, then fast
               const ratio = 1 - (lead.pacienciaRestante / initialPatience);
               const extraDrain = Math.floor(ratio * ratio * 15 * (1 + abSens));
               lead.pacienciaRestante = Math.max(0, lead.pacienciaRestante - extraDrain);
             } else if (curve === "sudden") {
-              // Sudden: patience stable until threshold, then collapses
               if (lead.pacienciaRestante < 40 && adjustedNota < 60) {
                 lead.pacienciaRestante = Math.max(0, lead.pacienciaRestante - Math.floor(25 * (1 + abSens)));
               }
             } else {
-              // Linear: steady drain amplified by abandonment sensitivity
               const drain = Math.floor(5 * (1 + abSens));
               if (adjustedNota < 50) lead.pacienciaRestante = Math.max(0, lead.pacienciaRestante - drain);
             }
             lead.scoreHumanizacao = lead.scoreHumanizacao > 0 ? Math.round((lead.scoreHumanizacao + avaliacao.humanizacao) / 2) : avaliacao.humanizacao;
             lead.scoreEficacia = lead.scoreEficacia > 0 ? Math.round((lead.scoreEficacia + avaliacao.eficaciaComercial) / 2) : avaliacao.eficaciaComercial;
             lead.scoreTecnica = lead.scoreTecnica > 0 ? Math.round((lead.scoreTecnica + avaliacao.qualidadeTecnica) / 2) : avaliacao.qualidadeTecnica;
-            setLeads([...allLeads]);
+            setLeads(prev => [...prev]);
 
             if (avaliacao.nota < 40) {
               addEvent("#F59E0B", `${lead.nome}: ${avaliacao.reacao} (H:${avaliacao.humanizacao} E:${avaliacao.eficaciaComercial} T:${avaliacao.qualidadeTecnica})`, "😤");
@@ -691,7 +684,6 @@ export default function SimuladorAutoMode() {
               addEvent("#10B981", `${lead.nome}: ${avaliacao.reacao} (H:${avaliacao.humanizacao} E:${avaliacao.eficaciaComercial} T:${avaliacao.qualidadeTecnica})`, "😊");
             }
 
-            // Check if lead gives up
             if (devePerdeLead(lead)) {
               if (enableLossNarrative) {
                 const lossMsg = await gerarMensagemPerda(lead);
@@ -700,10 +692,8 @@ export default function SimuladorAutoMode() {
               } else {
                 lead.motivoPerda = `Paciência esgotada (${lead.pacienciaRestante})`;
               }
-              lead.status = "perdeu";
-              lead.resultadoFinal = "perdeu";
-              lead.etapaPerda = lead.etapaAtual;
-              setLeads([...allLeads]);
+              lead.status = "perdeu"; lead.resultadoFinal = "perdeu"; lead.etapaPerda = lead.etapaAtual;
+              setLeads(prev => [...prev]);
               addEvent("#EF4444", `❌ ${lead.nome} DESISTIU em ${lead.etapaAtual}: "${(lead.motivoPerda || "").slice(0, 60)}..."`, "💔");
               forceLoss = true;
               break;
@@ -724,47 +714,52 @@ export default function SimuladorAutoMode() {
           if (speedDelay > 0) await new Promise(r => setTimeout(r, speedDelay));
           if (r >= rounds - 1 || abortRef.current) break;
 
-          // 4. Check for dynamic objection
+          // Check for dynamic objection
           const turno = r + 1;
           if (deveInserirObjecao(lead, lead.etapaAtual, turno)) {
             const objecao = await gerarObjecao(lead, agentResp);
+            if (!simAtivaRef.current) return;
             lead.mensagens.push({ role: "client", content: objecao, timestamp: Date.now() });
             if (lead.objecoesPendentes.length > 0) {
               lead.objecoesLancadas.push(lead.objecoesPendentes.shift()!);
             }
-            setLeads([...allLeads]);
+            setLeads(prev => [...prev]);
             addEvent("#F59E0B", `⚠️ Objeção de ${lead.nome}: "${objecao.slice(0, 50)}..."`, "🛡️");
 
-            // Agent needs to handle objection
+            const objCompressed = compressConversation(lead.mensagens);
             const objResp = await callSimulatorAI(
               buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength),
-              lead.mensagens.map(m => ({ role: m.role === "client" ? "user" : "assistant", content: m.content })), "agent"
+              objCompressed, "agent"
             );
+            if (!simAtivaRef.current) return;
             lead.mensagens.push({ role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
-            setLeads([...allLeads]);
+            setLeads(prev => [...prev]);
             continue;
           }
 
-          // 5. Generate contextual lead response via AI
+          // Generate contextual lead response via AI
           const clientResp = await generateLeadMsg(lead, agentResp, false);
+          if (!simAtivaRef.current) return;
           lead.mensagens.push({ role: "client", content: clientResp, timestamp: Date.now() });
-          setLeads([...allLeads]);
+          setLeads(prev => [...prev]);
 
           // Multi-message behavior
           if (enableMultiMsg && Math.random() < lead.probabilidadeMultiMensagem) {
             const extraMsg = await generateLeadMsg(lead, agentResp, false);
-            lead.mensagens.push({ role: "client", content: extraMsg, timestamp: Date.now() });
-            setLeads([...allLeads]);
-            addEvent(lead.perfil.cor, `${lead.nome} enviou múltiplas msgs`, "💬💬");
+            if (simAtivaRef.current) {
+              lead.mensagens.push({ role: "client", content: extraMsg, timestamp: Date.now() });
+              setLeads(prev => [...prev]);
+              addEvent(lead.perfil.cor, `${lead.nome} enviou múltiplas msgs`, "💬💬");
+            }
           }
 
-          // Follow-up pressure: lead sends "???" if configured
+          // Follow-up pressure
           const fup = (lead as any)._followUpPressure ?? 30;
           if (fup > 0 && Math.random() * 100 < fup) {
             const followUps = ["??", "e aí?", "alguém?", "oi?", "tô aguardando", "???", "🙄", "tem alguém aí?", "vou procurar outra agência..."];
             const fMsg = followUps[Math.floor(Math.random() * followUps.length)];
             lead.mensagens.push({ role: "client", content: fMsg, timestamp: Date.now() });
-            setLeads([...allLeads]);
+            setLeads(prev => [...prev]);
             addEvent("#F59E0B", `${lead.nome}: follow-up "${fMsg}"`, "⏰");
           }
 
@@ -788,9 +783,7 @@ export default function SimuladorAutoMode() {
             : lead.ticket > 0;
 
           if (willClose) {
-            lead.status = "fechou";
-            lead.resultadoFinal = "fechou";
-            lead.etapaAtual = "fechamento";
+            lead.status = "fechou"; lead.resultadoFinal = "fechou"; lead.etapaAtual = "fechamento";
             addEvent("#EAB308", `🎉 ${lead.nome} FECHOU · R$${(lead.ticket / 1000).toFixed(0)}k · ${lead.perfil.label}`, "🏆");
           } else {
             if (enableLossNarrative) {
@@ -800,24 +793,53 @@ export default function SimuladorAutoMode() {
             } else {
               lead.motivoPerda = "Não converteu";
             }
-            lead.status = "perdeu";
-            lead.resultadoFinal = "perdeu";
-            lead.etapaPerda = lead.etapaAtual;
+            lead.status = "perdeu"; lead.resultadoFinal = "perdeu"; lead.etapaPerda = lead.etapaAtual;
             addEvent("#EF4444", `${lead.nome} perdido em ${lead.etapaAtual} · ${lead.perfil.label}`, "📉");
           }
-          setLeads([...allLeads]);
+          setLeads(prev => [...prev]);
         }
       } catch (err) {
         console.error("Lead sim error:", err);
-        lead.status = "perdeu";
-        lead.motivoPerda = "Erro de sistema";
-        setLeads([...allLeads]);
+        lead.status = "perdeu"; lead.motivoPerda = "Erro de sistema";
+        setLeads(prev => [...prev]);
       }
+    };
 
-      // ★ ENFORCE intervalSec exactly as configured
-      if (i < numLeads - 1 && !abortRef.current) {
-        const delayMs = intervalSec * 1000;
-        if (delayMs > 0) await new Promise(r => setTimeout(r, delayMs));
+    // ===== Dispatch leads based on mode =====
+    if (dispatchMode === "simultaneous") {
+      // All leads start at once — parallel processing
+      addEvent("#8B5CF6", `⚡ Disparo simultâneo: ${allLeads.length} leads ao mesmo tempo!`, "🚀");
+      const batchSize = Math.min(allLeads.length, 10); // API rate limit protection
+      for (let i = 0; i < allLeads.length; i += batchSize) {
+        if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
+        const batch = allLeads.slice(i, i + batchSize);
+        await Promise.all(batch.map(lead => simulateLead(lead)));
+        if (i + batchSize < allLeads.length) {
+          await new Promise(r => setTimeout(r, 500)); // Small delay between batches for rate limiting
+        }
+      }
+    } else if (dispatchMode === "wave") {
+      // Wave mode — process in configurable parallel batches
+      const waveSize = Math.max(2, parallelLeads);
+      let waveNum = 1;
+      for (let i = 0; i < allLeads.length; i += waveSize) {
+        if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
+        const batch = allLeads.slice(i, i + waveSize);
+        addEvent("#06B6D4", `🌊 Onda ${waveNum}: ${batch.length} leads`, "🌊");
+        await Promise.all(batch.map(lead => simulateLead(lead)));
+        waveNum++;
+        if (i + waveSize < allLeads.length && intervalSec > 0) {
+          await new Promise(r => setTimeout(r, intervalSec * 1000));
+        }
+      }
+    } else {
+      // Sequential — original behavior
+      for (let i = 0; i < allLeads.length; i++) {
+        if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
+        await simulateLead(allLeads[i]);
+        if (i < allLeads.length - 1 && !abortRef.current && intervalSec > 0) {
+          await new Promise(r => setTimeout(r, intervalSec * 1000));
+        }
       }
     }
 
@@ -827,7 +849,7 @@ export default function SimuladorAutoMode() {
     const elapsed = Math.round((Date.now() - simStartTime) / 1000);
     const wasTimeout = elapsed >= duration;
     toast({ title: wasTimeout ? "Simulação encerrada por tempo!" : "Simulação concluída!", description: `${allLeads.length} leads processados em ${formatTime(elapsed)}` });
-  }, [numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, initialPatience, leadPatienceCurve, abandonmentSensitivity, leadToneFormality, leadTypingStyle, leadFollowUpPressure, infoRevealSpeed, enableLeadTypos, enableLeadEmojis, enableLeadAudioRef, leadConversationGoal, maxConversationMinutes, leadReengagementChance, leadCustomInstructions, toast]);
+  }, [numLeads, msgsPerLead, intervalSec, duration, parallelLeads, dispatchMode, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, initialPatience, leadPatienceCurve, abandonmentSensitivity, leadToneFormality, leadTypingStyle, leadFollowUpPressure, infoRevealSpeed, enableLeadTypos, enableLeadEmojis, enableLeadAudioRef, leadConversationGoal, maxConversationMinutes, leadReengagementChance, leadCustomInstructions, toast]);
 
   const stopSimulation = () => stopSimulationRef.current();
 
@@ -1270,7 +1292,7 @@ Retorne JSON:
   }, [leads, closedLeads, lostLeads, elapsedSeconds, conversionRate, totalReceita, ticketMedio, avgSentimento, avgHumanizacao, avgEficacia, avgTecnica, toast]);
 
   const CONFIG_TABS = [
-    { id: "volume" as const, label: "Volume & Tempo", icon: BarChart3, color: "#3B82F6", summary: `${numLeads} leads · ${msgsPerLead} msgs · ${formatTime(duration)}` },
+    { id: "volume" as const, label: "Volume & Tempo", icon: BarChart3, color: "#3B82F6", summary: `${numLeads} leads · ${msgsPerLead} msgs · ${duration >= 3600 ? Math.floor(duration / 3600) + "h" : formatTime(duration)} · ${dispatchMode === "simultaneous" ? "simultâneo" : dispatchMode === "wave" ? "ondas" : "seq."}` },
     { id: "perfis" as const, label: "Perfis", icon: User, color: "#EC4899", summary: `${selectedProfiles.length || 8} perfis ativos` },
     { id: "cenario" as const, label: "Cenário", icon: MapPin, color: "#06B6D4", summary: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos` },
     { id: "lead_behavior" as const, label: "Calibração Lead", icon: Heart, color: "#EF4444", summary: `Paciência ${initialPatience}% · ${leadPatienceCurve} · ${abandonmentSensitivity}% sensib.` },
@@ -1373,16 +1395,16 @@ Retorne JSON:
                   </div>
                   <div className={cn("gap-6", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                     {[
-                      { label: "Leads simultâneos", value: numLeads, setter: setNumLeads, min: 1, max: 100, step: 1, color: "#3B82F6", desc: "Quantidade de leads que entram na simulação" },
-                      { label: "Mensagens por lead", value: msgsPerLead, setter: setMsgsPerLead, min: 4, max: 40, step: 2, color: "#10B981", desc: "Rodadas de conversa entre agente e lead" },
-                      { label: "Intervalo entre leads", value: intervalSec, setter: setIntervalSec, min: 0, max: 30, step: 1, color: "#F59E0B", desc: "Segundos entre entrada de cada lead", suffix: "s" },
-                      { label: "Duração máxima", value: duration, setter: setDuration, min: 30, max: 1800, step: 30, color: "#8B5CF6", desc: "Tempo limite da simulação", format: true },
+                      { label: "Leads totais", value: numLeads, setter: setNumLeads, min: 1, max: 500, step: 1, color: "#3B82F6", desc: "Quantidade de leads na simulação (até 500)" },
+                      { label: "Mensagens por lead", value: msgsPerLead, setter: setMsgsPerLead, min: 4, max: 500, step: 2, color: "#10B981", desc: "Rodadas de conversa (até 500 — compressão automática)" },
+                      { label: "Intervalo entre leads", value: intervalSec, setter: setIntervalSec, min: 0, max: 60, step: 1, color: "#F59E0B", desc: "Segundos entre entrada de cada lead (0 = simultâneo)", suffix: "s" },
+                      { label: "Duração máxima", value: duration, setter: setDuration, min: 30, max: 86400, step: 30, color: "#8B5CF6", desc: "Tempo limite (até 24h)", format: true },
                     ].map(s => (
                       <div key={s.label} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-[12px] font-semibold" style={{ color: "#E2E8F0" }}>{s.label}</span>
                           <span className="text-[22px] font-extrabold tabular-nums" style={{ color: s.color, textShadow: `0 0 20px ${s.color}20` }}>
-                            {s.format ? formatTime(s.value) : s.value}{s.suffix || ""}
+                            {s.format ? (s.value >= 3600 ? `${Math.floor(s.value / 3600)}h${Math.floor((s.value % 3600) / 60)}m` : formatTime(s.value)) : s.value}{s.suffix || ""}
                           </span>
                         </div>
                         <p className="text-[9px] mb-3" style={{ color: "#475569" }}>{s.desc}</p>
@@ -1390,6 +1412,53 @@ Retorne JSON:
                       </div>
                     ))}
                   </div>
+
+                  {/* Dispatch Mode */}
+                  <div className="rounded-xl p-4 mt-2" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                    <p className="text-[12px] font-semibold mb-2" style={{ color: "#E2E8F0" }}>Modo de Disparo</p>
+                    <p className="text-[9px] mb-3" style={{ color: "#475569" }}>Como os leads entram na simulação</p>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { id: "sequential" as const, label: "Sequencial", desc: "Um lead por vez", icon: "📋" },
+                        { id: "simultaneous" as const, label: "Simultâneo", desc: "Todos ao mesmo tempo", icon: "⚡" },
+                        { id: "wave" as const, label: "Ondas", desc: "Lotes paralelos", icon: "🌊" },
+                      ].map(m => (
+                        <button key={m.id} onClick={() => setDispatchMode(m.id)}
+                          className="flex-1 min-w-[100px] text-left rounded-xl px-3 py-2.5 transition-all"
+                          style={{
+                            background: dispatchMode === m.id ? "rgba(59,130,246,0.08)" : "rgba(255,255,255,0.01)",
+                            border: `1px solid ${dispatchMode === m.id ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)"}`,
+                          }}>
+                          <span className="text-sm">{m.icon}</span>
+                          <p className="text-[11px] font-bold mt-1" style={{ color: dispatchMode === m.id ? "#3B82F6" : "#94A3B8" }}>{m.label}</p>
+                          <p className="text-[8px]" style={{ color: "#475569" }}>{m.desc}</p>
+                        </button>
+                      ))}
+                    </div>
+                    {dispatchMode === "wave" && (
+                      <div className="mt-3 rounded-xl p-3" style={{ background: "rgba(255,255,255,0.01)", border: "1px solid rgba(255,255,255,0.03)" }}>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Leads por onda</span>
+                          <span className="text-[16px] font-extrabold tabular-nums" style={{ color: "#06B6D4" }}>{parallelLeads}</span>
+                        </div>
+                        <Slider min={2} max={Math.min(50, numLeads)} step={1} value={[parallelLeads]} onValueChange={v => setParallelLeads(v[0])} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Context Compression Info */}
+                  {msgsPerLead > 20 && (
+                    <div className="rounded-xl p-3 mt-2 flex items-start gap-2" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.12)" }}>
+                      <Brain className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#10B981" }} />
+                      <div>
+                        <p className="text-[10px] font-bold" style={{ color: "#10B981" }}>Compressão de Contexto Ativa</p>
+                        <p className="text-[9px]" style={{ color: "#64748B" }}>
+                          Conversas com {msgsPerLead}+ msgs usam resumo inteligente do histórico antigo, 
+                          mantendo apenas as últimas 16 mensagens completas. Isso economiza tokens e mantém coerência.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2286,23 +2355,36 @@ Retorne JSON:
                     </div>
                   </div>
 
-                  {/* Quick presets */}
+                  {/* Built-in presets */}
                   <div>
-                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#64748B" }}>⚡ Presets rápidos</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { label: "Teste rápido", desc: "3 leads, 6 msgs, instantâneo", icon: "🚀", apply: () => { setNumLeads(3); setMsgsPerLead(6); setSpeed("instant"); setDuration(60); setEnableEvaluation(false); } },
-                        { label: "Estresse máximo", desc: "20 leads, 30 msgs, todos perfis", icon: "🔥", apply: () => { setNumLeads(20); setMsgsPerLead(30); setDuration(600); setObjectionDensity(80); setEmotionalVolatility(80); setSelectedProfiles([]); } },
-                        { label: "Qualidade total", desc: "5 leads, 20 msgs, avaliação completa", icon: "🏆", apply: () => { setNumLeads(5); setMsgsPerLead(20); setSpeed("normal"); setEnableEvaluation(true); setEvalFrequency("every"); setAgentResponseLength("longa"); setEnableLossNarrative(true); } },
-                      ].map(qp => (
-                        <button key={qp.label} onClick={() => { qp.apply(); toast({ title: `Preset "${qp.label}" aplicado` }); }}
-                          className="flex flex-col items-center gap-2 p-4 rounded-xl transition-all hover:scale-[1.02]"
+                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#64748B" }}>⚡ Cenários pré-configurados</p>
+                    <div className={cn("grid gap-2", isMobile ? "grid-cols-1" : "grid-cols-2 lg:grid-cols-3")}>
+                      {Object.values(BUILT_IN_PRESETS).map(bp => (
+                        <button key={bp.name} onClick={() => { loadPreset(bp.config); toast({ title: `${bp.name} aplicado!` }); }}
+                          className="flex flex-col items-start gap-1.5 p-4 rounded-xl transition-all hover:scale-[1.02] text-left"
                           style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                          <span className="text-2xl">{qp.icon}</span>
-                          <span className="text-[11px] font-bold" style={{ color: "#E2E8F0" }}>{qp.label}</span>
-                          <span className="text-[8px] text-center" style={{ color: "#475569" }}>{qp.desc}</span>
+                          <span className="text-[14px] font-bold" style={{ color: "#E2E8F0" }}>{bp.name}</span>
+                          <span className="text-[9px] leading-tight" style={{ color: "#64748B" }}>{bp.description}</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(59,130,246,0.1)", color: "#3B82F6" }}>{bp.config.numLeads} leads</span>
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>{bp.config.msgsPerLead} msgs</span>
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(139,92,246,0.1)", color: "#8B5CF6" }}>
+                              {bp.config.duration >= 3600 ? `${Math.floor(bp.config.duration / 3600)}h` : `${Math.floor(bp.config.duration / 60)}min`}
+                            </span>
+                          </div>
                         </button>
                       ))}
+                      {/* Legacy quick presets */}
+                      <button onClick={() => { setNumLeads(3); setMsgsPerLead(6); setSpeed("instant"); setDuration(60); setEnableEvaluation(false); toast({ title: "Teste rápido aplicado" }); }}
+                        className="flex flex-col items-start gap-1.5 p-4 rounded-xl transition-all hover:scale-[1.02] text-left"
+                        style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                        <span className="text-[14px] font-bold" style={{ color: "#E2E8F0" }}>🚀 Teste Rápido</span>
+                        <span className="text-[9px]" style={{ color: "#64748B" }}>3 leads, 6 msgs, instantâneo</span>
+                        <div className="flex gap-1 mt-1">
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(59,130,246,0.1)", color: "#3B82F6" }}>3 leads</span>
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>6 msgs</span>
+                        </div>
+                      </button>
                     </div>
                   </div>
 
