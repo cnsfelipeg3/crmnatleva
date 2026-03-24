@@ -2122,6 +2122,7 @@ Retorne JSON:
               <Square className="w-3 h-3" /> Parar
             </button>
           </div>
+        </div>
       )}
 
       {/* Report tabs */}
