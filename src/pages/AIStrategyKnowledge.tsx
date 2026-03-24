@@ -118,6 +118,7 @@ const emptyRule: Omit<StrategyRule, "id" | "created_at" | "updated_at"> = {
   context: null,
   related_rule_ids: [],
   status: "active",
+  created_by: null,
 };
 
 export default function AIStrategyKnowledge() {
