@@ -458,10 +458,11 @@ Retorne SOMENTE o JSON, sem markdown.`,
     complexa: { color: "#EF4444", bg: "rgba(239,68,68,0.1)" },
   };
 
-  const typeConfig = {
+  const typeConfig: Record<string, { icon: any; label: string; color: string; bg: string }> = {
     knowledge_base: { icon: BookOpen, label: "Base de Conhecimento", color: "#3B82F6", bg: "rgba(59,130,246,0.08)" },
     skill: { icon: Sparkles, label: "Habilidade do Agente", color: "#10B981", bg: "rgba(16,185,129,0.08)" },
     global_rule: { icon: Scale, label: "Regra Global", color: "#F59E0B", bg: "rgba(245,158,11,0.08)" },
+    new_agent: { icon: Bot, label: "Novo Agente", color: "#A855F7", bg: "rgba(168,85,247,0.08)" },
   };
 
   const priorityConfig = {
