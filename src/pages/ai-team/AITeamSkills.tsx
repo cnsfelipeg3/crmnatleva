@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ItemOriginBadge } from "@/components/ai-team/ItemOriginBadge";
 
 const SKILL_CATEGORIES = [
   { id: "all", label: "Todas" },
