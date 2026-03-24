@@ -468,10 +468,26 @@ export interface DebriefDimensoes {
   eficaciaComercial: import("./evaluationFramework").DimensaoScore;
   qualidadeTecnica: import("./evaluationFramework").DimensaoScore;
 }
+export interface AnaliseIndividualLead {
+  leadNome: string;
+  perfil: string;
+  destino: string;
+  status: "fechou" | "perdeu" | "ativo";
+  score: number;
+  humanizacao: number;
+  eficacia: number;
+  tecnica: number;
+  diagnostico: string;
+  pontosFortes: string[];
+  falhasCriticas: string[];
+  agenteResponsavel: string;
+}
 export interface DebriefData {
   scoreGeral: number; resumoExecutivo: string; fraseNathAI: string;
   pontosFortes: string[]; melhorias: Improvement[]; lacunasConhecimento: string[]; insightsCliente: string[];
   dimensoes?: DebriefDimensoes;
+  analiseIndividual?: AnaliseIndividualLead[];
+  diagnosticoSessao?: string;
 }
 export interface SimHistoryEntry {
   id: string; date: string; scoreGeral: number; totalLeads: number;

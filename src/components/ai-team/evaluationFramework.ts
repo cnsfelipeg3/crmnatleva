@@ -141,6 +141,7 @@ export function buildDebriefV2Prompt(dados: {
   perdasMotivadas: string;
   amostraConversas: string;
   agentesUsados: string[];
+  fichasIndividuais?: string;
 }) {
   const pesosInfo = dados.agentesUsados.map(a => {
     const p = getAgentPesos(a);
@@ -151,6 +152,7 @@ export function buildDebriefV2Prompt(dados: {
 Avalie a simulação usando o framework de 12 critérios em 3 dimensões.
 Tom: direto, construtivo, sem rodeios. Diagnóstico acionável.
 Cultura NatLeva: calorosa, próxima, humana. Nunca genérica.
+IMPORTANTE: Avalie CADA lead individualmente E a sessão como um todo.
 Retorne SOMENTE JSON válido. Nenhum texto fora do JSON.
 
 PESOS POR AGENTE USADO: ${pesosInfo}
@@ -168,12 +170,16 @@ PERFORMANCE POR PERFIL: ${dados.performancePorPerfil}
 TOP OBJEÇÕES: ${dados.topObjecoes || "nenhuma"}
 PERDAS MOTIVADAS: ${dados.perdasMotivadas}
 
-AMOSTRA DE CONVERSAS:
+FICHAS INDIVIDUAIS DE CADA LEAD:
+${dados.fichasIndividuais || "N/A"}
+
+AMOSTRA DE CONVERSAS (trechos representativos):
 ${dados.amostraConversas}
 
 Retorne JSON com esta ESTRUTURA EXATA:
 {
   "scoreGeral": 0-100,
+  "diagnosticoSessao": "3-5 frases analisando o PANORAMA GERAL da sessão: padrões recorrentes, tendências, comparação entre agentes, consistência de qualidade",
   "dimensoes": {
     "humanizacao": {
       "score": 0-100,
@@ -203,9 +209,25 @@ Retorne JSON com esta ESTRUTURA EXATA:
       }
     }
   },
-  "resumoExecutivo": "2-3 frases de diagnóstico preciso",
+  "analiseIndividual": [
+    {
+      "leadNome": "nome do lead",
+      "perfil": "tipo psicológico",
+      "destino": "destino",
+      "status": "fechou|perdeu|ativo",
+      "score": 0-100,
+      "humanizacao": 0-100,
+      "eficacia": 0-100,
+      "tecnica": 0-100,
+      "diagnostico": "2 frases específicas sobre este atendimento",
+      "pontosFortes": ["o que o agente fez bem NESTE lead"],
+      "falhasCriticas": ["erros específicos que custaram resultado"],
+      "agenteResponsavel": "nome do agente principal"
+    }
+  ],
+  "resumoExecutivo": "2-3 frases de diagnóstico preciso da sessão inteira",
   "fraseNathAI": "frase motivacional e específica para a Nathália",
-  "pontosFortes": ["o que funcionou bem com evidência"],
+  "pontosFortes": ["o que funcionou bem com evidência cruzando vários leads"],
   "melhorias": [{
     "criterio": "id do criterio que falhou",
     "titulo": "título curto e específico",
