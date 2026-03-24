@@ -94,6 +94,16 @@ serve(async (req) => {
       if (!response.ok) {
         const t = await response.text();
         console.error("AI gateway image error:", response.status, t);
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit atingido para geração de imagem. Aguarde alguns segundos e tente novamente." }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (response.status === 402) {
+          return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         return new Response(JSON.stringify({ error: "Erro ao gerar imagem" }), {
           status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
