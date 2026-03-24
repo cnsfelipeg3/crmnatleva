@@ -77,7 +77,7 @@ export default function AITeamSimulador() {
 
           <div className={cn(
             "flex items-center justify-between",
-            isMobile ? "flex-col gap-3 px-4 py-4" : "px-6 py-5"
+            isMobile ? "flex-col gap-3 px-4 py-3" : "px-5 py-3"
           )}>
             <div className="flex items-center gap-3">
               <div className="relative">
