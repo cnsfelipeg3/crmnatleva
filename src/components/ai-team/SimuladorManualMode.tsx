@@ -92,7 +92,7 @@ export default function SimuladorManualMode() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         body: JSON.stringify({
           type: "agent",
-          systemPrompt: selectedAgent.persona + `\nVoce conversa como ${selectedAgent.name} (${selectedAgent.role}) da agencia NatLeva pelo WhatsApp. Breve (1-3 frases).`,
+          systemPrompt: buildManualAgentPrompt(selectedAgent),
           history: [{ role: "user", content: `[Simulação - Cliente interessado em ${selectedDestino}] ${text}` }],
         }),
       });
