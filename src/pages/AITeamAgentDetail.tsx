@@ -584,6 +584,32 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
     return map;
   });
 
+  const [showNewRule, setShowNewRule] = useState(false);
+  const [newRule, setNewRule] = useState({ name: "", description: "", impact: "alta", scope: "specific" });
+  const [extraRules, setExtraRules] = useState<RuleItem[]>([]);
+
+  const allRules = useMemo(() => [...rules, ...extraRules], [rules, extraRules]);
+
+  const displayName = agentName;
+
+  const handleSaveRule = useCallback(() => {
+    if (!newRule.name.trim()) { sonnerToast.error("Nome da regra é obrigatório"); return; }
+    const rule: RuleItem = {
+      id: `r-custom-${Date.now()}`,
+      name: newRule.name.trim(),
+      description: newRule.description.trim(),
+      active: true,
+      impact: newRule.impact,
+      scope: newRule.scope,
+      agents: newRule.scope === "specific" ? [agentName.toUpperCase()] : [],
+    };
+    setExtraRules(prev => [...prev, rule]);
+    setRuleStates(prev => ({ ...prev, [rule.id]: true }));
+    setShowNewRule(false);
+    setNewRule({ name: "", description: "", impact: "alta", scope: "specific" });
+    sonnerToast.success("Regra criada com sucesso!");
+  }, [newRule, agentName]);
+
   const toggleRule = (id: string) => {
     setRuleStates((prev: any) => ({ ...prev, [id]: !prev[id] }));
     sonnerToast.success("Regra atualizada");
@@ -668,9 +694,9 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
       </SectionCard>
 
       {/* Rules */}
-      <SectionCard title={`Regras Ativas · ${rules.length}`} icon={Shield}>
+      <SectionCard title={`Regras Ativas · ${allRules.length}`} icon={Shield}>
         <div className="space-y-2">
-          {rules.map((rule: RuleItem) => {
+          {allRules.map((rule: RuleItem) => {
             const active = ruleStates[rule.id] ?? rule.active;
             return (
               <div key={rule.id} className={cn(
@@ -689,10 +715,70 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
               </div>
             );
           })}
-          <Button variant="outline" size="sm" className="gap-1.5 mt-2">
+          <Button variant="outline" size="sm" className="gap-1.5 mt-2" onClick={() => setShowNewRule(true)}>
             <Plus className="w-3.5 h-3.5" /> Nova Regra
           </Button>
         </div>
+
+        {/* New Rule Dialog */}
+        {showNewRule && (
+          <div className="mt-4 p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-3 animate-fade-in">
+            <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <Shield className="w-4 h-4 text-primary" /> Nova Regra para {displayName}
+            </h4>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Nome da Regra *</label>
+              <Input
+                placeholder="Ex: Limite de desconto 10%"
+                value={newRule.name}
+                onChange={(e: any) => setNewRule({ ...newRule, name: e.target.value })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Descrição</label>
+              <Textarea
+                placeholder="Descreva o que essa regra faz..."
+                value={newRule.description}
+                onChange={(e: any) => setNewRule({ ...newRule, description: e.target.value })}
+                rows={2}
+                className="mt-1"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Impacto</label>
+                <Select value={newRule.impact} onValueChange={(v) => setNewRule({ ...newRule, impact: v })}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="crítica">Crítica</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="média">Média</SelectItem>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Escopo</label>
+                <Select value={newRule.scope} onValueChange={(v) => setNewRule({ ...newRule, scope: v })}>
+                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="specific">Apenas {displayName}</SelectItem>
+                    <SelectItem value="all">Global (todos agentes)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="ghost" size="sm" onClick={() => { setShowNewRule(false); setNewRule({ name: "", description: "", impact: "alta", scope: "specific" }); }}>
+                Cancelar
+              </Button>
+              <Button size="sm" onClick={handleSaveRule} disabled={!newRule.name.trim()} className="gap-1.5">
+                <Save className="w-3.5 h-3.5" /> Salvar Regra
+              </Button>
+            </div>
+          </div>
+        )}
       </SectionCard>
     </div>
   );
