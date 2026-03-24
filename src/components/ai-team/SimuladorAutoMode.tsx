@@ -871,7 +871,7 @@ Retorne JSON:
   "recomendacao": "APROVAR|AVALIAR|REJEITAR",
   "confianca": 0-100
 }`;
-      const resp = await callAgent("Voce e NATH.AI analista senior. Retorne SOMENTE JSON.", [{ role: "user", content: prompt }]);
+      const resp = await callSimulatorAI("Voce e NATH.AI analista senior. Retorne SOMENTE JSON.", [{ role: "user", content: prompt }], "deep");
       const jsonMatch = resp.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const analysis: DeepAnalysis = JSON.parse(jsonMatch[0]);
