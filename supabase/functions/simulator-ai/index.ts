@@ -84,9 +84,6 @@ serve(async (req) => {
       messages,
       stream: config.stream,
     };
-    if (config.reasoning) {
-      requestBody.reasoning = config.reasoning;
-    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
