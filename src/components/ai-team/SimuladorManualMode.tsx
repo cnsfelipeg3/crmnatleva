@@ -12,7 +12,16 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 
-const DESTINOS = ["Dubai", "Orlando", "Europa", "Maldivas", "Caribe", "Japão", "Egito", "Tailândia", "Nova York", "Paris", "Grécia", "Bali", "Cancún", "Lisboa", "Seychelles"];
+const DESTINOS = ["🎲 Aleatório", "Dubai", "Orlando", "Europa", "Maldivas", "Caribe", "Japão", "Egito", "Tailândia", "Nova York", "Paris", "Grécia", "Bali", "Cancún", "Lisboa", "Seychelles"];
+
+const DESTINOS_ALEATORIOS = [
+  "Butão", "Islândia", "Patagônia", "Fiji", "Tanzânia", "Marrocos", "Sri Lanka",
+  "Mongólia", "Noruega", "Croácia", "Nova Zelândia", "Vietnã", "Costa Rica",
+  "Jordânia", "Georgia (Cáucaso)", "Madagascar", "Omã", "Eslovênia", "Quirguistão",
+  "Namíbia", "Laos", "Bermudas", "Açores", "Zanzibar", "Ruanda", "Belize",
+  "Faroe Islands", "Svalbard", "Galápagos", "Reunião", "Tahiti", "Cabo Verde",
+  "Uzbequistão", "Lapônia", "Sardenha", "Sicília", "Montenegro", "Albânia",
+];
 
 const MIN_TROCAS_MANUAL: Record<string, number> = {
   maya: 5, atlas: 6, habibi: 7, nemo: 7, dante: 7, luna: 5, nero: 5, iris: 4,
@@ -124,7 +133,15 @@ export default function SimuladorManualMode() {
   const { data: globalRules = [] } = useGlobalRules();
   const globalRulesBlock = buildGlobalRulesBlock(globalRules);
   const [selectedAgent, setSelectedAgent] = useState(AGENTS_V4[2]);
-  const [selectedDestino, setSelectedDestino] = useState("Dubai");
+  const [selectedDestino, setSelectedDestinoRaw] = useState("Dubai");
+  const setSelectedDestino = (d: string) => {
+    if (d === "🎲 Aleatório") {
+      const random = DESTINOS_ALEATORIOS[Math.floor(Math.random() * DESTINOS_ALEATORIOS.length)];
+      setSelectedDestinoRaw(random);
+    } else {
+      setSelectedDestinoRaw(d);
+    }
+  };
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -361,15 +378,19 @@ export default function SimuladorManualMode() {
           )}
           {panelTab === "destino" && (
             <div className="grid grid-cols-3 gap-2.5">
-              {DESTINOS.map(d => (
-                <button key={d} onClick={() => { setSelectedDestino(d); setShowPanel(false); }}
-                  className="text-[12px] px-3 py-3.5 rounded-xl font-medium transition-all text-center"
-                  style={{
-                    background: selectedDestino === d ? "rgba(245,158,11,0.1)" : "rgba(255,255,255,0.03)",
-                    border: `1px solid ${selectedDestino === d ? "rgba(245,158,11,0.35)" : "rgba(255,255,255,0.08)"}`,
-                    color: selectedDestino === d ? "#FCD34D" : "#CBD5E1",
-                  }}>{d}</button>
-              ))}
+              {DESTINOS.map(d => {
+                const isRandom = d === "🎲 Aleatório";
+                const isActive = isRandom ? !DESTINOS.slice(1).includes(selectedDestino) : selectedDestino === d;
+                return (
+                  <button key={d} onClick={() => { setSelectedDestino(d); setShowPanel(false); }}
+                    className="text-[12px] px-3 py-3.5 rounded-xl font-medium transition-all text-center"
+                    style={{
+                      background: isActive ? (isRandom ? "rgba(139,92,246,0.12)" : "rgba(245,158,11,0.1)") : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${isActive ? (isRandom ? "rgba(139,92,246,0.4)" : "rgba(245,158,11,0.35)") : "rgba(255,255,255,0.08)"}`,
+                      color: isActive ? (isRandom ? "#C4B5FD" : "#FCD34D") : "#CBD5E1",
+                    }}>{isRandom && isActive ? `🎲 ${selectedDestino}` : d}</button>
+                );
+              })}
             </div>
           )}
           {panelTab === "sessoes" && (
@@ -679,15 +700,19 @@ export default function SimuladorManualMode() {
             <div className="rounded-2xl p-4" style={{ background: "rgba(15,20,35,0.75)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <p className="text-[10px] uppercase tracking-[0.12em] font-bold mb-2" style={{ color: "#94A3B8" }}>Destino</p>
               <div className="flex flex-wrap gap-1.5">
-                {DESTINOS.map(d => (
-                  <button key={d} onClick={() => setSelectedDestino(d)}
-                    className="text-[10px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
-                    style={{
-                      background: selectedDestino === d ? "rgba(245,158,11,0.1)" : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${selectedDestino === d ? "rgba(245,158,11,0.35)" : "rgba(255,255,255,0.08)"}`,
-                      color: selectedDestino === d ? "#FCD34D" : "#CBD5E1",
-                    }}>{d}</button>
-                ))}
+                {DESTINOS.map(d => {
+                  const isRandom = d === "🎲 Aleatório";
+                  const isActive = isRandom ? !DESTINOS.slice(1).includes(selectedDestino) : selectedDestino === d;
+                  return (
+                    <button key={d} onClick={() => setSelectedDestino(d)}
+                      className="text-[10px] px-2.5 py-1.5 rounded-lg font-medium transition-all"
+                      style={{
+                        background: isActive ? (isRandom ? "rgba(139,92,246,0.12)" : "rgba(245,158,11,0.1)") : "rgba(255,255,255,0.03)",
+                        border: `1px solid ${isActive ? (isRandom ? "rgba(139,92,246,0.4)" : "rgba(245,158,11,0.35)") : "rgba(255,255,255,0.08)"}`,
+                        color: isActive ? (isRandom ? "#C4B5FD" : "#FCD34D") : "#CBD5E1",
+                      }}>{isRandom && isActive ? `🎲 ${selectedDestino}` : d}</button>
+                  );
+                })}
               </div>
             </div>
 
