@@ -43,6 +43,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { initPersistence, persistConversation, persistMessages, loadPersistedMessages } from "@/hooks/useChatPersistence";
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
+import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 
@@ -2250,6 +2251,16 @@ export default function LiveChat() {
                         </TooltipTrigger>
                         <TooltipContent>Resumir conversa com IA</TooltipContent>
                       </Tooltip>
+                      <NathOpinionButton
+                        messages={currentMessages.map(m => ({
+                          role: m.sender_type === "atendente" ? "agent" : "user",
+                          content: m.text || "",
+                          agentName: m.sender_type === "atendente" ? "Atendente" : selected?.contact_name || "Lead",
+                          timestamp: m.created_at,
+                        }))}
+                        context={`Conversa real WhatsApp · Cliente: ${selected?.contact_name || "Desconhecido"} · Telefone: ${selected?.phone} · Etapa: ${selected?.stage} · Tags: ${selected?.tags?.join(", ") || "nenhuma"}`}
+                        variant="inline"
+                      />
                       <Select value={selected.stage} onValueChange={s => handleStageChange(selected.id, s as Stage)}>
                         <SelectTrigger className="h-7 text-[10px] w-[100px] md:w-[130px]">
                           <SelectValue />
