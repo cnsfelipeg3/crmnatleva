@@ -12,11 +12,13 @@ import {
 export type SimCallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep" | "price_image";
 
 const SIMULATOR_MAX_CONCURRENT_REQUESTS = 1;
-const SIMULATOR_REQUEST_GAP_MS = 1200;
-const SIMULATOR_INPUT_TOKEN_BUDGET_PER_MIN = 22000;
+const SIMULATOR_REQUEST_GAP_MS = 1800;
+const SIMULATOR_INPUT_TOKEN_BUDGET_PER_MIN = 12000;
 const SIMULATOR_INPUT_WINDOW_MS = 60_000;
+const SIMULATOR_COOLDOWN_ON_429_MS = 35_000;
 let activeSimulatorRequests = 0;
 let lastSimulatorRequestAt = 0;
+let simulatorCooldownUntil = 0;
 const simulatorRequestQueue: Array<() => void> = [];
 const simulatorTokenUsage: Array<{ timestamp: number; tokens: number }> = [];
 
@@ -26,7 +28,12 @@ function pumpSimulatorQueue() {
   }
 
   const now = Date.now();
-  const waitMs = Math.max(0, lastSimulatorRequestAt + SIMULATOR_REQUEST_GAP_MS - now);
+  const waitMs = Math.max(
+    0,
+    lastSimulatorRequestAt + SIMULATOR_REQUEST_GAP_MS - now,
+    simulatorCooldownUntil - now,
+  );
+
   if (waitMs > 0) {
     setTimeout(pumpSimulatorQueue, waitMs);
     return;
@@ -61,6 +68,12 @@ function pruneSimulatorTokenUsage(now = Date.now()) {
   }
 }
 
+async function waitForSimulatorCooldown() {
+  while (Date.now() < simulatorCooldownUntil) {
+    await new Promise((resolve) => setTimeout(resolve, Math.max(500, simulatorCooldownUntil - Date.now())));
+  }
+}
+
 async function waitForSimulatorTokenBudget(estimatedTokens: number) {
   while (true) {
     const now = Date.now();
@@ -73,9 +86,16 @@ async function waitForSimulatorTokenBudget(estimatedTokens: number) {
     }
 
     const oldest = simulatorTokenUsage[0];
-    const waitMs = Math.max(400, SIMULATOR_INPUT_WINDOW_MS - (now - oldest.timestamp) + 50);
+    const waitMs = Math.max(1000, SIMULATOR_INPUT_WINDOW_MS - (now - oldest.timestamp) + 100);
     await new Promise((resolve) => setTimeout(resolve, waitMs));
   }
+}
+
+function registerSimulator429(retryCount: number) {
+  simulatorCooldownUntil = Math.max(
+    simulatorCooldownUntil,
+    Date.now() + SIMULATOR_COOLDOWN_ON_429_MS + retryCount * 5000,
+  );
 }
 
 function compactText(text: string, maxChars: number) {
@@ -85,14 +105,14 @@ function compactText(text: string, maxChars: number) {
 
 function compactSystemPromptForTransport(sysPrompt: string, type: SimCallType, retryCount: number) {
   const maxCharsByType: Record<SimCallType, number> = {
-    lead: retryCount >= 2 ? 1400 : 2200,
-    agent: retryCount >= 2 ? 1800 : 2600,
-    evaluate: retryCount >= 1 ? 900 : 1400,
-    debrief: retryCount >= 1 ? 1200 : 1800,
-    objection: retryCount >= 2 ? 1200 : 1800,
-    loss: retryCount >= 2 ? 1200 : 1800,
-    deep: retryCount >= 1 ? 1100 : 1600,
-    price_image: 800,
+    lead: retryCount >= 1 ? 900 : 1200,
+    agent: retryCount >= 1 ? 1100 : 1500,
+    evaluate: 700,
+    debrief: retryCount >= 1 ? 900 : 1200,
+    objection: 850,
+    loss: 850,
+    deep: retryCount >= 1 ? 900 : 1100,
+    price_image: 700,
   };
 
   return compactText(sysPrompt, maxCharsByType[type]);
@@ -100,8 +120,8 @@ function compactSystemPromptForTransport(sysPrompt: string, type: SimCallType, r
 
 function compactHistoryForTransport(history: { role: string; content: string }[], type: SimCallType, retryCount: number) {
   const maxMessagesByType: Record<SimCallType, number> = {
-    lead: retryCount >= 2 ? 1 : 2,
-    agent: retryCount >= 2 ? 5 : 7,
+    lead: 1,
+    agent: retryCount >= 1 ? 3 : 4,
     evaluate: 1,
     debrief: 1,
     objection: 1,
@@ -110,14 +130,14 @@ function compactHistoryForTransport(history: { role: string; content: string }[]
     price_image: 1,
   };
   const maxCharsPerMessageByType: Record<SimCallType, number> = {
-    lead: retryCount >= 2 ? 650 : 900,
-    agent: retryCount >= 2 ? 500 : 750,
-    evaluate: retryCount >= 1 ? 900 : 1200,
-    debrief: retryCount >= 1 ? 1400 : 2200,
-    objection: 500,
-    loss: 500,
-    deep: retryCount >= 1 ? 1100 : 1700,
-    price_image: 1800,
+    lead: 550,
+    agent: retryCount >= 1 ? 280 : 360,
+    evaluate: 800,
+    debrief: retryCount >= 1 ? 1000 : 1400,
+    objection: 420,
+    loss: 420,
+    deep: retryCount >= 1 ? 850 : 1000,
+    price_image: 1500,
   };
 
   const maxMessages = maxMessagesByType[type];
@@ -168,12 +188,13 @@ export function pushUniqueSimMessage(
 export async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent", agentBehaviorPrompt?: string, _retryCount = 0): Promise<string> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
   const compactSystemPrompt = compactSystemPromptForTransport(sysPrompt, type, _retryCount);
-  const compactAgentBehaviorPrompt = compactText(agentBehaviorPrompt || "", _retryCount >= 2 ? 600 : 1000);
+  const compactAgentBehaviorPrompt = compactText(agentBehaviorPrompt || "", _retryCount >= 1 ? 400 : 700);
   const requestHistory = compactHistoryForTransport(history, type, _retryCount);
   const estimatedInputTokens = estimateTextTokens(
     compactSystemPrompt + compactAgentBehaviorPrompt + requestHistory.map((item) => item.content).join(" "),
   );
 
+  await waitForSimulatorCooldown();
   await waitForSimulatorTokenBudget(estimatedInputTokens);
 
   const resp = await withSimulatorRequestSlot(() => fetch(url, {
@@ -188,9 +209,9 @@ export async function callSimulatorAI(sysPrompt: string, history: { role: string
     }),
   }));
 
-  if (resp.status === 429 && _retryCount < 4) {
-    const delay = 3000 * Math.pow(2, _retryCount) + Math.random() * 1200;
-    await new Promise(r => setTimeout(r, delay));
+  if (resp.status === 429 && _retryCount < 2) {
+    registerSimulator429(_retryCount);
+    await waitForSimulatorCooldown();
     return callSimulatorAI(sysPrompt, history, type, agentBehaviorPrompt, _retryCount + 1);
   }
 
