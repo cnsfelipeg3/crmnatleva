@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search, Workflow, Clock, CheckCircle2, Pause, Trash2, Copy, Network, ArrowRight, Pencil, Ban } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -66,6 +67,10 @@ export function FlowListPage({ onOpenFlow }: Props) {
   const [editingRuleData, setEditingRuleData] = useState<{ label: string; keywords: string; flowId: string; excludeKeyword: string; excludeMessage: string }>({ label: "", keywords: "", flowId: "", excludeKeyword: "", excludeMessage: "" });
   const flowNameRef = useRef<HTMLInputElement>(null);
 
+  // Delete confirmation
+  const [deleteFlowId, setDeleteFlowId] = useState<string | null>(null);
+  const [deleteFlowName, setDeleteFlowName] = useState("");
+
   useEffect(() => { fetchFlows(); fetchRouterRules(); }, []);
 
   useEffect(() => {
@@ -99,10 +104,17 @@ export function FlowListPage({ onOpenFlow }: Props) {
     toast({ title: "Fluxo criado", description: `"${newName}" está pronto para edição.` });
   };
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const confirmDelete = (flow: Flow, e: React.MouseEvent) => {
     e.stopPropagation();
-    await supabase.from("flows").delete().eq("id", id);
-    setFlows(prev => prev.filter(f => f.id !== id));
+    setDeleteFlowId(flow.id);
+    setDeleteFlowName(flow.name);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteFlowId) return;
+    await supabase.from("flows").delete().eq("id", deleteFlowId);
+    setFlows(prev => prev.filter(f => f.id !== deleteFlowId));
+    setDeleteFlowId(null);
     toast({ title: "Fluxo excluído" });
   };
 
@@ -595,7 +607,7 @@ export function FlowListPage({ onOpenFlow }: Props) {
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => handleDuplicate(flow, e)} title="Duplicar">
                     <Copy className="h-3 w-3" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => handleDelete(flow.id, e)} title="Excluir">
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={(e) => confirmDelete(flow, e)} title="Excluir">
                     <Trash2 className="h-3 w-3" />
                   </Button>
                 </div>
@@ -604,6 +616,24 @@ export function FlowListPage({ onOpenFlow }: Props) {
           })}
         </div>
       )}
+
+      {/* ─── DELETE CONFIRMATION ─── */}
+      <AlertDialog open={!!deleteFlowId} onOpenChange={(open) => { if (!open) setDeleteFlowId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir fluxo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <span className="font-bold text-foreground">"{deleteFlowName}"</span>? Essa ação é irreversível e todos os nós e conexões serão perdidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Sim, excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
