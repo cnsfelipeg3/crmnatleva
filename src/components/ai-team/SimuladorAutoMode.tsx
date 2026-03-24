@@ -2514,9 +2514,9 @@ Retorne JSON:
 
       {/* 3-column layout */}
       {(running || (phase === "report" && reportTab === "conversas")) && (
-        <div className="flex gap-4" style={{ height: "calc(100vh - 300px)", minHeight: 500 }}>
+        <div className={cn(isMobile ? "flex flex-col gap-2" : "flex gap-4")} style={{ height: isMobile ? "auto" : "calc(100vh - 300px)", minHeight: isMobile ? undefined : 500 }}>
           {/* LEFT: Lead list */}
-          <div className="w-[280px] shrink-0 rounded-2xl overflow-hidden flex flex-col" style={{ background: "rgba(11,20,26,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className={cn("rounded-2xl overflow-hidden flex flex-col", isMobile ? "max-h-[35vh]" : "w-[280px] shrink-0")} style={{ background: "rgba(11,20,26,0.9)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
               <span className="text-[13px] font-bold" style={{ color: "#F1F5F9" }}>Leads Inteligentes</span>
               <span className="text-[9px] font-bold px-2 py-0.5 rounded-lg" style={{ background: "rgba(37,211,102,0.1)", color: "#25D366" }}>
