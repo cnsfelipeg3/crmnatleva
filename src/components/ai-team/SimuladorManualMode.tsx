@@ -709,7 +709,7 @@ export default function SimuladorManualMode() {
                       }}>{isRandom && isActive ? `🎲 ${selectedDestino}` : d}</button>
                   );
                 })}
-                ))}
+              </div>
               </div>
             </div>
 
