@@ -2198,7 +2198,7 @@ Retorne JSON:
                   </div>
 
                   {/* Sliders */}
-                  <div className="grid grid-cols-2 gap-4">
+                   <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
                     <div className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[11px] font-semibold" style={{ color: "#E2E8F0" }}>Volatilidade emocional</span>
