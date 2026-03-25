@@ -358,6 +358,112 @@ export default function SimuladorManualMode() {
     } finally { setLoading(false); }
   }, [input, loading, selectedAgent, selectedDestino, isLivreMode, agentBehaviors, kbContent, manualSystemPrompt]);
 
+  // ─── Audio handler: transcribe then send as text ───
+  const handleSendAudio = useCallback(async (blob: Blob) => {
+    const audioUrl = URL.createObjectURL(blob);
+    // Add audio message immediately (user sees their audio)
+    const audioMsg: ChatMsg = {
+      id: crypto.randomUUID(), role: "user",
+      content: "🎤 Áudio enviado — transcrevendo...",
+      timestamp: new Date().toISOString(),
+      audioUrl,
+      attachmentType: "audio",
+    };
+    const nextMessages = [...messagesRef.current, audioMsg];
+    messagesRef.current = nextMessages;
+    setMessages(nextMessages);
+    setLoading(true);
+
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-media`;
+      const fd = new FormData();
+      fd.append("file", blob, "audio.webm");
+      fd.append("type", "audio");
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        body: fd,
+      });
+      if (!resp.ok) throw new Error("Transcription failed");
+      const data = await resp.json();
+      const transcription = data.transcription || "[áudio inaudível]";
+
+      // Update the audio message with transcription
+      setMessages(prev => {
+        const updated = prev.map(m => m.id === audioMsg.id ? { ...m, content: transcription } : m);
+        messagesRef.current = updated;
+        return updated;
+      });
+
+      // Now send to agent as regular text
+      await handleSend(transcription);
+    } catch (err) {
+      console.error("Audio processing error:", err);
+      setMessages(prev => {
+        const updated = prev.map(m => m.id === audioMsg.id ? { ...m, content: "❌ Erro ao transcrever áudio" } : m);
+        messagesRef.current = updated;
+        return updated;
+      });
+      setLoading(false);
+    }
+  }, [handleSend]);
+
+  // ─── File/image handler: describe then send context ───
+  const handleSendFile = useCallback(async (file: File) => {
+    const isImage = file.type.startsWith("image/");
+    const fileUrl = isImage ? URL.createObjectURL(file) : undefined;
+
+    const fileMsg: ChatMsg = {
+      id: crypto.randomUUID(), role: "user",
+      content: isImage ? "📷 Foto enviada — analisando..." : `📎 ${file.name} — analisando...`,
+      timestamp: new Date().toISOString(),
+      imageUrl: fileUrl,
+      fileName: file.name,
+      attachmentType: isImage ? "image" : "file",
+    };
+    const nextMessages = [...messagesRef.current, fileMsg];
+    messagesRef.current = nextMessages;
+    setMessages(nextMessages);
+    setLoading(true);
+
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-media`;
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("type", isImage ? "image" : "file");
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        body: fd,
+      });
+      if (!resp.ok) throw new Error("File processing failed");
+      const data = await resp.json();
+      const description = data.description || data.transcription || "[não foi possível analisar]";
+
+      // Update the file message with description
+      const contextText = isImage
+        ? `[Cliente enviou uma foto: ${description}]`
+        : `[Cliente enviou o arquivo "${file.name}": ${description}]`;
+
+      setMessages(prev => {
+        const updated = prev.map(m => m.id === fileMsg.id ? { ...m, content: isImage ? "" : `📎 ${file.name}` } : m);
+        messagesRef.current = updated;
+        return updated;
+      });
+
+      // Send context to agent
+      await handleSend(contextText);
+    } catch (err) {
+      console.error("File processing error:", err);
+      setMessages(prev => {
+        const updated = prev.map(m => m.id === fileMsg.id ? { ...m, content: `❌ Erro ao processar ${isImage ? "foto" : "arquivo"}` } : m);
+        messagesRef.current = updated;
+        return updated;
+      });
+      setLoading(false);
+    }
+  }, [handleSend]);
+
   const resetChat = () => {
     if (messages.length > 0 && !confirm("Tem certeza? Os dados atuais serão perdidos.")) return;
     messagesRef.current = [];
