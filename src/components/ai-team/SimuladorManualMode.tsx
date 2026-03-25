@@ -6,6 +6,7 @@ import SimulatorObservationsPanel, { type SelectedMessage } from "./SimulatorObs
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining, type AgentTrainingConfig } from "@/components/ai-team/agentTrainingStore";
 import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
+import { useAgencyConfig } from "@/hooks/useAgencyConfig";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
@@ -65,15 +66,18 @@ function buildTrainingBlock(agentId: string): string {
   return parts.join("\n");
 }
 
-function buildManualAgentPrompt(agent: typeof AGENTS_V4[0], globalRulesBlock: string): string {
+function buildManualAgentPrompt(agent: typeof AGENTS_V4[0], globalRulesBlock: string, agencyName?: string, agencyTone?: string): string {
   const minTrocas = MIN_TROCAS_MANUAL[agent.id] || 4;
   const roleInstr = AGENT_ROLE_MANUAL[agent.id] || "";
   const trainingBlock = buildTrainingBlock(agent.id);
+  const name = agencyName || "NatLeva";
+  const toneBlock = agencyTone ? `\nTOM DE VOZ DA AGÊNCIA: ${agencyTone}` : "";
   
   return `${agent.persona}
-Voce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.
+Voce conversa como ${agent.name} (${agent.role}) da agencia ${name} pelo WhatsApp.
+${toneBlock}
 
-FILOSOFIA DE ATENDIMENTO NATLEVA:
+FILOSOFIA DE ATENDIMENTO ${name.toUpperCase()}:
 Voce esta em uma conversa, nao em um formulario. Seu objetivo NAO e coletar dados e passar adiante. Seu objetivo E fazer este lead querer continuar a conversa.
 
 REGRAS DE OURO:
@@ -160,6 +164,7 @@ const getAgentColor = (agent: typeof AGENTS_V4[0]) => {
 
 export default function SimuladorManualMode() {
   const isMobile = useIsMobile();
+  const { config: agencyConfig } = useAgencyConfig();
   const { data: globalRules = [] } = useGlobalRules();
   const globalRulesBlock = buildGlobalRulesBlock(globalRules);
   const [selectedAgent, setSelectedAgent] = useState(AGENTS_V4[2]);
@@ -263,8 +268,8 @@ export default function SimuladorManualMode() {
 
   const filteredAgents = activeSquad === "all" ? AGENTS_V4 : AGENTS_V4.filter(a => a.squadId === activeSquad);
   const manualSystemPrompt = useMemo(
-    () => buildManualAgentPrompt(selectedAgent, globalRulesBlock),
-    [selectedAgent, globalRulesBlock],
+    () => buildManualAgentPrompt(selectedAgent, globalRulesBlock, agencyConfig.agency_name, agencyConfig.tom_comunicacao),
+    [selectedAgent, globalRulesBlock, agencyConfig.agency_name, agencyConfig.tom_comunicacao],
   );
 
   const handleSend = useCallback(async (overrideText?: string) => {
