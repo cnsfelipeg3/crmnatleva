@@ -46,8 +46,9 @@ export default defineConfig(({ mode }) => ({
           "vendor-3d": ["three", "@react-three/fiber", "@react-three/drei"],
           "vendor-motion": ["framer-motion"],
         },
+        experimentalMinChunkSize: 10_000,
       },
     },
-    chunkSizeWarningLimit: 800,
+    chunkSizeWarningLimit: 1200,
   },
 }));
