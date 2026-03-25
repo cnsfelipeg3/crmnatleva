@@ -68,12 +68,13 @@ interface Props {
 }
 
 // ===== CATEGORY META =====
-const CATEGORY_META: Record<SynthesizedImprovement["category"], { icon: typeof Lightbulb; label: string; color: string }> = {
+const CATEGORY_META: Record<string, { icon: typeof Lightbulb; label: string; color: string }> = {
   behavior: { icon: Shield, label: "Comportamento", color: "#F59E0B" },
   tone: { icon: MessageSquarePlus, label: "Tom de Voz", color: "#8B5CF6" },
   knowledge: { icon: FileText, label: "Conhecimento", color: "#3B82F6" },
   flow: { icon: Zap, label: "Fluxo", color: "#06B6D4" },
 };
+const DEFAULT_CATEGORY = { icon: Lightbulb, label: "Geral", color: "#94A3B8" };
 
 const SEVERITY_META: Record<SynthesizedImprovement["severity"], { label: string; color: string; bg: string }> = {
   critical: { label: "Crítico", color: "#EF4444", bg: "rgba(239,68,68,0.1)" },
