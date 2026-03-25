@@ -61,8 +61,8 @@ export default function SimuladorAutoMode() {
   const [numLeads, setNumLeads] = useState(8);
   const [msgsPerLead, setMsgsPerLead] = useState(14);
   const [intervalSec, setIntervalSec] = useState(1);
-  const [duration, setDuration] = useState(180);
-  const [parallelLeads, setParallelLeads] = useState(1); // How many leads to process simultaneously
+  const [duration, setDuration] = useState(0); // 0 = auto-calculate
+  const [parallelLeads, setParallelLeads] = useState(1);
   const [dispatchMode, setDispatchMode] = useState<"sequential" | "simultaneous" | "wave">("sequential");
   // Config — Perfis
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);
@@ -170,9 +170,9 @@ export default function SimuladorAutoMode() {
   // Auto-scroll chat
   useEffect(() => { chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" }); }, [selectedLead?.mensagens?.length]);
 
-  // ★ Auto-stop simulation when duration is exceeded
+  // ★ Auto-stop simulation when duration is exceeded (only if duration > 0)
   useEffect(() => {
-    if (running && elapsedSeconds >= duration) {
+    if (running && duration > 0 && elapsedSeconds >= duration) {
       stopSimulationRef.current();
     }
   }, [running, elapsedSeconds, duration]);
@@ -239,7 +239,12 @@ export default function SimuladorAutoMode() {
     const canais = selectedCanais.length > 0 ? selectedCanais : CANAIS_LEAD;
     const speedDelay = SPEED_OPTIONS.find(s => s.id === speed)?.delay ?? 2500;
     const simStartTime = Date.now();
-    const durationMs = duration * 1000;
+    // Auto-calculate duration: ~3s per API call, ~3 calls per round, per lead
+    const estimatedCallsPerLead = Math.floor(msgsPerLead / 2) * 3 + 2;
+    const estimatedSecondsPerLead = estimatedCallsPerLead * 2.5 + (speedDelay / 1000 * Math.floor(msgsPerLead / 2));
+    const autoDuration = Math.max(300, Math.ceil(numLeads * estimatedSecondsPerLead * 1.3));
+    const effectiveDuration = duration > 0 ? duration : autoDuration;
+    const durationMs = effectiveDuration * 1000;
     const evalEvery = evalFrequency === "every" ? 1 : evalFrequency === "every2" ? 2 : 3;
 
     // Helper to check duration limit
@@ -543,22 +548,22 @@ export default function SimuladorAutoMode() {
     if (dispatchMode === "simultaneous") {
       // All leads start at once — controlled micro-batches to protect Anthropic token/min limits
       addEvent("#8B5CF6", `⚡ Disparo simultâneo: ${allLeads.length} leads ao mesmo tempo!`, "🚀");
-      const batchSize = Math.min(allLeads.length, 2);
+      const batchSize = Math.min(allLeads.length, 3);
       for (let i = 0; i < allLeads.length; i += batchSize) {
         if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
         const batch = allLeads.slice(i, i + batchSize);
         await Promise.all(batch.map((lead, index) => new Promise<void>((resolve) => {
           setTimeout(() => {
             void simulateLead(lead).finally(() => resolve());
-          }, index * 1800);
+          }, index * 1200);
         })));
         if (i + batchSize < allLeads.length) {
-          await new Promise(r => setTimeout(r, 3200));
+          await new Promise(r => setTimeout(r, 2200));
         }
       }
     } else if (dispatchMode === "wave") {
       // Wave mode — capped parallelism to avoid input-token burst throttling
-      const waveSize = Math.min(Math.max(2, parallelLeads), 2);
+      const waveSize = Math.min(Math.max(2, parallelLeads), 3);
       let waveNum = 1;
       for (let i = 0; i < allLeads.length; i += waveSize) {
         if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
@@ -567,11 +572,11 @@ export default function SimuladorAutoMode() {
         await Promise.all(batch.map((lead, index) => new Promise<void>((resolve) => {
           setTimeout(() => {
             void simulateLead(lead).finally(() => resolve());
-          }, index * 1600);
+          }, index * 1200);
         })));
         waveNum++;
         if (i + waveSize < allLeads.length) {
-          await new Promise(r => setTimeout(r, Math.max(intervalSec * 1000, 2800)));
+          await new Promise(r => setTimeout(r, Math.max(intervalSec * 1000, 2000)));
         }
       }
     } else {
@@ -589,7 +594,7 @@ export default function SimuladorAutoMode() {
     setRunning(false);
     setPhase("report");
     const elapsed = Math.round((Date.now() - simStartTime) / 1000);
-    const wasTimeout = elapsed >= duration;
+    const wasTimeout = duration > 0 && elapsed >= duration;
 
     // Finalize DB persistence
     const finalClosed = allLeads.filter(l => l.status === "fechou");
