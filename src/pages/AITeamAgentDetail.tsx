@@ -854,16 +854,41 @@ function KnowledgeBaseTab({ docs, agentName, agentId }: { docs: KBDoc[]; agentNa
 }
 
 /* ═══ Skills Tab ═══ */
-function SkillsTab({ skills, agentName }: { skills: SkillItem[]; agentName: string }) {
+function SkillsTab({ skills, agentName, agentId }: { skills: SkillItem[]; agentName: string; agentId: string }) {
   const [skillStates, setSkillStates] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
     skills.forEach(s => { map[s.id] = s.active; });
     return map;
   });
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newSkillName, setNewSkillName] = useState("");
+  const [newSkillDesc, setNewSkillDesc] = useState("");
+  const [newSkillCategory, setNewSkillCategory] = useState("comunicação");
+  const [saving, setSaving] = useState(false);
 
   const toggleSkill = (id: string) => {
     setSkillStates(prev => ({ ...prev, [id]: !prev[id] }));
     sonnerToast.success("Skill atualizada");
+  };
+
+  const handleAddSkill = async () => {
+    if (!newSkillName.trim()) return;
+    setSaving(true);
+    // Add skill to agent's skills array in DB
+    const { data: current } = await supabase.from("ai_team_agents").select("skills").eq("id", agentId).maybeSingle();
+    const currentSkills: string[] = (current?.skills as string[]) || [];
+    if (!currentSkills.includes(newSkillName.trim())) {
+      const { error } = await supabase.from("ai_team_agents").update({
+        skills: [...currentSkills, newSkillName.trim()],
+        updated_at: new Date().toISOString(),
+      }).eq("id", agentId);
+      if (error) { sonnerToast.error("Erro: " + error.message); setSaving(false); return; }
+    }
+    sonnerToast.success(`Skill "${newSkillName.trim()}" adicionada!`);
+    setSaving(false);
+    setShowAddForm(false);
+    setNewSkillName("");
+    setNewSkillDesc("");
   };
 
   return (
@@ -872,10 +897,34 @@ function SkillsTab({ skills, agentName }: { skills: SkillItem[]; agentName: stri
         <p className="text-xs text-muted-foreground">
           {skills.length} skill{skills.length !== 1 ? "s" : ""} atribuídas a <span className="font-semibold text-foreground">{agentName}</span>
         </p>
-        <Button size="sm" variant="outline" className="gap-1.5">
+        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowAddForm(true)}>
           <Plus className="w-3.5 h-3.5" /> Nova Skill
         </Button>
       </div>
+
+      {showAddForm && (
+        <div className="rounded-xl border border-primary/30 bg-card p-4 space-y-3 animate-fade-in">
+          <h4 className="text-sm font-semibold text-foreground">Nova Skill</h4>
+          <Input placeholder="Nome da skill (ex: Qualificação BANT)" value={newSkillName} onChange={(e: any) => setNewSkillName(e.target.value)} className="text-sm" />
+          <Textarea placeholder="Descrição da skill (opcional)" value={newSkillDesc} onChange={(e: any) => setNewSkillDesc(e.target.value)} rows={2} className="text-sm" />
+          <Select value={newSkillCategory} onValueChange={setNewSkillCategory}>
+            <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="comunicação">Comunicação</SelectItem>
+              <SelectItem value="vendas">Vendas</SelectItem>
+              <SelectItem value="análise">Análise</SelectItem>
+              <SelectItem value="operacional">Operacional</SelectItem>
+              <SelectItem value="conhecimento">Conhecimento</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => { setShowAddForm(false); setNewSkillName(""); setNewSkillDesc(""); }}>Cancelar</Button>
+            <Button size="sm" disabled={!newSkillName.trim() || saving} className="gap-1.5" onClick={handleAddSkill}>
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Salvar
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-3">
         {skills.map(skill => {
