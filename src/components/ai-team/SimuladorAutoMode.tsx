@@ -61,8 +61,8 @@ export default function SimuladorAutoMode() {
   const [numLeads, setNumLeads] = useState(8);
   const [msgsPerLead, setMsgsPerLead] = useState(14);
   const [intervalSec, setIntervalSec] = useState(1);
-  const [duration, setDuration] = useState(180);
-  const [parallelLeads, setParallelLeads] = useState(1); // How many leads to process simultaneously
+  const [duration, setDuration] = useState(0); // 0 = auto-calculate
+  const [parallelLeads, setParallelLeads] = useState(1);
   const [dispatchMode, setDispatchMode] = useState<"sequential" | "simultaneous" | "wave">("sequential");
   // Config — Perfis
   const [selectedProfiles, setSelectedProfiles] = useState<string[]>([]);

@@ -11,11 +11,11 @@ import {
 // ===== API — Roteamento inteligente por tipo de chamada =====
 export type SimCallType = "lead" | "agent" | "evaluate" | "debrief" | "objection" | "loss" | "deep" | "price_image";
 
-const SIMULATOR_MAX_CONCURRENT_REQUESTS = 1;
-const SIMULATOR_REQUEST_GAP_MS = 1800;
-const SIMULATOR_INPUT_TOKEN_BUDGET_PER_MIN = 12000;
+const SIMULATOR_MAX_CONCURRENT_REQUESTS = 2;
+const SIMULATOR_REQUEST_GAP_MS = 1200;
+const SIMULATOR_INPUT_TOKEN_BUDGET_PER_MIN = 18000;
 const SIMULATOR_INPUT_WINDOW_MS = 60_000;
-const SIMULATOR_COOLDOWN_ON_429_MS = 35_000;
+const SIMULATOR_COOLDOWN_ON_429_MS = 25_000;
 let activeSimulatorRequests = 0;
 let lastSimulatorRequestAt = 0;
 let simulatorCooldownUntil = 0;
