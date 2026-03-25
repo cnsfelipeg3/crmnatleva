@@ -191,12 +191,45 @@ export default function SimuladorManualMode() {
 
   // Load behavior_prompt from DB for all agents
   const [agentBehaviors, setAgentBehaviors] = useState<Record<string, string>>({});
+  const [kbContent, setKbContent] = useState<Record<string, string>>({});
   useEffect(() => {
     supabase.from("ai_team_agents").select("id, behavior_prompt").then(({ data }) => {
       if (data) {
         const map: Record<string, string> = {};
         data.forEach((a: any) => { if (a.behavior_prompt) map[a.id] = a.behavior_prompt; });
         setAgentBehaviors(map);
+      }
+    });
+    // Load KB docs and map to agents by category/title
+    supabase.from("ai_knowledge_base").select("title, category, content_text").eq("is_active", true).then(({ data }) => {
+      if (data) {
+        const agentKb: Record<string, string[]> = {};
+        for (const doc of data) {
+          const content = doc.content_text || "";
+          const title = (doc.title || "").toLowerCase();
+          const cat = (doc.category || "").toLowerCase();
+          // Destination docs → specialists
+          if (cat === "destinos" || title.includes("dubai") || title.includes("oriente")) {
+            (agentKb["habibi"] ??= []).push(content);
+          }
+          if (cat === "destinos" || title.includes("orlando") || title.includes("américas") || title.includes("americas")) {
+            (agentKb["nemo"] ??= []).push(content);
+          }
+          if (cat === "destinos" || title.includes("europa")) {
+            (agentKb["dante"] ??= []).push(content);
+          }
+          // Culture/atendimento docs → all funnel agents
+          if (cat === "cultura" || cat === "atendimento" || cat === "regras") {
+            for (const aid of ["maya", "atlas", "habibi", "nemo", "dante", "luna", "nero", "iris"]) {
+              (agentKb[aid] ??= []).push(content);
+            }
+          }
+        }
+        const kbMap: Record<string, string> = {};
+        for (const [aid, docs] of Object.entries(agentKb)) {
+          kbMap[aid] = `\n=== BASE DE CONHECIMENTO ===\n${docs.join("\n\n")}`;
+        }
+        setKbContent(kbMap);
       }
     });
   }, []);
