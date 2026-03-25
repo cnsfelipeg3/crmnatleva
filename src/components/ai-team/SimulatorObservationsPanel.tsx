@@ -766,8 +766,8 @@ REGRAS:
               {/* Improvements list */}
               <div className="flex-1 overflow-y-auto custom-scrollbar px-3 py-2 space-y-2">
                 {improvements.map((imp) => {
-                  const catMeta = CATEGORY_META[imp.category];
-                  const sevMeta = SEVERITY_META[imp.severity];
+                  const catMeta = CATEGORY_META[imp.category] || DEFAULT_CATEGORY;
+                  const sevMeta = SEVERITY_META[imp.severity] || DEFAULT_SEVERITY;
                   const CatIcon = catMeta.icon;
                   const isExpanded = expandedImpId === imp.id;
                   const isApplying = applyingId === imp.id;
