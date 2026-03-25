@@ -1,19 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-/**
- * simulator-media — Processes audio and image attachments for the simulator.
- * 
- * POST with multipart form data:
- *   - file: the audio or image file
- *   - type: "audio" | "image" | "file"
- * 
- * Returns: { transcription: string } for audio, { description: string } for images/files
- */
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -32,14 +23,16 @@ serve(async (req) => {
       });
     }
 
-    // Convert file to base64
     const arrayBuffer = await file.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const base64 = base64Encode(new Uint8Array(arrayBuffer));
     const mimeType = file.type || (mediaType === "audio" ? "audio/webm" : "image/jpeg");
+
+    console.log(`Processing ${mediaType}: ${file.name}, size=${arrayBuffer.byteLength}, mime=${mimeType}`);
 
     let messages: Array<{ role: string; content: any }>;
 
     if (mediaType === "audio") {
+      // Gemini uses inline_data for audio
       messages = [
         {
           role: "system",
@@ -49,13 +42,10 @@ serve(async (req) => {
           role: "user",
           content: [
             {
-              type: "input_audio",
-              input_audio: {
-                data: base64,
-                format: mimeType.includes("webm") ? "webm" : mimeType.includes("mp4") ? "mp4" : "wav",
-              },
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${base64}` },
             },
-            { type: "text", text: "Transcreva este áudio." },
+            { type: "text", text: "Transcreva este áudio fielmente em português." },
           ],
         },
       ];
@@ -77,7 +67,6 @@ serve(async (req) => {
         },
       ];
     } else {
-      // Generic file — try to read as text
       const decoder = new TextDecoder("utf-8", { fatal: false });
       const textContent = decoder.decode(new Uint8Array(arrayBuffer)).slice(0, 3000);
       messages = [
@@ -118,13 +107,14 @@ serve(async (req) => {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      return new Response(JSON.stringify({ error: "Erro ao processar mídia" }), {
+      return new Response(JSON.stringify({ error: `Erro ao processar mídia: ${status}` }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "";
+    console.log(`Result: ${content.slice(0, 100)}`);
 
     if (mediaType === "audio") {
       return new Response(JSON.stringify({ transcription: content }), {
