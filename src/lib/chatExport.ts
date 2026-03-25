@@ -78,7 +78,7 @@ export async function exportChatAsPDF(messages: Msg[], title?: string) {
 /**
  * Export chat messages as XLSX spreadsheet
  */
-export function exportChatAsXLSX(messages: Msg[], title?: string) {
+export async function exportChatAsXLSX(messages: Msg[], title?: string) {
   const data = messages.map((msg, i) => ({
     "#": i + 1,
     "Remetente": msg.role === "user" ? "Você" : "NatLeva Intelligence",
