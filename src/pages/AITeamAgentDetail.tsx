@@ -439,12 +439,12 @@ export default function AITeamAgentDetail() {
 
           {/* ═══ TAB: KNOWLEDGE BASE ═══ */}
           <TabsContent value="knowledge" className="space-y-4 mt-0">
-            <KnowledgeBaseTab docs={agentDocs} agentName={displayName} />
+            <KnowledgeBaseTab docs={agentDocs} agentName={displayName} agentId={agentId!} />
           </TabsContent>
 
           {/* ═══ TAB: SKILLS ═══ */}
           <TabsContent value="skills" className="space-y-4 mt-0">
-            <SkillsTab skills={agentSkills} agentName={displayName} />
+            <SkillsTab skills={agentSkills} agentName={displayName} agentId={agentId!} />
           </TabsContent>
 
           {/* ═══ TAB: BEHAVIOR & RULES ═══ */}
@@ -608,7 +608,7 @@ function NathImprovementsTab({ improvements, knowledge, agentName }: {
 }
 
 /* ═══ Knowledge Base Tab ═══ */
-function KnowledgeBaseTab({ docs, agentName }: { docs: KBDoc[]; agentName: string }) {
+function KnowledgeBaseTab({ docs, agentName, agentId }: { docs: KBDoc[]; agentName: string; agentId: string }) {
   const [search, setSearch] = useState("");
   const [selectedDoc, setSelectedDoc] = useState<KBDoc | null>(null);
   const [editMode, setEditMode] = useState(false);
@@ -616,6 +616,11 @@ function KnowledgeBaseTab({ docs, agentName }: { docs: KBDoc[]; agentName: strin
   const [editResumo, setEditResumo] = useState("");
   const [editTags, setEditTags] = useState("");
   const [editAgente, setEditAgente] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newContent, setNewContent] = useState("");
+  const [newCategory, setNewCategory] = useState("geral");
+  const [saving, setSaving] = useState(false);
 
   const filtered = docs.filter(d => !search || d.title.toLowerCase().includes(search.toLowerCase()) || d.tags.some(t => t.includes(search.toLowerCase())));
 
@@ -750,10 +755,51 @@ function KnowledgeBaseTab({ docs, agentName }: { docs: KBDoc[]; agentName: strin
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input placeholder="Buscar na base de conhecimento..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 text-sm" />
         </div>
-        <Button size="sm" className="gap-1.5 shrink-0">
+        <Button size="sm" className="gap-1.5 shrink-0" onClick={() => setShowAddForm(true)}>
           <Upload className="w-3.5 h-3.5" /> Adicionar
         </Button>
       </div>
+
+      {showAddForm && (
+        <div className="rounded-xl border border-primary/30 bg-card p-4 space-y-3 animate-fade-in">
+          <h4 className="text-sm font-semibold text-foreground">Novo Documento de Conhecimento</h4>
+          <Input placeholder="Título do documento" value={newTitle} onChange={(e: any) => setNewTitle(e.target.value)} className="text-sm" />
+          <Textarea placeholder="Conteúdo / informação..." value={newContent} onChange={(e: any) => setNewContent(e.target.value)} rows={4} className="text-sm" />
+          <Select value={newCategory} onValueChange={setNewCategory}>
+            <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="geral">Geral</SelectItem>
+              <SelectItem value="destinos">Destinos</SelectItem>
+              <SelectItem value="hoteis">Hotéis</SelectItem>
+              <SelectItem value="scripts">Scripts</SelectItem>
+              <SelectItem value="objecoes">Objeções</SelectItem>
+              <SelectItem value="processos">Processos</SelectItem>
+              <SelectItem value="fornecedores">Fornecedores</SelectItem>
+              <SelectItem value="compliance">Compliance</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => { setShowAddForm(false); setNewTitle(""); setNewContent(""); }}>Cancelar</Button>
+            <Button size="sm" disabled={!newTitle.trim() || !newContent.trim() || saving} className="gap-1.5"
+              onClick={async () => {
+                setSaving(true);
+                const { error } = await supabase.from("ai_knowledge_base").insert({
+                  title: newTitle.trim(),
+                  content_text: newContent.trim(),
+                  category: newCategory,
+                  description: `Conhecimento do agente ${agentName}`,
+                  is_active: true,
+                });
+                setSaving(false);
+                if (error) { sonnerToast.error("Erro ao salvar: " + error.message); return; }
+                sonnerToast.success("Documento adicionado à base de conhecimento!");
+                setShowAddForm(false); setNewTitle(""); setNewContent("");
+              }}>
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Salvar
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="text-xs text-muted-foreground">
         {filtered.length} documento{filtered.length !== 1 ? "s" : ""} na base de <span className="font-semibold text-foreground">{agentName}</span>
@@ -808,16 +854,41 @@ function KnowledgeBaseTab({ docs, agentName }: { docs: KBDoc[]; agentName: strin
 }
 
 /* ═══ Skills Tab ═══ */
-function SkillsTab({ skills, agentName }: { skills: SkillItem[]; agentName: string }) {
+function SkillsTab({ skills, agentName, agentId }: { skills: SkillItem[]; agentName: string; agentId: string }) {
   const [skillStates, setSkillStates] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
     skills.forEach(s => { map[s.id] = s.active; });
     return map;
   });
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newSkillName, setNewSkillName] = useState("");
+  const [newSkillDesc, setNewSkillDesc] = useState("");
+  const [newSkillCategory, setNewSkillCategory] = useState("comunicação");
+  const [saving, setSaving] = useState(false);
 
   const toggleSkill = (id: string) => {
     setSkillStates(prev => ({ ...prev, [id]: !prev[id] }));
     sonnerToast.success("Skill atualizada");
+  };
+
+  const handleAddSkill = async () => {
+    if (!newSkillName.trim()) return;
+    setSaving(true);
+    // Add skill to agent's skills array in DB
+    const { data: current } = await supabase.from("ai_team_agents").select("skills").eq("id", agentId).maybeSingle();
+    const currentSkills: string[] = (current?.skills as string[]) || [];
+    if (!currentSkills.includes(newSkillName.trim())) {
+      const { error } = await supabase.from("ai_team_agents").update({
+        skills: [...currentSkills, newSkillName.trim()],
+        updated_at: new Date().toISOString(),
+      }).eq("id", agentId);
+      if (error) { sonnerToast.error("Erro: " + error.message); setSaving(false); return; }
+    }
+    sonnerToast.success(`Skill "${newSkillName.trim()}" adicionada!`);
+    setSaving(false);
+    setShowAddForm(false);
+    setNewSkillName("");
+    setNewSkillDesc("");
   };
 
   return (
@@ -826,10 +897,34 @@ function SkillsTab({ skills, agentName }: { skills: SkillItem[]; agentName: stri
         <p className="text-xs text-muted-foreground">
           {skills.length} skill{skills.length !== 1 ? "s" : ""} atribuídas a <span className="font-semibold text-foreground">{agentName}</span>
         </p>
-        <Button size="sm" variant="outline" className="gap-1.5">
+        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowAddForm(true)}>
           <Plus className="w-3.5 h-3.5" /> Nova Skill
         </Button>
       </div>
+
+      {showAddForm && (
+        <div className="rounded-xl border border-primary/30 bg-card p-4 space-y-3 animate-fade-in">
+          <h4 className="text-sm font-semibold text-foreground">Nova Skill</h4>
+          <Input placeholder="Nome da skill (ex: Qualificação BANT)" value={newSkillName} onChange={(e: any) => setNewSkillName(e.target.value)} className="text-sm" />
+          <Textarea placeholder="Descrição da skill (opcional)" value={newSkillDesc} onChange={(e: any) => setNewSkillDesc(e.target.value)} rows={2} className="text-sm" />
+          <Select value={newSkillCategory} onValueChange={setNewSkillCategory}>
+            <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="comunicação">Comunicação</SelectItem>
+              <SelectItem value="vendas">Vendas</SelectItem>
+              <SelectItem value="análise">Análise</SelectItem>
+              <SelectItem value="operacional">Operacional</SelectItem>
+              <SelectItem value="conhecimento">Conhecimento</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => { setShowAddForm(false); setNewSkillName(""); setNewSkillDesc(""); }}>Cancelar</Button>
+            <Button size="sm" disabled={!newSkillName.trim() || saving} className="gap-1.5" onClick={handleAddSkill}>
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Salvar
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-3">
         {skills.map(skill => {
