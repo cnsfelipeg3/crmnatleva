@@ -115,7 +115,7 @@ export default function SimuladorAutoMode() {
   const [fatigueThreshold, setFatigueThreshold] = useState(20);
   // Config — Presets
   const [presetName, setPresetName] = useState("");
-  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "lead_behavior" | "comportamento" | "avancado" | "stress" | "presets">("volume");
+  const [configTab, setConfigTab] = useState<string>("volume"); // kept for potential future use
 
   // Runtime
   const [phase, setPhase] = useState<Phase>("config");
