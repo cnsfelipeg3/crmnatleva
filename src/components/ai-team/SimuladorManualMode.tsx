@@ -164,6 +164,7 @@ const getAgentColor = (agent: typeof AGENTS_V4[0]) => {
 
 export default function SimuladorManualMode() {
   const isMobile = useIsMobile();
+  const { config: agencyConfig } = useAgencyConfig();
   const { data: globalRules = [] } = useGlobalRules();
   const globalRulesBlock = buildGlobalRulesBlock(globalRules);
   const [selectedAgent, setSelectedAgent] = useState(AGENTS_V4[2]);
