@@ -284,7 +284,7 @@ export default function SimuladorManualMode() {
         body: JSON.stringify({
           type: "agent",
           systemPrompt: manualSystemPrompt,
-          agentBehaviorPrompt: agentBehaviors[selectedAgent.id] || "",
+          agentBehaviorPrompt: (agentBehaviors[selectedAgent.id] || "") + (kbContent[selectedAgent.id] || ""),
           history: buildConversationHistory(nextMessages, selectedDestino, isLivreMode),
           provider: "anthropic",
         }),
