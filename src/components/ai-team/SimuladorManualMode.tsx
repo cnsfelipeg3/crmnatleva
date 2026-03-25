@@ -349,7 +349,7 @@ export default function SimuladorManualMode() {
           if (!line.startsWith("data: ")) continue;
           const json = line.slice(6).trim();
           if (json === "[DONE]") break;
-          try { const p = JSON.parse(json); const c = p.choices?.[0]?.delta?.content; if (c) { agentText += c; updateAgent(agentText); } } catch {}
+          try { const p = JSON.parse(json); const c = p.choices?.[0]?.delta?.content; if (c) { agentText += c; updateAgent(enforceAgentFormatting(agentText)); } } catch {}
         }
       }
 
