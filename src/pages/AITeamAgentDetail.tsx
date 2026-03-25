@@ -497,7 +497,7 @@ export default function AITeamAgentDetail() {
 
           {/* ═══ TAB: SKILLS ═══ */}
           <TabsContent value="skills" className="space-y-4 mt-0">
-            <SkillsTab skills={agentSkills} agentName={displayName} agentId={agentId!} />
+            <SkillsTab skills={agentSkills} dbSkills={dbAgentSkills} agentName={displayName} agentId={agentId!} />
           </TabsContent>
 
           {/* ═══ TAB: BEHAVIOR & RULES ═══ */}
@@ -907,10 +907,29 @@ function KnowledgeBaseTab({ docs, agentName, agentId }: { docs: KBDoc[]; agentNa
 }
 
 /* ═══ Skills Tab ═══ */
-function SkillsTab({ skills, agentName, agentId }: { skills: SkillItem[]; agentName: string; agentId: string }) {
+function SkillsTab({ skills, dbSkills = [], agentName, agentId }: { skills: SkillItem[]; dbSkills?: string[]; agentName: string; agentId: string }) {
+  // Merge: DB skills are source of truth, enrich with mock details where available
+  const mergedSkills = useMemo(() => {
+    if (dbSkills.length === 0) return skills;
+    return dbSkills.map((skillName, idx) => {
+      const mock = skills.find(s => s.name.toLowerCase() === skillName.toLowerCase());
+      return mock || {
+        id: `db-${idx}`,
+        name: skillName,
+        category: "geral",
+        level: "básico",
+        successRate: 0,
+        uses: 0,
+        active: true,
+        agents: [agentName],
+        description: "",
+      } satisfies SkillItem;
+    });
+  }, [dbSkills, skills, agentName]);
+
   const [skillStates, setSkillStates] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
-    skills.forEach(s => { map[s.id] = s.active; });
+    mergedSkills.forEach(s => { map[s.id] = s.active; });
     return map;
   });
   const [showAddForm, setShowAddForm] = useState(false);
@@ -919,15 +938,9 @@ function SkillsTab({ skills, agentName, agentId }: { skills: SkillItem[]; agentN
   const [newSkillCategory, setNewSkillCategory] = useState("comunicação");
   const [saving, setSaving] = useState(false);
 
-  const toggleSkill = (id: string) => {
-    setSkillStates(prev => ({ ...prev, [id]: !prev[id] }));
-    sonnerToast.success("Skill atualizada");
-  };
-
   const handleAddSkill = async () => {
     if (!newSkillName.trim()) return;
     setSaving(true);
-    // Add skill to agent's skills array in DB
     const { data: current } = await supabase.from("ai_team_agents").select("skills").eq("id", agentId).maybeSingle();
     const currentSkills: string[] = (current?.skills as string[]) || [];
     if (!currentSkills.includes(newSkillName.trim())) {
@@ -944,11 +957,17 @@ function SkillsTab({ skills, agentName, agentId }: { skills: SkillItem[]; agentN
     setNewSkillDesc("");
   };
 
+    setSkillStates(prev => ({ ...prev, [id]: !prev[id] }));
+    sonnerToast.success("Skill atualizada");
+  };
+
+  const totalSkills = mergedSkills.length;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          {skills.length} skill{skills.length !== 1 ? "s" : ""} atribuídas a <span className="font-semibold text-foreground">{agentName}</span>
+          {totalSkills} skill{totalSkills !== 1 ? "s" : ""} atribuídas a <span className="font-semibold text-foreground">{agentName}</span>
         </p>
         <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowAddForm(true)}>
           <Plus className="w-3.5 h-3.5" /> Nova Skill
@@ -980,7 +999,7 @@ function SkillsTab({ skills, agentName, agentId }: { skills: SkillItem[]; agentN
       )}
 
       <div className="grid gap-3">
-        {skills.map(skill => {
+        {mergedSkills.map(skill => {
           const active = skillStates[skill.id] ?? skill.active;
           return (
             <div key={skill.id} className={cn(
@@ -992,26 +1011,28 @@ function SkillsTab({ skills, agentName, agentId }: { skills: SkillItem[]; agentN
                   <div className="flex items-center gap-2 flex-wrap">
                     <Zap className="w-3.5 h-3.5 text-primary shrink-0" />
                     <h4 className="text-sm font-semibold text-foreground">{skill.name}</h4>
-                    <Badge className={cn("text-[9px] border", LEVEL_COLORS[skill.level] || "")}>{skill.level}</Badge>
+                    {skill.level && <Badge className={cn("text-[9px] border", LEVEL_COLORS[skill.level] || "")}>{skill.level}</Badge>}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">{skill.description}</p>
-                  <div className="flex items-center gap-4 mt-3">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${skill.successRate}%` }} />
+                  {skill.description && <p className="text-xs text-muted-foreground mt-1">{skill.description}</p>}
+                  {(skill.successRate > 0 || skill.uses > 0) && (
+                    <div className="flex items-center gap-4 mt-3">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${skill.successRate}%` }} />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">{skill.successRate}%</span>
                       </div>
-                      <span className="text-[10px] text-muted-foreground">{skill.successRate}%</span>
+                      <span className="text-[10px] text-muted-foreground">{skill.uses} usos</span>
+                      <span className="text-[10px] text-muted-foreground capitalize">{skill.category}</span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground">{skill.uses} usos</span>
-                    <span className="text-[10px] text-muted-foreground capitalize">{skill.category}</span>
-                  </div>
+                  )}
                 </div>
                 <Switch checked={active} onCheckedChange={() => toggleSkill(skill.id)} />
               </div>
             </div>
           );
         })}
-        {skills.length === 0 && (
+        {mergedSkills.length === 0 && (
           <div className="text-center py-8">
             <Zap className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Nenhuma skill atribuída a este agente.</p>
