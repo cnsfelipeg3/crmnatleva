@@ -14,7 +14,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 
-const DESTINOS = ["🎲 Aleatório", "Dubai", "Orlando", "Europa", "Maldivas", "Caribe", "Japão", "Egito", "Tailândia", "Nova York", "Paris", "Grécia", "Bali", "Cancún", "Lisboa", "Seychelles"];
+const DESTINOS = ["💬 Livre", "🎲 Aleatório", "Dubai", "Orlando", "Europa", "Maldivas", "Caribe", "Japão", "Egito", "Tailândia", "Nova York", "Paris", "Grécia", "Bali", "Cancún", "Lisboa", "Seychelles"];
 
 const DESTINOS_ALEATORIOS = [
   "Butão", "Islândia", "Patagônia", "Fiji", "Tanzânia", "Marrocos", "Sri Lanka",
@@ -135,7 +135,8 @@ export default function SimuladorManualMode() {
   const { data: globalRules = [] } = useGlobalRules();
   const globalRulesBlock = buildGlobalRulesBlock(globalRules);
   const [selectedAgent, setSelectedAgent] = useState(AGENTS_V4[2]);
-  const [selectedDestino, setSelectedDestinoRaw] = useState("Dubai");
+  const [selectedDestino, setSelectedDestinoRaw] = useState("💬 Livre");
+  const isLivreMode = selectedDestino === "💬 Livre";
   const setSelectedDestino = (d: string) => {
     if (d === "🎲 Aleatório") {
       const random = DESTINOS_ALEATORIOS[Math.floor(Math.random() * DESTINOS_ALEATORIOS.length)];
@@ -213,7 +214,7 @@ export default function SimuladorManualMode() {
           type: "agent",
           systemPrompt: buildManualAgentPrompt(selectedAgent, globalRulesBlock),
           agentBehaviorPrompt: agentBehaviors[selectedAgent.id] || "",
-          history: [{ role: "user", content: `[Simulação - Cliente interessado em ${selectedDestino}] ${text}` }],
+          history: [{ role: "user", content: isLivreMode ? text : `[Simulação - Cliente interessado em ${selectedDestino}] ${text}` }],
           provider: "anthropic",
         }),
       });
@@ -391,14 +392,15 @@ export default function SimuladorManualMode() {
             <div className="grid grid-cols-3 gap-2.5">
               {DESTINOS.map(d => {
                 const isRandom = d === "🎲 Aleatório";
-                const isActive = isRandom ? !DESTINOS.slice(1).includes(selectedDestino) : selectedDestino === d;
+                const isLivre = d === "💬 Livre";
+                const isActive = isLivre ? selectedDestino === "💬 Livre" : isRandom ? (!DESTINOS.slice(2).includes(selectedDestino) && selectedDestino !== "💬 Livre") : selectedDestino === d;
                 return (
                   <button key={d} onClick={() => { setSelectedDestino(d); setShowPanel(false); }}
                     className="text-[12px] px-3 py-3.5 rounded-xl font-medium transition-all text-center"
                     style={{
-                      background: isActive ? (isRandom ? "rgba(139,92,246,0.12)" : "rgba(245,158,11,0.1)") : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${isActive ? (isRandom ? "rgba(139,92,246,0.4)" : "rgba(245,158,11,0.35)") : "rgba(255,255,255,0.08)"}`,
-                      color: isActive ? (isRandom ? "#C4B5FD" : "#FCD34D") : "#CBD5E1",
+                      background: isActive ? (isLivre ? "rgba(16,185,129,0.12)" : isRandom ? "rgba(139,92,246,0.12)" : "rgba(245,158,11,0.1)") : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${isActive ? (isLivre ? "rgba(16,185,129,0.4)" : isRandom ? "rgba(139,92,246,0.4)" : "rgba(245,158,11,0.35)") : "rgba(255,255,255,0.08)"}`,
+                      color: isActive ? (isLivre ? "#6EE7B7" : isRandom ? "#C4B5FD" : "#FCD34D") : "#CBD5E1",
                     }}>{isRandom && isActive ? `🎲 ${selectedDestino}` : d}</button>
                 );
               })}
@@ -487,9 +489,12 @@ export default function SimuladorManualMode() {
                     {isMobile && <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />}
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <MapPin className="w-3 h-3 shrink-0 text-amber-500" />
+                    <MapPin className={cn("w-3 h-3 shrink-0", isLivreMode ? "text-emerald-500" : "text-amber-500")} />
                     <p className={cn("truncate text-muted-foreground", isMobile ? "text-[11px]" : "text-xs")}>
-                      {isMobile ? `${selectedDestino} · Lv.${selectedAgent.level}` : `Especialista ${selectedDestino} · Lv.${selectedAgent.level} · ${selectedAgent.role}`}
+                      {isMobile
+                        ? (isLivreMode ? `Modo Livre · Lv.${selectedAgent.level}` : `${selectedDestino} · Lv.${selectedAgent.level}`)
+                        : (isLivreMode ? `Modo Livre — destino definido na conversa · Lv.${selectedAgent.level} · ${selectedAgent.role}` : `Especialista ${selectedDestino} · Lv.${selectedAgent.level} · ${selectedAgent.role}`)
+                      }
                     </p>
                   </div>
                 </div>
@@ -537,7 +542,7 @@ export default function SimuladorManualMode() {
                     Converse com {selectedAgent.name}
                   </p>
                   <p className={cn("mt-1.5 text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
-                    Simule um cliente interessado em {selectedDestino}
+                    {isLivreMode ? "Converse livremente — o destino será descoberto na conversa" : `Simule um cliente interessado em ${selectedDestino}`}
                   </p>
                 </div>
                 <div className={cn("flex flex-wrap gap-2.5 justify-center mx-auto", isMobile ? "max-w-[340px]" : "max-w-lg")}>
@@ -560,7 +565,7 @@ export default function SimuladorManualMode() {
             <div className="space-y-2.5">
               <NathOpinionButton
                 messages={messages.map(m => ({ role: m.role === "user" ? "user" : "agent", content: m.content, agentName: m.agentName, timestamp: m.timestamp }))}
-                context={`Destino: ${selectedDestino} · Agente: ${selectedAgent.name} (${selectedAgent.role})`}
+                context={`${isLivreMode ? "Modo Livre (destino aberto)" : `Destino: ${selectedDestino}`} · Agente: ${selectedAgent.name} (${selectedAgent.role})`}
                 variant="floating"
               />
               <div className="flex gap-2">
@@ -657,14 +662,15 @@ export default function SimuladorManualMode() {
               <div className="flex flex-wrap gap-2">
                 {DESTINOS.map(d => {
                   const isRandom = d === "🎲 Aleatório";
-                  const isActive = isRandom ? !DESTINOS.slice(1).includes(selectedDestino) : selectedDestino === d;
+                  const isLivre = d === "💬 Livre";
+                  const isActive = isLivre ? selectedDestino === "💬 Livre" : isRandom ? (!DESTINOS.slice(2).includes(selectedDestino) && selectedDestino !== "💬 Livre") : selectedDestino === d;
                   return (
                     <button key={d} onClick={() => setSelectedDestino(d)}
                       className="text-[11px] px-3 py-2 rounded-xl font-medium transition-all"
                       style={{
-                        background: isActive ? (isRandom ? "rgba(139,92,246,0.12)" : "rgba(245,158,11,0.1)") : "rgba(255,255,255,0.03)",
-                        border: `1px solid ${isActive ? (isRandom ? "rgba(139,92,246,0.4)" : "rgba(245,158,11,0.35)") : "rgba(255,255,255,0.08)"}`,
-                        color: isActive ? (isRandom ? "#C4B5FD" : "#FCD34D") : "#CBD5E1",
+                        background: isActive ? (isLivre ? "rgba(16,185,129,0.12)" : isRandom ? "rgba(139,92,246,0.12)" : "rgba(245,158,11,0.1)") : "rgba(255,255,255,0.03)",
+                        border: `1px solid ${isActive ? (isLivre ? "rgba(16,185,129,0.4)" : isRandom ? "rgba(139,92,246,0.4)" : "rgba(245,158,11,0.35)") : "rgba(255,255,255,0.08)"}`,
+                        color: isActive ? (isLivre ? "#6EE7B7" : isRandom ? "#C4B5FD" : "#FCD34D") : "#CBD5E1",
                       }}>{isRandom && isActive ? `🎲 ${selectedDestino}` : d}</button>
                   );
                 })}
