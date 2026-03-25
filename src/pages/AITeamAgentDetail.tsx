@@ -938,7 +938,25 @@ function SkillsTab({ skills, dbSkills = [], agentName, agentId }: { skills: Skil
   const [newSkillCategory, setNewSkillCategory] = useState("comunicação");
   const [saving, setSaving] = useState(false);
 
-  const toggleSkill = (id: string) => {
+  const handleAddSkill = async () => {
+    if (!newSkillName.trim()) return;
+    setSaving(true);
+    const { data: current } = await supabase.from("ai_team_agents").select("skills").eq("id", agentId).maybeSingle();
+    const currentSkills: string[] = (current?.skills as string[]) || [];
+    if (!currentSkills.includes(newSkillName.trim())) {
+      const { error } = await supabase.from("ai_team_agents").update({
+        skills: [...currentSkills, newSkillName.trim()],
+        updated_at: new Date().toISOString(),
+      }).eq("id", agentId);
+      if (error) { sonnerToast.error("Erro: " + error.message); setSaving(false); return; }
+    }
+    sonnerToast.success(`Skill "${newSkillName.trim()}" adicionada!`);
+    setSaving(false);
+    setShowAddForm(false);
+    setNewSkillName("");
+    setNewSkillDesc("");
+  };
+
     setSkillStates(prev => ({ ...prev, [id]: !prev[id] }));
     sonnerToast.success("Skill atualizada");
   };
