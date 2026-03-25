@@ -907,10 +907,29 @@ function KnowledgeBaseTab({ docs, agentName, agentId }: { docs: KBDoc[]; agentNa
 }
 
 /* ═══ Skills Tab ═══ */
-function SkillsTab({ skills, agentName, agentId }: { skills: SkillItem[]; agentName: string; agentId: string }) {
+function SkillsTab({ skills, dbSkills = [], agentName, agentId }: { skills: SkillItem[]; dbSkills?: string[]; agentName: string; agentId: string }) {
+  // Merge: DB skills are source of truth, enrich with mock details where available
+  const mergedSkills = useMemo(() => {
+    if (dbSkills.length === 0) return skills;
+    return dbSkills.map((skillName, idx) => {
+      const mock = skills.find(s => s.name.toLowerCase() === skillName.toLowerCase());
+      return mock || {
+        id: `db-${idx}`,
+        name: skillName,
+        category: "geral",
+        level: "básico",
+        successRate: 0,
+        uses: 0,
+        active: true,
+        agents: [agentName],
+        description: "",
+      } satisfies SkillItem;
+    });
+  }, [dbSkills, skills, agentName]);
+
   const [skillStates, setSkillStates] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
-    skills.forEach(s => { map[s.id] = s.active; });
+    mergedSkills.forEach(s => { map[s.id] = s.active; });
     return map;
   });
   const [showAddForm, setShowAddForm] = useState(false);
@@ -924,31 +943,13 @@ function SkillsTab({ skills, agentName, agentId }: { skills: SkillItem[]; agentN
     sonnerToast.success("Skill atualizada");
   };
 
-  const handleAddSkill = async () => {
-    if (!newSkillName.trim()) return;
-    setSaving(true);
-    // Add skill to agent's skills array in DB
-    const { data: current } = await supabase.from("ai_team_agents").select("skills").eq("id", agentId).maybeSingle();
-    const currentSkills: string[] = (current?.skills as string[]) || [];
-    if (!currentSkills.includes(newSkillName.trim())) {
-      const { error } = await supabase.from("ai_team_agents").update({
-        skills: [...currentSkills, newSkillName.trim()],
-        updated_at: new Date().toISOString(),
-      }).eq("id", agentId);
-      if (error) { sonnerToast.error("Erro: " + error.message); setSaving(false); return; }
-    }
-    sonnerToast.success(`Skill "${newSkillName.trim()}" adicionada!`);
-    setSaving(false);
-    setShowAddForm(false);
-    setNewSkillName("");
-    setNewSkillDesc("");
-  };
+  const totalSkills = mergedSkills.length;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          {skills.length} skill{skills.length !== 1 ? "s" : ""} atribuídas a <span className="font-semibold text-foreground">{agentName}</span>
+          {totalSkills} skill{totalSkills !== 1 ? "s" : ""} atribuídas a <span className="font-semibold text-foreground">{agentName}</span>
         </p>
         <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowAddForm(true)}>
           <Plus className="w-3.5 h-3.5" /> Nova Skill
