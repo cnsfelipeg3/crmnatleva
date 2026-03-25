@@ -31,12 +31,12 @@ function getModelConfig(type: CallType, provider: string): { model: string; stre
 
   if (provider === "anthropic") {
     switch (type) {
-      // Heavy reasoning → Opus (worth the cost)
+      // Heavy reasoning → Claude Opus (máxima qualidade de análise)
       case "evaluate":
       case "debrief":
       case "deep":
-        return { model: "claude-sonnet-4-20250514", stream: false, maxTokens: 3000 };
-      // Fast conversational → Sonnet (15x cheaper than Opus, still excellent)
+        return { model: "claude-opus-4-20250514", stream: false, maxTokens: 4000 };
+      // Fast conversational → Sonnet (custo-eficiente, excelente para diálogo)
       case "lead":
       case "objection":
       case "loss":
