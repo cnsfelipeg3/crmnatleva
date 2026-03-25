@@ -134,6 +134,14 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
               {/* Right Actions */}
               <div className="flex items-center gap-1">
                 <button
+                  onClick={toggleFullscreen}
+                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200"
+                  title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+                >
+                  {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                </button>
+
+                <button
                   onClick={() => setDarkMode(!darkMode)}
                   className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200"
                   title={darkMode ? "Modo claro" : "Modo escuro"}
