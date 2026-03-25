@@ -162,6 +162,22 @@ export default function AITeamAgentDetail() {
     r.scope === "all" || r.agents.some(a => a.toUpperCase() === agentNameUpper)
   ), [agentNameUpper]);
 
+  // Fetch behavior_prompt from database (source of truth)
+  const { data: dbAgent } = useQuery({
+    queryKey: ["ai_team_agent_db", agentId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_team_agents")
+        .select("behavior_prompt")
+        .eq("id", agentId!)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!agentId,
+  });
+
+  const realBehaviorPrompt = dbAgent?.behavior_prompt || agent?.behaviorPrompt || "";
+
   // Fetch real improvements from Nath for this agent
   const { data: nathImprovements = [] } = useQuery({
     queryKey: ["ai_team_improvements", agentId],
