@@ -489,9 +489,12 @@ export default function SimuladorManualMode() {
                     {isMobile && <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />}
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <MapPin className="w-3 h-3 shrink-0 text-amber-500" />
+                    <MapPin className={cn("w-3 h-3 shrink-0", isLivreMode ? "text-emerald-500" : "text-amber-500")} />
                     <p className={cn("truncate text-muted-foreground", isMobile ? "text-[11px]" : "text-xs")}>
-                      {isMobile ? `${selectedDestino} · Lv.${selectedAgent.level}` : `Especialista ${selectedDestino} · Lv.${selectedAgent.level} · ${selectedAgent.role}`}
+                      {isMobile
+                        ? (isLivreMode ? `Modo Livre · Lv.${selectedAgent.level}` : `${selectedDestino} · Lv.${selectedAgent.level}`)
+                        : (isLivreMode ? `Modo Livre — destino definido na conversa · Lv.${selectedAgent.level} · ${selectedAgent.role}` : `Especialista ${selectedDestino} · Lv.${selectedAgent.level} · ${selectedAgent.role}`)
+                      }
                     </p>
                   </div>
                 </div>
