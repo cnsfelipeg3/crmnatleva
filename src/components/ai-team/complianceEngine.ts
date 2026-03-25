@@ -99,7 +99,7 @@ export async function loadAgentComplianceProfile(agentId: string): Promise<Agent
     title: r.title, rule: r.rule, category: r.category, impact: r.estimated_impact || "médio",
   }));
   const knowledgeSummaries = training?.knowledgeSummaries || [];
-  const skills = agent?.skills || (dbAgentRes.data?.skills as string[]) || [];
+  const skills = skillInstructions.length > 0 ? skillInstructions : (agent?.skills || (dbAgentRes.data?.skills as string[]) || []);
   const approvedImprovements = (improvementsRes.data || []).map((i: any) => `${i.title}: ${i.description || ""}`);
 
   // Extract ALL prohibitions from every text source
