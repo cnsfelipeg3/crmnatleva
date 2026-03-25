@@ -199,16 +199,21 @@ export default function AITeamAgentDetail() {
     enabled: !!agentId,
   });
 
-  // Keep mock arrays as fallback for rendering but use DB counts
-  const agentDocs = dbKbDocs.length > 0 ? dbKbDocs : ALL_KB_DOCS.filter(d =>
+  // Keep mock arrays for rendering, use DB counts for badges
+  const agentDocs = ALL_KB_DOCS.filter(d =>
     d.agente === agentNameUpper || d.agente === "Todos"
   );
-  const agentSkills = dbAgentSkills.length > 0 ? dbAgentSkills : ALL_SKILLS.filter(s =>
+  const agentSkills = ALL_SKILLS.filter(s =>
     s.agents.some(a => a.toUpperCase() === agentNameUpper)
   );
-  const agentRules = dbAgentRules.length > 0 ? dbAgentRules : ALL_RULES.filter(r =>
+  const agentRules = ALL_RULES.filter(r =>
     r.scope === "all" || r.agents.some(a => a.toUpperCase() === agentNameUpper)
   );
+
+  // Real counts from DB for tab badges
+  const realKbCount = dbKbDocs.length || agentDocs.length;
+  const realSkillsCount = dbAgentSkills.length || agentSkills.length;
+  const realRulesCount = dbAgentRules.length || agentRules.length;
 
   // Fetch behavior_prompt from database (source of truth)
   const { data: dbAgent } = useQuery({
