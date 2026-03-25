@@ -878,7 +878,7 @@ function SkillsTab({ skills, agentName }: { skills: SkillItem[]; agentName: stri
 function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRole, setEditRole,
   editSector, setEditSector, editLevel, setEditLevel, editSkills, setEditSkills,
   editBehavior, setEditBehavior, customSkill, setCustomSkill, toggleItem, addCustomSkill,
-  cancelEditing, saveEditing, startEditing, agent, agentId,
+  cancelEditing, saveEditing, startEditing, agent, agentId, realBehaviorPrompt,
 }: any) {
   const [ruleStates, setRuleStates] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
