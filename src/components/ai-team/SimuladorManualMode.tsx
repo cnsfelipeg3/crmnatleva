@@ -292,7 +292,7 @@ export default function SimuladorManualMode() {
           systemPrompt: manualSystemPrompt,
           agentBehaviorPrompt: (agentBehaviors[selectedAgent.id] || "") + (kbContent[selectedAgent.id] || ""),
           history: buildConversationHistory(nextMessages, selectedDestino, isLivreMode),
-          provider: "anthropic",
+          provider: "lovable",
         }),
       });
 
