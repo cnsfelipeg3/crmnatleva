@@ -565,7 +565,7 @@ export default function SimuladorManualMode() {
             <div className="space-y-2.5">
               <NathOpinionButton
                 messages={messages.map(m => ({ role: m.role === "user" ? "user" : "agent", content: m.content, agentName: m.agentName, timestamp: m.timestamp }))}
-                context={`Destino: ${selectedDestino} · Agente: ${selectedAgent.name} (${selectedAgent.role})`}
+                context={`${isLivreMode ? "Modo Livre (destino aberto)" : `Destino: ${selectedDestino}`} · Agente: ${selectedAgent.name} (${selectedAgent.role})`}
                 variant="floating"
               />
               <div className="flex gap-2">
