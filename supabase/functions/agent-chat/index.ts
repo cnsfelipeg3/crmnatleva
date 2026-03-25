@@ -128,7 +128,15 @@ serve(async (req) => {
 - Adapte linguagem ao perfil do lead
 - Máximo 1 emoji por mensagem, NUNCA use travessão
 - Gere desejo ANTES de falar preço
-- Mantenha continuidade total do contexto`;
+- Mantenha continuidade total do contexto
+
+REGRA CRÍTICA — ANTI-REPETIÇÃO:
+- NUNCA repita uma pergunta que já foi feita na conversa, mesmo com palavras diferentes.
+- Se o lead não respondeu uma pergunta, NÃO insista — siga o fluxo dele e mude de assunto.
+- Se uma informação já foi dada pelo lead, USE-A — jamais pergunte de novo.
+- Releia TODA a conversa antes de cada resposta para evitar redundância.
+- Siga o RITMO do cliente. A venda acontece no tempo dele, não no seu checklist.
+- Varie os temas: se já perguntou sobre datas, explore experiências, hospedagem, gastronomia, atividades.`;
 
     const agentDirectives = agentBehaviorPrompt ? `\n\nDIRETIVAS ESPECÍFICAS:\n${agentBehaviorPrompt}` : "";
 
