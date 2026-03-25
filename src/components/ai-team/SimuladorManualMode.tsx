@@ -268,8 +268,8 @@ export default function SimuladorManualMode() {
 
   const filteredAgents = activeSquad === "all" ? AGENTS_V4 : AGENTS_V4.filter(a => a.squadId === activeSquad);
   const manualSystemPrompt = useMemo(
-    () => buildManualAgentPrompt(selectedAgent, globalRulesBlock),
-    [selectedAgent, globalRulesBlock],
+    () => buildManualAgentPrompt(selectedAgent, globalRulesBlock, agencyConfig.agency_name, agencyConfig.tom_comunicacao),
+    [selectedAgent, globalRulesBlock, agencyConfig.agency_name, agencyConfig.tom_comunicacao],
   );
 
   const handleSend = useCallback(async (overrideText?: string) => {
