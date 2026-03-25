@@ -239,7 +239,12 @@ export default function SimuladorAutoMode() {
     const canais = selectedCanais.length > 0 ? selectedCanais : CANAIS_LEAD;
     const speedDelay = SPEED_OPTIONS.find(s => s.id === speed)?.delay ?? 2500;
     const simStartTime = Date.now();
-    const durationMs = duration * 1000;
+    // Auto-calculate duration: ~3s per API call, ~3 calls per round, per lead
+    const estimatedCallsPerLead = Math.floor(msgsPerLead / 2) * 3 + 2;
+    const estimatedSecondsPerLead = estimatedCallsPerLead * 2.5 + (speedDelay / 1000 * Math.floor(msgsPerLead / 2));
+    const autoDuration = Math.max(300, Math.ceil(numLeads * estimatedSecondsPerLead * 1.3));
+    const effectiveDuration = duration > 0 ? duration : autoDuration;
+    const durationMs = effectiveDuration * 1000;
     const evalEvery = evalFrequency === "every" ? 1 : evalFrequency === "every2" ? 2 : 3;
 
     // Helper to check duration limit
