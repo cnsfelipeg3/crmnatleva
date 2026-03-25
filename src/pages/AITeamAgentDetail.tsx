@@ -162,6 +162,22 @@ export default function AITeamAgentDetail() {
     r.scope === "all" || r.agents.some(a => a.toUpperCase() === agentNameUpper)
   ), [agentNameUpper]);
 
+  // Fetch behavior_prompt from database (source of truth)
+  const { data: dbAgent } = useQuery({
+    queryKey: ["ai_team_agent_db", agentId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_team_agents")
+        .select("behavior_prompt")
+        .eq("id", agentId!)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!agentId,
+  });
+
+  const realBehaviorPrompt = dbAgent?.behavior_prompt || agent?.behaviorPrompt || "";
+
   // Fetch real improvements from Nath for this agent
   const { data: nathImprovements = [] } = useQuery({
     queryKey: ["ai_team_improvements", agentId],
@@ -451,6 +467,7 @@ export default function AITeamAgentDetail() {
               startEditing={startEditing}
               agent={agent}
               agentId={agentId}
+              realBehaviorPrompt={realBehaviorPrompt}
             />
           </TabsContent>
 
@@ -861,7 +878,7 @@ function SkillsTab({ skills, agentName }: { skills: SkillItem[]; agentName: stri
 function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRole, setEditRole,
   editSector, setEditSector, editLevel, setEditLevel, editSkills, setEditSkills,
   editBehavior, setEditBehavior, customSkill, setCustomSkill, toggleItem, addCustomSkill,
-  cancelEditing, saveEditing, startEditing, agent, agentId,
+  cancelEditing, saveEditing, startEditing, agent, agentId, realBehaviorPrompt,
 }: any) {
   const [ruleStates, setRuleStates] = useState<Record<string, boolean>>(() => {
     const map: Record<string, boolean> = {};
@@ -989,9 +1006,9 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-foreground/70 leading-relaxed font-mono bg-muted/30 rounded-lg p-4 border border-border/30">
-              {agent?.behaviorPrompt || "Nenhuma diretiva configurada. Clique em Editar para definir."}
-            </p>
+            <pre className="text-sm text-foreground/70 leading-relaxed font-mono bg-muted/30 rounded-lg p-4 border border-border/30 whitespace-pre-wrap max-h-96 overflow-y-auto">
+              {realBehaviorPrompt || "Nenhuma diretiva configurada. Clique em Editar para definir."}
+            </pre>
             <Button variant="outline" size="sm" onClick={startEditing} className="gap-1.5">
               <Pencil className="w-3.5 h-3.5" /> Editar Comportamento
             </Button>
