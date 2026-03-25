@@ -226,6 +226,16 @@ export default function SimuladorAutoMode() {
     setSelectedLeadId(null); setDebrief(null); abortRef.current = false; simAtivaRef.current = true;
     chunksRef.current = new Map();
 
+    // Fetch real agent configs from DB before starting
+    try {
+      const { data: dbAgents } = await supabase.from("ai_team_agents").select("id, behavior_prompt, persona, skills").eq("is_active", true);
+      const overrides: Record<string, DbAgentOverride> = {};
+      (dbAgents || []).forEach((a: any) => {
+        overrides[a.id] = { behavior_prompt: a.behavior_prompt, persona: a.persona, skills: a.skills };
+      });
+      dbAgentOverridesRef.current = overrides;
+    } catch { dbAgentOverridesRef.current = {}; }
+
     timerRef.current = setInterval(() => setElapsedSeconds(p => p + 1), 1000);
 
     // Start DB persistence
