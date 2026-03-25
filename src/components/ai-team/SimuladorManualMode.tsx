@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
 import SimulatorChatLayout, { type SimChatMessage } from "./SimulatorChatLayout";
@@ -110,8 +110,27 @@ interface SavedSession {
   messages: ChatMsg[]; createdAt: string; updatedAt: string;
 }
 
+interface AIHistoryMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
 function loadSessions(): SavedSession[] { try { return JSON.parse(localStorage.getItem(SESSIONS_KEY) || "[]"); } catch { return []; } }
 function saveSessions(sessions: SavedSession[]) { localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions.slice(0, 50))); }
+
+function buildConversationHistory(messages: ChatMsg[], destino: string, isLivreMode: boolean): AIHistoryMessage[] {
+  return messages
+    .filter((message): message is ChatMsg => message.role === "user" || message.role === "agent")
+    .map((message, index) => {
+      const role = message.role === "user" ? "user" : "assistant";
+      const isFirstUserMessage = role === "user" && index === 0;
+      const content = isFirstUserMessage && !isLivreMode
+        ? `[Simulação - Cliente interessado em ${destino}] ${message.content}`
+        : message.content;
+
+      return { role, content };
+    });
+}
 
 const SUGGESTION_CHIPS = [
   "Quero uma viagem dos sonhos! ✨",
@@ -160,6 +179,7 @@ export default function SimuladorManualMode() {
   const [manualObsSelectedMsg, setManualObsSelectedMsg] = useState<SelectedMessage | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const messagesRef = useRef<ChatMsg[]>([]);
 
   // Load behavior_prompt from DB for all agents
   const [agentBehaviors, setAgentBehaviors] = useState<Record<string, string>>({});
@@ -172,6 +192,10 @@ export default function SimuladorManualMode() {
       }
     });
   }, []);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -196,12 +220,18 @@ export default function SimuladorManualMode() {
   }, [messages]);
 
   const filteredAgents = activeSquad === "all" ? AGENTS_V4 : AGENTS_V4.filter(a => a.squadId === activeSquad);
+  const manualSystemPrompt = useMemo(
+    () => buildManualAgentPrompt(selectedAgent, globalRulesBlock),
+    [selectedAgent, globalRulesBlock],
+  );
 
   const handleSend = useCallback(async (overrideText?: string) => {
     const text = overrideText || input.trim();
     if (!text || loading) return;
     const userMsg: ChatMsg = { id: crypto.randomUUID(), role: "user", content: text, timestamp: new Date().toISOString() };
-    setMessages(prev => [...prev, userMsg]);
+    const nextMessages = [...messagesRef.current, userMsg];
+    messagesRef.current = nextMessages;
+    setMessages(nextMessages);
     setInput("");
     setLoading(true);
 
@@ -212,9 +242,9 @@ export default function SimuladorManualMode() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         body: JSON.stringify({
           type: "agent",
-          systemPrompt: buildManualAgentPrompt(selectedAgent, globalRulesBlock),
+          systemPrompt: manualSystemPrompt,
           agentBehaviorPrompt: agentBehaviors[selectedAgent.id] || "",
-          history: [{ role: "user", content: isLivreMode ? text : `[Simulação - Cliente interessado em ${selectedDestino}] ${text}` }],
+          history: buildConversationHistory(nextMessages, selectedDestino, isLivreMode),
           provider: "anthropic",
         }),
       });
@@ -234,8 +264,14 @@ export default function SimuladorManualMode() {
       const updateAgent = (t: string) => {
         setMessages(prev => {
           const last = prev[prev.length - 1];
-          if (last?.id === streamId) return prev.map((m, idx) => idx === prev.length - 1 ? { ...m, content: t } : m);
-          return [...prev, { id: streamId, role: "agent" as const, content: t, timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name }];
+          let updated: ChatMsg[];
+          if (last?.id === streamId) {
+            updated = prev.map((m, idx) => idx === prev.length - 1 ? { ...m, content: t } : m);
+          } else {
+            updated = [...prev, { id: streamId, role: "agent" as const, content: t, timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name }];
+          }
+          messagesRef.current = updated;
+          return updated;
         });
       };
 
@@ -255,7 +291,12 @@ export default function SimuladorManualMode() {
       }
 
       if (!agentText) {
-        setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "agent", content: "Obrigado pelo contato! Como posso ajudá-lo?", timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name }]);
+        setMessages(prev => {
+          const fallbackMessage: ChatMsg = { id: crypto.randomUUID(), role: "agent", content: "Obrigado pelo contato! Como posso ajudá-lo?", timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name };
+          const updated = [...prev, fallbackMessage];
+          messagesRef.current = updated;
+          return updated;
+        });
       }
 
       if (agentText.includes("[TRANSFERIR]")) {
@@ -267,16 +308,23 @@ export default function SimuladorManualMode() {
         setTimeout(() => setTransferNotice(null), 4000);
       }
     } catch {
-      setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "agent", content: "Erro na comunicação. Tente novamente.", timestamp: new Date().toISOString() }]);
+      setMessages(prev => {
+        const errorMessage: ChatMsg = { id: crypto.randomUUID(), role: "agent", content: "Erro na comunicação. Tente novamente.", timestamp: new Date().toISOString() };
+        const updated = [...prev, errorMessage];
+        messagesRef.current = updated;
+        return updated;
+      });
     } finally { setLoading(false); }
-  }, [input, loading, selectedAgent, selectedDestino]);
+  }, [input, loading, selectedAgent, selectedDestino, isLivreMode, agentBehaviors, manualSystemPrompt]);
 
   const resetChat = () => {
     if (messages.length > 0 && !confirm("Tem certeza? Os dados atuais serão perdidos.")) return;
+    messagesRef.current = [];
     setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0);
   };
 
   const loadSession = (session: SavedSession) => {
+    messagesRef.current = session.messages;
     setMessages(session.messages); setCurrentSessionId(session.id);
     const agent = AGENTS_V4.find(a => a.id === session.agentId);
     if (agent) setSelectedAgent(agent);
