@@ -170,9 +170,9 @@ export default function SimuladorAutoMode() {
   // Auto-scroll chat
   useEffect(() => { chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" }); }, [selectedLead?.mensagens?.length]);
 
-  // ★ Auto-stop simulation when duration is exceeded
+  // ★ Auto-stop simulation when duration is exceeded (only if duration > 0)
   useEffect(() => {
-    if (running && elapsedSeconds >= duration) {
+    if (running && duration > 0 && elapsedSeconds >= duration) {
       stopSimulationRef.current();
     }
   }, [running, elapsedSeconds, duration]);
