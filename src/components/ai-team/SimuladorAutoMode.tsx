@@ -374,11 +374,20 @@ export default function SimuladorAutoMode() {
           }
           const leadChunks = chunksRef.current.get(lead.id) || [];
           const compressedHistory = leadChunks.length > 0 ? buildActiveContext(lead, leadChunks) : compressConversation(lead.mensagens);
-          const agentResp = await callSimulatorAI(
+          let agentResp = await callSimulatorAI(
             buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]),
             compressedHistory, "agent"
           );
           if (!simAtivaRef.current) return;
+
+          // 🛡️ Compliance Engine: validate against ALL agent configs
+          const convCtx = lead.mensagens.slice(-10).map(m => `${m.role}: ${m.content}`).join("\n");
+          const { text: compliantResp, wasRewritten } = await fullCompliancePipeline(agent.id, agentResp, convCtx);
+          if (wasRewritten) {
+            agentResp = compliantResp;
+            addEvent("#EF4444", `🛡️ Compliance: resposta de ${agent.name} corrigida para ${lead.nome}`, "🛡️");
+          }
+
           const addedAgentResp = pushUniqueSimMessage(lead, { role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
           if (addedAgentResp) setLeads(prev => [...prev]);
 
