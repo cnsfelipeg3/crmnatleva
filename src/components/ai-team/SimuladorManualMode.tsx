@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X } from "lucide-react";
+import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X, Mic } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
 import SimulatorChatLayout, { type SimChatMessage } from "./SimulatorChatLayout";
 import SimulatorObservationsPanel, { type SelectedMessage } from "./SimulatorObservationsPanel";
