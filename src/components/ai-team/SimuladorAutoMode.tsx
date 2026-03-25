@@ -28,7 +28,7 @@ import {
 import {
   callSimulatorAI, pushUniqueSimMessage, detectsPricePrint, generatePriceImage,
   generateLeadMsg, gerarObjecao, avaliarRespostaAgente, gerarMensagemPerda,
-  buildCalibrationPrompt, buildAgentSysPrompt,
+  buildCalibrationPrompt, buildAgentSysPrompt, type DbAgentOverride,
   MIN_TROCAS_POR_AGENTE, AGENT_ROLE_INSTRUCTIONS, FILOSOFIA_NATLEVA,
   SPEED_OPTIONS, getAgentColor,
   type Phase, type ReportTab, type ImprovementType,
