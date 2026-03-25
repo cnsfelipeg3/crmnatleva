@@ -76,6 +76,21 @@ export default function AppLayout() {
             <GlobalSearch />
             <div className="flex items-center gap-3">
               <AIPageSummaryButton />
+              <TooltipProvider delayDuration={300}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={toggleFullscreen}
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    {isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono">
                 <span className="hidden md:inline">NatLeva Intelligence</span>
                 <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
