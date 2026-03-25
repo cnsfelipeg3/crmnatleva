@@ -1,4 +1,5 @@
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
+import SmartSuspense from "@/components/SmartSuspense";
 import NatLevaLoader from "@/components/NatLevaLoader";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -161,7 +162,7 @@ function AppRoutes() {
   if (isLoading) return <ScreenLoader />;
 
   return (
-    <Suspense fallback={<ScreenLoader />}>
+    <SmartSuspense>
       <Routes>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
         {/* TODO: TEMPORÁRIO - Redireciona direto pro dashboard */}
@@ -309,7 +310,7 @@ function AppRoutes() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </Suspense>
+    </SmartSuspense>
   );
 }
 
