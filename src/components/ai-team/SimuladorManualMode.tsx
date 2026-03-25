@@ -356,7 +356,7 @@ export default function SimuladorManualMode() {
         return updated;
       });
     } finally { setLoading(false); }
-  }, [input, loading, selectedAgent, selectedDestino, isLivreMode, agentBehaviors, manualSystemPrompt]);
+  }, [input, loading, selectedAgent, selectedDestino, isLivreMode, agentBehaviors, kbContent, manualSystemPrompt]);
 
   const resetChat = () => {
     if (messages.length > 0 && !confirm("Tem certeza? Os dados atuais serão perdidos.")) return;
