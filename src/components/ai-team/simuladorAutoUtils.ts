@@ -237,7 +237,29 @@ export async function callSimulatorAI(sysPrompt: string, history: { role: string
       }
     }
   }
+
+  // Post-process: enforce formatting rules the LLM may ignore (e.g. no em-dashes)
+  if (type === "agent" || type === "lead" || type === "objection" || type === "loss") {
+    text = enforceAgentFormattingRules(text);
+  }
+
   return text;
+}
+
+/**
+ * Post-processing layer: enforces formatting rules that LLMs sometimes violate.
+ * Guarantees 100% compliance for rules like "no em-dash" regardless of model behavior.
+ */
+function enforceAgentFormattingRules(text: string): string {
+  // Remove em-dashes (—) and en-dashes (–) → replace with comma
+  let cleaned = text.replace(/\s*[—–]\s*/g, ", ");
+  // Collapse double commas
+  cleaned = cleaned.replace(/,\s*,/g, ",");
+  // Remove comma before period
+  cleaned = cleaned.replace(/,\s*\./g, ".");
+  // Remove leading comma at start of text
+  cleaned = cleaned.replace(/^,\s*/, "");
+  return cleaned;
 }
 
 // Detect if agent response mentions sending a price/quote print
