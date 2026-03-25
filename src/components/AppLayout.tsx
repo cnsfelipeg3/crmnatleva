@@ -19,6 +19,7 @@ export default function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const isImmersive = IMMERSIVE_ROUTES.includes(location.pathname);
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
 
   if (isMobile) {
     return (
