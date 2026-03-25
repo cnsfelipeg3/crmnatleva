@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { AGENTS_V4 } from "./agentsV4Data";
-import { callSimulatorAI } from "./simuladorAutoUtils";
+
 import { logAITeamAudit, AUDIT_ACTIONS, AUDIT_ENTITIES } from "@/lib/aiTeamAudit";
 
 // ===== TYPES =====
@@ -221,11 +221,30 @@ REGRAS:
 - Agrupe observações similares em uma única melhoria`;
 
     try {
-      const result = await callSimulatorAI(
-        systemPrompt,
-        [{ role: "user", content: `OBSERVAÇÕES DO GESTOR:\n${observationsText}` }],
-        "evaluate",
-      );
+      // Direct fetch to avoid simulator queue/cooldown blocking
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
+          type: "evaluate",
+          systemPrompt,
+          history: [{ role: "user", content: `OBSERVAÇÕES DO GESTOR:\n${observationsText}` }],
+          provider: "lovable",
+        }),
+      });
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        console.error("[Synthesis] API error:", resp.status, errText);
+        throw new Error(`HTTP ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      const result = data.content || "";
 
       // Parse JSON from response
       const jsonMatch = result.match(/\[[\s\S]*\]/);
