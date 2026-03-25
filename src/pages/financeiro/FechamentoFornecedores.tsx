@@ -18,8 +18,6 @@ import {
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, addMonths, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import jsPDF from "jspdf";
-import * as XLSX from "xlsx";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -273,7 +271,8 @@ export default function FechamentoFornecedores() {
   }
 
   // Export Excel
-  function exportExcel(settlement: any, items: any[]) {
+  async function exportExcel(settlement: any, items: any[]) {
+    const XLSX = await import("xlsx");
     const rows = items.map((i: any) => ({
       "Data Emissão": i.emission_date,
       "Venda": i.sales?.display_id || "",
@@ -287,14 +286,15 @@ export default function FechamentoFornecedores() {
       "Fonte": i.emission_source || "",
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
+    const wb = XLSX.utils.book_new(); 
     XLSX.utils.book_append_sheet(wb, ws, "Fechamento");
     const supplierName = settlement.suppliers?.name || "Fornecedor";
     XLSX.writeFile(wb, `Fechamento_${supplierName}_${settlement.period_start}_${settlement.period_end}.xlsx`);
   }
 
   // Export PDF
-  function exportPDF(settlement: any, items: any[]) {
+  async function exportPDF(settlement: any, items: any[]) {
+    const { default: jsPDF } = await import("jspdf");
     const doc = new jsPDF({ orientation: "landscape" });
     const supplierName = settlement.suppliers?.name || "Fornecedor";
     const periodStr = `${format(parseISO(settlement.period_start), "dd/MM/yyyy")} a ${format(parseISO(settlement.period_end), "dd/MM/yyyy")}`;

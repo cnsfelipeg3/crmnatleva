@@ -6,8 +6,6 @@ import ItineraryListPage from "@/components/itinerary/ItineraryListPage";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
-import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
 
 export default function Itinerary() {
   const [params] = useSearchParams();
@@ -80,6 +78,7 @@ export default function Itinerary() {
     if (!docRef.current) return;
     setExporting(true);
     try {
+      const html2canvas = (await import("html2canvas")).default;
       const canvas = await html2canvas(docRef.current, {
         scale: 2,
         useCORS: true,
@@ -91,6 +90,7 @@ export default function Itinerary() {
       const pdfWidth = 210; // A4
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
 
+      const { default: jsPDF } = await import("jspdf");
       const pdf = new jsPDF("p", "mm", "a4");
       let position = 0;
       const pageHeight = 297;

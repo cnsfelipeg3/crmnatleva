@@ -6,7 +6,6 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, Sparkles, Loader2, CheckCircle, AlertCircle, FileSpreadsheet, Users, ShoppingCart, Link2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from "xlsx";
 
 interface ImportResult {
   paxCreated: number;
@@ -86,10 +85,11 @@ export default function ImportData() {
   const { toast } = useToast();
 
   const parseClientsXlsx = (file: File): Promise<any[]> => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
+          const XLSX = await import("xlsx");
           const data = new Uint8Array(e.target!.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: "array", cellDates: true });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -161,10 +161,11 @@ export default function ImportData() {
   };
 
   const parseSalesXlsx = (file: File): Promise<any[]> => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
+          const XLSX = await import("xlsx");
           const data = new Uint8Array(e.target!.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: "array", cellDates: true });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];

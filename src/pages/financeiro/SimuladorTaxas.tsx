@@ -10,7 +10,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Calculator, ArrowDownToLine, ArrowUpFromLine, FileDown, ImageDown } from "lucide-react";
-import jsPDF from "jspdf";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
 
 interface FeeRule {
@@ -110,8 +109,9 @@ export default function SimuladorTaxas() {
 
   const gatewayNames = Object.keys(gateways);
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     if (rows.length === 0) return;
+    const { default: jsPDF } = await import("jspdf");
 
     const pageW = 210; // A4 width in mm
     const rowH = 11;

@@ -1,12 +1,12 @@
-import jsPDF from "jspdf";
-import * as XLSX from "xlsx";
-
 type Msg = { role: "user" | "assistant"; content: string };
+
+async function getXLSX() { return import("xlsx"); }
 
 /**
  * Export chat messages as a styled PDF
  */
-export function exportChatAsPDF(messages: Msg[], title?: string) {
+export async function exportChatAsPDF(messages: Msg[], title?: string) {
+  const { default: jsPDF } = await import("jspdf");
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
@@ -78,7 +78,7 @@ export function exportChatAsPDF(messages: Msg[], title?: string) {
 /**
  * Export chat messages as XLSX spreadsheet
  */
-export function exportChatAsXLSX(messages: Msg[], title?: string) {
+export async function exportChatAsXLSX(messages: Msg[], title?: string) {
   const data = messages.map((msg, i) => ({
     "#": i + 1,
     "Remetente": msg.role === "user" ? "Você" : "NatLeva Intelligence",
@@ -86,6 +86,7 @@ export function exportChatAsXLSX(messages: Msg[], title?: string) {
     "Data": new Date().toLocaleDateString("pt-BR"),
   }));
 
+  const XLSX = await getXLSX();
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(data);
 
@@ -104,7 +105,8 @@ export function exportChatAsXLSX(messages: Msg[], title?: string) {
 /**
  * Try to extract table data from AI response and export as spreadsheet
  */
-export function exportTableFromContent(content: string) {
+export async function exportTableFromContent(content: string) {
+  const XLSX = await getXLSX();
   // Try to find markdown tables
   const tableRegex = /\|(.+)\|\n\|[-|\s:]+\|\n((?:\|.+\|\n?)+)/g;
   const match = tableRegex.exec(content);
