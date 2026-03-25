@@ -73,13 +73,22 @@ export async function loadAgentComplianceProfile(agentId: string): Promise<Agent
   const agent = AGENTS_V4.find(a => a.id === agentId);
   const training = getAgentTraining(agentId);
 
-  // Parallel DB queries
-  const [dbAgentRes, globalRulesRes, kbRes, improvementsRes] = await Promise.all([
+  // Parallel DB queries — now includes real skills from agent_skills table
+  const [dbAgentRes, globalRulesRes, kbRes, improvementsRes, skillsRes] = await Promise.all([
     supabase.from("ai_team_agents").select("behavior_prompt, skills").eq("id", agentId).maybeSingle(),
     supabase.from("ai_strategy_knowledge").select("title, rule, category, estimated_impact").eq("is_active", true).order("priority", { ascending: false }),
     supabase.from("ai_knowledge_base").select("title, content_text, category").eq("is_active", true),
     supabase.from("ai_team_improvements").select("title, description").eq("agent_id", agentId).eq("status", "approved"),
+    supabase.from("agent_skill_assignments").select("skill_id, is_active").eq("agent_id", agentId).eq("is_active", true),
   ]);
+
+  // Fetch full skill details for active assignments
+  let skillInstructions: string[] = [];
+  const activeSkillIds = (skillsRes.data || []).map((a: any) => a.skill_id);
+  if (activeSkillIds.length > 0) {
+    const { data: fullSkills } = await supabase.from("agent_skills").select("name, prompt_instruction").in("id", activeSkillIds).eq("is_active", true);
+    skillInstructions = (fullSkills || []).filter((s: any) => s.prompt_instruction).map((s: any) => `[SKILL: ${s.name}] ${s.prompt_instruction}`);
+  }
 
   const behaviorPromptDB = dbAgentRes.data?.behavior_prompt || "";
   const behaviorPromptLocal = training?.behaviorPrompt || "";
@@ -90,7 +99,7 @@ export async function loadAgentComplianceProfile(agentId: string): Promise<Agent
     title: r.title, rule: r.rule, category: r.category, impact: r.estimated_impact || "médio",
   }));
   const knowledgeSummaries = training?.knowledgeSummaries || [];
-  const skills = agent?.skills || (dbAgentRes.data?.skills as string[]) || [];
+  const skills = skillInstructions.length > 0 ? skillInstructions : (agent?.skills || (dbAgentRes.data?.skills as string[]) || []);
   const approvedImprovements = (improvementsRes.data || []).map((i: any) => `${i.title}: ${i.description || ""}`);
 
   // Extract ALL prohibitions from every text source
