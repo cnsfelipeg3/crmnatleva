@@ -147,20 +147,73 @@ export default function AITeamAgentDetail() {
 
   const agentNameUpper = (v4?.name ?? agent?.name ?? "").toUpperCase();
 
-  // Filter knowledge docs for this agent
-  const agentDocs = useMemo(() => ALL_KB_DOCS.filter(d =>
+  // Fetch real knowledge docs from DB for this agent
+  const { data: dbKbDocs = [] } = useQuery({
+    queryKey: ["ai_knowledge_base_agent", agentId, agentNameUpper],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_knowledge_base")
+        .select("id, title, category, file_type, description, file_name, updated_at, is_active")
+        .eq("is_active", true);
+      return (data || []).filter((d: any) => {
+        const title = (d.title || "").toUpperCase();
+        const desc = (d.description || "").toUpperCase();
+        return title.includes(agentNameUpper) || desc.includes(agentNameUpper) ||
+               d.category === "cultura" || d.category === "atendimento" || d.category === "regras";
+      });
+    },
+    enabled: !!agentId,
+  });
+
+  // Fetch real skills from DB agent record
+  const { data: dbAgentSkills = [] } = useQuery({
+    queryKey: ["ai_team_agent_skills", agentId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_team_agents")
+        .select("skills")
+        .eq("id", agentId!)
+        .maybeSingle();
+      return data?.skills || [];
+    },
+    enabled: !!agentId,
+  });
+
+  // Fetch real rules from strategy knowledge that apply to this agent
+  const { data: dbAgentRules = [] } = useQuery({
+    queryKey: ["ai_strategy_knowledge_agent", agentId, agentNameUpper],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_strategy_knowledge")
+        .select("id, title, rule, category, priority, is_active, function_area, estimated_impact, tags")
+        .eq("is_active", true)
+        .order("priority", { ascending: false });
+      return (data || []).filter((r: any) => {
+        const tags = (r.tags || []).map((t: string) => t.toUpperCase());
+        const funcArea = (r.function_area || "").toUpperCase();
+        // Global rules apply to all, or agent-specific by tags/function_area
+        return !r.function_area || funcArea === "ALL" || funcArea === "TODOS" ||
+               tags.includes(agentNameUpper) || funcArea.includes(agentNameUpper);
+      });
+    },
+    enabled: !!agentId,
+  });
+
+  // Keep mock arrays for rendering, use DB counts for badges
+  const agentDocs = ALL_KB_DOCS.filter(d =>
     d.agente === agentNameUpper || d.agente === "Todos"
-  ), [agentNameUpper]);
-
-  // Filter skills for this agent
-  const agentSkills = useMemo(() => ALL_SKILLS.filter(s =>
+  );
+  const agentSkills = ALL_SKILLS.filter(s =>
     s.agents.some(a => a.toUpperCase() === agentNameUpper)
-  ), [agentNameUpper]);
-
-  // Filter rules for this agent
-  const agentRules = useMemo(() => ALL_RULES.filter(r =>
+  );
+  const agentRules = ALL_RULES.filter(r =>
     r.scope === "all" || r.agents.some(a => a.toUpperCase() === agentNameUpper)
-  ), [agentNameUpper]);
+  );
+
+  // Real counts from DB for tab badges
+  const realKbCount = dbKbDocs.length || agentDocs.length;
+  const realSkillsCount = dbAgentSkills.length || agentSkills.length;
+  const realRulesCount = dbAgentRules.length || agentRules.length;
 
   // Fetch behavior_prompt from database (source of truth)
   const { data: dbAgent } = useQuery({
@@ -287,9 +340,9 @@ export default function AITeamAgentDetail() {
   const TAB_ITEMS = [
     { id: "overview", label: "Visão Geral", icon: Activity, count: agentTasks.length },
     { id: "improvements", label: "Melhorias da Nath", icon: Sparkles, count: nathImprovements.length + nathKnowledge.length },
-    { id: "knowledge", label: "Conhecimento", icon: BookOpen, count: agentDocs.length },
-    { id: "skills", label: "Skills", icon: Zap, count: agentSkills.length },
-    { id: "behavior", label: "Regras & Comportamento", icon: Shield, count: agentRules.length },
+    { id: "knowledge", label: "Conhecimento", icon: BookOpen, count: realKbCount },
+    { id: "skills", label: "Skills", icon: Zap, count: realSkillsCount },
+    { id: "behavior", label: "Regras & Comportamento", icon: Shield, count: realRulesCount },
     { id: "memory", label: "Memória", icon: Brain, count: 0 },
     { id: "terminal", label: "Terminal", icon: MessageSquare, count: 0 },
   ];
