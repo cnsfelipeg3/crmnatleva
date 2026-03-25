@@ -654,6 +654,8 @@ export default function SimuladorManualMode() {
             inputValue={input}
             onInputChange={setInput}
             onSend={() => handleSend()}
+            onSendAudio={handleSendAudio}
+            onSendFile={handleSendFile}
             onMessageClick={(msg) => {
               setManualObsSelectedMsg({
                 content: msg.content,
