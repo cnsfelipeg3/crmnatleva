@@ -147,20 +147,68 @@ export default function AITeamAgentDetail() {
 
   const agentNameUpper = (v4?.name ?? agent?.name ?? "").toUpperCase();
 
-  // Filter knowledge docs for this agent
-  const agentDocs = useMemo(() => ALL_KB_DOCS.filter(d =>
+  // Fetch real knowledge docs from DB for this agent
+  const { data: dbKbDocs = [] } = useQuery({
+    queryKey: ["ai_knowledge_base_agent", agentId, agentNameUpper],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_knowledge_base")
+        .select("id, title, category, file_type, description, file_name, updated_at, is_active")
+        .eq("is_active", true);
+      return (data || []).filter((d: any) => {
+        const title = (d.title || "").toUpperCase();
+        const desc = (d.description || "").toUpperCase();
+        return title.includes(agentNameUpper) || desc.includes(agentNameUpper) ||
+               d.category === "cultura" || d.category === "atendimento" || d.category === "regras";
+      });
+    },
+    enabled: !!agentId,
+  });
+
+  // Fetch real skills from DB agent record
+  const { data: dbAgentSkills = [] } = useQuery({
+    queryKey: ["ai_team_agent_skills", agentId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_team_agents")
+        .select("skills")
+        .eq("id", agentId!)
+        .maybeSingle();
+      return data?.skills || [];
+    },
+    enabled: !!agentId,
+  });
+
+  // Fetch real rules from strategy knowledge that apply to this agent
+  const { data: dbAgentRules = [] } = useQuery({
+    queryKey: ["ai_strategy_knowledge_agent", agentId, agentNameUpper],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_strategy_knowledge")
+        .select("id, title, rule, category, priority, is_active, function_area, estimated_impact, tags")
+        .eq("is_active", true)
+        .order("priority", { ascending: false });
+      return (data || []).filter((r: any) => {
+        const tags = (r.tags || []).map((t: string) => t.toUpperCase());
+        const funcArea = (r.function_area || "").toUpperCase();
+        // Global rules apply to all, or agent-specific by tags/function_area
+        return !r.function_area || funcArea === "ALL" || funcArea === "TODOS" ||
+               tags.includes(agentNameUpper) || funcArea.includes(agentNameUpper);
+      });
+    },
+    enabled: !!agentId,
+  });
+
+  // Keep mock arrays as fallback for rendering but use DB counts
+  const agentDocs = dbKbDocs.length > 0 ? dbKbDocs : ALL_KB_DOCS.filter(d =>
     d.agente === agentNameUpper || d.agente === "Todos"
-  ), [agentNameUpper]);
-
-  // Filter skills for this agent
-  const agentSkills = useMemo(() => ALL_SKILLS.filter(s =>
+  );
+  const agentSkills = dbAgentSkills.length > 0 ? dbAgentSkills : ALL_SKILLS.filter(s =>
     s.agents.some(a => a.toUpperCase() === agentNameUpper)
-  ), [agentNameUpper]);
-
-  // Filter rules for this agent
-  const agentRules = useMemo(() => ALL_RULES.filter(r =>
+  );
+  const agentRules = dbAgentRules.length > 0 ? dbAgentRules : ALL_RULES.filter(r =>
     r.scope === "all" || r.agents.some(a => a.toUpperCase() === agentNameUpper)
-  ), [agentNameUpper]);
+  );
 
   // Fetch behavior_prompt from database (source of truth)
   const { data: dbAgent } = useQuery({
