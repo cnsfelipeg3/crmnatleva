@@ -999,7 +999,7 @@ function SkillsTab({ skills, dbSkills = [], agentName, agentId }: { skills: Skil
       )}
 
       <div className="grid gap-3">
-        {skills.map(skill => {
+        {mergedSkills.map(skill => {
           const active = skillStates[skill.id] ?? skill.active;
           return (
             <div key={skill.id} className={cn(
@@ -1011,26 +1011,28 @@ function SkillsTab({ skills, dbSkills = [], agentName, agentId }: { skills: Skil
                   <div className="flex items-center gap-2 flex-wrap">
                     <Zap className="w-3.5 h-3.5 text-primary shrink-0" />
                     <h4 className="text-sm font-semibold text-foreground">{skill.name}</h4>
-                    <Badge className={cn("text-[9px] border", LEVEL_COLORS[skill.level] || "")}>{skill.level}</Badge>
+                    {skill.level && <Badge className={cn("text-[9px] border", LEVEL_COLORS[skill.level] || "")}>{skill.level}</Badge>}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">{skill.description}</p>
-                  <div className="flex items-center gap-4 mt-3">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
-                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${skill.successRate}%` }} />
+                  {skill.description && <p className="text-xs text-muted-foreground mt-1">{skill.description}</p>}
+                  {(skill.successRate > 0 || skill.uses > 0) && (
+                    <div className="flex items-center gap-4 mt-3">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
+                          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${skill.successRate}%` }} />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">{skill.successRate}%</span>
                       </div>
-                      <span className="text-[10px] text-muted-foreground">{skill.successRate}%</span>
+                      <span className="text-[10px] text-muted-foreground">{skill.uses} usos</span>
+                      <span className="text-[10px] text-muted-foreground capitalize">{skill.category}</span>
                     </div>
-                    <span className="text-[10px] text-muted-foreground">{skill.uses} usos</span>
-                    <span className="text-[10px] text-muted-foreground capitalize">{skill.category}</span>
-                  </div>
+                  )}
                 </div>
                 <Switch checked={active} onCheckedChange={() => toggleSkill(skill.id)} />
               </div>
             </div>
           );
         })}
-        {skills.length === 0 && (
+        {mergedSkills.length === 0 && (
           <div className="text-center py-8">
             <Zap className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Nenhuma skill atribuída a este agente.</p>
