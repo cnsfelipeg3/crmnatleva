@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { AGENTS_V4 } from "./agentsV4Data";
-import { callSimulatorAI } from "./simuladorAutoUtils";
+
 import { logAITeamAudit, AUDIT_ACTIONS, AUDIT_ENTITIES } from "@/lib/aiTeamAudit";
 
 // ===== TYPES =====
