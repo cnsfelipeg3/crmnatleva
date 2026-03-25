@@ -3,7 +3,8 @@ import { useNavigate, Link, useLocation, Navigate } from "react-router-dom";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, Menu, X, User, Home, Map, MessageCircle, Bell, Sun, Moon, Wallet, PlaneTakeoff } from "lucide-react";
+import { LogOut, Menu, X, User, Home, Map, MessageCircle, Bell, Sun, Moon, Wallet, PlaneTakeoff, Maximize, Minimize } from "lucide-react";
+import { useFullscreen } from "@/hooks/useFullscreen";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
 import PortalNotificationPanel from "@/components/portal/PortalNotificationPanel";
 import PortalAssistant from "@/components/portal/PortalAssistant";
@@ -14,6 +15,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
   const [unreadCount, setUnreadCount] = useState(0);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
@@ -131,6 +133,14 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
 
               {/* Right Actions */}
               <div className="flex items-center gap-1">
+                <button
+                  onClick={toggleFullscreen}
+                  className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200"
+                  title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+                >
+                  {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                </button>
+
                 <button
                   onClick={() => setDarkMode(!darkMode)}
                   className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200"
