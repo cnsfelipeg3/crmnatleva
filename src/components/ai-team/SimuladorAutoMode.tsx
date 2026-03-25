@@ -563,7 +563,7 @@ export default function SimuladorAutoMode() {
       }
     } else if (dispatchMode === "wave") {
       // Wave mode — capped parallelism to avoid input-token burst throttling
-      const waveSize = Math.min(Math.max(2, parallelLeads), 2);
+      const waveSize = Math.min(Math.max(2, parallelLeads), 3);
       let waveNum = 1;
       for (let i = 0; i < allLeads.length; i += waveSize) {
         if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
@@ -572,11 +572,11 @@ export default function SimuladorAutoMode() {
         await Promise.all(batch.map((lead, index) => new Promise<void>((resolve) => {
           setTimeout(() => {
             void simulateLead(lead).finally(() => resolve());
-          }, index * 1600);
+          }, index * 1200);
         })));
         waveNum++;
         if (i + waveSize < allLeads.length) {
-          await new Promise(r => setTimeout(r, Math.max(intervalSec * 1000, 2800)));
+          await new Promise(r => setTimeout(r, Math.max(intervalSec * 1000, 2000)));
         }
       }
     } else {
