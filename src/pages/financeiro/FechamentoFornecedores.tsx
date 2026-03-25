@@ -271,7 +271,8 @@ export default function FechamentoFornecedores() {
   }
 
   // Export Excel
-  function exportExcel(settlement: any, items: any[]) {
+  async function exportExcel(settlement: any, items: any[]) {
+    const XLSX = await import("xlsx");
     const rows = items.map((i: any) => ({
       "Data Emissão": i.emission_date,
       "Venda": i.sales?.display_id || "",
@@ -292,7 +293,7 @@ export default function FechamentoFornecedores() {
   }
 
   // Export PDF
-  function exportPDF(settlement: any, items: any[]) {
+  async function exportPDF(settlement: any, items: any[]) {
     const { default: jsPDF } = await import("jspdf");
     const doc = new jsPDF({ orientation: "landscape" });
     const supplierName = settlement.suppliers?.name || "Fornecedor";

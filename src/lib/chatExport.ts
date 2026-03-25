@@ -1,5 +1,7 @@
 type Msg = { role: "user" | "assistant"; content: string };
 
+async function getXLSX() { return import("xlsx"); }
+
 /**
  * Export chat messages as a styled PDF
  */
@@ -84,6 +86,7 @@ export function exportChatAsXLSX(messages: Msg[], title?: string) {
     "Data": new Date().toLocaleDateString("pt-BR"),
   }));
 
+  const XLSX = await getXLSX();
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(data);
 
@@ -102,7 +105,8 @@ export function exportChatAsXLSX(messages: Msg[], title?: string) {
 /**
  * Try to extract table data from AI response and export as spreadsheet
  */
-export function exportTableFromContent(content: string) {
+export async function exportTableFromContent(content: string) {
+  const XLSX = await getXLSX();
   // Try to find markdown tables
   const tableRegex = /\|(.+)\|\n\|[-|\s:]+\|\n((?:\|.+\|\n?)+)/g;
   const match = tableRegex.exec(content);

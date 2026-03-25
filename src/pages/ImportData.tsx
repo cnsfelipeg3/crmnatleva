@@ -85,9 +85,9 @@ export default function ImportData() {
   const { toast } = useToast();
 
   const parseClientsXlsx = (file: File): Promise<any[]> => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
           const XLSX = await import("xlsx");
           const data = new Uint8Array(e.target!.result as ArrayBuffer);
@@ -161,10 +161,11 @@ export default function ImportData() {
   };
 
   const parseSalesXlsx = (file: File): Promise<any[]> => {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         try {
+          const XLSX = await import("xlsx");
           const data = new Uint8Array(e.target!.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: "array", cellDates: true });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];
