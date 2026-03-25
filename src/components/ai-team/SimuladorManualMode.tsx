@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { fullCompliancePipeline } from "./complianceEngine";
 import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X, Mic } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
 import SimulatorChatLayout, { type SimChatMessage } from "./SimulatorChatLayout";
