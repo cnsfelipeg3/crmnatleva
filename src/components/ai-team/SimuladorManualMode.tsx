@@ -392,14 +392,15 @@ export default function SimuladorManualMode() {
             <div className="grid grid-cols-3 gap-2.5">
               {DESTINOS.map(d => {
                 const isRandom = d === "🎲 Aleatório";
-                const isActive = isRandom ? !DESTINOS.slice(1).includes(selectedDestino) : selectedDestino === d;
+                const isLivre = d === "💬 Livre";
+                const isActive = isLivre ? selectedDestino === "💬 Livre" : isRandom ? (!DESTINOS.slice(2).includes(selectedDestino) && selectedDestino !== "💬 Livre") : selectedDestino === d;
                 return (
                   <button key={d} onClick={() => { setSelectedDestino(d); setShowPanel(false); }}
                     className="text-[12px] px-3 py-3.5 rounded-xl font-medium transition-all text-center"
                     style={{
-                      background: isActive ? (isRandom ? "rgba(139,92,246,0.12)" : "rgba(245,158,11,0.1)") : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${isActive ? (isRandom ? "rgba(139,92,246,0.4)" : "rgba(245,158,11,0.35)") : "rgba(255,255,255,0.08)"}`,
-                      color: isActive ? (isRandom ? "#C4B5FD" : "#FCD34D") : "#CBD5E1",
+                      background: isActive ? (isLivre ? "rgba(16,185,129,0.12)" : isRandom ? "rgba(139,92,246,0.12)" : "rgba(245,158,11,0.1)") : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${isActive ? (isLivre ? "rgba(16,185,129,0.4)" : isRandom ? "rgba(139,92,246,0.4)" : "rgba(245,158,11,0.35)") : "rgba(255,255,255,0.08)"}`,
+                      color: isActive ? (isLivre ? "#6EE7B7" : isRandom ? "#C4B5FD" : "#FCD34D") : "#CBD5E1",
                     }}>{isRandom && isActive ? `🎲 ${selectedDestino}` : d}</button>
                 );
               })}
