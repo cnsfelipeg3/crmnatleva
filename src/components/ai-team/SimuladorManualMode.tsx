@@ -120,7 +120,7 @@ function saveSessions(sessions: SavedSession[]) { localStorage.setItem(SESSIONS_
 
 function buildConversationHistory(messages: ChatMsg[], destino: string, isLivreMode: boolean): AIHistoryMessage[] {
   return messages
-    .filter((message) => message.role !== "system")
+    .filter((message): message is ChatMsg => message.role === "user" || message.role === "agent")
     .map((message, index) => {
       const role = message.role === "user" ? "user" : "assistant";
       const isFirstUserMessage = role === "user" && index === 0;
@@ -292,7 +292,8 @@ export default function SimuladorManualMode() {
 
       if (!agentText) {
         setMessages(prev => {
-          const updated = [...prev, { id: crypto.randomUUID(), role: "agent", content: "Obrigado pelo contato! Como posso ajudá-lo?", timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name }];
+          const fallbackMessage: ChatMsg = { id: crypto.randomUUID(), role: "agent", content: "Obrigado pelo contato! Como posso ajudá-lo?", timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name };
+          const updated = [...prev, fallbackMessage];
           messagesRef.current = updated;
           return updated;
         });
@@ -308,7 +309,8 @@ export default function SimuladorManualMode() {
       }
     } catch {
       setMessages(prev => {
-        const updated = [...prev, { id: crypto.randomUUID(), role: "agent", content: "Erro na comunicação. Tente novamente.", timestamp: new Date().toISOString() }];
+        const errorMessage: ChatMsg = { id: crypto.randomUUID(), role: "agent", content: "Erro na comunicação. Tente novamente.", timestamp: new Date().toISOString() };
+        const updated = [...prev, errorMessage];
         messagesRef.current = updated;
         return updated;
       });
