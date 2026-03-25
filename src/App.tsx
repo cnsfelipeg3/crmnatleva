@@ -1,4 +1,5 @@
-import { lazy, Suspense } from "react";
+import { lazy } from "react";
+import SmartSuspense from "@/components/SmartSuspense";
 import NatLevaLoader from "@/components/NatLevaLoader";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
