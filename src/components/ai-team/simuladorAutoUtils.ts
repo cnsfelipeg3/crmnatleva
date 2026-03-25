@@ -397,7 +397,20 @@ REGRAS DE OURO:
 - Celebre conquistas do lead (aniversario, casamento, viagem dos sonhos).
 `;
 
-export function buildAgentSysPrompt(agent: typeof AGENTS_V4[0], hasNext: boolean, enableTransfers: boolean, responseLength: "curta" | "media" | "longa", globalRulesBlock: string = "") {
+export interface DbAgentOverride {
+  behavior_prompt?: string | null;
+  persona?: string | null;
+  skills?: string[];
+}
+
+export function buildAgentSysPrompt(
+  agent: typeof AGENTS_V4[0],
+  hasNext: boolean,
+  enableTransfers: boolean,
+  responseLength: "curta" | "media" | "longa",
+  globalRulesBlock: string = "",
+  dbOverride?: DbAgentOverride,
+) {
   const lengthInstr = responseLength === "curta" ? "Responda de forma concisa mas com personalidade." : responseLength === "longa" ? "Responda de forma detalhada (3-5 frases), incluindo detalhes do produto." : "O agente decide o tamanho certo para cada momento da conversa.";
   const minTrocas = MIN_TROCAS_POR_AGENTE[agent.id] || 4;
   const transferInstr = hasNext && enableTransfers ? `\nSOBRE [TRANSFERIR]:
@@ -412,12 +425,31 @@ Se qualquer condicao faltar: continue a conversa. Aprofunde. Instigue. Surpreend
 Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
   const priceInstr = "IMPORTANTE: Quando for hora de enviar valores/orçamento, diga que vai enviar o print com os valores (ex: 'Segue o print com os valores!', 'Vou te enviar o orçamento agora!', 'Olha só o print com as opções de preço!'). Isso é fundamental para a experiência do cliente.\n";
   const roleInstr = AGENT_ROLE_INSTRUCTIONS[agent.id] || "";
+
+  // DB behavior_prompt takes priority over localStorage training
+  const dbBehavior = dbOverride?.behavior_prompt || "";
+  const dbPersona = dbOverride?.persona || agent.persona;
+  const dbSkills = dbOverride?.skills;
+
+  // Build DB behavior block
+  let dbBehaviorBlock = "";
+  if (dbBehavior) {
+    dbBehaviorBlock = `\n=== DIRETIVAS COMPORTAMENTAIS (banco de dados — PRIORIDADE MÁXIMA) ===\nVocê DEVE seguir rigorosamente estas instruções:\n${dbBehavior}\n`;
+  }
+
+  // Build skills block from DB if available
+  let skillsBlock = "";
+  if (dbSkills && dbSkills.length > 0) {
+    skillsBlock = `\n=== HABILIDADES ATIVAS ===\n${dbSkills.map(s => `- ${s}`).join("\n")}\n`;
+  }
   
+  // localStorage training as fallback (only for fields not covered by DB)
   const training = getAgentTraining(agent.id);
   let trainingBlock = "";
   if (training) {
     const parts: string[] = [];
-    if (training.behaviorPrompt) {
+    // Only use localStorage behavior if DB doesn't have one
+    if (!dbBehavior && training.behaviorPrompt) {
       parts.push(`\n=== DIRETIVAS COMPORTAMENTAIS (configuradas pela gestão — PRIORIDADE MÁXIMA) ===\nVocê DEVE seguir rigorosamente estas instruções:\n${training.behaviorPrompt}`);
     }
     if (training.customRules && training.customRules.length > 0) {
@@ -432,7 +464,7 @@ Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
     trainingBlock = parts.join("\n");
   }
   
-  return `${agent.persona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${trainingBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}${lengthInstr}`;
+  return `${dbPersona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}${lengthInstr}`;
 }
 
 export const SPEED_OPTIONS = [
