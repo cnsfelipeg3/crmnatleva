@@ -113,7 +113,7 @@ function AudioBubblePlayer({ src }: { src: string }) {
     if (!a) return;
     const onTime = () => setProgress(a.currentTime);
     const onEnd = () => { setPlaying(false); setProgress(0); };
-    const onMeta = () => setDuration(a.duration);
+    const onMeta = () => { const d = a.duration; setDuration(isFinite(d) ? d : 0); };
     a.addEventListener("timeupdate", onTime);
     a.addEventListener("ended", onEnd);
     a.addEventListener("loadedmetadata", onMeta);
@@ -129,6 +129,7 @@ function AudioBubblePlayer({ src }: { src: string }) {
   };
 
   const fmt = (s: number) => {
+    if (!isFinite(s) || isNaN(s) || s <= 0) return "0:00";
     const m = Math.floor(s / 60);
     const sec = Math.floor(s % 60);
     return `${m}:${sec.toString().padStart(2, "0")}`;
