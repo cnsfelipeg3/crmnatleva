@@ -439,12 +439,12 @@ export default function AITeamAgentDetail() {
 
           {/* ═══ TAB: KNOWLEDGE BASE ═══ */}
           <TabsContent value="knowledge" className="space-y-4 mt-0">
-            <KnowledgeBaseTab docs={agentDocs} agentName={displayName} />
+            <KnowledgeBaseTab docs={agentDocs} agentName={displayName} agentId={agentId!} />
           </TabsContent>
 
           {/* ═══ TAB: SKILLS ═══ */}
           <TabsContent value="skills" className="space-y-4 mt-0">
-            <SkillsTab skills={agentSkills} agentName={displayName} />
+            <SkillsTab skills={agentSkills} agentName={displayName} agentId={agentId!} />
           </TabsContent>
 
           {/* ═══ TAB: BEHAVIOR & RULES ═══ */}
