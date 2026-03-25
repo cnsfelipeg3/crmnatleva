@@ -190,6 +190,88 @@ export type Database = {
           },
         ]
       }
+      agent_skill_assignments: {
+        Row: {
+          agent_id: string
+          assigned_at: string
+          id: string
+          is_active: boolean
+          skill_id: string
+        }
+        Insert: {
+          agent_id: string
+          assigned_at?: string
+          id?: string
+          is_active?: boolean
+          skill_id: string
+        }
+        Update: {
+          agent_id?: string
+          assigned_at?: string
+          id?: string
+          is_active?: boolean
+          skill_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_skill_assignments_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "agent_skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_skills: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          level: string
+          name: string
+          prompt_instruction: string | null
+          source: string | null
+          source_improvement_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level?: string
+          name: string
+          prompt_instruction?: string | null
+          source?: string | null
+          source_improvement_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          level?: string
+          name?: string
+          prompt_instruction?: string | null
+          source?: string | null
+          source_improvement_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_skills_source_improvement_id_fkey"
+            columns: ["source_improvement_id"]
+            isOneToOne: false
+            referencedRelation: "ai_team_improvements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_chat_history: {
         Row: {
           conversation_id: string
