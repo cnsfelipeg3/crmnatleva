@@ -906,134 +906,255 @@ function KnowledgeBaseTab({ docs, agentName, agentId }: { docs: KBDoc[]; agentNa
   );
 }
 
-/* ═══ Skills Tab ═══ */
-function SkillsTab({ skills, dbSkills = [], agentName, agentId }: { skills: SkillItem[]; dbSkills?: string[]; agentName: string; agentId: string }) {
-  // Merge: DB skills are source of truth, enrich with mock details where available
-  const mergedSkills = useMemo(() => {
-    if (dbSkills.length === 0) return skills;
-    return dbSkills.map((skillName, idx) => {
-      const mock = skills.find(s => s.name.toLowerCase() === skillName.toLowerCase());
-      return mock || {
-        id: `db-${idx}`,
-        name: skillName,
-        category: "geral",
-        level: "básico",
-        successRate: 0,
-        uses: 0,
-        active: true,
-        agents: [agentName],
-        description: "",
-      } satisfies SkillItem;
-    });
-  }, [dbSkills, skills, agentName]);
-
-  const [skillStates, setSkillStates] = useState<Record<string, boolean>>(() => {
-    const map: Record<string, boolean> = {};
-    mergedSkills.forEach(s => { map[s.id] = s.active; });
-    return map;
-  });
+/* ═══ Skills Tab — Real DB-backed skills with edit capability ═══ */
+function SkillsTab({ agentName, agentId }: { agentName: string; agentId: string }) {
+  const [editingSkill, setEditingSkill] = useState<any | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newSkillName, setNewSkillName] = useState("");
-  const [newSkillDesc, setNewSkillDesc] = useState("");
-  const [newSkillCategory, setNewSkillCategory] = useState("comunicação");
   const [saving, setSaving] = useState(false);
 
-  const handleAddSkill = async () => {
-    if (!newSkillName.trim()) return;
+  // Form state
+  const [formName, setFormName] = useState("");
+  const [formDesc, setFormDesc] = useState("");
+  const [formCategory, setFormCategory] = useState("comunicação");
+  const [formLevel, setFormLevel] = useState("básico");
+  const [formInstruction, setFormInstruction] = useState("");
+
+  const { data: assignedSkills = [], refetch } = useQuery({
+    queryKey: ["agent_skills_full", agentId],
+    queryFn: async () => {
+      const { data: assignments } = await supabase
+        .from("agent_skill_assignments")
+        .select("id, skill_id, is_active")
+        .eq("agent_id", agentId);
+      if (!assignments || assignments.length === 0) return [];
+
+      const skillIds = assignments.map((a: any) => a.skill_id);
+      const { data: skills } = await supabase
+        .from("agent_skills")
+        .select("*")
+        .in("id", skillIds);
+
+      return (skills || []).map((s: any) => {
+        const assignment = assignments.find((a: any) => a.skill_id === s.id);
+        return { ...s, assignment_id: assignment?.id, is_assigned_active: assignment?.is_active ?? true };
+      });
+    },
+    enabled: !!agentId,
+  });
+
+  // All skills not yet assigned to this agent (for adding)
+  const { data: availableSkills = [] } = useQuery({
+    queryKey: ["agent_skills_available", agentId, assignedSkills.length],
+    queryFn: async () => {
+      const assignedIds = assignedSkills.map((s: any) => s.id);
+      const { data } = await supabase.from("agent_skills").select("id, name, category, level").eq("is_active", true);
+      return (data || []).filter((s: any) => !assignedIds.includes(s.id));
+    },
+    enabled: !!agentId,
+  });
+
+  const openEdit = (skill: any) => {
+    setEditingSkill(skill);
+    setFormName(skill.name);
+    setFormDesc(skill.description || "");
+    setFormCategory(skill.category);
+    setFormLevel(skill.level);
+    setFormInstruction(skill.prompt_instruction || "");
+  };
+
+  const openAdd = () => {
+    setEditingSkill(null);
+    setShowAddForm(true);
+    setFormName(""); setFormDesc(""); setFormCategory("comunicação"); setFormLevel("básico"); setFormInstruction("");
+  };
+
+  const handleSave = async () => {
+    if (!formName.trim() || !formInstruction.trim()) return;
     setSaving(true);
-    const { data: current } = await supabase.from("ai_team_agents").select("skills").eq("id", agentId).maybeSingle();
-    const currentSkills: string[] = (current?.skills as string[]) || [];
-    if (!currentSkills.includes(newSkillName.trim())) {
-      const { error } = await supabase.from("ai_team_agents").update({
-        skills: [...currentSkills, newSkillName.trim()],
+    if (editingSkill) {
+      await supabase.from("agent_skills").update({
+        name: formName.trim(),
+        description: formDesc.trim(),
+        category: formCategory,
+        level: formLevel,
+        prompt_instruction: formInstruction.trim(),
         updated_at: new Date().toISOString(),
-      }).eq("id", agentId);
-      if (error) { sonnerToast.error("Erro: " + error.message); setSaving(false); return; }
+      }).eq("id", editingSkill.id);
+      sonnerToast.success("Skill atualizada!");
+    } else {
+      const { data: newSkill } = await supabase.from("agent_skills").insert({
+        name: formName.trim(),
+        description: formDesc.trim(),
+        category: formCategory,
+        level: formLevel,
+        prompt_instruction: formInstruction.trim(),
+        source: "manual",
+      }).select("id").single();
+      if (newSkill) {
+        await supabase.from("agent_skill_assignments").insert({
+          agent_id: agentId,
+          skill_id: newSkill.id,
+        });
+      }
+      sonnerToast.success("Skill criada e atribuída!");
     }
-    sonnerToast.success(`Skill "${newSkillName.trim()}" adicionada!`);
     setSaving(false);
+    setEditingSkill(null);
     setShowAddForm(false);
-    setNewSkillName("");
-    setNewSkillDesc("");
+    refetch();
   };
 
-  const toggleSkill = (id: string) => {
-    setSkillStates(prev => ({ ...prev, [id]: !prev[id] }));
-    sonnerToast.success("Skill atualizada");
+  const toggleSkill = async (assignmentId: string, currentActive: boolean) => {
+    await supabase.from("agent_skill_assignments").update({ is_active: !currentActive }).eq("id", assignmentId);
+    refetch();
+    sonnerToast.success(!currentActive ? "Skill ativada" : "Skill desativada");
   };
 
-  const totalSkills = mergedSkills.length;
+  const assignExisting = async (skillId: string) => {
+    await supabase.from("agent_skill_assignments").insert({ agent_id: agentId, skill_id: skillId });
+    refetch();
+    sonnerToast.success("Skill atribuída!");
+  };
+
+  const removeSkill = async (assignmentId: string) => {
+    await supabase.from("agent_skill_assignments").delete().eq("id", assignmentId);
+    refetch();
+    sonnerToast.success("Skill removida do agente");
+  };
+
+  const CATEGORIES: Record<string, { emoji: string; color: string }> = {
+    comunicação: { emoji: "💬", color: "text-blue-400 bg-blue-500/10 border-blue-500/20" },
+    vendas: { emoji: "💰", color: "text-amber-400 bg-amber-500/10 border-amber-500/20" },
+    análise: { emoji: "🔍", color: "text-purple-400 bg-purple-500/10 border-purple-500/20" },
+    atendimento: { emoji: "🎧", color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20" },
+    geral: { emoji: "⚙️", color: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20" },
+  };
+
+  const isEditing = editingSkill || showAddForm;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          {totalSkills} skill{totalSkills !== 1 ? "s" : ""} atribuídas a <span className="font-semibold text-foreground">{agentName}</span>
+          {assignedSkills.length} skill{assignedSkills.length !== 1 ? "s" : ""} atribuídas a <span className="font-semibold text-foreground">{agentName}</span>
         </p>
-        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowAddForm(true)}>
-          <Plus className="w-3.5 h-3.5" /> Nova Skill
-        </Button>
+        <div className="flex gap-2">
+          {availableSkills.length > 0 && (
+            <Select onValueChange={assignExisting}>
+              <SelectTrigger className="text-xs h-8 w-48">
+                <SelectValue placeholder="Atribuir skill existente..." />
+              </SelectTrigger>
+              <SelectContent>
+                {availableSkills.map((s: any) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {(CATEGORIES[s.category]?.emoji || "⚙️")} {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={openAdd}>
+            <Plus className="w-3.5 h-3.5" /> Nova Skill
+          </Button>
+        </div>
       </div>
 
-      {showAddForm && (
+      {/* Edit/Add Form */}
+      {isEditing && (
         <div className="rounded-xl border border-primary/30 bg-card p-4 space-y-3 animate-fade-in">
-          <h4 className="text-sm font-semibold text-foreground">Nova Skill</h4>
-          <Input placeholder="Nome da skill (ex: Qualificação BANT)" value={newSkillName} onChange={(e: any) => setNewSkillName(e.target.value)} className="text-sm" />
-          <Textarea placeholder="Descrição da skill (opcional)" value={newSkillDesc} onChange={(e: any) => setNewSkillDesc(e.target.value)} rows={2} className="text-sm" />
-          <Select value={newSkillCategory} onValueChange={setNewSkillCategory}>
-            <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="comunicação">Comunicação</SelectItem>
-              <SelectItem value="vendas">Vendas</SelectItem>
-              <SelectItem value="análise">Análise</SelectItem>
-              <SelectItem value="operacional">Operacional</SelectItem>
-              <SelectItem value="conhecimento">Conhecimento</SelectItem>
-            </SelectContent>
-          </Select>
+          <h4 className="text-sm font-semibold text-foreground">
+            {editingSkill ? `Editar: ${editingSkill.name}` : "Nova Skill"}
+          </h4>
+          <Input placeholder="Nome da skill" value={formName} onChange={(e: any) => setFormName(e.target.value)} className="text-sm" />
+          <Textarea placeholder="Descrição (o que é esta skill)" value={formDesc} onChange={(e: any) => setFormDesc(e.target.value)} rows={2} className="text-sm" />
+          <div className="grid grid-cols-2 gap-3">
+            <Select value={formCategory} onValueChange={setFormCategory}>
+              <SelectTrigger className="text-sm"><SelectValue placeholder="Categoria" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="comunicação">💬 Comunicação</SelectItem>
+                <SelectItem value="vendas">💰 Vendas</SelectItem>
+                <SelectItem value="análise">🔍 Análise</SelectItem>
+                <SelectItem value="atendimento">🎧 Atendimento</SelectItem>
+                <SelectItem value="geral">⚙️ Geral</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={formLevel} onValueChange={setFormLevel}>
+              <SelectTrigger className="text-sm"><SelectValue placeholder="Nível" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="básico">Básico</SelectItem>
+                <SelectItem value="intermediário">Intermediário</SelectItem>
+                <SelectItem value="avançado">Avançado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">
+              Instrução para o Agente (injetada no prompt — obrigatório)
+            </label>
+            <Textarea
+              placeholder="Ex: Ao detectar objeções emocionais, PARE a venda. Acolha com empatia..."
+              value={formInstruction}
+              onChange={(e: any) => setFormInstruction(e.target.value)}
+              rows={3}
+              className="text-sm font-mono"
+            />
+          </div>
+          {editingSkill?.source && (
+            <p className="text-[10px] text-muted-foreground">
+              Origem: {editingSkill.source === "improvement" ? "Melhoria da Nath" : editingSkill.source === "manual" ? "Manual" : editingSkill.source}
+              {editingSkill.created_at && ` · Criada em ${new Date(editingSkill.created_at).toLocaleDateString("pt-BR")}`}
+            </p>
+          )}
           <div className="flex justify-end gap-2">
-            <Button variant="ghost" size="sm" onClick={() => { setShowAddForm(false); setNewSkillName(""); setNewSkillDesc(""); }}>Cancelar</Button>
-            <Button size="sm" disabled={!newSkillName.trim() || saving} className="gap-1.5" onClick={handleAddSkill}>
+            <Button variant="ghost" size="sm" onClick={() => { setEditingSkill(null); setShowAddForm(false); }}>Cancelar</Button>
+            <Button size="sm" disabled={!formName.trim() || !formInstruction.trim() || saving} className="gap-1.5" onClick={handleSave}>
               {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Salvar
             </Button>
           </div>
         </div>
       )}
 
+      {/* Skills Grid */}
       <div className="grid gap-3">
-        {mergedSkills.map(skill => {
-          const active = skillStates[skill.id] ?? skill.active;
+        {assignedSkills.map((skill: any) => {
+          const catMeta = CATEGORIES[skill.category] || CATEGORIES.geral;
+          const active = skill.is_assigned_active;
           return (
-            <div key={skill.id} className={cn(
-              "rounded-xl border bg-card p-4 transition-all",
-              active ? "border-border/50" : "border-border/30 opacity-60"
-            )}>
+            <div
+              key={skill.id}
+              className={cn(
+                "rounded-xl border bg-card p-4 transition-all cursor-pointer hover:border-primary/40",
+                active ? "border-border/50" : "border-border/30 opacity-60"
+              )}
+              onClick={() => openEdit(skill)}
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Zap className="w-3.5 h-3.5 text-primary shrink-0" />
                     <h4 className="text-sm font-semibold text-foreground">{skill.name}</h4>
-                    {skill.level && <Badge className={cn("text-[9px] border", LEVEL_COLORS[skill.level] || "")}>{skill.level}</Badge>}
+                    <Badge className={cn("text-[9px] border", LEVEL_COLORS[skill.level] || "")}>{skill.level}</Badge>
+                    <Badge className={cn("text-[9px] border", catMeta.color)}>{catMeta.emoji} {skill.category}</Badge>
+                    {skill.source === "improvement" && <Badge className="text-[9px] bg-purple-500/10 text-purple-400 border-purple-500/20">via Nath</Badge>}
                   </div>
                   {skill.description && <p className="text-xs text-muted-foreground mt-1">{skill.description}</p>}
-                  {(skill.successRate > 0 || skill.uses > 0) && (
-                    <div className="flex items-center gap-4 mt-3">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-16 h-1.5 rounded-full bg-muted overflow-hidden">
-                          <div className="h-full rounded-full bg-emerald-500" style={{ width: `${skill.successRate}%` }} />
-                        </div>
-                        <span className="text-[10px] text-muted-foreground">{skill.successRate}%</span>
-                      </div>
-                      <span className="text-[10px] text-muted-foreground">{skill.uses} usos</span>
-                      <span className="text-[10px] text-muted-foreground capitalize">{skill.category}</span>
+                  {skill.prompt_instruction && (
+                    <div className="mt-2 p-2 rounded-lg bg-muted/50 border border-border/30">
+                      <p className="text-[10px] text-muted-foreground font-mono line-clamp-2">{skill.prompt_instruction}</p>
                     </div>
                   )}
                 </div>
-                <Switch checked={active} onCheckedChange={() => toggleSkill(skill.id)} />
+                <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeSkill(skill.assignment_id)}>
+                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
+                  </Button>
+                  <Switch checked={active} onCheckedChange={() => toggleSkill(skill.assignment_id, active)} />
+                </div>
               </div>
             </div>
           );
         })}
-        {mergedSkills.length === 0 && (
+        {assignedSkills.length === 0 && (
           <div className="text-center py-8">
             <Zap className="w-8 h-8 text-muted-foreground/30 mx-auto mb-2" />
             <p className="text-sm text-muted-foreground">Nenhuma skill atribuída a este agente.</p>
