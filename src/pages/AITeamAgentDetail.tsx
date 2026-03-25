@@ -608,7 +608,7 @@ function NathImprovementsTab({ improvements, knowledge, agentName }: {
 }
 
 /* ═══ Knowledge Base Tab ═══ */
-function KnowledgeBaseTab({ docs, agentName }: { docs: KBDoc[]; agentName: string }) {
+function KnowledgeBaseTab({ docs, agentName, agentId }: { docs: KBDoc[]; agentName: string; agentId: string }) {
   const [search, setSearch] = useState("");
   const [selectedDoc, setSelectedDoc] = useState<KBDoc | null>(null);
   const [editMode, setEditMode] = useState(false);
@@ -616,6 +616,11 @@ function KnowledgeBaseTab({ docs, agentName }: { docs: KBDoc[]; agentName: strin
   const [editResumo, setEditResumo] = useState("");
   const [editTags, setEditTags] = useState("");
   const [editAgente, setEditAgente] = useState("");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newContent, setNewContent] = useState("");
+  const [newCategory, setNewCategory] = useState("geral");
+  const [saving, setSaving] = useState(false);
 
   const filtered = docs.filter(d => !search || d.title.toLowerCase().includes(search.toLowerCase()) || d.tags.some(t => t.includes(search.toLowerCase())));
 
