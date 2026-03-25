@@ -68,18 +68,20 @@ interface Props {
 }
 
 // ===== CATEGORY META =====
-const CATEGORY_META: Record<SynthesizedImprovement["category"], { icon: typeof Lightbulb; label: string; color: string }> = {
+const CATEGORY_META: Record<string, { icon: typeof Lightbulb; label: string; color: string }> = {
   behavior: { icon: Shield, label: "Comportamento", color: "#F59E0B" },
   tone: { icon: MessageSquarePlus, label: "Tom de Voz", color: "#8B5CF6" },
   knowledge: { icon: FileText, label: "Conhecimento", color: "#3B82F6" },
   flow: { icon: Zap, label: "Fluxo", color: "#06B6D4" },
 };
+const DEFAULT_CATEGORY = { icon: Lightbulb, label: "Geral", color: "#94A3B8" };
 
-const SEVERITY_META: Record<SynthesizedImprovement["severity"], { label: string; color: string; bg: string }> = {
+const SEVERITY_META: Record<string, { label: string; color: string; bg: string }> = {
   critical: { label: "Crítico", color: "#EF4444", bg: "rgba(239,68,68,0.1)" },
   important: { label: "Importante", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
   suggestion: { label: "Sugestão", color: "#10B981", bg: "rgba(16,185,129,0.1)" },
 };
+const DEFAULT_SEVERITY = { label: "Info", color: "#94A3B8", bg: "rgba(148,163,184,0.1)" };
 
 // ===== MAIN COMPONENT =====
 export default function SimulatorObservationsPanel({
@@ -764,8 +766,8 @@ REGRAS:
               {/* Improvements list */}
               <div className="flex-1 overflow-y-auto custom-scrollbar px-3 py-2 space-y-2">
                 {improvements.map((imp) => {
-                  const catMeta = CATEGORY_META[imp.category];
-                  const sevMeta = SEVERITY_META[imp.severity];
+                  const catMeta = CATEGORY_META[imp.category] || DEFAULT_CATEGORY;
+                  const sevMeta = SEVERITY_META[imp.severity] || DEFAULT_SEVERITY;
                   const CatIcon = catMeta.icon;
                   const isExpanded = expandedImpId === imp.id;
                   const isApplying = applyingId === imp.id;
