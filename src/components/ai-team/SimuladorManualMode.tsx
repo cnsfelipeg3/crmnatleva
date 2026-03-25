@@ -338,8 +338,9 @@ export default function SimuladorManualMode() {
       }
 
       if (!agentText) {
+        // Retry once with lovable provider before showing fallback
         setMessages(prev => {
-          const fallbackMessage: ChatMsg = { id: crypto.randomUUID(), role: "agent", content: "Obrigado pelo contato! Como posso ajudá-lo?", timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name };
+          const fallbackMessage: ChatMsg = { id: crypto.randomUUID(), role: "agent", content: "Desculpe, tive um problema técnico ao processar sua mensagem. Pode repetir?", timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name };
           const updated = [...prev, fallbackMessage];
           messagesRef.current = updated;
           return updated;
