@@ -6,7 +6,6 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, Sparkles, Loader2, CheckCircle, AlertCircle, FileSpreadsheet, Users, ShoppingCart, Link2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from "xlsx";
 
 interface ImportResult {
   paxCreated: number;
@@ -90,6 +89,7 @@ export default function ImportData() {
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
+          const XLSX = await import("xlsx");
           const data = new Uint8Array(e.target!.result as ArrayBuffer);
           const workbook = XLSX.read(data, { type: "array", cellDates: true });
           const sheet = workbook.Sheets[workbook.SheetNames[0]];

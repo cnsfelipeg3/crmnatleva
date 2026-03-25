@@ -1,12 +1,10 @@
-import jsPDF from "jspdf";
-import * as XLSX from "xlsx";
-
 type Msg = { role: "user" | "assistant"; content: string };
 
 /**
  * Export chat messages as a styled PDF
  */
-export function exportChatAsPDF(messages: Msg[], title?: string) {
+export async function exportChatAsPDF(messages: Msg[], title?: string) {
+  const { default: jsPDF } = await import("jspdf");
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
