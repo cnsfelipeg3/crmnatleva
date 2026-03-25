@@ -340,9 +340,9 @@ export default function AITeamAgentDetail() {
   const TAB_ITEMS = [
     { id: "overview", label: "Visão Geral", icon: Activity, count: agentTasks.length },
     { id: "improvements", label: "Melhorias da Nath", icon: Sparkles, count: nathImprovements.length + nathKnowledge.length },
-    { id: "knowledge", label: "Conhecimento", icon: BookOpen, count: agentDocs.length },
-    { id: "skills", label: "Skills", icon: Zap, count: agentSkills.length },
-    { id: "behavior", label: "Regras & Comportamento", icon: Shield, count: agentRules.length },
+    { id: "knowledge", label: "Conhecimento", icon: BookOpen, count: realKbCount },
+    { id: "skills", label: "Skills", icon: Zap, count: realSkillsCount },
+    { id: "behavior", label: "Regras & Comportamento", icon: Shield, count: realRulesCount },
     { id: "memory", label: "Memória", icon: Brain, count: 0 },
     { id: "terminal", label: "Terminal", icon: MessageSquare, count: 0 },
   ];
