@@ -17,6 +17,22 @@ import {
 
 const DESTINOS = ["💬 Livre", "🎲 Aleatório", "Dubai", "Orlando", "Europa", "Maldivas", "Caribe", "Japão", "Egito", "Tailândia", "Nova York", "Paris", "Grécia", "Bali", "Cancún", "Lisboa", "Seychelles"];
 
+/**
+ * Post-processing: enforces formatting rules that LLMs sometimes ignore.
+ * Runs AFTER the AI response, guaranteeing 100% compliance.
+ */
+function enforceAgentFormatting(text: string): string {
+  // Remove em-dashes (—) and en-dashes (–) → replace with comma or nothing
+  let cleaned = text.replace(/\s*[—–]\s*/g, ", ");
+  // Remove leading comma if line starts with it after replacement
+  cleaned = cleaned.replace(/(^|[\n])，?\s*,\s*/g, "$1");
+  // Collapse multiple commas
+  cleaned = cleaned.replace(/,\s*,/g, ",");
+  // Remove trailing comma before period
+  cleaned = cleaned.replace(/,\s*\./g, ".");
+  return cleaned;
+}
+
 const DESTINOS_ALEATORIOS = [
   "Butão", "Islândia", "Patagônia", "Fiji", "Tanzânia", "Marrocos", "Sri Lanka",
   "Mongólia", "Noruega", "Croácia", "Nova Zelândia", "Vietnã", "Costa Rica",
@@ -333,7 +349,7 @@ export default function SimuladorManualMode() {
           if (!line.startsWith("data: ")) continue;
           const json = line.slice(6).trim();
           if (json === "[DONE]") break;
-          try { const p = JSON.parse(json); const c = p.choices?.[0]?.delta?.content; if (c) { agentText += c; updateAgent(agentText); } } catch {}
+          try { const p = JSON.parse(json); const c = p.choices?.[0]?.delta?.content; if (c) { agentText += c; updateAgent(enforceAgentFormatting(agentText)); } } catch {}
         }
       }
 
