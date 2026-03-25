@@ -874,7 +874,75 @@ function SkillsTab({ skills, agentName }: { skills: SkillItem[]; agentName: stri
   );
 }
 
-/* ═══ Behavior & Rules Tab ═══ */
+/* ═══ Structured Prompt Viewer ═══ */
+const SECTION_ICONS: Record<string, { icon: typeof Shield; color: string }> = {
+  "IDENTIDADE": { icon: Target, color: "text-purple-400" },
+  "FUNÇÃO": { icon: Zap, color: "text-blue-400" },
+  "ESTADOS DA CONVERSA": { icon: Layers, color: "text-amber-400" },
+  "REGRAS DE MEMÓRIA": { icon: Brain, color: "text-emerald-400" },
+  "REGRAS DE LINGUAGEM": { icon: MessageSquare, color: "text-cyan-400" },
+  "REGRAS DE EMOJIS": { icon: Sparkles, color: "text-pink-400" },
+  "REGRAS DE COMPORTAMENTO": { icon: Activity, color: "text-orange-400" },
+  "RESTRIÇÕES": { icon: Shield, color: "text-red-400" },
+  "TRANSIÇÃO": { icon: TrendingUp, color: "text-indigo-400" },
+};
+
+function StructuredPromptView({ prompt }: { prompt: string }) {
+  const sections = useMemo(() => {
+    const parts = prompt.split(/^## /m).filter(Boolean);
+    return parts.map(part => {
+      const newline = part.indexOf("\n");
+      const title = newline > 0 ? part.slice(0, newline).trim() : part.trim();
+      const body = newline > 0 ? part.slice(newline + 1).trim() : "";
+      return { title, body };
+    });
+  }, [prompt]);
+
+  const [expanded, setExpanded] = useState<Record<number, boolean>>(() => {
+    const init: Record<number, boolean> = {};
+    sections.forEach((_, i) => { init[i] = true; });
+    return init;
+  });
+
+  const toggle = (i: number) => setExpanded(prev => ({ ...prev, [i]: !prev[i] }));
+
+  if (sections.length <= 1) {
+    return (
+      <pre className="text-sm text-foreground/70 leading-relaxed font-mono bg-muted/30 rounded-lg p-4 border border-border/30 whitespace-pre-wrap max-h-96 overflow-y-auto">
+        {prompt}
+      </pre>
+    );
+  }
+
+  return (
+    <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+      {sections.map((sec, i) => {
+        const cfg = SECTION_ICONS[sec.title.toUpperCase().replace(/\(.*\)/, "").trim()] || { icon: Settings2, color: "text-muted-foreground" };
+        const Icon = cfg.icon;
+        const isOpen = expanded[i] !== false;
+        return (
+          <div key={i} className="rounded-lg border border-border/40 bg-muted/20 overflow-hidden">
+            <button onClick={() => toggle(i)}
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-left hover:bg-muted/40 transition-colors">
+              <Icon className={cn("w-4 h-4 shrink-0", cfg.color)} />
+              <span className="text-sm font-semibold text-foreground flex-1">{sec.title}</span>
+              {isOpen ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+            </button>
+            {isOpen && sec.body && (
+              <div className="px-4 pb-3 border-t border-border/20">
+                <pre className="text-xs text-foreground/60 leading-relaxed font-mono whitespace-pre-wrap pt-2">
+                  {sec.body}
+                </pre>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
 function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRole, setEditRole,
   editSector, setEditSector, editLevel, setEditLevel, editSkills, setEditSkills,
   editBehavior, setEditBehavior, customSkill, setCustomSkill, toggleItem, addCustomSkill,
@@ -1006,9 +1074,11 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
           </div>
         ) : (
           <div className="space-y-3">
-            <pre className="text-sm text-foreground/70 leading-relaxed font-mono bg-muted/30 rounded-lg p-4 border border-border/30 whitespace-pre-wrap max-h-96 overflow-y-auto">
-              {realBehaviorPrompt || "Nenhuma diretiva configurada. Clique em Editar para definir."}
-            </pre>
+            {realBehaviorPrompt ? (
+              <StructuredPromptView prompt={realBehaviorPrompt} />
+            ) : (
+              <p className="text-sm text-muted-foreground italic">Nenhuma diretiva configurada. Clique em Editar para definir.</p>
+            )}
             <Button variant="outline" size="sm" onClick={startEditing} className="gap-1.5">
               <Pencil className="w-3.5 h-3.5" /> Editar Comportamento
             </Button>
