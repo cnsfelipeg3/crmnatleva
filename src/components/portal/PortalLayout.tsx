@@ -15,6 +15,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
   const [unreadCount, setUnreadCount] = useState(0);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
