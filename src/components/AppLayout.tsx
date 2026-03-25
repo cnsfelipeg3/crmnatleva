@@ -4,9 +4,11 @@ import GlobalSearch from "./GlobalSearch";
 import AIPageSummaryButton from "./AIPageSummaryButton";
 import PanelHelpButton from "./PanelHelpButton";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useFullscreen } from "@/hooks/useFullscreen";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
+import { Menu, Maximize, Minimize } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import logoNatleva from "@/assets/logo-natleva.png";
 
