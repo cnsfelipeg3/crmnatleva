@@ -1005,9 +1005,9 @@ function BehaviorTab({ rules, agentName, editing, editName, setEditName, editRol
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm text-foreground/70 leading-relaxed font-mono bg-muted/30 rounded-lg p-4 border border-border/30">
-              {agent?.behaviorPrompt || "Nenhuma diretiva configurada. Clique em Editar para definir."}
-            </p>
+            <pre className="text-sm text-foreground/70 leading-relaxed font-mono bg-muted/30 rounded-lg p-4 border border-border/30 whitespace-pre-wrap max-h-96 overflow-y-auto">
+              {realBehaviorPrompt || "Nenhuma diretiva configurada. Clique em Editar para definir."}
+            </pre>
             <Button variant="outline" size="sm" onClick={startEditing} className="gap-1.5">
               <Pencil className="w-3.5 h-3.5" /> Editar Comportamento
             </Button>
