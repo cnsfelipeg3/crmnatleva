@@ -481,11 +481,15 @@ export default function SimuladorAutoMode() {
             }
 
             const objCompressed = compressConversation(lead.mensagens);
-            const objResp = await callSimulatorAI(
+            let objResp = await callSimulatorAI(
               buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]),
               objCompressed, "agent"
             );
             if (!simAtivaRef.current) return;
+            // 🛡️ Compliance on objection response too
+            const objCtx = lead.mensagens.slice(-8).map(m => `${m.role}: ${m.content}`).join("\n");
+            const { text: compliantObj, wasRewritten: objRewritten } = await fullCompliancePipeline(agent.id, objResp, objCtx);
+            if (objRewritten) objResp = compliantObj;
             const addedObjectionResp = pushUniqueSimMessage(lead, { role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
             if (addedObjectionResp) setLeads(prev => [...prev]);
             continue;
