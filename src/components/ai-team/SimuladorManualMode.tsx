@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { fullCompliancePipeline } from "./complianceEngine";
 import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X, Mic } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
 import SimulatorChatLayout, { type SimChatMessage } from "./SimulatorChatLayout";
@@ -354,13 +355,22 @@ export default function SimuladorManualMode() {
       }
 
       if (!agentText) {
-        // Retry once with lovable provider before showing fallback
         setMessages(prev => {
           const fallbackMessage: ChatMsg = { id: crypto.randomUUID(), role: "agent", content: "Desculpe, tive um problema técnico ao processar sua mensagem. Pode repetir?", timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name };
           const updated = [...prev, fallbackMessage];
           messagesRef.current = updated;
           return updated;
         });
+      } else {
+        // 🛡️ Compliance Engine: validate response against ALL agent configs
+        const conversationCtx = nextMessages.map(m => `${m.role}: ${m.content}`).join("\n");
+        const { text: compliantText, wasRewritten } = await fullCompliancePipeline(
+          selectedAgent.id, agentText, conversationCtx,
+        );
+        if (wasRewritten) {
+          console.log(`🛡️ Compliance rewrite applied for ${selectedAgent.name}`);
+          updateAgent(compliantText);
+        }
       }
 
       if (agentText.includes("[TRANSFERIR]")) {

@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, Fragment } from "react";
+import { fullCompliancePipeline } from "./complianceEngine";
 import { supabase } from "@/integrations/supabase/client";
 import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users, BookOpen, Search, FileText, Workflow, Edit3, Download, Bot, CheckCheck, Repeat, Gauge, Timer, Target, Flame, SlidersHorizontal } from "lucide-react";
 import SimulatorObservationsPanel, { type SelectedMessage } from "./SimulatorObservationsPanel";
@@ -373,11 +374,20 @@ export default function SimuladorAutoMode() {
           }
           const leadChunks = chunksRef.current.get(lead.id) || [];
           const compressedHistory = leadChunks.length > 0 ? buildActiveContext(lead, leadChunks) : compressConversation(lead.mensagens);
-          const agentResp = await callSimulatorAI(
+          let agentResp = await callSimulatorAI(
             buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]),
             compressedHistory, "agent"
           );
           if (!simAtivaRef.current) return;
+
+          // 🛡️ Compliance Engine: validate against ALL agent configs
+          const convCtx = lead.mensagens.slice(-10).map(m => `${m.role}: ${m.content}`).join("\n");
+          const { text: compliantResp, wasRewritten } = await fullCompliancePipeline(agent.id, agentResp, convCtx);
+          if (wasRewritten) {
+            agentResp = compliantResp;
+            addEvent("#EF4444", `🛡️ Compliance: resposta de ${agent.name} corrigida para ${lead.nome}`, "🛡️");
+          }
+
           const addedAgentResp = pushUniqueSimMessage(lead, { role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
           if (addedAgentResp) setLeads(prev => [...prev]);
 
@@ -471,11 +481,15 @@ export default function SimuladorAutoMode() {
             }
 
             const objCompressed = compressConversation(lead.mensagens);
-            const objResp = await callSimulatorAI(
+            let objResp = await callSimulatorAI(
               buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]),
               objCompressed, "agent"
             );
             if (!simAtivaRef.current) return;
+            // 🛡️ Compliance on objection response too
+            const objCtx = lead.mensagens.slice(-8).map(m => `${m.role}: ${m.content}`).join("\n");
+            const { text: compliantObj, wasRewritten: objRewritten } = await fullCompliancePipeline(agent.id, objResp, objCtx);
+            if (objRewritten) objResp = compliantObj;
             const addedObjectionResp = pushUniqueSimMessage(lead, { role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
             if (addedObjectionResp) setLeads(prev => [...prev]);
             continue;
