@@ -205,7 +205,7 @@ export async function callSimulatorAI(sysPrompt: string, history: { role: string
       systemPrompt: compactSystemPrompt,
       history: requestHistory,
       agentBehaviorPrompt: compactAgentBehaviorPrompt,
-      provider: "anthropic",
+      provider: "lovable",
     }),
   }));
 

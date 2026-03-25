@@ -115,7 +115,7 @@ export default function SimuladorAutoMode() {
   const [fatigueThreshold, setFatigueThreshold] = useState(20);
   // Config — Presets
   const [presetName, setPresetName] = useState("");
-  const [configTab, setConfigTab] = useState<"volume" | "perfis" | "cenario" | "lead_behavior" | "comportamento" | "avancado" | "stress" | "presets">("volume");
+  const [configTab, setConfigTab] = useState<string>("volume"); // kept for potential future use
 
   // Runtime
   const [phase, setPhase] = useState<Phase>("config");
@@ -1111,244 +1111,217 @@ Retorne JSON:
     }
   }, [leads, closedLeads, lostLeads, elapsedSeconds, conversionRate, totalReceita, ticketMedio, avgSentimento, avgHumanizacao, avgEficacia, avgTecnica, toast]);
 
-  const CONFIG_TABS = [
-    { id: "volume" as const, label: "Volume & Tempo", icon: BarChart3, color: "#3B82F6", summary: `${numLeads} leads · ${msgsPerLead} msgs · ${duration >= 3600 ? Math.floor(duration / 3600) + "h" : formatTime(duration)} · ${dispatchMode === "simultaneous" ? "simultâneo" : dispatchMode === "wave" ? "ondas" : "seq."}` },
-    { id: "perfis" as const, label: "Perfis", icon: User, color: "#EC4899", summary: `${selectedProfiles.length || 8} perfis ativos` },
-    { id: "cenario" as const, label: "Cenário", icon: MapPin, color: "#06B6D4", summary: `${selectedDestinos.length || DESTINOS_LEAD.length} destinos` },
-    { id: "lead_behavior" as const, label: "Calibração Lead", icon: Heart, color: "#EF4444", summary: `Paciência ${initialPatience}% · ${leadPatienceCurve} · ${abandonmentSensitivity}% sensib.` },
-    { id: "comportamento" as const, label: "Agentes & Funil", icon: Users, color: "#8B5CF6", summary: `${funnelMode === "full" ? "Todos (pipeline)" : funnelMode === "comercial" ? "Squad Comercial" : funnelMode === "individual" ? (customFunnelAgents[0] ? AGENTS_V4.find(a => a.id === customFunnelAgents[0])?.name || "1 agente" : "Nenhum") : `${customFunnelAgents.length} agentes`} · ${SPEED_OPTIONS.find(s => s.id === speed)?.label}` },
-    { id: "avancado" as const, label: "Motor IA", icon: Brain, color: "#F59E0B", summary: `${enableEvaluation ? "Aval." : "—"} ${enableTransfers ? "Transf." : "—"} ${agentResponseLength}` },
-    { id: "stress" as const, label: "Teste de Estresse", icon: Flame, color: "#EF4444", summary: `Score mín ${minScoreToPass} · ${enableSentimentShock ? "Choque ativo" : "Sem choque"} · ${enableAgentFatigue ? "Fadiga ON" : "Sem fadiga"}` },
-    { id: "presets" as const, label: "Presets", icon: BookOpen, color: "#10B981", summary: `${presets.length} salvo${presets.length !== 1 ? "s" : ""}` },
-  ];
-
-  // ===== RENDER: CONFIG =====
+  // ===== RENDER: CONFIG (Simplified) =====
   if (phase === "config") {
+    const allFunnelAgents = AGENTS_V4.filter(a => ["comercial", "atendimento"].includes(a.squadId));
+
     return (
       <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
-        {/* Full-screen 2-column layout — fits viewport */}
-        <div className={cn("flex", isMobile ? "flex-col gap-3" : "gap-4")} style={{ height: isMobile ? undefined : "calc(100vh - 260px)", minHeight: isMobile ? undefined : 400 }}>
-          {/* Tab Navigation — scrollable sidebar that fits viewport */}
-          <div className={cn(
-            isMobile
-              ? "flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
-              : "w-[240px] shrink-0 flex flex-col overflow-hidden"
-          )}>
-            {!isMobile ? (
-              <div className="flex-1 overflow-y-auto space-y-1 pr-1 scrollbar-hide">
-                {CONFIG_TABS.map((tab, i) => {
-                  const active = configTab === tab.id;
-                  const Icon = tab.icon;
+        <div className={cn("mx-auto space-y-6", isMobile ? "px-0" : "max-w-[900px]")}>
+
+          {/* ── Section 1: Volume ── */}
+          <div className="rounded-2xl overflow-hidden" style={{
+            background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}>
+            <div className="h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #3B82F6, transparent)" }} />
+            <div className={cn("p-5", isMobile && "p-4")}>
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.2)" }}>
+                  <BarChart3 className="w-4.5 h-4.5" style={{ color: "#3B82F6" }} />
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Volume da Simulação</h3>
+                  <p className="text-xs" style={{ color: "#64748B" }}>Defina a escala do teste</p>
+                </div>
+              </div>
+              <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-3")}>
+                <SimConfigInput label="Leads totais" value={numLeads} onChange={setNumLeads} min={1} max={50} step={1} color="#3B82F6" desc="Quantidade de clientes fictícios" icon="👥" />
+                <SimConfigInput label="Mensagens por lead" value={msgsPerLead} onChange={setMsgsPerLead} min={4} max={40} step={2} color="#10B981" desc="Rodadas de conversa por cliente" icon="💬" />
+                <SimConfigInput label="Duração máxima" value={duration} onChange={setDuration} min={0} max={3600} step={30} color="#8B5CF6" desc="Tempo limite (0 = automático)" icon="⏳"
+                  format={v => v === 0 ? "Auto" : v >= 3600 ? `${Math.floor(v / 3600)}h${Math.floor((v % 3600) / 60)}m` : formatTime(v)} />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Section 2: Lead Profiles ── */}
+          <div className="rounded-2xl overflow-hidden" style={{
+            background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}>
+            <div className="h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #EC4899, transparent)" }} />
+            <div className={cn("p-5", isMobile && "p-4")}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(236,72,153,0.12)", border: "1px solid rgba(236,72,153,0.2)" }}>
+                    <User className="w-4.5 h-4.5" style={{ color: "#EC4899" }} />
+                  </div>
+                  <div>
+                    <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Perfil do Lead</h3>
+                    <p className="text-xs" style={{ color: "#64748B" }}>Que tipo de cliente vai testar · {selectedProfiles.length === 0 ? "Todos" : `${selectedProfiles.length} selecionados`}</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedProfiles([])}
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+                  style={{ color: selectedProfiles.length > 0 ? "#EC4899" : "#64748B", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {selectedProfiles.length > 0 ? "Limpar" : "✓ Todos"}
+                </button>
+              </div>
+              <div className={cn("grid gap-2", isMobile ? "grid-cols-2" : "grid-cols-4")}>
+                {PERFIS_INTELIGENTES.map(p => {
+                  const active = selectedProfiles.length === 0 || selectedProfiles.includes(p.tipo);
                   return (
-                    <button key={tab.id} onClick={() => setConfigTab(tab.id)}
-                      className="text-left rounded-xl transition-all duration-300 relative group w-full px-3 py-3"
+                    <button key={p.tipo} onClick={() => toggleMulti(selectedProfiles, p.tipo, setSelectedProfiles)}
+                      className="relative flex flex-col items-center gap-2 p-4 rounded-xl text-center transition-all duration-200 group"
                       style={{
-                        background: active ? `linear-gradient(135deg, ${tab.color}18, ${tab.color}0A)` : "rgba(255,255,255,0.02)",
-                        border: `1px solid ${active ? `${tab.color}40` : "rgba(255,255,255,0.08)"}`,
+                        background: active ? `${p.cor}08` : "rgba(255,255,255,0.015)",
+                        border: `1px solid ${active ? `${p.cor}30` : "rgba(255,255,255,0.04)"}`,
                       }}>
-                      {active && <div className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-r-full" style={{ background: tab.color }} />}
-                      <div className="flex items-center gap-2.5">
-                        <div className="rounded-lg w-7 h-7 flex items-center justify-center shrink-0 transition-all" style={{
-                          background: active ? `${tab.color}20` : "rgba(255,255,255,0.05)",
-                          border: `1px solid ${active ? `${tab.color}35` : "rgba(255,255,255,0.08)"}`,
-                        }}>
-                          <Icon className="w-3.5 h-3.5" style={{ color: active ? tab.color : "#94A3B8" }} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-bold truncate" style={{ color: active ? "#F8FAFC" : "#CBD5E1" }}>{tab.label}</p>
-                          <p className="text-[10px] mt-0.5 leading-snug truncate" style={{ color: active ? tab.color : "#94A3B8" }}>{tab.summary}</p>
-                        </div>
-                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
-                          style={{ background: active ? `${tab.color}20` : "rgba(255,255,255,0.05)", color: active ? tab.color : "#94A3B8" }}>
-                          {i + 1}
-                        </div>
-                      </div>
+                      {active && <div className="absolute top-2 right-2 w-2 h-2 rounded-full" style={{ background: p.cor }} />}
+                      <span className="text-2xl">{p.emoji}</span>
+                      <span className="text-xs font-bold" style={{ color: active ? "#F1F5F9" : "#64748B" }}>{p.label}</span>
                     </button>
                   );
                 })}
               </div>
-            ) : (
-              CONFIG_TABS.map((tab, i) => {
-                const active = configTab === tab.id;
-                const Icon = tab.icon;
-                return (
-                  <button key={tab.id} onClick={() => setConfigTab(tab.id)}
-                    className="shrink-0 px-3 py-2.5 min-w-[100px] text-left rounded-xl transition-all duration-300 relative"
-                    style={{
-                      background: active ? `linear-gradient(135deg, ${tab.color}18, ${tab.color}0A)` : "rgba(255,255,255,0.02)",
-                      border: `1px solid ${active ? `${tab.color}40` : "rgba(255,255,255,0.08)"}`,
-                    }}>
-                    <div className="flex items-center gap-2">
-                      <div className="rounded-lg w-6 h-6 flex items-center justify-center transition-all" style={{
-                        background: active ? `${tab.color}20` : "rgba(255,255,255,0.05)",
-                      }}>
-                        <Icon className="w-3 h-3" style={{ color: active ? tab.color : "#94A3B8" }} />
-                      </div>
-                      <p className="text-xs font-bold" style={{ color: active ? "#F8FAFC" : "#CBD5E1" }}>{tab.label}</p>
-                    </div>
-                  </button>
-                );
-              })
-            )}
-
-            {/* Config Summary Card — desktop only, compact */}
-            {!isMobile && (
-            <div className="mt-2 rounded-xl p-3 space-y-1.5 shrink-0" style={{
-              background: "linear-gradient(135deg, rgba(16,185,129,0.04), rgba(6,182,212,0.04))",
-              border: "1px solid rgba(16,185,129,0.1)",
-            }}>
-              <p className="text-[10px] uppercase tracking-[0.12em] font-bold" style={{ color: "#10B981" }}>Resumo da Config</p>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                {[
-                  { label: "Leads", value: `${numLeads}`, color: "#3B82F6" },
-                  { label: "Msgs", value: `${msgsPerLead}`, color: "#10B981" },
-                  { label: "Duração", value: formatTime(duration), color: "#8B5CF6" },
-                  { label: "Objeções", value: `${objectionDensity}%`, color: "#F59E0B" },
-                  { label: "Perfis", value: `${selectedProfiles.length || 8}`, color: "#EC4899" },
-                  { label: "Paciência", value: `${initialPatience}%`, color: "#EF4444" },
-                  { label: "Retries", value: `${apiRetries}`, color: "#06B6D4" },
-                  { label: "Score mín", value: `${minScoreToPass}`, color: "#10B981" },
-                ].map(item => (
-                  <div key={item.label} className="flex items-center justify-between">
-                    <span className="text-[10px]" style={{ color: "#94A3B8" }}>{item.label}</span>
-                    <span className="text-[11px] font-bold tabular-nums" style={{ color: item.color }}>{item.value}</span>
-                  </div>
-                ))}
-              </div>
             </div>
-            )}
           </div>
 
-          {/* RIGHT: Content Area — scrollable, fills remaining height */}
-          <div className="flex-1 rounded-2xl overflow-hidden relative flex flex-col" style={{
+          {/* ── Section 3: Destinations ── */}
+          <div className="rounded-2xl overflow-hidden" style={{
             background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))",
             border: "1px solid rgba(255,255,255,0.06)",
-            backdropFilter: "blur(8px)",
           }}>
-            {/* Active tab accent line */}
-            <div className="h-[2px] shrink-0" style={{ background: `linear-gradient(90deg, transparent, ${CONFIG_TABS.find(t => t.id === configTab)?.color || "#10B981"}, transparent)` }} />
+            <div className="h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #06B6D4, transparent)" }} />
+            <div className={cn("p-5", isMobile && "p-4")}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(6,182,212,0.12)", border: "1px solid rgba(6,182,212,0.2)" }}>
+                    <MapPin className="w-4.5 h-4.5" style={{ color: "#06B6D4" }} />
+                  </div>
+                  <div>
+                    <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Destinos</h3>
+                    <p className="text-xs" style={{ color: "#64748B" }}>Para onde os leads querem viajar · {selectedDestinos.length === 0 ? "Todos" : `${selectedDestinos.length} selecionados`}</p>
+                  </div>
+                </div>
+                <button onClick={() => setSelectedDestinos([])}
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+                  style={{ color: selectedDestinos.length > 0 ? "#06B6D4" : "#64748B", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  {selectedDestinos.length > 0 ? "Limpar" : "✓ Todos"}
+                </button>
+              </div>
+              <div className={cn("flex flex-wrap gap-2")}>
+                {(() => {
+                  const icons: Record<string, string> = {
+                    "Maldivas": "🏝️", "Paris": "🗼", "Nova York": "🗽", "Tóquio": "🗾", "Dubai": "🏙️",
+                    "Roma": "🏛️", "Cancún": "🌴", "Santorini": "🏖️", "Fernando de Noronha": "🐢",
+                    "Gramado": "🏔️", "Bali": "🛕", "Londres": "🎡", "Orlando": "🎢", "Santiago": "🏔️", "Lisboa": "⛵",
+                  };
+                  return DESTINOS_LEAD.map(d => {
+                    const active = selectedDestinos.length === 0 || selectedDestinos.includes(d);
+                    return (
+                      <button key={d} onClick={() => toggleMulti(selectedDestinos, d, setSelectedDestinos)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
+                        style={{
+                          background: active ? "rgba(6,182,212,0.08)" : "rgba(255,255,255,0.015)",
+                          border: `1px solid ${active ? "rgba(6,182,212,0.25)" : "rgba(255,255,255,0.04)"}`,
+                          color: active ? "#E2E8F0" : "#64748B",
+                        }}>
+                        <span>{icons[d] || "🌍"}</span> {d}
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+            </div>
+          </div>
 
-            <div className={cn("overflow-y-auto flex-1", isMobile ? "p-4" : "p-5")}>
-              {/* ===== VOLUME TAB ===== */}
-              {configTab === "volume" && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-right-3 duration-300">
-                  <div className="flex items-center gap-3 mb-2">
-                    <BarChart3 className="w-5 h-5" style={{ color: "#3B82F6" }} />
+          {/* ── Section 4: Agents ── */}
+          <div className="rounded-2xl overflow-hidden" style={{
+            background: "linear-gradient(135deg, rgba(13,18,32,0.9), rgba(13,18,32,0.7))",
+            border: "1px solid rgba(255,255,255,0.06)",
+          }}>
+            <div className="h-[2px]" style={{ background: "linear-gradient(90deg, transparent, #8B5CF6, transparent)" }} />
+            <div className={cn("p-5", isMobile && "p-4")}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.2)" }}>
+                  <Users className="w-4.5 h-4.5" style={{ color: "#8B5CF6" }} />
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-bold" style={{ color: "#F1F5F9" }}>Agentes a Testar</h3>
+                  <p className="text-xs" style={{ color: "#64748B" }}>Quem vai atender os leads na simulação</p>
+                </div>
+              </div>
+
+              {/* Mode selector — 3 options */}
+              <div className={cn("grid gap-3 mb-4", isMobile ? "grid-cols-1" : "grid-cols-3")}>
+                {([
+                  { id: "full" as const, label: "Pipeline Completo", desc: "Todos os agentes do funil", icon: "🔄", color: "#10B981" },
+                  { id: "individual" as const, label: "Agente Individual", desc: "Teste um agente isolado", icon: "🎯", color: "#EC4899" },
+                  { id: "custom" as const, label: "Seleção Customizada", desc: "Escolha agentes específicos", icon: "🔧", color: "#8B5CF6" },
+                ] as const).map(m => (
+                  <button key={m.id} onClick={() => { setFunnelMode(m.id); if (m.id === "full") setCustomFunnelAgents([]); }}
+                    className="flex items-center gap-3 p-4 rounded-xl transition-all duration-200 text-left"
+                    style={{
+                      background: funnelMode === m.id ? `${m.color}0A` : "rgba(255,255,255,0.015)",
+                      border: `1px solid ${funnelMode === m.id ? `${m.color}35` : "rgba(255,255,255,0.04)"}`,
+                    }}>
+                    <span className="text-xl">{m.icon}</span>
                     <div>
-                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Volume & Tempo</h3>
-                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Configure a escala e duração do teste de estresse</p>
+                      <p className="text-sm font-bold" style={{ color: funnelMode === m.id ? "#F1F5F9" : "#94A3B8" }}>{m.label}</p>
+                      <p className="text-[11px]" style={{ color: "#64748B" }}>{m.desc}</p>
                     </div>
-                  </div>
-                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
-                    <SimConfigInput label="Leads totais" value={numLeads} onChange={setNumLeads} min={1} max={500} step={1} color="#3B82F6" desc="Quantidade de leads na simulação (até 500)" icon="👥" />
-                    <SimConfigInput label="Mensagens por lead" value={msgsPerLead} onChange={setMsgsPerLead} min={4} max={500} step={2} color="#10B981" desc="Rodadas de conversa (até 500 — compressão automática)" icon="💬" />
-                    <SimConfigInput label="Intervalo entre leads" value={intervalSec} onChange={setIntervalSec} min={0} max={60} step={1} color="#F59E0B" desc="Segundos entre entrada de cada lead (0 = simultâneo)" suffix="s" icon="⏱️" />
-                    <SimConfigInput label="Duração máxima" value={duration} onChange={setDuration} min={30} max={86400} step={30} color="#8B5CF6" desc="Tempo limite (até 24h)" icon="⏳"
-                      format={v => v >= 3600 ? `${Math.floor(v / 3600)}h${Math.floor((v % 3600) / 60)}m` : formatTime(v)} />
-                  </div>
+                  </button>
+                ))}
+              </div>
 
-                  {/* New: Warm-up & Retry */}
-                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-3")}>
-                    <SimConfigInput label="Warm-up rounds" value={warmupRounds} onChange={setWarmupRounds} min={0} max={5} step={1} color="#06B6D4" desc="Rodadas de aquecimento antes de avaliar" icon="🔥" compact />
-                    <SimConfigInput label="Retentativas API" value={apiRetries} onChange={setApiRetries} min={0} max={5} step={1} color="#EC4899" desc="Tentativas em caso de erro 429/500" icon="🔄" compact />
-                    <SimConfigInput label="Cooldown entre msgs" value={cooldownMs} onChange={setCooldownMs} min={0} max={5000} step={100} color="#F59E0B" desc="ms de pausa entre mensagens" suffix="ms" icon="⏸️" compact />
-                  </div>
-
-                  {/* Dispatch Mode */}
-                  <div className="rounded-xl p-4 mt-2" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                    <p className="text-sm font-semibold mb-2" style={{ color: "#E2E8F0" }}>Modo de Disparo</p>
-                    <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Como os leads entram na simulação</p>
-                    <div className="flex flex-wrap gap-2">
-                      {[
-                        { id: "sequential" as const, label: "Sequencial", desc: "Um lead por vez", icon: "📋" },
-                        { id: "simultaneous" as const, label: "Simultâneo", desc: "Todos ao mesmo tempo", icon: "⚡" },
-                        { id: "wave" as const, label: "Ondas", desc: "Lotes paralelos", icon: "🌊" },
-                      ].map(m => (
-                        <button key={m.id} onClick={() => setDispatchMode(m.id)}
-                          className="flex-1 min-w-[100px] text-left rounded-xl px-3 py-2.5 transition-all"
-                          style={{
-                            background: dispatchMode === m.id ? "rgba(59,130,246,0.08)" : "rgba(255,255,255,0.01)",
-                            border: `1px solid ${dispatchMode === m.id ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.04)"}`,
-                          }}>
-                          <span className="text-sm">{m.icon}</span>
-                          <p className="text-sm font-bold mt-1" style={{ color: dispatchMode === m.id ? "#3B82F6" : "#94A3B8" }}>{m.label}</p>
-                          <p className="text-[11px]" style={{ color: "#94A3B8" }}>{m.desc}</p>
+              {/* Agent selection — only for individual/custom */}
+              {(funnelMode === "individual" || funnelMode === "custom") && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#94A3B8" }}>
+                      {funnelMode === "individual" ? "Selecione 1 agente" : `${customFunnelAgents.length} agentes selecionados`}
+                    </span>
+                    {funnelMode === "custom" && (
+                      <div className="flex gap-2">
+                        <button onClick={() => setCustomFunnelAgents(allFunnelAgents.map(a => a.id))}
+                          className="text-xs font-bold px-2.5 py-1 rounded-lg" style={{ background: "rgba(139,92,246,0.08)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.2)" }}>
+                          Todos
                         </button>
-                      ))}
-                    </div>
-                    {dispatchMode === "wave" && (
-                      <div className="mt-3">
-                        <SimConfigInput label="Leads por onda" value={parallelLeads} onChange={setParallelLeads} min={2} max={Math.min(50, numLeads)} step={1} color="#06B6D4" desc="Quantos leads processados em paralelo por lote" icon="🌊" compact />
+                        <button onClick={() => setCustomFunnelAgents([])}
+                          className="text-xs font-bold px-2.5 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.03)", color: "#64748B", border: "1px solid rgba(255,255,255,0.06)" }}>
+                          Limpar
+                        </button>
                       </div>
                     )}
                   </div>
-
-                  {/* Context Compression Info */}
-                  {msgsPerLead > 20 && (
-                    <div className="rounded-xl p-3 mt-2 flex items-start gap-2" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.12)" }}>
-                      <Brain className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#10B981" }} />
-                      <div>
-                        <p className="text-sm font-bold" style={{ color: "#10B981" }}>Compressão de Contexto Ativa</p>
-                        <p className="text-[11px]" style={{ color: "#94A3B8" }}>
-                          Conversas com {msgsPerLead}+ msgs usam resumo inteligente do histórico antigo, 
-                          mantendo apenas as últimas 16 mensagens completas. Isso economiza tokens e mantém coerência.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* ===== PERFIS TAB ===== */}
-              {configTab === "perfis" && (
-                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <User className="w-5 h-5" style={{ color: "#EC4899" }} />
-                      <div>
-                        <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Perfis Psicológicos</h3>
-                        <p className="text-[11px]" style={{ color: "#94A3B8" }}>Selecione quais perfis participam · {selectedProfiles.length || "Todos os 8"} ativos</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {[
-                        { id: "random", label: "Aleatório", icon: "🎲" },
-                        { id: "roundrobin", label: "Round-robin", icon: "🔄" },
-                      ].map(m => (
-                        <button key={m.id} onClick={() => setProfileMode(m.id as any)}
-                          className="text-sm px-3 py-1.5 rounded-lg font-semibold transition-all"
-                          style={{
-                            background: profileMode === m.id ? "rgba(236,72,153,0.1)" : "rgba(255,255,255,0.02)",
-                            border: `1px solid ${profileMode === m.id ? "rgba(236,72,153,0.25)" : "rgba(255,255,255,0.04)"}`,
-                            color: profileMode === m.id ? "#EC4899" : "#64748B",
-                          }}>
-                          {m.icon} {m.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {PERFIS_INTELIGENTES.map(p => {
-                      const active = selectedProfiles.length === 0 || selectedProfiles.includes(p.tipo);
+                  <div className={cn("grid gap-2", isMobile ? "grid-cols-2" : "grid-cols-3")}>
+                    {allFunnelAgents.map(a => {
+                      const active = customFunnelAgents.includes(a.id);
+                      const c = getAgentColor(a);
                       return (
-                        <button key={p.tipo} onClick={() => toggleMulti(selectedProfiles, p.tipo, setSelectedProfiles)}
-                          className="flex items-start gap-3 p-4 rounded-xl text-left transition-all duration-200"
+                        <button key={a.id} onClick={() => {
+                          if (funnelMode === "individual") {
+                            setCustomFunnelAgents(active ? [] : [a.id]);
+                          } else {
+                            toggleMulti(customFunnelAgents, a.id, setCustomFunnelAgents);
+                          }
+                        }}
+                          className="flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all duration-200"
                           style={{
-                            background: active ? `${p.cor}06` : "rgba(255,255,255,0.01)",
-                            border: `1px solid ${active ? `${p.cor}25` : "rgba(255,255,255,0.04)"}`,
+                            background: active ? `${c}0A` : "rgba(255,255,255,0.015)",
+                            border: `1px solid ${active ? `${c}35` : "rgba(255,255,255,0.04)"}`,
                           }}>
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0" style={{
-                            background: active ? `${p.cor}12` : "rgba(255,255,255,0.03)",
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0" style={{
+                            background: active ? `${c}15` : "rgba(255,255,255,0.04)",
                           }}>
-                            {p.emoji}
+                            {a.emoji}
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-bold" style={{ color: active ? "#F1F5F9" : "#64748B" }}>{p.label}</p>
-                              {active && <div className="w-2 h-2 rounded-full" style={{ background: p.cor }} />}
-                            </div>
-                            <p className="text-[11px] mt-0.5 line-clamp-2" style={{ color: "#94A3B8" }}>{p.gatilhosCompra.slice(0, 2).join(" · ")}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-bold truncate" style={{ color: active ? "#F1F5F9" : "#64748B" }}>{a.name}</p>
+                            <p className="text-[10px] truncate" style={{ color: "#94A3B8" }}>{a.role}</p>
                           </div>
+                          {active && <div className="w-2 h-2 rounded-full shrink-0" style={{ background: c }} />}
                         </button>
                       );
                     })}
@@ -1356,979 +1329,43 @@ Retorne JSON:
                 </div>
               )}
 
-              {/* ===== CENARIO TAB ===== */}
-              {configTab === "cenario" && (
-                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
-                  <div className="flex items-center gap-3 mb-2">
-                    <MapPin className="w-5 h-5" style={{ color: "#06B6D4" }} />
-                    <div>
-                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Cenário dos Leads</h3>
-                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Destinos, orçamentos, canais e composição de grupo</p>
-                    </div>
-                  </div>
-
-                  {/* Destinations */}
-                  {(() => {
-                    const DESTINO_DATA = DESTINOS_LEAD.map(d => {
-                      const regions: Record<string, { icon: string; region: string }> = {
-                        "Maldivas": { icon: "🏝️", region: "Ásia" }, "Paris": { icon: "🗼", region: "Europa" }, "Nova York": { icon: "🗽", region: "América" },
-                        "Tóquio": { icon: "🗾", region: "Ásia" }, "Dubai": { icon: "🏙️", region: "Oriente Médio" }, "Roma": { icon: "🏛️", region: "Europa" },
-                        "Cancún": { icon: "🌴", region: "América" }, "Santorini": { icon: "🏖️", region: "Europa" }, "Fernando de Noronha": { icon: "🐢", region: "Brasil" },
-                        "Gramado": { icon: "🏔️", region: "Brasil" }, "Bali": { icon: "🛕", region: "Ásia" }, "Londres": { icon: "🎡", region: "Europa" },
-                        "Orlando": { icon: "🎢", region: "América" }, "Santiago": { icon: "🏔️", region: "América" }, "Lisboa": { icon: "⛵", region: "Europa" },
-                      };
-                      return { name: d, ...regions[d] || { icon: "🌍", region: "Outros" } };
-                    });
-
+              {/* Pipeline preview for full mode */}
+              {funnelMode === "full" && (
+                <div className="flex items-center gap-1 flex-wrap">
+                  {allFunnelAgents.slice(0, 6).map((a, i, arr) => {
+                    const c = getAgentColor(a);
                     return (
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Destinos</span>
-                            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(6,182,212,0.08)", color: "#06B6D4" }}>
-                              {selectedDestinos.length || DESTINOS_LEAD.length} selecionados
-                            </span>
-                          </div>
-                          <button onClick={() => setSelectedDestinos([])} className="text-sm font-semibold px-2 py-1 rounded-lg" style={{ color: "#94A3B8", background: "rgba(255,255,255,0.02)" }}>
-                            {selectedDestinos.length > 0 ? "Limpar" : "Todos"}
-                          </button>
+                      <div key={a.id} className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg" style={{ background: `${c}08`, border: `1px solid ${c}15` }}>
+                          <span className="text-sm">{a.emoji}</span>
+                          <span className="text-xs font-bold" style={{ color: c }}>{a.name}</span>
                         </div>
-                        <div className={cn("grid gap-0 rounded-xl overflow-hidden", isMobile ? "grid-cols-2" : "grid-cols-5")} style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-                          {DESTINO_DATA.map((d, i) => {
-                            const active = selectedDestinos.length === 0 || selectedDestinos.includes(d.name);
-                            return (
-                              <button key={d.name} onClick={() => toggleMulti(selectedDestinos, d.name, setSelectedDestinos)}
-                                className="flex items-center gap-2 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
-                                style={{
-                                  background: active ? "rgba(6,182,212,0.06)" : "transparent",
-                                  borderBottom: i < DESTINO_DATA.length - 5 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                                  borderRight: (i + 1) % 5 !== 0 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                                }}>
-                                <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
-                                  background: active ? "#06B6D4" : "rgba(255,255,255,0.04)",
-                                  border: `1px solid ${active ? "#06B6D4" : "rgba(255,255,255,0.08)"}`,
-                                }}>
-                                  {active && <Check className="w-2.5 h-2.5 text-white" />}
-                                </div>
-                                <span className="text-sm">{d.icon}</span>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold truncate" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{d.name}</p>
-                                  <p className="text-[11px]" style={{ color: "#94A3B8" }}>{d.region}</p>
-                                </div>
-                              </button>
-                            );
-                          })}
-                        </div>
+                        {i < arr.length - 1 && <span className="text-xs" style={{ color: "#334155" }}>→</span>}
                       </div>
                     );
-                  })()}
-
-                  {/* Budget + Canal side by side */}
-                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
-                    {/* Budget */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Wallet className="w-3.5 h-3.5" style={{ color: "#10B981" }} />
-                        <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Faixa de Orçamento</span>
-                      </div>
-                      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-                        {BUDGETS_LEAD.map((b, i) => {
-                          const active = selectedBudgets.includes(b);
-                          const barWidths = [20, 35, 55, 75, 100];
-                          return (
-                            <button key={b} onClick={() => toggleMulti(selectedBudgets, b, setSelectedBudgets)}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
-                              style={{
-                                background: active ? "rgba(16,185,129,0.05)" : "transparent",
-                                borderBottom: i < BUDGETS_LEAD.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                              }}>
-                              <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
-                                background: active ? "#10B981" : "rgba(255,255,255,0.04)",
-                                border: `1px solid ${active ? "#10B981" : "rgba(255,255,255,0.08)"}`,
-                              }}>
-                                {active && <Check className="w-2.5 h-2.5 text-white" />}
-                              </div>
-                              <span className="text-sm font-semibold w-24 shrink-0" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{b}</span>
-                              <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.04)" }}>
-                                <div className="h-full rounded-full transition-all" style={{ width: `${barWidths[i]}%`, background: active ? "#10B981" : "rgba(255,255,255,0.08)" }} />
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Canal */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Radio className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
-                        <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Origem do Lead</span>
-                      </div>
-                      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-                        {CANAIS_LEAD.map((c, i) => {
-                          const active = selectedCanais.includes(c);
-                          const canalIcons: Record<string, string> = { "Instagram DM": "📸", WhatsApp: "💬", Site: "🌐", Indicação: "🤝", Google: "🔍", TikTok: "🎵" };
-                          return (
-                            <button key={c} onClick={() => toggleMulti(selectedCanais, c, setSelectedCanais)}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
-                              style={{
-                                background: active ? "rgba(139,92,246,0.05)" : "transparent",
-                                borderBottom: i < CANAIS_LEAD.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                              }}>
-                              <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
-                                background: active ? "#8B5CF6" : "rgba(255,255,255,0.04)",
-                                border: `1px solid ${active ? "#8B5CF6" : "rgba(255,255,255,0.08)"}`,
-                              }}>
-                                {active && <Check className="w-2.5 h-2.5 text-white" />}
-                              </div>
-                              <span className="text-sm">{canalIcons[c] || "📡"}</span>
-                              <span className="text-sm font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{c}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Grupos */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="w-3.5 h-3.5" style={{ color: "#F59E0B" }} />
-                      <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Grupo de Viajantes</span>
-                    </div>
-                    <div className={cn("grid gap-0 rounded-xl overflow-hidden", isMobile ? "grid-cols-2" : "grid-cols-3")} style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-                      {GRUPOS_LEAD.map((g, i) => {
-                        const active = selectedGrupos.includes(g);
-                        const grupoIcons: Record<string, string> = { "1 pessoa": "🧍", Casal: "👫", "Família 4 pax": "👨‍👩‍👧‍👦", "Grupo 6 amigos": "👥", "Corporativo 3 pax": "💼", "Casal lua de mel": "💍" };
-                        return (
-                          <button key={g} onClick={() => toggleMulti(selectedGrupos, g, setSelectedGrupos)}
-                            className="flex items-center gap-2.5 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
-                            style={{
-                              background: active ? "rgba(245,158,11,0.05)" : "transparent",
-                              borderBottom: i < GRUPOS_LEAD.length - 3 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                              borderRight: (i + 1) % 3 !== 0 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                            }}>
-                            <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all" style={{
-                              background: active ? "#F59E0B" : "rgba(255,255,255,0.04)",
-                              border: `1px solid ${active ? "#F59E0B" : "rgba(255,255,255,0.08)"}`,
-                            }}>
-                              {active && <Check className="w-2.5 h-2.5 text-white" />}
-                            </div>
-                            <span className="text-sm">{grupoIcons[g] || "👤"}</span>
-                            <span className="text-sm font-semibold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{g}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ===== LEAD BEHAVIOR TAB ===== */}
-              {configTab === "lead_behavior" && (
-                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Heart className="w-5 h-5" style={{ color: "#EF4444" }} />
-                    <div>
-                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Calibração do Lead Fictício</h3>
-                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Controle fino do comportamento, tom e reações do lead durante a simulação</p>
-                    </div>
-                  </div>
-
-                  {/* Patience & Abandonment */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <SimConfigInput label="Paciência inicial" value={initialPatience} onChange={setInitialPatience} min={10} max={100} step={5} color={initialPatience >= 70 ? "#10B981" : initialPatience >= 40 ? "#F59E0B" : "#EF4444"} desc="Nível de paciência com que o lead começa a conversa" suffix="%" icon="😤" />
-                    <SimConfigInput label="Sensibilidade a abandono" value={abandonmentSensitivity} onChange={setAbandonmentSensitivity} min={0} max={100} step={5} color={abandonmentSensitivity >= 70 ? "#EF4444" : abandonmentSensitivity >= 40 ? "#F59E0B" : "#10B981"} desc="Quão facilmente o lead desiste ao receber respostas fracas" suffix="%" icon="🚪" />
-                  </div>
-
-                  {/* Patience Curve */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="w-3.5 h-3.5" style={{ color: "#EF4444" }} />
-                      <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Curva de perda de paciência</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {([
-                        { id: "linear" as const, label: "Linear", desc: "Perde paciência de forma constante", icon: "📉", visual: "━━━━━━━━" },
-                        { id: "exponential" as const, label: "Exponencial", desc: "Começa tolerante, depois desaba", icon: "📈", visual: "━━━━━╲╲╲" },
-                        { id: "sudden" as const, label: "Abrupta", desc: "Mantém paciência até estourar de repente", icon: "💥", visual: "━━━━━━━╲" },
-                      ]).map(c => (
-                        <button key={c.id} onClick={() => setLeadPatienceCurve(c.id)}
-                          className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl transition-all text-center"
-                          style={{
-                            background: leadPatienceCurve === c.id ? "rgba(239,68,68,0.08)" : "rgba(255,255,255,0.015)",
-                            border: `1px solid ${leadPatienceCurve === c.id ? "rgba(239,68,68,0.3)" : "rgba(255,255,255,0.04)"}`,
-                          }}>
-                          <span className="text-lg">{c.icon}</span>
-                          <span className="text-sm font-bold" style={{ color: leadPatienceCurve === c.id ? "#F1F5F9" : "#94A3B8" }}>{c.label}</span>
-                          <span className="text-[11px] font-mono tracking-wider" style={{ color: leadPatienceCurve === c.id ? "#EF4444" : "#334155" }}>{c.visual}</span>
-                          <span className="text-[11px]" style={{ color: "#94A3B8" }}>{c.desc}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Communication Style */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <SimConfigInput label="Tom de formalidade" value={leadToneFormality} onChange={setLeadToneFormality} min={0} max={100} step={10} color="#8B5CF6" desc="Informal (gírias, abreviações) → Formal (Prezado/a)" suffix="%" icon="🎩" />
-                    <SimConfigInput label="Follow-up espontâneo" value={leadFollowUpPressure} onChange={setLeadFollowUpPressure} min={0} max={100} step={5} color="#F59E0B" desc="Chance do lead mandar msg extra ('e aí?', '???')" suffix="%" icon="📲" />
-                  </div>
-
-                  {/* Typing style */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <MessageSquare className="w-3.5 h-3.5" style={{ color: "#06B6D4" }} />
-                      <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Estilo de escrita do lead</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {([
-                        { id: "rapido" as const, label: "Rápido", desc: "Msgs curtas, direto ao ponto", icon: "⚡", example: "\"quanto?\"" },
-                        { id: "natural" as const, label: "Natural", desc: "Conversacional, parágrafos curtos", icon: "💬", example: "\"Oi! Queria saber sobre...\"" },
-                        { id: "detalhado" as const, label: "Detalhista", desc: "Textos longos, muita informação", icon: "📝", example: "\"Bom dia! Preciso de um pacote completo incluindo...\"" },
-                      ]).map(ts => (
-                        <button key={ts.id} onClick={() => setLeadTypingStyle(ts.id)}
-                          className="flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all text-center"
-                          style={{
-                            background: leadTypingStyle === ts.id ? "rgba(6,182,212,0.08)" : "rgba(255,255,255,0.015)",
-                            border: `1px solid ${leadTypingStyle === ts.id ? "rgba(6,182,212,0.3)" : "rgba(255,255,255,0.04)"}`,
-                          }}>
-                          <span className="text-lg">{ts.icon}</span>
-                          <span className="text-sm font-bold" style={{ color: leadTypingStyle === ts.id ? "#E2E8F0" : "#94A3B8" }}>{ts.label}</span>
-                          <span className="text-[11px] italic" style={{ color: "#94A3B8" }}>{ts.example}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Info reveal + conversation goal */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Search className="w-3.5 h-3.5" style={{ color: "#10B981" }} />
-                        <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Revelação de informações</span>
-                      </div>
-                      <div className="grid grid-cols-1 gap-2">
-                        {([
-                          { id: "imediato" as const, label: "Imediato", desc: "Dá todas as infos na 1ª msg", icon: "📢" },
-                          { id: "gradual" as const, label: "Gradual", desc: "Revela aos poucos conforme perguntado", icon: "🧩" },
-                          { id: "resistente" as const, label: "Resistente", desc: "Omite dados, exige confiança primeiro", icon: "🔒" },
-                        ]).map(ir => (
-                          <button key={ir.id} onClick={() => setInfoRevealSpeed(ir.id)}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all"
-                            style={{
-                              background: infoRevealSpeed === ir.id ? "rgba(16,185,129,0.06)" : "rgba(255,255,255,0.015)",
-                              border: `1px solid ${infoRevealSpeed === ir.id ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`,
-                            }}>
-                            <span>{ir.icon}</span>
-                            <div>
-                              <p className="text-sm font-bold" style={{ color: infoRevealSpeed === ir.id ? "#E2E8F0" : "#94A3B8" }}>{ir.label}</p>
-                              <p className="text-[11px]" style={{ color: "#94A3B8" }}>{ir.desc}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Lightbulb className="w-3.5 h-3.5" style={{ color: "#F59E0B" }} />
-                        <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Objetivo do lead</span>
-                      </div>
-                      <div className="grid grid-cols-1 gap-2">
-                        {([
-                          { id: "comprar" as const, label: "Quer comprar", desc: "Intenção real de fechar", icon: "🎯" },
-                          { id: "pesquisar" as const, label: "Só pesquisando", desc: "Coleta informação, sem pressa", icon: "🔍" },
-                          { id: "comparar" as const, label: "Comparando preços", desc: "Tem concorrente, quer melhor oferta", icon: "⚖️" },
-                          { id: "aleatorio" as const, label: "Aleatório", desc: "Mix realista de intenções", icon: "🎲" },
-                        ]).map(cg => (
-                          <button key={cg.id} onClick={() => setLeadConversationGoal(cg.id)}
-                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all"
-                            style={{
-                              background: leadConversationGoal === cg.id ? "rgba(245,158,11,0.06)" : "rgba(255,255,255,0.015)",
-                              border: `1px solid ${leadConversationGoal === cg.id ? "rgba(245,158,11,0.25)" : "rgba(255,255,255,0.04)"}`,
-                            }}>
-                            <span>{cg.icon}</span>
-                            <div>
-                              <p className="text-sm font-bold" style={{ color: leadConversationGoal === cg.id ? "#E2E8F0" : "#94A3B8" }}>{cg.label}</p>
-                              <p className="text-[11px]" style={{ color: "#94A3B8" }}>{cg.desc}</p>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Toggles row */}
-                  <div className="space-y-2">
-                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#94A3B8" }}>🎭 Traços de personalidade</p>
-                    {[
-                      { label: "Erros de digitação", desc: "Lead comete typos realistas (\"tbm\", \"vc\", palavras cortadas)", value: enableLeadTypos, setter: setEnableLeadTypos, color: "#EC4899", icon: "✏️" },
-                      { label: "Emojis na conversa", desc: "Lead usa emojis naturalmente (😊 🙏 ✈️)", value: enableLeadEmojis, setter: setEnableLeadEmojis, color: "#F59E0B", icon: "😊" },
-                      { label: "Referências a áudio", desc: "Lead menciona 'prefiro mandar áudio' ou 'não consigo ler agora'", value: enableLeadAudioRef, setter: setEnableLeadAudioRef, color: "#8B5CF6", icon: "🎤" },
-                    ].map(opt => (
-                      <button key={opt.label} onClick={() => opt.setter(!opt.value)}
-                        className="w-full flex items-center gap-4 px-4 py-2.5 rounded-xl text-left transition-all"
-                        style={{
-                          background: opt.value ? `${opt.color}06` : "rgba(255,255,255,0.015)",
-                          border: `1px solid ${opt.value ? `${opt.color}25` : "rgba(255,255,255,0.04)"}`,
-                        }}>
-                        <span className="text-sm">{opt.icon}</span>
-                        <div className="flex-1">
-                          <p className="text-sm font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
-                          <p className="text-[11px] mt-0.5" style={{ color: "#94A3B8" }}>{opt.desc}</p>
-                        </div>
-                        <div className="w-9 h-5 rounded-full relative transition-all" style={{ background: opt.value ? opt.color : "rgba(255,255,255,0.1)" }}>
-                          <div className="absolute top-0.5 w-4 h-4 rounded-full transition-all" style={{ left: opt.value ? 18 : 2, background: "#fff" }} />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Advanced: re-engagement + max conv time + custom instructions */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <SimConfigInput label="Reengajamento" value={leadReengagementChance} onChange={setLeadReengagementChance} min={0} max={80} step={5} color="#06B6D4" desc="Chance do lead voltar após silêncio/desistência parcial" suffix="%" icon="🔁" />
-                    <SimConfigInput label="Duração máx por conversa" value={maxConversationMinutes} onChange={setMaxConversationMinutes} min={0} max={30} step={1} color="#8B5CF6" desc="Limite por conversa individual (0 = ilimitado)" suffix="min" icon="⏱️"
-                      format={v => v === 0 ? "∞" : `${v}min`} />
-                  </div>
-
-                  {/* Custom instructions */}
-                  <div className="rounded-xl p-4" style={{ background: "rgba(139,92,246,0.04)", border: "1px solid rgba(139,92,246,0.12)" }}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Edit3 className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
-                      <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Instruções customizadas para o lead</span>
-                    </div>
-                    <p className="text-[11px] mb-2" style={{ color: "#94A3B8" }}>Adicione comportamentos específicos que serão injetados no prompt do lead fictício</p>
-                    <textarea
-                      value={leadCustomInstructions}
-                      onChange={e => setLeadCustomInstructions(e.target.value)}
-                      placeholder="Ex: 'Sempre mencione que já viajou com a CVC antes', 'Pergunte sobre seguro viagem', 'Insista em saber sobre cancelamento'..."
-                      rows={3}
-                      className="w-full rounded-lg px-3 py-2 text-xs outline-none resize-none"
-                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "#E2E8F0" }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* ===== AGENTES & FUNIL TAB ===== */}
-              {configTab === "comportamento" && (
-                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Users className="w-5 h-5" style={{ color: "#8B5CF6" }} />
-                    <div>
-                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Seleção de Agentes & Pipeline</h3>
-                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Escolha quem será testado: um único agente, vários específicos ou o pipeline completo</p>
-                    </div>
-                  </div>
-
-                  {/* Mode selector — 4 options */}
-                  <div className="grid grid-cols-4 gap-2">
-                    {([
-                      { id: "individual" as const, label: "Individual", desc: "Teste 1 agente isolado", icon: "🎯", color: "#EC4899" },
-                      { id: "custom" as const, label: "Específicos", desc: "Selecione vários agentes", icon: "🔧", color: "#8B5CF6" },
-                      { id: "comercial" as const, label: "Squad Comercial", desc: "Pipeline de vendas completo", icon: "💼", color: "#F59E0B" },
-                      { id: "full" as const, label: "Todos (Pipeline)", desc: "Comercial + Atendimento", icon: "🔄", color: "#10B981" },
-                    ] as const).map(m => (
-                      <button key={m.id} onClick={() => { setFunnelMode(m.id); if (m.id !== "custom" && m.id !== "individual") setCustomFunnelAgents([]); }}
-                        className="flex flex-col items-center gap-1.5 p-3.5 rounded-xl transition-all duration-200 relative overflow-hidden group"
-                        style={{
-                          background: funnelMode === m.id ? `${m.color}10` : "rgba(255,255,255,0.015)",
-                          border: `1px solid ${funnelMode === m.id ? `${m.color}35` : "rgba(255,255,255,0.04)"}`,
-                        }}>
-                        {funnelMode === m.id && <div className="absolute inset-x-0 top-0 h-[2px]" style={{ background: m.color }} />}
-                        <span className="text-xl">{m.icon}</span>
-                        <span className="text-sm font-bold" style={{ color: funnelMode === m.id ? "#F1F5F9" : "#94A3B8" }}>{m.label}</span>
-                        <span className="text-[11px] text-center leading-tight" style={{ color: "#94A3B8" }}>{m.desc}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* INDIVIDUAL MODE — single agent selector */}
-                  {funnelMode === "individual" && (
-                    <div className="space-y-3 animate-in fade-in duration-200">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#EC4899" }}>🎯 Selecione o agente para teste individual</span>
-                      </div>
-                      <div className="space-y-2">
-                        {SQUADS.filter(s => s.id !== 'orquestracao').map(squad => {
-                          const squadAgents = AGENTS_V4.filter(a => a.squadId === squad.id);
-                          if (squadAgents.length === 0) return null;
-                          return (
-                            <div key={squad.id}>
-                              <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-1.5 flex items-center gap-1.5"
-                                style={{ color: "#94A3B8" }}>
-                                <span>{squad.emoji}</span> {squad.name}
-                              </p>
-                              <div className={cn("gap-1.5", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
-                                {squadAgents.map(a => {
-                                  const selected = customFunnelAgents[0] === a.id;
-                                  const c = getAgentColor(a);
-                                  return (
-                                    <button key={a.id} onClick={() => setCustomFunnelAgents([a.id])}
-                                      className="flex items-center gap-3 px-3.5 py-3 rounded-xl text-left transition-all duration-200 relative overflow-hidden"
-                                      style={{
-                                        background: selected ? `${c}12` : "rgba(255,255,255,0.015)",
-                                        border: `1.5px solid ${selected ? c : "rgba(255,255,255,0.04)"}`,
-                                        boxShadow: selected ? `0 0 20px ${c}15` : "none",
-                                      }}>
-                                      {selected && <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: c }} />}
-                                      <div className="w-9 h-9 rounded-lg flex items-center justify-center text-lg shrink-0" style={{
-                                        background: selected ? `${c}20` : "rgba(255,255,255,0.03)",
-                                        border: `1px solid ${selected ? `${c}30` : "rgba(255,255,255,0.06)"}`,
-                                      }}>
-                                        {a.emoji}
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                          <p className="text-sm font-bold" style={{ color: selected ? "#F1F5F9" : "#94A3B8" }}>{a.name}</p>
-                                          {selected && <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: c }} />}
-                                        </div>
-                                        <p className="text-[11px] truncate" style={{ color: "#94A3B8" }}>{a.role}</p>
-                                        <div className="flex items-center gap-1.5 mt-1">
-                                          <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${c}08`, color: c }}>{a.skills[0]}</span>
-                                          <span className="text-[11px]" style={{ color: "#94A3B8" }}>Lv.{a.level}</span>
-                                          <span className="text-[11px]" style={{ color: "#94A3B8" }}>{a.successRate}%</span>
-                                        </div>
-                                      </div>
-                                      {selected && (
-                                        <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0" style={{ background: c }}>
-                                          <Check className="w-3.5 h-3.5 text-white" />
-                                        </div>
-                                      )}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      {customFunnelAgents.length > 0 && (() => {
-                        const agent = AGENTS_V4.find(a => a.id === customFunnelAgents[0]);
-                        if (!agent) return null;
-                        const c = getAgentColor(agent);
-                        return (
-                          <div className="rounded-xl p-4 mt-2" style={{ background: `${c}06`, border: `1px solid ${c}20` }}>
-                            <p className="text-sm font-bold mb-2" style={{ color: c }}>📋 Detalhes do agente selecionado</p>
-                            <div className="grid grid-cols-3 gap-3">
-                              <div><p className="text-[10px] uppercase" style={{ color: "#94A3B8" }}>Squad</p><p className="text-[10px] font-bold" style={{ color: "#E2E8F0" }}>{SQUADS.find(s => s.id === agent.squadId)?.name}</p></div>
-                              <div><p className="text-[10px] uppercase" style={{ color: "#94A3B8" }}>Nível</p><p className="text-[10px] font-bold" style={{ color: "#E2E8F0" }}>Lv.{agent.level} ({agent.xp}/{agent.maxXp} XP)</p></div>
-                              <div><p className="text-[10px] uppercase" style={{ color: "#94A3B8" }}>Taxa Sucesso</p><p className="text-[10px] font-bold" style={{ color: "#10B981" }}>{agent.successRate}%</p></div>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5 mt-2">
-                              {agent.skills.map(s => <span key={s} className="text-xs px-2 py-0.5 rounded-full" style={{ background: `${c}10`, color: c, border: `1px solid ${c}20` }}>{s}</span>)}
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-
-                  {/* CUSTOM MODE — multi-select by squad */}
-                  {funnelMode === "custom" && (
-                    <div className="space-y-3 animate-in fade-in duration-200">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#8B5CF6" }}>
-                          🔧 Selecione os agentes ({customFunnelAgents.length} selecionados)
-                        </span>
-                        <div className="flex gap-2">
-                          <button onClick={() => setCustomFunnelAgents(AGENTS_V4.map(a => a.id))}
-                            className="text-sm font-bold px-2.5 py-1 rounded-lg transition-all"
-                            style={{ background: "rgba(139,92,246,0.08)", color: "#8B5CF6", border: "1px solid rgba(139,92,246,0.2)" }}>
-                            Todos
-                          </button>
-                          <button onClick={() => setCustomFunnelAgents([])}
-                            className="text-sm font-bold px-2.5 py-1 rounded-lg transition-all"
-                            style={{ background: "rgba(255,255,255,0.02)", color: "#94A3B8", border: "1px solid rgba(255,255,255,0.04)" }}>
-                            Limpar
-                          </button>
-                        </div>
-                      </div>
-                      {/* Squad quick-select buttons */}
-                      <div className="flex flex-wrap gap-2">
-                        {SQUADS.filter(s => s.id !== 'orquestracao').map(squad => {
-                          const squadAgentIds = AGENTS_V4.filter(a => a.squadId === squad.id).map(a => a.id);
-                          const allSelected = squadAgentIds.every(id => customFunnelAgents.includes(id));
-                          return (
-                            <button key={squad.id} onClick={() => {
-                              if (allSelected) {
-                                setCustomFunnelAgents(prev => prev.filter(id => !squadAgentIds.includes(id)));
-                              } else {
-                                setCustomFunnelAgents(prev => [...new Set([...prev, ...squadAgentIds])]);
-                              }
-                            }}
-                              className="text-sm font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5"
-                              style={{
-                                background: allSelected ? "rgba(139,92,246,0.12)" : "rgba(255,255,255,0.02)",
-                                border: `1px solid ${allSelected ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.06)"}`,
-                                color: allSelected ? "#8B5CF6" : "#64748B",
-                              }}>
-                              {squad.emoji} {squad.name}
-                              {allSelected && <Check className="w-3 h-3" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {/* Agent grid */}
-                      <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1" style={{ scrollbarWidth: "thin" }}>
-                        {SQUADS.filter(s => s.id !== 'orquestracao').map(squad => {
-                          const squadAgents = AGENTS_V4.filter(a => a.squadId === squad.id);
-                          if (squadAgents.length === 0) return null;
-                          return (
-                            <div key={squad.id}>
-                              <p className="text-[10px] uppercase tracking-[0.12em] font-bold mb-1 flex items-center gap-1" style={{ color: "#94A3B8" }}>
-                                {squad.emoji} {squad.name}
-                              </p>
-                              <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-                                {squadAgents.map((a, i) => {
-                                  const active = customFunnelAgents.includes(a.id);
-                                  const c = getAgentColor(a);
-                                  return (
-                                    <button key={a.id} onClick={() => toggleMulti(customFunnelAgents, a.id, setCustomFunnelAgents)}
-                                      className="w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all duration-200 hover:bg-white/[0.02]"
-                                      style={{
-                                        background: active ? `${c}08` : "transparent",
-                                        borderBottom: i < squadAgents.length - 1 ? "1px solid rgba(255,255,255,0.02)" : "none",
-                                      }}>
-                                      <div className="w-5 h-5 rounded flex items-center justify-center shrink-0 transition-all" style={{
-                                        background: active ? c : "rgba(255,255,255,0.04)",
-                                        border: `1px solid ${active ? c : "rgba(255,255,255,0.08)"}`,
-                                      }}>
-                                        {active && <Check className="w-3 h-3 text-white" />}
-                                      </div>
-                                      <span className="text-sm">{a.emoji}</span>
-                                      <div className="flex-1 min-w-0">
-                                        <span className="text-sm font-bold" style={{ color: active ? "#E2E8F0" : "#64748B" }}>{a.name}</span>
-                                        <span className="text-[11px] ml-2" style={{ color: "#94A3B8" }}>{a.role}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2 shrink-0">
-                                        <span className="text-[11px] tabular-nums" style={{ color: "#94A3B8" }}>Lv.{a.level}</span>
-                                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${c}10`, color: c }}>{a.successRate}%</span>
-                                      </div>
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* FULL / COMERCIAL preview */}
-                  {(funnelMode === "full" || funnelMode === "comercial") && (
-                    <div className="animate-in fade-in duration-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: funnelMode === "full" ? "#10B981" : "#F59E0B" }}>
-                          {funnelMode === "full" ? "🔄 Pipeline completo — agentes que serão testados" : "💼 Squad Comercial — agentes do funil de vendas"}
-                        </span>
-                      </div>
-                      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-                        {(funnelMode === "full"
-                          ? AGENTS_V4.filter(a => ["comercial", "atendimento"].includes(a.squadId)).slice(0, 6)
-                          : AGENTS_V4.filter(a => a.squadId === "comercial")
-                        ).map((a, i, arr) => {
-                          const c = getAgentColor(a);
-                          return (
-                            <div key={a.id} className="flex items-center gap-3 px-4 py-2.5"
-                              style={{
-                                background: `${c}04`,
-                                borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none",
-                              }}>
-                              <span className="text-sm font-bold tabular-nums w-5 text-center" style={{ color: c }}>{i + 1}</span>
-                              <span className="text-sm">{a.emoji}</span>
-                              <div className="flex-1">
-                                <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>{a.name}</span>
-                                <span className="text-[11px] ml-2" style={{ color: "#94A3B8" }}>{a.role}</span>
-                              </div>
-                              <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${c}10`, color: c }}>{a.successRate}%</span>
-                              {i < arr.length - 1 && <span className="text-[11px]" style={{ color: "#94A3B8" }}>→</span>}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Divider */}
-                  <div className="h-px" style={{ background: "rgba(255,255,255,0.06)" }} />
-
-                  {/* Speed + Objections + Conversion — compacted */}
-                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Taxa alvo de conversão</span>
-                      </div>
-                      <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>Forçar taxa ou deixar natural</p>
-                      <div className="flex items-center gap-3">
-                        {conversionOverride !== null && (
-                          <SimConfigInput label="" value={conversionOverride} onChange={setConversionOverride} min={0} max={100} step={5} color="#10B981" suffix="%" compact />
-                        )}
-                        <button onClick={() => setConversionOverride(conversionOverride === null ? 50 : null)}
-                          className="text-sm px-3 py-1.5 rounded-lg shrink-0 font-semibold transition-all"
-                          style={{ background: conversionOverride !== null ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.02)", border: `1px solid ${conversionOverride !== null ? "rgba(16,185,129,0.25)" : "rgba(255,255,255,0.04)"}`, color: conversionOverride !== null ? "#10B981" : "#64748B" }}>
-                          {conversionOverride !== null ? "Override" : "Natural"}
-                        </button>
-                      </div>
-                    </div>
-                    <SimConfigInput label="Densidade de objeções" value={objectionDensity} onChange={setObjectionDensity} min={0} max={100} step={5} color="#F59E0B" desc="Probabilidade de objeções por turno" suffix="%" icon="🛡️" />
-                  </div>
-
-                  {/* Speed */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Clock className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
-                      <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Velocidade da Simulação</span>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2">
-                      {SPEED_OPTIONS.map(s => {
-                        const active = speed === s.id;
-                        const speedIcons: Record<string, string> = { lenta: "🐢", normal: "⚡", rapida: "🚀", instant: "💥" };
-                        return (
-                          <button key={s.id} onClick={() => setSpeed(s.id)}
-                            className="flex flex-col items-center gap-1 p-2.5 rounded-xl transition-all"
-                            style={{
-                              background: active ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.015)",
-                              border: `1px solid ${active ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.04)"}`,
-                            }}>
-                            <span className="text-lg">{speedIcons[s.id]}</span>
-                            <span className="text-sm font-bold" style={{ color: active ? "#E2E8F0" : "#94A3B8" }}>{s.label}</span>
-                            <span className="text-[11px]" style={{ color: "#94A3B8" }}>{s.delay > 0 ? `${s.delay / 1000}s` : "0s"}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ===== AVANCADO TAB ===== */}
-              {configTab === "avancado" && (
-                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Brain className="w-5 h-5" style={{ color: "#F59E0B" }} />
-                    <div>
-                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Motor IA Avançado</h3>
-                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Controle granular de cada aspecto da simulação</p>
-                    </div>
-                  </div>
-                  {/* Toggles */}
-                  <div className="space-y-2">
-                    {[
-                      { label: "Avaliação IA em tempo real", desc: "Lead julga qualidade de cada resposta (3 dimensões: H/E/T)", value: enableEvaluation, setter: setEnableEvaluation, color: "#EC4899", icon: "🧠" },
-                      { label: "Multi-mensagem por perfil", desc: "Ansioso e Sonhador enviam múltiplas msgs seguidas", value: enableMultiMsg, setter: setEnableMultiMsg, color: "#F59E0B", icon: "💬" },
-                      { label: "Transferência entre agentes", desc: "Permite passagem de bastão via [TRANSFERIR] entre agentes", value: enableTransfers, setter: setEnableTransfers, color: "#06B6D4", icon: "🔄" },
-                      { label: "Narrativa de perda por IA", desc: "Gera mensagem de desistência contextual (desativar = mais rápido)", value: enableLossNarrative, setter: setEnableLossNarrative, color: "#EF4444", icon: "📝" },
-                    ].map(opt => (
-                      <button key={opt.label} onClick={() => opt.setter(!opt.value)}
-                        className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-left transition-all"
-                        style={{
-                          background: opt.value ? `${opt.color}06` : "rgba(255,255,255,0.015)",
-                          border: `1px solid ${opt.value ? `${opt.color}25` : "rgba(255,255,255,0.04)"}`,
-                        }}>
-                        <span className="text-lg">{opt.icon}</span>
-                        <div className="flex-1">
-                          <p className="text-sm font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
-                          <p className="text-[11px] mt-0.5" style={{ color: "#94A3B8" }}>{opt.desc}</p>
-                        </div>
-                        <div className="w-10 h-6 rounded-full relative transition-all" style={{ background: opt.value ? opt.color : "rgba(255,255,255,0.1)" }}>
-                          <div className="absolute top-1 w-4 h-4 rounded-full transition-all" style={{ left: opt.value ? 20 : 4, background: "#fff" }} />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Volatility */}
-                   <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
-                    <SimConfigInput label="Volatilidade emocional" value={emotionalVolatility} onChange={setEmotionalVolatility} min={0} max={100} step={5} color="#EC4899" desc="0% = lead estável · 100% = extremamente volátil" suffix="%" icon="🎭" />
-                    <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>Frequência de avaliação IA</span>
-                      <p className="text-[11px] mb-3 mt-1" style={{ color: "#94A3B8" }}>Com que frequência o juiz IA avalia o agente</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {([
-                          { id: "every" as const, label: "Toda msg", icon: "🔍" },
-                          { id: "every2" as const, label: "A cada 2", icon: "⚡" },
-                          { id: "every3" as const, label: "A cada 3", icon: "💨" },
-                        ]).map(ef => (
-                          <button key={ef.id} onClick={() => setEvalFrequency(ef.id)}
-                            className="flex flex-col items-center gap-1 p-2 rounded-lg transition-all text-center"
-                            style={{
-                              background: evalFrequency === ef.id ? "rgba(236,72,153,0.08)" : "rgba(255,255,255,0.015)",
-                              border: `1px solid ${evalFrequency === ef.id ? "rgba(236,72,153,0.3)" : "rgba(255,255,255,0.04)"}`,
-                            }}>
-                            <span className="text-sm">{ef.icon}</span>
-                            <span className="text-sm font-bold" style={{ color: evalFrequency === ef.id ? "#EC4899" : "#64748B" }}>{ef.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Response length */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <MessageSquare className="w-3.5 h-3.5" style={{ color: "#8B5CF6" }} />
-                      <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>Tamanho de resposta do agente</span>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      {([
-                        { id: "curta" as const, label: "Curta", desc: "1 frase", icon: "⚡" },
-                        { id: "media" as const, label: "Média", desc: "1-3 frases", icon: "📝" },
-                        { id: "longa" as const, label: "Detalhada", desc: "3-5 frases", icon: "📄" },
-                      ]).map(rl => (
-                        <button key={rl.id} onClick={() => setAgentResponseLength(rl.id)}
-                          className="flex flex-col items-center gap-1 p-3 rounded-xl transition-all"
-                          style={{
-                            background: agentResponseLength === rl.id ? "rgba(139,92,246,0.08)" : "rgba(255,255,255,0.015)",
-                            border: `1px solid ${agentResponseLength === rl.id ? "rgba(139,92,246,0.3)" : "rgba(255,255,255,0.04)"}`,
-                          }}>
-                          <span className="text-lg">{rl.icon}</span>
-                          <span className="text-sm font-bold" style={{ color: agentResponseLength === rl.id ? "#E2E8F0" : "#94A3B8" }}>{rl.label}</span>
-                          <span className="text-[11px]" style={{ color: "#94A3B8" }}>{rl.desc}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Engine features checklist */}
-                  <div className="rounded-xl p-4" style={{ background: "rgba(236,72,153,0.04)", border: "1px solid rgba(236,72,153,0.1)" }}>
-                    <p className="text-sm font-bold mb-2" style={{ color: "#EC4899" }}>Motor de Leads Inteligentes v3.0</p>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                      {[
-                        "✅ 8 perfis psicológicos", "✅ Objeções dinâmicas IA",
-                        "✅ 3 dimensões (H/E/T)", "✅ 12 critérios debrief",
-                        "✅ Avaliação ao vivo", "✅ Duração enforced",
-                        "✅ Multi-mensagem", "✅ Sentimento adaptativo",
-                        "✅ Transferência agentes", "✅ Presets de config",
-                        "✅ Volatilidade emocional", "✅ Freq. avaliação ajustável",
-                      ].map(f => (
-                        <p key={f} className="text-[11px]" style={{ color: "#94A3B8" }}>{f}</p>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ===== STRESS TEST TAB ===== */}
-              {configTab === "stress" && (
-                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Flame className="w-5 h-5" style={{ color: "#EF4444" }} />
-                    <div>
-                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Teste de Estresse</h3>
-                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Cenários extremos para encontrar limites dos agentes</p>
-                    </div>
-                  </div>
-
-                  {/* Scoring thresholds */}
-                  <div className={cn("gap-4", isMobile ? "grid grid-cols-1" : "grid grid-cols-2")}>
-                    <SimConfigInput label="Score mínimo para aprovação" value={minScoreToPass} onChange={setMinScoreToPass} min={0} max={100} step={5} color="#10B981" desc="Abaixo deste score, o agente é reprovado no debrief" suffix="pts" icon="🎯" />
-                    <SimConfigInput label="Chats concorrentes máx" value={maxConcurrentChats} onChange={setMaxConcurrentChats} min={1} max={20} step={1} color="#3B82F6" desc="Quantos chats simultâneos por agente" icon="📱" />
-                  </div>
-
-                  {/* Sentiment shock */}
-                  <div className="space-y-2">
-                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold" style={{ color: "#94A3B8" }}>⚡ Eventos de estresse</p>
-                    {[
-                      { label: "Choque de sentimento", desc: "No round N, o lead muda de humor abruptamente (feliz → furioso)", value: enableSentimentShock, setter: setEnableSentimentShock, color: "#EF4444", icon: "💥" },
-                      { label: "Fadiga do agente", desc: "Após N atendimentos, qualidade do agente cai (simula cansaço)", value: enableAgentFatigue, setter: setEnableAgentFatigue, color: "#F59E0B", icon: "😴" },
-                      { label: "Re-rodar lead perdido", desc: "Leads perdidos são reinseridos com agente diferente", value: autoRetryOnLoss, setter: setAutoRetryOnLoss, color: "#8B5CF6", icon: "🔄" },
-                    ].map(opt => (
-                      <button key={opt.label} onClick={() => opt.setter(!opt.value)}
-                        className="w-full flex items-center gap-4 px-4 py-3 rounded-xl text-left transition-all"
-                        style={{
-                          background: opt.value ? `${opt.color}06` : "rgba(255,255,255,0.015)",
-                          border: `1px solid ${opt.value ? `${opt.color}25` : "rgba(255,255,255,0.04)"}`,
-                        }}>
-                        <span className="text-lg">{opt.icon}</span>
-                        <div className="flex-1">
-                          <p className="text-sm font-bold" style={{ color: opt.value ? "#F1F5F9" : "#94A3B8" }}>{opt.label}</p>
-                          <p className="text-[11px] mt-0.5" style={{ color: "#94A3B8" }}>{opt.desc}</p>
-                        </div>
-                        <div className="w-10 h-6 rounded-full relative transition-all" style={{ background: opt.value ? opt.color : "rgba(255,255,255,0.1)" }}>
-                          <div className="absolute top-1 w-4 h-4 rounded-full transition-all" style={{ left: opt.value ? 20 : 4, background: "#fff" }} />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Conditional params */}
-                  {enableSentimentShock && (
-                    <SimConfigInput label="Choque no round" value={shockAtRound} onChange={setShockAtRound} min={2} max={20} step={1} color="#EF4444" desc="Em qual rodada ocorre a mudança brusca de sentimento" icon="💥" compact />
-                  )}
-                  {enableAgentFatigue && (
-                    <SimConfigInput label="Fadiga após N atendimentos" value={fatigueThreshold} onChange={setFatigueThreshold} min={5} max={100} step={5} color="#F59E0B" desc="Número de atendimentos até o agente mostrar cansaço" icon="😴" compact />
-                  )}
-
-                  {/* Stress presets */}
-                  <div className="rounded-xl p-4" style={{ background: "rgba(239,68,68,0.04)", border: "1px solid rgba(239,68,68,0.12)" }}>
-                    <p className="text-sm font-bold mb-3" style={{ color: "#EF4444" }}>🔥 Cenários prontos de estresse</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { label: "Carga Leve", desc: "5 leads, sem choque", action: () => { setNumLeads(5); setMsgsPerLead(10); setEnableSentimentShock(false); setEnableAgentFatigue(false); } },
-                        { label: "Carga Média", desc: "20 leads + choque round 5", action: () => { setNumLeads(20); setMsgsPerLead(16); setEnableSentimentShock(true); setShockAtRound(5); setEnableAgentFatigue(false); } },
-                        { label: "Carga Extrema", desc: "50 leads + fadiga + choque", action: () => { setNumLeads(50); setMsgsPerLead(20); setEnableSentimentShock(true); setShockAtRound(3); setEnableAgentFatigue(true); setFatigueThreshold(10); setDispatchMode("simultaneous"); } },
-                      ].map(s => (
-                        <button key={s.label} onClick={() => { s.action(); toast({ title: `${s.label} aplicado!` }); }}
-                          className="flex flex-col items-start gap-1 p-3 rounded-xl transition-all hover:scale-[1.02] text-left"
-                          style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                          <span className="text-sm font-bold" style={{ color: "#F1F5F9" }}>{s.label}</span>
-                          <span className="text-[11px]" style={{ color: "#94A3B8" }}>{s.desc}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* ===== PRESETS TAB ===== */}
-              {configTab === "presets" && (
-                <div className="space-y-5 animate-in fade-in slide-in-from-right-3 duration-300">
-                  <div className="flex items-center gap-3 mb-2">
-                    <BookOpen className="w-5 h-5" style={{ color: "#10B981" }} />
-                    <div>
-                      <h3 className="text-sm font-bold" style={{ color: "#F1F5F9" }}>Presets de Configuração</h3>
-                      <p className="text-[11px]" style={{ color: "#94A3B8" }}>Salve e reutilize configurações de teste</p>
-                    </div>
-                  </div>
-
-                  {/* Built-in presets */}
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#94A3B8" }}>⚡ Cenários pré-configurados</p>
-                    <div className={cn("grid gap-2", isMobile ? "grid-cols-1" : "grid-cols-2 lg:grid-cols-3")}>
-                      {Object.values(BUILT_IN_PRESETS).map(bp => (
-                        <button key={bp.name} onClick={() => { loadPreset(bp.config); toast({ title: `${bp.name} aplicado!` }); }}
-                          className="flex flex-col items-start gap-1.5 p-4 rounded-xl transition-all hover:scale-[1.02] text-left"
-                          style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                          <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>{bp.name}</span>
-                          <span className="text-[11px] leading-tight" style={{ color: "#94A3B8" }}>{bp.description}</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            <span className="text-sm px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(59,130,246,0.1)", color: "#3B82F6" }}>{bp.config.numLeads} leads</span>
-                            <span className="text-sm px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>{bp.config.msgsPerLead} msgs</span>
-                            <span className="text-sm px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(139,92,246,0.1)", color: "#8B5CF6" }}>
-                              {bp.config.duration >= 3600 ? `${Math.floor(bp.config.duration / 3600)}h` : `${Math.floor(bp.config.duration / 60)}min`}
-                            </span>
-                          </div>
-                        </button>
-                      ))}
-                      {/* Legacy quick presets */}
-                      <button onClick={() => { setNumLeads(3); setMsgsPerLead(6); setSpeed("instant"); setDuration(60); setEnableEvaluation(false); toast({ title: "Teste rápido aplicado" }); }}
-                        className="flex flex-col items-start gap-1.5 p-4 rounded-xl transition-all hover:scale-[1.02] text-left"
-                        style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                        <span className="text-sm font-bold" style={{ color: "#E2E8F0" }}>🚀 Teste Rápido</span>
-                        <span className="text-[11px]" style={{ color: "#94A3B8" }}>3 leads, 6 msgs, instantâneo</span>
-                        <div className="flex gap-1 mt-1">
-                          <span className="text-sm px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(59,130,246,0.1)", color: "#3B82F6" }}>3 leads</span>
-                          <span className="text-sm px-1.5 py-0.5 rounded-full font-bold" style={{ background: "rgba(16,185,129,0.1)", color: "#10B981" }}>6 msgs</span>
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Save preset */}
-                  <div className="rounded-xl p-4" style={{ background: "rgba(16,185,129,0.04)", border: "1px solid rgba(16,185,129,0.1)" }}>
-                    <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#10B981" }}>💾 Salvar config atual</p>
-                    <div className="flex gap-2">
-                      <input type="text" value={presetName} onChange={e => setPresetName(e.target.value)}
-                        placeholder="Nome do preset..."
-                        className="flex-1 h-9 rounded-lg px-3 text-sm font-semibold outline-none"
-                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "#E2E8F0" }} />
-                      <button onClick={() => { if (presetName.trim()) { savePreset(presetName.trim()); setPresetName(""); } }}
-                        disabled={!presetName.trim()}
-                        className="px-4 h-9 rounded-lg text-sm font-bold transition-all"
-                        style={{ background: presetName.trim() ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.02)", color: presetName.trim() ? "#10B981" : "#475569", border: `1px solid ${presetName.trim() ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.04)"}` }}>
-                        Salvar
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Saved presets */}
-                  {presets.length > 0 && (
-                    <div>
-                      <p className="text-[10px] uppercase tracking-[0.1em] font-bold mb-2" style={{ color: "#94A3B8" }}>📂 Presets salvos</p>
-                      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.04)" }}>
-                        {presets.map((p, i) => (
-                          <div key={p.name} className="flex items-center gap-3 px-4 py-3 transition-all hover:bg-white/[0.02]"
-                            style={{ borderBottom: i < presets.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none" }}>
-                            <BookOpen className="w-4 h-4 shrink-0" style={{ color: "#10B981" }} />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-bold" style={{ color: "#E2E8F0" }}>{p.name}</p>
-                              <p className="text-[11px]" style={{ color: "#94A3B8" }}>
-                                {p.config.numLeads} leads · {p.config.msgsPerLead} msgs · {p.config.speed}
-                              </p>
-                            </div>
-                            <button onClick={() => loadPreset(p.config)} className="text-sm font-bold px-3 py-1.5 rounded-lg transition-all"
-                              style={{ background: "rgba(16,185,129,0.08)", color: "#10B981", border: "1px solid rgba(16,185,129,0.2)" }}>
-                              Carregar
-                            </button>
-                            <button onClick={() => deletePreset(p.name)} className="text-sm font-bold px-2 py-1.5 rounded-lg transition-all"
-                              style={{ background: "rgba(239,68,68,0.06)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.15)" }}>
-                              ✕
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Export / Import */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => {
-                      const config = { numLeads, msgsPerLead, intervalSec, duration, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency };
-                      navigator.clipboard.writeText(JSON.stringify(config, null, 2));
-                      toast({ title: "Config copiada para clipboard!" });
-                    }}
-                      className="flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-bold transition-all"
-                      style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)", color: "#94A3B8" }}>
-                      📋 Copiar JSON
-                    </button>
-                    <button onClick={() => {
-                      const input = prompt("Cole o JSON da configuração:");
-                      if (input) { try { loadPreset(JSON.parse(input)); } catch { toast({ title: "JSON inválido", variant: "destructive" }); } }
-                    }}
-                      className="flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-bold transition-all"
-                      style={{ background: "rgba(255,255,255,0.015)", border: "1px solid rgba(255,255,255,0.04)", color: "#94A3B8" }}>
-                      📥 Importar JSON
-                    </button>
-                  </div>
+                  })}
                 </div>
               )}
             </div>
           </div>
-        </div>
 
-        {/* CTA Bar — sticky bottom, compact */}
-        <div className="mt-3 rounded-xl overflow-hidden relative sticky bottom-2 z-20" style={{
-          background: "linear-gradient(135deg, rgba(13,18,32,0.98), rgba(13,18,32,0.9))",
-          border: "1px solid rgba(16,185,129,0.2)",
-          boxShadow: "0 -4px 24px rgba(0,0,0,0.4)",
-          backdropFilter: "blur(12px)",
-        }}>
-          <div className="h-[2px]" style={{ background: "linear-gradient(90deg, #10B981, #06B6D4, #8B5CF6)" }} />
-          <div className={cn("flex items-center gap-3", isMobile ? "flex-col px-3 py-3" : "px-5 py-3")}>
-            {/* Config chips */}
-            <div className="flex-1 flex items-center gap-1.5 overflow-x-auto scrollbar-hide w-full">
-              {[
-                { icon: "👥", label: `${numLeads} leads`, color: "#3B82F6" },
-                { icon: "💬", label: `${msgsPerLead} msgs`, color: "#10B981" },
-                { icon: "⏱️", label: formatTime(duration), color: "#8B5CF6" },
-                { icon: "🎯", label: `${selectedProfiles.length || 8} perfis`, color: "#EC4899" },
-                { icon: "⚡", label: SPEED_OPTIONS.find(s => s.id === speed)?.label || "Normal", color: "#F59E0B" },
-              ].map(chip => (
-                <span key={chip.label} className="text-xs font-semibold px-2 py-1 rounded-lg whitespace-nowrap shrink-0"
-                  style={{ background: `${chip.color}08`, color: chip.color, border: `1px solid ${chip.color}15` }}>
-                  {chip.icon} {chip.label}
-                </span>
-              ))}
-            </div>
-            {/* Start button */}
+          {/* ── CTA: Start Simulation ── */}
+          <div className="sticky bottom-2 z-20">
             <button onClick={runSimulation}
-              className={cn("rounded-xl text-sm font-extrabold tracking-wide transition-all duration-300 relative overflow-hidden shrink-0 hover:scale-[1.03] active:scale-[0.97]", isMobile ? "w-full py-3 px-6" : "px-8 py-3")}
-              style={{ background: "linear-gradient(135deg, #10B981, #06B6D4)", color: "#000", boxShadow: "0 4px 20px rgba(16,185,129,0.3)" }}>
-              <Play className="w-4 h-4 inline mr-1.5" />
-              Iniciar Simulação IA
+              className={cn("w-full rounded-2xl font-extrabold tracking-wide transition-all duration-300 relative overflow-hidden group", isMobile ? "py-4 text-base" : "py-4 text-[15px]")}
+              style={{
+                background: "linear-gradient(135deg, #10B981, #06B6D4)",
+                color: "#000",
+                boxShadow: "0 8px 32px rgba(16,185,129,0.3), 0 0 0 1px rgba(16,185,129,0.2)",
+              }}>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "linear-gradient(135deg, #059669, #0891B2)" }} />
+              <span className="relative flex items-center justify-center gap-2">
+                <Play className="w-5 h-5" />
+                Iniciar Simulação · {numLeads} leads · {msgsPerLead} msgs
+              </span>
             </button>
           </div>
+
         </div>
       </div>
     );
