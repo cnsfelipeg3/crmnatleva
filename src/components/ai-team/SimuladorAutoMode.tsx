@@ -594,7 +594,7 @@ export default function SimuladorAutoMode() {
     setRunning(false);
     setPhase("report");
     const elapsed = Math.round((Date.now() - simStartTime) / 1000);
-    const wasTimeout = elapsed >= duration;
+    const wasTimeout = duration > 0 && elapsed >= duration;
 
     // Finalize DB persistence
     const finalClosed = allLeads.filter(l => l.status === "fechou");
