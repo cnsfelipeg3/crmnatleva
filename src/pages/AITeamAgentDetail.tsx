@@ -467,6 +467,7 @@ export default function AITeamAgentDetail() {
               startEditing={startEditing}
               agent={agent}
               agentId={agentId}
+              realBehaviorPrompt={realBehaviorPrompt}
             />
           </TabsContent>
 
