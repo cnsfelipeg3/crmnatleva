@@ -548,17 +548,17 @@ export default function SimuladorAutoMode() {
     if (dispatchMode === "simultaneous") {
       // All leads start at once — controlled micro-batches to protect Anthropic token/min limits
       addEvent("#8B5CF6", `⚡ Disparo simultâneo: ${allLeads.length} leads ao mesmo tempo!`, "🚀");
-      const batchSize = Math.min(allLeads.length, 2);
+      const batchSize = Math.min(allLeads.length, 3);
       for (let i = 0; i < allLeads.length; i += batchSize) {
         if (!simAtivaRef.current || abortRef.current || isDurationExceeded()) break;
         const batch = allLeads.slice(i, i + batchSize);
         await Promise.all(batch.map((lead, index) => new Promise<void>((resolve) => {
           setTimeout(() => {
             void simulateLead(lead).finally(() => resolve());
-          }, index * 1800);
+          }, index * 1200);
         })));
         if (i + batchSize < allLeads.length) {
-          await new Promise(r => setTimeout(r, 3200));
+          await new Promise(r => setTimeout(r, 2200));
         }
       }
     } else if (dispatchMode === "wave") {
