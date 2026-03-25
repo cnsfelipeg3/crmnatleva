@@ -542,7 +542,7 @@ export default function SimuladorManualMode() {
                     Converse com {selectedAgent.name}
                   </p>
                   <p className={cn("mt-1.5 text-muted-foreground", isMobile ? "text-xs" : "text-sm")}>
-                    Simule um cliente interessado em {selectedDestino}
+                    {isLivreMode ? "Converse livremente — o destino será descoberto na conversa" : `Simule um cliente interessado em ${selectedDestino}`}
                   </p>
                 </div>
                 <div className={cn("flex flex-wrap gap-2.5 justify-center mx-auto", isMobile ? "max-w-[340px]" : "max-w-lg")}>
