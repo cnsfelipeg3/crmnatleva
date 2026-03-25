@@ -20,20 +20,28 @@ interface SimConfigInputProps {
 export default function SimConfigInput({
   label, value, onChange, min, max, step = 1, color, desc, suffix = "", format, icon, compact = false,
 }: SimConfigInputProps) {
-  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(String(value));
+  const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setDraft(String(value)); }, [value]);
-  useEffect(() => { if (editing) inputRef.current?.select(); }, [editing]);
+  useEffect(() => { if (!focused) setDraft(String(value)); }, [value, focused]);
 
   const displayValue = format ? format(value) : `${value}${suffix}`;
 
-  const commit = () => {
-    setEditing(false);
-    const n = parseInt(draft, 10);
-    if (!isNaN(n)) onChange(Math.max(min, Math.min(max, n)));
-    else setDraft(String(value));
+  const commit = (raw: string) => {
+    setFocused(false);
+    const cleaned = raw.replace(/[^0-9.-]/g, "");
+    const n = step < 1 ? parseFloat(cleaned) : parseInt(cleaned, 10);
+    if (!isNaN(n)) {
+      onChange(Math.max(min, Math.min(max, n)));
+    }
+    setDraft(String(value));
+  };
+
+  const handleFocus = () => {
+    setFocused(true);
+    setDraft(String(value));
+    setTimeout(() => inputRef.current?.select(), 0);
   };
 
   const nudge = (dir: 1 | -1) => {
@@ -58,17 +66,21 @@ export default function SimConfigInput({
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <Minus className="w-3 h-3" style={{ color: "#94A3B8" }} />
           </button>
-          {editing ? (
-            <input ref={inputRef} value={draft} onChange={e => setDraft(e.target.value)}
-              onBlur={commit} onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setEditing(false); setDraft(String(value)); } }}
-              className="w-16 h-7 text-center text-sm font-extrabold rounded outline-none tabular-nums"
-              style={{ background: `${color}15`, border: `1.5px solid ${color}`, color }} />
-          ) : (
-            <button onClick={() => setEditing(true)} className="w-16 h-7 rounded text-sm font-extrabold tabular-nums transition-all hover:scale-105"
-              style={{ background: `${color}10`, border: `1px solid ${color}30`, color }}>
-              {displayValue}
-            </button>
-          )}
+          <input
+            ref={inputRef}
+            value={focused ? draft : displayValue}
+            onChange={e => setDraft(e.target.value)}
+            onFocus={handleFocus}
+            onBlur={() => commit(draft)}
+            onKeyDown={e => { if (e.key === "Enter") { commit(draft); inputRef.current?.blur(); } }}
+            className="w-16 h-7 text-center text-sm font-extrabold rounded outline-none tabular-nums transition-all"
+            style={{
+              background: focused ? `${color}15` : `${color}10`,
+              border: focused ? `1.5px solid ${color}` : `1px solid ${color}30`,
+              color,
+              caretColor: color,
+            }}
+          />
           <button onClick={() => nudge(1)} className="w-6 h-6 rounded flex items-center justify-center transition-all hover:scale-110"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <Plus className="w-3 h-3" style={{ color: "#94A3B8" }} />
@@ -87,19 +99,22 @@ export default function SimConfigInput({
           {icon && <span className="text-base">{icon}</span>}
           <span className="text-sm font-semibold" style={{ color: "#E2E8F0" }}>{label}</span>
         </div>
-        {editing ? (
-          <input ref={inputRef} value={draft} onChange={e => setDraft(e.target.value)}
-            onBlur={commit} onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") { setEditing(false); setDraft(String(value)); } }}
-            className="w-24 h-9 text-center text-[22px] font-extrabold rounded-lg outline-none tabular-nums"
-            style={{ background: `${color}12`, border: `2px solid ${color}`, color, textShadow: `0 0 20px ${color}30` }} />
-        ) : (
-          <button onClick={() => setEditing(true)}
-            className="text-[22px] font-extrabold tabular-nums cursor-text transition-all hover:scale-105 px-2 py-0.5 rounded-lg"
-            style={{ color, textShadow: `0 0 20px ${color}20`, background: `${color}06` }}
-            title="Clique para editar">
-            {displayValue}
-          </button>
-        )}
+        <input
+          ref={!compact ? inputRef : undefined}
+          value={focused ? draft : displayValue}
+          onChange={e => setDraft(e.target.value)}
+          onFocus={handleFocus}
+          onBlur={() => commit(draft)}
+          onKeyDown={e => { if (e.key === "Enter") { commit(draft); (e.target as HTMLInputElement).blur(); } }}
+          className="w-24 h-9 text-center text-[22px] font-extrabold rounded-lg outline-none tabular-nums transition-all cursor-text"
+          style={{
+            background: focused ? `${color}12` : `${color}06`,
+            border: focused ? `2px solid ${color}` : `1px solid transparent`,
+            color,
+            textShadow: `0 0 20px ${color}20`,
+            caretColor: color,
+          }}
+        />
       </div>
       {desc && <p className="text-[11px] mb-3" style={{ color: "#94A3B8" }}>{desc}</p>}
       <div className="flex items-center gap-2">
@@ -107,8 +122,14 @@ export default function SimConfigInput({
           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
           <Minus className="w-3.5 h-3.5" style={{ color: "#94A3B8" }} />
         </button>
-        {/* Mini visual bar */}
-        <div className="flex-1 h-2 rounded-full overflow-hidden relative" style={{ background: "rgba(255,255,255,0.04)" }}>
+        <div className="flex-1 h-2 rounded-full overflow-hidden relative cursor-pointer" style={{ background: "rgba(255,255,255,0.04)" }}
+          onClick={e => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const raw = min + pct * (max - min);
+            const snapped = Math.round(raw / step) * step;
+            onChange(Math.max(min, Math.min(max, snapped)));
+          }}>
           <div className="h-full rounded-full transition-all duration-300" style={{
             width: `${Math.min(100, ((value - min) / (max - min)) * 100)}%`,
             background: `linear-gradient(90deg, ${color}60, ${color})`,
