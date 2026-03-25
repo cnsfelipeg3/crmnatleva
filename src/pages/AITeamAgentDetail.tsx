@@ -497,7 +497,7 @@ export default function AITeamAgentDetail() {
 
           {/* ═══ TAB: SKILLS ═══ */}
           <TabsContent value="skills" className="space-y-4 mt-0">
-            <SkillsTab skills={agentSkills} dbSkills={dbAgentSkills} agentName={displayName} agentId={agentId!} />
+            <SkillsTab agentName={displayName} agentId={agentId!} />
           </TabsContent>
 
           {/* ═══ TAB: BEHAVIOR & RULES ═══ */}
