@@ -957,6 +957,7 @@ function SkillsTab({ skills, dbSkills = [], agentName, agentId }: { skills: Skil
     setNewSkillDesc("");
   };
 
+  const toggleSkill = (id: string) => {
     setSkillStates(prev => ({ ...prev, [id]: !prev[id] }));
     sonnerToast.success("Skill atualizada");
   };
