@@ -1,24 +1,44 @@
-import { Settings, Save, TestTube, Download, Upload, Shield, Clock, Bot, AlertTriangle } from "lucide-react";
+import { Settings, Save, TestTube, Download, Upload, Shield, Clock, Bot, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useAgencyConfig } from "@/hooks/useAgencyConfig";
 
 export default function AITeamConfig() {
-  const [agencyName, setAgencyName] = useState("NatLeva Viagens");
-  const [segment, setSegment] = useState("Viagens Premium");
-  const [slogan, setSlogan] = useState("Transformando sonhos em experiências inesquecíveis");
-  const [tomVoz, setTomVoz] = useState("Profissional, acolhedor e consultivo. Foco em experiências premium com toque humano.");
-  const [maxResponseTime, setMaxResponseTime] = useState("30");
-  const [autoApprove, setAutoApprove] = useState(false);
-  const [nightMode, setNightMode] = useState(true);
+  const { config, isLoading, saveConfig, isSaving } = useAgencyConfig();
 
-  const handleSave = () => toast.success("Configurações salvas com sucesso!");
+  const [form, setForm] = useState(config);
+  useEffect(() => { setForm(config); }, [config]);
+
+  const set = (key: string, value: string) => setForm(prev => ({ ...prev, [key]: value }));
+  const setBool = (key: string, value: boolean) => setForm(prev => ({ ...prev, [key]: String(value) }));
+
+  const handleSave = async () => {
+    await saveConfig(form);
+  };
+
   const handleTest = () => toast.info("Testando conexão com AI Gateway...");
+
+  const modelDisplay = (() => {
+    const p = form.default_provider;
+    const m = form.default_model;
+    if (p === "anthropic") return { provider: "Anthropic", model: m || "claude-sonnet-4", label: "Claude" };
+    if (p === "lovable") return { provider: "Lovable AI Gateway", model: m || "gemini-3-flash-preview", label: "Lovable AI" };
+    return { provider: p || "Lovable AI Gateway", model: m || "auto", label: p || "AI" };
+  })();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
@@ -33,7 +53,10 @@ export default function AITeamConfig() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm"><Download className="w-4 h-4 mr-1" /> Exportar</Button>
           <Button variant="outline" size="sm"><Upload className="w-4 h-4 mr-1" /> Importar</Button>
-          <Button size="sm" onClick={handleSave}><Save className="w-4 h-4 mr-1" /> Salvar</Button>
+          <Button size="sm" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+            Salvar
+          </Button>
         </div>
       </div>
 
@@ -51,32 +74,31 @@ export default function AITeamConfig() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Nome da Agência</label>
-                <Input value={agencyName} onChange={e => setAgencyName(e.target.value)} />
+                <Input value={form.agency_name} onChange={e => set("agency_name", e.target.value)} />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Segmento</label>
-                <Input value={segment} onChange={e => setSegment(e.target.value)} />
+                <Input value={form.segment} onChange={e => set("segment", e.target.value)} />
               </div>
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Slogan</label>
-              <Input value={slogan} onChange={e => setSlogan(e.target.value)} />
+              <Input value={form.slogan} onChange={e => set("slogan", e.target.value)} />
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Tom de Voz Global</label>
-              <Textarea value={tomVoz} onChange={e => setTomVoz(e.target.value)} rows={3} />
-              <p className="text-[10px] text-muted-foreground mt-1">Este tom é injetado em todos os 21 agentes via buildPromptV2()</p>
+              <Textarea value={form.tom_comunicacao} onChange={e => set("tom_comunicacao", e.target.value)} rows={3} />
+              <p className="text-[10px] text-muted-foreground mt-1">Este tom é injetado em todos os 21 agentes via buildPromptV2() e sincronizado em tempo real</p>
             </div>
           </div>
 
           <div className="rounded-xl border border-border/50 bg-card p-6 space-y-4">
             <h3 className="text-sm font-bold">Diretrizes de Comunicação</h3>
-            <Textarea defaultValue={`1. Sempre cumprimentar pelo nome
-2. Usar emojis com moderação (máx. 2 por mensagem)
-3. Nunca usar gírias ou linguagem informal excessiva
-4. Sempre fechar com CTA claro
-5. Mencionar exclusividade quando aplicável
-6. Adaptar tom ao perfil do cliente`} rows={6} />
+            <Textarea
+              value={form.diretrizes_comunicacao}
+              onChange={e => set("diretrizes_comunicacao", e.target.value)}
+              rows={6}
+            />
           </div>
         </TabsContent>
 
@@ -87,8 +109,8 @@ export default function AITeamConfig() {
               <div className="flex items-center gap-3">
                 <Bot className="w-8 h-8 text-primary" />
                 <div>
-                  <p className="text-sm font-bold">Lovable AI Gateway</p>
-                  <p className="text-xs text-muted-foreground">openai/gpt-5 + openai/gpt-5-mini</p>
+                  <p className="text-sm font-bold">{modelDisplay.provider}</p>
+                  <p className="text-xs text-muted-foreground">{modelDisplay.model}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -96,20 +118,36 @@ export default function AITeamConfig() {
                 <Button variant="outline" size="sm" onClick={handleTest}><TestTube className="w-4 h-4 mr-1" /> Testar</Button>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Provider</label>
+                <Input value={form.default_provider} onChange={e => set("default_provider", e.target.value)} />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Modelo</label>
+                <Input value={form.default_model} onChange={e => set("default_model", e.target.value)} />
+              </div>
+            </div>
+
+            <p className="text-[10px] text-muted-foreground">Alterar o modelo aqui reflete automaticamente em todos os agentes, simuladores e edge functions que leem esta configuração.</p>
           </div>
 
           <div className="rounded-xl border border-border/50 bg-card p-6">
-            <h3 className="text-sm font-bold mb-4">Uso da API</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <h3 className="text-sm font-bold mb-4">Stack de Modelos Ativa</h3>
+            <div className="space-y-2">
               {[
-                { label: "Chamadas hoje", value: "1,247" },
-                { label: "Custo estimado", value: "R$ 12,40" },
-                { label: "Latência média", value: "340ms" },
-                { label: "Uptime", value: "99.9%" },
-              ].map(stat => (
-                <div key={stat.label} className="text-center">
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
+                { label: "Conversacional (Agentes)", value: `${form.default_provider} / ${form.default_model}`, badge: "Principal" },
+                { label: "Utilitário (Correção, Resumos)", value: "Lovable AI / gemini-2.5-flash-lite", badge: "Secundário" },
+                { label: "Mídia (Transcrição, Visão)", value: "Lovable AI / gemini-3-flash-preview", badge: "Multimodal" },
+                { label: "Geração de Imagens", value: "Lovable AI / gemini-3.1-flash-image", badge: "Visual" },
+              ].map(item => (
+                <div key={item.label} className="flex items-center justify-between p-2 rounded-lg bg-muted/20">
+                  <div>
+                    <p className="text-sm font-medium">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{item.value}</p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px]">{item.badge}</Badge>
                 </div>
               ))}
             </div>
@@ -122,32 +160,32 @@ export default function AITeamConfig() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Horário de Operação</label>
-                <Input defaultValue="08:00 - 22:00" />
+                <Input value={form.horario_operacao} onChange={e => set("horario_operacao", e.target.value)} />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Tempo Máx. Resposta (seg)</label>
-                <Input value={maxResponseTime} onChange={e => setMaxResponseTime(e.target.value)} />
+                <Input value={form.max_response_time} onChange={e => set("max_response_time", e.target.value)} />
               </div>
             </div>
             <div>
               <label className="text-xs text-muted-foreground mb-1 block">Critérios de Escalonamento para Humano</label>
-              <Textarea defaultValue="Escalonar quando: score de confiança < 60%, objeção não mapeada, solicitação de cancelamento, cliente irritado, ou mencionar reclamação em redes sociais." rows={3} />
+              <Textarea value={form.criterios_escalonamento} onChange={e => set("criterios_escalonamento", e.target.value)} rows={3} />
             </div>
 
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                 <div>
                   <p className="text-sm font-medium">Auto-aprovar melhorias de baixo risco</p>
-                  <p className="text-xs text-muted-foreground"><p className="text-xs text-muted-foreground">{"Melhorias com confiança >90% e impacto baixo são aplicadas automaticamente"}</p></p>
+                  <p className="text-xs text-muted-foreground">{"Melhorias com confiança >90% e impacto baixo são aplicadas automaticamente"}</p>
                 </div>
-                <Switch checked={autoApprove} onCheckedChange={setAutoApprove} />
+                <Switch checked={form.auto_approve_low_risk === "true"} onCheckedChange={v => setBool("auto_approve_low_risk", v)} />
               </div>
               <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                 <div>
                   <p className="text-sm font-medium">Modo Noturno</p>
                   <p className="text-xs text-muted-foreground">Agentes operam em modo reduzido fora do horário (respostas automáticas básicas)</p>
                 </div>
-                <Switch checked={nightMode} onCheckedChange={setNightMode} />
+                <Switch checked={form.night_mode === "true"} onCheckedChange={v => setBool("night_mode", v)} />
               </div>
             </div>
           </div>
@@ -161,18 +199,21 @@ export default function AITeamConfig() {
             </div>
             <div className="space-y-3">
               {[
-                { label: "VIGIL Gate ativo em todas as mensagens", desc: "Verifica compliance fiscal e LGPD antes do envio", active: true },
-                { label: "Bloqueio de dados sensíveis", desc: "CPF, dados bancários e senhas nunca são armazenados", active: true },
-                { label: "Auditoria automática (ÓRION)", desc: "ÓRION revisa 100% das interações em busca de anomalias", active: true },
-                { label: "Limite de ações por agente", desc: "Máximo de 50 interações/hora por agente", active: true },
-                { label: "Modo sandbox para novos agentes", desc: "Novos agentes operam em modo teste por 72h", active: false },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                { key: "vigil_gate", label: "VIGIL Gate ativo em todas as mensagens", desc: "Verifica compliance fiscal e LGPD antes do envio" },
+                { key: "bloqueio_dados_sensiveis", label: "Bloqueio de dados sensíveis", desc: "CPF, dados bancários e senhas nunca são armazenados" },
+                { key: "auditoria_orion", label: "Auditoria automática (ÓRION)", desc: "ÓRION revisa 100% das interações em busca de anomalias" },
+                { key: "limite_acoes_agente", label: "Limite de ações por agente", desc: "Máximo de 50 interações/hora por agente" },
+                { key: "sandbox_novos_agentes", label: "Modo sandbox para novos agentes", desc: "Novos agentes operam em modo teste por 72h" },
+              ].map((item) => (
+                <div key={item.key} className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
                   <div>
                     <p className="text-sm font-medium">{item.label}</p>
                     <p className="text-xs text-muted-foreground">{item.desc}</p>
                   </div>
-                  <Switch checked={item.active} />
+                  <Switch
+                    checked={form[item.key as keyof typeof form] === "true"}
+                    onCheckedChange={v => setBool(item.key, v)}
+                  />
                 </div>
               ))}
             </div>
