@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, Fragment } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X, Square, BarChart3, Zap, User, MessageSquare, Lightbulb, AlertTriangle, Brain, Heart, Shield, Clock, TrendingUp, Send, MapPin, Wallet, Radio, Users, BookOpen, Search, FileText, Workflow, Edit3, Download, Bot, CheckCheck, Repeat, Gauge, Timer, Target, Flame, SlidersHorizontal } from "lucide-react";
 import SimulatorObservationsPanel, { type SelectedMessage } from "./SimulatorObservationsPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -27,7 +28,7 @@ import {
 import {
   callSimulatorAI, pushUniqueSimMessage, detectsPricePrint, generatePriceImage,
   generateLeadMsg, gerarObjecao, avaliarRespostaAgente, gerarMensagemPerda,
-  buildCalibrationPrompt, buildAgentSysPrompt,
+  buildCalibrationPrompt, buildAgentSysPrompt, type DbAgentOverride,
   MIN_TROCAS_POR_AGENTE, AGENT_ROLE_INSTRUCTIONS, FILOSOFIA_NATLEVA,
   SPEED_OPTIONS, getAgentColor,
   type Phase, type ReportTab, type ImprovementType,
@@ -179,6 +180,7 @@ export default function SimuladorAutoMode() {
 
   const stopSimulationRef = useRef(() => {});
   stopSimulationRef.current = () => { simAtivaRef.current = false; abortRef.current = true; setRunning(false); if (timerRef.current) clearInterval(timerRef.current); setPhase("report"); };
+  const dbAgentOverridesRef = useRef<Record<string, DbAgentOverride>>({});
 
   // ===== PRESETS =====
   const PRESET_STORAGE_KEY = "natleva_sim_presets";
@@ -223,6 +225,16 @@ export default function SimuladorAutoMode() {
     setPhase("running"); setRunning(true); setLeads([]); setEvents([]); setElapsedSeconds(0);
     setSelectedLeadId(null); setDebrief(null); abortRef.current = false; simAtivaRef.current = true;
     chunksRef.current = new Map();
+
+    // Fetch real agent configs from DB before starting
+    try {
+      const { data: dbAgents } = await supabase.from("ai_team_agents").select("id, behavior_prompt, persona, skills").eq("is_active", true);
+      const overrides: Record<string, DbAgentOverride> = {};
+      (dbAgents || []).forEach((a: any) => {
+        overrides[a.id] = { behavior_prompt: a.behavior_prompt, persona: a.persona, skills: a.skills };
+      });
+      dbAgentOverridesRef.current = overrides;
+    } catch { dbAgentOverridesRef.current = {}; }
 
     timerRef.current = setInterval(() => setElapsedSeconds(p => p + 1), 1000);
 
@@ -362,7 +374,7 @@ export default function SimuladorAutoMode() {
           const leadChunks = chunksRef.current.get(lead.id) || [];
           const compressedHistory = leadChunks.length > 0 ? buildActiveContext(lead, leadChunks) : compressConversation(lead.mensagens);
           const agentResp = await callSimulatorAI(
-            buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current),
+            buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]),
             compressedHistory, "agent"
           );
           if (!simAtivaRef.current) return;
@@ -460,7 +472,7 @@ export default function SimuladorAutoMode() {
 
             const objCompressed = compressConversation(lead.mensagens);
             const objResp = await callSimulatorAI(
-              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current),
+              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]),
               objCompressed, "agent"
             );
             if (!simAtivaRef.current) return;
