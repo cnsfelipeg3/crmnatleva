@@ -113,7 +113,7 @@ function AudioBubblePlayer({ src }: { src: string }) {
     if (!a) return;
     const onTime = () => setProgress(a.currentTime);
     const onEnd = () => { setPlaying(false); setProgress(0); };
-    const onMeta = () => setDuration(a.duration);
+    const onMeta = () => { const d = a.duration; setDuration(isFinite(d) ? d : 0); };
     a.addEventListener("timeupdate", onTime);
     a.addEventListener("ended", onEnd);
     a.addEventListener("loadedmetadata", onMeta);
