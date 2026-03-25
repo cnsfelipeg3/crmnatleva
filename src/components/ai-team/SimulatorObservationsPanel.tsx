@@ -76,11 +76,12 @@ const CATEGORY_META: Record<string, { icon: typeof Lightbulb; label: string; col
 };
 const DEFAULT_CATEGORY = { icon: Lightbulb, label: "Geral", color: "#94A3B8" };
 
-const SEVERITY_META: Record<SynthesizedImprovement["severity"], { label: string; color: string; bg: string }> = {
+const SEVERITY_META: Record<string, { label: string; color: string; bg: string }> = {
   critical: { label: "Crítico", color: "#EF4444", bg: "rgba(239,68,68,0.1)" },
   important: { label: "Importante", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
   suggestion: { label: "Sugestão", color: "#10B981", bg: "rgba(16,185,129,0.1)" },
 };
+const DEFAULT_SEVERITY = { label: "Info", color: "#94A3B8", bg: "rgba(148,163,184,0.1)" };
 
 // ===== MAIN COMPONENT =====
 export default function SimulatorObservationsPanel({
