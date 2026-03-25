@@ -162,7 +162,7 @@ function AppRoutes() {
   if (isLoading) return <ScreenLoader />;
 
   return (
-    <Suspense fallback={<ScreenLoader />}>
+    <SmartSuspense>
       <Routes>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
         {/* TODO: TEMPORÁRIO - Redireciona direto pro dashboard */}
