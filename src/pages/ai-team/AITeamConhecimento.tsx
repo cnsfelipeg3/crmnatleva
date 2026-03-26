@@ -1,4 +1,4 @@
-import { BookOpen, Search, Upload, FileText, Image, Video, Link, Music, Eye, Trash2, Download, Loader2, Plus } from "lucide-react";
+import { BookOpen, Search, Upload, FileText, Image, Video, Link, Music, Eye, Trash2, Download, Loader2, Plus, Youtube, Sparkles, CheckCircle, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -48,6 +48,205 @@ interface KBDoc {
   created_at: string;
 }
 
+function extractYouTubeId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+// ─── YouTube Upload Sub-component ───
+function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
+  const [ytUrl, setYtUrl] = useState("");
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const [result, setResult] = useState<{
+    title: string;
+    transcript: string;
+    structured_knowledge: string;
+    videoId: string;
+  } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState("destinos");
+  const [editContent, setEditContent] = useState("");
+
+  // Auto-detect video ID
+  useEffect(() => {
+    const id = extractYouTubeId(ytUrl);
+    setVideoId(id);
+  }, [ytUrl]);
+
+  const handleTranscribe = async () => {
+    if (!videoId) return;
+    setTranscribing(true);
+    setResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("youtube-transcribe", {
+        body: { url: ytUrl },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      setResult(data);
+      setEditTitle(data.title || "");
+      setEditContent(data.structured_knowledge || "");
+      // Try to detect category from AI output
+      const catMatch = data.structured_knowledge?.match(/Categoria sugerida[:\s]*(\w+)/i);
+      if (catMatch && CATEGORIES.includes(catMatch[1].toLowerCase())) {
+        setEditCategory(catMatch[1].toLowerCase());
+      }
+    } catch (err: any) {
+      toast.error("Erro ao transcrever: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!editTitle.trim() || !editContent.trim()) {
+      toast.error("Título e conteúdo são obrigatórios");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("ai_knowledge_base").insert({
+        title: editTitle.trim(),
+        category: editCategory,
+        description: `Transcrito do YouTube: ${ytUrl}`,
+        content_text: editContent.trim(),
+        file_url: ytUrl,
+        file_type: "video/youtube",
+        file_name: `youtube-${videoId}.txt`,
+      });
+      if (error) throw error;
+      toast.success("Conhecimento do vídeo adicionado à base!");
+      onSave();
+    } catch (err: any) {
+      toast.error("Erro ao salvar: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Step 1: URL Input */}
+      <div className="space-y-1.5">
+        <Label className="text-xs font-bold flex items-center gap-1.5">
+          <Youtube className="w-4 h-4 text-red-500" /> URL do YouTube
+        </Label>
+        <Input
+          value={ytUrl}
+          onChange={(e) => setYtUrl(e.target.value)}
+          placeholder="https://www.youtube.com/watch?v=..."
+          className="font-mono text-xs"
+        />
+      </div>
+
+      {/* Step 2: Video Preview */}
+      {videoId && (
+        <div className="rounded-xl overflow-hidden border border-border/40 bg-black">
+          <iframe
+            src={`https://www.youtube.com/embed/${videoId}`}
+            className="w-full aspect-video"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title="YouTube Preview"
+          />
+        </div>
+      )}
+
+      {/* Step 3: Transcribe Button */}
+      {videoId && !result && (
+        <Button
+          onClick={handleTranscribe}
+          disabled={transcribing}
+          className="w-full gap-2"
+          size="sm"
+        >
+          {transcribing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Transcrevendo e extraindo conhecimento...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              Transcrever e Extrair Conhecimento
+            </>
+          )}
+        </Button>
+      )}
+
+      {/* Step 4: Review Extracted Knowledge */}
+      {result && (
+        <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center gap-2 text-xs font-bold text-emerald-500">
+            <CheckCircle className="w-4 h-4" />
+            Conhecimento extraído! Revise e aprove:
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold">Título</Label>
+            <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold">Categoria</Label>
+            <Select value={editCategory} onValueChange={setEditCategory}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold">Conhecimento Extraído (editável)</Label>
+            <Textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              rows={10}
+              className="text-xs font-mono"
+            />
+          </div>
+
+          {/* Collapsible raw transcript */}
+          <details className="text-xs">
+            <summary className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
+              Ver transcrição bruta ({result.transcript.length.toLocaleString()} caracteres)
+            </summary>
+            <pre className="mt-2 max-h-[200px] overflow-y-auto bg-muted/30 p-3 rounded-lg whitespace-pre-wrap text-[10px] text-muted-foreground font-sans">
+              {result.transcript}
+            </pre>
+          </details>
+
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" size="sm" onClick={onCancel}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={handleApprove} disabled={saving} className="gap-1.5">
+              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+              Aprovar e Adicionar à Base
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Cancel if no result yet */}
+      {!result && (
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={onCancel}>Cancelar</Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Page ───
 export default function AITeamConhecimento() {
   const [search, setSearch] = useState("");
   const [tipoFilter, setTipoFilter] = useState("all");
@@ -55,10 +254,10 @@ export default function AITeamConhecimento() {
   const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState<KBDoc | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [showYouTube, setShowYouTube] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Upload form
   const [newTitle, setNewTitle] = useState("");
   const [newCategory, setNewCategory] = useState("geral");
   const [newDescription, setNewDescription] = useState("");
@@ -77,6 +276,7 @@ export default function AITeamConhecimento() {
   useEffect(() => { loadDocs(); }, []);
 
   const getDocType = (doc: KBDoc): string => {
+    if (doc.file_type?.includes("youtube")) return "video";
     if (doc.file_type?.includes("pdf")) return "pdf";
     if (doc.file_type?.includes("image")) return "imagem";
     if (doc.file_type?.includes("video")) return "video";
@@ -161,9 +361,14 @@ export default function AITeamConhecimento() {
             <p className="text-sm text-muted-foreground">{docs.length} documentos</p>
           </div>
         </div>
-        <Button size="sm" className="gap-1.5" onClick={() => setShowUpload(true)}>
-          <Upload className="w-4 h-4" /> Upload Documento
-        </Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowYouTube(true)}>
+            <Youtube className="w-4 h-4 text-red-500" /> YouTube
+          </Button>
+          <Button size="sm" className="gap-1.5" onClick={() => setShowUpload(true)}>
+            <Upload className="w-4 h-4" /> Upload Documento
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -207,24 +412,38 @@ export default function AITeamConhecimento() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map(doc => {
             const docType = getDocType(doc);
-            const TipoIcon = TIPO_ICONS[docType] || FileText;
+            const TipoIcon = docType === "video" && doc.file_type?.includes("youtube") ? Youtube : (TIPO_ICONS[docType] || FileText);
+            const isYT = doc.file_type?.includes("youtube");
             return (
               <div key={doc.id} className="rounded-xl border border-border/40 bg-card p-4 hover:border-primary/30 transition-all cursor-pointer"
                 onClick={() => setSelectedDoc(doc)}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
-                    <TipoIcon className="w-3.5 h-3.5 text-muted-foreground" />
-                    <Badge variant="outline" className="text-[10px]">{docType.toUpperCase()}</Badge>
+                    <TipoIcon className={cn("w-3.5 h-3.5", isYT ? "text-red-500" : "text-muted-foreground")} />
+                    <Badge variant="outline" className="text-[10px]">{isYT ? "YOUTUBE" : docType.toUpperCase()}</Badge>
                   </div>
                   <span className="text-[10px] text-muted-foreground">{new Date(doc.created_at).toLocaleDateString("pt-BR")}</span>
                 </div>
+                {/* YouTube thumbnail */}
+                {isYT && doc.file_url && (() => {
+                  const vid = extractYouTubeId(doc.file_url!);
+                  return vid ? (
+                    <div className="rounded-lg overflow-hidden mb-2 border border-border/20">
+                      <img
+                        src={`https://img.youtube.com/vi/${vid}/mqdefault.jpg`}
+                        alt={doc.title}
+                        className="w-full h-auto object-cover"
+                      />
+                    </div>
+                  ) : null;
+                })()}
                 <h3 className="text-sm font-bold mb-1">{doc.title}</h3>
                 <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                   {doc.description || doc.content_text?.slice(0, 120) || "Sem descrição"}
                 </p>
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <Badge variant="secondary" className="text-[10px]">{doc.category}</Badge>
-                  {doc.file_name && <span className="truncate max-w-[120px]">{doc.file_name}</span>}
+                  {doc.file_name && !isYT && <span className="truncate max-w-[120px]">{doc.file_name}</span>}
                 </div>
               </div>
             );
@@ -249,6 +468,22 @@ export default function AITeamConhecimento() {
                 <span className="text-xs text-muted-foreground">{new Date(selectedDoc.created_at).toLocaleDateString("pt-BR")}</span>
               </div>
 
+              {/* YouTube embed in detail */}
+              {selectedDoc.file_type?.includes("youtube") && selectedDoc.file_url && (() => {
+                const vid = extractYouTubeId(selectedDoc.file_url!);
+                return vid ? (
+                  <div className="rounded-xl overflow-hidden border border-border/40 bg-black">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${vid}`}
+                      className="w-full aspect-video"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title={selectedDoc.title}
+                    />
+                  </div>
+                ) : null;
+              })()}
+
               {selectedDoc.description && (
                 <p className="text-sm text-muted-foreground">{selectedDoc.description}</p>
               )}
@@ -262,7 +497,7 @@ export default function AITeamConhecimento() {
                 </div>
               )}
 
-              {selectedDoc.file_url && (
+              {selectedDoc.file_url && !selectedDoc.file_type?.includes("youtube") && (
                 <div>
                   <p className="text-xs font-bold mb-1">Arquivo</p>
                   <p className="text-xs text-muted-foreground">{selectedDoc.file_name}</p>
@@ -270,10 +505,17 @@ export default function AITeamConhecimento() {
               )}
 
               <div className="flex gap-2">
-                {selectedDoc.file_url && (
+                {selectedDoc.file_url && !selectedDoc.file_type?.includes("youtube") && (
                   <Button size="sm" variant="outline" className="gap-1 flex-1" asChild>
                     <a href={selectedDoc.file_url} target="_blank" rel="noopener noreferrer">
                       <Download className="w-3.5 h-3.5" /> Download
+                    </a>
+                  </Button>
+                )}
+                {selectedDoc.file_url && selectedDoc.file_type?.includes("youtube") && (
+                  <Button size="sm" variant="outline" className="gap-1 flex-1" asChild>
+                    <a href={selectedDoc.file_url} target="_blank" rel="noopener noreferrer">
+                      <Youtube className="w-3.5 h-3.5 text-red-500" /> Abrir no YouTube
                     </a>
                   </Button>
                 )}
@@ -284,6 +526,21 @@ export default function AITeamConhecimento() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* YouTube Upload Dialog */}
+      <Dialog open={showYouTube} onOpenChange={setShowYouTube}>
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Youtube className="w-5 h-5 text-red-500" /> Adicionar Vídeo do YouTube
+            </DialogTitle>
+          </DialogHeader>
+          <YouTubeUploadFlow
+            onSave={() => { setShowYouTube(false); loadDocs(); }}
+            onCancel={() => setShowYouTube(false)}
+          />
         </DialogContent>
       </Dialog>
 
