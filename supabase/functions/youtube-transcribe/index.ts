@@ -135,27 +135,9 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
   }
   
   if (!jsonParsed) {
-    // json3 format has events[] with segs[] containing utf8 text
-    const events = json.events || [];
-    const segments: string[] = [];
-    for (const event of events) {
-      if (event.segs) {
-        let line = "";
-        for (const seg of event.segs) {
-          if (seg.utf8 && seg.utf8.trim() !== "\n" && seg.utf8.trim() !== "") {
-            line += seg.utf8;
-          }
-        }
-        if (line.trim()) segments.push(line.trim());
-      }
-    }
-    // Join segments with spaces, then add paragraph breaks every ~5 sentences
-    transcript = formatTranscript(segments);
-  } else {
     // XML format fallback
-    const xml = await captionRes.text();
     const segments: string[] = [];
-    const textMatches = xml.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g);
+    const textMatches = captionText.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g);
     for (const match of textMatches) {
       let text = match[1]
         .replace(/&amp;/g, "&")
