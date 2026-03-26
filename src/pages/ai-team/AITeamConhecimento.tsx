@@ -313,22 +313,27 @@ function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel:
             </Select>
           </div>
 
-          {/* Conteúdo bruto da página (só mostra se tiver conteúdo útil) */}
+          {/* Transcrição completa do vídeo */}
           {(() => {
             const raw = result.transcript || "";
-            const hasError = raw.includes("Error 403") || raw.includes("Forbidden") || raw.length < 100;
-            if (hasError) return null;
+            if (!raw || raw.length < 30) return (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 p-3">
+                <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+                  ⚠️ Não foi possível extrair a transcrição deste vídeo. O vídeo pode não ter legendas/closed captions habilitadas.
+                </p>
+              </div>
+            );
             return (
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold flex items-center gap-1.5">
-                  📝 Conteúdo Extraído da Página
+                  📝 Transcrição Completa do Vídeo
                   <span className="font-normal text-muted-foreground">({raw.length.toLocaleString()} caracteres)</span>
                 </Label>
                 <Textarea
                   value={raw}
                   readOnly
-                  rows={6}
-                  className="text-xs font-mono bg-muted/30 text-muted-foreground"
+                  rows={10}
+                  className="text-xs font-mono bg-muted/30 text-muted-foreground max-h-[300px] overflow-y-auto"
                 />
               </div>
             );
