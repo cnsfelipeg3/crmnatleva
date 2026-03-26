@@ -313,19 +313,26 @@ function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel:
             </Select>
           </div>
 
-          {/* Transcrição completa em textarea */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold flex items-center gap-1.5">
-              📝 Transcrição Completa
-              <span className="font-normal text-muted-foreground">({result.transcript.length.toLocaleString()} caracteres)</span>
-            </Label>
-            <Textarea
-              value={result.transcript}
-              readOnly
-              rows={6}
-              className="text-xs font-mono bg-muted/30 text-muted-foreground"
-            />
-          </div>
+          {/* Conteúdo bruto da página (só mostra se tiver conteúdo útil) */}
+          {(() => {
+            const raw = result.transcript || "";
+            const hasError = raw.includes("Error 403") || raw.includes("Forbidden") || raw.length < 100;
+            if (hasError) return null;
+            return (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold flex items-center gap-1.5">
+                  📝 Conteúdo Extraído da Página
+                  <span className="font-normal text-muted-foreground">({raw.length.toLocaleString()} caracteres)</span>
+                </Label>
+                <Textarea
+                  value={raw}
+                  readOnly
+                  rows={6}
+                  className="text-xs font-mono bg-muted/30 text-muted-foreground"
+                />
+              </div>
+            );
+          })()}
 
           {/* Conhecimentos extraídos em cards */}
           <div className="space-y-1.5">
