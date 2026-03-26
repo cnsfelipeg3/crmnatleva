@@ -85,15 +85,15 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
     captionTracks.find((t: any) => t.kind !== "asr") ||
     captionTracks[0];
 
-  // Build caption URL - unescape any remaining unicode
-  let captionUrl = (preferred.baseUrl || "").replace(/\\u0026/g, "&").replace(/\\u003d/g, "=");
+  // Build caption URL
+  let captionUrl = preferred.baseUrl || "";
   
   // Request json3 format for structured parsing
   if (!captionUrl.includes("fmt=")) {
     captionUrl += "&fmt=json3";
   }
 
-  console.log(`Fetching captions: lang=${preferred.languageCode}, kind=${preferred.kind || "manual"}`);
+  console.log(`Fetching captions: lang=${preferred.languageCode}, kind=${preferred.kind || "manual"}, url_len=${captionUrl.length}`);
 
   const captionRes = await fetch(captionUrl, {
     headers: {
@@ -103,11 +103,38 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
 
   if (!captionRes.ok) throw new Error(`Failed to fetch captions: ${captionRes.status}`);
   
-  const contentType = captionRes.headers.get("content-type") || "";
+  // Always read as text first, then try to parse as JSON
+  const captionText = await captionRes.text();
+  console.log(`Caption response length: ${captionText.length}, first 100: ${captionText.slice(0, 100)}`);
+  
   let transcript = "";
 
-  if (contentType.includes("json") || captionUrl.includes("json3")) {
-    const json = await captionRes.json();
+  // Try JSON parsing first
+  let jsonParsed = false;
+  if (captionUrl.includes("json3") || captionText.trimStart().startsWith("{")) {
+    try {
+      const json = JSON.parse(captionText);
+      const events = json.events || [];
+      const segments: string[] = [];
+      for (const event of events) {
+        if (event.segs) {
+          let line = "";
+          for (const seg of event.segs) {
+            if (seg.utf8 && seg.utf8.trim() !== "\n" && seg.utf8.trim() !== "") {
+              line += seg.utf8;
+            }
+          }
+          if (line.trim()) segments.push(line.trim());
+        }
+      }
+      transcript = formatTranscript(segments);
+      jsonParsed = true;
+    } catch {
+      console.warn("JSON parse of captions failed, trying XML fallback");
+    }
+  }
+  
+  if (!jsonParsed) {
     // json3 format has events[] with segs[] containing utf8 text
     const events = json.events || [];
     const segments: string[] = [];
