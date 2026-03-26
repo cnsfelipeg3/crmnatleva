@@ -48,44 +48,29 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
   if (hasCaptions) {
     const marker = '"captionTracks":';
     const markerIdx = html.indexOf(marker);
-    console.log(`captionTracks marker at index: ${markerIdx}`);
     
     if (markerIdx !== -1) {
       const arrayStart = html.indexOf("[", markerIdx);
-      const gap = arrayStart - markerIdx - marker.length;
-      console.log(`Array starts at: ${arrayStart}, gap: ${gap}`);
       
-      if (arrayStart !== -1 && gap < 5) {
-        // Find matching closing bracket
-        let depth = 0;
-        let arrayEnd = -1;
-        for (let i = arrayStart; i < Math.min(arrayStart + 5000, html.length); i++) {
-          if (html[i] === "[") depth++;
-          else if (html[i] === "]") {
-            depth--;
-            if (depth === 0) { arrayEnd = i; break; }
-          }
-        }
-        console.log(`Array ends at: ${arrayEnd}, length: ${arrayEnd - arrayStart + 1}`);
-        
-        if (arrayEnd !== -1) {
-          try {
-            const raw = html.slice(arrayStart, arrayEnd + 1).replace(/\\u0026/g, "&").replace(/\\u003d/g, "=");
-            captionTracks = JSON.parse(raw);
-            console.log(`Found ${captionTracks!.length} caption tracks via indexOf`);
-          } catch (e) {
-            console.warn("captionTracks parse failed:", e);
-            console.warn("Raw snippet:", html.slice(arrayStart, Math.min(arrayStart + 200, arrayEnd + 1)));
+      if (arrayStart !== -1 && arrayStart - markerIdx - marker.length < 5) {
+        // Try incremental JSON.parse to find the exact array boundary
+        // This handles brackets inside string values correctly
+        for (let end = arrayStart + 10; end < Math.min(arrayStart + 10000, html.length); end++) {
+          if (html[end] === "]") {
+            try {
+              const candidate = html.slice(arrayStart, end + 1);
+              captionTracks = JSON.parse(candidate);
+              console.log(`Found ${captionTracks!.length} caption tracks`);
+              break;
+            } catch {
+              // Not a valid JSON array yet, keep going
+            }
           }
         }
       }
     }
   } else {
     console.warn("No captionTracks found in page HTML at all");
-    // Check if we got a consent/login page instead
-    const isConsentPage = html.includes("consent.youtube") || html.includes("accounts.google.com");
-    const isBotBlock = html.includes("sorry/index") || html.includes("unusual traffic");
-    console.log(`isConsentPage=${isConsentPage}, isBotBlock=${isBotBlock}`);
   }
 
   if (!captionTracks || captionTracks.length === 0) {
