@@ -17,6 +17,36 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
+const SYSTEM_PROMPT = `Você é um especialista em extrair conhecimento útil de vídeos sobre viagens e turismo.
+Sua tarefa é analisar o vídeo fornecido e transformar o conteúdo em um documento de conhecimento estruturado e prático que será usado por agentes de IA de uma agência de viagens.
+
+REGRAS CRÍTICAS:
+- Extraia SOMENTE o que é REALMENTE dito/mostrado no vídeo. NÃO invente informações.
+- Se o vídeo é sobre a China, o conteúdo deve ser sobre a China. Se é sobre Dubai, deve ser sobre Dubai.
+- Nunca substitua o destino real por outro.
+
+FORMATO DE SAÍDA (em português, use markdown):
+
+# [Título descritivo do conteúdo REAL do vídeo]
+
+## Resumo
+[2-3 frases sobre o que o vídeo REALMENTE cobre]
+
+## Conhecimento Extraído
+[Lista organizada dos pontos-chave: dicas, informações práticas, recomendações, preços mencionados, locais, restaurantes, hotéis, etc.]
+
+## Dados Práticos
+- **Destino**: [destino REAL do vídeo]
+- **Melhor época**: [se mencionado]
+- **Faixa de preço**: [se mencionado]
+- **Duração sugerida**: [se mencionado]
+- **Dicas importantes**: [lista]
+
+## Categoria sugerida
+[uma de: destinos, scripts, preços, fornecedores, processos, treinamento, compliance, geral]
+
+IMPORTANTE: Seja fiel ao conteúdo do vídeo. Extraia TODAS as informações acionáveis mencionadas.`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -42,9 +72,9 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Use Gemini with the YouTube URL directly — Gemini can process YouTube videos natively
     const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
+    // Use Gemini with the YouTube URL as a media/file_url part so it actually processes the video
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -56,36 +86,20 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Você é um especialista em extrair conhecimento útil de vídeos sobre viagens e turismo.
-Sua tarefa é assistir o vídeo e transformar o conteúdo em um documento de conhecimento estruturado e prático que será usado por agentes de IA de uma agência de viagens.
-
-FORMATO DE SAÍDA (em português, use markdown):
-
-# [Título descritivo do conteúdo]
-
-## Resumo
-[2-3 frases sobre o que o vídeo cobre]
-
-## Conhecimento Extraído
-[Lista organizada dos pontos-chave: dicas, informações práticas, recomendações, preços mencionados, locais, restaurantes, hotéis, etc. Organize por subtópicos quando relevante.]
-
-## Dados Práticos
-- **Melhor época**: [se mencionado]
-- **Faixa de preço**: [se mencionado]
-- **Duração sugerida**: [se mencionado]
-- **Dicas importantes**: [lista]
-
-## Categoria sugerida
-[uma de: destinos, scripts, preços, fornecedores, processos, treinamento, compliance, geral]
-
-IMPORTANTE: Seja extremamente detalhado e objetivo. Extraia TODAS as informações acionáveis que um agente de viagens poderia usar para atender clientes. Inclua nomes específicos de hotéis, restaurantes, atrações, preços e dicas práticas mencionados no vídeo.`,
+            content: SYSTEM_PROMPT,
           },
           {
             role: "user",
             content: [
               {
+                type: "image_url",
+                image_url: {
+                  url: youtubeUrl,
+                },
+              },
+              {
                 type: "text",
-                text: `Assista este vídeo do YouTube e extraia todo o conhecimento relevante para uma agência de viagens: ${youtubeUrl}`,
+                text: `Analise este vídeo do YouTube e extraia todo o conhecimento relevante. Seja fiel ao conteúdo REAL do vídeo — não invente nada.`,
               },
             ],
           },
@@ -97,7 +111,7 @@ IMPORTANTE: Seja extremamente detalhado e objetivo. Extraia TODAS as informaçõ
       const status = aiResponse.status;
       const errorBody = await aiResponse.text();
       console.error(`AI gateway error: ${status}`, errorBody.slice(0, 500));
-      
+
       if (status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit atingido. Tente novamente em alguns segundos." }), {
           status: 429,
@@ -110,15 +124,17 @@ IMPORTANTE: Seja extremamente detalhado e objetivo. Extraia TODAS as informaçõ
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI gateway error: ${status}`);
+      throw new Error(`AI gateway error: ${status} - ${errorBody.slice(0, 200)}`);
     }
 
     const aiData = await aiResponse.json();
     const structuredKnowledge = aiData.choices?.[0]?.message?.content || "";
 
+    console.log(`AI response length: ${structuredKnowledge.length} chars`);
+
     if (!structuredKnowledge || structuredKnowledge.length < 50) {
       return new Response(JSON.stringify({
-        error: "Não foi possível extrair conhecimento deste vídeo. Tente outro vídeo.",
+        error: "Não foi possível extrair conhecimento deste vídeo. O modelo pode não ter conseguido acessar o conteúdo. Tente outro vídeo.",
         videoId,
       }), {
         status: 422,
@@ -126,7 +142,7 @@ IMPORTANTE: Seja extremamente detalhado e objetivo. Extraia TODAS as informaçõ
       });
     }
 
-    // Extract title from the AI response (first heading)
+    // Extract title from the AI response
     const titleMatch = structuredKnowledge.match(/^#\s+(.+)$/m);
     const title = titleMatch ? titleMatch[1].trim() : `Vídeo YouTube: ${videoId}`;
 
