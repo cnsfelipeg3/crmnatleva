@@ -37,47 +37,32 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
   const titleMatch = html.match(/<title>([^<]+)<\/title>/);
   const rawTitle = titleMatch ? titleMatch[1].replace(/ - YouTube$/, "").trim() : `Video ${videoId}`;
 
-  // Strategy 1: Direct captionTracks regex (most reliable)
+  // Extract captionTracks using indexOf-based approach (regex unreliable on large HTML in Deno)
   let captionTracks: any[] | null = null;
 
-  const captionTracksMatch = html.match(/"captionTracks"\s*:\s*(\[.*?\])(?:\s*[,}])/);
-  if (captionTracksMatch) {
-    try {
-      // Handle unicode escapes like \u0026
-      const raw = captionTracksMatch[1].replace(/\\u0026/g, "&").replace(/\\u003d/g, "=");
-      captionTracks = JSON.parse(raw);
-      console.log(`Strategy 1: Found ${captionTracks!.length} caption tracks`);
-    } catch (e) {
-      console.warn("Strategy 1 parse failed:", e);
-    }
-  }
-
-  // Strategy 2: Extract from ytInitialPlayerResponse JSON
-  if (!captionTracks) {
-    const playerMatch = html.match(/var\s+ytInitialPlayerResponse\s*=\s*(\{.*?\});\s*(?:var|<\/script)/s);
-    if (playerMatch) {
-      try {
-        const player = JSON.parse(playerMatch[1]);
-        captionTracks = player?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-        if (captionTracks) {
-          console.log(`Strategy 2: Found ${captionTracks.length} caption tracks`);
+  const marker = '"captionTracks":';
+  const markerIdx = html.indexOf(marker);
+  if (markerIdx !== -1) {
+    const arrayStart = html.indexOf("[", markerIdx);
+    if (arrayStart !== -1 && arrayStart - markerIdx < 10) {
+      // Find matching closing bracket
+      let depth = 0;
+      let arrayEnd = -1;
+      for (let i = arrayStart; i < Math.min(arrayStart + 5000, html.length); i++) {
+        if (html[i] === "[") depth++;
+        else if (html[i] === "]") {
+          depth--;
+          if (depth === 0) { arrayEnd = i; break; }
         }
-      } catch (e) {
-        console.warn("Strategy 2 parse failed:", e);
       }
-    }
-  }
-
-  // Strategy 3: Broader regex for captionTracks with greedy matching
-  if (!captionTracks) {
-    const broadMatch = html.match(/"captionTracks":\[(.+?)\],"translationLanguages"/);
-    if (broadMatch) {
-      try {
-        const raw = `[${broadMatch[1]}]`.replace(/\\u0026/g, "&").replace(/\\u003d/g, "=");
-        captionTracks = JSON.parse(raw);
-        console.log(`Strategy 3: Found ${captionTracks!.length} caption tracks`);
-      } catch (e) {
-        console.warn("Strategy 3 parse failed:", e);
+      if (arrayEnd !== -1) {
+        try {
+          const raw = html.slice(arrayStart, arrayEnd + 1).replace(/\\u0026/g, "&").replace(/\\u003d/g, "=");
+          captionTracks = JSON.parse(raw);
+          console.log(`Found ${captionTracks!.length} caption tracks via indexOf`);
+        } catch (e) {
+          console.warn("captionTracks parse failed:", e);
+        }
       }
     }
   }
