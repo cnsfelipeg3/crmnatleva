@@ -17,13 +17,14 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
-const SYSTEM_PROMPT = `Você é um especialista em extrair conhecimento útil de vídeos sobre viagens e turismo.
-Sua tarefa é analisar o vídeo fornecido e transformar o conteúdo em um documento de conhecimento estruturado e prático que será usado por agentes de IA de uma agência de viagens.
+const SYSTEM_PROMPT = `Você é um especialista em extrair conhecimento útil de conteúdo sobre viagens e turismo.
+Sua tarefa é analisar o conteúdo fornecido (descrição, capítulos e informações de um vídeo do YouTube) e transformá-lo em um documento de conhecimento estruturado e prático que será usado por agentes de IA de uma agência de viagens.
 
 REGRAS CRÍTICAS:
-- Extraia SOMENTE o que é REALMENTE dito/mostrado no vídeo. NÃO invente informações.
-- Se o vídeo é sobre a China, o conteúdo deve ser sobre a China. Se é sobre Dubai, deve ser sobre Dubai.
+- Extraia SOMENTE o que é REALMENTE mencionado no conteúdo. NÃO invente informações.
+- Se o conteúdo é sobre a China, o documento deve ser sobre a China. Se é sobre Dubai, deve ser sobre Dubai.
 - Nunca substitua o destino real por outro.
+- Use o título do vídeo e a descrição como fonte principal de informação.
 
 FORMATO DE SAÍDA (em português, use markdown):
 
@@ -45,7 +46,7 @@ FORMATO DE SAÍDA (em português, use markdown):
 ## Categoria sugerida
 [uma de: destinos, scripts, preços, fornecedores, processos, treinamento, compliance, geral]
 
-IMPORTANTE: Seja fiel ao conteúdo do vídeo. Extraia TODAS as informações acionáveis mencionadas.`;
+IMPORTANTE: Seja fiel ao conteúdo. Extraia TODAS as informações acionáveis mencionadas.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -69,12 +70,55 @@ serve(async (req) => {
 
     console.log(`Processing YouTube video: ${videoId}`);
 
+    // Step 1: Use Firecrawl to scrape the YouTube page content
+    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+    if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY not configured");
+
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    
+    const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: youtubeUrl,
+        formats: ["markdown"],
+      }),
+    });
+
+    if (!scrapeRes.ok) {
+      const errText = await scrapeRes.text();
+      console.error(`Firecrawl error: ${scrapeRes.status}`, errText.slice(0, 300));
+      throw new Error(`Erro ao acessar o vídeo: ${scrapeRes.status}`);
+    }
+
+    const scrapeData = await scrapeRes.json();
+    const pageContent = scrapeData?.data?.markdown || "";
+    const metadata = scrapeData?.data?.metadata || {};
+
+    if (!pageContent || pageContent.length < 50) {
+      return new Response(JSON.stringify({
+        error: "Não foi possível acessar o conteúdo do vídeo.",
+        videoId,
+      }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`Scraped content: ${pageContent.length} chars`);
+
+    // Step 2: Send content to AI for structuring
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    // Truncate if too long
+    const truncatedContent = pageContent.length > 12000
+      ? pageContent.slice(0, 12000) + "\n\n[... conteúdo truncado]"
+      : pageContent;
 
-    // Use Gemini with the YouTube URL as a media/file_url part so it actually processes the video
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -84,24 +128,10 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          {
-            role: "system",
-            content: SYSTEM_PROMPT,
-          },
+          { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: {
-                  url: youtubeUrl,
-                },
-              },
-              {
-                type: "text",
-                text: `Analise este vídeo do YouTube e extraia todo o conhecimento relevante. Seja fiel ao conteúdo REAL do vídeo — não invente nada.`,
-              },
-            ],
+            content: `Analise o conteúdo desta página de vídeo do YouTube e extraia todo o conhecimento relevante para uma agência de viagens. O título do vídeo é: "${metadata.title || 'Desconhecido'}". Seja fiel ao conteúdo REAL — não invente nada.\n\nCONTEÚDO DA PÁGINA:\n${truncatedContent}`,
           },
         ],
       }),
@@ -124,17 +154,15 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI gateway error: ${status} - ${errorBody.slice(0, 200)}`);
+      throw new Error(`AI gateway error: ${status}`);
     }
 
     const aiData = await aiResponse.json();
     const structuredKnowledge = aiData.choices?.[0]?.message?.content || "";
 
-    console.log(`AI response length: ${structuredKnowledge.length} chars`);
-
     if (!structuredKnowledge || structuredKnowledge.length < 50) {
       return new Response(JSON.stringify({
-        error: "Não foi possível extrair conhecimento deste vídeo. O modelo pode não ter conseguido acessar o conteúdo. Tente outro vídeo.",
+        error: "Não foi possível extrair conhecimento deste vídeo. Tente outro vídeo.",
         videoId,
       }), {
         status: 422,
@@ -142,16 +170,15 @@ serve(async (req) => {
       });
     }
 
-    // Extract title from the AI response
     const titleMatch = structuredKnowledge.match(/^#\s+(.+)$/m);
-    const title = titleMatch ? titleMatch[1].trim() : `Vídeo YouTube: ${videoId}`;
+    const title = titleMatch ? titleMatch[1].trim() : (metadata.title || `Vídeo YouTube: ${videoId}`);
 
     console.log(`Successfully extracted knowledge for: ${title}`);
 
     return new Response(JSON.stringify({
       videoId,
       title,
-      transcript: structuredKnowledge,
+      transcript: truncatedContent,
       structured_knowledge: structuredKnowledge,
       language: "pt",
     }), {
