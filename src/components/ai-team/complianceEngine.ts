@@ -244,6 +244,25 @@ export async function runComplianceCheck(
       return { text: agentResponse, wasRewritten: false, profile };
     }
 
+    // Safety: reject compliance responses that are clearly meta-commentary
+    // (the validator AI responding about itself instead of rewriting)
+    const metaPatterns = [
+      /validador/i, /compliance/i, /verificando/i, /analis(e|ar)/i,
+      /preciso que voc[eê] forne[cç]a/i, /aguardando/i, /minha fun[cç][aã]o/i,
+      /vou verificar/i, /documento/i, /STATUS/,
+    ];
+    const isMetaResponse = metaPatterns.filter(p => p.test(result)).length >= 2;
+    if (isMetaResponse) {
+      console.warn(`🛡️ Compliance returned meta-commentary instead of rewrite, keeping original for ${profile.agentName}`);
+      return { text: agentResponse, wasRewritten: false, profile };
+    }
+
+    // Safety: if result is wildly different length, likely not a valid rewrite
+    if (result.length > agentResponse.length * 3 || result.length < agentResponse.length * 0.2) {
+      console.warn(`🛡️ Compliance rewrite has suspicious length ratio, keeping original for ${profile.agentName}`);
+      return { text: agentResponse, wasRewritten: false, profile };
+    }
+
     // The AI returned a rewritten version
     console.log(`🛡️ Compliance rewrite for ${profile.agentName}: violations detected and corrected`);
     return { text: result, wasRewritten: true, profile };
