@@ -40,31 +40,52 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
   // Extract captionTracks using indexOf-based approach (regex unreliable on large HTML in Deno)
   let captionTracks: any[] | null = null;
 
-  const marker = '"captionTracks":';
-  const markerIdx = html.indexOf(marker);
-  if (markerIdx !== -1) {
-    const arrayStart = html.indexOf("[", markerIdx);
-    if (arrayStart !== -1 && arrayStart - markerIdx < 10) {
-      // Find matching closing bracket
-      let depth = 0;
-      let arrayEnd = -1;
-      for (let i = arrayStart; i < Math.min(arrayStart + 5000, html.length); i++) {
-        if (html[i] === "[") depth++;
-        else if (html[i] === "]") {
-          depth--;
-          if (depth === 0) { arrayEnd = i; break; }
+  // Check if page has captions data at all
+  const hasPlayerResponse = html.includes("ytInitialPlayerResponse");
+  const hasCaptions = html.includes("captionTracks");
+  console.log(`Page analysis: hasPlayerResponse=${hasPlayerResponse}, hasCaptionTracks=${hasCaptions}`);
+
+  if (hasCaptions) {
+    const marker = '"captionTracks":';
+    const markerIdx = html.indexOf(marker);
+    console.log(`captionTracks marker at index: ${markerIdx}`);
+    
+    if (markerIdx !== -1) {
+      const arrayStart = html.indexOf("[", markerIdx);
+      const gap = arrayStart - markerIdx - marker.length;
+      console.log(`Array starts at: ${arrayStart}, gap: ${gap}`);
+      
+      if (arrayStart !== -1 && gap < 5) {
+        // Find matching closing bracket
+        let depth = 0;
+        let arrayEnd = -1;
+        for (let i = arrayStart; i < Math.min(arrayStart + 5000, html.length); i++) {
+          if (html[i] === "[") depth++;
+          else if (html[i] === "]") {
+            depth--;
+            if (depth === 0) { arrayEnd = i; break; }
+          }
         }
-      }
-      if (arrayEnd !== -1) {
-        try {
-          const raw = html.slice(arrayStart, arrayEnd + 1).replace(/\\u0026/g, "&").replace(/\\u003d/g, "=");
-          captionTracks = JSON.parse(raw);
-          console.log(`Found ${captionTracks!.length} caption tracks via indexOf`);
-        } catch (e) {
-          console.warn("captionTracks parse failed:", e);
+        console.log(`Array ends at: ${arrayEnd}, length: ${arrayEnd - arrayStart + 1}`);
+        
+        if (arrayEnd !== -1) {
+          try {
+            const raw = html.slice(arrayStart, arrayEnd + 1).replace(/\\u0026/g, "&").replace(/\\u003d/g, "=");
+            captionTracks = JSON.parse(raw);
+            console.log(`Found ${captionTracks!.length} caption tracks via indexOf`);
+          } catch (e) {
+            console.warn("captionTracks parse failed:", e);
+            console.warn("Raw snippet:", html.slice(arrayStart, Math.min(arrayStart + 200, arrayEnd + 1)));
+          }
         }
       }
     }
+  } else {
+    console.warn("No captionTracks found in page HTML at all");
+    // Check if we got a consent/login page instead
+    const isConsentPage = html.includes("consent.youtube") || html.includes("accounts.google.com");
+    const isBotBlock = html.includes("sorry/index") || html.includes("unusual traffic");
+    console.log(`isConsentPage=${isConsentPage}, isBotBlock=${isBotBlock}`);
   }
 
   if (!captionTracks || captionTracks.length === 0) {
