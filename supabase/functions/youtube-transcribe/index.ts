@@ -57,13 +57,26 @@ async function fetchCaptionsViaInnertube(videoId: string): Promise<{ text: strin
   });
 
   if (!playerResp.ok) {
+    console.error("Player API status:", playerResp.status);
+    const errText = await playerResp.text();
+    console.error("Player API error body:", errText.slice(0, 500));
     throw new Error("NO_CAPTIONS");
   }
 
   const playerData = await playerResp.json();
+  
+  // Debug: log available keys
+  console.log("Player response keys:", Object.keys(playerData));
+  console.log("Has captions:", !!playerData?.captions);
+  console.log("Playability status:", playerData?.playabilityStatus?.status);
+  if (playerData?.captions) {
+    console.log("Captions keys:", JSON.stringify(Object.keys(playerData.captions)));
+  }
+  
   const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
 
   if (!captionTracks || captionTracks.length === 0) {
+    console.error("No caption tracks found. Available captions data:", JSON.stringify(playerData?.captions || "none").slice(0, 500));
     throw new Error("NO_CAPTIONS");
   }
 
