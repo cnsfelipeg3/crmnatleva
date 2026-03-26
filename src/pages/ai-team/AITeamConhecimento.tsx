@@ -181,7 +181,7 @@ function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel:
 
       {/* Step 4: Review Extracted Knowledge */}
       {result && (
-        <div className="space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="flex items-center gap-2 text-xs font-bold text-emerald-500">
             <CheckCircle className="w-4 h-4" />
             Conhecimento extraído! Revise e aprove:
@@ -204,25 +204,27 @@ function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel:
             </Select>
           </div>
 
+          {/* Transcrição completa em textarea */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold">Conhecimento Extraído (editável)</Label>
+            <Label className="text-xs font-bold flex items-center gap-1.5">
+              📝 Transcrição Completa
+              <span className="font-normal text-muted-foreground">({result.transcript.length.toLocaleString()} caracteres)</span>
+            </Label>
             <Textarea
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              rows={10}
-              className="text-xs font-mono"
+              value={result.transcript}
+              readOnly
+              rows={6}
+              className="text-xs font-mono bg-muted/30 text-muted-foreground"
             />
           </div>
 
-          {/* Collapsible raw transcript */}
-          <details className="text-xs">
-            <summary className="cursor-pointer text-muted-foreground hover:text-foreground transition-colors">
-              Ver transcrição bruta ({result.transcript.length.toLocaleString()} caracteres)
-            </summary>
-            <pre className="mt-2 max-h-[200px] overflow-y-auto bg-muted/30 p-3 rounded-lg whitespace-pre-wrap text-[10px] text-muted-foreground font-sans">
-              {result.transcript}
-            </pre>
-          </details>
+          {/* Conhecimentos extraídos em cards */}
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Conhecimentos Extraídos
+            </Label>
+            <KnowledgeCards content={editContent} onChange={setEditContent} />
+          </div>
 
           <div className="flex gap-2 justify-end pt-2">
             <Button variant="outline" size="sm" onClick={onCancel}>
