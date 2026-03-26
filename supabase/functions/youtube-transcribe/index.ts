@@ -17,12 +17,13 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
-async function fetchYouTubeTranscript(videoId: string): Promise<{ text: string; title: string }> {
-  // Step 1: Fetch the YouTube page to get caption tracks
+async function fetchCaptionsViaInnertube(videoId: string): Promise<{ text: string; title: string }> {
+  // Step 1: Fetch the YouTube page to get INNERTUBE_API_KEY
   const pageResp = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     },
   });
   const html = await pageResp.text();
@@ -31,14 +32,40 @@ async function fetchYouTubeTranscript(videoId: string): Promise<{ text: string; 
   const titleMatch = html.match(/<title>([^<]*)<\/title>/);
   const rawTitle = titleMatch ? titleMatch[1].replace(/ - YouTube$/, "").trim() : `Video ${videoId}`;
 
-  // Look for captions in the page data
-  const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
-  if (!captionMatch) {
-    // No captions available - fall back to AI-based description
+  // Try to get INNERTUBE_API_KEY
+  const apiKeyMatch = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
+  const apiKey = apiKeyMatch ? apiKeyMatch[1] : "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"; // fallback known key
+
+  // Step 2: Call innertube player API to get caption tracks
+  const playerResp = await fetch(`https://www.youtube.com/youtubei/v1/player?key=${apiKey}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    },
+    body: JSON.stringify({
+      context: {
+        client: {
+          hl: "pt",
+          gl: "BR",
+          clientName: "WEB",
+          clientVersion: "2.20241126.01.00",
+        },
+      },
+      videoId,
+    }),
+  });
+
+  if (!playerResp.ok) {
     throw new Error("NO_CAPTIONS");
   }
 
-  const captionTracks = JSON.parse(captionMatch[1]);
+  const playerData = await playerResp.json();
+  const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+
+  if (!captionTracks || captionTracks.length === 0) {
+    throw new Error("NO_CAPTIONS");
+  }
 
   // Prefer Portuguese, then English, then first available
   let selectedTrack = captionTracks.find((t: any) =>
@@ -49,7 +76,7 @@ async function fetchYouTubeTranscript(videoId: string): Promise<{ text: string; 
       t.languageCode === "en" || t.languageCode === "en-US"
     );
   }
-  if (!selectedTrack && captionTracks.length > 0) {
+  if (!selectedTrack) {
     selectedTrack = captionTracks[0];
   }
 
@@ -57,11 +84,11 @@ async function fetchYouTubeTranscript(videoId: string): Promise<{ text: string; 
     throw new Error("NO_CAPTIONS");
   }
 
-  // Step 2: Fetch the captions XML
+  // Step 3: Fetch the captions XML
   const captionResp = await fetch(selectedTrack.baseUrl);
   const captionXml = await captionResp.text();
 
-  // Step 3: Parse XML to extract text
+  // Step 4: Parse XML to extract text
   const textSegments: string[] = [];
   const regex = /<text[^>]*>(.*?)<\/text>/gs;
   let match;
@@ -78,7 +105,9 @@ async function fetchYouTubeTranscript(videoId: string): Promise<{ text: string; 
   }
 
   const fullText = textSegments.join(" ");
-  return { text: fullText, title: rawTitle };
+  const videoTitle = playerData?.videoDetails?.title || rawTitle;
+
+  return { text: fullText, title: videoTitle };
 }
 
 serve(async (req) => {
@@ -107,10 +136,12 @@ serve(async (req) => {
     let title: string;
 
     try {
-      const result = await fetchYouTubeTranscript(videoId);
+      const result = await fetchCaptionsViaInnertube(videoId);
       transcript = result.text;
       title = result.title;
+      console.log(`Got transcript: ${transcript.length} chars, title: ${title}`);
     } catch (e) {
+      console.error("Caption fetch error:", e);
       if (e instanceof Error && e.message === "NO_CAPTIONS") {
         return new Response(JSON.stringify({
           error: "Este vídeo não possui legendas disponíveis. Tente um vídeo com legendas ativadas.",
@@ -133,7 +164,7 @@ serve(async (req) => {
       });
     }
 
-    // Step 4: Use AI to summarize and structure the knowledge
+    // Step 5: Use AI to summarize and structure the knowledge
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
