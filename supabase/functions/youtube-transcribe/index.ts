@@ -17,12 +17,101 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
-const SYSTEM_PROMPT = `Você é um especialista em extrair conhecimento útil de vídeos sobre viagens e turismo.
-Sua tarefa é analisar o vídeo fornecido e transformar o conteúdo em um documento de conhecimento estruturado e prático que será usado por agentes de IA de uma agência de viagens.
+async function fetchTranscript(videoId: string): Promise<string> {
+  // Step 1: Fetch YouTube page to extract caption tracks
+  const pageUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  const pageRes = await fetch(pageUrl, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    },
+  });
+
+  if (!pageRes.ok) {
+    throw new Error(`Failed to fetch YouTube page: ${pageRes.status}`);
+  }
+
+  const html = await pageRes.text();
+
+  // Step 2: Extract captions data from playerCaptionsTracklistRenderer
+  const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
+  if (!captionMatch) {
+    // Try alternative: check for timedtext in the page
+    const timedTextMatch = html.match(/\/api\/timedtext[^"']*/);
+    if (timedTextMatch) {
+      const ttUrl = `https://www.youtube.com${timedTextMatch[0].replace(/\\u0026/g, '&')}`;
+      return await fetchCaptionXml(ttUrl);
+    }
+    throw new Error("NO_CAPTIONS");
+  }
+
+  let tracks: any[];
+  try {
+    const raw = captionMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    tracks = JSON.parse(raw);
+  } catch {
+    // Try a more lenient extraction
+    const urlMatch = captionMatch[1].match(/"baseUrl":\s*"([^"]+)"/);
+    if (urlMatch) {
+      const captionUrl = urlMatch[1].replace(/\\u0026/g, '&');
+      return await fetchCaptionXml(captionUrl);
+    }
+    throw new Error("NO_CAPTIONS");
+  }
+
+  if (!tracks || tracks.length === 0) {
+    throw new Error("NO_CAPTIONS");
+  }
+
+  // Step 3: Prefer Portuguese, then English, then first available
+  const ptTrack = tracks.find((t: any) => t.languageCode?.startsWith('pt'));
+  const enTrack = tracks.find((t: any) => t.languageCode?.startsWith('en'));
+  const selectedTrack = ptTrack || enTrack || tracks[0];
+
+  const captionUrl = selectedTrack.baseUrl.replace(/\\u0026/g, '&');
+  return await fetchCaptionXml(captionUrl);
+}
+
+async function fetchCaptionXml(url: string): Promise<string> {
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    },
+  });
+  if (!res.ok) throw new Error(`Failed to fetch captions: ${res.status}`);
+  const xml = await res.text();
+
+  // Parse XML to extract text
+  const textParts: string[] = [];
+  const regex = /<text[^>]*>(.*?)<\/text>/gs;
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    let text = match[1]
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&apos;/g, "'")
+      .replace(/<[^>]+>/g, '') // remove any nested tags
+      .trim();
+    if (text) textParts.push(text);
+  }
+
+  if (textParts.length === 0) {
+    throw new Error("NO_CAPTIONS");
+  }
+
+  return textParts.join(' ');
+}
+
+const SYSTEM_PROMPT = `Você é um especialista em extrair conhecimento útil de transcrições de vídeos sobre viagens e turismo.
+Sua tarefa é analisar a transcrição fornecida e transformar o conteúdo em um documento de conhecimento estruturado e prático que será usado por agentes de IA de uma agência de viagens.
 
 REGRAS CRÍTICAS:
-- Extraia SOMENTE o que é REALMENTE dito/mostrado no vídeo. NÃO invente informações.
-- Se o vídeo é sobre a China, o conteúdo deve ser sobre a China. Se é sobre Dubai, deve ser sobre Dubai.
+- Extraia SOMENTE o que é REALMENTE dito na transcrição. NÃO invente informações.
+- Se a transcrição é sobre a China, o conteúdo deve ser sobre a China. Se é sobre Dubai, deve ser sobre Dubai.
 - Nunca substitua o destino real por outro.
 
 FORMATO DE SAÍDA (em português, use markdown):
@@ -45,7 +134,7 @@ FORMATO DE SAÍDA (em português, use markdown):
 ## Categoria sugerida
 [uma de: destinos, scripts, preços, fornecedores, processos, treinamento, compliance, geral]
 
-IMPORTANTE: Seja fiel ao conteúdo do vídeo. Extraia TODAS as informações acionáveis mencionadas.`;
+IMPORTANTE: Seja fiel ao conteúdo da transcrição. Extraia TODAS as informações acionáveis mencionadas.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -69,12 +158,34 @@ serve(async (req) => {
 
     console.log(`Processing YouTube video: ${videoId}`);
 
+    // Step 1: Extract transcript from captions
+    let transcript: string;
+    try {
+      transcript = await fetchTranscript(videoId);
+      console.log(`Transcript extracted: ${transcript.length} chars`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === "NO_CAPTIONS") {
+        return new Response(JSON.stringify({
+          error: "Este vídeo não possui legendas/captions disponíveis. Tente outro vídeo que tenha legendas ativadas.",
+          videoId,
+        }), {
+          status: 422,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw e;
+    }
+
+    // Step 2: Send transcript to AI for structuring
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    // Truncate transcript if too long (keep first ~15000 chars)
+    const truncatedTranscript = transcript.length > 15000 
+      ? transcript.slice(0, 15000) + "\n\n[... transcrição truncada por limite de tamanho]"
+      : transcript;
 
-    // Use Gemini with the YouTube URL as a media/file_url part so it actually processes the video
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -84,24 +195,10 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          {
-            role: "system",
-            content: SYSTEM_PROMPT,
-          },
+          { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: {
-                  url: youtubeUrl,
-                },
-              },
-              {
-                type: "text",
-                text: `Analise este vídeo do YouTube e extraia todo o conhecimento relevante. Seja fiel ao conteúdo REAL do vídeo — não invente nada.`,
-              },
-            ],
+            content: `Analise esta transcrição de um vídeo do YouTube e extraia todo o conhecimento relevante. Seja fiel ao conteúdo REAL — não invente nada.\n\nTRANSCRIÇÃO:\n${truncatedTranscript}`,
           },
         ],
       }),
@@ -124,17 +221,15 @@ serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI gateway error: ${status} - ${errorBody.slice(0, 200)}`);
+      throw new Error(`AI gateway error: ${status}`);
     }
 
     const aiData = await aiResponse.json();
     const structuredKnowledge = aiData.choices?.[0]?.message?.content || "";
 
-    console.log(`AI response length: ${structuredKnowledge.length} chars`);
-
     if (!structuredKnowledge || structuredKnowledge.length < 50) {
       return new Response(JSON.stringify({
-        error: "Não foi possível extrair conhecimento deste vídeo. O modelo pode não ter conseguido acessar o conteúdo. Tente outro vídeo.",
+        error: "Não foi possível extrair conhecimento deste vídeo. Tente outro vídeo.",
         videoId,
       }), {
         status: 422,
@@ -142,7 +237,6 @@ serve(async (req) => {
       });
     }
 
-    // Extract title from the AI response
     const titleMatch = structuredKnowledge.match(/^#\s+(.+)$/m);
     const title = titleMatch ? titleMatch[1].trim() : `Vídeo YouTube: ${videoId}`;
 
@@ -151,7 +245,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       videoId,
       title,
-      transcript: structuredKnowledge,
+      transcript: truncatedTranscript,
       structured_knowledge: structuredKnowledge,
       language: "pt",
     }), {
