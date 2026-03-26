@@ -17,112 +17,6 @@ function extractVideoId(url: string): string | null {
   return null;
 }
 
-async function fetchCaptionsViaInnertube(videoId: string): Promise<{ text: string; title: string }> {
-  // Step 1: Fetch the YouTube page to get INNERTUBE_API_KEY
-  const pageResp = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-      "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    },
-  });
-  const html = await pageResp.text();
-
-  // Extract title
-  const titleMatch = html.match(/<title>([^<]*)<\/title>/);
-  const rawTitle = titleMatch ? titleMatch[1].replace(/ - YouTube$/, "").trim() : `Video ${videoId}`;
-
-  // Try to get INNERTUBE_API_KEY
-  const apiKeyMatch = html.match(/"INNERTUBE_API_KEY":"([^"]+)"/);
-  const apiKey = apiKeyMatch ? apiKeyMatch[1] : "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8"; // fallback known key
-
-  // Step 2: Call innertube player API to get caption tracks
-  const playerResp = await fetch(`https://www.youtube.com/youtubei/v1/player?key=${apiKey}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-    },
-    body: JSON.stringify({
-      context: {
-        client: {
-          hl: "pt",
-          gl: "BR",
-          clientName: "WEB",
-          clientVersion: "2.20241126.01.00",
-        },
-      },
-      videoId,
-    }),
-  });
-
-  if (!playerResp.ok) {
-    console.error("Player API status:", playerResp.status);
-    const errText = await playerResp.text();
-    console.error("Player API error body:", errText.slice(0, 500));
-    throw new Error("NO_CAPTIONS");
-  }
-
-  const playerData = await playerResp.json();
-  
-  // Debug: log available keys
-  console.log("Player response keys:", Object.keys(playerData));
-  console.log("Has captions:", !!playerData?.captions);
-  console.log("Playability status:", playerData?.playabilityStatus?.status);
-  if (playerData?.captions) {
-    console.log("Captions keys:", JSON.stringify(Object.keys(playerData.captions)));
-  }
-  
-  const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-
-  if (!captionTracks || captionTracks.length === 0) {
-    console.error("No caption tracks found. Available captions data:", JSON.stringify(playerData?.captions || "none").slice(0, 500));
-    throw new Error("NO_CAPTIONS");
-  }
-
-  // Prefer Portuguese, then English, then first available
-  let selectedTrack = captionTracks.find((t: any) =>
-    t.languageCode === "pt" || t.languageCode === "pt-BR"
-  );
-  if (!selectedTrack) {
-    selectedTrack = captionTracks.find((t: any) =>
-      t.languageCode === "en" || t.languageCode === "en-US"
-    );
-  }
-  if (!selectedTrack) {
-    selectedTrack = captionTracks[0];
-  }
-
-  if (!selectedTrack?.baseUrl) {
-    throw new Error("NO_CAPTIONS");
-  }
-
-  // Step 3: Fetch the captions XML
-  const captionResp = await fetch(selectedTrack.baseUrl);
-  const captionXml = await captionResp.text();
-
-  // Step 4: Parse XML to extract text
-  const textSegments: string[] = [];
-  const regex = /<text[^>]*>(.*?)<\/text>/gs;
-  let match;
-  while ((match = regex.exec(captionXml)) !== null) {
-    let text = match[1]
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/\n/g, " ")
-      .trim();
-    if (text) textSegments.push(text);
-  }
-
-  const fullText = textSegments.join(" ");
-  const videoTitle = playerData?.videoDetails?.title || rawTitle;
-
-  return { text: fullText, title: videoTitle };
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -145,41 +39,11 @@ serve(async (req) => {
 
     console.log(`Processing YouTube video: ${videoId}`);
 
-    let transcript: string;
-    let title: string;
-
-    try {
-      const result = await fetchCaptionsViaInnertube(videoId);
-      transcript = result.text;
-      title = result.title;
-      console.log(`Got transcript: ${transcript.length} chars, title: ${title}`);
-    } catch (e) {
-      console.error("Caption fetch error:", e);
-      if (e instanceof Error && e.message === "NO_CAPTIONS") {
-        return new Response(JSON.stringify({
-          error: "Este vídeo não possui legendas disponíveis. Tente um vídeo com legendas ativadas.",
-          videoId,
-        }), {
-          status: 422,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw e;
-    }
-
-    if (!transcript || transcript.length < 20) {
-      return new Response(JSON.stringify({
-        error: "Transcrição muito curta ou vazia.",
-        videoId,
-      }), {
-        status: 422,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Step 5: Use AI to summarize and structure the knowledge
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    // Use Gemini with the YouTube URL directly — Gemini can process YouTube videos natively
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -192,20 +56,38 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Você é um especialista em extrair conhecimento útil de transcrições de vídeos sobre viagens e turismo.
-Sua tarefa é transformar a transcrição bruta em um documento de conhecimento estruturado e prático que será usado por agentes de IA de uma agência de viagens.
+            content: `Você é um especialista em extrair conhecimento útil de vídeos sobre viagens e turismo.
+Sua tarefa é assistir o vídeo e transformar o conteúdo em um documento de conhecimento estruturado e prático que será usado por agentes de IA de uma agência de viagens.
 
-FORMATO DE SAÍDA (em português):
-1. **Título sugerido** (1 linha)
-2. **Resumo** (2-3 frases sobre o que o vídeo cobre)
-3. **Conhecimento Extraído** (lista organizada dos pontos-chave: dicas, informações práticas, recomendações, preços mencionados, locais, restaurantes, hotéis, etc.)
-4. **Categoria sugerida** (uma de: destinos, scripts, preços, fornecedores, processos, treinamento, compliance, geral)
+FORMATO DE SAÍDA (em português, use markdown):
 
-Seja objetivo e foque em informações acionáveis que um agente de viagens possa usar para atender clientes.`,
+# [Título descritivo do conteúdo]
+
+## Resumo
+[2-3 frases sobre o que o vídeo cobre]
+
+## Conhecimento Extraído
+[Lista organizada dos pontos-chave: dicas, informações práticas, recomendações, preços mencionados, locais, restaurantes, hotéis, etc. Organize por subtópicos quando relevante.]
+
+## Dados Práticos
+- **Melhor época**: [se mencionado]
+- **Faixa de preço**: [se mencionado]
+- **Duração sugerida**: [se mencionado]
+- **Dicas importantes**: [lista]
+
+## Categoria sugerida
+[uma de: destinos, scripts, preços, fornecedores, processos, treinamento, compliance, geral]
+
+IMPORTANTE: Seja extremamente detalhado e objetivo. Extraia TODAS as informações acionáveis que um agente de viagens poderia usar para atender clientes. Inclua nomes específicos de hotéis, restaurantes, atrações, preços e dicas práticas mencionados no vídeo.`,
           },
           {
             role: "user",
-            content: `Transcrição do vídeo "${title}":\n\n${transcript.slice(0, 15000)}`,
+            content: [
+              {
+                type: "text",
+                text: `Assista este vídeo do YouTube e extraia todo o conhecimento relevante para uma agência de viagens: ${youtubeUrl}`,
+              },
+            ],
           },
         ],
       }),
@@ -213,6 +95,9 @@ Seja objetivo e foque em informações acionáveis que um agente de viagens poss
 
     if (!aiResponse.ok) {
       const status = aiResponse.status;
+      const errorBody = await aiResponse.text();
+      console.error(`AI gateway error: ${status}`, errorBody.slice(0, 500));
+      
       if (status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit atingido. Tente novamente em alguns segundos." }), {
           status: 429,
@@ -231,10 +116,26 @@ Seja objetivo e foque em informações acionáveis que um agente de viagens poss
     const aiData = await aiResponse.json();
     const structuredKnowledge = aiData.choices?.[0]?.message?.content || "";
 
+    if (!structuredKnowledge || structuredKnowledge.length < 50) {
+      return new Response(JSON.stringify({
+        error: "Não foi possível extrair conhecimento deste vídeo. Tente outro vídeo.",
+        videoId,
+      }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Extract title from the AI response (first heading)
+    const titleMatch = structuredKnowledge.match(/^#\s+(.+)$/m);
+    const title = titleMatch ? titleMatch[1].trim() : `Vídeo YouTube: ${videoId}`;
+
+    console.log(`Successfully extracted knowledge for: ${title}`);
+
     return new Response(JSON.stringify({
       videoId,
       title,
-      transcript: transcript.slice(0, 20000),
+      transcript: structuredKnowledge,
       structured_knowledge: structuredKnowledge,
       language: "pt",
     }), {
