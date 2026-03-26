@@ -23,38 +23,68 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
   
   const res = await fetch(pageUrl, {
     headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     },
   });
 
   if (!res.ok) throw new Error(`Failed to fetch YouTube page: ${res.status}`);
   const html = await res.text();
+  console.log(`Page HTML length: ${html.length}`);
 
   // Extract video title
   const titleMatch = html.match(/<title>([^<]+)<\/title>/);
   const rawTitle = titleMatch ? titleMatch[1].replace(/ - YouTube$/, "").trim() : `Video ${videoId}`;
 
-  // Extract captions from ytInitialPlayerResponse
-  const playerMatch = html.match(/ytInitialPlayerResponse\s*=\s*(\{.+?\});/s);
-  if (!playerMatch) {
-    // Try alternative pattern
-    const altMatch = html.match(/"captions"\s*:\s*(\{[^}]+?"captionTracks"\s*:\s*\[[^\]]+?\][^}]*?\})/s);
-    if (!altMatch) throw new Error("NO_CAPTIONS_FOUND");
+  // Strategy 1: Direct captionTracks regex (most reliable)
+  let captionTracks: any[] | null = null;
+
+  const captionTracksMatch = html.match(/"captionTracks"\s*:\s*(\[.*?\])(?:\s*[,}])/);
+  if (captionTracksMatch) {
+    try {
+      // Handle unicode escapes like \u0026
+      const raw = captionTracksMatch[1].replace(/\\u0026/g, "&").replace(/\\u003d/g, "=");
+      captionTracks = JSON.parse(raw);
+      console.log(`Strategy 1: Found ${captionTracks!.length} caption tracks`);
+    } catch (e) {
+      console.warn("Strategy 1 parse failed:", e);
+    }
   }
 
-  // Find captionTracks URLs
-  const captionTracksMatch = html.match(/"captionTracks"\s*:\s*(\[[\s\S]*?\])\s*[,}]/);
-  if (!captionTracksMatch) throw new Error("NO_CAPTIONS_FOUND");
+  // Strategy 2: Extract from ytInitialPlayerResponse JSON
+  if (!captionTracks) {
+    const playerMatch = html.match(/var\s+ytInitialPlayerResponse\s*=\s*(\{.*?\});\s*(?:var|<\/script)/s);
+    if (playerMatch) {
+      try {
+        const player = JSON.parse(playerMatch[1]);
+        captionTracks = player?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+        if (captionTracks) {
+          console.log(`Strategy 2: Found ${captionTracks.length} caption tracks`);
+        }
+      } catch (e) {
+        console.warn("Strategy 2 parse failed:", e);
+      }
+    }
+  }
 
-  let captionTracks: any[];
-  try {
-    captionTracks = JSON.parse(captionTracksMatch[1]);
-  } catch {
+  // Strategy 3: Broader regex for captionTracks with greedy matching
+  if (!captionTracks) {
+    const broadMatch = html.match(/"captionTracks":\[(.+?)\],"translationLanguages"/);
+    if (broadMatch) {
+      try {
+        const raw = `[${broadMatch[1]}]`.replace(/\\u0026/g, "&").replace(/\\u003d/g, "=");
+        captionTracks = JSON.parse(raw);
+        console.log(`Strategy 3: Found ${captionTracks!.length} caption tracks`);
+      } catch (e) {
+        console.warn("Strategy 3 parse failed:", e);
+      }
+    }
+  }
+
+  if (!captionTracks || captionTracks.length === 0) {
     throw new Error("NO_CAPTIONS_FOUND");
   }
-
-  if (!captionTracks || captionTracks.length === 0) throw new Error("NO_CAPTIONS_FOUND");
 
   // Prefer Portuguese, then auto-generated Portuguese, then any available
   const preferred = 
@@ -64,8 +94,10 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
     captionTracks.find((t: any) => t.kind !== "asr") ||
     captionTracks[0];
 
-  let captionUrl = preferred.baseUrl;
-  // Request plain text format (srv1 = timed text XML, but we want json3 for easy parsing)
+  // Build caption URL - unescape any remaining unicode
+  let captionUrl = (preferred.baseUrl || "").replace(/\\u0026/g, "&").replace(/\\u003d/g, "=");
+  
+  // Request json3 format for structured parsing
   if (!captionUrl.includes("fmt=")) {
     captionUrl += "&fmt=json3";
   }
@@ -87,18 +119,24 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
     const json = await captionRes.json();
     // json3 format has events[] with segs[] containing utf8 text
     const events = json.events || [];
+    const segments: string[] = [];
     for (const event of events) {
       if (event.segs) {
+        let line = "";
         for (const seg of event.segs) {
-          if (seg.utf8 && seg.utf8.trim() !== "\n") {
-            transcript += seg.utf8;
+          if (seg.utf8 && seg.utf8.trim() !== "\n" && seg.utf8.trim() !== "") {
+            line += seg.utf8;
           }
         }
+        if (line.trim()) segments.push(line.trim());
       }
     }
+    // Join segments with spaces, then add paragraph breaks every ~5 sentences
+    transcript = formatTranscript(segments);
   } else {
     // XML format fallback
     const xml = await captionRes.text();
+    const segments: string[] = [];
     const textMatches = xml.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g);
     for (const match of textMatches) {
       let text = match[1]
@@ -107,19 +145,43 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
         .replace(/&gt;/g, ">")
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'")
-        .replace(/\n/g, " ");
-      transcript += text + " ";
+        .replace(/\n/g, " ")
+        .trim();
+      if (text) segments.push(text);
     }
+    transcript = formatTranscript(segments);
   }
-
-  transcript = transcript
-    .replace(/\s+/g, " ")
-    .replace(/\n\s*\n/g, "\n")
-    .trim();
 
   if (!transcript || transcript.length < 20) throw new Error("EMPTY_TRANSCRIPT");
 
   return { transcript, title: rawTitle };
+}
+
+/** Format raw caption segments into readable paragraphs */
+function formatTranscript(segments: string[]): string {
+  // Join all segments with spaces
+  let text = segments.join(" ");
+  
+  // Clean up double spaces
+  text = text.replace(/\s+/g, " ").trim();
+  
+  // Add paragraph breaks at natural sentence boundaries (every ~3-4 sentences)
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  const paragraphs: string[] = [];
+  let current: string[] = [];
+  
+  for (const sentence of sentences) {
+    current.push(sentence);
+    if (current.length >= 4) {
+      paragraphs.push(current.join(" "));
+      current = [];
+    }
+  }
+  if (current.length > 0) {
+    paragraphs.push(current.join(" "));
+  }
+  
+  return paragraphs.join("\n\n");
 }
 
 const SYSTEM_PROMPT = `Você é um especialista em extrair conhecimento útil de transcrições de vídeos sobre viagens e turismo.
@@ -131,6 +193,7 @@ REGRAS CRÍTICAS:
 - Se o apresentador menciona um restaurante, diga QUAL restaurante, ONDE fica, O QUE ele recomendou e QUANTO custou.
 - Se fala de hotel, diga QUAL hotel, a experiência real, prós e contras mencionados.
 - Se fala de transporte, diga COMO ir, QUANTO custa, TEMPO de deslocamento.
+- Se fala de idioma, diga EXATAMENTE o que foi recomendado (ex: "O apresentador disse que mandarim básico ajuda muito em cidades menores, mas em Xangai e Pequim o inglês funciona em hotéis e restaurantes turísticos. Ele recomendou o app Pleco para tradução.")
 - NÃO use frases genéricas como "o vídeo discute sobre idiomas" — diga exatamente O QUE foi dito sobre idiomas.
 
 FORMATO DE SAÍDA (em português, use markdown):
@@ -229,15 +292,13 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     let structuredKnowledge = "";
-    const MAX_CHUNK = 25000; // chars per chunk
+    const MAX_CHUNK = 25000;
 
     if (transcript.length <= MAX_CHUNK) {
-      // Single pass — transcript fits in one request
       structuredKnowledge = await callAI(LOVABLE_API_KEY, SYSTEM_PROMPT, 
         `Analise a transcrição COMPLETA deste vídeo do YouTube chamado "${videoTitle}" e extraia TODOS os detalhes específicos mencionados. Seja extremamente detalhado e específico.\n\nTRANSCRIÇÃO COMPLETA:\n${transcript}`
       );
     } else {
-      // Chunked approach: extract key points from each chunk, then synthesize
       console.log(`Long transcript (${transcript.length} chars), using chunked approach`);
       
       const chunks: string[] = [];
@@ -246,22 +307,19 @@ serve(async (req) => {
       }
       console.log(`Split into ${chunks.length} chunks`);
 
-      // Phase 1: Extract detailed notes from each chunk
       const chunkSummaries: string[] = [];
       for (let i = 0; i < chunks.length; i++) {
         console.log(`Processing chunk ${i + 1}/${chunks.length}...`);
         const chunkResult = await callAI(LOVABLE_API_KEY,
-          `Você é um especialista em extrair informações detalhadas de transcrições de vídeos de viagem. Extraia TODAS as informações específicas: nomes de lugares, preços, dicas, recomendações, horários, experiências. Seja extremamente detalhado. Não invente nada.`,
+          `Você é um especialista em extrair informações detalhadas de transcrições de vídeos de viagem. Extraia TODAS as informações específicas: nomes de lugares, preços, dicas, recomendações, horários, experiências. Seja extremamente detalhado e cite EXATAMENTE o que foi dito. Não invente nada.`,
           `Esta é a PARTE ${i + 1} de ${chunks.length} da transcrição do vídeo "${videoTitle}". Extraia TODOS os detalhes específicos mencionados neste trecho.\n\nTRECHO:\n${chunks[i]}`
         );
         chunkSummaries.push(`--- PARTE ${i + 1} ---\n${chunkResult}`);
       }
 
-      // Phase 2: Synthesize all chunk summaries into final structured knowledge
       console.log("Synthesizing final knowledge...");
       const combinedSummaries = chunkSummaries.join("\n\n");
       
-      // Truncate combined summaries if too long
       const summaryInput = combinedSummaries.length > 30000 
         ? combinedSummaries.slice(0, 30000) + "\n\n[... notas adicionais truncadas]"
         : combinedSummaries;
