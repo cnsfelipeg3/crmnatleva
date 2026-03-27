@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import YouTubeReviewPanel from "@/components/knowledge/YouTubeReviewPanel";
 
 const KB_TIPOS = [
   { id: "all", label: "Todos" },
