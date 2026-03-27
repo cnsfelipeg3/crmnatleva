@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import YouTubeReviewPanel from "@/components/knowledge/YouTubeReviewPanel";
 
 const KB_TIPOS = [
   { id: "all", label: "Todos" },
@@ -522,6 +523,16 @@ export default function AITeamConhecimento() {
     );
   }
 
+  // Full-page YouTube review panel
+  if (showYouTube) {
+    return (
+      <YouTubeReviewPanel
+        onBack={() => setShowYouTube(false)}
+        onSaved={() => { setShowYouTube(false); loadDocs(); }}
+      />
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -700,20 +711,8 @@ export default function AITeamConhecimento() {
         </DialogContent>
       </Dialog>
 
-      {/* YouTube Upload Dialog */}
-      <Dialog open={showYouTube} onOpenChange={setShowYouTube}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Youtube className="w-5 h-5 text-red-500" /> Adicionar Vídeo do YouTube
-            </DialogTitle>
-          </DialogHeader>
-          <YouTubeUploadFlow
-            onSave={() => { setShowYouTube(false); loadDocs(); }}
-            onCancel={() => setShowYouTube(false)}
-          />
-        </DialogContent>
-      </Dialog>
+
+
 
       {/* Upload Dialog */}
       <Dialog open={showUpload} onOpenChange={setShowUpload}>
