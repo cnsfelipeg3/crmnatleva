@@ -143,6 +143,9 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [filterType, setFilterType] = useState<ActionItemType | "all">("all");
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualTranscript, setManualTranscript] = useState("");
+  const [errorVideoTitle, setErrorVideoTitle] = useState("");
 
   // Fetch agents
   useEffect(() => {
@@ -163,17 +166,27 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
     }
   }, [editContent]);
 
-  const handleTranscribe = async () => {
+  const handleTranscribe = async (useManual = false) => {
     if (!videoId) return;
     setTranscribing(true);
     setResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("youtube-transcribe", {
-        body: { url: ytUrl },
-      });
+      const body: any = { url: ytUrl };
+      if (useManual && manualTranscript.trim()) {
+        body.manual_transcript = manualTranscript.trim();
+      }
+      const { data, error } = await supabase.functions.invoke("youtube-transcribe", { body });
       if (error) throw error;
+      if (data?.error === "TRANSCRIPT_UNAVAILABLE") {
+        // Show manual transcript input
+        setShowManualInput(true);
+        setErrorVideoTitle(data.videoTitle || "");
+        toast.error("Extração automática bloqueada pelo YouTube. Cole a transcrição manualmente.", { duration: 6000 });
+        return;
+      }
       if (data?.error) { toast.error(data.error); return; }
       setResult(data);
+      setShowManualInput(false);
       setEditTitle(data.title || "");
       setEditContent(data.structured_knowledge || "");
       const catMatch = data.structured_knowledge?.match(/Categoria sugerida[:\s]*(\w+)/i);
