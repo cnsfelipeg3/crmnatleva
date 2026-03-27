@@ -711,20 +711,8 @@ export default function AITeamConhecimento() {
         </DialogContent>
       </Dialog>
 
-      {/* YouTube Upload Dialog */}
-      <Dialog open={showYouTube} onOpenChange={setShowYouTube}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Youtube className="w-5 h-5 text-red-500" /> Adicionar Vídeo do YouTube
-            </DialogTitle>
-          </DialogHeader>
-          <YouTubeUploadFlow
-            onSave={() => { setShowYouTube(false); loadDocs(); }}
-            onCancel={() => setShowYouTube(false)}
-          />
-        </DialogContent>
-      </Dialog>
+
+
 
       {/* Upload Dialog */}
       <Dialog open={showUpload} onOpenChange={setShowUpload}>
