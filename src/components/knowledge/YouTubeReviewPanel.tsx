@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   ArrowLeft, Youtube, Sparkles, Loader2, CheckCircle, Brain,
   Play, Zap, BookOpen, Shield, AlertTriangle, Lightbulb, MessageSquare,
-  LayoutGrid, List,
+  LayoutGrid, List, ClipboardPaste,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
