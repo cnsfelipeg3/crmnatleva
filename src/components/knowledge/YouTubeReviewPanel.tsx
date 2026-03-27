@@ -178,13 +178,18 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       const { data, error } = await supabase.functions.invoke("youtube-transcribe", { body });
       // supabase.functions.invoke returns error for non-2xx; parse body for TRANSCRIPT_UNAVAILABLE
       if (error) {
-        // Try to extract the JSON error body
         let errorBody: any = null;
-        if (error instanceof Object && "context" in error) {
-          try { errorBody = JSON.parse((error as any).context?.body || "{}"); } catch {}
-        }
+        try {
+          if (typeof error === "object" && "context" in error) {
+            const ctx = (error as any).context;
+            if (typeof ctx?.json === "function") {
+              errorBody = await ctx.json().catch(() => null);
+            } else if (ctx?.body) {
+              errorBody = JSON.parse(ctx.body);
+            }
+          }
+        } catch {}
         if (!errorBody && data) errorBody = data;
-        // Also try parsing error.message as JSON
         if (!errorBody) {
           try { errorBody = JSON.parse(error.message || "{}"); } catch {}
         }
