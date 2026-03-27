@@ -1,0 +1,520 @@
+import { useState, useEffect } from "react";
+import {
+  ArrowLeft, Youtube, Sparkles, Loader2, CheckCircle, BookOpen,
+  Brain, Shield, Target, Lightbulb, AlertTriangle, Map, MessageSquare,
+  Play, FileText, Copy, Check,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+const CATEGORIES = [
+  "geral", "destinos", "scripts", "preços", "fornecedores", "processos", "treinamento", "compliance",
+];
+
+function extractYouTubeId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+// ─── Section icon/color mapping ───
+const SECTION_META: Record<string, { icon: React.ElementType; color: string; bg: string; border: string }> = {
+  "resumo":            { icon: BookOpen,       color: "text-blue-500",    bg: "bg-blue-500/10",    border: "border-blue-500/20" },
+  "argumento":         { icon: Target,         color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+  "venda":             { icon: Target,         color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
+  "alerta":            { icon: AlertTriangle,  color: "text-amber-500",   bg: "bg-amber-500/10",   border: "border-amber-500/20" },
+  "cuidado":           { icon: AlertTriangle,  color: "text-amber-500",   bg: "bg-amber-500/10",   border: "border-amber-500/20" },
+  "dica":              { icon: Lightbulb,      color: "text-yellow-500",  bg: "bg-yellow-500/10",  border: "border-yellow-500/20" },
+  "roteiro":           { icon: Map,            color: "text-purple-500",  bg: "bg-purple-500/10",  border: "border-purple-500/20" },
+  "itinerário":        { icon: Map,            color: "text-purple-500",  bg: "bg-purple-500/10",  border: "border-purple-500/20" },
+  "script":            { icon: MessageSquare,  color: "text-indigo-500",  bg: "bg-indigo-500/10",  border: "border-indigo-500/20" },
+  "objeção":           { icon: Shield,         color: "text-red-500",     bg: "bg-red-500/10",     border: "border-red-500/20" },
+  "objeções":          { icon: Shield,         color: "text-red-500",     bg: "bg-red-500/10",     border: "border-red-500/20" },
+  "conhecimento":      { icon: Brain,          color: "text-cyan-500",    bg: "bg-cyan-500/10",    border: "border-cyan-500/20" },
+  "dados":             { icon: FileText,       color: "text-slate-500",   bg: "bg-slate-500/10",   border: "border-slate-500/20" },
+  "prático":           { icon: FileText,       color: "text-slate-500",   bg: "bg-slate-500/10",   border: "border-slate-500/20" },
+  "categoria":         { icon: BookOpen,       color: "text-muted-foreground", bg: "bg-muted/50",  border: "border-border/40" },
+};
+
+function getSectionMeta(title: string) {
+  const lower = title.toLowerCase();
+  for (const [key, meta] of Object.entries(SECTION_META)) {
+    if (lower.includes(key)) return meta;
+  }
+  return { icon: FileText, color: "text-muted-foreground", bg: "bg-muted/30", border: "border-border/40" };
+}
+
+function parseKnowledgeSections(content: string): { title: string; body: string }[] {
+  const lines = content.split("\n");
+  const sections: { title: string; body: string }[] = [];
+  let currentTitle = "";
+  let currentBody: string[] = [];
+
+  for (const line of lines) {
+    const h2Match = line.match(/^##\s+(.+)/);
+    if (h2Match) {
+      if (currentTitle || currentBody.length > 0) {
+        sections.push({ title: currentTitle, body: currentBody.join("\n").trim() });
+      }
+      currentTitle = h2Match[1].trim();
+      currentBody = [];
+    } else if (line.match(/^#\s+/)) {
+      continue;
+    } else {
+      currentBody.push(line);
+    }
+  }
+  if (currentTitle || currentBody.length > 0) {
+    sections.push({ title: currentTitle, body: currentBody.join("\n").trim() });
+  }
+  return sections.filter(s => s.body.length > 0);
+}
+
+// ─── Organize with AI ───
+function OrganizeWithAIButton({ content, transcript, onOrganized }: { content: string; transcript?: string; onOrganized: (v: string) => void }) {
+  const [organizing, setOrganizing] = useState(false);
+
+  const handleOrganize = async () => {
+    if (!content.trim()) return;
+    setOrganizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("organize-knowledge", {
+        body: { content, transcript: transcript || "" },
+      });
+      if (error) throw error;
+      if (data?.error) { toast.error(data.error); return; }
+      if (data?.organized_content) {
+        onOrganized(data.organized_content);
+        toast.success("Conhecimento reorganizado com Claude Opus!");
+      }
+    } catch (err: any) {
+      toast.error("Erro ao organizar: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setOrganizing(false);
+    }
+  };
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={handleOrganize}
+      disabled={organizing || !content.trim()}
+      className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
+    >
+      {organizing ? (
+        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Reorganizando com IA...</>
+      ) : (
+        <><Sparkles className="w-3.5 h-3.5" /> Organizar com IA</>
+      )}
+    </Button>
+  );
+}
+
+// ─── Single Knowledge Card ───
+function KnowledgeCard({ section, onEdit }: {
+  section: { title: string; body: string };
+  onEdit: (body: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(section.body);
+  const [copied, setCopied] = useState(false);
+  const meta = getSectionMeta(section.title);
+  const Icon = meta.icon;
+
+  const handleSave = () => {
+    onEdit(text);
+    setEditing(false);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(section.body);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className={cn("rounded-xl border overflow-hidden transition-all hover:shadow-md", meta.border)}>
+      <div className={cn("flex items-center justify-between px-4 py-3", meta.bg)}>
+        <div className="flex items-center gap-2.5">
+          <div className={cn("p-1.5 rounded-lg", meta.bg)}>
+            <Icon className={cn("w-4 h-4", meta.color)} />
+          </div>
+          <span className="text-sm font-bold">{section.title}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={handleCopy}
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/50 transition-colors"
+            title="Copiar"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            onClick={() => editing ? handleSave() : setEditing(true)}
+            className="text-[11px] font-medium text-primary hover:underline px-2 py-1"
+          >
+            {editing ? "Salvar" : "Editar"}
+          </button>
+        </div>
+      </div>
+      <div className="p-4 bg-card">
+        {editing ? (
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={8}
+            className="text-sm"
+          />
+        ) : (
+          <pre className="text-sm text-foreground/80 whitespace-pre-wrap font-sans leading-relaxed">
+            {section.body}
+          </pre>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Panel ───
+interface YouTubeReviewPanelProps {
+  onBack: () => void;
+  onSaved: () => void;
+}
+
+export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPanelProps) {
+  const [ytUrl, setYtUrl] = useState("");
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const [result, setResult] = useState<{
+    title: string;
+    transcript: string;
+    structured_knowledge: string;
+    videoId: string;
+  } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState("destinos");
+  const [editContent, setEditContent] = useState("");
+  const [showTranscript, setShowTranscript] = useState(false);
+
+  useEffect(() => {
+    setVideoId(extractYouTubeId(ytUrl));
+  }, [ytUrl]);
+
+  const handleTranscribe = async () => {
+    if (!videoId) return;
+    setTranscribing(true);
+    setResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("youtube-transcribe", {
+        body: { url: ytUrl },
+      });
+      if (error) throw error;
+      if (data?.error) { toast.error(data.error); return; }
+      setResult(data);
+      setEditTitle(data.title || "");
+      setEditContent(data.structured_knowledge || "");
+      const catMatch = data.structured_knowledge?.match(/Categoria sugerida[:\s]*(\w+)/i);
+      if (catMatch && CATEGORIES.includes(catMatch[1].toLowerCase())) {
+        setEditCategory(catMatch[1].toLowerCase());
+      }
+    } catch (err: any) {
+      toast.error("Erro ao transcrever: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setTranscribing(false);
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!editTitle.trim() || !editContent.trim()) {
+      toast.error("Título e conteúdo são obrigatórios");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("ai_knowledge_base").insert({
+        title: editTitle.trim(),
+        category: editCategory,
+        description: `Transcrito do YouTube: ${ytUrl}`,
+        content_text: editContent.trim(),
+        file_url: ytUrl,
+        file_type: "video/youtube",
+        file_name: `youtube-${videoId}.txt`,
+      });
+      if (error) throw error;
+      toast.success("Conhecimento do vídeo adicionado à base!");
+      onSaved();
+    } catch (err: any) {
+      toast.error("Erro ao salvar: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const sections = parseKnowledgeSections(editContent);
+
+  const handleSectionEdit = (idx: number, newBody: string) => {
+    const updated = sections.map((s, i) => i === idx ? { ...s, body: newBody } : s);
+    const newContent = updated.map(s => `## ${s.title}\n${s.body}`).join("\n\n");
+    setEditContent(newContent);
+  };
+
+  const transcript = result?.transcript || "";
+  const charCount = transcript.length;
+  const wordCount = transcript.split(/\s+/).filter(Boolean).length;
+
+  return (
+    <div className="min-h-screen animate-in fade-in slide-in-from-right-4 duration-300">
+      {/* ─── TOP BAR ─── */}
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar à Base
+          </button>
+
+          {result && (
+            <div className="flex items-center gap-3">
+              <OrganizeWithAIButton
+                content={editContent}
+                transcript={transcript}
+                onOrganized={setEditContent}
+              />
+              <Button
+                size="sm"
+                onClick={handleApprove}
+                disabled={saving || !editTitle.trim()}
+                className="gap-1.5"
+              >
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                Aprovar e Adicionar à Base
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-6">
+
+        {/* ─── STEP 1: URL + VIDEO PREVIEW ─── */}
+        {!result && (
+          <div className="max-w-2xl mx-auto space-y-6">
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto">
+                <Youtube className="w-8 h-8 text-red-500" />
+              </div>
+              <h1 className="text-2xl font-bold">Extrair Conhecimento do YouTube</h1>
+              <p className="text-sm text-muted-foreground">
+                Cole a URL do vídeo para transcrever e extrair conhecimento útil para os agentes
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold flex items-center gap-1.5">
+                <Youtube className="w-4 h-4 text-red-500" /> URL do YouTube
+              </Label>
+              <Input
+                value={ytUrl}
+                onChange={(e) => setYtUrl(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..."
+                className="font-mono text-sm h-11"
+              />
+            </div>
+
+            {videoId && (
+              <div className="rounded-xl overflow-hidden border border-border/40 bg-black shadow-lg">
+                <iframe
+                  src={`https://www.youtube.com/embed/${videoId}`}
+                  className="w-full aspect-video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title="YouTube Preview"
+                />
+              </div>
+            )}
+
+            {videoId && (
+              <Button
+                onClick={handleTranscribe}
+                disabled={transcribing}
+                className="w-full gap-2 h-12 text-base"
+              >
+                {transcribing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Transcrevendo e extraindo conhecimento...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-5 h-5" />
+                    Transcrever e Extrair Conhecimento
+                  </>
+                )}
+              </Button>
+            )}
+
+            <Button variant="outline" size="sm" onClick={onBack} className="w-full">
+              Cancelar
+            </Button>
+          </div>
+        )}
+
+        {/* ─── STEP 2: FULL REVIEW PANEL ─── */}
+        {result && (
+          <div className="space-y-6">
+            {/* Success banner */}
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+              <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
+              <div>
+                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                  Conhecimento extraído com sucesso!
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Revise cada seção abaixo antes de aprovar
+                </p>
+              </div>
+            </div>
+
+            {/* Two-column layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
+
+              {/* LEFT: Video + Metadata + Transcript */}
+              <div className="space-y-4">
+                {/* Video embed */}
+                {videoId && (
+                  <div className="rounded-xl overflow-hidden border border-border/40 bg-black shadow-lg sticky top-20">
+                    <iframe
+                      src={`https://www.youtube.com/embed/${videoId}`}
+                      className="w-full aspect-video"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      title={editTitle}
+                    />
+
+                    {/* Metadata under video */}
+                    <div className="bg-card p-4 space-y-3 border-t border-border/40">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Título</Label>
+                        <Input
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          className="text-sm font-medium"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Categoria</Label>
+                        <Select value={editCategory} onValueChange={setEditCategory}>
+                          <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {CATEGORIES.map((c) => (
+                              <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Stats */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-lg bg-muted/50 p-2.5 text-center">
+                          <p className="text-lg font-bold text-foreground">{charCount.toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground">caracteres</p>
+                        </div>
+                        <div className="rounded-lg bg-muted/50 p-2.5 text-center">
+                          <p className="text-lg font-bold text-foreground">{wordCount.toLocaleString()}</p>
+                          <p className="text-[10px] text-muted-foreground">palavras</p>
+                        </div>
+                      </div>
+
+                      {/* Transcript toggle */}
+                      <div>
+                        <button
+                          onClick={() => setShowTranscript(!showTranscript)}
+                          className="flex items-center gap-2 text-xs font-bold text-primary hover:underline w-full"
+                        >
+                          <Play className="w-3.5 h-3.5" />
+                          {showTranscript ? "Ocultar Transcrição" : "Ver Transcrição Completa"}
+                        </button>
+                        {showTranscript && (
+                          <div className="mt-2 max-h-[400px] overflow-y-auto rounded-lg bg-muted/30 p-3 border border-border/30">
+                            <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-sans leading-relaxed">
+                              {transcript || "Transcrição não disponível"}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* RIGHT: Knowledge Cards */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <Sparkles className="w-5 h-5 text-amber-500" />
+                    <h2 className="text-lg font-bold">Conhecimentos Extraídos</h2>
+                    <Badge variant="secondary" className="text-xs">
+                      {sections.length} seções
+                    </Badge>
+                  </div>
+                </div>
+
+                {sections.length === 0 ? (
+                  <div className="rounded-xl border border-border/40 bg-card p-8 text-center">
+                    <Brain className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">Nenhuma seção estruturada detectada</p>
+                    <Textarea
+                      value={editContent}
+                      onChange={(e) => setEditContent(e.target.value)}
+                      rows={12}
+                      className="mt-4 text-sm"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {sections.map((section, idx) => (
+                      <KnowledgeCard
+                        key={idx}
+                        section={section}
+                        onEdit={(body) => handleSectionEdit(idx, body)}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* Bottom action bar */}
+                <div className="flex items-center justify-between pt-4 border-t border-border/40">
+                  <Button variant="outline" size="sm" onClick={onBack}>
+                    Cancelar
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <OrganizeWithAIButton
+                      content={editContent}
+                      transcript={transcript}
+                      onOrganized={setEditContent}
+                    />
+                    <Button onClick={handleApprove} disabled={saving} className="gap-1.5">
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                      Aprovar e Adicionar à Base
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
