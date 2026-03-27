@@ -323,24 +323,48 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
               </div>
             )}
 
-            {videoId && (
+            {videoId && !showManualInput && (
               <Button
-                onClick={handleTranscribe}
+                onClick={() => handleTranscribe(false)}
                 disabled={transcribing}
                 className="w-full gap-2 h-12 text-base"
               >
                 {transcribing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Transcrevendo e extraindo conhecimento...
-                  </>
+                  <><Loader2 className="w-5 h-5 animate-spin" /> Transcrevendo e extraindo conhecimento...</>
                 ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    Transcrever e Extrair Conhecimento
-                  </>
+                  <><Sparkles className="w-5 h-5" /> Transcrever e Extrair Conhecimento</>
                 )}
               </Button>
+            )}
+
+            {videoId && showManualInput && (
+              <div className="space-y-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20 p-4">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span className="text-sm font-medium">Extração automática bloqueada pelo YouTube</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  O YouTube bloqueia servidores em nuvem. Abra o vídeo, ative as legendas (CC), copie o texto e cole abaixo.
+                  Dica: use extensões como "YouTube Transcript" para copiar facilmente.
+                </p>
+                <textarea
+                  value={manualTranscript}
+                  onChange={(e) => setManualTranscript(e.target.value)}
+                  placeholder="Cole a transcrição do vídeo aqui..."
+                  className="w-full min-h-[200px] rounded-lg border border-border bg-background p-3 text-sm font-mono resize-y"
+                />
+                <Button
+                  onClick={() => handleTranscribe(true)}
+                  disabled={transcribing || manualTranscript.trim().length < 20}
+                  className="w-full gap-2 h-11"
+                >
+                  {transcribing ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Processando transcrição...</>
+                  ) : (
+                    <><ClipboardPaste className="w-4 h-4" /> Processar Transcrição Manual</>
+                  )}
+                </Button>
+              </div>
             )}
 
             <Button variant="outline" size="sm" onClick={onBack} className="w-full">
