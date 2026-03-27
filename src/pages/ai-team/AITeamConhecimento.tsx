@@ -250,7 +250,8 @@ function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel:
       }
       const body422 = errorBody || data;
       if (body422?.error === "TRANSCRIPT_UNAVAILABLE") {
-        toast.error("Extração automática bloqueada pelo YouTube. Cole a transcrição manualmente.", { duration: 6000 });
+        toast.error("Extração automática bloqueada. Use o painel completo para colar a transcrição manualmente.", { duration: 6000 });
+        setShowYouTube(true);
         return;
       }
       if (error) throw error;
