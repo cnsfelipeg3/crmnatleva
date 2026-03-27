@@ -176,39 +176,28 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
         body.manual_transcript = manualTranscript.trim();
       }
       const { data, error } = await supabase.functions.invoke("youtube-transcribe", { body });
-      // supabase.functions.invoke returns error for non-2xx; parse body for TRANSCRIPT_UNAVAILABLE
+      // Parse error body from FunctionsHttpError (422)
+      let errorBody: any = null;
       if (error) {
-        let errorBody: any = null;
         try {
-          if (typeof error === "object" && "context" in error) {
-            const ctx = (error as any).context;
-            if (typeof ctx?.json === "function") {
-              errorBody = await ctx.json().catch(() => null);
-            } else if (ctx?.body) {
-              errorBody = JSON.parse(ctx.body);
-            }
+          const ctx = (error as any).context;
+          if (ctx instanceof Response) {
+            errorBody = await ctx.json().catch(() => null);
           }
         } catch {}
-        if (!errorBody && data) errorBody = data;
+        if (!errorBody) errorBody = data;
         if (!errorBody) {
-          try { errorBody = JSON.parse(error.message || "{}"); } catch {}
+          try { errorBody = JSON.parse(String(error.message)); } catch {}
         }
-        
-        if (errorBody?.error === "TRANSCRIPT_UNAVAILABLE" || 
-            (typeof error.message === "string" && error.message.includes("422"))) {
-          setShowManualInput(true);
-          setErrorVideoTitle(errorBody?.videoTitle || "");
-          toast.error("Extração automática bloqueada pelo YouTube. Cole a transcrição manualmente.", { duration: 6000 });
-          return;
-        }
-        throw error;
       }
-      if (data?.error === "TRANSCRIPT_UNAVAILABLE") {
+      const body422 = errorBody || data;
+      if (body422?.error === "TRANSCRIPT_UNAVAILABLE") {
         setShowManualInput(true);
-        setErrorVideoTitle(data.videoTitle || "");
+        setErrorVideoTitle(body422?.videoTitle || "");
         toast.error("Extração automática bloqueada pelo YouTube. Cole a transcrição manualmente.", { duration: 6000 });
         return;
       }
+      if (error) throw error;
       if (data?.error) { toast.error(data.error); return; }
       setResult(data);
       setShowManualInput(false);

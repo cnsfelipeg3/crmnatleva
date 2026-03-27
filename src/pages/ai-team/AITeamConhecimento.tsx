@@ -234,34 +234,26 @@ function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel:
       const { data, error } = await supabase.functions.invoke("youtube-transcribe", {
         body: { url: ytUrl },
       });
+      // Parse error body from FunctionsHttpError
+      let errorBody: any = null;
       if (error) {
-        // For non-2xx, supabase puts response in error; try to parse the body
-        let errorBody: any = null;
         try {
-          if (typeof error === "object" && "context" in error) {
-            const ctx = (error as any).context;
-            if (typeof ctx?.json === "function") {
-              errorBody = await ctx.json().catch(() => null);
-            } else if (ctx?.body) {
-              errorBody = JSON.parse(ctx.body);
-            }
+          const ctx = (error as any).context;
+          if (ctx instanceof Response) {
+            errorBody = await ctx.json().catch(() => null);
           }
         } catch {}
-        if (!errorBody && data) errorBody = data;
+        if (!errorBody) errorBody = data;
         if (!errorBody) {
-          try { errorBody = JSON.parse(error.message || "{}"); } catch {}
+          try { errorBody = JSON.parse(String(error.message)); } catch {}
         }
-
-        if (errorBody?.error === "TRANSCRIPT_UNAVAILABLE") {
-          toast.error("Extração automática bloqueada pelo YouTube. Cole a transcrição manualmente.", { duration: 6000 });
-          return;
-        }
-        throw error;
       }
-      if (data?.error === "TRANSCRIPT_UNAVAILABLE") {
+      const body422 = errorBody || data;
+      if (body422?.error === "TRANSCRIPT_UNAVAILABLE") {
         toast.error("Extração automática bloqueada pelo YouTube. Cole a transcrição manualmente.", { duration: 6000 });
         return;
       }
+      if (error) throw error;
       if (data?.error) {
         toast.error(data.error);
         return;
