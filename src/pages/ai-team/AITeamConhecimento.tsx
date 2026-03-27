@@ -523,6 +523,16 @@ export default function AITeamConhecimento() {
     );
   }
 
+  // Full-page YouTube review panel
+  if (showYouTube) {
+    return (
+      <YouTubeReviewPanel
+        onBack={() => setShowYouTube(false)}
+        onSaved={() => { setShowYouTube(false); loadDocs(); }}
+      />
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between flex-wrap gap-3">
