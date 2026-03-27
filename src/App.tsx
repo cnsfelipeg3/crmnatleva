@@ -11,7 +11,13 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 // Portal do Cliente
 import { PortalAuthProvider } from "@/contexts/PortalAuthContext";
 
-const AppLayout = lazy(() => import("@/components/AppLayout"));
+const lazyRetry = (fn: () => Promise<any>) =>
+  lazy(() => fn().catch(() => {
+    window.location.reload();
+    return new Promise(() => {}); // never resolves, page will reload
+  }));
+
+const AppLayout = lazyRetry(() => import("@/components/AppLayout"));
 const Login = lazy(() => import("@/pages/Login"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Sales = lazy(() => import("@/pages/Sales"));
