@@ -176,9 +176,29 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
         body.manual_transcript = manualTranscript.trim();
       }
       const { data, error } = await supabase.functions.invoke("youtube-transcribe", { body });
-      if (error) throw error;
+      // supabase.functions.invoke returns error for non-2xx; parse body for TRANSCRIPT_UNAVAILABLE
+      if (error) {
+        // Try to extract the JSON error body
+        let errorBody: any = null;
+        if (error instanceof Object && "context" in error) {
+          try { errorBody = JSON.parse((error as any).context?.body || "{}"); } catch {}
+        }
+        if (!errorBody && data) errorBody = data;
+        // Also try parsing error.message as JSON
+        if (!errorBody) {
+          try { errorBody = JSON.parse(error.message || "{}"); } catch {}
+        }
+        
+        if (errorBody?.error === "TRANSCRIPT_UNAVAILABLE" || 
+            (typeof error.message === "string" && error.message.includes("422"))) {
+          setShowManualInput(true);
+          setErrorVideoTitle(errorBody?.videoTitle || "");
+          toast.error("Extração automática bloqueada pelo YouTube. Cole a transcrição manualmente.", { duration: 6000 });
+          return;
+        }
+        throw error;
+      }
       if (data?.error === "TRANSCRIPT_UNAVAILABLE") {
-        // Show manual transcript input
         setShowManualInput(true);
         setErrorVideoTitle(data.videoTitle || "");
         toast.error("Extração automática bloqueada pelo YouTube. Cole a transcrição manualmente.", { duration: 6000 });
