@@ -157,8 +157,9 @@ function ScreenLoader() {
 // TODO: TEMPORÁRIO - Reativar proteção de login depois dos testes
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // const { isAuthenticated, isLoading } = useAuth();
+  // const location = useLocation();
   // if (isLoading) return <ScreenLoader />;
-  // if (!isAuthenticated) return <Navigate to="/login" replace />;
+  // if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
   return <>{children}</>;
 }
 
