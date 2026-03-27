@@ -61,9 +61,6 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
 
   if (!html) throw new Error("Failed to fetch YouTube page");
 
-  if (!res.ok) throw new Error(`Failed to fetch YouTube page: ${res.status}`);
-  const html = await res.text();
-  console.log(`Page HTML length: ${html.length}`);
 
   const titleMatch = html.match(/<title>([^<]+)<\/title>/);
   const rawTitle = titleMatch ? titleMatch[1].replace(/ - YouTube$/, "").trim() : `Video ${videoId}`;
