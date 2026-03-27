@@ -54,23 +54,25 @@ serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
     const userMessage = transcript && transcript.length > 200
       ? `Aqui está o CONHECIMENTO BRUTO extraído de um vídeo do YouTube:\n\n${content}\n\n---\n\nE aqui está a TRANSCRIÇÃO ORIGINAL do vídeo para referência (use para extrair detalhes que possam ter sido perdidos):\n\n${transcript.slice(0, 30000)}`
       : `Aqui está o CONHECIMENTO BRUTO extraído de um vídeo do YouTube. Reorganize para uso dos agentes da NatLeva:\n\n${content}`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "claude-opus-4-20250514",
+        max_tokens: 8192,
+        system: SYSTEM_PROMPT,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userMessage },
         ],
       }),
@@ -83,15 +85,17 @@ serve(async (req) => {
         });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes." }), {
+        return new Response(JSON.stringify({ error: "Créditos insuficientes na Anthropic." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI error: ${response.status}`);
+      const errText = await response.text();
+      console.error("Anthropic error:", response.status, errText);
+      throw new Error(`Anthropic error: ${response.status}`);
     }
 
     const data = await response.json();
-    const organized = data.choices?.[0]?.message?.content || "";
+    const organized = data.content?.[0]?.text || "";
 
     return new Response(JSON.stringify({ organized_content: organized }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
