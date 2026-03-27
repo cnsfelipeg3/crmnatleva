@@ -1,18 +1,18 @@
 import { useState, useEffect } from "react";
 import {
-  ArrowLeft, Youtube, Sparkles, Loader2, CheckCircle, BookOpen,
-  Brain, Shield, Target, Lightbulb, AlertTriangle, Map, MessageSquare,
-  Play, FileText, Copy, Check,
+  ArrowLeft, Youtube, Sparkles, Loader2, CheckCircle, Brain,
+  Play, Zap, BookOpen, Shield, AlertTriangle, Lightbulb, MessageSquare,
+  LayoutGrid, List,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import YouTubeActionCard, { ActionItem, ActionItemType, AgentOption, classifySection } from "./YouTubeActionCard";
 
 const CATEGORIES = [
   "geral", "destinos", "scripts", "preços", "fornecedores", "processos", "treinamento", "compliance",
@@ -23,36 +23,10 @@ function extractYouTubeId(url: string): string | null {
   return m ? m[1] : null;
 }
 
-// ─── Section icon/color mapping ───
-const SECTION_META: Record<string, { icon: React.ElementType; color: string; bg: string; border: string }> = {
-  "resumo":            { icon: BookOpen,       color: "text-blue-500",    bg: "bg-blue-500/10",    border: "border-blue-500/20" },
-  "argumento":         { icon: Target,         color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-  "venda":             { icon: Target,         color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-  "alerta":            { icon: AlertTriangle,  color: "text-amber-500",   bg: "bg-amber-500/10",   border: "border-amber-500/20" },
-  "cuidado":           { icon: AlertTriangle,  color: "text-amber-500",   bg: "bg-amber-500/10",   border: "border-amber-500/20" },
-  "dica":              { icon: Lightbulb,      color: "text-yellow-500",  bg: "bg-yellow-500/10",  border: "border-yellow-500/20" },
-  "roteiro":           { icon: Map,            color: "text-purple-500",  bg: "bg-purple-500/10",  border: "border-purple-500/20" },
-  "itinerário":        { icon: Map,            color: "text-purple-500",  bg: "bg-purple-500/10",  border: "border-purple-500/20" },
-  "script":            { icon: MessageSquare,  color: "text-indigo-500",  bg: "bg-indigo-500/10",  border: "border-indigo-500/20" },
-  "objeção":           { icon: Shield,         color: "text-red-500",     bg: "bg-red-500/10",     border: "border-red-500/20" },
-  "objeções":          { icon: Shield,         color: "text-red-500",     bg: "bg-red-500/10",     border: "border-red-500/20" },
-  "conhecimento":      { icon: Brain,          color: "text-cyan-500",    bg: "bg-cyan-500/10",    border: "border-cyan-500/20" },
-  "dados":             { icon: FileText,       color: "text-slate-500",   bg: "bg-slate-500/10",   border: "border-slate-500/20" },
-  "prático":           { icon: FileText,       color: "text-slate-500",   bg: "bg-slate-500/10",   border: "border-slate-500/20" },
-  "categoria":         { icon: BookOpen,       color: "text-muted-foreground", bg: "bg-muted/50",  border: "border-border/40" },
-};
-
-function getSectionMeta(title: string) {
-  const lower = title.toLowerCase();
-  for (const [key, meta] of Object.entries(SECTION_META)) {
-    if (lower.includes(key)) return meta;
-  }
-  return { icon: FileText, color: "text-muted-foreground", bg: "bg-muted/30", border: "border-border/40" };
-}
-
-function parseKnowledgeSections(content: string): { title: string; body: string }[] {
+// ─── Parse markdown into action items ───
+function parseToActionItems(content: string): ActionItem[] {
   const lines = content.split("\n");
-  const sections: { title: string; body: string }[] = [];
+  const items: ActionItem[] = [];
   let currentTitle = "";
   let currentBody: string[] = [];
 
@@ -60,7 +34,16 @@ function parseKnowledgeSections(content: string): { title: string; body: string 
     const h2Match = line.match(/^##\s+(.+)/);
     if (h2Match) {
       if (currentTitle || currentBody.length > 0) {
-        sections.push({ title: currentTitle, body: currentBody.join("\n").trim() });
+        const body = currentBody.join("\n").trim();
+        if (body.length > 0) {
+          items.push({
+            id: crypto.randomUUID(),
+            type: classifySection(currentTitle),
+            title: currentTitle,
+            body,
+            originalSection: currentTitle,
+          });
+        }
       }
       currentTitle = h2Match[1].trim();
       currentBody = [];
@@ -71,10 +54,29 @@ function parseKnowledgeSections(content: string): { title: string; body: string 
     }
   }
   if (currentTitle || currentBody.length > 0) {
-    sections.push({ title: currentTitle, body: currentBody.join("\n").trim() });
+    const body = currentBody.join("\n").trim();
+    if (body.length > 0) {
+      items.push({
+        id: crypto.randomUUID(),
+        type: classifySection(currentTitle),
+        title: currentTitle,
+        body,
+        originalSection: currentTitle,
+      });
+    }
   }
-  return sections.filter(s => s.body.length > 0);
+  return items;
 }
+
+// ─── Stats by type ───
+const TYPE_COUNTS_CONFIG: { type: ActionItemType; icon: React.ElementType; label: string; color: string }[] = [
+  { type: "skill", icon: Zap, label: "Skills", color: "text-violet-500" },
+  { type: "knowledge", icon: BookOpen, label: "Conhecimento", color: "text-blue-500" },
+  { type: "rule", icon: Shield, label: "Regras", color: "text-emerald-500" },
+  { type: "script", icon: MessageSquare, label: "Scripts", color: "text-indigo-500" },
+  { type: "alert", icon: AlertTriangle, label: "Alertas", color: "text-amber-500" },
+  { type: "tip", icon: Lightbulb, label: "Dicas", color: "text-yellow-500" },
+];
 
 // ─── Organize with AI ───
 function OrganizeWithAIButton({ content, transcript, onOrganized }: { content: string; transcript?: string; onOrganized: (v: string) => void }) {
@@ -91,7 +93,7 @@ function OrganizeWithAIButton({ content, transcript, onOrganized }: { content: s
       if (data?.error) { toast.error(data.error); return; }
       if (data?.organized_content) {
         onOrganized(data.organized_content);
-        toast.success("Conhecimento reorganizado com Claude Opus!");
+        toast.success("Conhecimento reorganizado com IA!");
       }
     } catch (err: any) {
       toast.error("Erro ao organizar: " + (err.message || "Erro desconhecido"));
@@ -109,76 +111,11 @@ function OrganizeWithAIButton({ content, transcript, onOrganized }: { content: s
       className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
     >
       {organizing ? (
-        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Reorganizando com IA...</>
+        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Reorganizando...</>
       ) : (
         <><Sparkles className="w-3.5 h-3.5" /> Organizar com IA</>
       )}
     </Button>
-  );
-}
-
-// ─── Single Knowledge Card ───
-function KnowledgeCard({ section, onEdit }: {
-  section: { title: string; body: string };
-  onEdit: (body: string) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(section.body);
-  const [copied, setCopied] = useState(false);
-  const meta = getSectionMeta(section.title);
-  const Icon = meta.icon;
-
-  const handleSave = () => {
-    onEdit(text);
-    setEditing(false);
-  };
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(section.body);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className={cn("rounded-xl border overflow-hidden transition-all hover:shadow-md", meta.border)}>
-      <div className={cn("flex items-center justify-between px-4 py-3", meta.bg)}>
-        <div className="flex items-center gap-2.5">
-          <div className={cn("p-1.5 rounded-lg", meta.bg)}>
-            <Icon className={cn("w-4 h-4", meta.color)} />
-          </div>
-          <span className="text-sm font-bold">{section.title}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={handleCopy}
-            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-background/50 transition-colors"
-            title="Copiar"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
-          </button>
-          <button
-            onClick={() => editing ? handleSave() : setEditing(true)}
-            className="text-[11px] font-medium text-primary hover:underline px-2 py-1"
-          >
-            {editing ? "Salvar" : "Editar"}
-          </button>
-        </div>
-      </div>
-      <div className="p-4 bg-card">
-        {editing ? (
-          <Textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={8}
-            className="text-sm"
-          />
-        ) : (
-          <pre className="text-sm text-foreground/80 whitespace-pre-wrap font-sans leading-relaxed">
-            {section.body}
-          </pre>
-        )}
-      </div>
-    </div>
   );
 }
 
@@ -203,10 +140,28 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
   const [editCategory, setEditCategory] = useState("destinos");
   const [editContent, setEditContent] = useState("");
   const [showTranscript, setShowTranscript] = useState(false);
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
+  const [filterType, setFilterType] = useState<ActionItemType | "all">("all");
+
+  // Fetch agents
+  useEffect(() => {
+    supabase.from("ai_team_agents").select("id, name, emoji, role").eq("is_active", true)
+      .then(({ data }) => {
+        if (data) setAgents(data.map(a => ({ id: a.id, name: a.name, emoji: a.emoji, role: a.role })));
+      });
+  }, []);
 
   useEffect(() => {
     setVideoId(extractYouTubeId(ytUrl));
   }, [ytUrl]);
+
+  // Parse content into action items whenever editContent changes
+  useEffect(() => {
+    if (editContent) {
+      setActionItems(parseToActionItems(editContent));
+    }
+  }, [editContent]);
 
   const handleTranscribe = async () => {
     if (!videoId) return;
@@ -233,17 +188,19 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
   };
 
   const handleApprove = async () => {
-    if (!editTitle.trim() || !editContent.trim()) {
+    if (!editTitle.trim() || actionItems.length === 0) {
       toast.error("Título e conteúdo são obrigatórios");
       return;
     }
     setSaving(true);
     try {
+      // Reconstruct content from action items
+      const finalContent = actionItems.map(item => `## ${item.title}\n${item.body}`).join("\n\n");
       const { error } = await supabase.from("ai_knowledge_base").insert({
         title: editTitle.trim(),
         category: editCategory,
         description: `Transcrito do YouTube: ${ytUrl}`,
-        content_text: editContent.trim(),
+        content_text: finalContent.trim(),
         file_url: ytUrl,
         file_type: "video/youtube",
         file_name: `youtube-${videoId}.txt`,
@@ -258,23 +215,33 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
     }
   };
 
-  const sections = parseKnowledgeSections(editContent);
+  const handleItemUpdate = (updated: ActionItem) => {
+    setActionItems(prev => prev.map(item => item.id === updated.id ? updated : item));
+  };
 
-  const handleSectionEdit = (idx: number, newBody: string) => {
-    const updated = sections.map((s, i) => i === idx ? { ...s, body: newBody } : s);
-    const newContent = updated.map(s => `## ${s.title}\n${s.body}`).join("\n\n");
-    setEditContent(newContent);
+  const handleContentOrganized = (organized: string) => {
+    setEditContent(organized);
   };
 
   const transcript = result?.transcript || "";
   const charCount = transcript.length;
   const wordCount = transcript.split(/\s+/).filter(Boolean).length;
 
+  const filteredItems = filterType === "all"
+    ? actionItems
+    : actionItems.filter(i => i.type === filterType);
+
+  // Count by type
+  const typeCounts = TYPE_COUNTS_CONFIG.map(tc => ({
+    ...tc,
+    count: actionItems.filter(i => i.type === tc.type).length,
+  })).filter(tc => tc.count > 0);
+
   return (
-    <div className="min-h-screen animate-in fade-in slide-in-from-right-4 duration-300">
+    <div className="min-h-screen animate-in fade-in duration-300">
       {/* ─── TOP BAR ─── */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+        <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between gap-4">
           <button
             onClick={onBack}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -288,7 +255,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
               <OrganizeWithAIButton
                 content={editContent}
                 transcript={transcript}
-                onOrganized={setEditContent}
+                onOrganized={handleContentOrganized}
               />
               <Button
                 size="sm"
@@ -304,7 +271,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
+      <div className="max-w-[1600px] mx-auto px-6 py-6">
 
         {/* ─── STEP 1: URL + VIDEO PREVIEW ─── */}
         {!result && (
@@ -375,22 +342,32 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
             {/* Success banner */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
               <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                   Conhecimento extraído com sucesso!
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Revise cada seção abaixo antes de aprovar
+                  Revise cada item, atribua agentes e ajuste os tipos antes de aprovar
                 </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {typeCounts.map(tc => {
+                  const TIcon = tc.icon;
+                  return (
+                    <div key={tc.type} className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <TIcon className={cn("w-3.5 h-3.5", tc.color)} />
+                      <span className="font-bold">{tc.count}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Two-column layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6">
 
               {/* LEFT: Video + Metadata + Transcript */}
               <div className="space-y-4">
-                {/* Video embed */}
                 {videoId && (
                   <div className="rounded-xl overflow-hidden border border-border/40 bg-black shadow-lg sticky top-20">
                     <iframe
@@ -401,7 +378,6 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
                       title={editTitle}
                     />
 
-                    {/* Metadata under video */}
                     <div className="bg-card p-4 space-y-3 border-t border-border/40">
                       <div className="space-y-1.5">
                         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Título</Label>
@@ -436,6 +412,40 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
                         </div>
                       </div>
 
+                      {/* Type summary */}
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Itens Extraídos</Label>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {typeCounts.map(tc => {
+                            const TIcon = tc.icon;
+                            return (
+                              <button
+                                key={tc.type}
+                                onClick={() => setFilterType(filterType === tc.type ? "all" : tc.type)}
+                                className={cn(
+                                  "flex items-center gap-2 text-xs rounded-lg px-2.5 py-2 transition-colors",
+                                  filterType === tc.type
+                                    ? "bg-primary/10 text-primary font-bold"
+                                    : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
+                                )}
+                              >
+                                <TIcon className={cn("w-3.5 h-3.5", tc.color)} />
+                                <span className="font-bold">{tc.count}</span>
+                                <span className="truncate">{tc.label}</span>
+                              </button>
+                            );
+                          })}
+                          {filterType !== "all" && (
+                            <button
+                              onClick={() => setFilterType("all")}
+                              className="col-span-2 text-xs text-primary hover:underline py-1"
+                            >
+                              Mostrar todos ({actionItems.length})
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
                       {/* Transcript toggle */}
                       <div>
                         <button
@@ -458,36 +468,32 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
                 )}
               </div>
 
-              {/* RIGHT: Knowledge Cards */}
+              {/* RIGHT: Action Cards */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <Sparkles className="w-5 h-5 text-amber-500" />
-                    <h2 className="text-lg font-bold">Conhecimentos Extraídos</h2>
-                    <Badge variant="secondary" className="text-xs">
-                      {sections.length} seções
+                    <h2 className="text-lg font-bold">Itens Extraídos</h2>
+                    <Badge variant="secondary" className="text-xs font-bold">
+                      {filteredItems.length} {filterType !== "all" ? `de ${actionItems.length}` : "itens"}
                     </Badge>
                   </div>
                 </div>
 
-                {sections.length === 0 ? (
+                {filteredItems.length === 0 ? (
                   <div className="rounded-xl border border-border/40 bg-card p-8 text-center">
                     <Brain className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">Nenhuma seção estruturada detectada</p>
-                    <Textarea
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      rows={12}
-                      className="mt-4 text-sm"
-                    />
+                    <p className="text-sm text-muted-foreground">Nenhum item encontrado</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {sections.map((section, idx) => (
-                      <KnowledgeCard
-                        key={idx}
-                        section={section}
-                        onEdit={(body) => handleSectionEdit(idx, body)}
+                    {filteredItems.map((item, idx) => (
+                      <YouTubeActionCard
+                        key={item.id}
+                        item={item}
+                        agents={agents}
+                        onUpdate={handleItemUpdate}
+                        index={idx}
                       />
                     ))}
                   </div>
@@ -502,7 +508,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
                     <OrganizeWithAIButton
                       content={editContent}
                       transcript={transcript}
-                      onOrganized={setEditContent}
+                      onOrganized={handleContentOrganized}
                     />
                     <Button onClick={handleApprove} disabled={saving} className="gap-1.5">
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
