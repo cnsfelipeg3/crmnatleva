@@ -29,10 +29,37 @@ async function getVideoTitle(videoId: string): Promise<string> {
   return `Video ${videoId}`;
 }
 
-// ─── InnerTube client configs (ordered by likelihood of bypassing cloud blocks) ───
+// Public InnerTube API key (used by YouTube's own web player)
+const INNERTUBE_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
+
+// ─── InnerTube client configs ───
 const INNERTUBE_CLIENTS = [
   {
+    name: "WEB_CREATOR",
+    url: `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}&prettyPrint=false`,
+    body: (videoId: string) => ({
+      context: {
+        client: {
+          hl: "pt", gl: "BR",
+          clientName: "WEB_CREATOR",
+          clientVersion: "1.20250320.01.00",
+          userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        },
+      },
+      videoId,
+    }),
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      "Origin": "https://studio.youtube.com",
+      "Referer": "https://studio.youtube.com/",
+      "X-Youtube-Client-Name": "62",
+      "X-Youtube-Client-Version": "1.20250320.01.00",
+    },
+  },
+  {
     name: "ANDROID_TESTSUITE",
+    url: `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}&prettyPrint=false`,
     body: (videoId: string) => ({
       context: {
         client: {
@@ -50,7 +77,29 @@ const INNERTUBE_CLIENTS = [
     },
   },
   {
+    name: "MWEB",
+    url: `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}&prettyPrint=false`,
+    body: (videoId: string) => ({
+      context: {
+        client: {
+          hl: "pt", gl: "BR",
+          clientName: "MWEB",
+          clientVersion: "2.20250320.01.00",
+          userAgent: "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+        },
+      },
+      videoId,
+    }),
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+      "Origin": "https://m.youtube.com",
+      "Referer": "https://m.youtube.com/",
+    },
+  },
+  {
     name: "IOS",
+    url: `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}&prettyPrint=false`,
     body: (videoId: string) => ({
       context: {
         client: {
@@ -72,6 +121,7 @@ const INNERTUBE_CLIENTS = [
   },
   {
     name: "TV_EMBEDDED",
+    url: `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}&prettyPrint=false`,
     body: (videoId: string) => ({
       context: {
         client: {
@@ -89,25 +139,8 @@ const INNERTUBE_CLIENTS = [
     },
   },
   {
-    name: "ANDROID",
-    body: (videoId: string) => ({
-      context: {
-        client: {
-          hl: "pt", gl: "BR",
-          clientName: "ANDROID",
-          clientVersion: "19.29.37",
-          androidSdkVersion: 34,
-        },
-      },
-      videoId,
-    }),
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": "com.google.android.youtube/19.29.37 (Linux; U; Android 14) gzip",
-    },
-  },
-  {
     name: "WEB",
+    url: `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}&prettyPrint=false`,
     body: (videoId: string) => ({
       context: {
         client: {
@@ -123,6 +156,9 @@ const INNERTUBE_CLIENTS = [
       "Content-Type": "application/json",
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       "Origin": "https://www.youtube.com",
+      "Referer": "https://www.youtube.com/",
+      "X-Youtube-Client-Name": "1",
+      "X-Youtube-Client-Version": "2.20250320.01.00",
     },
   },
 ];
