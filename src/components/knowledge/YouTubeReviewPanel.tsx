@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   ArrowLeft, Youtube, Sparkles, Loader2, CheckCircle, Brain,
   Play, Zap, BookOpen, Shield, AlertTriangle, Lightbulb, MessageSquare,
-  LayoutGrid, List,
+  LayoutGrid, List, ClipboardPaste,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -143,6 +143,9 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [actionItems, setActionItems] = useState<ActionItem[]>([]);
   const [filterType, setFilterType] = useState<ActionItemType | "all">("all");
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualTranscript, setManualTranscript] = useState("");
+  const [errorVideoTitle, setErrorVideoTitle] = useState("");
 
   // Fetch agents
   useEffect(() => {
@@ -163,17 +166,27 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
     }
   }, [editContent]);
 
-  const handleTranscribe = async () => {
+  const handleTranscribe = async (useManual = false) => {
     if (!videoId) return;
     setTranscribing(true);
     setResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("youtube-transcribe", {
-        body: { url: ytUrl },
-      });
+      const body: any = { url: ytUrl };
+      if (useManual && manualTranscript.trim()) {
+        body.manual_transcript = manualTranscript.trim();
+      }
+      const { data, error } = await supabase.functions.invoke("youtube-transcribe", { body });
       if (error) throw error;
+      if (data?.error === "TRANSCRIPT_UNAVAILABLE") {
+        // Show manual transcript input
+        setShowManualInput(true);
+        setErrorVideoTitle(data.videoTitle || "");
+        toast.error("Extração automática bloqueada pelo YouTube. Cole a transcrição manualmente.", { duration: 6000 });
+        return;
+      }
       if (data?.error) { toast.error(data.error); return; }
       setResult(data);
+      setShowManualInput(false);
       setEditTitle(data.title || "");
       setEditContent(data.structured_knowledge || "");
       const catMatch = data.structured_knowledge?.match(/Categoria sugerida[:\s]*(\w+)/i);
@@ -310,24 +323,48 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
               </div>
             )}
 
-            {videoId && (
+            {videoId && !showManualInput && (
               <Button
-                onClick={handleTranscribe}
+                onClick={() => handleTranscribe(false)}
                 disabled={transcribing}
                 className="w-full gap-2 h-12 text-base"
               >
                 {transcribing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Transcrevendo e extraindo conhecimento...
-                  </>
+                  <><Loader2 className="w-5 h-5 animate-spin" /> Transcrevendo e extraindo conhecimento...</>
                 ) : (
-                  <>
-                    <Sparkles className="w-5 h-5" />
-                    Transcrever e Extrair Conhecimento
-                  </>
+                  <><Sparkles className="w-5 h-5" /> Transcrever e Extrair Conhecimento</>
                 )}
               </Button>
+            )}
+
+            {videoId && showManualInput && (
+              <div className="space-y-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-950/20 p-4">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span className="text-sm font-medium">Extração automática bloqueada pelo YouTube</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  O YouTube bloqueia servidores em nuvem. Abra o vídeo, ative as legendas (CC), copie o texto e cole abaixo.
+                  Dica: use extensões como "YouTube Transcript" para copiar facilmente.
+                </p>
+                <textarea
+                  value={manualTranscript}
+                  onChange={(e) => setManualTranscript(e.target.value)}
+                  placeholder="Cole a transcrição do vídeo aqui..."
+                  className="w-full min-h-[200px] rounded-lg border border-border bg-background p-3 text-sm font-mono resize-y"
+                />
+                <Button
+                  onClick={() => handleTranscribe(true)}
+                  disabled={transcribing || manualTranscript.trim().length < 20}
+                  className="w-full gap-2 h-11"
+                >
+                  {transcribing ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Processando transcrição...</>
+                  ) : (
+                    <><ClipboardPaste className="w-4 h-4" /> Processar Transcrição Manual</>
+                  )}
+                </Button>
+              </div>
             )}
 
             <Button variant="outline" size="sm" onClick={onBack} className="w-full">
