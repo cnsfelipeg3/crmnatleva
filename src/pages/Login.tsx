@@ -29,14 +29,14 @@ export default function Login() {
       if (err) {
         setError(err);
       } else {
-        navigate("/dashboard");
+        navigate(from, { replace: true });
       }
     } else {
       const { error: err } = await signIn(email, password);
       if (err) {
         setError(err);
       } else {
-        navigate("/dashboard");
+        navigate(from, { replace: true });
       }
     }
     setLoading(false);
