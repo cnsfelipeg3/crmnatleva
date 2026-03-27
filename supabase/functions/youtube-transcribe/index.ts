@@ -29,10 +29,37 @@ async function getVideoTitle(videoId: string): Promise<string> {
   return `Video ${videoId}`;
 }
 
-// ─── InnerTube client configs (ordered by likelihood of bypassing cloud blocks) ───
+// Public InnerTube API key (used by YouTube's own web player)
+const INNERTUBE_API_KEY = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
+
+// ─── InnerTube client configs ───
 const INNERTUBE_CLIENTS = [
   {
+    name: "WEB_CREATOR",
+    url: `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}&prettyPrint=false`,
+    body: (videoId: string) => ({
+      context: {
+        client: {
+          hl: "pt", gl: "BR",
+          clientName: "WEB_CREATOR",
+          clientVersion: "1.20250320.01.00",
+          userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        },
+      },
+      videoId,
+    }),
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      "Origin": "https://studio.youtube.com",
+      "Referer": "https://studio.youtube.com/",
+      "X-Youtube-Client-Name": "62",
+      "X-Youtube-Client-Version": "1.20250320.01.00",
+    },
+  },
+  {
     name: "ANDROID_TESTSUITE",
+    url: `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}&prettyPrint=false`,
     body: (videoId: string) => ({
       context: {
         client: {
@@ -50,7 +77,29 @@ const INNERTUBE_CLIENTS = [
     },
   },
   {
+    name: "MWEB",
+    url: `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}&prettyPrint=false`,
+    body: (videoId: string) => ({
+      context: {
+        client: {
+          hl: "pt", gl: "BR",
+          clientName: "MWEB",
+          clientVersion: "2.20250320.01.00",
+          userAgent: "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+        },
+      },
+      videoId,
+    }),
+    headers: {
+      "Content-Type": "application/json",
+      "User-Agent": "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+      "Origin": "https://m.youtube.com",
+      "Referer": "https://m.youtube.com/",
+    },
+  },
+  {
     name: "IOS",
+    url: `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}&prettyPrint=false`,
     body: (videoId: string) => ({
       context: {
         client: {
@@ -72,6 +121,7 @@ const INNERTUBE_CLIENTS = [
   },
   {
     name: "TV_EMBEDDED",
+    url: `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}&prettyPrint=false`,
     body: (videoId: string) => ({
       context: {
         client: {
@@ -89,25 +139,8 @@ const INNERTUBE_CLIENTS = [
     },
   },
   {
-    name: "ANDROID",
-    body: (videoId: string) => ({
-      context: {
-        client: {
-          hl: "pt", gl: "BR",
-          clientName: "ANDROID",
-          clientVersion: "19.29.37",
-          androidSdkVersion: 34,
-        },
-      },
-      videoId,
-    }),
-    headers: {
-      "Content-Type": "application/json",
-      "User-Agent": "com.google.android.youtube/19.29.37 (Linux; U; Android 14) gzip",
-    },
-  },
-  {
     name: "WEB",
+    url: `https://www.youtube.com/youtubei/v1/player?key=${INNERTUBE_API_KEY}&prettyPrint=false`,
     body: (videoId: string) => ({
       context: {
         client: {
@@ -123,6 +156,9 @@ const INNERTUBE_CLIENTS = [
       "Content-Type": "application/json",
       "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       "Origin": "https://www.youtube.com",
+      "Referer": "https://www.youtube.com/",
+      "X-Youtube-Client-Name": "1",
+      "X-Youtube-Client-Version": "2.20250320.01.00",
     },
   },
 ];
@@ -151,7 +187,7 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
   for (const client of INNERTUBE_CLIENTS) {
     try {
       console.log(`Trying InnerTube ${client.name}...`);
-      const res = await fetch("https://www.youtube.com/youtubei/v1/player?prettyPrint=false", {
+      const res = await fetch(client.url, {
         method: "POST",
         headers: client.headers,
         body: JSON.stringify(client.body(videoId)),
@@ -177,6 +213,61 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
     }
   }
 
+  // Method: InnerTube get_transcript endpoint (different from player, may bypass blocks)
+  if (!captionTracks || captionTracks.length === 0) {
+    console.log("Trying InnerTube get_transcript endpoint...");
+    try {
+      const gtRes = await fetch(`https://www.youtube.com/youtubei/v1/get_transcript?key=${INNERTUBE_API_KEY}&prettyPrint=false`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+          "Origin": "https://www.youtube.com",
+          "Referer": "https://www.youtube.com/",
+        },
+        body: JSON.stringify({
+          context: {
+            client: {
+              hl: "pt", gl: "BR",
+              clientName: "WEB",
+              clientVersion: "2.20250320.01.00",
+            },
+          },
+          params: btoa(`\n\x0b${videoId}`),
+        }),
+      });
+      if (gtRes.ok) {
+        const gtData = await gtRes.json();
+        const body = gtData?.actions?.[0]?.updateEngagementPanelAction?.content?.transcriptRenderer?.body?.transcriptBodyRenderer;
+        const cueGroups = body?.cueGroups;
+        if (cueGroups && Array.isArray(cueGroups) && cueGroups.length > 0) {
+          const lines: string[] = [];
+          for (const group of cueGroups) {
+            const cues = group?.transcriptCueGroupRenderer?.cues;
+            if (cues) {
+              for (const cue of cues) {
+                const text = cue?.transcriptCueRenderer?.cue?.simpleText;
+                if (text && text.trim()) lines.push(text.trim());
+              }
+            }
+          }
+          if (lines.length > 0) {
+            const transcript = lines.join(" ").replace(/\s+/g, " ").trim();
+            if (transcript.length > 20) {
+              console.log(`✓ get_transcript: ${transcript.length} chars, ${lines.length} lines`);
+              return { transcript, title: rawTitle, isAutoGenerated: true };
+            }
+          }
+        }
+        console.log("get_transcript: no cueGroups found");
+      } else {
+        console.warn(`get_transcript: HTTP ${gtRes.status}`);
+        await gtRes.text().catch(() => {});
+      }
+    } catch (e: any) {
+      console.warn(`get_transcript error: ${e.message}`);
+    }
+  }
   // Method: Direct timedtext API (works independently of InnerTube)
   if (!captionTracks || captionTracks.length === 0) {
     console.log("Trying direct timedtext API...");
@@ -437,36 +528,134 @@ serve(async (req) => {
         isAutoGenerated = result.isAutoGenerated;
         console.log(`Got transcript: ${transcript.length} chars, auto=${isAutoGenerated}`);
       } catch (captionErr: any) {
-        console.warn(`All caption methods failed: ${captionErr.message}`);
+        console.warn(`All direct caption methods failed: ${captionErr.message}`);
 
-        // Firecrawl fallback
-        const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
-        if (FIRECRAWL_API_KEY) {
+        // Fallback 1: yt.lemnoslife.com (reliable free YouTube data API)
+        if (!transcript || transcript.length < 50) {
           try {
-            console.log("Trying Firecrawl...");
-            const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                url: `https://www.youtube.com/watch?v=${videoId}`,
-                formats: ["markdown"],
-                timeout: 15000,
-              }),
-            });
-            if (scrapeRes.ok) {
-              const scrapeData = await scrapeRes.json();
-              transcript = scrapeData?.data?.markdown || "";
-              videoTitle = scrapeData?.data?.metadata?.title || "";
-              console.log(`Firecrawl got ${transcript.length} chars`);
+            console.log("Trying yt.lemnoslife.com captions API...");
+            const lemnosRes = await fetch(`https://yt.lemnoslife.com/captions?v=${videoId}`);
+            if (lemnosRes.ok) {
+              const lemnosData = await lemnosRes.json();
+              // Find best caption track
+              const tracks = lemnosData?.captions || lemnosData?.captionTracks || [];
+              if (Array.isArray(tracks) && tracks.length > 0) {
+                const best = tracks.find((t: any) => t.languageCode === "pt" && t.kind !== "asr") ||
+                  tracks.find((t: any) => t.languageCode?.startsWith("pt")) ||
+                  tracks.find((t: any) => t.kind !== "asr") ||
+                  tracks[0];
+                const subtitleUrl = best?.baseUrl || best?.url || "";
+                if (subtitleUrl) {
+                  const subRes = await fetch(subtitleUrl + (subtitleUrl.includes("?") ? "&" : "?") + "fmt=json3");
+                  if (subRes.ok) {
+                    const subText = await subRes.text();
+                    try {
+                      const subJson = JSON.parse(subText);
+                      transcript = parseTimedTextEvents(subJson.events || []);
+                      isAutoGenerated = best.kind === "asr";
+                      console.log(`✓ Lemnoslife: ${transcript.length} chars`);
+                    } catch {
+                      // Try XML
+                      const segs: string[] = [];
+                      for (const m of subText.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)) {
+                        const t = m[1].replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/\n/g," ").trim();
+                        if (t) segs.push(t);
+                      }
+                      transcript = segs.join(" ").replace(/\s+/g," ").trim();
+                      isAutoGenerated = true;
+                      console.log(`✓ Lemnoslife (XML): ${transcript.length} chars`);
+                    }
+                  }
+                }
+              }
             } else {
-              console.warn(`Firecrawl: ${scrapeRes.status}`);
-              await scrapeRes.text().catch(() => {});
+              console.warn(`Lemnoslife: HTTP ${lemnosRes.status}`);
+              await lemnosRes.text().catch(() => {});
             }
           } catch (e: any) {
-            console.warn(`Firecrawl error: ${e.message}`);
+            console.warn(`Lemnoslife error: ${e.message}`);
+          }
+        }
+
+        // Fallback 2: Tactiq transcript API
+        if (!transcript || transcript.length < 50) {
+          try {
+            console.log("Trying Tactiq transcript API...");
+            const tactiqRes = await fetch(`https://tactiq-apps-prod.tactiq.io/transcript?videoId=${videoId}&langCode=pt`, {
+              headers: { "Accept": "application/json" },
+            });
+            if (tactiqRes.ok) {
+              const tactiqData = await tactiqRes.json();
+              if (tactiqData?.captions && Array.isArray(tactiqData.captions)) {
+                transcript = tactiqData.captions.map((c: any) => c.text || "").join(" ").replace(/\s+/g, " ").trim();
+                isAutoGenerated = true;
+                console.log(`✓ Tactiq: ${transcript.length} chars`);
+              }
+            } else {
+              console.warn(`Tactiq: HTTP ${tactiqRes.status}`);
+              await tactiqRes.text().catch(() => {});
+            }
+          } catch (e: any) {
+            console.warn(`Tactiq error: ${e.message}`);
+          }
+        }
+
+        // Fallback 3: Kome.ai transcript API
+        if (!transcript || transcript.length < 50) {
+          try {
+            console.log("Trying Kome.ai transcript API...");
+            const komeRes = await fetch("https://api.kome.ai/api/tools/youtube-transcripts", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ video_id: videoId, format: true }),
+            });
+            if (komeRes.ok) {
+              const komeData = await komeRes.json();
+              const komeText = komeData?.transcript || komeData?.text || "";
+              if (typeof komeText === "string" && komeText.length > 20) {
+                transcript = komeText.replace(/\s+/g, " ").trim();
+                isAutoGenerated = true;
+                console.log(`✓ Kome.ai: ${transcript.length} chars`);
+              }
+            } else {
+              console.warn(`Kome.ai: HTTP ${komeRes.status}`);
+              await komeRes.text().catch(() => {});
+            }
+          } catch (e: any) {
+            console.warn(`Kome.ai error: ${e.message}`);
+          }
+        }
+
+        // Fallback 4: Firecrawl 
+        if (!transcript || transcript.length < 50) {
+          const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+          if (FIRECRAWL_API_KEY) {
+            try {
+              console.log("Trying Firecrawl...");
+              const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  url: `https://www.youtube.com/watch?v=${videoId}`,
+                  formats: ["markdown"],
+                  timeout: 15000,
+                }),
+              });
+              if (scrapeRes.ok) {
+                const scrapeData = await scrapeRes.json();
+                transcript = scrapeData?.data?.markdown || "";
+                videoTitle = scrapeData?.data?.metadata?.title || videoTitle;
+                console.log(`Firecrawl got ${transcript.length} chars`);
+              } else {
+                console.warn(`Firecrawl: ${scrapeRes.status}`);
+                await scrapeRes.text().catch(() => {});
+              }
+            } catch (e: any) {
+              console.warn(`Firecrawl error: ${e.message}`);
+            }
           }
         }
 
