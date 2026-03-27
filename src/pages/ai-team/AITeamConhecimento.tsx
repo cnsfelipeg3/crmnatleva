@@ -162,6 +162,47 @@ function KnowledgeCards({ content, onChange }: { content: string; onChange: (v: 
   );
 }
 
+// ─── Organize with AI Button ───
+function OrganizeWithAIButton({ content, transcript, onOrganized }: { content: string; transcript?: string; onOrganized: (v: string) => void }) {
+  const [organizing, setOrganizing] = useState(false);
+
+  const handleOrganize = async () => {
+    if (!content.trim()) return;
+    setOrganizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("organize-knowledge", {
+        body: { content, transcript: transcript || "" },
+      });
+      if (error) throw error;
+      if (data?.error) { toast.error(data.error); return; }
+      if (data?.organized_content) {
+        onOrganized(data.organized_content);
+        toast.success("Conhecimento reorganizado para os agentes NatLeva!");
+      }
+    } catch (err: any) {
+      toast.error("Erro ao organizar: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setOrganizing(false);
+    }
+  };
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={handleOrganize}
+      disabled={organizing || !content.trim()}
+      className="gap-1.5 text-xs border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
+    >
+      {organizing ? (
+        <><Loader2 className="w-3 h-3 animate-spin" /> Organizando...</>
+      ) : (
+        <><Sparkles className="w-3 h-3" /> Organizar com IA</>
+      )}
+    </Button>
+  );
+}
+
 // ─── YouTube Upload Sub-component ───
 function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel: () => void }) {
   const [ytUrl, setYtUrl] = useState("");
@@ -341,9 +382,16 @@ function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel:
 
           {/* Conhecimentos extraídos em cards */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Conhecimentos Extraídos
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-bold flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" /> Conhecimentos Extraídos
+              </Label>
+              <OrganizeWithAIButton
+                content={editContent}
+                transcript={result.transcript}
+                onOrganized={setEditContent}
+              />
+            </div>
             <KnowledgeCards content={editContent} onChange={setEditContent} />
           </div>
 
