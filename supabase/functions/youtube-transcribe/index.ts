@@ -187,7 +187,7 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
   for (const client of INNERTUBE_CLIENTS) {
     try {
       console.log(`Trying InnerTube ${client.name}...`);
-      const res = await fetch("https://www.youtube.com/youtubei/v1/player?prettyPrint=false", {
+      const res = await fetch(client.url, {
         method: "POST",
         headers: client.headers,
         body: JSON.stringify(client.body(videoId)),
