@@ -229,7 +229,7 @@ serve(async (req) => {
 
     // Build user message with intelligent truncation
     const rawContent = content || transcript || "";
-    const truncated = truncateForOrion(rawContent, 6000);
+    const truncated = truncateForOrion(rawContent, 10000);
 
     let userMessage: string;
     if (transcript && transcript.length > 200 && content) {
