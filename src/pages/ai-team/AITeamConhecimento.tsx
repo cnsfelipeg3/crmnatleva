@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import YouTubeReviewPanel from "@/components/knowledge/YouTubeReviewPanel";
+import TaxonomyPreview from "@/components/knowledge/TaxonomyPreview";
 
 const KB_TIPOS = [
   { id: "all", label: "Todos" },
@@ -47,6 +48,9 @@ interface KBDoc {
   is_active: boolean | null;
   uploaded_by: string | null;
   created_at: string;
+  tags: string[] | null;
+  confidence: number | null;
+  taxonomy: any | null;
 }
 
 function extractYouTubeId(url: string): string | null {
@@ -639,7 +643,19 @@ export default function AITeamConhecimento() {
                     <TipoIcon className={cn("w-3.5 h-3.5", isYT ? "text-red-500" : "text-muted-foreground")} />
                     <Badge variant="outline" className="text-[10px]">{isYT ? "YOUTUBE" : docType.toUpperCase()}</Badge>
                   </div>
-                  <span className="text-[10px] text-muted-foreground">{new Date(doc.created_at).toLocaleDateString("pt-BR")}</span>
+                  <div className="flex items-center gap-1.5">
+                    {/* Confidence badge for YouTube items */}
+                    {isYT && doc.confidence != null && doc.confidence > 0 && (
+                      <Badge className={cn("text-[10px] font-bold", 
+                        doc.confidence >= 0.8 ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30" :
+                        doc.confidence >= 0.5 ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30" :
+                        "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30"
+                      )}>
+                        {Math.round(doc.confidence * 100)}%
+                      </Badge>
+                    )}
+                    <span className="text-[10px] text-muted-foreground">{new Date(doc.created_at).toLocaleDateString("pt-BR")}</span>
+                  </div>
                 </div>
                 {/* YouTube thumbnail */}
                 {isYT && doc.file_url && (() => {
@@ -655,9 +671,35 @@ export default function AITeamConhecimento() {
                   ) : null;
                 })()}
                 <h3 className="text-sm font-bold mb-1">{doc.title}</h3>
+                {/* YouTube enriched info line */}
+                {isYT && doc.taxonomy?.taxonomia && (() => {
+                  const tax = doc.taxonomy.taxonomia;
+                  const parts: string[] = [];
+                  if (tax.geo?.pais) parts.push(tax.geo.pais.charAt(0).toUpperCase() + tax.geo.pais.slice(1));
+                  if (tax.financeiro?.faixa_preco_label) parts.push(tax.financeiro.faixa_preco_label.charAt(0).toUpperCase() + tax.financeiro.faixa_preco_label.slice(1));
+                  if (tax.perfil_viajante?.ideal?.length > 0) parts.push(tax.perfil_viajante.ideal.slice(0, 3).join(", "));
+                  return parts.length > 0 ? (
+                    <p className="text-[11px] text-muted-foreground mb-2 font-medium">
+                      {parts.join(" | ")}
+                    </p>
+                  ) : null;
+                })()}
                 <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                   {doc.description || doc.content_text?.slice(0, 120) || "Sem descrição"}
                 </p>
+                {/* Tags for YouTube items */}
+                {isYT && doc.tags && doc.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {doc.tags.slice(0, 8).map((tag, i) => (
+                      <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-primary/10 text-primary">
+                        {tag}
+                      </span>
+                    ))}
+                    {doc.tags.length > 8 && (
+                      <span className="text-[9px] text-muted-foreground">+{doc.tags.length - 8}</span>
+                    )}
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <Badge variant="secondary" className="text-[10px]">{doc.category}</Badge>
                   {doc.file_name && !isYT && <span className="truncate max-w-[120px]">{doc.file_name}</span>}
@@ -670,7 +712,7 @@ export default function AITeamConhecimento() {
 
       {/* Doc Detail Dialog */}
       <Dialog open={!!selectedDoc} onOpenChange={() => setSelectedDoc(null)}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className={cn("max-h-[85vh] overflow-y-auto", selectedDoc?.file_type?.includes("youtube") && selectedDoc?.taxonomy ? "max-w-2xl" : "max-w-lg")}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-primary" />
@@ -705,7 +747,61 @@ export default function AITeamConhecimento() {
                 <p className="text-sm text-muted-foreground">{selectedDoc.description}</p>
               )}
 
-              {selectedDoc.content_text && (
+              {/* Tags */}
+              {selectedDoc.file_type?.includes("youtube") && selectedDoc.tags && selectedDoc.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedDoc.tags.map((tag: string, i: number) => (
+                    <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Taxonomy sections for YouTube items */}
+              {selectedDoc.file_type?.includes("youtube") && selectedDoc.taxonomy?.taxonomia && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <span className="text-sm font-bold">Taxonomia ÓRION</span>
+                  </div>
+                  <TaxonomyPreview 
+                    taxonomy={selectedDoc.taxonomy.taxonomia} 
+                    onChange={() => {}} 
+                    readOnly 
+                  />
+                </div>
+              )}
+
+              {/* Chunks for YouTube items */}
+              {selectedDoc.file_type?.includes("youtube") && selectedDoc.taxonomy?.chunks && selectedDoc.taxonomy.chunks.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+                    <BookOpen className="w-4 h-4 text-blue-500" />
+                    <span className="text-sm font-bold">Chunks de Conhecimento ({selectedDoc.taxonomy.chunks.length})</span>
+                  </div>
+                  <div className="space-y-2">
+                    {selectedDoc.taxonomy.chunks.map((chunk: any, i: number) => (
+                      <div key={i} className="rounded-xl border border-border/40 bg-muted/20 p-3 space-y-1.5">
+                        <h4 className="text-xs font-bold">{chunk.titulo}</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{chunk.conteudo}</p>
+                        {chunk.tags_chunk && chunk.tags_chunk.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {chunk.tags_chunk.map((t: string, j: number) => (
+                              <span key={j} className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-muted text-muted-foreground">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Content text for non-YouTube or as fallback */}
+              {selectedDoc.content_text && !selectedDoc.file_type?.includes("youtube") && (
                 <div className="max-h-[300px] overflow-y-auto">
                   <p className="text-xs font-bold mb-1">Conteúdo</p>
                   <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted/30 p-3 rounded-lg font-sans">

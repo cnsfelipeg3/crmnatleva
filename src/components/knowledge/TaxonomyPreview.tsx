@@ -47,6 +47,7 @@ export interface Taxonomy {
     faixa_preco_total?: string;
     faixa_preco_label?: string;
     dica_moeda?: string;
+    moeda_dica?: string;
   };
   perfil_viajante?: {
     ideal?: string[];
@@ -384,8 +385,8 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
               {fin.faixa_preco_label} {fin.faixa_preco_total && `• ${fin.faixa_preco_total}`}
             </Badge>
           )}
-          {fin?.dica_moeda && (
-            <p className="text-xs text-muted-foreground">💱 {fin.dica_moeda}</p>
+          {(fin?.dica_moeda || fin?.moeda_dica) && (
+            <p className="text-xs text-muted-foreground">💱 {fin.dica_moeda || fin.moeda_dica}</p>
           )}
         </TaxSection>
       )}
