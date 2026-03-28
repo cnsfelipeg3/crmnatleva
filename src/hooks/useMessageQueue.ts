@@ -4,6 +4,7 @@
  * Processes queue automatically when WhatsApp reconnects.
  */
 import { useState, useCallback, useRef, useEffect } from "react";
+import { debugLog } from "@/lib/debugMode";
 
 export interface QueuedMessage {
   id: string;               // temp ID
