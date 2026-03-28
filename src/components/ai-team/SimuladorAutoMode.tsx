@@ -374,8 +374,13 @@ export default function SimuladorAutoMode() {
           }
           const leadChunks = chunksRef.current.get(lead.id) || [];
           const compressedHistory = leadChunks.length > 0 ? buildActiveContext(lead, leadChunks) : compressConversation(lead.mensagens);
+          let agentSysPrompt = buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]);
+          if ((lead as any)._lengthWarning) {
+            agentSysPrompt += "\n\nAVISO CRITICO: sua ultima resposta foi LONGA DEMAIS e foi truncada. Respostas devem ter no maximo 60 palavras. Seja MUITO mais breve. UMA ideia por mensagem. ZERO listas.";
+            (lead as any)._lengthWarning = false;
+          }
           let agentResp = await callSimulatorAI(
-            buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]),
+            agentSysPrompt,
             compressedHistory, "agent"
           );
           if (!simAtivaRef.current) return;
