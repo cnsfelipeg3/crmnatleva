@@ -396,9 +396,9 @@ export default function SimuladorManualMode() {
       if (extras.length > 0) {
         enrichedBehaviorPrompt += extras.join("\n");
       }
-      console.log(`[ENRICHMENT] ${addedSkills} skills adicionadas, ${addedKb} KB items, ${addedWorkflows} workflows`);
+      debugLog(`[ENRICHMENT] ${addedSkills} skills adicionadas, ${addedKb} KB items, ${addedWorkflows} workflows`);
     } catch (err) {
-      console.log("[ENRICHMENT] Falha silenciosa, usando prompt original", err);
+      debugLog("[ENRICHMENT] Falha silenciosa, usando prompt original", err);
     }
 
     try {
