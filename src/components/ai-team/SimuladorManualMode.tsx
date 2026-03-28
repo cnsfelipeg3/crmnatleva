@@ -91,6 +91,8 @@ function buildManualAgentPrompt(agent: typeof AGENTS_V4[0], globalRulesBlock: st
   const name = agencyName || "NatLeva";
   const toneBlock = agencyTone ? `\nTOM DE VOZ DA AGÊNCIA: ${agencyTone}` : "";
   
+  const teamContext = buildTeamContextBlock(agent.id);
+
   return `${agent.persona}
 Voce conversa como ${agent.name} (${agent.role}) da agencia ${name} pelo WhatsApp.
 ${toneBlock}
@@ -113,6 +115,8 @@ REGRA CRITICA — ANTI-REPETICAO:
 - Releia TODA a conversa antes de responder. Se uma informacao ja foi dada, USE-A — nao pergunte novamente.
 - Varie seus temas: se ja perguntou sobre datas, pergunte sobre experiencias desejadas, tipo de hospedagem, atividades, gastronomia, etc.
 ${roleInstr}
+${teamContext}
+${NATH_UNIVERSAL_RULES}
 ${trainingBlock}
 ${globalRulesBlock}
 
