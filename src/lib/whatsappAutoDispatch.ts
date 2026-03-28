@@ -90,7 +90,7 @@ export async function dispatchWhatsAppTemplate(params: DispatchParams): Promise<
         await supabase.functions.invoke("zapi-proxy", {
           body: { action: "send-text", payload: { phone: cleanPhone, message: msg } },
         });
-        console.log(`[WhatsApp Auto] Mensagem "${triggerEvent}" enviada para ${cleanPhone}`);
+        debugLog(`[WhatsApp Auto] Mensagem "${triggerEvent}" enviada para ${cleanPhone}`);
         // Log dispatch
         await supabase.from("whatsapp_dispatch_logs" as any).insert({
           template_id: template.id,
