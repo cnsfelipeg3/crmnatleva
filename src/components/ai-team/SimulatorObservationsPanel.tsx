@@ -950,22 +950,39 @@ REGRAS:
 
                           {imp.status === "approved" && (
                             <div
-                              className="flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg"
+                              className="py-2 px-2.5 rounded-lg space-y-1.5"
                               style={{
                                 background: "rgba(16,185,129,0.06)",
                                 border: "1px solid rgba(16,185,129,0.1)",
                               }}
                             >
-                              <Check
-                                className="w-3 h-3"
-                                style={{ color: "#10B981" }}
-                              />
-                              <span
-                                className="text-[10px] font-bold"
-                                style={{ color: "#10B981" }}
+                              <div className="flex items-center gap-1.5">
+                                <Check
+                                  className="w-3.5 h-3.5 shrink-0"
+                                  style={{ color: "#10B981" }}
+                                />
+                                <span
+                                  className="text-[11px] font-bold"
+                                  style={{ color: "#10B981" }}
+                                >
+                                  Aplicado em {imp.agentName}
+                                </span>
+                              </div>
+                              <p
+                                className="text-[10px] leading-relaxed"
+                                style={{ color: "#94A3B8" }}
                               >
-                                Aplicado ao prompt de {imp.agentName}
-                              </span>
+                                "{imp.title}" adicionado ao <strong style={{ color: "#CBD5E1" }}>prompt ({CATEGORY_META[imp.category]?.label || "Comportamento"})</strong> do agente
+                              </p>
+                              <a
+                                href={`/ai-team/equipe?agent=${imp.agentId}&tab=melhorias`}
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold mt-0.5 hover:underline transition-colors"
+                                style={{ color: "#8B5CF6" }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Ver melhoria no painel do agente
+                              </a>
                             </div>
                           )}
                         </div>
