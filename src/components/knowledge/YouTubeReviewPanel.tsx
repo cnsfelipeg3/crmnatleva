@@ -53,8 +53,30 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
   const [tags, setTags] = useState<string[]>([]);
   const [resumo, setResumo] = useState("");
 
-  // Processing step: idle -> transcribing -> organizing -> ready
+   // Processing step: idle -> transcribing -> organizing -> ready
   const [step, setStep] = useState<"idle" | "transcribing" | "organizing" | "ready">("idle");
+  const [elapsed, setElapsed] = useState(0);
+  const [showSlowWarning, setShowSlowWarning] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Elapsed timer
+  useEffect(() => {
+    if (step === "transcribing" || step === "organizing") {
+      setElapsed(0);
+      setShowSlowWarning(false);
+      timerRef.current = setInterval(() => {
+        setElapsed(prev => {
+          if (prev >= 30) setShowSlowWarning(true);
+          return prev + 1;
+        });
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+      setShowSlowWarning(false);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [step]);
 
   useEffect(() => {
     setVideoId(extractYouTubeId(ytUrl));
