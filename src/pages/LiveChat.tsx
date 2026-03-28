@@ -1967,6 +1967,7 @@ export default function LiveChat() {
           onSimulate={() => { setEditingFlow(null); setActiveSection("simulator"); }}
         />
       </div>
+      </Suspense>
     );
   }
 
