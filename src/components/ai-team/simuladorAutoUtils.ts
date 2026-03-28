@@ -106,7 +106,7 @@ function compactText(text: string, maxChars: number) {
 function compactSystemPromptForTransport(sysPrompt: string, type: SimCallType, retryCount: number) {
   const maxCharsByType: Record<SimCallType, number> = {
     lead: retryCount >= 1 ? 900 : 1200,
-    agent: retryCount >= 1 ? 1100 : 1500,
+    agent: retryCount >= 1 ? 2800 : 3500,
     evaluate: 700,
     debrief: retryCount >= 1 ? 900 : 1200,
     objection: 850,
