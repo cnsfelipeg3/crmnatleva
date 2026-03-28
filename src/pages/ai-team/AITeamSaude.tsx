@@ -426,6 +426,17 @@ Seja breve quando o momento pedir brevidade, e detalhado quando pedir detalhe.`;
         const newPrompt = currentPrompt + additions;
         await supabase.from("ai_team_agents").update({ behavior_prompt: newPrompt, updated_at: new Date().toISOString() }).eq("id", h.agent.id);
         fixedCount++;
+        logAITeamAudit({
+          action_type: AUDIT_ACTIONS.UPDATE,
+          entity_type: AUDIT_ENTITIES.AGENT,
+          entity_id: h.agent.id,
+          entity_name: h.agent.name,
+          agent_id: h.agent.id,
+          agent_name: h.agent.name,
+          description: `Auto-Fix Suave: ${additions.includes("NATH") ? "regras de tom Nath" : ""}${additions.includes("trocas") ? " + regra mínimo trocas" : ""}${additions.includes("travessão") ? " + regra anti-travessão" : ""} adicionado ao prompt de ${h.agent.name}`,
+          performed_by: "Sistema (Auto-Fix)",
+          details: { fix_type: "auto_fix_suave", additions_length: additions.length },
+        });
       }
     }
 

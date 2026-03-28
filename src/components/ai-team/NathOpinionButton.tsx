@@ -367,6 +367,15 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
           });
           applied++;
         }
+        logAITeamAudit({
+          action_type: AUDIT_ACTIONS.CREATE,
+          entity_type: action.type === "skill" ? AUDIT_ENTITIES.SKILL : action.type === "new_agent" ? AUDIT_ENTITIES.AGENT : AUDIT_ENTITIES.RULE,
+          entity_name: action.title,
+          description: `Opinião da Nath aplicada: ${action.title}`,
+          performed_by: "NATH.AI",
+          agent_name: action.scope === "all_agents" ? "global" : undefined,
+          details: { type: action.type, priority: action.priority, scope: action.scope },
+        });
       } catch (err) {
         console.warn("[NathAction] Failed to apply:", action.title, err);
       }

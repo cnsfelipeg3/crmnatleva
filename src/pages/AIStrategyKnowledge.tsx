@@ -233,14 +233,33 @@ export default function AIStrategyKnowledge() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Excluir esta regra?")) return;
+    const rule = rules.find(r => r.id === id);
     const { error } = await supabase.from("ai_strategy_knowledge").delete().eq("id", id);
     if (error) toast.error("Erro");
-    else { toast.success("Excluída"); fetchRules(); }
+    else {
+      toast.success("Excluída"); fetchRules();
+      logAITeamAudit({
+        action_type: AUDIT_ACTIONS.DELETE,
+        entity_type: AUDIT_ENTITIES.RULE,
+        entity_id: id,
+        entity_name: rule?.title || id,
+        description: `Regra global excluída: ${rule?.title || id}`,
+        performed_by: "gestor",
+      });
+    }
   };
 
   const toggleActive = async (r: StrategyRule) => {
     await supabase.from("ai_strategy_knowledge").update({ is_active: !r.is_active, updated_at: new Date().toISOString() }).eq("id", r.id);
     fetchRules();
+    logAITeamAudit({
+      action_type: r.is_active ? AUDIT_ACTIONS.DEACTIVATE : AUDIT_ACTIONS.ACTIVATE,
+      entity_type: AUDIT_ENTITIES.RULE,
+      entity_id: r.id,
+      entity_name: r.title,
+      description: `Regra global ${r.is_active ? "desativada" : "ativada"}: ${r.title}`,
+      performed_by: "gestor",
+    });
   };
 
   const catLabel = (v: string) => CATEGORIES.find((c) => c.value === v)?.label || v;

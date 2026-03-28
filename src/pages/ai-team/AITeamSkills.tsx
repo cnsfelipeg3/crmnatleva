@@ -119,6 +119,14 @@ export default function AITeamSkills() {
       if (error) { toast.error("Erro ao criar: " + error.message); setSaving(false); return; }
       toast.success("Skill criada com sucesso!");
       setShowCreate(false);
+      logAITeamAudit({
+        action_type: AUDIT_ACTIONS.CREATE,
+        entity_type: AUDIT_ENTITIES.SKILL,
+        entity_name: editName.trim(),
+        description: `Nova skill criada: ${editName.trim()} (${editCategory})`,
+        performed_by: "gestor",
+        details: { category: editCategory, level: editLevel },
+      });
     } else if (selectedSkill) {
       const { error } = await supabase.from("agent_skills").update({
         name: editName.trim(),
@@ -132,6 +140,15 @@ export default function AITeamSkills() {
       toast.success("Skill atualizada!");
       setEditMode(false);
       setSelectedSkill(null);
+      logAITeamAudit({
+        action_type: AUDIT_ACTIONS.UPDATE,
+        entity_type: AUDIT_ENTITIES.SKILL,
+        entity_id: selectedSkill.id,
+        entity_name: editName.trim(),
+        description: `Skill editada: ${editName.trim()}`,
+        performed_by: "gestor",
+        details: { category: editCategory, level: editLevel },
+      });
     }
     setSaving(false);
     loadSkills();

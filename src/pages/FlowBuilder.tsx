@@ -1484,6 +1484,15 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
         setEdges(edges.map((e) => ({ ...e, source: idMap[e.source] || e.source, target: idMap[e.target] || e.target })));
       }
       toast.success("Fluxo salvo!");
+      logAITeamAudit({
+        action_type: currentFlow?.id ? AUDIT_ACTIONS.UPDATE : AUDIT_ACTIONS.CREATE,
+        entity_type: AUDIT_ENTITIES.FLOW,
+        entity_id: flowId!,
+        entity_name: flowName,
+        description: `Workflow ${currentFlow?.id ? "atualizado" : "criado"}: ${flowName}`,
+        performed_by: "gestor",
+        details: { nodes_count: nodes.length, edges_count: edges.length, status: flowStatus },
+      });
       reloadFlows();
     } catch (err: any) {
       toast.error("Erro: " + err.message);

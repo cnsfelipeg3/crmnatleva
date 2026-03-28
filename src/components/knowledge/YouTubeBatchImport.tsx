@@ -120,6 +120,14 @@ export default function YouTubeBatchImport({ onBack, onSaved }: YouTubeBatchImpo
 
         setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "done", title: data.title } : it));
         successCount++;
+        logAITeamAudit({
+          action_type: AUDIT_ACTIONS.CREATE,
+          entity_type: AUDIT_ENTITIES.KNOWLEDGE,
+          entity_name: data.title || item.url,
+          description: `YouTube batch import: ${data.title || item.url}`,
+          performed_by: "ÓRION",
+          details: { source: "youtube_batch", url: item.url },
+        });
       } catch (err: any) {
         setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "error", error: err.message || "Erro" } : it));
       }

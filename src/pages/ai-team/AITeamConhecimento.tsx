@@ -536,6 +536,14 @@ export default function AITeamConhecimento() {
 
       if (error) throw error;
       toast.success("Documento adicionado à base!");
+      logAITeamAudit({
+        action_type: AUDIT_ACTIONS.CREATE,
+        entity_type: AUDIT_ENTITIES.KNOWLEDGE,
+        entity_name: newTitle.trim(),
+        description: `Documento adicionado à KB: ${newTitle.trim()} (${newCategory})`,
+        performed_by: "gestor",
+        details: { category: newCategory, has_file: !!fileName },
+      });
       setShowUpload(false);
       setNewTitle(""); setNewDescription(""); setNewContent(""); setNewFile(null);
       loadDocs();
