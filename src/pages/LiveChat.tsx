@@ -990,12 +990,8 @@ export default function LiveChat() {
 
     async function loadChats() {
       try {
-        console.log("=== INBOX LOAD ===");
-        console.log("Status conexão:", waConnected);
         const data = await callZapiProxy("get-chats");
         const chats = Array.isArray(data) ? data : [];
-        console.log("Chats recebidos:", JSON.stringify(chats)?.substring(0, 500));
-        console.log("Total chats:", chats?.length);
         // Only show chats that have a conversation in our DB
         const phoneList = chats
           .map((c: any) => (c.phone || c.id || "").replace(/\D/g, ""))
