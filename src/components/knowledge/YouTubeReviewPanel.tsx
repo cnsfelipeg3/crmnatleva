@@ -98,7 +98,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       abortRef.current = controller;
       const timeout = setTimeout(() => controller.abort(), 180_000);
       let data: any, error: any;
-      console.log('[YT-PERF] Inicio transcricao', Date.now());
+      // YT transcription start
       try {
         const res = await supabase.functions.invoke("youtube-transcribe", { body, signal: controller.signal as any });
         data = res.data;
@@ -114,7 +114,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
         throw abortErr;
       }
       clearTimeout(timeout);
-      console.log('[YT-PERF] Fim transcricao', Date.now());
+      // YT transcription end
 
       let errorBody: any = null;
       if (error) {
@@ -145,12 +145,12 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       // Auto-run ÓRION (organize with AI)
       setStep("organizing");
       setOrganizing(true);
-      console.log('[YT-PERF] Inicio ORION', Date.now());
+      // ORION start
       try {
         const { data: orgData, error: orgErr } = await supabase.functions.invoke("organize-knowledge", {
           body: { content: data.structured_knowledge || "", transcript: data.transcript || "" },
         });
-        console.log('[YT-PERF] Fim ORION', Date.now());
+        // ORION end
         if (orgErr) throw orgErr;
         if (orgData?.taxonomy) {
           setTaxonomy(orgData.taxonomy.taxonomia || orgData.taxonomy);

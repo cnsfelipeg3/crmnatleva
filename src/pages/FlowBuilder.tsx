@@ -1,9 +1,9 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from "react";
 import { FlowCRMPipeline } from "@/components/flow/FlowCRMPipeline";
 import { FlowMetrics } from "@/components/flow/FlowMetrics";
 import { FlowSimulator } from "@/components/flow/FlowSimulator";
 import { LiveFunnel } from "@/components/flow/LiveFunnel";
-import { Funnel3DView } from "@/components/flow/Funnel3DView";
+const Funnel3DView = lazy(() => import("@/components/flow/Funnel3DView").then(m => ({ default: m.Funnel3DView })));
 import natlevaLogo from "@/assets/logo-natleva.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -1101,9 +1101,11 @@ function FlowList({ flows, onSelect, onCreate, onUseTemplate, onDeleteFlow, onAr
       {tab === "metrics" && <FlowMetrics />}
       {tab === "livefunnel" && <LiveFunnel onClose={() => setTab("flows")} />}
       {tab === "funnel3d" && (
-        <div className="h-[calc(100vh-180px)]">
-          <Funnel3DView mode="simulation" />
-        </div>
+        <Suspense fallback={<div className="h-[calc(100vh-180px)] flex items-center justify-center text-muted-foreground">Carregando 3D...</div>}>
+          <div className="h-[calc(100vh-180px)]">
+            <Funnel3DView mode="simulation" />
+          </div>
+        </Suspense>
       )}
 
       {(tab === "flows" || tab === "templates") && (

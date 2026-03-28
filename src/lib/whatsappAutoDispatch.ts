@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { debugLog, debugWarn } from "@/lib/debugMode";
 
 interface DispatchParams {
   triggerEvent: string;
@@ -36,12 +37,12 @@ export async function dispatchWhatsAppTemplate(params: DispatchParams): Promise<
   } = params;
 
   if (!clientPhone) {
-    console.warn("[WhatsApp Auto] No phone number, skipping dispatch for:", triggerEvent);
+    debugWarn("[WhatsApp Auto] No phone number, skipping dispatch for:", triggerEvent);
     return false;
   }
 
   try {
-    console.log("[WhatsApp Auto] 🚀 Iniciando dispatch para trigger:", triggerEvent, "phone:", clientPhone);
+    debugLog("[WhatsApp Auto] 🚀 Iniciando dispatch para trigger:", triggerEvent, "phone:", clientPhone);
     
     const { data: templates, error: tplError } = await supabase
       .from("whatsapp_templates")
@@ -50,11 +51,11 @@ export async function dispatchWhatsAppTemplate(params: DispatchParams): Promise<
       .eq("is_active", true)
       .limit(1);
 
-    console.log("[WhatsApp Auto] Templates encontrados:", templates?.length, "erro:", tplError?.message);
+    debugLog("[WhatsApp Auto] Templates encontrados:", templates?.length, "erro:", tplError?.message);
 
     const template = templates?.[0];
     if (!template) {
-      console.log("[WhatsApp Auto] ❌ Nenhum template ativo para trigger:", triggerEvent);
+      debugLog("[WhatsApp Auto] ❌ Nenhum template ativo para trigger:", triggerEvent);
       return false;
     }
 
@@ -89,7 +90,7 @@ export async function dispatchWhatsAppTemplate(params: DispatchParams): Promise<
         await supabase.functions.invoke("zapi-proxy", {
           body: { action: "send-text", payload: { phone: cleanPhone, message: msg } },
         });
-        console.log(`[WhatsApp Auto] Mensagem "${triggerEvent}" enviada para ${cleanPhone}`);
+        debugLog(`[WhatsApp Auto] Mensagem "${triggerEvent}" enviada para ${cleanPhone}`);
         // Log dispatch
         await supabase.from("whatsapp_dispatch_logs" as any).insert({
           template_id: template.id,
@@ -127,7 +128,7 @@ export async function dispatchWhatsAppTemplate(params: DispatchParams): Promise<
 
     if (template.delay_minutes && template.delay_minutes > 0) {
       setTimeout(sendMsg, template.delay_minutes * 60 * 1000);
-      console.log(`[WhatsApp Auto] Mensagem "${triggerEvent}" agendada em ${template.delay_minutes} min`);
+      debugLog(`[WhatsApp Auto] Mensagem "${triggerEvent}" agendada em ${template.delay_minutes} min`);
       return true;
     } else {
       return await sendMsg();

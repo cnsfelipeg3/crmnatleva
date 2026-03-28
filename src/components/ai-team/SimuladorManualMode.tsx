@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { debugLog } from "@/lib/debugMode";
 import { fullCompliancePipeline } from "./complianceEngine";
 import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X, Mic } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
@@ -395,9 +396,9 @@ export default function SimuladorManualMode() {
       if (extras.length > 0) {
         enrichedBehaviorPrompt += extras.join("\n");
       }
-      console.log(`[ENRICHMENT] ${addedSkills} skills adicionadas, ${addedKb} KB items, ${addedWorkflows} workflows`);
+      debugLog(`[ENRICHMENT] ${addedSkills} skills adicionadas, ${addedKb} KB items, ${addedWorkflows} workflows`);
     } catch (err) {
-      console.log("[ENRICHMENT] Falha silenciosa, usando prompt original", err);
+      debugLog("[ENRICHMENT] Falha silenciosa, usando prompt original", err);
     }
 
     try {
@@ -475,7 +476,7 @@ export default function SimuladorManualMode() {
           selectedAgent.id, agentText, conversationCtx,
         );
         if (wasRewritten) {
-          console.log(`🛡️ Compliance rewrite applied for ${selectedAgent.name}`);
+          debugLog(`🛡️ Compliance rewrite applied for ${selectedAgent.name}`);
           updateAgent(compliantText);
         }
       }
@@ -531,7 +532,7 @@ export default function SimuladorManualMode() {
           transferReason = "fallback por squad (sem rota no PIPELINE_MAP)";
         }
 
-        console.log(`[TRANSFER] ${selectedAgent.name} → ${nextAgent.name} | Motivo: ${transferReason}`);
+        debugLog(`[TRANSFER] ${selectedAgent.name} → ${nextAgent.name} | Motivo: ${transferReason}`);
 
         logAITeamAudit({
           action_type: "create",
@@ -561,7 +562,7 @@ export default function SimuladorManualMode() {
 
       // If new messages accumulated during processing, start new debounce cycle
       if (pendingMessagesRef.current.length > 0) {
-        console.log(`[DEBOUNCE] ${pendingMessagesRef.current.length} mensagens pendentes acumuladas durante processamento, novo ciclo em ${DEBOUNCE_MS}ms`);
+        debugLog(`[DEBOUNCE] ${pendingMessagesRef.current.length} mensagens pendentes acumuladas durante processamento, novo ciclo em ${DEBOUNCE_MS}ms`);
         debounceTimerRef.current = setTimeout(() => {
           triggerAgentResponse();
         }, DEBOUNCE_MS);
@@ -594,9 +595,9 @@ export default function SimuladorManualMode() {
       debounceTimerRef.current = setTimeout(() => {
         triggerAgentResponse();
       }, DEBOUNCE_MS);
-      console.log(`[DEBOUNCE] Timer de ${DEBOUNCE_MS}ms iniciado (${pendingMessagesRef.current.length} msgs na fila)`);
+      debugLog(`[DEBOUNCE] Timer de ${DEBOUNCE_MS}ms iniciado (${pendingMessagesRef.current.length} msgs na fila)`);
     } else {
-      console.log(`[DEBOUNCE] Agente processando, msg adicionada à fila (${pendingMessagesRef.current.length} msgs pendentes)`);
+      debugLog(`[DEBOUNCE] Agente processando, msg adicionada à fila (${pendingMessagesRef.current.length} msgs pendentes)`);
     }
   }, [input, triggerAgentResponse]);
 

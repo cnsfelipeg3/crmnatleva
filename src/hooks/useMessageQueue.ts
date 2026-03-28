@@ -4,6 +4,7 @@
  * Processes queue automatically when WhatsApp reconnects.
  */
 import { useState, useCallback, useRef, useEffect } from "react";
+import { debugLog } from "@/lib/debugMode";
 
 export interface QueuedMessage {
   id: string;               // temp ID
@@ -50,7 +51,7 @@ export function useMessageQueue() {
       attemptCount: 0,
     };
     setQueue(prev => [...prev, queued]);
-    console.log(`[QUEUE] Mensagem enfileirada: ${queued.id} para ${queued.phone}`);
+    debugLog(`[QUEUE] Mensagem enfileirada: ${queued.id} para ${queued.phone}`);
     return queued;
   }, []);
 
@@ -89,7 +90,7 @@ export function useMessageQueue() {
       .filter(m => m.sendStatus === "queued")
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-    console.log(`[QUEUE] Processando ${pending.length} mensagens pendentes...`);
+    debugLog(`[QUEUE] Processando ${pending.length} mensagens pendentes...`);
 
     for (const msg of pending) {
       // Mark as sending
@@ -103,7 +104,7 @@ export function useMessageQueue() {
           onStatusUpdate(msg, "sent", result.realId);
           // Remove from queue after success
           setTimeout(() => removeFromQueue(msg.id), 2000);
-          console.log(`[QUEUE✓] Mensagem ${msg.id} enviada com sucesso`);
+          debugLog(`[QUEUE✓] Mensagem ${msg.id} enviada com sucesso`);
         } else {
           updateStatus(msg.id, "failed", result.error);
           onStatusUpdate(msg, "failed", undefined, result.error);
@@ -120,7 +121,7 @@ export function useMessageQueue() {
     }
 
     processingRef.current = false;
-    console.log(`[QUEUE] Processamento concluído.`);
+    debugLog(`[QUEUE] Processamento concluído.`);
   }, [queue, updateStatus, removeFromQueue]);
 
   return {

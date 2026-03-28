@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, Fragment, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, Fragment, useMemo, lazy, Suspense } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -30,11 +30,6 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import LayerDivider from "@/components/LayerDivider";
 import { toast } from "@/hooks/use-toast";
-import { FlowListPage } from "@/components/flowbuilder/FlowListPage";
-import { FlowCanvas } from "@/components/flowbuilder/FlowCanvas";
-import { LiveChatIntegrations } from "@/components/livechat/LiveChatIntegrations";
-import { LiveChatSimulator } from "@/components/livechat/LiveChatSimulator";
-import { LiveChatLogs } from "@/components/livechat/LiveChatLogs";
 import { AudioWaveformPlayer } from "@/components/livechat/AudioWaveformPlayer";
 import { AISuggestionPanel } from "@/components/livechat/AISuggestionPanel";
 import { BuyingMomentAlert } from "@/components/livechat/BuyingMomentAlert";
@@ -44,6 +39,13 @@ import { initPersistence, persistConversation, persistMessages, loadPersistedMes
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
+
+// ── Lazy-loaded heavy sub-components ──
+const FlowListPage = lazy(() => import("@/components/flowbuilder/FlowListPage").then(m => ({ default: m.FlowListPage })));
+const FlowCanvas = lazy(() => import("@/components/flowbuilder/FlowCanvas").then(m => ({ default: m.FlowCanvas })));
+const LiveChatIntegrations = lazy(() => import("@/components/livechat/LiveChatIntegrations").then(m => ({ default: m.LiveChatIntegrations })));
+const LiveChatSimulator = lazy(() => import("@/components/livechat/LiveChatSimulator").then(m => ({ default: m.LiveChatSimulator })));
+const LiveChatLogs = lazy(() => import("@/components/livechat/LiveChatLogs").then(m => ({ default: m.LiveChatLogs })));
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 
@@ -933,7 +935,7 @@ export default function LiveChat() {
 
         // ── Handle exclusion marker from webhook ──
         if (u.last_message_preview === "__CONTACT_EXCLUDED__" || u.unread_count === -1) {
-          console.log("[LiveChat] Contact excluded signal received for:", waKey);
+          // contact excluded — silent in production
           setConversations(prev => prev.filter(c => c.id !== waKey && c.id !== u.id));
           setMessages(prev => {
             const next = { ...prev };
@@ -990,12 +992,8 @@ export default function LiveChat() {
 
     async function loadChats() {
       try {
-        console.log("=== INBOX LOAD ===");
-        console.log("Status conexão:", waConnected);
         const data = await callZapiProxy("get-chats");
         const chats = Array.isArray(data) ? data : [];
-        console.log("Chats recebidos:", JSON.stringify(chats)?.substring(0, 500));
-        console.log("Total chats:", chats?.length);
         // Only show chats that have a conversation in our DB
         const phoneList = chats
           .map((c: any) => (c.phone || c.id || "").replace(/\D/g, ""))
@@ -1570,8 +1568,7 @@ export default function LiveChat() {
         const phone = selectedId.replace("wa_", "");
         try {
           // Convert WebM to WAV for WhatsApp compatibility
-          console.log("Converting WebM to WAV...");
-          console.log("Original blob size:", rawBlob.size, "type:", actualMime);
+          // Converting WebM to WAV for WhatsApp compatibility
           
           const arrayBuffer = await rawBlob.arrayBuffer();
           const offlineCtx = new AudioContext();
@@ -1611,8 +1608,7 @@ export default function LiveChat() {
           const blob = new Blob([wavBuffer], { type: 'audio/wav' });
 
           const fileName = `audio_${Date.now()}.wav`;
-          console.log("WAV blob size:", blob.size);
-          console.log("Upload fileName:", fileName);
+          // WAV ready for upload
 
           const { error: uploadError } = await supabase.storage
             .from('audios')
@@ -1625,8 +1621,7 @@ export default function LiveChat() {
 
           const { data: urlData } = supabase.storage.from('audios').getPublicUrl(fileName);
           const audioUrl = urlData.publicUrl;
-          console.log("URL pública:", audioUrl);
-          console.log("Enviando para phone:", phone);
+          // Audio uploaded, sending to WhatsApp
 
           const localUrl = URL.createObjectURL(blob);
           // Send URL to Z-API (WhatsApp handles URL-based audio better)
@@ -1962,6 +1957,7 @@ export default function LiveChat() {
   // If editing a flow, show full-screen canvas
   if (editingFlow) {
     return (
+      <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
       <div className="h-full min-h-0">
         <FlowCanvas
           flowId={editingFlow.id}
@@ -1971,6 +1967,7 @@ export default function LiveChat() {
           onSimulate={() => { setEditingFlow(null); setActiveSection("simulator"); }}
         />
       </div>
+      </Suspense>
     );
   }
 
@@ -2875,6 +2872,7 @@ export default function LiveChat() {
           </div>
         )}
 
+        <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
         {activeSection === "flowbuilder" && (
           <FlowListPage onOpenFlow={(flow) => setEditingFlow(flow)} />
         )}
@@ -2882,6 +2880,7 @@ export default function LiveChat() {
         {activeSection === "integrations" && <LiveChatIntegrations />}
         {activeSection === "simulator" && <LiveChatSimulator />}
         {activeSection === "logs" && <LiveChatLogs />}
+        </Suspense>
       </div>
 
       {/* Lightbox */}

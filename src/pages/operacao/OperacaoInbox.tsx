@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, Fragment, useMemo } from "react";
+import { debugLog, debugWarn } from "@/lib/debugMode";
 import { InboxPipelineView } from "@/components/inbox/InboxPipelineView";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -228,12 +229,12 @@ function OperacaoInboxInner() {
       if (!error && inserted?.id) {
         persistedId = inserted.id;
         persistedTable = "conversation_messages";
-        console.log(`[PERSIST✓] Mensagem gravada em conversation_messages: ${persistedId}`);
+        debugLog(`[PERSIST✓] Mensagem gravada em conversation_messages: ${persistedId}`);
       } else {
-        console.warn(`[PERSIST] conversation_messages falhou: ${error?.message}. Tentando fallback...`);
+        debugWarn(`[PERSIST] conversation_messages falhou: ${error?.message}. Tentando fallback...`);
       }
     } catch (err: any) {
-      console.warn(`[PERSIST] conversation_messages exception: ${err.message}. Tentando fallback...`);
+      debugWarn(`[PERSIST] conversation_messages exception: ${err.message}. Tentando fallback...`);
     }
 
     // ── FALLBACK: chat_messages (legacy, funcional) ──
@@ -257,7 +258,7 @@ function OperacaoInboxInner() {
         if (!legacyErr && legacyInserted?.id) {
           persistedId = legacyInserted.id;
           persistedTable = "chat_messages";
-          console.warn(`[PERSIST⚠] Mensagem gravada via FALLBACK em chat_messages: ${persistedId}`);
+          debugWarn(`[PERSIST⚠] Mensagem gravada via FALLBACK em chat_messages: ${persistedId}`);
         } else {
           console.error(`[PERSIST✗] chat_messages fallback also failed: ${legacyErr?.message}`);
         }
@@ -1071,7 +1072,7 @@ function OperacaoInboxInner() {
     if (waConnected && !prevWaConnectedRef.current) {
       const pendingCount = getPendingCount();
       if (pendingCount > 0) {
-        console.log(`[QUEUE] WhatsApp reconectado! Processando ${pendingCount} mensagens pendentes...`);
+        debugLog(`[QUEUE] WhatsApp reconectado! Processando ${pendingCount} mensagens pendentes...`);
         toast({ title: "🔄 WhatsApp reconectado", description: `Enviando ${pendingCount} mensagem(ns) pendente(s)...` });
         processQueue(
           async (queuedMsg: QueuedMessage) => {

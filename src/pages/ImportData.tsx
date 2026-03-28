@@ -126,7 +126,7 @@ export default function ImportData() {
           const colCep = findCol(headers, "CEP");
           const colCategoria = findCol(headers, "Categoria");
 
-          console.log("Clients column map:", { colName, colPhone, colEmail, colCpf, colRg, colBirth, colPassport, colCity, colCep });
+          // Column mapping resolved
 
           const passengers: any[] = [];
           for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -151,7 +151,7 @@ export default function ImportData() {
               categoria: cellStr(row, colCategoria) || "SILVER",
             });
           }
-          console.log(`Parsed ${passengers.length} passengers from clients file`);
+          // Passengers parsed
           resolve(passengers);
         } catch (err) { reject(err); }
       };
@@ -223,7 +223,7 @@ export default function ImportData() {
             observations: findCol(headers, "Observacoes"),
           };
 
-          console.log("Sales column map:", col);
+          // Sales column mapping resolved
 
           const sales: any[] = [];
           for (let i = headerIdx + 1; i < rows.length; i++) {
@@ -281,7 +281,7 @@ export default function ImportData() {
             });
           }
 
-          console.log(`Parsed ${sales.length} sales from sales file`);
+          // Sales parsed
           resolve(sales);
         } catch (err) { reject(err); }
       };
