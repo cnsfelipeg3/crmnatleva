@@ -231,9 +231,25 @@ function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel:
     setTranscribing(true);
     setResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("youtube-transcribe", {
-        body: { url: ytUrl },
-      });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 180_000);
+      let data: any, error: any;
+      try {
+        const res = await supabase.functions.invoke("youtube-transcribe", {
+          body: { url: ytUrl },
+          signal: controller.signal as any,
+        });
+        data = res.data;
+        error = res.error;
+      } catch (abortErr: any) {
+        clearTimeout(timeout);
+        if (abortErr.name === "AbortError") {
+          toast.error("A extração demorou demais. Tente o painel completo com transcrição manual.", { duration: 8000 });
+          return;
+        }
+        throw abortErr;
+      }
+      clearTimeout(timeout);
       // Parse error body from FunctionsHttpError
       let errorBody: any = null;
       if (error) {
