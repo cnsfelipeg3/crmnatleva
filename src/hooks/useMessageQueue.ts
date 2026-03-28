@@ -121,7 +121,7 @@ export function useMessageQueue() {
     }
 
     processingRef.current = false;
-    console.log(`[QUEUE] Processamento concluído.`);
+    debugLog(`[QUEUE] Processamento concluído.`);
   }, [queue, updateStatus, removeFromQueue]);
 
   return {

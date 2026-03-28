@@ -595,9 +595,9 @@ export default function SimuladorManualMode() {
       debounceTimerRef.current = setTimeout(() => {
         triggerAgentResponse();
       }, DEBOUNCE_MS);
-      console.log(`[DEBOUNCE] Timer de ${DEBOUNCE_MS}ms iniciado (${pendingMessagesRef.current.length} msgs na fila)`);
+      debugLog(`[DEBOUNCE] Timer de ${DEBOUNCE_MS}ms iniciado (${pendingMessagesRef.current.length} msgs na fila)`);
     } else {
-      console.log(`[DEBOUNCE] Agente processando, msg adicionada à fila (${pendingMessagesRef.current.length} msgs pendentes)`);
+      debugLog(`[DEBOUNCE] Agente processando, msg adicionada à fila (${pendingMessagesRef.current.length} msgs pendentes)`);
     }
   }, [input, triggerAgentResponse]);
 

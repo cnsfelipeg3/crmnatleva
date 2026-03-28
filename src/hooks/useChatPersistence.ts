@@ -40,7 +40,7 @@ export async function initPersistence() {
     }
   }
 
-  console.log(`Persistence init: ${waToDbId.size} convs, ${persistedMsgIds.size} msgs tracked`);
+  debugLog(`Persistence init: ${waToDbId.size} convs, ${persistedMsgIds.size} msgs tracked`);
 }
 
 export async function persistConversation(conv: {

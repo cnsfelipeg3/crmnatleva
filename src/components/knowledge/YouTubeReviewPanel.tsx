@@ -150,7 +150,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
         const { data: orgData, error: orgErr } = await supabase.functions.invoke("organize-knowledge", {
           body: { content: data.structured_knowledge || "", transcript: data.transcript || "" },
         });
-        console.log('[YT-PERF] Fim ORION', Date.now());
+        // ORION end
         if (orgErr) throw orgErr;
         if (orgData?.taxonomy) {
           setTaxonomy(orgData.taxonomy.taxonomia || orgData.taxonomy);

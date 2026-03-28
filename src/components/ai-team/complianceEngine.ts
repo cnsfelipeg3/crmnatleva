@@ -264,7 +264,7 @@ export async function runComplianceCheck(
     }
 
     // The AI returned a rewritten version
-    console.log(`🛡️ Compliance rewrite for ${profile.agentName}: violations detected and corrected`);
+    // Compliance rewrite applied — violations detected and corrected
     return { text: result, wasRewritten: true, profile };
   } catch (err) {
     console.error("Compliance check error:", err);

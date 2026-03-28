@@ -128,7 +128,7 @@ export async function dispatchWhatsAppTemplate(params: DispatchParams): Promise<
 
     if (template.delay_minutes && template.delay_minutes > 0) {
       setTimeout(sendMsg, template.delay_minutes * 60 * 1000);
-      console.log(`[WhatsApp Auto] Mensagem "${triggerEvent}" agendada em ${template.delay_minutes} min`);
+      debugLog(`[WhatsApp Auto] Mensagem "${triggerEvent}" agendada em ${template.delay_minutes} min`);
       return true;
     } else {
       return await sendMsg();
