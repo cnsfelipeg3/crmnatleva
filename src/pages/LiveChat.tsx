@@ -1606,8 +1606,7 @@ export default function LiveChat() {
           const blob = new Blob([wavBuffer], { type: 'audio/wav' });
 
           const fileName = `audio_${Date.now()}.wav`;
-          console.log("WAV blob size:", blob.size);
-          console.log("Upload fileName:", fileName);
+          // WAV ready for upload
 
           const { error: uploadError } = await supabase.storage
             .from('audios')
