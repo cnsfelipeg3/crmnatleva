@@ -638,7 +638,7 @@ export default function SimuladorManualMode() {
       });
 
       // Now send to agent as regular text
-      await handleSend(transcription);
+      handleSend(transcription);
     } catch (err) {
       console.error("Audio processing error:", err);
       setMessages(prev => {
