@@ -519,6 +519,7 @@ export type Database = {
       ai_knowledge_base: {
         Row: {
           category: string
+          confidence: number | null
           content_text: string | null
           created_at: string
           description: string | null
@@ -527,12 +528,15 @@ export type Database = {
           file_url: string | null
           id: string
           is_active: boolean | null
+          tags: string[] | null
+          taxonomy: Json | null
           title: string
           updated_at: string
           uploaded_by: string | null
         }
         Insert: {
           category?: string
+          confidence?: number | null
           content_text?: string | null
           created_at?: string
           description?: string | null
@@ -541,12 +545,15 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_active?: boolean | null
+          tags?: string[] | null
+          taxonomy?: Json | null
           title: string
           updated_at?: string
           uploaded_by?: string | null
         }
         Update: {
           category?: string
+          confidence?: number | null
           content_text?: string | null
           created_at?: string
           description?: string | null
@@ -555,6 +562,8 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_active?: boolean | null
+          tags?: string[] | null
+          taxonomy?: Json | null
           title?: string
           updated_at?: string
           uploaded_by?: string | null
