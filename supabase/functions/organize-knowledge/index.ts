@@ -183,7 +183,7 @@ async function callOrion(systemPrompt: string, content: string, retries = 1): Pr
         },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 4096,
+          max_tokens: 6000,
           system: systemPrompt,
           messages: [{ role: "user", content }],
         }),
