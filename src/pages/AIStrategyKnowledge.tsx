@@ -197,13 +197,34 @@ export default function AIStrategyKnowledge() {
         .update(payload as any)
         .eq("id", (editRule as any).id);
       if (error) toast.error("Erro ao atualizar");
-      else toast.success("Regra atualizada");
+      else {
+        toast.success("Regra atualizada");
+        logAITeamAudit({
+          action_type: AUDIT_ACTIONS.UPDATE,
+          entity_type: AUDIT_ENTITIES.RULE,
+          entity_id: (editRule as any).id,
+          entity_name: editRule.title,
+          description: `Regra global editada: ${editRule.title}`,
+          performed_by: "gestor",
+          details: { category: editRule.category, priority: editRule.priority },
+        });
+      }
     } else {
       const { error } = await supabase
         .from("ai_strategy_knowledge")
         .insert(payload as any);
       if (error) toast.error("Erro ao criar");
-      else toast.success("Regra criada");
+      else {
+        toast.success("Regra criada");
+        logAITeamAudit({
+          action_type: AUDIT_ACTIONS.CREATE,
+          entity_type: AUDIT_ENTITIES.RULE,
+          entity_name: editRule.title,
+          description: `Nova regra global criada: ${editRule.title}`,
+          performed_by: "gestor",
+          details: { category: editRule.category, priority: editRule.priority },
+        });
+      }
     }
     setSaving(false);
     setEditOpen(false);
