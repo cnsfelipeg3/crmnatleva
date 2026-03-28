@@ -532,7 +532,7 @@ export default function SimuladorManualMode() {
           transferReason = "fallback por squad (sem rota no PIPELINE_MAP)";
         }
 
-        console.log(`[TRANSFER] ${selectedAgent.name} → ${nextAgent.name} | Motivo: ${transferReason}`);
+        debugLog(`[TRANSFER] ${selectedAgent.name} → ${nextAgent.name} | Motivo: ${transferReason}`);
 
         logAITeamAudit({
           action_type: "create",
