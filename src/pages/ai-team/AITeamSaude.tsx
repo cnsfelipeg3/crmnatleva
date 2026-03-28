@@ -578,6 +578,35 @@ Seja breve quando o momento pedir brevidade, e detalhado quando pedir detalhe.`;
                           </div>
                         );
                       })}
+
+                      {/* Prompt Completo */}
+                      <div className="mt-2 border-t border-border/30 pt-2">
+                        <button
+                          type="button"
+                          className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPromptPreview(prev => prev === h.agent.id ? null : h.agent.id);
+                          }}
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          {promptPreview === h.agent.id ? "Ocultar Prompt Completo" : "Ver Prompt Completo"}
+                        </button>
+                        {promptPreview === h.agent.id && (() => {
+                          const dbA = dbAgents.find((a: any) => a.id === h.agent.id);
+                          const behaviorPrompt = dbA?.behavior_prompt || "(vazio)";
+                          const persona = dbA?.persona || h.agent.persona || "(vazio)";
+                          const teamCtx = buildTeamContextBlock(h.agent.id);
+                          const fullPrompt = `=== PERSONA ===\n${persona}\n\n=== BEHAVIOR PROMPT (do banco) ===\n${behaviorPrompt}\n\n=== TEAM CONTEXT (pipeline + regras comerciais) ===\n${teamCtx}\n\n=== REGRAS UNIVERSAIS NATH ===\n${NATH_UNIVERSAL_RULES}`;
+                          return (
+                            <div className="mt-2 max-h-80 overflow-y-auto rounded-lg bg-zinc-950 border border-border/30 p-3">
+                              <pre className="text-[10px] leading-relaxed text-emerald-300 font-mono whitespace-pre-wrap break-words">
+                                {fullPrompt}
+                              </pre>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </div>
                   )}
                 </CardContent>
