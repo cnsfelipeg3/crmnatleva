@@ -342,13 +342,40 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
 
         {/* ─── PROCESSING STATES ─── */}
         {(step === "transcribing" || step === "organizing") && (
-          <div className="max-w-md mx-auto text-center py-20 space-y-6">
+          <div className="max-w-lg mx-auto text-center py-16 space-y-6">
             <div className={cn(
               "w-20 h-20 rounded-2xl flex items-center justify-center mx-auto animate-pulse",
               step === "transcribing" ? "bg-red-500/10" : "bg-amber-500/10"
             )}>
               {step === "transcribing" ? <Youtube className="w-10 h-10 text-red-500" /> : <Brain className="w-10 h-10 text-amber-500" />}
             </div>
+
+            {/* 3-step progress */}
+            <div className="flex items-center justify-center gap-2 text-xs font-medium">
+              {[
+                { key: "transcribing", label: "Buscando legendas", icon: Youtube, color: "text-red-500" },
+                { key: "organizing", label: "ÓRION analisando", icon: Brain, color: "text-amber-500" },
+                { key: "saving", label: "Salvando na base", icon: Database, color: "text-emerald-500" },
+              ].map((s, i) => {
+                const isActive = s.key === step;
+                const isDone = (s.key === "transcribing" && step === "organizing");
+                return (
+                  <div key={s.key} className="flex items-center gap-1.5">
+                    {i > 0 && <div className={cn("w-6 h-px", isDone || isActive ? "bg-foreground/30" : "bg-muted")} />}
+                    <div className={cn(
+                      "flex items-center gap-1 px-2 py-1 rounded-full transition-all",
+                      isActive ? "bg-foreground/5 font-bold" : isDone ? "text-emerald-600" : "text-muted-foreground"
+                    )}>
+                      {isDone ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> :
+                        isActive ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
+                        <s.icon className="w-3.5 h-3.5" />}
+                      {s.label}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
             <div>
               <h2 className="text-lg font-bold">
                 {step === "transcribing" ? "Buscando legendas do vídeo..." : "ÓRION analisando conteúdo..."}
@@ -357,20 +384,55 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
                 {step === "transcribing" ? "Extraindo transcrição automática" : "Classificando, tagueando e estruturando o conhecimento"}
               </p>
             </div>
-            <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+
+            {/* Progress bar */}
+            <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
               <div className={cn(
-                "h-full rounded-full animate-[indeterminate_1.5s_ease-in-out_infinite]",
+                "h-full rounded-full transition-all duration-500",
                 step === "transcribing" ? "bg-red-500" : "bg-amber-500"
               )} style={{
-                width: "40%",
-                animation: "indeterminate 1.5s ease-in-out infinite",
+                width: step === "transcribing" ? "40%" : "75%",
+                animation: "pulse-width 2s ease-in-out infinite",
               }} />
             </div>
+
+            {/* Elapsed time */}
+            <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="w-3.5 h-3.5" />
+              <span>{elapsed}s decorridos</span>
+            </div>
+
+            {/* Slow warning */}
+            {showSlowWarning && (
+              <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>
+                  Está demorando mais que o normal. Isso pode acontecer com vídeos longos. Aguarde mais um momento ou cancele para tentar com transcrição manual.
+                </span>
+              </div>
+            )}
+
+            {/* Cancel button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                abortRef.current?.abort();
+                setStep("idle");
+                setTranscribing(false);
+                setOrganizing(false);
+                setShowManualInput(true);
+                toast.info("Operação cancelada. Tente colar a transcrição manualmente.");
+              }}
+              className="gap-1.5"
+            >
+              <XCircle className="w-4 h-4" /> Cancelar
+            </Button>
+
             <style>{`
-              @keyframes indeterminate {
-                0% { margin-left: 0%; width: 30%; }
-                50% { margin-left: 30%; width: 40%; }
-                100% { margin-left: 70%; width: 30%; }
+              @keyframes pulse-width {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.7; }
               }
             `}</style>
           </div>
