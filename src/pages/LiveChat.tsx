@@ -1566,8 +1566,7 @@ export default function LiveChat() {
         const phone = selectedId.replace("wa_", "");
         try {
           // Convert WebM to WAV for WhatsApp compatibility
-          console.log("Converting WebM to WAV...");
-          console.log("Original blob size:", rawBlob.size, "type:", actualMime);
+          // Converting WebM to WAV for WhatsApp compatibility
           
           const arrayBuffer = await rawBlob.arrayBuffer();
           const offlineCtx = new AudioContext();
