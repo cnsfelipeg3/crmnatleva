@@ -90,7 +90,7 @@ export function useMessageQueue() {
       .filter(m => m.sendStatus === "queued")
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
-    console.log(`[QUEUE] Processando ${pending.length} mensagens pendentes...`);
+    debugLog(`[QUEUE] Processando ${pending.length} mensagens pendentes...`);
 
     for (const msg of pending) {
       // Mark as sending
