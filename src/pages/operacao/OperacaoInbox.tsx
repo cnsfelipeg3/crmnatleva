@@ -258,7 +258,7 @@ function OperacaoInboxInner() {
         if (!legacyErr && legacyInserted?.id) {
           persistedId = legacyInserted.id;
           persistedTable = "chat_messages";
-          console.warn(`[PERSIST⚠] Mensagem gravada via FALLBACK em chat_messages: ${persistedId}`);
+          debugWarn(`[PERSIST⚠] Mensagem gravada via FALLBACK em chat_messages: ${persistedId}`);
         } else {
           console.error(`[PERSIST✗] chat_messages fallback also failed: ${legacyErr?.message}`);
         }
