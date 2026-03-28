@@ -114,7 +114,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
         throw abortErr;
       }
       clearTimeout(timeout);
-      console.log('[YT-PERF] Fim transcricao', Date.now());
+      // YT transcription end
 
       let errorBody: any = null;
       if (error) {
