@@ -233,7 +233,7 @@ serve(async (req) => {
 
     let userMessage: string;
     if (transcript && transcript.length > 200 && content) {
-      const truncatedTranscript = truncateForOrion(transcript, 3000);
+      const truncatedTranscript = truncateForOrion(transcript, 5000);
       userMessage = `Documento: ${title || "Conteudo"}\nTipo: ${tipo || "youtube"}\nConteudo:\n${truncated}\n\n---\n\nTranscricao original para referencia:\n${truncatedTranscript}`;
     } else {
       userMessage = `Documento: ${title || "Conteudo"}\nTipo: ${tipo || "texto"}\nConteudo:\n${truncated}`;
