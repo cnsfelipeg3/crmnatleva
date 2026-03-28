@@ -151,7 +151,7 @@ export default function ImportData() {
               categoria: cellStr(row, colCategoria) || "SILVER",
             });
           }
-          console.log(`Parsed ${passengers.length} passengers from clients file`);
+          // Passengers parsed
           resolve(passengers);
         } catch (err) { reject(err); }
       };
