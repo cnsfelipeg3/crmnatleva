@@ -47,6 +47,7 @@ export interface Taxonomy {
     faixa_preco_total?: string;
     faixa_preco_label?: string;
     dica_moeda?: string;
+    moeda_dica?: string;
   };
   perfil_viajante?: {
     ideal?: string[];
