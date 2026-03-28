@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -9,22 +9,26 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import {
   BookOpen, Upload, Plus, Trash2, Edit2, Save, X,
   FileText, Link2, Youtube, Image, Mic, FileSpreadsheet,
-  Presentation, MessageSquare, Search, Filter, Brain,
+  Presentation, MessageSquare, Search, Brain,
   CheckCircle2, AlertCircle, Loader2, Globe2, Sparkles,
-  ChevronLeft, Play, ListPlus,
+  ChevronLeft, ListPlus, Map, DollarSign, User, Compass,
+  ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import YouTubeReviewPanel from "@/components/knowledge/YouTubeReviewPanel";
 import YouTubeBatchImport from "@/components/knowledge/YouTubeBatchImport";
+import { TaxonomySummary, Taxonomy } from "@/components/knowledge/TaxonomyPreview";
+import TaxonomyPreview from "@/components/knowledge/TaxonomyPreview";
+
 const CATEGORIES = [
   { value: "atendimento", label: "Atendimento & Scripts", icon: MessageSquare },
   { value: "destinos", label: "Destinos & Roteiros", icon: Globe2 },
@@ -37,15 +41,12 @@ const CATEGORIES = [
 ];
 
 const FILE_TYPE_ICONS: Record<string, any> = {
-  pdf: FileText,
-  link: Link2,
-  youtube: Youtube,
-  image: Image,
-  audio: Mic,
-  spreadsheet: FileSpreadsheet,
-  presentation: Presentation,
-  text: MessageSquare,
+  pdf: FileText, link: Link2, youtube: Youtube, image: Image,
+  audio: Mic, spreadsheet: FileSpreadsheet, presentation: Presentation, text: MessageSquare,
 };
+
+const PRICE_LABELS = ["economico", "moderado", "premium", "luxo"];
+const PROFILE_OPTIONS = ["casal", "familia", "aventureiro", "lua-de-mel", "vip", "primeira-viagem", "solo", "grupo"];
 
 interface KBEntry {
   id: string;
@@ -58,6 +59,9 @@ interface KBEntry {
   file_type: string | null;
   is_active: boolean;
   created_at: string;
+  taxonomy?: any;
+  tags?: string[] | null;
+  confidence?: number | null;
 }
 
 export default function AIKnowledgeBase() {
@@ -66,11 +70,16 @@ export default function AIKnowledgeBase() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [filterCountry, setFilterCountry] = useState("all");
+  const [filterPrice, setFilterPrice] = useState("all");
+  const [filterProfile, setFilterProfile] = useState("all");
   const [showAdd, setShowAdd] = useState(false);
   const [editEntry, setEditEntry] = useState<KBEntry | null>(null);
   const [activeTab, setActiveTab] = useState("items");
   const [showYouTube, setShowYouTube] = useState(false);
   const [showBatchYouTube, setShowBatchYouTube] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Form state
   const [formTitle, setFormTitle] = useState("");
@@ -83,20 +92,10 @@ export default function AIKnowledgeBase() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   // Rules state
-  const [rules, setRules] = useState({
-    tone: "premium",
-    formality: "formal",
-    guidelines: "",
-    forbidden: "",
-    greeting_template: "",
-    closing_template: "",
-  });
+  const [rules, setRules] = useState({ tone: "premium", formality: "formal", guidelines: "", forbidden: "", greeting_template: "", closing_template: "" });
   const [savingRules, setSavingRules] = useState(false);
 
-  useEffect(() => {
-    loadEntries();
-    loadRules();
-  }, []);
+  useEffect(() => { loadEntries(); loadRules(); }, []);
 
   const loadEntries = async () => {
     setLoading(true);
@@ -128,12 +127,9 @@ export default function AIKnowledgeBase() {
     setSavingRules(true);
     try {
       const pairs = [
-        { key: "ai_tone", value: rules.tone },
-        { key: "ai_formality", value: rules.formality },
-        { key: "ai_guidelines", value: rules.guidelines },
-        { key: "ai_forbidden", value: rules.forbidden },
-        { key: "ai_greeting_template", value: rules.greeting_template },
-        { key: "ai_closing_template", value: rules.closing_template },
+        { key: "ai_tone", value: rules.tone }, { key: "ai_formality", value: rules.formality },
+        { key: "ai_guidelines", value: rules.guidelines }, { key: "ai_forbidden", value: rules.forbidden },
+        { key: "ai_greeting_template", value: rules.greeting_template }, { key: "ai_closing_template", value: rules.closing_template },
       ];
       for (const { key, value } of pairs) {
         const { data: existing } = await supabase.from("ai_config").select("id").eq("config_key", key).maybeSingle();
@@ -144,11 +140,8 @@ export default function AIKnowledgeBase() {
         }
       }
       toast.success("Regras salvas!");
-    } catch (err: any) {
-      toast.error("Erro: " + err.message);
-    } finally {
-      setSavingRules(false);
-    }
+    } catch (err: any) { toast.error("Erro: " + err.message); }
+    finally { setSavingRules(false); }
   };
 
   const resetForm = () => {
@@ -163,35 +156,20 @@ export default function AIKnowledgeBase() {
     try {
       let fileUrl = editEntry?.file_url || null;
       let fileName = editEntry?.file_name || null;
-
-      // Upload file if provided
       if (uploadFile) {
-        const ext = uploadFile.name.split(".").pop();
         const path = `kb/${Date.now()}-${uploadFile.name}`;
         const { error: upErr } = await supabase.storage.from("ai-knowledge-base").upload(path, uploadFile);
         if (upErr) throw upErr;
         const { data: urlData } = supabase.storage.from("ai-knowledge-base").getPublicUrl(path);
-        fileUrl = urlData.publicUrl;
-        fileName = uploadFile.name;
+        fileUrl = urlData.publicUrl; fileName = uploadFile.name;
       }
-
-      // If URL provided (link/youtube)
-      if (formUrl && !uploadFile) {
-        fileUrl = formUrl;
-        fileName = formUrl;
-      }
+      if (formUrl && !uploadFile) { fileUrl = formUrl; fileName = formUrl; }
 
       const payload = {
-        title: formTitle,
-        description: formDesc || null,
-        category: formCategory,
-        content_text: formContent || null,
-        file_url: fileUrl,
-        file_name: fileName,
-        file_type: formType,
-        is_active: true,
+        title: formTitle, description: formDesc || null, category: formCategory,
+        content_text: formContent || null, file_url: fileUrl, file_name: fileName,
+        file_type: formType, is_active: true,
       };
-
       if (editEntry) {
         await supabase.from("ai_knowledge_base").update(payload).eq("id", editEntry.id);
         toast.success("Atualizado!");
@@ -199,14 +177,9 @@ export default function AIKnowledgeBase() {
         await supabase.from("ai_knowledge_base").insert(payload);
         toast.success("Adicionado à base de conhecimento!");
       }
-      resetForm();
-      setShowAdd(false);
-      loadEntries();
-    } catch (err: any) {
-      toast.error("Erro: " + err.message);
-    } finally {
-      setUploading(false);
-    }
+      resetForm(); setShowAdd(false); loadEntries();
+    } catch (err: any) { toast.error("Erro: " + err.message); }
+    finally { setUploading(false); }
   };
 
   const toggleActive = async (id: string, active: boolean) => {
@@ -216,26 +189,69 @@ export default function AIKnowledgeBase() {
 
   const deleteEntry = async (id: string) => {
     await supabase.from("ai_knowledge_base").delete().eq("id", id);
-    toast.success("Removido");
-    loadEntries();
+    toast.success("Removido"); loadEntries();
   };
 
   const startEdit = (entry: KBEntry) => {
-    setEditEntry(entry);
-    setFormTitle(entry.title);
-    setFormDesc(entry.description || "");
-    setFormCategory(entry.category);
-    setFormContent(entry.content_text || "");
-    setFormType(entry.file_type || "text");
-    setFormUrl(entry.file_url || "");
-    setShowAdd(true);
+    setEditEntry(entry); setFormTitle(entry.title); setFormDesc(entry.description || "");
+    setFormCategory(entry.category); setFormContent(entry.content_text || "");
+    setFormType(entry.file_type || "text"); setFormUrl(entry.file_url || ""); setShowAdd(true);
   };
 
-  const filtered = entries.filter((e) => {
-    const matchSearch = !search || e.title.toLowerCase().includes(search.toLowerCase()) || (e.content_text || "").toLowerCase().includes(search.toLowerCase());
-    const matchCat = filterCategory === "all" || e.category === filterCategory;
-    return matchSearch && matchCat;
-  });
+  // ─── Derived filter data ───
+  const countriesAvailable = useMemo(() => {
+    const set = new Set<string>();
+    entries.forEach(e => {
+      const pais = e.taxonomy?.geo?.pais;
+      if (pais) set.add(pais);
+    });
+    return Array.from(set).sort();
+  }, [entries]);
+
+  // ─── Filtering ───
+  const filtered = useMemo(() => {
+    return entries.filter((e) => {
+      const tax = e.taxonomy as Taxonomy | undefined;
+
+      // Text search - search in title, content, tags, taxonomy
+      if (search) {
+        const s = search.toLowerCase();
+        const inTitle = e.title.toLowerCase().includes(s);
+        const inContent = (e.content_text || "").toLowerCase().includes(s);
+        const inTags = (e.tags || []).some(t => t.toLowerCase().includes(s));
+        const inGeo = [
+          tax?.geo?.pais, tax?.geo?.continente, ...(tax?.geo?.cidades || []),
+        ].filter(Boolean).some(v => v!.toLowerCase().includes(s));
+        const inPasseios = (tax?.experiencias?.passeios || []).some(p => p.nome.toLowerCase().includes(s));
+        const inHoteis = (tax?.hospedagem?.hoteis || []).some(h => h.nome.toLowerCase().includes(s));
+        const inVendas = (tax?.vendas?.argumentos_chave || []).some(a => a.toLowerCase().includes(s));
+        if (!inTitle && !inContent && !inTags && !inGeo && !inPasseios && !inHoteis && !inVendas) return false;
+      }
+
+      // Category filter
+      if (filterCategory !== "all" && e.category !== filterCategory) return false;
+
+      // Country filter
+      if (filterCountry !== "all") {
+        if (!tax?.geo?.pais || tax.geo.pais.toLowerCase() !== filterCountry.toLowerCase()) return false;
+      }
+
+      // Price filter
+      if (filterPrice !== "all") {
+        if (!tax?.financeiro?.faixa_preco_label || tax.financeiro.faixa_preco_label !== filterPrice) return false;
+      }
+
+      // Profile filter
+      if (filterProfile !== "all") {
+        const ideals = [...(tax?.destino?.ideal_para || []), ...(tax?.perfil_viajante?.ideal || [])];
+        if (!ideals.some(p => p.toLowerCase().includes(filterProfile))) return false;
+      }
+
+      return true;
+    });
+  }, [entries, search, filterCategory, filterCountry, filterPrice, filterProfile]);
+
+  const hasActiveFilters = filterCountry !== "all" || filterPrice !== "all" || filterProfile !== "all";
 
   // YouTube full-screen panels
   if (showYouTube) {
@@ -276,7 +292,7 @@ export default function AIKnowledgeBase() {
           <div className="flex flex-wrap gap-2">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-muted-foreground" />
-              <Input placeholder="Buscar na base..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-9 text-xs" />
+              <Input placeholder="Buscar na base (destino, passeio, hotel...)" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8 h-9 text-xs" />
             </div>
             <Select value={filterCategory} onValueChange={setFilterCategory}>
               <SelectTrigger className="w-[160px] h-9 text-xs"><SelectValue /></SelectTrigger>
@@ -285,6 +301,9 @@ export default function AIKnowledgeBase() {
                 {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Button size="sm" variant={showFilters ? "default" : "outline"} className="h-9 text-xs gap-1" onClick={() => setShowFilters(!showFilters)}>
+              <Compass className="w-3 h-3" /> Filtros {hasActiveFilters && <Badge className="text-[8px] px-1 py-0 ml-1 bg-primary text-primary-foreground">!</Badge>}
+            </Button>
             <Button size="sm" variant="outline" className="h-9 text-xs gap-1 border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30" onClick={() => setShowYouTube(true)}>
               <Youtube className="w-3 h-3" /> YouTube
             </Button>
@@ -300,97 +319,35 @@ export default function AIKnowledgeBase() {
                   <DialogTitle className="text-sm">{editEntry ? "Editar Item" : "Adicionar à Base de Conhecimento"}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-3">
-                  {/* Type selector */}
                   <div className="grid grid-cols-4 gap-1.5">
                     {[
-                      { t: "text", l: "Texto", i: MessageSquare },
-                      { t: "pdf", l: "PDF", i: FileText },
-                      { t: "link", l: "Link", i: Link2 },
-                      { t: "youtube", l: "YouTube", i: Youtube },
-                      { t: "image", l: "Imagem", i: Image },
-                      { t: "audio", l: "Áudio", i: Mic },
-                      { t: "spreadsheet", l: "Planilha", i: FileSpreadsheet },
-                      { t: "presentation", l: "PPT", i: Presentation },
+                      { t: "text", l: "Texto", i: MessageSquare }, { t: "pdf", l: "PDF", i: FileText },
+                      { t: "link", l: "Link", i: Link2 }, { t: "youtube", l: "YouTube", i: Youtube },
+                      { t: "image", l: "Imagem", i: Image }, { t: "audio", l: "Áudio", i: Mic },
+                      { t: "spreadsheet", l: "Planilha", i: FileSpreadsheet }, { t: "presentation", l: "PPT", i: Presentation },
                     ].map(({ t, l, i: Icon }) => (
-                      <button
-                        key={t}
-                        onClick={() => setFormType(t)}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-[10px] transition-colors ${
-                          formType === t ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/50"
-                        }`}
-                      >
-                        <Icon className="w-4 h-4" />
-                        {l}
+                      <button key={t} onClick={() => setFormType(t)} className={`flex flex-col items-center gap-1 p-2 rounded-lg border text-[10px] transition-colors ${formType === t ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/50"}`}>
+                        <Icon className="w-4 h-4" />{l}
                       </button>
                     ))}
                   </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs">Título *</Label>
-                    <Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)} placeholder="Ex: Script de recepção VIP" className="text-xs h-8" />
+                  <div className="space-y-1"><Label className="text-xs">Título *</Label><Input value={formTitle} onChange={(e) => setFormTitle(e.target.value)} placeholder="Ex: Script de recepção VIP" className="text-xs h-8" /></div>
+                  <div className="space-y-1"><Label className="text-xs">Categoria</Label>
+                    <Select value={formCategory} onValueChange={setFormCategory}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent>{CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent></Select>
                   </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs">Categoria</Label>
-                    <Select value={formCategory} onValueChange={setFormCategory}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label className="text-xs">Descrição</Label>
-                    <Input value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Breve descrição do conteúdo" className="text-xs h-8" />
-                  </div>
-
-                  {/* Conditional: URL input for links/youtube */}
+                  <div className="space-y-1"><Label className="text-xs">Descrição</Label><Input value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Breve descrição" className="text-xs h-8" /></div>
                   {(formType === "link" || formType === "youtube") && (
-                    <div className="space-y-1">
-                      <Label className="text-xs">{formType === "youtube" ? "URL do YouTube" : "URL"}</Label>
-                      <Input value={formUrl} onChange={(e) => setFormUrl(e.target.value)} placeholder={formType === "youtube" ? "https://youtube.com/watch?v=..." : "https://..."} className="text-xs h-8" />
-                    </div>
+                    <div className="space-y-1"><Label className="text-xs">{formType === "youtube" ? "URL do YouTube" : "URL"}</Label><Input value={formUrl} onChange={(e) => setFormUrl(e.target.value)} placeholder={formType === "youtube" ? "https://youtube.com/watch?v=..." : "https://..."} className="text-xs h-8" /></div>
                   )}
-
-                  {/* Conditional: File upload for pdf/image/audio/spreadsheet/presentation */}
                   {["pdf", "image", "audio", "spreadsheet", "presentation"].includes(formType) && (
-                    <div className="space-y-1">
-                      <Label className="text-xs">Arquivo</Label>
-                      <div className="border border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-primary/50 transition-colors"
-                        onClick={() => document.getElementById("kb-file-upload")?.click()}>
-                        <Upload className="w-5 h-5 text-muted-foreground mx-auto mb-1" />
-                        <p className="text-[10px] text-muted-foreground">
-                          {uploadFile ? uploadFile.name : "Clique ou arraste o arquivo"}
-                        </p>
-                        <input type="file" id="kb-file-upload" className="hidden"
-                          accept={
-                            formType === "pdf" ? ".pdf" :
-                            formType === "image" ? "image/*" :
-                            formType === "audio" ? "audio/*,.mp3,.wav,.m4a,.ogg" :
-                            formType === "spreadsheet" ? ".csv,.xlsx,.xls" :
-                            formType === "presentation" ? ".ppt,.pptx" : "*"
-                          }
-                          onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                        />
+                    <div className="space-y-1"><Label className="text-xs">Arquivo</Label>
+                      <div className="border border-dashed rounded-lg p-3 text-center cursor-pointer hover:border-primary/50 transition-colors" onClick={() => document.getElementById("kb-file-upload")?.click()}>
+                        <Upload className="w-5 h-5 text-muted-foreground mx-auto mb-1" /><p className="text-[10px] text-muted-foreground">{uploadFile ? uploadFile.name : "Clique ou arraste"}</p>
+                        <input type="file" id="kb-file-upload" className="hidden" accept={formType === "pdf" ? ".pdf" : formType === "image" ? "image/*" : formType === "audio" ? "audio/*,.mp3,.wav,.m4a,.ogg" : formType === "spreadsheet" ? ".csv,.xlsx,.xls" : formType === "presentation" ? ".ppt,.pptx" : "*"} onChange={(e) => setUploadFile(e.target.files?.[0] || null)} />
                       </div>
                     </div>
                   )}
-
-                  {/* Text content - always available */}
-                  <div className="space-y-1">
-                    <Label className="text-xs">
-                      {formType === "text" ? "Conteúdo *" : "Texto complementar (opcional)"}
-                    </Label>
-                    <Textarea
-                      value={formContent}
-                      onChange={(e) => setFormContent(e.target.value)}
-                      placeholder="Cole aqui o conteúdo: scripts de venda, regras, mensagens padrão, instruções..."
-                      rows={6}
-                      className="text-xs"
-                    />
-                  </div>
-
+                  <div className="space-y-1"><Label className="text-xs">{formType === "text" ? "Conteúdo *" : "Texto complementar (opcional)"}</Label><Textarea value={formContent} onChange={(e) => setFormContent(e.target.value)} placeholder="Cole o conteúdo..." rows={6} className="text-xs" /></div>
                   <Button onClick={handleSave} disabled={uploading} className="w-full text-xs" size="sm">
                     {uploading ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Salvando...</> : <><Save className="w-3 h-3 mr-1" /> {editEntry ? "Atualizar" : "Salvar na Base"}</>}
                   </Button>
@@ -398,6 +355,41 @@ export default function AIKnowledgeBase() {
               </DialogContent>
             </Dialog>
           </div>
+
+          {/* ─── TAXONOMY FILTERS BAR ─── */}
+          {showFilters && (
+            <div className="flex flex-wrap gap-2 p-3 rounded-xl border border-border/40 bg-muted/20 animate-in slide-in-from-top-2 duration-200">
+              {/* Country */}
+              <Select value={filterCountry} onValueChange={setFilterCountry}>
+                <SelectTrigger className="w-[150px] h-8 text-xs"><Map className="w-3 h-3 mr-1 text-blue-500" /><SelectValue placeholder="País" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos países</SelectItem>
+                  {countriesAvailable.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {/* Price */}
+              <Select value={filterPrice} onValueChange={setFilterPrice}>
+                <SelectTrigger className="w-[140px] h-8 text-xs"><DollarSign className="w-3 h-3 mr-1 text-emerald-500" /><SelectValue placeholder="Preço" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas faixas</SelectItem>
+                  {PRICE_LABELS.map(p => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {/* Profile */}
+              <Select value={filterProfile} onValueChange={setFilterProfile}>
+                <SelectTrigger className="w-[150px] h-8 text-xs"><User className="w-3 h-3 mr-1 text-pink-500" /><SelectValue placeholder="Perfil" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos perfis</SelectItem>
+                  {PROFILE_OPTIONS.map(p => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              {hasActiveFilters && (
+                <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => { setFilterCountry("all"); setFilterPrice("all"); setFilterProfile("all"); }}>
+                  <X className="w-3 h-3 mr-1" /> Limpar filtros
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* Entries list */}
           {loading ? (
@@ -408,8 +400,7 @@ export default function AIKnowledgeBase() {
             <Card className="border-dashed">
               <CardContent className="py-12 text-center">
                 <BookOpen className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">Nenhum item na base de conhecimento</p>
-                <p className="text-xs text-muted-foreground mt-1">Adicione PDFs, links, vídeos, áudios e textos para treinar a IA</p>
+                <p className="text-sm text-muted-foreground">Nenhum item encontrado</p>
               </CardContent>
             </Card>
           ) : (
@@ -420,53 +411,68 @@ export default function AIKnowledgeBase() {
                 const cat = CATEGORIES.find((c) => c.value === entry.category);
                 const ytVideoId = isYouTube && entry.file_url ? entry.file_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1] : null;
                 const thumbnailUrl = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/mqdefault.jpg` : null;
+                const hasTaxonomy = entry.taxonomy && typeof entry.taxonomy === "object" && Object.keys(entry.taxonomy).length > 0;
+                const isExpanded = expandedId === entry.id;
 
                 return (
-                  <Card key={entry.id} className={`transition-opacity overflow-hidden relative ${!entry.is_active ? "opacity-50" : ""}`}>
-                    {/* YouTube thumbnail background */}
+                  <Card key={entry.id} className={cn("transition-all overflow-hidden relative", !entry.is_active && "opacity-50")}>
                     {isYouTube && thumbnailUrl && (
-                      <div
-                        className="absolute inset-0 bg-cover bg-center opacity-[0.06] dark:opacity-[0.08]"
-                        style={{ backgroundImage: `url(${thumbnailUrl})` }}
-                      />
+                      <div className="absolute inset-0 bg-cover bg-center opacity-[0.06] dark:opacity-[0.08]" style={{ backgroundImage: `url(${thumbnailUrl})` }} />
                     )}
-                    <CardContent className="p-3 flex items-start gap-3 relative z-10">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isYouTube ? "bg-red-500/15" : "bg-primary/10"}`}>
-                        <TypeIcon className={`w-4 h-4 ${isYouTube ? "text-red-500" : "text-primary"}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium truncate">{entry.title}</h3>
-                          {isYouTube && (
-                            <Badge className="text-[9px] flex-shrink-0 bg-red-500 text-white border-0 hover:bg-red-600">
-                              <Youtube className="w-2.5 h-2.5 mr-0.5" /> YouTube
-                            </Badge>
-                          )}
-                          <Badge variant="outline" className="text-[9px] flex-shrink-0">{cat?.label || entry.category}</Badge>
-                          {entry.is_active ? (
-                            <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
-                          ) : (
-                            <AlertCircle className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                          )}
+                    <CardContent className="p-3 relative z-10">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isYouTube ? "bg-red-500/15" : "bg-primary/10"}`}>
+                          <TypeIcon className={`w-4 h-4 ${isYouTube ? "text-red-500" : "text-primary"}`} />
                         </div>
-                        {entry.description && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{entry.description}</p>}
-                        {entry.content_text && (
-                          <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{entry.content_text.substring(0, 150)}...</p>
-                        )}
-                        <p className="text-[9px] text-muted-foreground mt-1">
-                          {new Date(entry.created_at).toLocaleDateString("pt-BR")}
-                          {entry.file_name && ` • ${entry.file_name}`}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium truncate">{entry.title}</h3>
+                            {isYouTube && (
+                              <Badge className="text-[9px] flex-shrink-0 bg-red-500 text-white border-0 hover:bg-red-600">
+                                <Youtube className="w-2.5 h-2.5 mr-0.5" /> YouTube
+                              </Badge>
+                            )}
+                            <Badge variant="outline" className="text-[9px] flex-shrink-0">{cat?.label || entry.category}</Badge>
+                            {entry.is_active ? <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" /> : <AlertCircle className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
+                          </div>
+                          {entry.description && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{entry.description}</p>}
+
+                          {/* Taxonomy summary */}
+                          {hasTaxonomy && !isExpanded && (
+                            <TaxonomySummary taxonomy={entry.taxonomy as Taxonomy} />
+                          )}
+
+                          {!hasTaxonomy && entry.content_text && (
+                            <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{entry.content_text.substring(0, 150)}...</p>
+                          )}
+
+                          <p className="text-[9px] text-muted-foreground mt-1">
+                            {new Date(entry.created_at).toLocaleDateString("pt-BR")}
+                            {entry.tags && entry.tags.length > 0 && ` · ${entry.tags.length} tags`}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {hasTaxonomy && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedId(isExpanded ? null : entry.id)}>
+                              {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                            </Button>
+                          )}
+                          <Switch checked={entry.is_active ?? true} onCheckedChange={() => toggleActive(entry.id, entry.is_active ?? true)} />
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(entry)}>
+                            <Edit2 className="w-3 h-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteEntry(entry.id)}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <Switch checked={entry.is_active ?? true} onCheckedChange={() => toggleActive(entry.id, entry.is_active ?? true)} />
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(entry)}>
-                          <Edit2 className="w-3 h-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteEntry(entry.id)}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
+
+                      {/* Expanded taxonomy view */}
+                      {isExpanded && hasTaxonomy && (
+                        <div className="mt-4 pt-4 border-t border-border/40">
+                          <TaxonomyPreview taxonomy={entry.taxonomy as Taxonomy} onChange={() => {}} readOnly />
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 );
@@ -486,8 +492,7 @@ export default function AIKnowledgeBase() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Tom de Voz</Label>
+                <div className="space-y-1"><Label className="text-xs">Tom de Voz</Label>
                   <Select value={rules.tone} onValueChange={(v) => setRules({ ...rules, tone: v })}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -499,8 +504,7 @@ export default function AIKnowledgeBase() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Nível de Formalidade</Label>
+                <div className="space-y-1"><Label className="text-xs">Nível de Formalidade</Label>
                   <Select value={rules.formality} onValueChange={(v) => setRules({ ...rules, formality: v })}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -511,53 +515,11 @@ export default function AIKnowledgeBase() {
                   </Select>
                 </div>
               </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs">Diretrizes Gerais</Label>
-                <Textarea
-                  value={rules.guidelines}
-                  onChange={(e) => setRules({ ...rules, guidelines: e.target.value })}
-                  placeholder="Ex: Sempre pergunte o destino antes do período. Priorize margem sobre volume. Sugira sempre seguro viagem..."
-                  rows={4}
-                  className="text-xs"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs">Proibições / O que NUNCA fazer</Label>
-                <Textarea
-                  value={rules.forbidden}
-                  onChange={(e) => setRules({ ...rules, forbidden: e.target.value })}
-                  placeholder="Ex: Nunca prometer preço sem orçamento. Nunca falar mal de concorrente. Nunca dar informação de visto sem confirmar..."
-                  rows={3}
-                  className="text-xs"
-                />
-              </div>
-
+              <div className="space-y-1"><Label className="text-xs">Diretrizes Gerais</Label><Textarea value={rules.guidelines} onChange={(e) => setRules({ ...rules, guidelines: e.target.value })} placeholder="Ex: Sempre pergunte o destino antes do período..." rows={4} className="text-xs" /></div>
+              <div className="space-y-1"><Label className="text-xs">Proibições / O que NUNCA fazer</Label><Textarea value={rules.forbidden} onChange={(e) => setRules({ ...rules, forbidden: e.target.value })} placeholder="Ex: Nunca prometer preço sem orçamento..." rows={3} className="text-xs" /></div>
               <Separator />
-
-              <div className="space-y-1">
-                <Label className="text-xs">Template de Saudação (primeira mensagem)</Label>
-                <Textarea
-                  value={rules.greeting_template}
-                  onChange={(e) => setRules({ ...rules, greeting_template: e.target.value })}
-                  placeholder="Ex: Olá {nome}! ✨ Que bom ter você aqui na NatLeva! Sou {vendedor} e vou cuidar da sua viagem..."
-                  rows={2}
-                  className="text-xs"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <Label className="text-xs">Template de Encerramento</Label>
-                <Textarea
-                  value={rules.closing_template}
-                  onChange={(e) => setRules({ ...rules, closing_template: e.target.value })}
-                  placeholder="Ex: Muito obrigado pela confiança, {nome}! A NatLeva está aqui para tornar sua viagem inesquecível! 🌍✨"
-                  rows={2}
-                  className="text-xs"
-                />
-              </div>
-
+              <div className="space-y-1"><Label className="text-xs">Template de Saudação</Label><Textarea value={rules.greeting_template} onChange={(e) => setRules({ ...rules, greeting_template: e.target.value })} placeholder="Ex: Olá {nome}! ✨..." rows={2} className="text-xs" /></div>
+              <div className="space-y-1"><Label className="text-xs">Template de Encerramento</Label><Textarea value={rules.closing_template} onChange={(e) => setRules({ ...rules, closing_template: e.target.value })} placeholder="Ex: Muito obrigado, {nome}!..." rows={2} className="text-xs" /></div>
               <Button onClick={saveRules} disabled={savingRules} className="w-full text-xs" size="sm">
                 {savingRules ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Salvando...</> : <><Save className="w-3 h-3 mr-1" /> Salvar Regras</>}
               </Button>
