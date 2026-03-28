@@ -10,7 +10,7 @@ import { useState, useRef, useEffect, useCallback, Fragment } from "react";
 import {
   MessageSquarePlus, X, Send, Eye, Lightbulb, Sparkles, Trash2,
   Bot, Check, XCircle, Loader2, Wand2, ChevronDown, ChevronUp,
-  AlertTriangle, ArrowRight, Shield, Zap, FileText,
+  AlertTriangle, ArrowRight, Shield, Zap, FileText, ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
