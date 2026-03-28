@@ -31,7 +31,7 @@ import {
   generateLeadMsg, gerarObjecao, avaliarRespostaAgente, gerarMensagemPerda,
   buildCalibrationPrompt, buildAgentSysPrompt, type DbAgentOverride,
   MIN_TROCAS_POR_AGENTE, AGENT_ROLE_INSTRUCTIONS, FILOSOFIA_NATLEVA,
-  SPEED_OPTIONS, getAgentColor,
+  SPEED_OPTIONS, getAgentColor, validateAutoResponse,
   type Phase, type ReportTab, type ImprovementType,
   type Improvement, type DeepAnalysis, type DebriefDimensoes, type DebriefData, type SimHistoryEntry,
   TIPO_COLORS, STORAGE_KEYS, loadJson, saveJson,
