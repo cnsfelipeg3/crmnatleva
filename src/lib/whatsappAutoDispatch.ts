@@ -55,7 +55,7 @@ export async function dispatchWhatsAppTemplate(params: DispatchParams): Promise<
 
     const template = templates?.[0];
     if (!template) {
-      console.log("[WhatsApp Auto] ❌ Nenhum template ativo para trigger:", triggerEvent);
+      debugLog("[WhatsApp Auto] ❌ Nenhum template ativo para trigger:", triggerEvent);
       return false;
     }
 
