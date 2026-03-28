@@ -476,7 +476,7 @@ export default function SimuladorManualMode() {
           selectedAgent.id, agentText, conversationCtx,
         );
         if (wasRewritten) {
-          console.log(`🛡️ Compliance rewrite applied for ${selectedAgent.name}`);
+          debugLog(`🛡️ Compliance rewrite applied for ${selectedAgent.name}`);
           updateAgent(compliantText);
         }
       }
