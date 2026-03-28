@@ -55,7 +55,7 @@ REGRAS INEGOCIAVEIS:
 - Lembre: NUNCA cite fornecedores. Substitua por "a NatLeva providencia/organiza/cuida"`;
 
 // ─── Truncation Strategy (60% head + 35% tail) ───
-function truncateForOrion(text: string, maxChars = 6000): string {
+function truncateForOrion(text: string, maxChars = 10000): string {
   if (text.length <= maxChars) return text;
   const headSize = Math.floor(maxChars * 0.6);
   const tailSize = Math.floor(maxChars * 0.35);
