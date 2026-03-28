@@ -106,7 +106,7 @@ function compactText(text: string, maxChars: number) {
 function compactSystemPromptForTransport(sysPrompt: string, type: SimCallType, retryCount: number) {
   const maxCharsByType: Record<SimCallType, number> = {
     lead: retryCount >= 1 ? 900 : 1200,
-    agent: retryCount >= 1 ? 1100 : 1500,
+    agent: retryCount >= 1 ? 2800 : 3500,
     evaluate: 700,
     debrief: retryCount >= 1 ? 900 : 1200,
     objection: 850,
@@ -259,7 +259,53 @@ function enforceAgentFormattingRules(text: string): string {
   cleaned = cleaned.replace(/,\s*\./g, ".");
   // Remove leading comma at start of text
   cleaned = cleaned.replace(/^,\s*/, "");
+  // Remove bullet point lines
+  cleaned = cleaned.replace(/^[\s]*[-*•]\s+.+$/gm, "").replace(/\n{2,}/g, "\n").trim();
+  // Remove ESTADO_ metadata
+  cleaned = cleaned.replace(/\bESTADO_\w+\b/g, "").trim();
   return cleaned;
+}
+
+/**
+ * Validate agent response for compliance violations in auto mode.
+ * Returns violation list and whether the response should be flagged.
+ */
+export function validateAutoResponse(text: string, agentName?: string): { violations: string[]; needsWarning: boolean } {
+  const violations: string[] = [];
+  
+  // Check length (300 chars ≈ 60 words)
+  if (text.length > 300) {
+    violations.push(`resposta longa (${text.length} chars, max 300)`);
+  }
+  
+  // Check bullet points
+  if (/^[\s]*[-*•]\s+/m.test(text)) {
+    violations.push("bullet points detectados");
+  }
+  
+  // Check agent name leak (not "Nath")
+  const agentNames = ["Maya", "Atlas", "Habibi", "Nemo", "Dante", "Luna", "Nero", "Iris"];
+  for (const name of agentNames) {
+    if (new RegExp(`\\b(sou|sou a|sou o|me chamo|meu nome é|aqui é|aqui é a|aqui é o)\\s+${name}\\b`, "i").test(text)) {
+      violations.push(`se apresentou como ${name} (deveria ser Nath)`);
+    }
+  }
+  
+  // Check [TRANSFERIR] or ESTADO_ visible
+  if (/\[TRANSFERIR\]/.test(text) && text.replace("[TRANSFERIR]", "").trim().length < 20) {
+    violations.push("[TRANSFERIR] visível sem mensagem");
+  }
+  if (/\bESTADO_\w+\b/.test(text)) {
+    violations.push("metadado ESTADO_ visível");
+  }
+  
+  // Multiple questions
+  const questionCount = (text.match(/\?/g) || []).length;
+  if (questionCount > 2) {
+    violations.push(`${questionCount} perguntas (max 1-2)`);
+  }
+  
+  return { violations, needsWarning: violations.length > 0 };
 }
 
 // Detect if agent response mentions sending a price/quote print
@@ -419,6 +465,27 @@ REGRAS DE OURO:
 - Celebre conquistas do lead (aniversario, casamento, viagem dos sonhos).
 `;
 
+const IDENTIDADE_NATH = `
+IDENTIDADE (PRIORIDADE ABSOLUTA):
+- Voce se chama NATH. SEMPRE se apresente como Nath.
+- NUNCA revele nomes internos como Maya, Atlas, Habibi, Nemo, Dante, Luna, Nero, Iris.
+- Se o cliente perguntar seu nome, responda: "Sou a Nath, da NatLeva!"
+`;
+
+const FORMATO_WHATSAPP = `
+FORMATO DE RESPOSTA (OBRIGATORIO):
+- Maximo 60 palavras por mensagem. Isso e INEGOCIAVEL.
+- NUNCA use bullet points (- ou *). NUNCA faca listas.
+- NUNCA use travessao (— ou –).
+- Maximo 1 emoji por mensagem.
+- Maximo 1 pergunta por mensagem.
+- Escreva como WhatsApp real: curto, direto, conversacional.
+- NUNCA despeje informacoes que o cliente nao pediu.
+- NUNCA escreva paragrafos longos ou textos enciclopedicos.
+- Fale sobre UMA coisa por vez.
+- Se quiser falar mais, espere a proxima mensagem.
+`;
+
 export interface DbAgentOverride {
   behavior_prompt?: string | null;
   persona?: string | null;
@@ -433,7 +500,6 @@ export function buildAgentSysPrompt(
   globalRulesBlock: string = "",
   dbOverride?: DbAgentOverride,
 ) {
-  const lengthInstr = responseLength === "curta" ? "Responda de forma concisa mas com personalidade." : responseLength === "longa" ? "Responda de forma detalhada (3-5 frases), incluindo detalhes do produto." : "O agente decide o tamanho certo para cada momento da conversa.";
   const minTrocas = MIN_TROCAS_POR_AGENTE[agent.id] || 4;
   const transferInstr = hasNext && enableTransfers ? `\nSOBRE [TRANSFERIR]:
 Use [TRANSFERIR] SOMENTE quando TUDO isso for verdade:
@@ -486,7 +552,7 @@ Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
     trainingBlock = parts.join("\n");
   }
   
-  return `${dbPersona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}${lengthInstr}`;
+  return `${IDENTIDADE_NATH}\n${FORMATO_WHATSAPP}\n${dbPersona}\nVoce atua internamente como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp, mas para o cliente voce e SEMPRE a Nath.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}`;
 }
 
 export const SPEED_OPTIONS = [

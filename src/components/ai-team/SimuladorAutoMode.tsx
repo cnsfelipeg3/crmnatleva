@@ -31,7 +31,7 @@ import {
   generateLeadMsg, gerarObjecao, avaliarRespostaAgente, gerarMensagemPerda,
   buildCalibrationPrompt, buildAgentSysPrompt, type DbAgentOverride,
   MIN_TROCAS_POR_AGENTE, AGENT_ROLE_INSTRUCTIONS, FILOSOFIA_NATLEVA,
-  SPEED_OPTIONS, getAgentColor,
+  SPEED_OPTIONS, getAgentColor, validateAutoResponse,
   type Phase, type ReportTab, type ImprovementType,
   type Improvement, type DeepAnalysis, type DebriefDimensoes, type DebriefData, type SimHistoryEntry,
   TIPO_COLORS, STORAGE_KEYS, loadJson, saveJson,
@@ -374,8 +374,13 @@ export default function SimuladorAutoMode() {
           }
           const leadChunks = chunksRef.current.get(lead.id) || [];
           const compressedHistory = leadChunks.length > 0 ? buildActiveContext(lead, leadChunks) : compressConversation(lead.mensagens);
+          let agentSysPrompt = buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]);
+          if ((lead as any)._lengthWarning) {
+            agentSysPrompt += "\n\nAVISO CRITICO: sua ultima resposta foi LONGA DEMAIS e foi truncada. Respostas devem ter no maximo 60 palavras. Seja MUITO mais breve. UMA ideia por mensagem. ZERO listas.";
+            (lead as any)._lengthWarning = false;
+          }
           let agentResp = await callSimulatorAI(
-            buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]),
+            agentSysPrompt,
             compressedHistory, "agent"
           );
           if (!simAtivaRef.current) return;
@@ -386,6 +391,23 @@ export default function SimuladorAutoMode() {
           if (wasRewritten) {
             agentResp = compliantResp;
             addEvent("#EF4444", `🛡️ Compliance: resposta de ${agent.name} corrigida para ${lead.nome}`, "🛡️");
+          }
+
+          // 🔍 Post-response validation for auto mode
+          const validation = validateAutoResponse(agentResp, agent.name);
+          if (validation.needsWarning) {
+            for (const v of validation.violations) {
+              console.warn(`[VIOLATION] ${agent.name} → ${lead.nome}: ${v}`);
+            }
+            addEvent("#EF4444", `⚠️ Violação: ${validation.violations[0]}`, "🚨");
+          }
+
+          // Truncate overly long responses
+          if (agentResp.length > 300) {
+            // Keep first 300 chars and add ellipsis
+            agentResp = agentResp.slice(0, 300).replace(/\s+\S*$/, "") + "...";
+            // Inject warning for next round
+            (lead as any)._lengthWarning = true;
           }
 
           const addedAgentResp = pushUniqueSimMessage(lead, { role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
@@ -490,6 +512,15 @@ export default function SimuladorAutoMode() {
             const objCtx = lead.mensagens.slice(-8).map(m => `${m.role}: ${m.content}`).join("\n");
             const { text: compliantObj, wasRewritten: objRewritten } = await fullCompliancePipeline(agent.id, objResp, objCtx);
             if (objRewritten) objResp = compliantObj;
+            // Truncate long objection responses too
+            if (objResp.length > 300) {
+              objResp = objResp.slice(0, 300).replace(/\s+\S*$/, "") + "...";
+              (lead as any)._lengthWarning = true;
+            }
+            const objValidation = validateAutoResponse(objResp, agent.name);
+            if (objValidation.needsWarning) {
+              for (const v of objValidation.violations) console.warn(`[VIOLATION] ${agent.name} objection → ${lead.nome}: ${v}`);
+            }
             const addedObjectionResp = pushUniqueSimMessage(lead, { role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
             if (addedObjectionResp) setLeads(prev => [...prev]);
             continue;
