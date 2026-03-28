@@ -110,6 +110,7 @@ const AITeamMemoria = lazy(() => import("@/pages/ai-team/AITeamMemoria"));
 const AITeamAcademia = lazy(() => import("@/pages/ai-team/AITeamAcademia"));
 const AITeamSimulador = lazy(() => import("@/pages/ai-team/AITeamSimulador"));
 const AITeamExtrato = lazy(() => import("@/pages/ai-team/AITeamExtrato"));
+const AITeamSaude = lazy(() => import("@/pages/ai-team/AITeamSaude"));
 const AITeamConfig = lazy(() => import("@/pages/ai-team/AITeamConfig"));
 
 // Portal do Cliente
