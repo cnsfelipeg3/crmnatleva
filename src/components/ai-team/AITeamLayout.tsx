@@ -18,6 +18,7 @@ const AI_TEAM_MENUS = [
   { to: "/ai-team/academia", icon: GraduationCap, label: "Academia" },
   { to: "/ai-team/simulador", icon: MessageSquare, label: "Simulador" },
   { to: "/ai-team/extrato", icon: Receipt, label: "Extrato" },
+  { to: "/ai-team/saude", icon: Shield, label: "Saúde" },
   { to: "/ai-team/config", icon: Settings, label: "Configurações" },
 ];
 
