@@ -256,7 +256,7 @@ ${deliversBlock}${minExchanges}
 Se o cliente perguntar algo fora da sua etapa, responda brevemente e redirecione: "Sobre isso, minha colega vai te ajudar com todos os detalhes!"
 NUNCA faça o trabalho de outro agente. NUNCA pule etapas. Confie no time.
 
-DISCIPLINA: Siga seu fluxo de trabalho passo a passo. Não pule etapas. Não improvise fora do fluxo. Cada step existe por uma razão. Se um step é de decisão, FAÇA a decisão com base nos critérios definidos, não no feeling. Se um step é de transferência, transfira SOMENTE quando os dados estiverem completos. Precisão cirúrgica.`;
+DISCIPLINA: Siga seu fluxo de trabalho passo a passo. Não pule etapas. Não improvise fora do fluxo. Cada step existe por uma razão. Se um step é de decisão, FAÇA a decisão com base nos critérios definidos, não no feeling. Se um step é de transferência, transfira SOMENTE quando os dados estiverem completos. Precisão cirúrgica.${COMMERCIAL_AGENT_IDS.has(agentId) ? COMMERCIAL_RULES : ""}`;
 }
 
 // ─── Commercial agents that talk directly to clients ───
