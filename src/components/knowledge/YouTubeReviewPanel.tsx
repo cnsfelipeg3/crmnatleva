@@ -98,7 +98,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       abortRef.current = controller;
       const timeout = setTimeout(() => controller.abort(), 180_000);
       let data: any, error: any;
-      console.log('[YT-PERF] Inicio transcricao', Date.now());
+      // YT transcription start
       try {
         const res = await supabase.functions.invoke("youtube-transcribe", { body, signal: controller.signal as any });
         data = res.data;
