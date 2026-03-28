@@ -614,7 +614,7 @@ export default function SimuladorManualMode() {
     const nextMessages = [...messagesRef.current, audioMsg];
     messagesRef.current = nextMessages;
     setMessages(nextMessages);
-    setLoading(true);
+
 
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-media`;
