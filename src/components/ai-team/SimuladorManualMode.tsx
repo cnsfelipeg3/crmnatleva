@@ -7,7 +7,7 @@ import SimulatorObservationsPanel, { type SelectedMessage } from "./SimulatorObs
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining, type AgentTrainingConfig } from "@/components/ai-team/agentTrainingStore";
 import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
-import { buildTeamContextBlock, NATH_UNIVERSAL_RULES } from "@/components/ai-team/agentTeamContext";
+import { buildTeamContextBlock, NATH_UNIVERSAL_RULES, getTransferTargets } from "@/components/ai-team/agentTeamContext";
 import { useAgencyConfig } from "@/hooks/useAgencyConfig";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -465,9 +465,74 @@ export default function SimuladorManualMode() {
       }
 
       if (agentText.includes("[TRANSFERIR]")) {
-        const currentIdx = AGENTS_V4.findIndex(a => a.id === selectedAgent.id);
-        const sameSquad = AGENTS_V4.filter(a => a.squadId === selectedAgent.squadId && a.id !== selectedAgent.id);
-        const nextAgent = sameSquad[0] || AGENTS_V4[(currentIdx + 1) % AGENTS_V4.length];
+        // ── Pipeline-aware transfer using PIPELINE_MAP ──
+        const pipelineTargets = getTransferTargets(selectedAgent.id);
+        let nextAgent: AgentV4 | undefined;
+        let transferReason = "";
+
+        if (pipelineTargets.length === 1) {
+          // Single destination — use it directly
+          nextAgent = AGENTS_V4.find(a => a.id === pipelineTargets[0]);
+          transferReason = `rota única no pipeline: ${selectedAgent.id}→${pipelineTargets[0]}`;
+        } else if (pipelineTargets.length > 1) {
+          // Multiple destinations — analyze conversation for destination keywords
+          const allClientText = messagesRef.current
+            .filter(m => m.role === "user")
+            .map(m => (m.content || "").toLowerCase())
+            .join(" ");
+
+          const DESTINATION_KEYWORDS: Record<string, string[]> = {
+            habibi: ["dubai", "emirados", "abu dhabi", "oriente", "oriente médio", "qatar", "doha", "arábia", "omã", "bahrein"],
+            nemo: ["orlando", "disney", "miami", "eua", "estados unidos", "nova york", "americas", "caribe", "cancun", "cancún", "mexico", "méxico", "las vegas", "los angeles", "califórnia", "hawaii", "punta cana"],
+            dante: ["europa", "paris", "londres", "italia", "itália", "roma", "portugal", "espanha", "grecia", "grécia", "amsterdam", "berlim", "praga", "viena", "suíça", "croácia", "santorini"],
+          };
+
+          let matchedId = "";
+          let matchedKeyword = "";
+          for (const [agentId, keywords] of Object.entries(DESTINATION_KEYWORDS)) {
+            if (!pipelineTargets.includes(agentId)) continue;
+            const found = keywords.find(kw => allClientText.includes(kw));
+            if (found) {
+              matchedId = agentId;
+              matchedKeyword = found;
+              break;
+            }
+          }
+
+          if (matchedId) {
+            nextAgent = AGENTS_V4.find(a => a.id === matchedId);
+            transferReason = `destino "${matchedKeyword}" detectado no histórico`;
+          } else {
+            // No keyword match — fallback to LUNA (consultoria genérica) if in targets, otherwise first target
+            const fallbackId = pipelineTargets.includes("luna") ? "luna" : pipelineTargets[0];
+            nextAgent = AGENTS_V4.find(a => a.id === fallbackId);
+            transferReason = `sem keyword de destino detectado, fallback para ${fallbackId}`;
+          }
+        }
+
+        // Final fallback: no pipeline route defined
+        if (!nextAgent) {
+          console.warn("[TRANSFER] Sem rota no PIPELINE_MAP para", selectedAgent.name, selectedAgent.id);
+          const currentIdx = AGENTS_V4.findIndex(a => a.id === selectedAgent.id);
+          const sameSquad = AGENTS_V4.filter(a => a.squadId === selectedAgent.squadId && a.id !== selectedAgent.id);
+          nextAgent = sameSquad[0] || AGENTS_V4[(currentIdx + 1) % AGENTS_V4.length];
+          transferReason = "fallback por squad (sem rota no PIPELINE_MAP)";
+        }
+
+        console.log(`[TRANSFER] ${selectedAgent.name} → ${nextAgent.name} | Motivo: ${transferReason}`);
+
+        // Register in Extrato
+        logAITeamAudit({
+          action_type: "create",
+          entity_type: AUDIT_ENTITIES.FLOW,
+          entity_name: `${selectedAgent.name} → ${nextAgent.name}`,
+          agent_id: selectedAgent.id,
+          agent_name: selectedAgent.name,
+          description: `Transferência: ${selectedAgent.name} → ${nextAgent.name}. ${transferReason}`,
+          details: { from: selectedAgent.id, to: nextAgent.id, reason: transferReason },
+          performed_by: "Sistema",
+        });
+
         setTransferNotice(`${selectedAgent.name} → ${nextAgent.name}`);
         setSelectedAgent(nextAgent);
         setTimeout(() => setTransferNotice(null), 4000);
