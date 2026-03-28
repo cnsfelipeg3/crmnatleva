@@ -694,7 +694,7 @@ export default function SimuladorManualMode() {
       });
 
       // Send context to agent
-      await handleSend(contextText);
+      handleSend(contextText);
     } catch (err) {
       console.error("File processing error:", err);
       setMessages(prev => {
