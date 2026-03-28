@@ -237,6 +237,14 @@ export default function AIKnowledgeBase() {
     return matchSearch && matchCat;
   });
 
+  // YouTube full-screen panels
+  if (showYouTube) {
+    return <YouTubeReviewPanel onBack={() => setShowYouTube(false)} onSaved={() => { setShowYouTube(false); loadEntries(); }} />;
+  }
+  if (showBatchYouTube) {
+    return <YouTubeBatchImport onBack={() => setShowBatchYouTube(false)} onSaved={() => { setShowBatchYouTube(false); loadEntries(); }} />;
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
       {/* Header */}
