@@ -2872,6 +2872,7 @@ export default function LiveChat() {
           </div>
         )}
 
+        <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
         {activeSection === "flowbuilder" && (
           <FlowListPage onOpenFlow={(flow) => setEditingFlow(flow)} />
         )}
@@ -2879,6 +2880,7 @@ export default function LiveChat() {
         {activeSection === "integrations" && <LiveChatIntegrations />}
         {activeSection === "simulator" && <LiveChatSimulator />}
         {activeSection === "logs" && <LiveChatLogs />}
+        </Suspense>
       </div>
 
       {/* Lightbox */}
