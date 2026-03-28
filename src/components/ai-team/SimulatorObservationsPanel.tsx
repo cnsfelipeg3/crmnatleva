@@ -56,6 +56,7 @@ interface SynthesizedImprovement {
   severity: "critical" | "important" | "suggestion";
   sourceObservationIds: string[];
   status: "pending" | "approved" | "rejected";
+  improvementDbId?: string; // id from ai_team_improvements after approval
 }
 
 type PanelView = "observations" | "review";
