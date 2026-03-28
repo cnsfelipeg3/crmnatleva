@@ -42,7 +42,7 @@ export async function dispatchWhatsAppTemplate(params: DispatchParams): Promise<
   }
 
   try {
-    console.log("[WhatsApp Auto] 🚀 Iniciando dispatch para trigger:", triggerEvent, "phone:", clientPhone);
+    debugLog("[WhatsApp Auto] 🚀 Iniciando dispatch para trigger:", triggerEvent, "phone:", clientPhone);
     
     const { data: templates, error: tplError } = await supabase
       .from("whatsapp_templates")
