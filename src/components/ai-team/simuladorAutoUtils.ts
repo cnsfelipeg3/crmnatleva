@@ -259,7 +259,53 @@ function enforceAgentFormattingRules(text: string): string {
   cleaned = cleaned.replace(/,\s*\./g, ".");
   // Remove leading comma at start of text
   cleaned = cleaned.replace(/^,\s*/, "");
+  // Remove bullet point lines
+  cleaned = cleaned.replace(/^[\s]*[-*•]\s+.+$/gm, "").replace(/\n{2,}/g, "\n").trim();
+  // Remove ESTADO_ metadata
+  cleaned = cleaned.replace(/\bESTADO_\w+\b/g, "").trim();
   return cleaned;
+}
+
+/**
+ * Validate agent response for compliance violations in auto mode.
+ * Returns violation list and whether the response should be flagged.
+ */
+export function validateAutoResponse(text: string, agentName?: string): { violations: string[]; needsWarning: boolean } {
+  const violations: string[] = [];
+  
+  // Check length (300 chars ≈ 60 words)
+  if (text.length > 300) {
+    violations.push(`resposta longa (${text.length} chars, max 300)`);
+  }
+  
+  // Check bullet points
+  if (/^[\s]*[-*•]\s+/m.test(text)) {
+    violations.push("bullet points detectados");
+  }
+  
+  // Check agent name leak (not "Nath")
+  const agentNames = ["Maya", "Atlas", "Habibi", "Nemo", "Dante", "Luna", "Nero", "Iris"];
+  for (const name of agentNames) {
+    if (new RegExp(`\\b(sou|sou a|sou o|me chamo|meu nome é|aqui é|aqui é a|aqui é o)\\s+${name}\\b`, "i").test(text)) {
+      violations.push(`se apresentou como ${name} (deveria ser Nath)`);
+    }
+  }
+  
+  // Check [TRANSFERIR] or ESTADO_ visible
+  if (/\[TRANSFERIR\]/.test(text) && text.replace("[TRANSFERIR]", "").trim().length < 20) {
+    violations.push("[TRANSFERIR] visível sem mensagem");
+  }
+  if (/\bESTADO_\w+\b/.test(text)) {
+    violations.push("metadado ESTADO_ visível");
+  }
+  
+  // Multiple questions
+  const questionCount = (text.match(/\?/g) || []).length;
+  if (questionCount > 2) {
+    violations.push(`${questionCount} perguntas (max 1-2)`);
+  }
+  
+  return { violations, needsWarning: violations.length > 0 };
 }
 
 // Detect if agent response mentions sending a price/quote print
