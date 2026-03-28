@@ -7,6 +7,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
+import { buildTeamContextBlock, NATH_UNIVERSAL_RULES } from "@/components/ai-team/agentTeamContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import { cn } from "@/lib/utils";
 import {
   HeartPulse, ChevronDown, ChevronUp, Wrench, CheckCircle2,
   AlertTriangle, XCircle, Shield, BookOpen, Wand2, GitBranch, MessageSquare,
-  Loader2, Sparkles, Info,
+  Loader2, Sparkles, Info, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -289,6 +290,7 @@ export default function AITeamSaude() {
   const [expandedDetail, setExpandedDetail] = useState<string | null>(null);
   const [autoFixOpen, setAutoFixOpen] = useState(false);
   const [fixing, setFixing] = useState(false);
+  const [promptPreview, setPromptPreview] = useState<string | null>(null); // agent id showing prompt
   const queryClient = useQueryClient();
 
   const toggleDetail = useCallback((label: string) => {
@@ -576,6 +578,35 @@ Seja breve quando o momento pedir brevidade, e detalhado quando pedir detalhe.`;
                           </div>
                         );
                       })}
+
+                      {/* Prompt Completo */}
+                      <div className="mt-2 border-t border-border/30 pt-2">
+                        <button
+                          type="button"
+                          className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPromptPreview(prev => prev === h.agent.id ? null : h.agent.id);
+                          }}
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          {promptPreview === h.agent.id ? "Ocultar Prompt Completo" : "Ver Prompt Completo"}
+                        </button>
+                        {promptPreview === h.agent.id && (() => {
+                          const dbA = dbAgents.find((a: any) => a.id === h.agent.id);
+                          const behaviorPrompt = dbA?.behavior_prompt || "(vazio)";
+                          const persona = dbA?.persona || h.agent.persona || "(vazio)";
+                          const teamCtx = buildTeamContextBlock(h.agent.id);
+                          const fullPrompt = `=== PERSONA ===\n${persona}\n\n=== BEHAVIOR PROMPT (do banco) ===\n${behaviorPrompt}\n\n=== TEAM CONTEXT (pipeline + regras comerciais) ===\n${teamCtx}\n\n=== REGRAS UNIVERSAIS NATH ===\n${NATH_UNIVERSAL_RULES}`;
+                          return (
+                            <div className="mt-2 max-h-80 overflow-y-auto rounded-lg bg-zinc-950 border border-border/30 p-3">
+                              <pre className="text-[10px] leading-relaxed text-emerald-300 font-mono whitespace-pre-wrap break-words">
+                                {fullPrompt}
+                              </pre>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     </div>
                   )}
                 </CardContent>
