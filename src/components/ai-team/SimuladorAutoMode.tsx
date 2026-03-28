@@ -512,6 +512,15 @@ export default function SimuladorAutoMode() {
             const objCtx = lead.mensagens.slice(-8).map(m => `${m.role}: ${m.content}`).join("\n");
             const { text: compliantObj, wasRewritten: objRewritten } = await fullCompliancePipeline(agent.id, objResp, objCtx);
             if (objRewritten) objResp = compliantObj;
+            // Truncate long objection responses too
+            if (objResp.length > 300) {
+              objResp = objResp.slice(0, 300).replace(/\s+\S*$/, "") + "...";
+              (lead as any)._lengthWarning = true;
+            }
+            const objValidation = validateAutoResponse(objResp, agent.name);
+            if (objValidation.needsWarning) {
+              for (const v of objValidation.violations) console.warn(`[VIOLATION] ${agent.name} objection → ${lead.nome}: ${v}`);
+            }
             const addedObjectionResp = pushUniqueSimMessage(lead, { role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
             if (addedObjectionResp) setLeads(prev => [...prev]);
             continue;
