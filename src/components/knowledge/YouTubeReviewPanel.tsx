@@ -94,8 +94,10 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
         body.manual_transcript = manualTranscript.trim();
       }
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 180_000); // 3 min timeout
+      abortRef.current = controller;
+      const timeout = setTimeout(() => controller.abort(), 180_000);
       let data: any, error: any;
+      console.log('[YT-PERF] Inicio transcricao', Date.now());
       try {
         const res = await supabase.functions.invoke("youtube-transcribe", { body, signal: controller.signal as any });
         data = res.data;
@@ -103,7 +105,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       } catch (abortErr: any) {
         clearTimeout(timeout);
         if (abortErr.name === "AbortError") {
-          toast.error("A extração demorou demais. Tente colar a transcrição manualmente.", { duration: 8000 });
+          toast.error("A extração foi cancelada. Tente colar a transcrição manualmente.", { duration: 8000 });
           setShowManualInput(true);
           setStep("idle");
           return;
@@ -111,6 +113,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
         throw abortErr;
       }
       clearTimeout(timeout);
+      console.log('[YT-PERF] Fim transcricao', Date.now());
 
       let errorBody: any = null;
       if (error) {
