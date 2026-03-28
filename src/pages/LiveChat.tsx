@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, Fragment, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, Fragment, useMemo, lazy, Suspense } from "react";
 import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -30,11 +30,6 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import LayerDivider from "@/components/LayerDivider";
 import { toast } from "@/hooks/use-toast";
-import { FlowListPage } from "@/components/flowbuilder/FlowListPage";
-import { FlowCanvas } from "@/components/flowbuilder/FlowCanvas";
-import { LiveChatIntegrations } from "@/components/livechat/LiveChatIntegrations";
-import { LiveChatSimulator } from "@/components/livechat/LiveChatSimulator";
-import { LiveChatLogs } from "@/components/livechat/LiveChatLogs";
 import { AudioWaveformPlayer } from "@/components/livechat/AudioWaveformPlayer";
 import { AISuggestionPanel } from "@/components/livechat/AISuggestionPanel";
 import { BuyingMomentAlert } from "@/components/livechat/BuyingMomentAlert";
@@ -44,6 +39,14 @@ import { initPersistence, persistConversation, persistMessages, loadPersistedMes
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
+
+// ── Lazy-loaded heavy sub-components ──
+const FlowListPage = lazy(() => import("@/components/flowbuilder/FlowListPage").then(m => ({ default: m.FlowListPage })));
+const FlowCanvas = lazy(() => import("@/components/flowbuilder/FlowCanvas").then(m => ({ default: m.FlowCanvas })));
+const LiveChatIntegrations = lazy(() => import("@/components/livechat/LiveChatIntegrations").then(m => ({ default: m.LiveChatIntegrations })));
+const LiveChatSimulator = lazy(() => import("@/components/livechat/LiveChatSimulator").then(m => ({ default: m.LiveChatSimulator })));
+const LiveChatLogs = lazy(() => import("@/components/livechat/LiveChatLogs").then(m => ({ default: m.LiveChatLogs })));
+const EmojiPickerData = lazy(() => import("@emoji-mart/data").then(m => ({ default: () => null })));
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 
