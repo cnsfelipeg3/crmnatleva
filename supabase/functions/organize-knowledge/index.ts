@@ -5,7 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Voce e o ORION, analista de inteligencia da NatLeva, uma agencia de viagens premium brasileira. Sua missao: extrair o MAXIMO de conhecimento acionavel de qualquer conteudo sobre viagens.
+// ─── ÓRION v1 — System Prompt ───
+const ORION_SYSTEM_PROMPT = `Voce e o ORION, analista de inteligencia da NatLeva, uma agencia de viagens premium brasileira. Sua missao: extrair o MAXIMO de conhecimento acionavel para vendas.
 
 REGRAS CRITICAS DE CONFIDENCIALIDADE (PRIORIDADE MAXIMA):
 - NUNCA cite nomes de fornecedores, operadoras, consolidadoras, plataformas de reserva, apps de pagamento ou parceiros comerciais (ex: Trip.com, Booking, Expedia, Hotelbeds, CVC, Flytour, Omnibees, Alipay, WeChat Pay, Klook, GetYourGuide, Viator, Decolar, Submarino Viagens, 123milhas, MaxMilhas, etc.)
@@ -18,158 +19,243 @@ REGRAS DE FILTRAGEM AGENCY-FIRST:
 - TRANSFORME dicas de "faca voce mesmo" em argumentos de venda para a NatLeva
 - MANTENHA todas as informacoes uteis sobre destinos, cultura, gastronomia, pontos turisticos, clima, transporte local, precos de referencia
 
-Analise o conteudo e retorne SOMENTE JSON valido (sem markdown, sem backticks, sem texto antes ou depois) com esta estrutura:
+Analise o conteudo e retorne SOMENTE JSON valido (sem markdown, sem backticks, sem texto antes ou depois do JSON) com esta estrutura:
 
 {
-  "titulo_sugerido": "titulo claro e descritivo para este conteudo",
-  "resumo": "resumo executivo de 3-5 frases focado no que e mais util para VENDER viagens",
-  "tags": ["array de 8-15 tags em portugues lowercase, incluindo pais, cidades, tipo de viagem, perfil"],
+  "titulo_sugerido": "titulo claro e descritivo",
+  "resumo": "resumo executivo de 3-5 frases focado em VENDER viagens",
+  "tags": ["8-15 tags em portugues lowercase, sem acentos quando possivel"],
   "chunks": [
-    { "titulo": "titulo do trecho", "conteudo": "2-4 frases com dados acionaveis", "tags_chunk": ["tags especificas"] }
+    {"titulo":"titulo do trecho","conteudo":"2-4 frases com dados acionaveis","tags_chunk":["tags deste chunk"]}
   ],
   "taxonomia": {
-    "geo": {
-      "continente": "",
-      "pais": "",
-      "regiao": "",
-      "cidades": [],
-      "bairros": []
-    },
-    "destino": {
-      "tipo": "internacional ou nacional ou regional",
-      "popularidade": "alta ou media ou nicho",
-      "ideal_para": ["casal","familia","aventureiro","lua-de-mel","vip","primeira-viagem","grupo","solo"],
-      "melhor_epoca": ["meses do ano"],
-      "evitar_epoca": ["meses do ano"],
-      "clima": "descricao curta",
-      "visto_necessario": null,
-      "vacinas": ["se mencionadas"]
-    },
-    "experiencias": {
-      "passeios": [{"nome":"","tipo":"historico|cultural|natureza|aventura|gastronomico|noturno|relaxamento|compras","duracao":"","preco_aprox":"em R$"}],
-      "restaurantes": [{"nome":"","tipo":"","faixa_preco":"$|$$|$$$|$$$$"}],
-      "experiencias_unicas": ["descricoes curtas"]
-    },
-    "hospedagem": {
-      "hoteis": [{"nome":"","categoria":"estrelas","faixa_preco":"R$/noite","destaque":""}],
-      "regioes_recomendadas": [],
-      "tipo_hospedagem": ["hotel luxo","boutique","resort","airbnb","hostel"]
-    },
-    "logistica": {
-      "companhias_aereas": [],
-      "aeroportos": [],
-      "tempo_voo_brasil": "",
-      "melhor_conexao": "",
-      "transfer_interno": ["opcoes de transporte local"]
-    },
-    "financeiro": {
-      "faixa_preco_total": "R$ range por pessoa",
-      "faixa_preco_label": "economico ou moderado ou premium ou luxo",
-      "dica_moeda": "dica pratica sobre cambio"
-    },
-    "perfil_viajante": {
-      "ideal": ["perfis que mais aproveitariam"],
-      "nao_recomendado": ["perfis que nao combina"],
-      "nivel_conforto": "alto ou medio ou basico",
-      "nivel_aventura": "alto ou medio ou baixo"
-    },
-    "vendas": {
-      "argumentos_chave": ["3-5 argumentos fortes para vender"],
-      "objecoes_comuns": ["objecoes que clientes levantam"],
-      "como_contornar": ["resposta para cada objecao"],
-      "gatilho_emocional": "UMA frase que a Nath usaria no WhatsApp para encantar",
-      "urgencia": "frase de urgencia para fechar"
-    },
-    "dominio": "destinos ou cultura ou produtos ou conversacao ou fiscal ou icp",
+    "geo": {"continente":"","pais":"","regiao":"","cidades":[],"bairros":[]},
+    "destino": {"tipo":"internacional|nacional|regional","popularidade":"alta|media|nicho","ideal_para":[],"melhor_epoca":[],"evitar_epoca":[],"clima":"","visto_necessario":null,"vacinas":[]},
+    "experiencias": {"passeios":[{"nome":"","tipo":"historico|cultural|natureza|aventura|gastronomico|noturno|relaxamento|compras","duracao":"","preco_aprox":""}],"restaurantes":[{"nome":"","tipo":"","faixa_preco":""}],"experiencias_unicas":[]},
+    "hospedagem": {"hoteis":[{"nome":"","categoria":"","faixa_preco":"","destaque":""}],"regioes_recomendadas":[],"tipo_hospedagem":[]},
+    "logistica": {"companhias_aereas":[],"aeroportos":[],"tempo_voo_brasil":"","melhor_conexao":"","transfer_interno":[]},
+    "financeiro": {"faixa_preco_total":"","faixa_preco_label":"economico|moderado|premium|luxo","moeda_dica":""},
+    "perfil_viajante": {"ideal":[],"nao_recomendado":[],"nivel_conforto":"","nivel_aventura":""},
+    "vendas": {"argumentos_chave":[],"objecoes_comuns":[],"como_contornar":[],"gatilho_emocional":"","urgencia":""},
+    "dominio": "destinos|cultura|produtos|conversacao|fiscal|icp",
     "confianca": 0.0
   }
 }
 
-IMPORTANTE:
-- Preencha APENAS os campos que voce consegue extrair do conteudo. Deixe arrays vazios [] ou strings vazias "" para campos sem informacao.
-- As tags devem incluir: pais, cidades, tipo de viagem (lua-de-mel, aventura, etc), continente, perfil ideal
-- O campo "confianca" deve ser um numero de 0.0 a 1.0 indicando o quanto voce confia na qualidade/completude do conhecimento extraido
-- Seja ESPECIFICO, cite dados reais do conteudo. NAO invente informacoes.
+REGRAS INEGOCIAVEIS:
+- Retorne APENAS o JSON. Nada antes, nada depois. Sem \`\`\`json, sem explicacoes.
+- Preencha APENAS campos com informacao real do conteudo. Strings vazias e arrays vazios pro resto.
+- confianca (0.0 a 1.0): quao completo e confiavel e o conhecimento.
+- dominio: categoria principal do conteudo.
+- Gere 3-8 chunks com dados ACIONAVEIS para vendas.
+- Tags: portugues, lowercase, sem acentos.
+- Precos SEMPRE em Reais (R$).
+- vendas.gatilho_emocional: escreva como a Nath (caloroso, humano, sem travessao).
+- Seja AGRESSIVO na extracao. Hotel citado de passagem? Extraia. Prato mencionado? Extraia.
 - Lembre: NUNCA cite fornecedores. Substitua por "a NatLeva providencia/organiza/cuida"`;
+
+// ─── Truncation Strategy (60% head + 35% tail) ───
+function truncateForOrion(text: string, maxChars = 6000): string {
+  if (text.length <= maxChars) return text;
+  const headSize = Math.floor(maxChars * 0.6);
+  const tailSize = Math.floor(maxChars * 0.35);
+  const head = text.slice(0, headSize);
+  const tail = text.slice(-tailSize);
+  return head + "\n\n[... conteudo intermediario omitido por limite ...]\n\n" + tail;
+}
+
+// ─── Empty Taxonomy (fallback structure) ───
+function getEmptyTaxonomia() {
+  return {
+    geo: { continente: "", pais: "", regiao: "", cidades: [], bairros: [] },
+    destino: { tipo: "", popularidade: "", ideal_para: [], melhor_epoca: [], evitar_epoca: [], clima: "", visto_necessario: null, vacinas: [] },
+    experiencias: { passeios: [], restaurantes: [], experiencias_unicas: [] },
+    hospedagem: { hoteis: [], regioes_recomendadas: [], tipo_hospedagem: [] },
+    logistica: { companhias_aereas: [], aeroportos: [], tempo_voo_brasil: "", melhor_conexao: "", transfer_interno: [] },
+    financeiro: { faixa_preco_total: "", faixa_preco_label: "", moeda_dica: "" },
+    perfil_viajante: { ideal: [], nao_recomendado: [], nivel_conforto: "", nivel_aventura: "" },
+    vendas: { argumentos_chave: [], objecoes_comuns: [], como_contornar: [], gatilho_emocional: "", urgencia: "" },
+    dominio: "",
+    confianca: 0,
+  };
+}
+
+// ─── Validate Taxonomy (deep merge with empty) ───
+function validateTaxonomia(tax: any) {
+  if (!tax || typeof tax !== "object") return getEmptyTaxonomia();
+  const empty = getEmptyTaxonomia() as Record<string, any>;
+  const result: Record<string, any> = {};
+  for (const key of Object.keys(empty)) {
+    if (typeof empty[key] === "object" && !Array.isArray(empty[key]) && empty[key] !== null) {
+      result[key] = { ...empty[key], ...(tax[key] || {}) };
+    } else {
+      result[key] = tax[key] !== undefined ? tax[key] : empty[key];
+    }
+  }
+  result.confianca = Math.min(1, Math.max(0, Number(result.confianca) || 0));
+  return result;
+}
+
+// ─── Robust Parse (4 layers) ───
+function parseOrionResponse(rawText: string) {
+  try {
+    // Layer 1: clean markdown
+    let clean = (rawText || "").trim();
+    clean = clean.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+
+    // Layer 2: find JSON boundaries
+    const firstBrace = clean.indexOf("{");
+    const lastBrace = clean.lastIndexOf("}");
+    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+      throw new Error("JSON nao encontrado na resposta");
+    }
+    const jsonStr = clean.slice(firstBrace, lastBrace + 1);
+
+    // Layer 3: parse
+    const parsed = JSON.parse(jsonStr);
+
+    // Layer 4: validate required fields
+    const result = {
+      titulo_sugerido: parsed.titulo_sugerido || "",
+      resumo: parsed.resumo || "Conteudo processado pelo ORION.",
+      tags: Array.isArray(parsed.tags) ? parsed.tags.filter((t: any) => typeof t === "string") : [],
+      chunks: Array.isArray(parsed.chunks)
+        ? parsed.chunks.map((c: any) => ({
+            titulo: c.titulo || "Sem titulo",
+            conteudo: c.conteudo || "",
+            tags_chunk: Array.isArray(c.tags_chunk) ? c.tags_chunk : [],
+          }))
+        : [],
+      taxonomia: validateTaxonomia(parsed.taxonomia),
+      processadoEm: new Date().toISOString(),
+      cerebroVersao: "orion-v1",
+      status: "processado",
+    };
+    return result;
+  } catch (e: any) {
+    console.error("ORION parse error:", e.message);
+    return {
+      titulo_sugerido: "",
+      resumo: "Erro no processamento. Reprocesse manualmente.",
+      tags: [],
+      chunks: [],
+      taxonomia: getEmptyTaxonomia(),
+      processadoEm: new Date().toISOString(),
+      cerebroVersao: "orion-v1",
+      status: "pendente_reprocessamento",
+      erro: e.message,
+    };
+  }
+}
+
+// ─── Call Claude with retry ───
+async function callOrion(systemPrompt: string, content: string, retries = 1): Promise<string> {
+  const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const r = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: [{ role: "user", content }],
+        }),
+      });
+
+      if (!r.ok) {
+        if (r.status === 429) {
+          if (attempt < retries) { await new Promise(w => setTimeout(w, 2000)); continue; }
+          throw new Error("Rate limit atingido. Tente novamente em alguns segundos.");
+        }
+        if (r.status === 402) {
+          throw new Error("Créditos insuficientes na Anthropic.");
+        }
+        const errText = await r.text();
+        console.error("Anthropic error:", r.status, errText);
+        if (attempt < retries) { await new Promise(w => setTimeout(w, 2000)); continue; }
+        throw new Error(`API retornou ${r.status}`);
+      }
+
+      const d = await r.json();
+      if (d.error) throw new Error(d.error.message);
+      return d?.content?.[0]?.text?.trim() || "";
+    } catch (e) {
+      if (attempt < retries) { await new Promise(w => setTimeout(w, 2000)); continue; }
+      throw e;
+    }
+  }
+  throw new Error("callOrion: todas as tentativas falharam");
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const startTime = Date.now();
+
   try {
-    const { content, transcript } = await req.json();
+    const { content, transcript, title, tipo } = await req.json();
     if (!content && !transcript) {
       return new Response(JSON.stringify({ error: "Conteúdo não fornecido" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
+    // Build user message with intelligent truncation
+    const rawContent = content || transcript || "";
+    const truncated = truncateForOrion(rawContent, 6000);
 
-    const userMessage = transcript && transcript.length > 200
-      ? `Aqui esta o CONHECIMENTO BRUTO extraido de um video do YouTube:\n\n${content}\n\n---\n\nE aqui esta a TRANSCRICAO ORIGINAL do video para referencia (use para extrair detalhes que possam ter sido perdidos):\n\n${transcript.slice(0, 30000)}`
-      : `Aqui esta o CONHECIMENTO BRUTO. Analise e retorne a taxonomia completa em JSON:\n\n${content}`;
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 8192,
-        system: SYSTEM_PROMPT,
-        messages: [
-          { role: "user", content: userMessage },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit atingido. Tente novamente em alguns segundos." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes na Anthropic." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errText = await response.text();
-      console.error("Anthropic error:", response.status, errText);
-      throw new Error(`Anthropic error: ${response.status}`);
+    let userMessage: string;
+    if (transcript && transcript.length > 200 && content) {
+      const truncatedTranscript = truncateForOrion(transcript, 3000);
+      userMessage = `Documento: ${title || "Conteudo"}\nTipo: ${tipo || "youtube"}\nConteudo:\n${truncated}\n\n---\n\nTranscricao original para referencia:\n${truncatedTranscript}`;
+    } else {
+      userMessage = `Documento: ${title || "Conteudo"}\nTipo: ${tipo || "texto"}\nConteudo:\n${truncated}`;
     }
 
-    const data = await response.json();
-    const rawText = data.content?.[0]?.text || "";
+    // Call ÓRION with retry
+    const rawResponse = await callOrion(ORION_SYSTEM_PROMPT, userMessage);
+    const result = parseOrionResponse(rawResponse);
 
-    // Try to parse as JSON (the new format)
-    let taxonomy = null;
-    let organized_content = rawText;
-    try {
-      // Strip potential markdown code fences
-      const cleaned = rawText.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
-      taxonomy = JSON.parse(cleaned);
-      // Also generate markdown for backward compatibility
-      organized_content = taxonomy.resumo || rawText;
-    } catch {
-      // If not JSON, it's the old markdown format - still return it
-      console.log("Response was not JSON, returning as markdown");
-    }
+    const elapsed = Date.now() - startTime;
 
-    return new Response(JSON.stringify({ 
-      organized_content,
-      taxonomy,
+    return new Response(JSON.stringify({
+      organized_content: result.resumo,
+      taxonomy: result,
+      processing_time_ms: elapsed,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (e) {
+  } catch (e: any) {
     console.error("organize-knowledge error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const elapsed = Date.now() - startTime;
+
+    // Return fallback instead of crashing
+    return new Response(JSON.stringify({
+      organized_content: "Erro no processamento. Reprocesse manualmente.",
+      taxonomy: {
+        titulo_sugerido: "",
+        resumo: "Erro no processamento. Reprocesse manualmente.",
+        tags: [],
+        chunks: [],
+        taxonomia: getEmptyTaxonomia(),
+        processadoEm: new Date().toISOString(),
+        cerebroVersao: "orion-v1",
+        status: "pendente_reprocessamento",
+        erro: e.message,
+      },
+      processing_time_ms: elapsed,
+      error: e.message,
+    }), {
+      status: 200, // Return 200 with error info so frontend doesn't crash
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
