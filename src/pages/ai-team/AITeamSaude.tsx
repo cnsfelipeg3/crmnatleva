@@ -7,6 +7,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
+import { buildTeamContextBlock, NATH_UNIVERSAL_RULES } from "@/components/ai-team/agentTeamContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import { cn } from "@/lib/utils";
 import {
   HeartPulse, ChevronDown, ChevronUp, Wrench, CheckCircle2,
   AlertTriangle, XCircle, Shield, BookOpen, Wand2, GitBranch, MessageSquare,
-  Loader2, Sparkles, Info,
+  Loader2, Sparkles, Info, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
