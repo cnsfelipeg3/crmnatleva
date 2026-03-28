@@ -144,10 +144,12 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       // Auto-run ÓRION (organize with AI)
       setStep("organizing");
       setOrganizing(true);
+      console.log('[YT-PERF] Inicio ORION', Date.now());
       try {
         const { data: orgData, error: orgErr } = await supabase.functions.invoke("organize-knowledge", {
           body: { content: data.structured_knowledge || "", transcript: data.transcript || "" },
         });
+        console.log('[YT-PERF] Fim ORION', Date.now());
         if (orgErr) throw orgErr;
         if (orgData?.taxonomy) {
           setTaxonomy(orgData.taxonomy.taxonomia || orgData.taxonomy);
