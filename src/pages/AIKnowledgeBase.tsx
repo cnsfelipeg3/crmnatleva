@@ -69,6 +69,8 @@ export default function AIKnowledgeBase() {
   const [showAdd, setShowAdd] = useState(false);
   const [editEntry, setEditEntry] = useState<KBEntry | null>(null);
   const [activeTab, setActiveTab] = useState("items");
+  const [showYouTube, setShowYouTube] = useState(false);
+  const [showBatchYouTube, setShowBatchYouTube] = useState(false);
 
   // Form state
   const [formTitle, setFormTitle] = useState("");
