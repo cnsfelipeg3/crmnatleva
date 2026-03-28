@@ -145,7 +145,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       // Auto-run ÓRION (organize with AI)
       setStep("organizing");
       setOrganizing(true);
-      console.log('[YT-PERF] Inicio ORION', Date.now());
+      // ORION start
       try {
         const { data: orgData, error: orgErr } = await supabase.functions.invoke("organize-knowledge", {
           body: { content: data.structured_knowledge || "", transcript: data.transcript || "" },
