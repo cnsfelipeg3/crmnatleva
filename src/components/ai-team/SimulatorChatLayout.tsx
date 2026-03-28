@@ -465,7 +465,7 @@ export default function SimulatorChatLayout({
                   variant="ghost"
                   className="h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground"
                   onClick={() => setShowAttachMenu(!showAttachMenu)}
-                  disabled={disabled || loading}
+              disabled={disabled}
                 >
                   <Paperclip className="h-4 w-4" />
                 </Button>
@@ -510,7 +510,7 @@ export default function SimulatorChatLayout({
               value={inputValue}
               onChange={(e) => onInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              disabled={disabled || loading}
+              disabled={disabled}
               className="flex-1 min-h-[40px] max-h-[120px] text-sm resize-none bg-background/50 border-border/50"
               rows={1}
             />
@@ -521,9 +521,9 @@ export default function SimulatorChatLayout({
                 size="icon"
                 className="h-10 w-10 shrink-0"
                 onClick={onSend}
-                disabled={disabled || loading}
+                disabled={disabled}
               >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                <Send className="h-4 w-4" />
               </Button>
             ) : onSendAudio ? (
               <Button
@@ -531,7 +531,7 @@ export default function SimulatorChatLayout({
                 variant="ghost"
                 className="h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground hover:bg-primary/10"
                 onClick={startRecording}
-                disabled={disabled || loading}
+                disabled={disabled}
               >
                 <Mic className="h-4 w-4" />
               </Button>
@@ -540,9 +540,9 @@ export default function SimulatorChatLayout({
                 size="icon"
                 className="h-10 w-10 shrink-0"
                 onClick={onSend}
-                disabled={disabled || loading || !hasText}
+                disabled={disabled || !hasText}
               >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                <Send className="h-4 w-4" />
               </Button>
             )}
           </div>

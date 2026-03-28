@@ -223,6 +223,9 @@ export default function SimuladorManualMode() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const messagesRef = useRef<ChatMsg[]>([]);
+  const pendingMessagesRef = useRef<ChatMsg[]>([]);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isProcessingRef = useRef(false);
 
   // Load behavior_prompt from DB for all agents
   const [agentBehaviors, setAgentBehaviors] = useState<Record<string, string>>({});
@@ -301,15 +304,23 @@ export default function SimuladorManualMode() {
     [selectedAgent, globalRulesBlock, agencyConfig.agency_name, agencyConfig.tom_comunicacao],
   );
 
-  const handleSend = useCallback(async (overrideText?: string) => {
-    const text = overrideText || input.trim();
-    if (!text || loading) return;
-    const userMsg: ChatMsg = { id: crypto.randomUUID(), role: "user", content: text, timestamp: new Date().toISOString() };
-    const nextMessages = [...messagesRef.current, userMsg];
-    messagesRef.current = nextMessages;
-    setMessages(nextMessages);
-    setInput("");
+  // ═══ DEBOUNCE CHAT — Input livre, fila de mensagens, resposta em lote ═══
+  const DEBOUNCE_MS = 4000;
+
+  const triggerAgentResponse = useCallback(async () => {
+    const batch = [...pendingMessagesRef.current];
+    pendingMessagesRef.current = [];
+    if (batch.length === 0) return;
+    if (isProcessingRef.current) {
+      // Re-queue: agent is still processing, will be picked up after
+      pendingMessagesRef.current = [...batch, ...pendingMessagesRef.current];
+      return;
+    }
+
+    isProcessingRef.current = true;
     setLoading(true);
+
+    const currentMessages = messagesRef.current;
 
     // ═══ ENRICHMENT LAYER — additive, safe, no-break ═══
     let enrichedBehaviorPrompt = (agentBehaviors[selectedAgent.id] || "") + (kbContent[selectedAgent.id] || "");
@@ -338,7 +349,7 @@ export default function SimuladorManualMode() {
         }
       }
 
-      // 2) KB items from DB (not already in kbContent)
+      // 2) KB items from DB
       const { data: kbDocs } = await supabase
         .from("ai_knowledge_base")
         .select("title, content_text, category")
@@ -386,7 +397,6 @@ export default function SimuladorManualMode() {
       }
       console.log(`[ENRICHMENT] ${addedSkills} skills adicionadas, ${addedKb} KB items, ${addedWorkflows} workflows`);
     } catch (err) {
-      // Silent fail — use original prompt
       console.log("[ENRICHMENT] Falha silenciosa, usando prompt original", err);
     }
 
@@ -399,7 +409,7 @@ export default function SimuladorManualMode() {
           type: "agent",
           systemPrompt: manualSystemPrompt,
           agentBehaviorPrompt: enrichedBehaviorPrompt,
-          history: buildConversationHistory(nextMessages, selectedDestino, isLivreMode),
+          history: buildConversationHistory(currentMessages, selectedDestino, isLivreMode),
           provider: "lovable",
         }),
       });
@@ -408,8 +418,14 @@ export default function SimuladorManualMode() {
         const errorData = resp.status === 429
           ? "Anthropic está temporariamente no limite. Aguarde alguns segundos e tente novamente."
           : resp.status === 402 ? "Créditos insuficientes." : "Erro na comunicação.";
-        setMessages(prev => [...prev, { id: crypto.randomUUID(), role: "agent", content: errorData, timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name }]);
-        setLoading(false); return;
+        setMessages(prev => {
+          const updated = [...prev, { id: crypto.randomUUID(), role: "agent" as const, content: errorData, timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name }];
+          messagesRef.current = updated;
+          return updated;
+        });
+        setLoading(false);
+        isProcessingRef.current = false;
+        return;
       }
 
       const reader = resp.body.getReader();
@@ -453,8 +469,8 @@ export default function SimuladorManualMode() {
           return updated;
         });
       } else {
-        // 🛡️ Compliance Engine: validate response against ALL agent configs
-        const conversationCtx = nextMessages.map(m => `${m.role}: ${m.content}`).join("\n");
+        // 🛡️ Compliance Engine
+        const conversationCtx = currentMessages.map(m => `${m.role}: ${m.content}`).join("\n");
         const { text: compliantText, wasRewritten } = await fullCompliancePipeline(
           selectedAgent.id, agentText, conversationCtx,
         );
@@ -471,11 +487,9 @@ export default function SimuladorManualMode() {
         let transferReason = "";
 
         if (pipelineTargets.length === 1) {
-          // Single destination — use it directly
           nextAgent = AGENTS_V4.find(a => a.id === pipelineTargets[0]);
           transferReason = `rota única no pipeline: ${selectedAgent.id}→${pipelineTargets[0]}`;
         } else if (pipelineTargets.length > 1) {
-          // Multiple destinations — analyze conversation for destination keywords
           const allClientText = messagesRef.current
             .filter(m => m.role === "user")
             .map(m => (m.content || "").toLowerCase())
@@ -503,14 +517,12 @@ export default function SimuladorManualMode() {
             nextAgent = AGENTS_V4.find(a => a.id === matchedId);
             transferReason = `destino "${matchedKeyword}" detectado no histórico`;
           } else {
-            // No keyword match — fallback to LUNA (consultoria genérica) if in targets, otherwise first target
             const fallbackId = pipelineTargets.includes("luna") ? "luna" : pipelineTargets[0];
             nextAgent = AGENTS_V4.find(a => a.id === fallbackId);
             transferReason = `sem keyword de destino detectado, fallback para ${fallbackId}`;
           }
         }
 
-        // Final fallback: no pipeline route defined
         if (!nextAgent) {
           console.warn("[TRANSFER] Sem rota no PIPELINE_MAP para", selectedAgent.name, selectedAgent.id);
           const currentIdx = AGENTS_V4.findIndex(a => a.id === selectedAgent.id);
@@ -521,7 +533,6 @@ export default function SimuladorManualMode() {
 
         console.log(`[TRANSFER] ${selectedAgent.name} → ${nextAgent.name} | Motivo: ${transferReason}`);
 
-        // Register in Extrato
         logAITeamAudit({
           action_type: "create",
           entity_type: AUDIT_ENTITIES.FLOW,
@@ -544,8 +555,50 @@ export default function SimuladorManualMode() {
         messagesRef.current = updated;
         return updated;
       });
-    } finally { setLoading(false); }
-  }, [input, loading, selectedAgent, selectedDestino, isLivreMode, agentBehaviors, kbContent, manualSystemPrompt]);
+    } finally {
+      setLoading(false);
+      isProcessingRef.current = false;
+
+      // If new messages accumulated during processing, start new debounce cycle
+      if (pendingMessagesRef.current.length > 0) {
+        console.log(`[DEBOUNCE] ${pendingMessagesRef.current.length} mensagens pendentes acumuladas durante processamento, novo ciclo em ${DEBOUNCE_MS}ms`);
+        debounceTimerRef.current = setTimeout(() => {
+          triggerAgentResponse();
+        }, DEBOUNCE_MS);
+      }
+    }
+  }, [selectedAgent, selectedDestino, isLivreMode, agentBehaviors, kbContent, manualSystemPrompt]);
+
+  const handleSend = useCallback((overrideText?: string) => {
+    const text = overrideText || input.trim();
+    if (!text) return;
+
+    // 1. Always add to visual history immediately
+    const userMsg: ChatMsg = { id: crypto.randomUUID(), role: "user", content: text, timestamp: new Date().toISOString() };
+    const nextMessages = [...messagesRef.current, userMsg];
+    messagesRef.current = nextMessages;
+    setMessages(nextMessages);
+    setInput("");
+
+    // 2. Add to pending queue
+    pendingMessagesRef.current = [...pendingMessagesRef.current, userMsg];
+
+    // 3. Reset debounce timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
+    // 4. Start new 4s timer (only if agent is NOT currently processing)
+    if (!isProcessingRef.current) {
+      debounceTimerRef.current = setTimeout(() => {
+        triggerAgentResponse();
+      }, DEBOUNCE_MS);
+      console.log(`[DEBOUNCE] Timer de ${DEBOUNCE_MS}ms iniciado (${pendingMessagesRef.current.length} msgs na fila)`);
+    } else {
+      console.log(`[DEBOUNCE] Agente processando, msg adicionada à fila (${pendingMessagesRef.current.length} msgs pendentes)`);
+    }
+  }, [input, triggerAgentResponse]);
 
   // ─── Audio handler: transcribe then send as text ───
   const handleSendAudio = useCallback(async (blob: Blob) => {
@@ -561,7 +614,7 @@ export default function SimuladorManualMode() {
     const nextMessages = [...messagesRef.current, audioMsg];
     messagesRef.current = nextMessages;
     setMessages(nextMessages);
-    setLoading(true);
+
 
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-media`;
@@ -585,7 +638,7 @@ export default function SimuladorManualMode() {
       });
 
       // Now send to agent as regular text
-      await handleSend(transcription);
+      handleSend(transcription);
     } catch (err) {
       console.error("Audio processing error:", err);
       setMessages(prev => {
@@ -613,7 +666,7 @@ export default function SimuladorManualMode() {
     const nextMessages = [...messagesRef.current, fileMsg];
     messagesRef.current = nextMessages;
     setMessages(nextMessages);
-    setLoading(true);
+
 
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-media`;
@@ -641,7 +694,7 @@ export default function SimuladorManualMode() {
       });
 
       // Send context to agent
-      await handleSend(contextText);
+      handleSend(contextText);
     } catch (err) {
       console.error("File processing error:", err);
       setMessages(prev => {
@@ -655,6 +708,8 @@ export default function SimuladorManualMode() {
 
   const resetChat = () => {
     if (messages.length > 0 && !confirm("Tem certeza? Os dados atuais serão perdidos.")) return;
+    if (debounceTimerRef.current) { clearTimeout(debounceTimerRef.current); debounceTimerRef.current = null; }
+    pendingMessagesRef.current = [];
     messagesRef.current = [];
     setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0);
   };
