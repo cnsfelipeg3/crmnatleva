@@ -465,7 +465,7 @@ export default function SimulatorChatLayout({
                   variant="ghost"
                   className="h-10 w-10 shrink-0 text-muted-foreground hover:text-foreground"
                   onClick={() => setShowAttachMenu(!showAttachMenu)}
-                  disabled={disabled || loading}
+              disabled={disabled}
                 >
                   <Paperclip className="h-4 w-4" />
                 </Button>
