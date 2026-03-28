@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import GlobalSearch from "./GlobalSearch";
 import AIPageSummaryButton from "./AIPageSummaryButton";
 import PanelHelpButton from "./PanelHelpButton";
+import NatLevaLoader from "./NatLevaLoader";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useState } from "react";
