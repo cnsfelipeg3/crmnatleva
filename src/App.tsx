@@ -303,17 +303,17 @@ function AppRoutes() {
         </Route>
 
         {/* Portal do Cliente - rotas separadas fora do CRM */}
-        <Route path="/portal/login" element={<PortalLogin />} />
-        <Route path="/portal" element={<PortalDashboard />} />
-        <Route path="/portal/viagens" element={<PortalMyTrips />} />
-        <Route path="/portal/viagem/:saleId" element={<PortalTripDetail />} />
-        <Route path="/portal/modelo" element={<PortalDemoTrip />} />
-        <Route path="/portal/financeiro" element={<PortalFinance />} />
-        <Route path="/portal/nova-cotacao" element={<PortalNewQuote />} />
-        <Route path="/portal/perfil" element={<PortalProfile />} />
+        <Route path="/portal/login" element={<Suspense fallback={<NatLevaLoader />}><PortalLogin /></Suspense>} />
+        <Route path="/portal" element={<Suspense fallback={<NatLevaLoader />}><PortalDashboard /></Suspense>} />
+        <Route path="/portal/viagens" element={<Suspense fallback={<NatLevaLoader />}><PortalMyTrips /></Suspense>} />
+        <Route path="/portal/viagem/:saleId" element={<Suspense fallback={<NatLevaLoader />}><PortalTripDetail /></Suspense>} />
+        <Route path="/portal/modelo" element={<Suspense fallback={<NatLevaLoader />}><PortalDemoTrip /></Suspense>} />
+        <Route path="/portal/financeiro" element={<Suspense fallback={<NatLevaLoader />}><PortalFinance /></Suspense>} />
+        <Route path="/portal/nova-cotacao" element={<Suspense fallback={<NatLevaLoader />}><PortalNewQuote /></Suspense>} />
+        <Route path="/portal/perfil" element={<Suspense fallback={<NatLevaLoader />}><PortalProfile /></Suspense>} />
 
         {/* Proposta pública */}
-        <Route path="/proposta/:slug" element={<ProposalPublicView />} />
+        <Route path="/proposta/:slug" element={<Suspense fallback={<NatLevaLoader />}><ProposalPublicView /></Suspense>} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
