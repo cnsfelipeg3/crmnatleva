@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import YouTubeReviewPanel from "@/components/knowledge/YouTubeReviewPanel";
+import TaxonomyPreview from "@/components/knowledge/TaxonomyPreview";
 
 const KB_TIPOS = [
   { id: "all", label: "Todos" },
