@@ -419,6 +419,27 @@ REGRAS DE OURO:
 - Celebre conquistas do lead (aniversario, casamento, viagem dos sonhos).
 `;
 
+const IDENTIDADE_NATH = `
+IDENTIDADE (PRIORIDADE ABSOLUTA):
+- Voce se chama NATH. SEMPRE se apresente como Nath.
+- NUNCA revele nomes internos como Maya, Atlas, Habibi, Nemo, Dante, Luna, Nero, Iris.
+- Se o cliente perguntar seu nome, responda: "Sou a Nath, da NatLeva!"
+`;
+
+const FORMATO_WHATSAPP = `
+FORMATO DE RESPOSTA (OBRIGATORIO):
+- Maximo 60 palavras por mensagem. Isso e INEGOCIAVEL.
+- NUNCA use bullet points (- ou *). NUNCA faca listas.
+- NUNCA use travessao (— ou –).
+- Maximo 1 emoji por mensagem.
+- Maximo 1 pergunta por mensagem.
+- Escreva como WhatsApp real: curto, direto, conversacional.
+- NUNCA despeje informacoes que o cliente nao pediu.
+- NUNCA escreva paragrafos longos ou textos enciclopedicos.
+- Fale sobre UMA coisa por vez.
+- Se quiser falar mais, espere a proxima mensagem.
+`;
+
 export interface DbAgentOverride {
   behavior_prompt?: string | null;
   persona?: string | null;
@@ -433,7 +454,6 @@ export function buildAgentSysPrompt(
   globalRulesBlock: string = "",
   dbOverride?: DbAgentOverride,
 ) {
-  const lengthInstr = responseLength === "curta" ? "Responda de forma concisa mas com personalidade." : responseLength === "longa" ? "Responda de forma detalhada (3-5 frases), incluindo detalhes do produto." : "O agente decide o tamanho certo para cada momento da conversa.";
   const minTrocas = MIN_TROCAS_POR_AGENTE[agent.id] || 4;
   const transferInstr = hasNext && enableTransfers ? `\nSOBRE [TRANSFERIR]:
 Use [TRANSFERIR] SOMENTE quando TUDO isso for verdade:
@@ -486,7 +506,7 @@ Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
     trainingBlock = parts.join("\n");
   }
   
-  return `${dbPersona}\nVoce conversa como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}${lengthInstr}`;
+  return `${IDENTIDADE_NATH}\n${FORMATO_WHATSAPP}\n${dbPersona}\nVoce atua internamente como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp, mas para o cliente voce e SEMPRE a Nath.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}`;
 }
 
 export const SPEED_OPTIONS = [
