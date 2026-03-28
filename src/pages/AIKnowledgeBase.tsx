@@ -16,14 +16,15 @@ import {
   FileText, Link2, Youtube, Image, Mic, FileSpreadsheet,
   Presentation, MessageSquare, Search, Filter, Brain,
   CheckCircle2, AlertCircle, Loader2, Globe2, Sparkles,
-  ChevronLeft,
+  ChevronLeft, Play, ListPlus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import YouTubeReviewPanel from "@/components/knowledge/YouTubeReviewPanel";
+import YouTubeBatchImport from "@/components/knowledge/YouTubeBatchImport";
 const CATEGORIES = [
   { value: "atendimento", label: "Atendimento & Scripts", icon: MessageSquare },
   { value: "destinos", label: "Destinos & Roteiros", icon: Globe2 },
