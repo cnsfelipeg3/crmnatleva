@@ -8,6 +8,7 @@ import natlevaLogo from "@/assets/logo-natleva.png";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logAITeamAudit, AUDIT_ACTIONS, AUDIT_ENTITIES } from "@/lib/aiTeamAudit";
 import type { Database } from "@/integrations/supabase/types";
 import {
   ReactFlow, Background, Controls, MiniMap, Panel,
