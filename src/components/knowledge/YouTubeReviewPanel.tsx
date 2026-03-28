@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   ArrowLeft, Youtube, Sparkles, Loader2, CheckCircle, Brain,
   Play, Zap, BookOpen, Shield, AlertTriangle, Lightbulb, MessageSquare,
-  LayoutGrid, List, ClipboardPaste,
+  ClipboardPaste, Map,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import YouTubeActionCard, { ActionItem, ActionItemType, AgentOption, classifySection } from "./YouTubeActionCard";
+import TaxonomyPreview, { Taxonomy } from "./TaxonomyPreview";
 
 const CATEGORIES = [
   "geral", "destinos", "scripts", "preços", "fornecedores", "processos", "treinamento", "compliance",
@@ -21,102 +21,6 @@ const CATEGORIES = [
 function extractYouTubeId(url: string): string | null {
   const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/);
   return m ? m[1] : null;
-}
-
-// ─── Parse markdown into action items ───
-function parseToActionItems(content: string): ActionItem[] {
-  const lines = content.split("\n");
-  const items: ActionItem[] = [];
-  let currentTitle = "";
-  let currentBody: string[] = [];
-
-  for (const line of lines) {
-    const h2Match = line.match(/^##\s+(.+)/);
-    if (h2Match) {
-      if (currentTitle || currentBody.length > 0) {
-        const body = currentBody.join("\n").trim();
-        if (body.length > 0) {
-          items.push({
-            id: crypto.randomUUID(),
-            type: classifySection(currentTitle),
-            title: currentTitle,
-            body,
-            originalSection: currentTitle,
-          });
-        }
-      }
-      currentTitle = h2Match[1].trim();
-      currentBody = [];
-    } else if (line.match(/^#\s+/)) {
-      continue;
-    } else {
-      currentBody.push(line);
-    }
-  }
-  if (currentTitle || currentBody.length > 0) {
-    const body = currentBody.join("\n").trim();
-    if (body.length > 0) {
-      items.push({
-        id: crypto.randomUUID(),
-        type: classifySection(currentTitle),
-        title: currentTitle,
-        body,
-        originalSection: currentTitle,
-      });
-    }
-  }
-  return items;
-}
-
-// ─── Stats by type ───
-const TYPE_COUNTS_CONFIG: { type: ActionItemType; icon: React.ElementType; label: string; color: string }[] = [
-  { type: "skill", icon: Zap, label: "Skills", color: "text-violet-500" },
-  { type: "knowledge", icon: BookOpen, label: "Conhecimento", color: "text-blue-500" },
-  { type: "rule", icon: Shield, label: "Regras", color: "text-emerald-500" },
-  { type: "script", icon: MessageSquare, label: "Scripts", color: "text-indigo-500" },
-  { type: "alert", icon: AlertTriangle, label: "Alertas", color: "text-amber-500" },
-  { type: "tip", icon: Lightbulb, label: "Dicas", color: "text-yellow-500" },
-];
-
-// ─── Organize with AI ───
-function OrganizeWithAIButton({ content, transcript, onOrganized }: { content: string; transcript?: string; onOrganized: (v: string) => void }) {
-  const [organizing, setOrganizing] = useState(false);
-
-  const handleOrganize = async () => {
-    if (!content.trim()) return;
-    setOrganizing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("organize-knowledge", {
-        body: { content, transcript: transcript || "" },
-      });
-      if (error) throw error;
-      if (data?.error) { toast.error(data.error); return; }
-      if (data?.organized_content) {
-        onOrganized(data.organized_content);
-        toast.success("Conhecimento reorganizado com IA!");
-      }
-    } catch (err: any) {
-      toast.error("Erro ao organizar: " + (err.message || "Erro desconhecido"));
-    } finally {
-      setOrganizing(false);
-    }
-  };
-
-  return (
-    <Button
-      size="sm"
-      variant="outline"
-      onClick={handleOrganize}
-      disabled={organizing || !content.trim()}
-      className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
-    >
-      {organizing ? (
-        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Reorganizando...</>
-      ) : (
-        <><Sparkles className="w-3.5 h-3.5" /> Organizar com IA</>
-      )}
-    </Button>
-  );
 }
 
 // ─── Main Panel ───
@@ -129,6 +33,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
   const [ytUrl, setYtUrl] = useState("");
   const [videoId, setVideoId] = useState<string | null>(null);
   const [transcribing, setTranscribing] = useState(false);
+  const [organizing, setOrganizing] = useState(false);
   const [result, setResult] = useState<{
     title: string;
     transcript: string;
@@ -138,52 +43,41 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
   const [saving, setSaving] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editCategory, setEditCategory] = useState("destinos");
-  const [editContent, setEditContent] = useState("");
   const [showTranscript, setShowTranscript] = useState(false);
-  const [agents, setAgents] = useState<AgentOption[]>([]);
-  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
-  const [filterType, setFilterType] = useState<ActionItemType | "all">("all");
   const [showManualInput, setShowManualInput] = useState(false);
   const [manualTranscript, setManualTranscript] = useState("");
   const [errorVideoTitle, setErrorVideoTitle] = useState("");
 
-  // Fetch agents
-  useEffect(() => {
-    supabase.from("ai_team_agents").select("id, name, emoji, role").eq("is_active", true)
-      .then(({ data }) => {
-        if (data) setAgents(data.map(a => ({ id: a.id, name: a.name, emoji: a.emoji, role: a.role })));
-      });
-  }, []);
+  // Taxonomy state
+  const [taxonomy, setTaxonomy] = useState<Taxonomy | null>(null);
+  const [tags, setTags] = useState<string[]>([]);
+  const [resumo, setResumo] = useState("");
+
+  // Processing step: idle -> transcribing -> organizing -> ready
+  const [step, setStep] = useState<"idle" | "transcribing" | "organizing" | "ready">("idle");
 
   useEffect(() => {
     setVideoId(extractYouTubeId(ytUrl));
   }, [ytUrl]);
 
-  // Parse content into action items whenever editContent changes
-  useEffect(() => {
-    if (editContent) {
-      setActionItems(parseToActionItems(editContent));
-    }
-  }, [editContent]);
-
   const handleTranscribe = async (useManual = false) => {
     if (!videoId) return;
     setTranscribing(true);
+    setStep("transcribing");
     setResult(null);
+    setTaxonomy(null);
     try {
       const body: any = { url: ytUrl };
       if (useManual && manualTranscript.trim()) {
         body.manual_transcript = manualTranscript.trim();
       }
       const { data, error } = await supabase.functions.invoke("youtube-transcribe", { body });
-      // Parse error body from FunctionsHttpError (422)
+
       let errorBody: any = null;
       if (error) {
         try {
           const ctx = (error as any).context;
-          if (ctx instanceof Response) {
-            errorBody = await ctx.json().catch(() => null);
-          }
+          if (ctx instanceof Response) { errorBody = await ctx.json().catch(() => null); }
         } catch {}
         if (!errorBody) errorBody = data;
         if (!errorBody) {
@@ -194,46 +88,107 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       if (body422?.error === "TRANSCRIPT_UNAVAILABLE") {
         setShowManualInput(true);
         setErrorVideoTitle(body422?.videoTitle || "");
-        toast.error("Extração automática bloqueada pelo YouTube. Cole a transcrição manualmente.", { duration: 6000 });
+        setStep("idle");
+        toast.error("Extração automática bloqueada. Cole a transcrição manualmente.", { duration: 6000 });
         return;
       }
       if (error) throw error;
-      if (data?.error) { toast.error(data.error); return; }
+      if (data?.error) { toast.error(data.error); setStep("idle"); return; }
+
       setResult(data);
       setShowManualInput(false);
       setEditTitle(data.title || "");
-      setEditContent(data.structured_knowledge || "");
-      const catMatch = data.structured_knowledge?.match(/Categoria sugerida[:\s]*(\w+)/i);
-      if (catMatch && CATEGORIES.includes(catMatch[1].toLowerCase())) {
-        setEditCategory(catMatch[1].toLowerCase());
+
+      // Auto-run ÓRION (organize with AI)
+      setStep("organizing");
+      setOrganizing(true);
+      try {
+        const { data: orgData, error: orgErr } = await supabase.functions.invoke("organize-knowledge", {
+          body: { content: data.structured_knowledge || "", transcript: data.transcript || "" },
+        });
+        if (orgErr) throw orgErr;
+        if (orgData?.taxonomy) {
+          setTaxonomy(orgData.taxonomy.taxonomia || orgData.taxonomy);
+          setTags(orgData.taxonomy.tags || []);
+          setResumo(orgData.taxonomy.resumo || "");
+          if (orgData.taxonomy.titulo_sugerido) {
+            setEditTitle(orgData.taxonomy.titulo_sugerido);
+          }
+          toast.success("ÓRION analisou o conteúdo com sucesso!");
+        } else if (orgData?.organized_content) {
+          setResumo(orgData.organized_content);
+          toast.success("Conhecimento organizado!");
+        }
+      } catch (orgE: any) {
+        console.error("Organize error:", orgE);
+        toast.error("Erro ao processar com ÓRION. Salvando conteúdo bruto.");
       }
+      setOrganizing(false);
+      setStep("ready");
     } catch (err: any) {
       toast.error("Erro ao transcrever: " + (err.message || "Erro desconhecido"));
+      setStep("idle");
     } finally {
       setTranscribing(false);
     }
   };
 
+  const handleReOrganize = async () => {
+    if (!result) return;
+    setOrganizing(true);
+    try {
+      const { data: orgData, error: orgErr } = await supabase.functions.invoke("organize-knowledge", {
+        body: { content: result.structured_knowledge || "", transcript: result.transcript || "" },
+      });
+      if (orgErr) throw orgErr;
+      if (orgData?.taxonomy) {
+        setTaxonomy(orgData.taxonomy.taxonomia || orgData.taxonomy);
+        setTags(orgData.taxonomy.tags || []);
+        setResumo(orgData.taxonomy.resumo || "");
+        if (orgData.taxonomy.titulo_sugerido) setEditTitle(orgData.taxonomy.titulo_sugerido);
+        toast.success("Re-analisado pelo ÓRION!");
+      }
+    } catch (err: any) {
+      toast.error("Erro: " + err.message);
+    } finally {
+      setOrganizing(false);
+    }
+  };
+
   const handleApprove = async () => {
-    if (!editTitle.trim() || actionItems.length === 0) {
-      toast.error("Título e conteúdo são obrigatórios");
+    if (!editTitle.trim()) {
+      toast.error("Título obrigatório");
       return;
     }
     setSaving(true);
     try {
-      // Reconstruct content from action items
-      const finalContent = actionItems.map(item => `## ${item.title}\n${item.body}`).join("\n\n");
-      const { error } = await supabase.from("ai_knowledge_base").insert({
+      // Build content - resumo + markdown fallback
+      const contentText = resumo || result?.structured_knowledge || "";
+
+      const payload: any = {
         title: editTitle.trim(),
         category: editCategory,
         description: `Transcrito do YouTube: ${ytUrl}`,
-        content_text: finalContent.trim(),
+        content_text: contentText.trim(),
         file_url: ytUrl,
         file_type: "video/youtube",
         file_name: `youtube-${videoId}.txt`,
-      });
+        tags: tags.length > 0 ? tags : null,
+        confidence: taxonomy?.confianca || null,
+      };
+
+      // Save taxonomy as JSONB
+      if (taxonomy) {
+        payload.taxonomy = taxonomy;
+      }
+
+      const { error } = await supabase.from("ai_knowledge_base").insert(payload);
       if (error) throw error;
-      toast.success("Conhecimento do vídeo adicionado à base!");
+
+      const tagCount = tags.length;
+      const passeioCount = taxonomy?.experiencias?.passeios?.length || 0;
+      const hotelCount = taxonomy?.hospedagem?.hoteis?.length || 0;
+      toast.success(`Conhecimento importado! ${tagCount} tags · ${passeioCount} passeios · ${hotelCount} hotéis`);
       onSaved();
     } catch (err: any) {
       toast.error("Erro ao salvar: " + err.message);
@@ -242,54 +197,32 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
     }
   };
 
-  const handleItemUpdate = (updated: ActionItem) => {
-    setActionItems(prev => prev.map(item => item.id === updated.id ? updated : item));
-  };
-
-  const handleContentOrganized = (organized: string) => {
-    setEditContent(organized);
-  };
-
   const transcript = result?.transcript || "";
   const charCount = transcript.length;
   const wordCount = transcript.split(/\s+/).filter(Boolean).length;
-
-  const filteredItems = filterType === "all"
-    ? actionItems
-    : actionItems.filter(i => i.type === filterType);
-
-  // Count by type
-  const typeCounts = TYPE_COUNTS_CONFIG.map(tc => ({
-    ...tc,
-    count: actionItems.filter(i => i.type === tc.type).length,
-  })).filter(tc => tc.count > 0);
 
   return (
     <div className="min-h-screen animate-in fade-in duration-300">
       {/* ─── TOP BAR ─── */}
       <div className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/40">
         <div className="max-w-[1600px] mx-auto px-6 py-3 flex items-center justify-between gap-4">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Voltar à Base
+          <button onClick={onBack} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="w-4 h-4" /> Voltar à Base
           </button>
 
-          {result && (
+          {step === "ready" && (
             <div className="flex items-center gap-3">
-              <OrganizeWithAIButton
-                content={editContent}
-                transcript={transcript}
-                onOrganized={handleContentOrganized}
-              />
               <Button
                 size="sm"
-                onClick={handleApprove}
-                disabled={saving || !editTitle.trim()}
-                className="gap-1.5"
+                variant="outline"
+                onClick={handleReOrganize}
+                disabled={organizing}
+                className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30"
               >
+                {organizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
+                Re-analisar com ÓRION
+              </Button>
+              <Button size="sm" onClick={handleApprove} disabled={saving || !editTitle.trim()} className="gap-1.5">
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
                 Aprovar e Adicionar à Base
               </Button>
@@ -299,66 +232,42 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       </div>
 
       <div className="max-w-[1600px] mx-auto px-6 py-6">
-
         {/* ─── STEP 1: URL + VIDEO PREVIEW ─── */}
-        {!result && (
+        {step === "idle" && !result && (
           <div className="max-w-2xl mx-auto space-y-6">
             <div className="text-center space-y-2">
               <div className="w-16 h-16 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto">
                 <Youtube className="w-8 h-8 text-red-500" />
               </div>
               <h1 className="text-2xl font-bold">Extrair Conhecimento do YouTube</h1>
-              <p className="text-sm text-muted-foreground">
-                Cole a URL do vídeo para transcrever e extrair conhecimento útil para os agentes
-              </p>
+              <p className="text-sm text-muted-foreground">Cole a URL → Transcrição automática → ÓRION analisa e tagueia tudo</p>
             </div>
 
             <div className="space-y-2">
               <Label className="text-xs font-bold flex items-center gap-1.5">
                 <Youtube className="w-4 h-4 text-red-500" /> URL do YouTube
               </Label>
-              <Input
-                value={ytUrl}
-                onChange={(e) => setYtUrl(e.target.value)}
-                placeholder="https://www.youtube.com/watch?v=..."
-                className="font-mono text-sm h-11"
-              />
+              <Input value={ytUrl} onChange={(e) => setYtUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." className="font-mono text-sm h-11" />
             </div>
 
             {videoId && (
               <div className="rounded-xl overflow-hidden border border-border/40 bg-black shadow-lg">
-                <iframe
-                  src={`https://www.youtube.com/embed/${videoId}`}
-                  className="w-full aspect-video"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  title="YouTube Preview"
-                />
+                <iframe src={`https://www.youtube.com/embed/${videoId}`} className="w-full aspect-video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title="YouTube Preview" />
               </div>
             )}
 
             {videoId && (
               <div className="space-y-4">
                 {!showManualInput && (
-                  <Button
-                    onClick={() => handleTranscribe(false)}
-                    disabled={transcribing}
-                    className="w-full gap-2 h-12 text-base"
-                  >
-                    {transcribing ? (
-                      <><Loader2 className="w-5 h-5 animate-spin" /> Transcrevendo e extraindo conhecimento...</>
-                    ) : (
-                      <><Sparkles className="w-5 h-5" /> Transcrever Automaticamente</>
-                    )}
+                  <Button onClick={() => handleTranscribe(false)} disabled={transcribing} className="w-full gap-2 h-12 text-base">
+                    {transcribing ? <><Loader2 className="w-5 h-5 animate-spin" /> Transcrevendo...</> : <><Sparkles className="w-5 h-5" /> Transcrever e Analisar com ÓRION</>}
                   </Button>
                 )}
 
-                {/* Manual transcript section - always visible as alternative, prominent when auto fails */}
+                {/* Manual transcript section */}
                 <div className={cn(
                   "space-y-3 rounded-xl border p-4 transition-all duration-300",
-                  showManualInput
-                    ? "border-amber-400 dark:border-amber-600 bg-amber-50/60 dark:bg-amber-950/30 shadow-md"
-                    : "border-border/40 bg-muted/30"
+                  showManualInput ? "border-amber-400 dark:border-amber-600 bg-amber-50/60 dark:bg-amber-950/30 shadow-md" : "border-border/40 bg-muted/30"
                 )}>
                   {showManualInput && (
                     <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 mb-1">
@@ -366,130 +275,110 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
                       <span className="text-sm font-bold">Extração automática bloqueada pelo YouTube</span>
                     </div>
                   )}
-
-                  <div className={cn(
-                    "text-xs space-y-2",
-                    showManualInput ? "text-foreground/80" : "text-muted-foreground"
-                  )}>
-                    <p className="font-semibold">
-                      {showManualInput ? "Siga estes passos para colar a transcrição:" : "Ou cole a transcrição manualmente:"}
-                    </p>
+                  <div className={cn("text-xs space-y-2", showManualInput ? "text-foreground/80" : "text-muted-foreground")}>
+                    <p className="font-semibold">{showManualInput ? "Siga estes passos:" : "Ou cole a transcrição manualmente:"}</p>
                     <ol className="list-decimal list-inside space-y-1 pl-1">
-                      <li>Abra o vídeo no YouTube em outra aba</li>
-                      <li>Clique nos <strong>3 pontos (⋯)</strong> abaixo do vídeo</li>
+                      <li>Abra o vídeo no YouTube</li>
+                      <li>Clique nos <strong>3 pontos (⋯)</strong></li>
                       <li>Clique em <strong>"Mostrar transcrição"</strong></li>
-                      <li>Selecione todo o texto da transcrição (<strong>Ctrl+A</strong>) e copie (<strong>Ctrl+C</strong>)</li>
-                      <li>Cole no campo abaixo</li>
+                      <li>Selecione tudo e cole abaixo</li>
                     </ol>
                   </div>
-
-                  {videoId && (
-                    <a
-                      href={`https://www.youtube.com/watch?v=${videoId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-red-600 dark:text-red-400 hover:underline"
-                    >
-                      <Youtube className="w-3.5 h-3.5" />
-                      Abrir vídeo no YouTube →
-                    </a>
-                  )}
-
-                  <textarea
-                    value={manualTranscript}
-                    onChange={(e) => setManualTranscript(e.target.value)}
-                    placeholder="Cole a transcrição do vídeo aqui..."
-                    className="w-full min-h-[180px] rounded-lg border border-border bg-background p-3 text-sm font-mono resize-y focus:ring-2 focus:ring-primary/30"
-                  />
-
-                  {manualTranscript.trim().length > 0 && manualTranscript.trim().length < 20 && (
-                    <p className="text-xs text-amber-600">Texto muito curto. Cole a transcrição completa do vídeo.</p>
-                  )}
-
-                  <Button
-                    onClick={() => handleTranscribe(true)}
-                    disabled={transcribing || manualTranscript.trim().length < 20}
-                    className="w-full gap-2 h-11"
-                  >
-                    {transcribing ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> Processando transcrição...</>
-                    ) : (
-                      <><ClipboardPaste className="w-4 h-4" /> Processar Transcrição Colada</>
-                    )}
+                  <textarea value={manualTranscript} onChange={(e) => setManualTranscript(e.target.value)} placeholder="Cole a transcrição aqui..." className="w-full min-h-[180px] rounded-lg border border-border bg-background p-3 text-sm font-mono resize-y focus:ring-2 focus:ring-primary/30" />
+                  <Button onClick={() => handleTranscribe(true)} disabled={transcribing || manualTranscript.trim().length < 20} className="w-full gap-2 h-11">
+                    {transcribing ? <><Loader2 className="w-4 h-4 animate-spin" /> Processando...</> : <><ClipboardPaste className="w-4 h-4" /> Processar Transcrição</>}
                   </Button>
                 </div>
               </div>
             )}
 
-            <Button variant="outline" size="sm" onClick={onBack} className="w-full">
-              Cancelar
-            </Button>
+            <Button variant="outline" size="sm" onClick={onBack} className="w-full">Cancelar</Button>
           </div>
         )}
 
-        {/* ─── STEP 2: FULL REVIEW PANEL ─── */}
-        {result && (
+        {/* ─── PROCESSING STATES ─── */}
+        {(step === "transcribing" || step === "organizing") && (
+          <div className="max-w-md mx-auto text-center py-20 space-y-6">
+            <div className={cn(
+              "w-20 h-20 rounded-2xl flex items-center justify-center mx-auto animate-pulse",
+              step === "transcribing" ? "bg-red-500/10" : "bg-amber-500/10"
+            )}>
+              {step === "transcribing" ? <Youtube className="w-10 h-10 text-red-500" /> : <Brain className="w-10 h-10 text-amber-500" />}
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">
+                {step === "transcribing" ? "Buscando legendas do vídeo..." : "ÓRION analisando conteúdo..."}
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {step === "transcribing" ? "Extraindo transcrição automática" : "Classificando, tagueando e estruturando o conhecimento"}
+              </p>
+            </div>
+            <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+              <div className={cn(
+                "h-full rounded-full animate-[indeterminate_1.5s_ease-in-out_infinite]",
+                step === "transcribing" ? "bg-red-500" : "bg-amber-500"
+              )} style={{
+                width: "40%",
+                animation: "indeterminate 1.5s ease-in-out infinite",
+              }} />
+            </div>
+            <style>{`
+              @keyframes indeterminate {
+                0% { margin-left: 0%; width: 30%; }
+                50% { margin-left: 30%; width: 40%; }
+                100% { margin-left: 70%; width: 30%; }
+              }
+            `}</style>
+          </div>
+        )}
+
+        {/* ─── STEP 3: FULL REVIEW WITH TAXONOMY ─── */}
+        {step === "ready" && result && (
           <div className="space-y-6">
             {/* Success banner */}
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
               <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
               <div className="flex-1">
-                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                  Conhecimento extraído com sucesso!
-                </p>
+                <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Conhecimento extraído e classificado!</p>
                 <p className="text-xs text-muted-foreground">
-                  Revise cada item, atribua agentes e ajuste os tipos antes de aprovar
+                  {tags.length} tags · {taxonomy?.experiencias?.passeios?.length || 0} passeios · {taxonomy?.hospedagem?.hoteis?.length || 0} hotéis · Confiança {Math.round((taxonomy?.confianca || 0) * 100)}%
                 </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {typeCounts.map(tc => {
-                  const TIcon = tc.icon;
-                  return (
-                    <div key={tc.type} className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <TIcon className={cn("w-3.5 h-3.5", tc.color)} />
-                      <span className="font-bold">{tc.count}</span>
-                    </div>
-                  );
-                })}
               </div>
             </div>
 
             {/* Two-column layout */}
             <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-6">
-
-              {/* LEFT: Video + Metadata + Transcript */}
+              {/* LEFT: Video + Metadata */}
               <div className="space-y-4">
                 {videoId && (
                   <div className="rounded-xl overflow-hidden border border-border/40 bg-black shadow-lg sticky top-20">
-                    <iframe
-                      src={`https://www.youtube.com/embed/${videoId}`}
-                      className="w-full aspect-video"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      title={editTitle}
-                    />
-
+                    <iframe src={`https://www.youtube.com/embed/${videoId}`} className="w-full aspect-video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={editTitle} />
                     <div className="bg-card p-4 space-y-3 border-t border-border/40">
                       <div className="space-y-1.5">
                         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Título</Label>
-                        <Input
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          className="text-sm font-medium"
-                        />
+                        <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="text-sm font-medium" />
                       </div>
-
                       <div className="space-y-1.5">
                         <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Categoria</Label>
                         <Select value={editCategory} onValueChange={setEditCategory}>
                           <SelectTrigger className="text-sm"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            {CATEGORIES.map((c) => (
-                              <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>
-                            ))}
+                            {CATEGORIES.map((c) => <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
+
+                      {/* Tags */}
+                      {tags.length > 0 && (
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Tags ({tags.length})</Label>
+                          <div className="flex flex-wrap gap-1">
+                            {tags.map((tag, i) => (
+                              <Badge key={i} variant="secondary" className="text-[9px]">{tag}</Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Stats */}
                       <div className="grid grid-cols-2 gap-2">
@@ -503,104 +392,58 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
                         </div>
                       </div>
 
-                      {/* Type summary */}
-                      <div className="space-y-1.5">
-                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Itens Extraídos</Label>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {typeCounts.map(tc => {
-                            const TIcon = tc.icon;
-                            return (
-                              <button
-                                key={tc.type}
-                                onClick={() => setFilterType(filterType === tc.type ? "all" : tc.type)}
-                                className={cn(
-                                  "flex items-center gap-2 text-xs rounded-lg px-2.5 py-2 transition-colors",
-                                  filterType === tc.type
-                                    ? "bg-primary/10 text-primary font-bold"
-                                    : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
-                                )}
-                              >
-                                <TIcon className={cn("w-3.5 h-3.5", tc.color)} />
-                                <span className="font-bold">{tc.count}</span>
-                                <span className="truncate">{tc.label}</span>
-                              </button>
-                            );
-                          })}
-                          {filterType !== "all" && (
-                            <button
-                              onClick={() => setFilterType("all")}
-                              className="col-span-2 text-xs text-primary hover:underline py-1"
-                            >
-                              Mostrar todos ({actionItems.length})
-                            </button>
-                          )}
+                      {/* Resumo */}
+                      {resumo && (
+                        <div className="space-y-1.5">
+                          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Resumo Executivo</Label>
+                          <p className="text-xs text-muted-foreground leading-relaxed">{resumo}</p>
                         </div>
-                      </div>
+                      )}
 
                       {/* Transcript toggle */}
-                      <div>
-                        <button
-                          onClick={() => setShowTranscript(!showTranscript)}
-                          className="flex items-center gap-2 text-xs font-bold text-primary hover:underline w-full"
-                        >
-                          <Play className="w-3.5 h-3.5" />
-                          {showTranscript ? "Ocultar Transcrição" : "Ver Transcrição Completa"}
-                        </button>
-                        {showTranscript && (
-                          <div className="mt-2 max-h-[400px] overflow-y-auto rounded-lg bg-muted/30 p-3 border border-border/30">
-                            <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-sans leading-relaxed">
-                              {transcript || "Transcrição não disponível"}
-                            </pre>
-                          </div>
-                        )}
-                      </div>
+                      <button onClick={() => setShowTranscript(!showTranscript)} className="flex items-center gap-2 text-xs font-bold text-primary hover:underline w-full">
+                        <Play className="w-3.5 h-3.5" />
+                        {showTranscript ? "Ocultar Transcrição" : "Ver Transcrição Completa"}
+                      </button>
+                      {showTranscript && (
+                        <div className="max-h-[400px] overflow-y-auto rounded-lg bg-muted/30 p-3 border border-border/30">
+                          <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-sans leading-relaxed">{transcript}</pre>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* RIGHT: Action Cards */}
+              {/* RIGHT: Taxonomy Preview */}
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <Sparkles className="w-5 h-5 text-amber-500" />
-                    <h2 className="text-lg font-bold">Itens Extraídos</h2>
-                    <Badge variant="secondary" className="text-xs font-bold">
-                      {filteredItems.length} {filterType !== "all" ? `de ${actionItems.length}` : "itens"}
-                    </Badge>
-                  </div>
+                <div className="flex items-center gap-2.5">
+                  <Brain className="w-5 h-5 text-amber-500" />
+                  <h2 className="text-lg font-bold">Taxonomia do ÓRION</h2>
                 </div>
 
-                {filteredItems.length === 0 ? (
+                {taxonomy ? (
+                  <TaxonomyPreview taxonomy={taxonomy} onChange={setTaxonomy} />
+                ) : (
                   <div className="rounded-xl border border-border/40 bg-card p-8 text-center">
                     <Brain className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">Nenhum item encontrado</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredItems.map((item, idx) => (
-                      <YouTubeActionCard
-                        key={item.id}
-                        item={item}
-                        agents={agents}
-                        onUpdate={handleItemUpdate}
-                        index={idx}
-                      />
-                    ))}
+                    <p className="text-sm text-muted-foreground">Taxonomia não disponível</p>
+                    <Button size="sm" variant="outline" className="mt-3" onClick={handleReOrganize} disabled={organizing}>
+                      {organizing ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
+                      Processar com ÓRION
+                    </Button>
                   </div>
                 )}
 
                 {/* Bottom action bar */}
                 <div className="flex items-center justify-between pt-4 border-t border-border/40">
-                  <Button variant="outline" size="sm" onClick={onBack}>
-                    Cancelar
-                  </Button>
+                  <Button variant="outline" size="sm" onClick={onBack}>Cancelar</Button>
                   <div className="flex items-center gap-2">
-                    <OrganizeWithAIButton
-                      content={editContent}
-                      transcript={transcript}
-                      onOrganized={handleContentOrganized}
-                    />
+                    <Button size="sm" variant="outline" onClick={handleReOrganize} disabled={organizing}
+                      className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30">
+                      {organizing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Brain className="w-3.5 h-3.5" />}
+                      Re-analisar
+                    </Button>
                     <Button onClick={handleApprove} disabled={saving} className="gap-1.5">
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
                       Aprovar e Adicionar à Base

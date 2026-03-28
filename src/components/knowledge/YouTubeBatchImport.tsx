@@ -83,16 +83,40 @@ export default function YouTubeBatchImport({ onBack, onSaved }: YouTubeBatchImpo
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
-        // Save to KB
-        await supabase.from("ai_knowledge_base").insert({
+        // Run ÓRION taxonomy extraction
+        let taxonomy = null;
+        let tags: string[] = [];
+        let confidence: number | null = null;
+        let contentText = data.structured_knowledge || data.transcript || "";
+        try {
+          const { data: orgData } = await supabase.functions.invoke("organize-knowledge", {
+            body: { content: data.structured_knowledge || "", transcript: data.transcript || "" },
+          });
+          if (orgData?.taxonomy) {
+            taxonomy = orgData.taxonomy.taxonomia || orgData.taxonomy;
+            tags = orgData.taxonomy.tags || [];
+            confidence = orgData.taxonomy.confianca ?? taxonomy?.confianca ?? null;
+            contentText = orgData.taxonomy.resumo || contentText;
+          }
+        } catch (orgErr) {
+          console.error("ÓRION error in batch:", orgErr);
+        }
+
+        // Save to KB with taxonomy
+        const payload: any = {
           title: data.title || `Vídeo YouTube`,
           category: "destinos",
           description: `Transcrito do YouTube: ${item.url}`,
-          content_text: data.structured_knowledge || data.transcript || "",
+          content_text: contentText,
           file_url: item.url,
           file_type: "video/youtube",
           file_name: `youtube-${item.videoId}.txt`,
-        });
+        };
+        if (taxonomy) payload.taxonomy = taxonomy;
+        if (tags.length > 0) payload.tags = tags;
+        if (confidence !== null) payload.confidence = confidence;
+
+        await supabase.from("ai_knowledge_base").insert(payload);
 
         setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "done", title: data.title } : it));
         successCount++;
