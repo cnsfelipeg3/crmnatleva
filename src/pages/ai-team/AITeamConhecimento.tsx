@@ -643,7 +643,19 @@ export default function AITeamConhecimento() {
                     <TipoIcon className={cn("w-3.5 h-3.5", isYT ? "text-red-500" : "text-muted-foreground")} />
                     <Badge variant="outline" className="text-[10px]">{isYT ? "YOUTUBE" : docType.toUpperCase()}</Badge>
                   </div>
-                  <span className="text-[10px] text-muted-foreground">{new Date(doc.created_at).toLocaleDateString("pt-BR")}</span>
+                  <div className="flex items-center gap-1.5">
+                    {/* Confidence badge for YouTube items */}
+                    {isYT && doc.confidence != null && doc.confidence > 0 && (
+                      <Badge className={cn("text-[10px] font-bold", 
+                        doc.confidence >= 0.8 ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30" :
+                        doc.confidence >= 0.5 ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30" :
+                        "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/30"
+                      )}>
+                        {Math.round(doc.confidence * 100)}%
+                      </Badge>
+                    )}
+                    <span className="text-[10px] text-muted-foreground">{new Date(doc.created_at).toLocaleDateString("pt-BR")}</span>
+                  </div>
                 </div>
                 {/* YouTube thumbnail */}
                 {isYT && doc.file_url && (() => {
@@ -659,9 +671,35 @@ export default function AITeamConhecimento() {
                   ) : null;
                 })()}
                 <h3 className="text-sm font-bold mb-1">{doc.title}</h3>
+                {/* YouTube enriched info line */}
+                {isYT && doc.taxonomy?.taxonomia && (() => {
+                  const tax = doc.taxonomy.taxonomia;
+                  const parts: string[] = [];
+                  if (tax.geo?.pais) parts.push(tax.geo.pais.charAt(0).toUpperCase() + tax.geo.pais.slice(1));
+                  if (tax.financeiro?.faixa_preco_label) parts.push(tax.financeiro.faixa_preco_label.charAt(0).toUpperCase() + tax.financeiro.faixa_preco_label.slice(1));
+                  if (tax.perfil_viajante?.ideal?.length > 0) parts.push(tax.perfil_viajante.ideal.slice(0, 3).join(", "));
+                  return parts.length > 0 ? (
+                    <p className="text-[11px] text-muted-foreground mb-2 font-medium">
+                      {parts.join(" | ")}
+                    </p>
+                  ) : null;
+                })()}
                 <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                   {doc.description || doc.content_text?.slice(0, 120) || "Sem descrição"}
                 </p>
+                {/* Tags for YouTube items */}
+                {isYT && doc.tags && doc.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {doc.tags.slice(0, 8).map((tag, i) => (
+                      <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-primary/10 text-primary">
+                        {tag}
+                      </span>
+                    ))}
+                    {doc.tags.length > 8 && (
+                      <span className="text-[9px] text-muted-foreground">+{doc.tags.length - 8}</span>
+                    )}
+                  </div>
+                )}
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <Badge variant="secondary" className="text-[10px]">{doc.category}</Badge>
                   {doc.file_name && !isYT && <span className="truncate max-w-[120px]">{doc.file_name}</span>}
