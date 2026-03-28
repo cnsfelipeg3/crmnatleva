@@ -234,7 +234,7 @@ function OperacaoInboxInner() {
         debugWarn(`[PERSIST] conversation_messages falhou: ${error?.message}. Tentando fallback...`);
       }
     } catch (err: any) {
-      console.warn(`[PERSIST] conversation_messages exception: ${err.message}. Tentando fallback...`);
+      debugWarn(`[PERSIST] conversation_messages exception: ${err.message}. Tentando fallback...`);
     }
 
     // ── FALLBACK: chat_messages (legacy, funcional) ──
