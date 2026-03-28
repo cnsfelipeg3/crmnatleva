@@ -223,7 +223,7 @@ export default function ImportData() {
             observations: findCol(headers, "Observacoes"),
           };
 
-          console.log("Sales column map:", col);
+          // Sales column mapping resolved
 
           const sales: any[] = [];
           for (let i = headerIdx + 1; i < rows.length; i++) {
