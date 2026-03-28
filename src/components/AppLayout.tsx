@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import GlobalSearch from "./GlobalSearch";
 import AIPageSummaryButton from "./AIPageSummaryButton";
 import PanelHelpButton from "./PanelHelpButton";
+import NatLevaLoader from "./NatLevaLoader";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useState } from "react";
@@ -60,7 +62,9 @@ export default function AppLayout() {
         </Sheet>
 
         <main className={cn("flex-1 min-h-0", isImmersive ? "overflow-hidden" : "overflow-auto")}>
-          <Outlet />
+          <Suspense fallback={<NatLevaLoader />}>
+            <Outlet />
+          </Suspense>
         </main>
         <PanelHelpButton />
       </div>
@@ -99,7 +103,9 @@ export default function AppLayout() {
           </header>
         )}
         <main className={cn("flex-1 overflow-auto min-h-0", isImmersive && "overflow-hidden")}>
-          <Outlet />
+          <Suspense fallback={<NatLevaLoader />}>
+            <Outlet />
+          </Suspense>
         </main>
         <PanelHelpButton />
       </div>
