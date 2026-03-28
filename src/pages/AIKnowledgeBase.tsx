@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import {
   BookOpen, Upload, Plus, Trash2, Edit2, Save, X,
   FileText, Link2, Youtube, Image, Mic, FileSpreadsheet,
   Presentation, MessageSquare, Search, Brain,
   CheckCircle2, AlertCircle, Loader2, Globe2, Sparkles,
   ChevronLeft, ListPlus, Map, DollarSign, User, Compass,
-  ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp, RefreshCw, Zap, Clock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -64,6 +65,17 @@ interface KBEntry {
   confidence?: number | null;
 }
 
+// ─── Helper: Determine ÓRION processing status ───
+function getOrionStatus(entry: KBEntry): "processado" | "pendente" | "sem" {
+  if (!entry.taxonomy || typeof entry.taxonomy !== "object" || Object.keys(entry.taxonomy).length === 0) {
+    return "sem";
+  }
+  if (entry.taxonomy.status === "pendente_reprocessamento") {
+    return "pendente";
+  }
+  return "processado";
+}
+
 export default function AIKnowledgeBase() {
   const navigate = useNavigate();
   const [entries, setEntries] = useState<KBEntry[]>([]);
@@ -80,6 +92,11 @@ export default function AIKnowledgeBase() {
   const [showBatchYouTube, setShowBatchYouTube] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Reprocess state
+  const [reprocessingId, setReprocessingId] = useState<string | null>(null);
+  const [batchProcessing, setBatchProcessing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, successes: 0, failures: 0 });
 
   // Form state
   const [formTitle, setFormTitle] = useState("");
@@ -198,6 +215,111 @@ export default function AIKnowledgeBase() {
     setFormType(entry.file_type || "text"); setFormUrl(entry.file_url || ""); setShowAdd(true);
   };
 
+  // ─── Reprocess single item with ÓRION ───
+  const reprocessItem = useCallback(async (entry: KBEntry) => {
+    if (!entry.content_text && !entry.description) {
+      toast.error("Item sem conteúdo para processar");
+      return;
+    }
+    setReprocessingId(entry.id);
+    const startTime = Date.now();
+    try {
+      const { data: orgData, error: orgErr } = await supabase.functions.invoke("organize-knowledge", {
+        body: {
+          content: entry.content_text || entry.description || "",
+          title: entry.title,
+          tipo: entry.file_type || "texto",
+        },
+      });
+      if (orgErr) throw orgErr;
+
+      const taxonomy = orgData?.taxonomy;
+      if (!taxonomy) throw new Error("ÓRION não retornou taxonomia");
+
+      const updatePayload: any = {
+        taxonomy: taxonomy.taxonomia || taxonomy,
+        tags: taxonomy.tags || [],
+        confidence: taxonomy.taxonomia?.confianca ?? taxonomy.confianca ?? null,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Update resumo if better than current
+      if (taxonomy.resumo && taxonomy.resumo !== "Erro no processamento. Reprocesse manualmente.") {
+        updatePayload.content_text = entry.content_text; // Keep original content
+      }
+
+      await supabase.from("ai_knowledge_base").update(updatePayload).eq("id", entry.id);
+
+      const elapsed = Date.now() - startTime;
+      const tagCount = (taxonomy.tags || []).length;
+      const chunkCount = (taxonomy.chunks || []).length;
+      const conf = Math.round((taxonomy.taxonomia?.confianca ?? taxonomy.confianca ?? 0) * 100);
+      toast.success(`ÓRION reprocessou! ${tagCount} tags, ${chunkCount} chunks, confiança ${conf}% (${(elapsed / 1000).toFixed(1)}s)`);
+      loadEntries();
+    } catch (err: any) {
+      toast.error("Erro ao reprocessar: " + err.message);
+    } finally {
+      setReprocessingId(null);
+    }
+  }, []);
+
+  // ─── Batch process all pending/unprocessed items ───
+  const processAllPending = useCallback(async () => {
+    const pending = entries.filter(e => {
+      const status = getOrionStatus(e);
+      return (status === "sem" || status === "pendente") && (e.content_text || e.description);
+    });
+    if (pending.length === 0) {
+      toast.info("Nenhum item pendente para processar");
+      return;
+    }
+
+    setBatchProcessing(true);
+    setBatchProgress({ current: 0, total: pending.length, successes: 0, failures: 0 });
+
+    let successes = 0;
+    let failures = 0;
+
+    for (let i = 0; i < pending.length; i++) {
+      setBatchProgress(prev => ({ ...prev, current: i + 1 }));
+
+      try {
+        const entry = pending[i];
+        const { data: orgData, error: orgErr } = await supabase.functions.invoke("organize-knowledge", {
+          body: {
+            content: entry.content_text || entry.description || "",
+            title: entry.title,
+            tipo: entry.file_type || "texto",
+          },
+        });
+        if (orgErr) throw orgErr;
+
+        const taxonomy = orgData?.taxonomy;
+        if (!taxonomy) throw new Error("Sem taxonomia");
+
+        await supabase.from("ai_knowledge_base").update({
+          taxonomy: taxonomy.taxonomia || taxonomy,
+          tags: taxonomy.tags || [],
+          confidence: taxonomy.taxonomia?.confianca ?? taxonomy.confianca ?? null,
+          updated_at: new Date().toISOString(),
+        }).eq("id", entry.id);
+
+        successes++;
+      } catch {
+        failures++;
+      }
+
+      setBatchProgress(prev => ({ ...prev, successes, failures }));
+
+      // Rate limiting delay
+      if (i < pending.length - 1) await new Promise(r => setTimeout(r, 2000));
+    }
+
+    setBatchProcessing(false);
+    toast.success(`${successes} processado(s) com sucesso${failures > 0 ? `, ${failures} falhou(aram)` : ""}`);
+    loadEntries();
+  }, [entries]);
+
   // ─── Derived filter data ───
   const countriesAvailable = useMemo(() => {
     const set = new Set<string>();
@@ -208,12 +330,16 @@ export default function AIKnowledgeBase() {
     return Array.from(set).sort();
   }, [entries]);
 
+  // ─── Stats ───
+  const pendingCount = useMemo(() => entries.filter(e => {
+    const s = getOrionStatus(e);
+    return (s === "sem" || s === "pendente") && (e.content_text || e.description);
+  }).length, [entries]);
+
   // ─── Filtering ───
   const filtered = useMemo(() => {
     return entries.filter((e) => {
       const tax = e.taxonomy as Taxonomy | undefined;
-
-      // Text search - search in title, content, tags, taxonomy
       if (search) {
         const s = search.toLowerCase();
         const inTitle = e.title.toLowerCase().includes(s);
@@ -227,26 +353,17 @@ export default function AIKnowledgeBase() {
         const inVendas = (tax?.vendas?.argumentos_chave || []).some(a => a.toLowerCase().includes(s));
         if (!inTitle && !inContent && !inTags && !inGeo && !inPasseios && !inHoteis && !inVendas) return false;
       }
-
-      // Category filter
       if (filterCategory !== "all" && e.category !== filterCategory) return false;
-
-      // Country filter
       if (filterCountry !== "all") {
         if (!tax?.geo?.pais || tax.geo.pais.toLowerCase() !== filterCountry.toLowerCase()) return false;
       }
-
-      // Price filter
       if (filterPrice !== "all") {
         if (!tax?.financeiro?.faixa_preco_label || tax.financeiro.faixa_preco_label !== filterPrice) return false;
       }
-
-      // Profile filter
       if (filterProfile !== "all") {
         const ideals = [...(tax?.destino?.ideal_para || []), ...(tax?.perfil_viajante?.ideal || [])];
         if (!ideals.some(p => p.toLowerCase().includes(filterProfile))) return false;
       }
-
       return true;
     });
   }, [entries, search, filterCategory, filterCountry, filterPrice, filterProfile]);
@@ -359,7 +476,6 @@ export default function AIKnowledgeBase() {
           {/* ─── TAXONOMY FILTERS BAR ─── */}
           {showFilters && (
             <div className="flex flex-wrap gap-2 p-3 rounded-xl border border-border/40 bg-muted/20 animate-in slide-in-from-top-2 duration-200">
-              {/* Country */}
               <Select value={filterCountry} onValueChange={setFilterCountry}>
                 <SelectTrigger className="w-[150px] h-8 text-xs"><Map className="w-3 h-3 mr-1 text-blue-500" /><SelectValue placeholder="País" /></SelectTrigger>
                 <SelectContent>
@@ -367,7 +483,6 @@ export default function AIKnowledgeBase() {
                   {countriesAvailable.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {/* Price */}
               <Select value={filterPrice} onValueChange={setFilterPrice}>
                 <SelectTrigger className="w-[140px] h-8 text-xs"><DollarSign className="w-3 h-3 mr-1 text-emerald-500" /><SelectValue placeholder="Preço" /></SelectTrigger>
                 <SelectContent>
@@ -375,7 +490,6 @@ export default function AIKnowledgeBase() {
                   {PRICE_LABELS.map(p => <SelectItem key={p} value={p} className="capitalize">{p}</SelectItem>)}
                 </SelectContent>
               </Select>
-              {/* Profile */}
               <Select value={filterProfile} onValueChange={setFilterProfile}>
                 <SelectTrigger className="w-[150px] h-8 text-xs"><User className="w-3 h-3 mr-1 text-pink-500" /><SelectValue placeholder="Perfil" /></SelectTrigger>
                 <SelectContent>
@@ -388,6 +502,33 @@ export default function AIKnowledgeBase() {
                   <X className="w-3 h-3 mr-1" /> Limpar filtros
                 </Button>
               )}
+            </div>
+          )}
+
+          {/* ─── BATCH PROCESSING BAR ─── */}
+          {pendingCount > 0 && !batchProcessing && (
+            <div className="flex items-center gap-3 p-3 rounded-xl border border-amber-400/30 bg-amber-500/5">
+              <Clock className="w-4 h-4 text-amber-500" />
+              <span className="text-xs text-amber-700 dark:text-amber-400 flex-1">
+                {pendingCount} item(ns) sem processamento do ÓRION
+              </span>
+              <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-amber-400 text-amber-700 hover:bg-amber-50 dark:border-amber-600 dark:text-amber-400" onClick={processAllPending}>
+                <Zap className="w-3 h-3" /> Processar todos pendentes
+              </Button>
+            </div>
+          )}
+          {batchProcessing && (
+            <div className="p-4 rounded-xl border border-primary/30 bg-primary/5 space-y-2">
+              <div className="flex justify-between text-xs">
+                <span className="text-primary font-medium flex items-center gap-1.5">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Processando {batchProgress.current} de {batchProgress.total}...
+                </span>
+                <span className="text-muted-foreground">
+                  {batchProgress.successes} ✓ {batchProgress.failures > 0 && `· ${batchProgress.failures} ✗`}
+                </span>
+              </div>
+              <Progress value={(batchProgress.current / batchProgress.total) * 100} className="h-2" />
             </div>
           )}
 
@@ -411,11 +552,17 @@ export default function AIKnowledgeBase() {
                 const cat = CATEGORIES.find((c) => c.value === entry.category);
                 const ytVideoId = isYouTube && entry.file_url ? entry.file_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1] : null;
                 const thumbnailUrl = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/mqdefault.jpg` : null;
-                const hasTaxonomy = entry.taxonomy && typeof entry.taxonomy === "object" && Object.keys(entry.taxonomy).length > 0;
+                const orionStatus = getOrionStatus(entry);
+                const hasTaxonomy = orionStatus === "processado";
                 const isExpanded = expandedId === entry.id;
+                const isReprocessing = reprocessingId === entry.id;
 
                 return (
-                  <Card key={entry.id} className={cn("transition-all overflow-hidden relative", !entry.is_active && "opacity-50")}>
+                  <Card key={entry.id} className={cn(
+                    "transition-all overflow-hidden relative",
+                    !entry.is_active && "opacity-50",
+                    orionStatus === "pendente" && "ring-1 ring-amber-400/50",
+                  )}>
                     {isYouTube && thumbnailUrl && (
                       <div className="absolute inset-0 bg-cover bg-center opacity-[0.06] dark:opacity-[0.08]" style={{ backgroundImage: `url(${thumbnailUrl})` }} />
                     )}
@@ -425,7 +572,7 @@ export default function AIKnowledgeBase() {
                           <TypeIcon className={`w-4 h-4 ${isYouTube ? "text-red-500" : "text-primary"}`} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-sm font-medium truncate">{entry.title}</h3>
                             {isYouTube && (
                               <Badge className="text-[9px] flex-shrink-0 bg-red-500 text-white border-0 hover:bg-red-600">
@@ -433,7 +580,29 @@ export default function AIKnowledgeBase() {
                               </Badge>
                             )}
                             <Badge variant="outline" className="text-[9px] flex-shrink-0">{cat?.label || entry.category}</Badge>
-                            {entry.is_active ? <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" /> : <AlertCircle className="w-3 h-3 text-muted-foreground flex-shrink-0" />}
+
+                            {/* ÓRION Status Badge */}
+                            {orionStatus === "processado" && (
+                              <Badge className="text-[9px] flex-shrink-0 bg-emerald-500/15 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20">
+                                <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" /> ÓRION
+                              </Badge>
+                            )}
+                            {orionStatus === "pendente" && (
+                              <Badge className="text-[9px] flex-shrink-0 bg-amber-500/15 text-amber-600 border-amber-500/30 hover:bg-amber-500/20 animate-pulse">
+                                <AlertCircle className="w-2.5 h-2.5 mr-0.5" /> Pendente
+                              </Badge>
+                            )}
+                            {orionStatus === "sem" && (
+                              <Badge variant="outline" className="text-[9px] flex-shrink-0 text-muted-foreground border-muted-foreground/30">
+                                <Clock className="w-2.5 h-2.5 mr-0.5" /> Sem ÓRION
+                              </Badge>
+                            )}
+
+                            {entry.confidence != null && entry.confidence > 0 && (
+                              <Badge variant="outline" className="text-[9px] flex-shrink-0 font-mono">
+                                {Math.round(entry.confidence * 100)}%
+                              </Badge>
+                            )}
                           </div>
                           {entry.description && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{entry.description}</p>}
 
@@ -452,6 +621,21 @@ export default function AIKnowledgeBase() {
                           </p>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
+                          {/* Reprocess / Process button */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                              "h-7 w-7",
+                              orionStatus === "sem" && "text-primary",
+                              orionStatus === "pendente" && "text-amber-500",
+                            )}
+                            onClick={() => reprocessItem(entry)}
+                            disabled={isReprocessing || batchProcessing}
+                            title={orionStatus === "sem" ? "Processar com ÓRION" : "Reprocessar com ÓRION"}
+                          >
+                            {isReprocessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                          </Button>
                           {hasTaxonomy && (
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpandedId(isExpanded ? null : entry.id)}>
                               {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
