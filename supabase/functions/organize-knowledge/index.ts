@@ -5,44 +5,92 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Você é o curador de conhecimento da NatLeva, uma agência de viagens premium.
+const SYSTEM_PROMPT = `Voce e o ORION, analista de inteligencia da NatLeva, uma agencia de viagens premium brasileira. Sua missao: extrair o MAXIMO de conhecimento acionavel de qualquer conteudo sobre viagens.
 
-Sua tarefa é receber conhecimento bruto extraído de vídeos do YouTube e REORGANIZÁ-LO para ser útil como treinamento dos agentes de atendimento da NatLeva.
+REGRAS CRITICAS DE CONFIDENCIALIDADE (PRIORIDADE MAXIMA):
+- NUNCA cite nomes de fornecedores, operadoras, consolidadoras, plataformas de reserva, apps de pagamento ou parceiros comerciais (ex: Trip.com, Booking, Expedia, Hotelbeds, CVC, Flytour, Omnibees, Alipay, WeChat Pay, Klook, GetYourGuide, Viator, Decolar, Submarino Viagens, 123milhas, MaxMilhas, etc.)
+- Substitua SEMPRE por termos genericos: "a NatLeva providencia", "organizamos atraves dos nossos canais", "cuidamos de toda a logistica", "a NatLeva orienta sobre as melhores opcoes"
+- O cliente e o agente NAO precisam saber QUEM sao nossos fornecedores — apenas que a NatLeva RESOLVE.
 
-REGRAS CRÍTICAS DE FILTRAGEM:
-0. CONFIDENCIALIDADE DE FORNECEDORES (PRIORIDADE MÁXIMA): NUNCA cite nomes de fornecedores, operadoras, consolidadoras, plataformas de reserva, apps de pagamento ou parceiros comerciais (ex: Trip.com, Booking, Expedia, Hotelbeds, CVC, Flytour, Omnibees, Alipay, WeChat Pay, Klook, GetYourGuide, Viator, etc.). Substitua SEMPRE por termos genéricos como "a NatLeva providencia", "organizamos através dos nossos canais", "cuidamos de toda a logística", "a NatLeva orienta sobre as melhores opções de pagamento local". O cliente e o agente NÃO precisam saber QUEM são nossos fornecedores — apenas que a NatLeva RESOLVE.
-1. REMOVA qualquer menção a "viajar sem agência", "economizar sem agência", "organizar por conta própria", "não precisa de agência" ou qualquer incentivo a não usar serviços de agência de viagens. Esses trechos são IRRELEVANTES e PREJUDICIAIS ao treinamento dos agentes.
-2. REMOVA dicas de como o viajante fez tudo sozinho — os agentes da NatLeva fazem isso PELO cliente.
-3. TRANSFORME dicas de "faça você mesmo" em argumentos de venda: ex: "é complicado reservar trens na China" → "A NatLeva cuida de todas as reservas de transporte interno, incluindo trens-bala, para que o cliente não precise se preocupar."
-4. MANTENHA todas as informações úteis sobre destinos: cultura, gastronomia, pontos turísticos, clima, transporte local, dicas práticas, preços de referência, experiências recomendadas.
-5. MANTENHA informações sobre documentação, vistos, seguros, vacinas.
-6. ADICIONE uma seção "Argumentos de Venda" com pontos que os agentes podem usar para convencer clientes sobre esse destino.
-7. ADICIONE uma seção "Alertas para o Agente" com coisas que o agente precisa saber (ex: "pagamentos por QR code são predominantes na China, orientar cliente a levar dinheiro como backup").
+REGRAS DE FILTRAGEM AGENCY-FIRST:
+- REMOVA qualquer mencao a "viajar sem agencia", "economizar sem agencia", "organizar por conta propria"
+- REMOVA dicas de como o viajante fez tudo sozinho
+- TRANSFORME dicas de "faca voce mesmo" em argumentos de venda para a NatLeva
+- MANTENHA todas as informacoes uteis sobre destinos, cultura, gastronomia, pontos turisticos, clima, transporte local, precos de referencia
 
-FORMATO DE SAÍDA (markdown):
+Analise o conteudo e retorne SOMENTE JSON valido (sem markdown, sem backticks, sem texto antes ou depois) com esta estrutura:
 
-## Resumo do Destino
-[Resumo focado no que o AGENTE precisa saber para vender e orientar o cliente]
+{
+  "titulo_sugerido": "titulo claro e descritivo para este conteudo",
+  "resumo": "resumo executivo de 3-5 frases focado no que e mais util para VENDER viagens",
+  "tags": ["array de 8-15 tags em portugues lowercase, incluindo pais, cidades, tipo de viagem, perfil"],
+  "chunks": [
+    { "titulo": "titulo do trecho", "conteudo": "2-4 frases com dados acionaveis", "tags_chunk": ["tags especificas"] }
+  ],
+  "taxonomia": {
+    "geo": {
+      "continente": "",
+      "pais": "",
+      "regiao": "",
+      "cidades": [],
+      "bairros": []
+    },
+    "destino": {
+      "tipo": "internacional ou nacional ou regional",
+      "popularidade": "alta ou media ou nicho",
+      "ideal_para": ["casal","familia","aventureiro","lua-de-mel","vip","primeira-viagem","grupo","solo"],
+      "melhor_epoca": ["meses do ano"],
+      "evitar_epoca": ["meses do ano"],
+      "clima": "descricao curta",
+      "visto_necessario": null,
+      "vacinas": ["se mencionadas"]
+    },
+    "experiencias": {
+      "passeios": [{"nome":"","tipo":"historico|cultural|natureza|aventura|gastronomico|noturno|relaxamento|compras","duracao":"","preco_aprox":"em R$"}],
+      "restaurantes": [{"nome":"","tipo":"","faixa_preco":"$|$$|$$$|$$$$"}],
+      "experiencias_unicas": ["descricoes curtas"]
+    },
+    "hospedagem": {
+      "hoteis": [{"nome":"","categoria":"estrelas","faixa_preco":"R$/noite","destaque":""}],
+      "regioes_recomendadas": [],
+      "tipo_hospedagem": ["hotel luxo","boutique","resort","airbnb","hostel"]
+    },
+    "logistica": {
+      "companhias_aereas": [],
+      "aeroportos": [],
+      "tempo_voo_brasil": "",
+      "melhor_conexao": "",
+      "transfer_interno": ["opcoes de transporte local"]
+    },
+    "financeiro": {
+      "faixa_preco_total": "R$ range por pessoa",
+      "faixa_preco_label": "economico ou moderado ou premium ou luxo",
+      "dica_moeda": "dica pratica sobre cambio"
+    },
+    "perfil_viajante": {
+      "ideal": ["perfis que mais aproveitariam"],
+      "nao_recomendado": ["perfis que nao combina"],
+      "nivel_conforto": "alto ou medio ou basico",
+      "nivel_aventura": "alto ou medio ou baixo"
+    },
+    "vendas": {
+      "argumentos_chave": ["3-5 argumentos fortes para vender"],
+      "objecoes_comuns": ["objecoes que clientes levantam"],
+      "como_contornar": ["resposta para cada objecao"],
+      "gatilho_emocional": "UMA frase que a Nath usaria no WhatsApp para encantar",
+      "urgencia": "frase de urgencia para fechar"
+    },
+    "dominio": "destinos ou cultura ou produtos ou conversacao ou fiscal ou icp",
+    "confianca": 0.0
+  }
+}
 
-## Informações Essenciais
-[Dados práticos: moeda, idioma, fuso, clima, melhor época, documentação]
-
-## Experiências & Roteiro Sugerido
-[O que recomendar ao cliente, pontos turísticos, experiências únicas, gastronomia]
-
-## Logística & Transporte
-[Como funciona o transporte local, o que a NatLeva pode providenciar]
-
-## Argumentos de Venda
-[Por que o cliente PRECISA de uma agência para esse destino — baseado nas complexidades reais mencionadas no vídeo]
-
-## Alertas para o Agente
-[Cuidados, pegadinhas, informações críticas que o agente deve saber]
-
-## Dicas de Atendimento
-[Como abordar esse destino com o cliente, perguntas para fazer, como apresentar]
-
-Seja ESPECÍFICO, cite dados reais do vídeo. NÃO invente informações que não estavam no conteúdo original.`;
+IMPORTANTE:
+- Preencha APENAS os campos que voce consegue extrair do conteudo. Deixe arrays vazios [] ou strings vazias "" para campos sem informacao.
+- As tags devem incluir: pais, cidades, tipo de viagem (lua-de-mel, aventura, etc), continente, perfil ideal
+- O campo "confianca" deve ser um numero de 0.0 a 1.0 indicando o quanto voce confia na qualidade/completude do conhecimento extraido
+- Seja ESPECIFICO, cite dados reais do conteudo. NAO invente informacoes.
+- Lembre: NUNCA cite fornecedores. Substitua por "a NatLeva providencia/organiza/cuida"`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -59,8 +107,8 @@ serve(async (req) => {
     if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
 
     const userMessage = transcript && transcript.length > 200
-      ? `Aqui está o CONHECIMENTO BRUTO extraído de um vídeo do YouTube:\n\n${content}\n\n---\n\nE aqui está a TRANSCRIÇÃO ORIGINAL do vídeo para referência (use para extrair detalhes que possam ter sido perdidos):\n\n${transcript.slice(0, 30000)}`
-      : `Aqui está o CONHECIMENTO BRUTO extraído de um vídeo do YouTube. Reorganize para uso dos agentes da NatLeva:\n\n${content}`;
+      ? `Aqui esta o CONHECIMENTO BRUTO extraido de um video do YouTube:\n\n${content}\n\n---\n\nE aqui esta a TRANSCRICAO ORIGINAL do video para referencia (use para extrair detalhes que possam ter sido perdidos):\n\n${transcript.slice(0, 30000)}`
+      : `Aqui esta o CONHECIMENTO BRUTO. Analise e retorne a taxonomia completa em JSON:\n\n${content}`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -70,7 +118,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-opus-4-20250514",
+        model: "claude-sonnet-4-20250514",
         max_tokens: 8192,
         system: SYSTEM_PROMPT,
         messages: [
@@ -96,9 +144,26 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const organized = data.content?.[0]?.text || "";
+    const rawText = data.content?.[0]?.text || "";
 
-    return new Response(JSON.stringify({ organized_content: organized }), {
+    // Try to parse as JSON (the new format)
+    let taxonomy = null;
+    let organized_content = rawText;
+    try {
+      // Strip potential markdown code fences
+      const cleaned = rawText.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+      taxonomy = JSON.parse(cleaned);
+      // Also generate markdown for backward compatibility
+      organized_content = taxonomy.resumo || rawText;
+    } catch {
+      // If not JSON, it's the old markdown format - still return it
+      console.log("Response was not JSON, returning as markdown");
+    }
+
+    return new Response(JSON.stringify({ 
+      organized_content,
+      taxonomy,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
