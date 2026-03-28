@@ -717,16 +717,10 @@ REGRAS:
         <div className="flex-1 flex flex-col overflow-hidden">
           {synthesizing ? (
             <div className="flex-1 flex flex-col items-center justify-center py-8 gap-3">
-              <div className="relative">
-                <Loader2
-                  className="w-8 h-8 animate-spin"
-                  style={{ color: "#F59E0B" }}
-                />
-                <Sparkles
-                  className="w-4 h-4 absolute -top-1 -right-1 animate-pulse"
-                  style={{ color: "#8B5CF6" }}
-                />
-              </div>
+              <Loader2
+                className="w-10 h-10 animate-spin"
+                style={{ color: "#F59E0B" }}
+              />
               <p className="text-xs" style={{ color: "#94A3B8" }}>
                 Convertendo observações em melhorias...
               </p>
