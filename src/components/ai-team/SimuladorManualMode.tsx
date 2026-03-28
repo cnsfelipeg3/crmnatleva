@@ -7,7 +7,7 @@ import SimulatorObservationsPanel, { type SelectedMessage } from "./SimulatorObs
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining, type AgentTrainingConfig } from "@/components/ai-team/agentTrainingStore";
 import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
-import { buildTeamContextBlock, NATH_UNIVERSAL_RULES } from "@/components/ai-team/agentTeamContext";
+import { buildTeamContextBlock, NATH_UNIVERSAL_RULES, getTransferTargets } from "@/components/ai-team/agentTeamContext";
 import { useAgencyConfig } from "@/hooks/useAgencyConfig";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
