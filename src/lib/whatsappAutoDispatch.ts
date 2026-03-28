@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { debugLog, debugWarn } from "@/lib/debugMode";
 
 interface DispatchParams {
   triggerEvent: string;
