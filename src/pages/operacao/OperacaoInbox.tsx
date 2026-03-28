@@ -231,7 +231,7 @@ function OperacaoInboxInner() {
         persistedTable = "conversation_messages";
         debugLog(`[PERSIST✓] Mensagem gravada em conversation_messages: ${persistedId}`);
       } else {
-        console.warn(`[PERSIST] conversation_messages falhou: ${error?.message}. Tentando fallback...`);
+        debugWarn(`[PERSIST] conversation_messages falhou: ${error?.message}. Tentando fallback...`);
       }
     } catch (err: any) {
       console.warn(`[PERSIST] conversation_messages exception: ${err.message}. Tentando fallback...`);
