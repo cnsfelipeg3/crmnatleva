@@ -311,6 +311,85 @@ export default function SimuladorManualMode() {
     setInput("");
     setLoading(true);
 
+    // ═══ ENRICHMENT LAYER — additive, safe, no-break ═══
+    let enrichedBehaviorPrompt = (agentBehaviors[selectedAgent.id] || "") + (kbContent[selectedAgent.id] || "");
+    try {
+      const behaviorLower = enrichedBehaviorPrompt.toLowerCase();
+      let addedSkills = 0, addedKb = 0, addedWorkflows = 0;
+      const extras: string[] = [];
+
+      // 1) Skills from DB
+      const { data: skillAssignments } = await supabase
+        .from("agent_skill_assignments")
+        .select("skill_id, agent_skills(name, prompt_instruction, is_active)")
+        .eq("agent_id", selectedAgent.id)
+        .eq("is_active", true);
+      if (skillAssignments && skillAssignments.length > 0) {
+        const newSkills: string[] = [];
+        for (const sa of skillAssignments) {
+          const skill = sa.agent_skills as any;
+          if (!skill || !skill.is_active || !skill.prompt_instruction) continue;
+          if (behaviorLower.includes(skill.name.toLowerCase())) continue;
+          newSkills.push(`- ${skill.name}: ${(skill.prompt_instruction || "").slice(0, 150)}`);
+        }
+        if (newSkills.length > 0) {
+          extras.push(`\n[SKILLS ATUALIZADAS]\n${newSkills.join("\n")}`);
+          addedSkills = newSkills.length;
+        }
+      }
+
+      // 2) KB items from DB (not already in kbContent)
+      const { data: kbDocs } = await supabase
+        .from("ai_knowledge_base")
+        .select("title, content_text, category")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false })
+        .limit(30);
+      if (kbDocs && kbDocs.length > 0) {
+        const newKb: string[] = [];
+        for (const doc of kbDocs) {
+          if (!doc.content_text || !doc.title) continue;
+          if (behaviorLower.includes(doc.title.toLowerCase())) continue;
+          newKb.push(`- ${doc.title}: ${doc.content_text.slice(0, 200)}`);
+        }
+        if (newKb.length > 0) {
+          extras.push(`\n[CONHECIMENTO ATUALIZADO]\n${newKb.join("\n")}`);
+          addedKb = newKb.length;
+        }
+      }
+
+      // 3) Active workflow from Flow Builder
+      const { data: flows } = await supabase
+        .from("automation_flows")
+        .select("id, name, description")
+        .eq("status", "active")
+        .limit(3);
+      if (flows && flows.length > 0) {
+        for (const flow of flows) {
+          if (behaviorLower.includes(flow.name.toLowerCase())) continue;
+          const { data: flowNodes } = await supabase
+            .from("automation_nodes")
+            .select("label, node_type")
+            .eq("flow_id", flow.id)
+            .order("position_y", { ascending: true })
+            .limit(15);
+          if (flowNodes && flowNodes.length > 0) {
+            const steps = flowNodes.map(n => n.label || n.node_type).join(" → ");
+            extras.push(`\n[FLUXO DE TRABALHO ATUALIZADO]\nFluxo "${flow.name}": ${steps}`);
+            addedWorkflows++;
+          }
+        }
+      }
+
+      if (extras.length > 0) {
+        enrichedBehaviorPrompt += extras.join("\n");
+      }
+      console.log(`[ENRICHMENT] ${addedSkills} skills adicionadas, ${addedKb} KB items, ${addedWorkflows} workflows`);
+    } catch (err) {
+      // Silent fail — use original prompt
+      console.log("[ENRICHMENT] Falha silenciosa, usando prompt original", err);
+    }
+
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
       const resp = await fetch(url, {
@@ -319,7 +398,7 @@ export default function SimuladorManualMode() {
         body: JSON.stringify({
           type: "agent",
           systemPrompt: manualSystemPrompt,
-          agentBehaviorPrompt: (agentBehaviors[selectedAgent.id] || "") + (kbContent[selectedAgent.id] || ""),
+          agentBehaviorPrompt: enrichedBehaviorPrompt,
           history: buildConversationHistory(nextMessages, selectedDestino, isLivreMode),
           provider: "lovable",
         }),
