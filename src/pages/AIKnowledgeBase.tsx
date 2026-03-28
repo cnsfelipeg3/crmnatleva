@@ -16,14 +16,15 @@ import {
   FileText, Link2, Youtube, Image, Mic, FileSpreadsheet,
   Presentation, MessageSquare, Search, Filter, Brain,
   CheckCircle2, AlertCircle, Loader2, Globe2, Sparkles,
-  ChevronLeft,
+  ChevronLeft, Play, ListPlus,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import YouTubeReviewPanel from "@/components/knowledge/YouTubeReviewPanel";
+import YouTubeBatchImport from "@/components/knowledge/YouTubeBatchImport";
 const CATEGORIES = [
   { value: "atendimento", label: "Atendimento & Scripts", icon: MessageSquare },
   { value: "destinos", label: "Destinos & Roteiros", icon: Globe2 },
@@ -68,6 +69,8 @@ export default function AIKnowledgeBase() {
   const [showAdd, setShowAdd] = useState(false);
   const [editEntry, setEditEntry] = useState<KBEntry | null>(null);
   const [activeTab, setActiveTab] = useState("items");
+  const [showYouTube, setShowYouTube] = useState(false);
+  const [showBatchYouTube, setShowBatchYouTube] = useState(false);
 
   // Form state
   const [formTitle, setFormTitle] = useState("");
@@ -234,6 +237,14 @@ export default function AIKnowledgeBase() {
     return matchSearch && matchCat;
   });
 
+  // YouTube full-screen panels
+  if (showYouTube) {
+    return <YouTubeReviewPanel onBack={() => setShowYouTube(false)} onSaved={() => { setShowYouTube(false); loadEntries(); }} />;
+  }
+  if (showBatchYouTube) {
+    return <YouTubeBatchImport onBack={() => setShowBatchYouTube(false)} onSaved={() => { setShowBatchYouTube(false); loadEntries(); }} />;
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-4 max-w-6xl mx-auto">
       {/* Header */}
@@ -274,6 +285,12 @@ export default function AIKnowledgeBase() {
                 {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Button size="sm" variant="outline" className="h-9 text-xs gap-1 border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30" onClick={() => setShowYouTube(true)}>
+              <Youtube className="w-3 h-3" /> YouTube
+            </Button>
+            <Button size="sm" variant="outline" className="h-9 text-xs gap-1 border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30" onClick={() => setShowBatchYouTube(true)}>
+              <ListPlus className="w-3 h-3" /> Lote YT
+            </Button>
             <Dialog open={showAdd} onOpenChange={(o) => { if (!o) resetForm(); setShowAdd(o); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="h-9 text-xs"><Plus className="w-3 h-3 mr-1" /> Adicionar</Button>
@@ -398,17 +415,33 @@ export default function AIKnowledgeBase() {
           ) : (
             <div className="grid gap-2">
               {filtered.map((entry) => {
-                const TypeIcon = FILE_TYPE_ICONS[entry.file_type || "text"] || FileText;
+                const isYouTube = entry.file_type === "youtube" || entry.file_type === "video/youtube";
+                const TypeIcon = isYouTube ? Youtube : (FILE_TYPE_ICONS[entry.file_type || "text"] || FileText);
                 const cat = CATEGORIES.find((c) => c.value === entry.category);
+                const ytVideoId = isYouTube && entry.file_url ? entry.file_url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1] : null;
+                const thumbnailUrl = ytVideoId ? `https://img.youtube.com/vi/${ytVideoId}/mqdefault.jpg` : null;
+
                 return (
-                  <Card key={entry.id} className={`transition-opacity ${!entry.is_active ? "opacity-50" : ""}`}>
-                    <CardContent className="p-3 flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <TypeIcon className="w-4 h-4 text-primary" />
+                  <Card key={entry.id} className={`transition-opacity overflow-hidden relative ${!entry.is_active ? "opacity-50" : ""}`}>
+                    {/* YouTube thumbnail background */}
+                    {isYouTube && thumbnailUrl && (
+                      <div
+                        className="absolute inset-0 bg-cover bg-center opacity-[0.06] dark:opacity-[0.08]"
+                        style={{ backgroundImage: `url(${thumbnailUrl})` }}
+                      />
+                    )}
+                    <CardContent className="p-3 flex items-start gap-3 relative z-10">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${isYouTube ? "bg-red-500/15" : "bg-primary/10"}`}>
+                        <TypeIcon className={`w-4 h-4 ${isYouTube ? "text-red-500" : "text-primary"}`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-medium truncate">{entry.title}</h3>
+                          {isYouTube && (
+                            <Badge className="text-[9px] flex-shrink-0 bg-red-500 text-white border-0 hover:bg-red-600">
+                              <Youtube className="w-2.5 h-2.5 mr-0.5" /> YouTube
+                            </Badge>
+                          )}
                           <Badge variant="outline" className="text-[9px] flex-shrink-0">{cat?.label || entry.category}</Badge>
                           {entry.is_active ? (
                             <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
