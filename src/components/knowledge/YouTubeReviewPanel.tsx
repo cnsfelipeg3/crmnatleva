@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft, Youtube, Sparkles, Loader2, CheckCircle, Brain,
   Play, Zap, BookOpen, Shield, AlertTriangle, Lightbulb, MessageSquare,
-  ClipboardPaste, Map,
+  ClipboardPaste, Map, XCircle, Clock, Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
