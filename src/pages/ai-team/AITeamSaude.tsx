@@ -290,6 +290,7 @@ export default function AITeamSaude() {
   const [expandedDetail, setExpandedDetail] = useState<string | null>(null);
   const [autoFixOpen, setAutoFixOpen] = useState(false);
   const [fixing, setFixing] = useState(false);
+  const [promptPreview, setPromptPreview] = useState<string | null>(null); // agent id showing prompt
   const queryClient = useQueryClient();
 
   const toggleDetail = useCallback((label: string) => {
