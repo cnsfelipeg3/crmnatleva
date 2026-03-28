@@ -383,8 +383,8 @@ serve(async (req) => {
               if (descMarker > 0 && commentsMarker > descMarker) {
                 rawMarkdown = rawMarkdown.slice(0, commentsMarker);
               }
-              // Hard cap — if still too large, it's page chrome not transcript
-              const MAX_FIRECRAWL = 40000;
+              // Hard cap for Firecrawl page content (generous limit for full transcripts)
+              const MAX_FIRECRAWL = 150000;
               if (rawMarkdown.length > MAX_FIRECRAWL) {
                 rawMarkdown = rawMarkdown.slice(0, MAX_FIRECRAWL);
               }
