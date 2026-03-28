@@ -712,7 +712,7 @@ export default function AITeamConhecimento() {
 
       {/* Doc Detail Dialog */}
       <Dialog open={!!selectedDoc} onOpenChange={() => setSelectedDoc(null)}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className={cn("max-h-[85vh] overflow-y-auto", selectedDoc?.file_type?.includes("youtube") && selectedDoc?.taxonomy ? "max-w-2xl" : "max-w-lg")}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-primary" />
@@ -747,7 +747,61 @@ export default function AITeamConhecimento() {
                 <p className="text-sm text-muted-foreground">{selectedDoc.description}</p>
               )}
 
-              {selectedDoc.content_text && (
+              {/* Tags */}
+              {selectedDoc.file_type?.includes("youtube") && selectedDoc.tags && selectedDoc.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedDoc.tags.map((tag: string, i: number) => (
+                    <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Taxonomy sections for YouTube items */}
+              {selectedDoc.file_type?.includes("youtube") && selectedDoc.taxonomy?.taxonomia && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <span className="text-sm font-bold">Taxonomia ÓRION</span>
+                  </div>
+                  <TaxonomyPreview 
+                    taxonomy={selectedDoc.taxonomy.taxonomia} 
+                    onChange={() => {}} 
+                    readOnly 
+                  />
+                </div>
+              )}
+
+              {/* Chunks for YouTube items */}
+              {selectedDoc.file_type?.includes("youtube") && selectedDoc.taxonomy?.chunks && selectedDoc.taxonomy.chunks.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+                    <BookOpen className="w-4 h-4 text-blue-500" />
+                    <span className="text-sm font-bold">Chunks de Conhecimento ({selectedDoc.taxonomy.chunks.length})</span>
+                  </div>
+                  <div className="space-y-2">
+                    {selectedDoc.taxonomy.chunks.map((chunk: any, i: number) => (
+                      <div key={i} className="rounded-xl border border-border/40 bg-muted/20 p-3 space-y-1.5">
+                        <h4 className="text-xs font-bold">{chunk.titulo}</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{chunk.conteudo}</p>
+                        {chunk.tags_chunk && chunk.tags_chunk.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {chunk.tags_chunk.map((t: string, j: number) => (
+                              <span key={j} className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-muted text-muted-foreground">
+                                {t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Content text for non-YouTube or as fallback */}
+              {selectedDoc.content_text && !selectedDoc.file_type?.includes("youtube") && (
                 <div className="max-h-[300px] overflow-y-auto">
                   <p className="text-xs font-bold mb-1">Conteúdo</p>
                   <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted/30 p-3 rounded-lg font-sans">
