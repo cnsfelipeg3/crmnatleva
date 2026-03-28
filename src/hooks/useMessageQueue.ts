@@ -51,7 +51,7 @@ export function useMessageQueue() {
       attemptCount: 0,
     };
     setQueue(prev => [...prev, queued]);
-    console.log(`[QUEUE] Mensagem enfileirada: ${queued.id} para ${queued.phone}`);
+    debugLog(`[QUEUE] Mensagem enfileirada: ${queued.id} para ${queued.phone}`);
     return queued;
   }, []);
 
