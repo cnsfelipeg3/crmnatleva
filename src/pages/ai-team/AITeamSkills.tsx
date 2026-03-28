@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { logAITeamAudit, AUDIT_ACTIONS, AUDIT_ENTITIES } from "@/lib/aiTeamAudit";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -119,6 +120,14 @@ export default function AITeamSkills() {
       if (error) { toast.error("Erro ao criar: " + error.message); setSaving(false); return; }
       toast.success("Skill criada com sucesso!");
       setShowCreate(false);
+      logAITeamAudit({
+        action_type: AUDIT_ACTIONS.CREATE,
+        entity_type: AUDIT_ENTITIES.SKILL,
+        entity_name: editName.trim(),
+        description: `Nova skill criada: ${editName.trim()} (${editCategory})`,
+        performed_by: "gestor",
+        details: { category: editCategory, level: editLevel },
+      });
     } else if (selectedSkill) {
       const { error } = await supabase.from("agent_skills").update({
         name: editName.trim(),
@@ -132,6 +141,15 @@ export default function AITeamSkills() {
       toast.success("Skill atualizada!");
       setEditMode(false);
       setSelectedSkill(null);
+      logAITeamAudit({
+        action_type: AUDIT_ACTIONS.UPDATE,
+        entity_type: AUDIT_ENTITIES.SKILL,
+        entity_id: selectedSkill.id,
+        entity_name: editName.trim(),
+        description: `Skill editada: ${editName.trim()}`,
+        performed_by: "gestor",
+        details: { category: editCategory, level: editLevel },
+      });
     }
     setSaving(false);
     loadSkills();

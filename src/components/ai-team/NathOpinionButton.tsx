@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { logAITeamAudit, AUDIT_ACTIONS, AUDIT_ENTITIES } from "@/lib/aiTeamAudit";
 
 const NATH_SYSTEM_PROMPT = `Você é NATH — Natália, CEO, fundadora, idealizadora e coração da NatLeva, agência de viagens premium que carrega o SEU nome. Você trata a NatLeva como um cristal precioso.
 
@@ -367,6 +368,15 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
           });
           applied++;
         }
+        logAITeamAudit({
+          action_type: AUDIT_ACTIONS.CREATE,
+          entity_type: action.type === "skill" ? AUDIT_ENTITIES.SKILL : action.type === "new_agent" ? AUDIT_ENTITIES.AGENT : AUDIT_ENTITIES.RULE,
+          entity_name: action.title,
+          description: `Opinião da Nath aplicada: ${action.title}`,
+          performed_by: "NATH.AI",
+          agent_name: action.scope === "all_agents" ? "global" : undefined,
+          details: { type: action.type, priority: action.priority, scope: action.scope },
+        });
       } catch (err) {
         console.warn("[NathAction] Failed to apply:", action.title, err);
       }

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { logAITeamAudit, AUDIT_ACTIONS, AUDIT_ENTITIES } from "@/lib/aiTeamAudit";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -233,6 +234,14 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       const passeioCount = taxonomy?.experiencias?.passeios?.length || 0;
       const hotelCount = taxonomy?.hospedagem?.hoteis?.length || 0;
       toast.success(`Conhecimento importado! ${tagCount} tags · ${passeioCount} passeios · ${hotelCount} hotéis`);
+      logAITeamAudit({
+        action_type: AUDIT_ACTIONS.CREATE,
+        entity_type: AUDIT_ENTITIES.KNOWLEDGE,
+        entity_name: payload.title,
+        description: `ÓRION processou vídeo YouTube: ${payload.title} (${tagCount} tags, ${passeioCount} passeios, ${hotelCount} hotéis)`,
+        performed_by: "ÓRION",
+        details: { source: "youtube", tags: tags.slice(0, 10), taxonomy_keys: taxonomy ? Object.keys(taxonomy) : [] },
+      });
       onSaved();
     } catch (err: any) {
       toast.error("Erro ao salvar: " + err.message);

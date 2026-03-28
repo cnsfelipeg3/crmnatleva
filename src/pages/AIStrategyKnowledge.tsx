@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { logAITeamAudit, AUDIT_ACTIONS, AUDIT_ENTITIES } from "@/lib/aiTeamAudit";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -197,13 +198,34 @@ export default function AIStrategyKnowledge() {
         .update(payload as any)
         .eq("id", (editRule as any).id);
       if (error) toast.error("Erro ao atualizar");
-      else toast.success("Regra atualizada");
+      else {
+        toast.success("Regra atualizada");
+        logAITeamAudit({
+          action_type: AUDIT_ACTIONS.UPDATE,
+          entity_type: AUDIT_ENTITIES.RULE,
+          entity_id: (editRule as any).id,
+          entity_name: editRule.title,
+          description: `Regra global editada: ${editRule.title}`,
+          performed_by: "gestor",
+          details: { category: editRule.category, priority: editRule.priority },
+        });
+      }
     } else {
       const { error } = await supabase
         .from("ai_strategy_knowledge")
         .insert(payload as any);
       if (error) toast.error("Erro ao criar");
-      else toast.success("Regra criada");
+      else {
+        toast.success("Regra criada");
+        logAITeamAudit({
+          action_type: AUDIT_ACTIONS.CREATE,
+          entity_type: AUDIT_ENTITIES.RULE,
+          entity_name: editRule.title,
+          description: `Nova regra global criada: ${editRule.title}`,
+          performed_by: "gestor",
+          details: { category: editRule.category, priority: editRule.priority },
+        });
+      }
     }
     setSaving(false);
     setEditOpen(false);
@@ -212,14 +234,33 @@ export default function AIStrategyKnowledge() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Excluir esta regra?")) return;
+    const rule = rules.find(r => r.id === id);
     const { error } = await supabase.from("ai_strategy_knowledge").delete().eq("id", id);
     if (error) toast.error("Erro");
-    else { toast.success("Excluída"); fetchRules(); }
+    else {
+      toast.success("Excluída"); fetchRules();
+      logAITeamAudit({
+        action_type: AUDIT_ACTIONS.DELETE,
+        entity_type: AUDIT_ENTITIES.RULE,
+        entity_id: id,
+        entity_name: rule?.title || id,
+        description: `Regra global excluída: ${rule?.title || id}`,
+        performed_by: "gestor",
+      });
+    }
   };
 
   const toggleActive = async (r: StrategyRule) => {
     await supabase.from("ai_strategy_knowledge").update({ is_active: !r.is_active, updated_at: new Date().toISOString() }).eq("id", r.id);
     fetchRules();
+    logAITeamAudit({
+      action_type: r.is_active ? AUDIT_ACTIONS.DEACTIVATE : AUDIT_ACTIONS.ACTIVATE,
+      entity_type: AUDIT_ENTITIES.RULE,
+      entity_id: r.id,
+      entity_name: r.title,
+      description: `Regra global ${r.is_active ? "desativada" : "ativada"}: ${r.title}`,
+      performed_by: "gestor",
+    });
   };
 
   const catLabel = (v: string) => CATEGORIES.find((c) => c.value === v)?.label || v;

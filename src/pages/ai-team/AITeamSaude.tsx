@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
 import { buildTeamContextBlock, NATH_UNIVERSAL_RULES } from "@/components/ai-team/agentTeamContext";
+import { logAITeamAudit, AUDIT_ACTIONS, AUDIT_ENTITIES } from "@/lib/aiTeamAudit";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -426,6 +427,17 @@ Seja breve quando o momento pedir brevidade, e detalhado quando pedir detalhe.`;
         const newPrompt = currentPrompt + additions;
         await supabase.from("ai_team_agents").update({ behavior_prompt: newPrompt, updated_at: new Date().toISOString() }).eq("id", h.agent.id);
         fixedCount++;
+        logAITeamAudit({
+          action_type: AUDIT_ACTIONS.UPDATE,
+          entity_type: AUDIT_ENTITIES.AGENT,
+          entity_id: h.agent.id,
+          entity_name: h.agent.name,
+          agent_id: h.agent.id,
+          agent_name: h.agent.name,
+          description: `Auto-Fix Suave: ${additions.includes("NATH") ? "regras de tom Nath" : ""}${additions.includes("trocas") ? " + regra mínimo trocas" : ""}${additions.includes("travessão") ? " + regra anti-travessão" : ""} adicionado ao prompt de ${h.agent.name}`,
+          performed_by: "Sistema (Auto-Fix)",
+          details: { fix_type: "auto_fix_suave", additions_length: additions.length },
+        });
       }
     }
 

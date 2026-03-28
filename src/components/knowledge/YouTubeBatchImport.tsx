@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { logAITeamAudit, AUDIT_ACTIONS, AUDIT_ENTITIES } from "@/lib/aiTeamAudit";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -120,6 +121,14 @@ export default function YouTubeBatchImport({ onBack, onSaved }: YouTubeBatchImpo
 
         setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "done", title: data.title } : it));
         successCount++;
+        logAITeamAudit({
+          action_type: AUDIT_ACTIONS.CREATE,
+          entity_type: AUDIT_ENTITIES.KNOWLEDGE,
+          entity_name: data.title || item.url,
+          description: `YouTube batch import: ${data.title || item.url}`,
+          performed_by: "ÓRION",
+          details: { source: "youtube_batch", url: item.url },
+        });
       } catch (err: any) {
         setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "error", error: err.message || "Erro" } : it));
       }

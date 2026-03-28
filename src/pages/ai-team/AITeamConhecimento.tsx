@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { logAITeamAudit, AUDIT_ACTIONS, AUDIT_ENTITIES } from "@/lib/aiTeamAudit";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import YouTubeReviewPanel from "@/components/knowledge/YouTubeReviewPanel";
@@ -536,6 +537,14 @@ export default function AITeamConhecimento() {
 
       if (error) throw error;
       toast.success("Documento adicionado à base!");
+      logAITeamAudit({
+        action_type: AUDIT_ACTIONS.CREATE,
+        entity_type: AUDIT_ENTITIES.KNOWLEDGE,
+        entity_name: newTitle.trim(),
+        description: `Documento adicionado à KB: ${newTitle.trim()} (${newCategory})`,
+        performed_by: "gestor",
+        details: { category: newCategory, has_file: !!fileName },
+      });
       setShowUpload(false);
       setNewTitle(""); setNewDescription(""); setNewContent(""); setNewFile(null);
       loadDocs();
