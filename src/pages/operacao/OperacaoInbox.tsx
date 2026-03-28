@@ -1072,7 +1072,7 @@ function OperacaoInboxInner() {
     if (waConnected && !prevWaConnectedRef.current) {
       const pendingCount = getPendingCount();
       if (pendingCount > 0) {
-        console.log(`[QUEUE] WhatsApp reconectado! Processando ${pendingCount} mensagens pendentes...`);
+        debugLog(`[QUEUE] WhatsApp reconectado! Processando ${pendingCount} mensagens pendentes...`);
         toast({ title: "🔄 WhatsApp reconectado", description: `Enviando ${pendingCount} mensagem(ns) pendente(s)...` });
         processQueue(
           async (queuedMsg: QueuedMessage) => {
