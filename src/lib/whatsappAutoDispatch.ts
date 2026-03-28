@@ -51,7 +51,7 @@ export async function dispatchWhatsAppTemplate(params: DispatchParams): Promise<
       .eq("is_active", true)
       .limit(1);
 
-    console.log("[WhatsApp Auto] Templates encontrados:", templates?.length, "erro:", tplError?.message);
+    debugLog("[WhatsApp Auto] Templates encontrados:", templates?.length, "erro:", tplError?.message);
 
     const template = templates?.[0];
     if (!template) {
