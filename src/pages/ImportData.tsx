@@ -126,7 +126,7 @@ export default function ImportData() {
           const colCep = findCol(headers, "CEP");
           const colCategoria = findCol(headers, "Categoria");
 
-          console.log("Clients column map:", { colName, colPhone, colEmail, colCpf, colRg, colBirth, colPassport, colCity, colCep });
+          // Column mapping resolved
 
           const passengers: any[] = [];
           for (let i = headerIdx + 1; i < rows.length; i++) {
