@@ -223,6 +223,9 @@ export default function SimuladorManualMode() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const messagesRef = useRef<ChatMsg[]>([]);
+  const pendingMessagesRef = useRef<ChatMsg[]>([]);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isProcessingRef = useRef(false);
 
   // Load behavior_prompt from DB for all agents
   const [agentBehaviors, setAgentBehaviors] = useState<Record<string, string>>({});
