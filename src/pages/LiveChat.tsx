@@ -1619,8 +1619,7 @@ export default function LiveChat() {
 
           const { data: urlData } = supabase.storage.from('audios').getPublicUrl(fileName);
           const audioUrl = urlData.publicUrl;
-          console.log("URL pública:", audioUrl);
-          console.log("Enviando para phone:", phone);
+          // Audio uploaded, sending to WhatsApp
 
           const localUrl = URL.createObjectURL(blob);
           // Send URL to Z-API (WhatsApp handles URL-based audio better)

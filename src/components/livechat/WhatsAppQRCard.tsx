@@ -76,9 +76,7 @@ export function WhatsAppQRCard() {
     try {
       const data = await callZapiProxy("get-qrcode");
       const raw = data?.value || data?.qrcode || data?.base64 || "";
-      console.log("=== QR CODE DEBUG ===");
-      console.log("Resposta completa:", JSON.stringify(data));
-      console.log("Valor extraído (100 chars):", String(raw).substring(0, 100));
+      // QR code data received
       if (raw) {
         // Normalize: if already has data:image prefix, use as-is; otherwise add it
         const qrSrc = String(raw).startsWith("data:image") ? raw : `data:image/png;base64,${raw}`;

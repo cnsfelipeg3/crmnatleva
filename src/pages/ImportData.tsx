@@ -281,7 +281,7 @@ export default function ImportData() {
             });
           }
 
-          console.log(`Parsed ${sales.length} sales from sales file`);
+          // Sales parsed
           resolve(sales);
         } catch (err) { reject(err); }
       };
