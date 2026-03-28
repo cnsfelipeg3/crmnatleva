@@ -708,6 +708,8 @@ export default function SimuladorManualMode() {
 
   const resetChat = () => {
     if (messages.length > 0 && !confirm("Tem certeza? Os dados atuais serão perdidos.")) return;
+    if (debounceTimerRef.current) { clearTimeout(debounceTimerRef.current); debounceTimerRef.current = null; }
+    pendingMessagesRef.current = [];
     messagesRef.current = [];
     setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0);
   };
