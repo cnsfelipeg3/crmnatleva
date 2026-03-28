@@ -104,7 +104,7 @@ export function useMessageQueue() {
           onStatusUpdate(msg, "sent", result.realId);
           // Remove from queue after success
           setTimeout(() => removeFromQueue(msg.id), 2000);
-          console.log(`[QUEUE✓] Mensagem ${msg.id} enviada com sucesso`);
+          debugLog(`[QUEUE✓] Mensagem ${msg.id} enviada com sucesso`);
         } else {
           updateStatus(msg.id, "failed", result.error);
           onStatusUpdate(msg, "failed", undefined, result.error);
