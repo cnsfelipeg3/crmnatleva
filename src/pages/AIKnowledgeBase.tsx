@@ -285,6 +285,12 @@ export default function AIKnowledgeBase() {
                 {CATEGORIES.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Button size="sm" variant="outline" className="h-9 text-xs gap-1 border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30" onClick={() => setShowYouTube(true)}>
+              <Youtube className="w-3 h-3" /> YouTube
+            </Button>
+            <Button size="sm" variant="outline" className="h-9 text-xs gap-1 border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30" onClick={() => setShowBatchYouTube(true)}>
+              <ListPlus className="w-3 h-3" /> Lote YT
+            </Button>
             <Dialog open={showAdd} onOpenChange={(o) => { if (!o) resetForm(); setShowAdd(o); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="h-9 text-xs"><Plus className="w-3 h-3 mr-1" /> Adicionar</Button>
