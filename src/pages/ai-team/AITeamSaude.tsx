@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import {
   HeartPulse, ChevronDown, ChevronUp, Wrench, CheckCircle2,
   AlertTriangle, XCircle, Shield, BookOpen, Wand2, GitBranch, MessageSquare,
-  Loader2, Sparkles,
+  Loader2, Sparkles, Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -40,6 +40,86 @@ interface AgentHealth {
   totalMax: number;
   percent: number;
 }
+
+// ═══ Explicações clicáveis ═══
+interface Explicacao {
+  oque: string;
+  porque: string;
+  resolver: string;
+}
+
+const EXPLICACOES: Record<string, Explicacao> = {
+  "Nome e papel definidos": {
+    oque: "O agente tem um nome (ex: MAYA) e um papel claro (ex: Boas-vindas).",
+    porque: "Sem nome e papel, o agente não sabe quem é e responde de forma genérica. É como contratar alguém sem dizer qual é o cargo.",
+    resolver: "Defina um nome único e um papel descritivo para o agente no cadastro da equipe.",
+  },
+  "Prompt com >100 chars": {
+    oque: "O agente tem instruções detalhadas de como se comportar, com pelo menos 100 caracteres.",
+    porque: "Um prompt curto demais (tipo 'Você é um assistente') faz o agente ser genérico e não ter personalidade. Quanto mais rico o prompt, mais inteligente e personalizado ele age.",
+    resolver: "Enriqueça o prompt do agente com: quem ele é, como fala, o que faz, exemplos de frases, e limites (o que NÃO fazer).",
+  },
+  "Menciona tom de voz": {
+    oque: "O prompt do agente inclui instrução sobre COMO falar (caloroso, humano, sem travessão).",
+    porque: "Sem isso, o agente pode responder de forma fria e robótica, quebrando a identidade da NatLeva. A Nath fala com carinho, e todo agente deve fazer o mesmo.",
+    resolver: "Adicione no prompt: 'Fale como a Nath: caloroso, humano, próximo. Nunca use travessão. Seja genuíno.'",
+  },
+  "Pelo menos 1 item KB atribuído": {
+    oque: "O agente tem acesso a pelo menos um documento da Base de Conhecimento.",
+    porque: "Sem conhecimento, o agente inventa respostas. Com a KB, ele responde com dados reais: preços, roteiros, dicas verdadeiras.",
+    resolver: "Vá na Base de Conhecimento, escolha itens relevantes pro papel desse agente, e atribua a ele (ou deixe como global pra todos terem acesso).",
+  },
+  "KB com conteúdo real": {
+    oque: "Os itens da KB atribuídos têm conteúdo de verdade, não são placeholders vazios.",
+    porque: "Um item de KB vazio é como dar um livro em branco pro agente estudar. Ele precisa de dados reais pra responder com qualidade.",
+    resolver: "Abra os itens da KB e preencha com conteúdo real: roteiros, preços, dicas, regras. Ou importe vídeos do YouTube pro ÓRION extrair o conhecimento automaticamente.",
+  },
+  "Pelo menos 1 skill ativa": {
+    oque: "O agente tem pelo menos uma habilidade especial vinculada (ex: contornar objeção de preço).",
+    porque: "Skills são superpoderes. Sem elas, o agente só conversa. Com elas, ele sabe COMO executar tarefas específicas com excelência.",
+    resolver: "Crie ou vincule skills relevantes ao papel do agente na seção de Skills.",
+  },
+  "Skills com instruções >50 chars": {
+    oque: "As skills vinculadas têm instruções detalhadas, não só um título.",
+    porque: "Uma skill sem instrução é como ensinar alguém a dirigir dizendo só 'dirija'. Precisa do passo a passo.",
+    resolver: "Abra cada skill e escreva instruções claras: quando usar, como usar, passo a passo, e o que NÃO fazer.",
+  },
+  "Skills com descrição": {
+    oque: "As skills têm uma descrição que explica pra que servem.",
+    porque: "A descrição ajuda o agente a decidir QUANDO ativar a skill. Sem descrição, ele pode usar na hora errada.",
+    resolver: "Adicione uma descrição de 1-2 frases em cada skill explicando quando usar.",
+  },
+  "Workflow definido": {
+    oque: "O agente tem um fluxo de trabalho passo a passo definido.",
+    porque: "Sem workflow, o agente improvisa. Com workflow, ele segue um roteiro testado que garante que nenhuma etapa importante é pulada.",
+    resolver: "Crie um workflow pra esse agente na seção de Workflows com pelo menos: início, ações principais, decisões, e fim.",
+  },
+  "Workflow com ≥3 steps": {
+    oque: "O workflow tem pelo menos 3 etapas definidas.",
+    porque: "Um workflow com menos de 3 etapas é muito simplificado e provavelmente está pulando passos importantes.",
+    resolver: "Revise o workflow e adicione as etapas que faltam. Pense: o que o agente faz primeiro? Que decisão ele toma? Quando ele finaliza?",
+  },
+  "Step de transferência com destino": {
+    oque: "O workflow tem uma etapa de transferência que diz pra qual agente passar o lead.",
+    porque: "Se o agente não sabe pra quem transferir, o lead fica preso. É como um jogador que não sabe pra quem passar a bola.",
+    resolver: "Adicione um step de transferência no workflow indicando o agente destino (ex: 'Transferir para ATLAS quando qualificado').",
+  },
+  "Condição de transferência": {
+    oque: "O prompt do agente diz QUANDO transferir com uma condição clara e específica.",
+    porque: "Sem condição específica, o agente transfere cedo demais (lead não está pronto) ou tarde demais (lead esfriou).",
+    resolver: "Adicione no prompt algo como: 'Transfira quando o cliente tiver informado destino, período, orçamento e número de viajantes.'",
+  },
+  "Sem condições vagas": {
+    oque: "O prompt NÃO contém frases vagas como 'quando achar adequado' ou 'se necessário'.",
+    porque: "Condições vagas = decisões inconsistentes. Cada vez o agente decide diferente. Precisamos de precisão cirúrgica, não de feeling.",
+    resolver: "Substitua qualquer condição vaga por critérios objetivos e mensuráveis.",
+  },
+  "Regra de mínimo de trocas": {
+    oque: "O prompt exige um mínimo de trocas de mensagem antes de transferir.",
+    porque: "Transferir após 1-2 mensagens faz o lead sentir que está falando com robôs que jogam ele de um lado pro outro. Mínimo 5 trocas cria conexão real.",
+    resolver: "Adicione no prompt: 'Mínimo 5 trocas de mensagem antes de considerar transferir. Conexão antes de dados.'",
+  },
+};
 
 // ═══ Helpers ═══
 const NATH_RULES_KEYWORDS = ["travessão", "tom de voz", "nath", "caloroso", "humano"];
@@ -148,12 +228,72 @@ function calculateAgentHealth(
   };
 }
 
+// ═══ Clickable Detail Item ═══
+function DiagnosticItem({ detail, expandedLabel, onToggle }: {
+  detail: { label: string; ok: boolean; points: number };
+  expandedLabel: string | null;
+  onToggle: (label: string) => void;
+}) {
+  const exp = EXPLICACOES[detail.label];
+  const isOpen = expandedLabel === detail.label;
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onToggle(detail.label); }}
+        className={cn(
+          "flex items-center gap-1.5 text-[11px] w-full text-left rounded-md px-1.5 py-0.5 transition-colors",
+          "hover:bg-muted/50",
+          isOpen && "bg-muted/40",
+        )}
+      >
+        {detail.ok ? (
+          <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+        ) : (
+          <XCircle className="w-3 h-3 text-red-400 shrink-0" />
+        )}
+        <span className={cn("flex-1", detail.ok ? "text-muted-foreground" : "text-red-400")}>
+          {detail.label} ({detail.points}pts)
+        </span>
+        {exp && <Info className="w-2.5 h-2.5 text-muted-foreground/40 shrink-0" />}
+      </button>
+
+      {isOpen && exp && (
+        <div className="ml-5 mt-1 mb-2 p-2.5 rounded-lg bg-muted/30 border border-border/30 space-y-1.5 animate-in slide-in-from-top-1 duration-150">
+          <p className="text-[10px] leading-snug">
+            <span className="font-semibold text-foreground/80">O que é: </span>
+            <span className="text-muted-foreground">{exp.oque}</span>
+          </p>
+          <p className="text-[10px] leading-snug">
+            <span className="font-semibold text-foreground/80">Por que importa: </span>
+            <span className="text-muted-foreground">{exp.porque}</span>
+          </p>
+          <p className="text-[10px] leading-snug">
+            <span className={cn("font-semibold", detail.ok ? "text-emerald-500" : "text-red-400")}>
+              Como resolver:{" "}
+            </span>
+            <span className={cn(detail.ok ? "text-emerald-500/80" : "text-red-400/80")}>
+              {detail.ok ? "Tudo certo! Este critério já está sendo atendido. ✓" : exp.resolver}
+            </span>
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ═══ Component ═══
 export default function AITeamSaude() {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [expandedDetail, setExpandedDetail] = useState<string | null>(null);
   const [autoFixOpen, setAutoFixOpen] = useState(false);
   const [fixing, setFixing] = useState(false);
   const queryClient = useQueryClient();
+
+  const toggleDetail = useCallback((label: string) => {
+    setExpandedDetail(prev => prev === label ? null : label);
+  }, []);
 
   // Fetch all agent data from DB
   const { data: dbAgents = [] } = useQuery({
@@ -358,7 +498,7 @@ Seja breve quando o momento pedir brevidade, e detalhado quando pedir detalhe.`;
               <Card
                 key={h.agent.id}
                 className={cn("cursor-pointer transition-all hover:shadow-md", isExpanded && "ring-1 ring-primary/30")}
-                onClick={() => setExpanded(isExpanded ? null : h.agent.id)}
+                onClick={() => { setExpanded(isExpanded ? null : h.agent.id); setExpandedDetail(null); }}
               >
                 <CardContent className="p-4">
                   {/* Header */}
@@ -425,16 +565,12 @@ Seja breve quando o momento pedir brevidade, e detalhado quando pedir detalhe.`;
                             </div>
                             <div className="space-y-0.5 pl-5">
                               {dimData.details.map((d, i) => (
-                                <div key={i} className="flex items-center gap-1.5 text-[11px]">
-                                  {d.ok ? (
-                                    <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-                                  ) : (
-                                    <XCircle className="w-3 h-3 text-red-400 shrink-0" />
-                                  )}
-                                  <span className={d.ok ? "text-muted-foreground" : "text-red-400"}>
-                                    {d.label} ({d.points}pts)
-                                  </span>
-                                </div>
+                                <DiagnosticItem
+                                  key={i}
+                                  detail={d}
+                                  expandedLabel={expandedDetail}
+                                  onToggle={toggleDetail}
+                                />
                               ))}
                             </div>
                           </div>
