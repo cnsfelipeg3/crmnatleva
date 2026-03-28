@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft, Youtube, Sparkles, Loader2, CheckCircle, Brain,
   Play, Zap, BookOpen, Shield, AlertTriangle, Lightbulb, MessageSquare,
-  ClipboardPaste, Map,
+  ClipboardPaste, Map, XCircle, Clock, Database,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,8 +53,30 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
   const [tags, setTags] = useState<string[]>([]);
   const [resumo, setResumo] = useState("");
 
-  // Processing step: idle -> transcribing -> organizing -> ready
+   // Processing step: idle -> transcribing -> organizing -> ready
   const [step, setStep] = useState<"idle" | "transcribing" | "organizing" | "ready">("idle");
+  const [elapsed, setElapsed] = useState(0);
+  const [showSlowWarning, setShowSlowWarning] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Elapsed timer
+  useEffect(() => {
+    if (step === "transcribing" || step === "organizing") {
+      setElapsed(0);
+      setShowSlowWarning(false);
+      timerRef.current = setInterval(() => {
+        setElapsed(prev => {
+          if (prev >= 30) setShowSlowWarning(true);
+          return prev + 1;
+        });
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+      setShowSlowWarning(false);
+    }
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [step]);
 
   useEffect(() => {
     setVideoId(extractYouTubeId(ytUrl));
@@ -72,8 +94,10 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
         body.manual_transcript = manualTranscript.trim();
       }
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 180_000); // 3 min timeout
+      abortRef.current = controller;
+      const timeout = setTimeout(() => controller.abort(), 180_000);
       let data: any, error: any;
+      console.log('[YT-PERF] Inicio transcricao', Date.now());
       try {
         const res = await supabase.functions.invoke("youtube-transcribe", { body, signal: controller.signal as any });
         data = res.data;
@@ -81,7 +105,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       } catch (abortErr: any) {
         clearTimeout(timeout);
         if (abortErr.name === "AbortError") {
-          toast.error("A extração demorou demais. Tente colar a transcrição manualmente.", { duration: 8000 });
+          toast.error("A extração foi cancelada. Tente colar a transcrição manualmente.", { duration: 8000 });
           setShowManualInput(true);
           setStep("idle");
           return;
@@ -89,6 +113,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
         throw abortErr;
       }
       clearTimeout(timeout);
+      console.log('[YT-PERF] Fim transcricao', Date.now());
 
       let errorBody: any = null;
       if (error) {
@@ -119,10 +144,12 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       // Auto-run ÓRION (organize with AI)
       setStep("organizing");
       setOrganizing(true);
+      console.log('[YT-PERF] Inicio ORION', Date.now());
       try {
         const { data: orgData, error: orgErr } = await supabase.functions.invoke("organize-knowledge", {
           body: { content: data.structured_knowledge || "", transcript: data.transcript || "" },
         });
+        console.log('[YT-PERF] Fim ORION', Date.now());
         if (orgErr) throw orgErr;
         if (orgData?.taxonomy) {
           setTaxonomy(orgData.taxonomy.taxonomia || orgData.taxonomy);
@@ -315,13 +342,40 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
 
         {/* ─── PROCESSING STATES ─── */}
         {(step === "transcribing" || step === "organizing") && (
-          <div className="max-w-md mx-auto text-center py-20 space-y-6">
+          <div className="max-w-lg mx-auto text-center py-16 space-y-6">
             <div className={cn(
               "w-20 h-20 rounded-2xl flex items-center justify-center mx-auto animate-pulse",
               step === "transcribing" ? "bg-red-500/10" : "bg-amber-500/10"
             )}>
               {step === "transcribing" ? <Youtube className="w-10 h-10 text-red-500" /> : <Brain className="w-10 h-10 text-amber-500" />}
             </div>
+
+            {/* 3-step progress */}
+            <div className="flex items-center justify-center gap-2 text-xs font-medium">
+              {[
+                { key: "transcribing", label: "Buscando legendas", icon: Youtube, color: "text-red-500" },
+                { key: "organizing", label: "ÓRION analisando", icon: Brain, color: "text-amber-500" },
+                { key: "saving", label: "Salvando na base", icon: Database, color: "text-emerald-500" },
+              ].map((s, i) => {
+                const isActive = s.key === step;
+                const isDone = (s.key === "transcribing" && step === "organizing");
+                return (
+                  <div key={s.key} className="flex items-center gap-1.5">
+                    {i > 0 && <div className={cn("w-6 h-px", isDone || isActive ? "bg-foreground/30" : "bg-muted")} />}
+                    <div className={cn(
+                      "flex items-center gap-1 px-2 py-1 rounded-full transition-all",
+                      isActive ? "bg-foreground/5 font-bold" : isDone ? "text-emerald-600" : "text-muted-foreground"
+                    )}>
+                      {isDone ? <CheckCircle className="w-3.5 h-3.5 text-emerald-500" /> :
+                        isActive ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> :
+                        <s.icon className="w-3.5 h-3.5" />}
+                      {s.label}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
             <div>
               <h2 className="text-lg font-bold">
                 {step === "transcribing" ? "Buscando legendas do vídeo..." : "ÓRION analisando conteúdo..."}
@@ -330,20 +384,55 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
                 {step === "transcribing" ? "Extraindo transcrição automática" : "Classificando, tagueando e estruturando o conhecimento"}
               </p>
             </div>
-            <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+
+            {/* Progress bar */}
+            <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
               <div className={cn(
-                "h-full rounded-full animate-[indeterminate_1.5s_ease-in-out_infinite]",
+                "h-full rounded-full transition-all duration-500",
                 step === "transcribing" ? "bg-red-500" : "bg-amber-500"
               )} style={{
-                width: "40%",
-                animation: "indeterminate 1.5s ease-in-out infinite",
+                width: step === "transcribing" ? "40%" : "75%",
+                animation: "pulse-width 2s ease-in-out infinite",
               }} />
             </div>
+
+            {/* Elapsed time */}
+            <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="w-3.5 h-3.5" />
+              <span>{elapsed}s decorridos</span>
+            </div>
+
+            {/* Slow warning */}
+            {showSlowWarning && (
+              <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>
+                  Está demorando mais que o normal. Isso pode acontecer com vídeos longos. Aguarde mais um momento ou cancele para tentar com transcrição manual.
+                </span>
+              </div>
+            )}
+
+            {/* Cancel button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                abortRef.current?.abort();
+                setStep("idle");
+                setTranscribing(false);
+                setOrganizing(false);
+                setShowManualInput(true);
+                toast.info("Operação cancelada. Tente colar a transcrição manualmente.");
+              }}
+              className="gap-1.5"
+            >
+              <XCircle className="w-4 h-4" /> Cancelar
+            </Button>
+
             <style>{`
-              @keyframes indeterminate {
-                0% { margin-left: 0%; width: 30%; }
-                50% { margin-left: 30%; width: 40%; }
-                100% { margin-left: 70%; width: 30%; }
+              @keyframes pulse-width {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.7; }
               }
             `}</style>
           </div>
