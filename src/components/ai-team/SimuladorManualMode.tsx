@@ -562,7 +562,7 @@ export default function SimuladorManualMode() {
 
       // If new messages accumulated during processing, start new debounce cycle
       if (pendingMessagesRef.current.length > 0) {
-        console.log(`[DEBOUNCE] ${pendingMessagesRef.current.length} mensagens pendentes acumuladas durante processamento, novo ciclo em ${DEBOUNCE_MS}ms`);
+        debugLog(`[DEBOUNCE] ${pendingMessagesRef.current.length} mensagens pendentes acumuladas durante processamento, novo ciclo em ${DEBOUNCE_MS}ms`);
         debounceTimerRef.current = setTimeout(() => {
           triggerAgentResponse();
         }, DEBOUNCE_MS);
