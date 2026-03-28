@@ -47,6 +47,9 @@ interface KBDoc {
   is_active: boolean | null;
   uploaded_by: string | null;
   created_at: string;
+  tags: string[] | null;
+  confidence: number | null;
+  taxonomy: any | null;
 }
 
 function extractYouTubeId(url: string): string | null {
