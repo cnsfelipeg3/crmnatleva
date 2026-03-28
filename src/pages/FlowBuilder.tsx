@@ -1101,9 +1101,11 @@ function FlowList({ flows, onSelect, onCreate, onUseTemplate, onDeleteFlow, onAr
       {tab === "metrics" && <FlowMetrics />}
       {tab === "livefunnel" && <LiveFunnel onClose={() => setTab("flows")} />}
       {tab === "funnel3d" && (
-        <div className="h-[calc(100vh-180px)]">
-          <Funnel3DView mode="simulation" />
-        </div>
+        <Suspense fallback={<div className="h-[calc(100vh-180px)] flex items-center justify-center text-muted-foreground">Carregando 3D...</div>}>
+          <div className="h-[calc(100vh-180px)]">
+            <Funnel3DView mode="simulation" />
+          </div>
+        </Suspense>
       )}
 
       {(tab === "flows" || tab === "templates") && (
