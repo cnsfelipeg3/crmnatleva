@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { debugLog } from "@/lib/debugMode";
 
 // Map: wa_<phone> → DB conversation UUID
 const waToDbId = new Map<string, string>();
