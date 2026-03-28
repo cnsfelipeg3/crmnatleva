@@ -147,22 +147,17 @@ export default function AITeamAgentDetail() {
 
   const agentNameUpper = (v4?.name ?? agent?.name ?? "").toUpperCase();
 
-  // Fetch real knowledge docs from DB for this agent
+  // Fetch ALL real knowledge docs from DB (all agents see entire KB)
   const { data: dbKbDocs = [] } = useQuery({
-    queryKey: ["ai_knowledge_base_agent", agentId, agentNameUpper],
+    queryKey: ["ai_knowledge_base_agent_all"],
     queryFn: async () => {
       const { data } = await supabase
         .from("ai_knowledge_base")
-        .select("id, title, category, file_type, description, file_name, updated_at, is_active")
-        .eq("is_active", true);
-      return (data || []).filter((d: any) => {
-        const title = (d.title || "").toUpperCase();
-        const desc = (d.description || "").toUpperCase();
-        return title.includes(agentNameUpper) || desc.includes(agentNameUpper) ||
-               d.category === "cultura" || d.category === "atendimento" || d.category === "regras";
-      });
+        .select("id, title, category, file_type, description, file_name, updated_at, is_active, tags, content_text, taxonomy, confidence")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false });
+      return data || [];
     },
-    enabled: !!agentId,
   });
 
   // Fetch real skills from DB agent record
@@ -199,10 +194,40 @@ export default function AITeamAgentDetail() {
     enabled: !!agentId,
   });
 
-  // Keep mock arrays for rendering, use DB counts for badges
-  const agentDocs = ALL_KB_DOCS.filter(d =>
-    d.agente === agentNameUpper || d.agente === "Todos"
-  );
+  // Map DB KB docs to KBDoc format for the tab
+  const agentDocs: KBDoc[] = useMemo(() => {
+    if (dbKbDocs.length === 0) {
+      // Fallback to mock if DB is empty
+      return ALL_KB_DOCS.filter(d => d.agente === agentNameUpper || d.agente === "Todos");
+    }
+    return dbKbDocs.map((d: any) => {
+      const contentLen = (d.content_text || "").length;
+      const sizeStr = contentLen > 1024 * 1024
+        ? `${(contentLen / (1024 * 1024)).toFixed(1)} MB`
+        : contentLen > 1024
+        ? `${Math.round(contentLen / 1024)} KB`
+        : `${contentLen} B`;
+      const hasTaxonomy = !!d.taxonomy;
+      const fileType = d.file_type || d.category || "texto";
+      const tipo = fileType.includes("video") || fileType.includes("youtube") ? "video"
+        : fileType.includes("pdf") ? "pdf"
+        : fileType.includes("image") ? "imagem"
+        : "texto";
+      return {
+        id: d.id,
+        title: d.title || "Sem título",
+        tipo,
+        tags: d.tags || [],
+        agente: "Todos",
+        resumo: d.description || "",
+        chunks: (d.taxonomy as any)?.chunks?.length || 0,
+        updatedAt: d.updated_at ? new Date(d.updated_at).toLocaleDateString("pt-BR") : "",
+        status: hasTaxonomy ? "processado" as const : "processando" as const,
+        size: sizeStr,
+      };
+    });
+  }, [dbKbDocs, agentNameUpper]);
+
   const agentSkills = ALL_SKILLS.filter(s =>
     s.agents.some(a => a.toUpperCase() === agentNameUpper)
   );
@@ -211,7 +236,7 @@ export default function AITeamAgentDetail() {
   );
 
   // Real counts from DB for tab badges
-  const realKbCount = dbKbDocs.length || agentDocs.length;
+  const realKbCount = agentDocs.length;
   const realSkillsCount = dbAgentSkills.length || agentSkills.length;
   const realRulesCount = dbAgentRules.length || agentRules.length;
 
