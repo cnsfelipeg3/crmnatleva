@@ -198,10 +198,10 @@ export default function AITeamSaude() {
       const { data: flows } = await supabase.from("automation_flows").select("id, status").eq("status", "active");
       if (!flows || flows.length === 0) return [];
       const flowIds = flows.map(f => f.id);
-      const { data: nodes } = await supabase.from("automation_nodes").select("id, flow_id, type, config").in("flow_id", flowIds);
+      const { data: nodes } = await supabase.from("automation_nodes").select("id, flow_id, node_type, config").in("flow_id", flowIds);
       return flows.map(f => {
         const fNodes = (nodes || []).filter(n => n.flow_id === f.id);
-        const agentIds = fNodes.filter((n: any) => n.type === "ai_agent").map((n: any) => (n.config as any)?.agentId).filter(Boolean);
+        const agentIds = fNodes.filter(n => n.node_type === "ai_agent").map(n => (n.config as any)?.agentId).filter(Boolean);
         return { id: f.id, agent_ids: agentIds as string[], steps: fNodes.length };
       });
     },
