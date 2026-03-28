@@ -147,22 +147,17 @@ export default function AITeamAgentDetail() {
 
   const agentNameUpper = (v4?.name ?? agent?.name ?? "").toUpperCase();
 
-  // Fetch real knowledge docs from DB for this agent
+  // Fetch ALL real knowledge docs from DB (all agents see entire KB)
   const { data: dbKbDocs = [] } = useQuery({
-    queryKey: ["ai_knowledge_base_agent", agentId, agentNameUpper],
+    queryKey: ["ai_knowledge_base_agent_all"],
     queryFn: async () => {
       const { data } = await supabase
         .from("ai_knowledge_base")
-        .select("id, title, category, file_type, description, file_name, updated_at, is_active")
-        .eq("is_active", true);
-      return (data || []).filter((d: any) => {
-        const title = (d.title || "").toUpperCase();
-        const desc = (d.description || "").toUpperCase();
-        return title.includes(agentNameUpper) || desc.includes(agentNameUpper) ||
-               d.category === "cultura" || d.category === "atendimento" || d.category === "regras";
-      });
+        .select("id, title, category, file_type, description, file_name, updated_at, is_active, tags, content_text, taxonomy, confidence")
+        .eq("is_active", true)
+        .order("updated_at", { ascending: false });
+      return data || [];
     },
-    enabled: !!agentId,
   });
 
   // Fetch real skills from DB agent record
