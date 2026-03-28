@@ -933,7 +933,7 @@ export default function LiveChat() {
 
         // ── Handle exclusion marker from webhook ──
         if (u.last_message_preview === "__CONTACT_EXCLUDED__" || u.unread_count === -1) {
-          console.log("[LiveChat] Contact excluded signal received for:", waKey);
+          // contact excluded — silent in production
           setConversations(prev => prev.filter(c => c.id !== waKey && c.id !== u.id));
           setMessages(prev => {
             const next = { ...prev };
