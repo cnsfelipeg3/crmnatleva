@@ -372,9 +372,24 @@ serve(async (req) => {
             });
             if (scrapeRes.ok) {
               const scrapeData = await scrapeRes.json();
-              transcript = scrapeData?.data?.markdown || "";
+              let rawMarkdown = scrapeData?.data?.markdown || "";
               videoTitle = scrapeData?.data?.metadata?.title || `Vídeo YouTube: ${videoId}`;
-              console.log(`Firecrawl fallback: ${transcript.length} chars`);
+              
+              // Firecrawl returns the entire YouTube page as markdown (100k+).
+              // Extract only the video description / relevant text, not nav/comments/etc.
+              // Look for the description section and limit to 25k chars max
+              const descMarker = rawMarkdown.indexOf("...more");
+              const commentsMarker = rawMarkdown.search(/\d+\s*Comment/i);
+              if (descMarker > 0 && commentsMarker > descMarker) {
+                rawMarkdown = rawMarkdown.slice(0, commentsMarker);
+              }
+              // Hard cap — if still too large, it's page chrome not transcript
+              const MAX_FIRECRAWL = 40000;
+              if (rawMarkdown.length > MAX_FIRECRAWL) {
+                rawMarkdown = rawMarkdown.slice(0, MAX_FIRECRAWL);
+              }
+              transcript = rawMarkdown;
+              console.log(`Firecrawl fallback: ${transcript.length} chars (trimmed from ${scrapeData?.data?.markdown?.length || 0})`);
             } else {
               console.warn(`Firecrawl: ${scrapeRes.status}`);
               await scrapeRes.text().catch(() => {});

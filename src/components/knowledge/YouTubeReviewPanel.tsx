@@ -71,7 +71,24 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       if (useManual && manualTranscript.trim()) {
         body.manual_transcript = manualTranscript.trim();
       }
-      const { data, error } = await supabase.functions.invoke("youtube-transcribe", { body });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 180_000); // 3 min timeout
+      let data: any, error: any;
+      try {
+        const res = await supabase.functions.invoke("youtube-transcribe", { body, signal: controller.signal as any });
+        data = res.data;
+        error = res.error;
+      } catch (abortErr: any) {
+        clearTimeout(timeout);
+        if (abortErr.name === "AbortError") {
+          toast.error("A extração demorou demais. Tente colar a transcrição manualmente.", { duration: 8000 });
+          setShowManualInput(true);
+          setStep("idle");
+          return;
+        }
+        throw abortErr;
+      }
+      clearTimeout(timeout);
 
       let errorBody: any = null;
       if (error) {
