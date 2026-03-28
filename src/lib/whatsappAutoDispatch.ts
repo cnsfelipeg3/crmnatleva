@@ -37,7 +37,7 @@ export async function dispatchWhatsAppTemplate(params: DispatchParams): Promise<
   } = params;
 
   if (!clientPhone) {
-    console.warn("[WhatsApp Auto] No phone number, skipping dispatch for:", triggerEvent);
+    debugWarn("[WhatsApp Auto] No phone number, skipping dispatch for:", triggerEvent);
     return false;
   }
 
