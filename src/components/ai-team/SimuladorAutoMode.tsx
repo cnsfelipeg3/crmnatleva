@@ -388,6 +388,23 @@ export default function SimuladorAutoMode() {
             addEvent("#EF4444", `🛡️ Compliance: resposta de ${agent.name} corrigida para ${lead.nome}`, "🛡️");
           }
 
+          // 🔍 Post-response validation for auto mode
+          const validation = validateAutoResponse(agentResp, agent.name);
+          if (validation.needsWarning) {
+            for (const v of validation.violations) {
+              console.warn(`[VIOLATION] ${agent.name} → ${lead.nome}: ${v}`);
+            }
+            addEvent("#EF4444", `⚠️ Violação: ${validation.violations[0]}`, "🚨");
+          }
+
+          // Truncate overly long responses
+          if (agentResp.length > 300) {
+            // Keep first 300 chars and add ellipsis
+            agentResp = agentResp.slice(0, 300).replace(/\s+\S*$/, "") + "...";
+            // Inject warning for next round
+            (lead as any)._lengthWarning = true;
+          }
+
           const addedAgentResp = pushUniqueSimMessage(lead, { role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
           if (addedAgentResp) setLeads(prev => [...prev]);
 
