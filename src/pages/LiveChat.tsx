@@ -46,7 +46,6 @@ const FlowCanvas = lazy(() => import("@/components/flowbuilder/FlowCanvas").then
 const LiveChatIntegrations = lazy(() => import("@/components/livechat/LiveChatIntegrations").then(m => ({ default: m.LiveChatIntegrations })));
 const LiveChatSimulator = lazy(() => import("@/components/livechat/LiveChatSimulator").then(m => ({ default: m.LiveChatSimulator })));
 const LiveChatLogs = lazy(() => import("@/components/livechat/LiveChatLogs").then(m => ({ default: m.LiveChatLogs })));
-const EmojiPickerData = lazy(() => import("@emoji-mart/data").then(m => ({ default: () => null })));
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 
