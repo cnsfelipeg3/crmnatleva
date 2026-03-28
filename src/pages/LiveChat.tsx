@@ -1957,6 +1957,7 @@ export default function LiveChat() {
   // If editing a flow, show full-screen canvas
   if (editingFlow) {
     return (
+      <Suspense fallback={<div className="h-full flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
       <div className="h-full min-h-0">
         <FlowCanvas
           flowId={editingFlow.id}
