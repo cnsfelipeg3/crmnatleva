@@ -10,7 +10,7 @@ import { useState, useRef, useEffect, useCallback, Fragment } from "react";
 import {
   MessageSquarePlus, X, Send, Eye, Lightbulb, Sparkles, Trash2,
   Bot, Check, XCircle, Loader2, Wand2, ChevronDown, ChevronUp,
-  AlertTriangle, ArrowRight, Shield, Zap, FileText,
+  AlertTriangle, ArrowRight, Shield, Zap, FileText, ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,6 +56,7 @@ interface SynthesizedImprovement {
   severity: "critical" | "important" | "suggestion";
   sourceObservationIds: string[];
   status: "pending" | "approved" | "rejected";
+  improvementDbId?: string; // id from ai_team_improvements after approval
 }
 
 type PanelView = "observations" | "review";
@@ -342,7 +343,7 @@ REGRAS:
         });
 
         // 4. Log improvement to ai_team_improvements
-        await supabase.from("ai_team_improvements").insert({
+        const { data: improvementRow } = await supabase.from("ai_team_improvements").insert({
           agent_id: imp.agentId,
           title: imp.title,
           description: imp.description,
@@ -351,17 +352,21 @@ REGRAS:
           status: "approved",
           approved_at: new Date().toISOString(),
           approved_by: "gestor_simulador",
-        });
+        }).select("id").single();
+
+        const improvementDbId = (improvementRow as any)?.id || null;
 
         // 5. Update local state
         setImprovements((prev) =>
           prev.map((i) =>
-            i.id === imp.id ? { ...i, status: "approved" } : i,
+            i.id === imp.id ? { ...i, status: "approved", improvementDbId } : i,
           ),
         );
 
+        const categoryLabel = CATEGORY_META[imp.category]?.label || "Comportamento";
+
         sonnerToast.success(`✅ Aplicado em ${imp.agentName}`, {
-          description: `"${imp.title}" agora faz parte das instruções do agente`,
+          description: `"${imp.title}" adicionado ao prompt (${categoryLabel}) do agente`,
         });
       } catch (err: any) {
         console.error("[Approve] Failed:", err);
@@ -717,16 +722,10 @@ REGRAS:
         <div className="flex-1 flex flex-col overflow-hidden">
           {synthesizing ? (
             <div className="flex-1 flex flex-col items-center justify-center py-8 gap-3">
-              <div className="relative">
-                <Loader2
-                  className="w-8 h-8 animate-spin"
-                  style={{ color: "#F59E0B" }}
-                />
-                <Sparkles
-                  className="w-4 h-4 absolute -top-1 -right-1 animate-pulse"
-                  style={{ color: "#8B5CF6" }}
-                />
-              </div>
+              <Loader2
+                className="w-10 h-10 animate-spin"
+                style={{ color: "#F59E0B" }}
+              />
               <p className="text-xs" style={{ color: "#94A3B8" }}>
                 Convertendo observações em melhorias...
               </p>
@@ -951,22 +950,39 @@ REGRAS:
 
                           {imp.status === "approved" && (
                             <div
-                              className="flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg"
+                              className="py-2 px-2.5 rounded-lg space-y-1.5"
                               style={{
                                 background: "rgba(16,185,129,0.06)",
                                 border: "1px solid rgba(16,185,129,0.1)",
                               }}
                             >
-                              <Check
-                                className="w-3 h-3"
-                                style={{ color: "#10B981" }}
-                              />
-                              <span
-                                className="text-[10px] font-bold"
-                                style={{ color: "#10B981" }}
+                              <div className="flex items-center gap-1.5">
+                                <Check
+                                  className="w-3.5 h-3.5 shrink-0"
+                                  style={{ color: "#10B981" }}
+                                />
+                                <span
+                                  className="text-[11px] font-bold"
+                                  style={{ color: "#10B981" }}
+                                >
+                                  Aplicado em {imp.agentName}
+                                </span>
+                              </div>
+                              <p
+                                className="text-[10px] leading-relaxed"
+                                style={{ color: "#94A3B8" }}
                               >
-                                Aplicado ao prompt de {imp.agentName}
-                              </span>
+                                "{imp.title}" adicionado ao <strong style={{ color: "#CBD5E1" }}>prompt ({CATEGORY_META[imp.category]?.label || "Comportamento"})</strong> do agente
+                              </p>
+                              <a
+                                href={`/ai-team/equipe?agent=${imp.agentId}&tab=melhorias`}
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold mt-0.5 hover:underline transition-colors"
+                                style={{ color: "#8B5CF6" }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                Ver melhoria no painel do agente
+                              </a>
                             </div>
                           )}
                         </div>
