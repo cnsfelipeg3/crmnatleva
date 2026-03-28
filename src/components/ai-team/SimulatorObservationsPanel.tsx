@@ -343,7 +343,7 @@ REGRAS:
         });
 
         // 4. Log improvement to ai_team_improvements
-        await supabase.from("ai_team_improvements").insert({
+        const { data: improvementRow } = await supabase.from("ai_team_improvements").insert({
           agent_id: imp.agentId,
           title: imp.title,
           description: imp.description,
@@ -352,17 +352,21 @@ REGRAS:
           status: "approved",
           approved_at: new Date().toISOString(),
           approved_by: "gestor_simulador",
-        });
+        }).select("id").single();
+
+        const improvementDbId = (improvementRow as any)?.id || null;
 
         // 5. Update local state
         setImprovements((prev) =>
           prev.map((i) =>
-            i.id === imp.id ? { ...i, status: "approved" } : i,
+            i.id === imp.id ? { ...i, status: "approved", improvementDbId } : i,
           ),
         );
 
+        const categoryLabel = CATEGORY_META[imp.category]?.label || "Comportamento";
+
         sonnerToast.success(`✅ Aplicado em ${imp.agentName}`, {
-          description: `"${imp.title}" agora faz parte das instruções do agente`,
+          description: `"${imp.title}" adicionado ao prompt (${categoryLabel}) do agente`,
         });
       } catch (err: any) {
         console.error("[Approve] Failed:", err);
