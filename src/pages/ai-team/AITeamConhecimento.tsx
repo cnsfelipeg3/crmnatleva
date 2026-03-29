@@ -616,12 +616,19 @@ export default function AITeamConhecimento() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { label: "Documentos", value: docs.length, color: "text-blue-500" },
-          { label: "Com Arquivo", value: docs.filter(d => d.file_url).length, color: "text-purple-500" },
-          { label: "Com Texto", value: docs.filter(d => d.content_text).length, color: "text-emerald-500" },
-          { label: "Categorias", value: [...new Set(docs.map(d => d.category))].length, color: "text-amber-500" },
+          { label: "Documentos", value: docs.length, color: "text-blue-500", filter: "all" },
+          { label: "Com Arquivo", value: docs.filter(d => d.file_url).length, color: "text-purple-500", filter: "_arquivo" },
+          { label: "Com Texto", value: docs.filter(d => d.content_text).length, color: "text-emerald-500", filter: "_texto" },
+          { label: "Categorias", value: [...new Set(docs.map(d => d.category))].length, color: "text-amber-500", filter: "_cat" },
         ].map(stat => (
-          <div key={stat.label} className="rounded-xl border border-border/40 bg-card p-3 text-center">
+          <div key={stat.label}
+            onClick={() => {
+              if (stat.filter === "all") { setTipoFilter("all"); setSearch(""); }
+              else if (stat.filter === "_arquivo") { setTipoFilter("all"); setSearch(""); }
+              else if (stat.filter === "_texto") { setTipoFilter("texto"); setSearch(""); }
+              else if (stat.filter === "_cat") { setTipoFilter("all"); setSearch(""); }
+            }}
+            className="rounded-xl border border-border/40 bg-card p-3 text-center cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all">
             <p className={cn("text-xl font-bold", stat.color)}>{stat.value}</p>
             <p className="text-[10px] text-muted-foreground">{stat.label}</p>
           </div>
