@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import YouTubeReviewPanel from "@/components/knowledge/YouTubeReviewPanel";
 import TaxonomyPreview from "@/components/knowledge/TaxonomyPreview";
+import YouTubeKnowledgeDetail from "@/components/knowledge/YouTubeKnowledgeDetail";
 
 const KB_TIPOS = [
   { id: "all", label: "Todos" },
@@ -467,6 +468,7 @@ export default function AITeamConhecimento() {
   const [selectedDoc, setSelectedDoc] = useState<KBDoc | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   const [showYouTube, setShowYouTube] = useState(false);
+  const [ytDetailDoc, setYtDetailDoc] = useState<KBDoc | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -571,6 +573,17 @@ export default function AITeamConhecimento() {
     );
   }
 
+  // Full-page YouTube knowledge detail
+  if (ytDetailDoc) {
+    return (
+      <YouTubeKnowledgeDetail
+        doc={ytDetailDoc}
+        onBack={() => setYtDetailDoc(null)}
+        onDelete={(id) => { handleDelete(id); setYtDetailDoc(null); }}
+      />
+    );
+  }
+
   // Full-page YouTube review panel
   if (showYouTube) {
     return (
@@ -646,7 +659,7 @@ export default function AITeamConhecimento() {
             const isYT = doc.file_type?.includes("youtube");
             return (
               <div key={doc.id} className="rounded-xl border border-border/40 bg-card p-4 hover:border-primary/30 transition-all cursor-pointer"
-                onClick={() => setSelectedDoc(doc)}>
+                onClick={() => isYT ? setYtDetailDoc(doc) : setSelectedDoc(doc)}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
                     <TipoIcon className={cn("w-3.5 h-3.5", isYT ? "text-red-500" : "text-muted-foreground")} />
