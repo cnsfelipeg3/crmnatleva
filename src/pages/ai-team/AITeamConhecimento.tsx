@@ -573,6 +573,17 @@ export default function AITeamConhecimento() {
     );
   }
 
+  // Full-page YouTube knowledge detail
+  if (ytDetailDoc) {
+    return (
+      <YouTubeKnowledgeDetail
+        doc={ytDetailDoc}
+        onBack={() => setYtDetailDoc(null)}
+        onDelete={(id) => { handleDelete(id); setYtDetailDoc(null); }}
+      />
+    );
+  }
+
   // Full-page YouTube review panel
   if (showYouTube) {
     return (
