@@ -659,7 +659,7 @@ export default function AITeamConhecimento() {
             const isYT = doc.file_type?.includes("youtube");
             return (
               <div key={doc.id} className="rounded-xl border border-border/40 bg-card p-4 hover:border-primary/30 transition-all cursor-pointer"
-                onClick={() => setSelectedDoc(doc)}>
+                onClick={() => isYT ? setYtDetailDoc(doc) : setSelectedDoc(doc)}>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
                     <TipoIcon className={cn("w-3.5 h-3.5", isYT ? "text-red-500" : "text-muted-foreground")} />
