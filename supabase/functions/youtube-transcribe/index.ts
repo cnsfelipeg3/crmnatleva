@@ -322,7 +322,19 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
     return { clientDownloadNeeded: true, captionTracks: captionTracksForClient, videoTitle: videoTitleForClient };
   }
 
-  throw lastError || new Error("NO_CAPTIONS_FOUND");
+  // Even if NO tracks were found server-side, generate standard timedtext URLs
+  // so the client browser can try (YouTube often blocks cloud IPs but allows browsers)
+  const fallbackTitle = videoTitleForClient || await getVideoTitle(videoId);
+  console.log(`No tracks found server-side, generating fallback timedtext URLs for client download`);
+  const fallbackTracks = [
+    { baseUrl: `https://www.youtube.com/api/timedtext?v=${videoId}&lang=pt&fmt=json3`, languageCode: "pt", kind: "manual", name: "Português" },
+    { baseUrl: `https://www.youtube.com/api/timedtext?v=${videoId}&lang=pt&kind=asr&fmt=json3`, languageCode: "pt", kind: "asr", name: "Português (auto)" },
+    { baseUrl: `https://www.youtube.com/api/timedtext?v=${videoId}&lang=pt-BR&fmt=json3`, languageCode: "pt-BR", kind: "manual", name: "Português BR" },
+    { baseUrl: `https://www.youtube.com/api/timedtext?v=${videoId}&lang=pt-BR&kind=asr&fmt=json3`, languageCode: "pt-BR", kind: "asr", name: "Português BR (auto)" },
+    { baseUrl: `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&fmt=json3`, languageCode: "en", kind: "manual", name: "English" },
+    { baseUrl: `https://www.youtube.com/api/timedtext?v=${videoId}&lang=en&kind=asr&fmt=json3`, languageCode: "en", kind: "asr", name: "English (auto)" },
+  ];
+  return { clientDownloadNeeded: true, captionTracks: fallbackTracks, videoTitle: fallbackTitle };
 }
 
 /** Clean and format raw transcript using Claude — fixes names, punctuation, paragraphs */
