@@ -77,14 +77,20 @@ function getInstruction(mimeType: string): string {
 }
 
 // ─── Unified AI call with fallback model ───
-async function callAI(textPrompt: string, fileUrl: string): Promise<string> {
+async function callAI(textPrompt: string, fileUrl: string, mimeType: string): Promise<string> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-  const models = ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
+  // Video/audio need Pro model for reliable processing; images/PDFs work with Flash
+  const isHeavyMedia = mimeType.startsWith("video/") || mimeType.startsWith("audio/");
+  const models = isHeavyMedia
+    ? ["google/gemini-2.5-pro", "google/gemini-2.5-flash"]
+    : ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
+
+  const errors: string[] = [];
 
   for (const model of models) {
-    console.log(`[SMART-UPLOAD] Trying model ${model} with file URL...`);
+    console.log(`[SMART-UPLOAD] Trying model ${model} for ${mimeType}, URL length=${fileUrl.length}`);
     try {
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -106,37 +112,46 @@ async function callAI(textPrompt: string, fileUrl: string): Promise<string> {
       });
 
       const rawText = await response.text();
-      console.log(`[SMART-UPLOAD] ${model} status: ${response.status}, length: ${rawText.length}`);
+      console.log(`[SMART-UPLOAD] ${model} status: ${response.status}, response length: ${rawText.length}`);
 
       if (!response.ok) {
-        console.warn(`[SMART-UPLOAD] ${model} failed: ${response.status} ${rawText.substring(0, 200)}`);
+        const snippet = rawText.substring(0, 300);
+        console.warn(`[SMART-UPLOAD] ${model} failed: ${response.status} ${snippet}`);
+        errors.push(`${model}: ${response.status} ${snippet}`);
         if (response.status === 429) throw new Error("Rate limit atingido. Tente novamente em alguns segundos.");
         if (response.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
-        // For 503/5xx, try next model
         continue;
       }
 
       if (!rawText.trim()) {
-        console.warn(`[SMART-UPLOAD] ${model} returned empty, trying next...`);
+        console.warn(`[SMART-UPLOAD] ${model} returned empty body`);
+        errors.push(`${model}: empty response`);
         continue;
       }
 
       try {
         const data = JSON.parse(rawText);
         const content = data?.choices?.[0]?.message?.content;
-        if (content) return content;
-        console.warn(`[SMART-UPLOAD] Parsed JSON but no choices.content`);
-        return rawText;
+        if (content && content.trim().length > 0) return content;
+        // If parsed but no content, check finish_reason
+        const finishReason = data?.choices?.[0]?.finish_reason;
+        console.warn(`[SMART-UPLOAD] ${model} parsed OK but no content. finish_reason=${finishReason}`);
+        errors.push(`${model}: no content, finish_reason=${finishReason}`);
+        continue;
       } catch {
-        return rawText;
+        // Not JSON, return raw if it has content
+        if (rawText.trim().length > 10) return rawText;
+        errors.push(`${model}: unparseable short response`);
+        continue;
       }
     } catch (err: any) {
-      // Re-throw user-facing errors (rate limit, credits)
       if (err.message.includes("Rate limit") || err.message.includes("Créditos")) throw err;
       console.warn(`[SMART-UPLOAD] ${model} error: ${err.message}`);
+      errors.push(`${model}: ${err.message}`);
       continue;
     }
   }
 
+  console.error(`[SMART-UPLOAD] All models failed. Errors: ${JSON.stringify(errors)}`);
   throw new Error("Todos os modelos de IA falharam. Tente novamente em alguns minutos.");
 }
