@@ -6,8 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MAX_INLINE_SIZE = 8 * 1024 * 1024; // 8MB
-
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -35,33 +33,16 @@ serve(async (req) => {
     // ─── Binary files: use AI for extraction ───
     else {
       const instruction = getInstruction(mimeType);
+      const prompt = `Título: "${title}"\n\n${instruction}`;
 
-      // Video/audio → always use signed URL (too large for inline)
-      const alwaysUrl = mimeType.startsWith("video/") || mimeType.startsWith("audio/");
+      // Generate a signed URL for ALL binary files — pass as image_url so the AI can fetch it
+      const { data: signedData, error: signErr } = await supabase.storage
+        .from("ai-knowledge-base")
+        .createSignedUrl(storageKey, 600); // 10 min expiry
+      if (signErr) throw signErr;
 
-      if (alwaysUrl) {
-        const { data: signedData, error: signErr } = await supabase.storage
-          .from("ai-knowledge-base")
-          .createSignedUrl(storageKey, 600);
-        if (signErr) throw signErr;
-
-        content = await callAI(
-          `Título: "${title}"\n\n${instruction}\n\nURL do arquivo: ${signedData.signedUrl}\n\nAcesse a URL e processe o conteúdo conforme a instrução acima.`,
-          null, null
-        );
-      } else {
-        // Small file: inline base64
-        const { data: fileData, error: dlErr } = await supabase.storage
-          .from("ai-knowledge-base").download(storageKey);
-        if (dlErr) throw dlErr;
-
-        const bytes = new Uint8Array(await fileData.arrayBuffer());
-        const base64 = arrayBufferToBase64(bytes);
-        content = await callAI(
-          `Título: "${title}"\n\n${instruction}`,
-          `data:${mimeType};base64,${base64}`, null
-        );
-      }
+      console.log("[SMART-UPLOAD] Using signed URL for", mimeType, "size strategy: url");
+      content = await callAI(prompt, signedData.signedUrl);
     }
 
     return new Response(JSON.stringify({
@@ -90,37 +71,17 @@ function getInstruction(mimeType: string): string {
     return "Transcreva este áudio completamente em português. Retorne apenas a transcrição.";
   }
   if (mimeType.startsWith("video/")) {
-    return "Transcreva o áudio deste vídeo e descreva o conteúdo visual. Foque em informações úteis sobre destinos, experiências, hotéis, restaurantes e dicas de viagem.";
+    return "Transcreva o áudio deste vídeo e descreva o conteúdo visual. Foque em informações úteis sobre destinos, experiências, hotéis, restaurantes e dicas de viagem. Retorne o conteúdo completo em português.";
   }
   return "Extraia todo o conteúdo textual deste arquivo.";
 }
 
-function arrayBufferToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  const chunkSize = 8192;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const chunk = bytes.subarray(i, i + chunkSize);
-    for (let j = 0; j < chunk.length; j++) {
-      binary += String.fromCharCode(chunk[j]);
-    }
-  }
-  return btoa(binary);
-}
-
-// ─── Unified AI call with robust response handling ───
-async function callAI(textPrompt: string, imageUrl: string | null, _unused: null): Promise<string> {
+// ─── Unified AI call — always passes file as image_url so gateway can fetch it ───
+async function callAI(textPrompt: string, fileUrl: string): Promise<string> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-  const contentParts: any[] = [{ type: "text", text: textPrompt }];
-  if (imageUrl) {
-    contentParts.push({ type: "image_url", image_url: { url: imageUrl } });
-  }
-
-  console.log("[SMART-UPLOAD] Calling AI gateway...", {
-    hasImage: !!imageUrl,
-    promptLength: textPrompt.length,
-  });
+  console.log("[SMART-UPLOAD] Calling AI gateway with file URL...");
 
   let response: Response;
   try {
@@ -132,7 +93,13 @@ async function callAI(textPrompt: string, imageUrl: string | null, _unused: null
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: contentParts }],
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: textPrompt },
+            { type: "image_url", image_url: { url: fileUrl } },
+          ],
+        }],
         max_tokens: 8000,
       }),
     });
@@ -141,33 +108,32 @@ async function callAI(textPrompt: string, imageUrl: string | null, _unused: null
     throw new Error(`AI gateway unreachable: ${fetchErr.message}`);
   }
 
-  // Read raw text first — never call response.json() directly
+  // Always read as text first to avoid JSON parse errors
   const rawText = await response.text();
-  console.log("[SMART-UPLOAD] AI response status:", response.status, "length:", rawText.length);
+  console.log("[SMART-UPLOAD] AI status:", response.status, "body length:", rawText.length);
   console.log("[SMART-UPLOAD] AI raw (first 500):", rawText.substring(0, 500));
 
   if (!response.ok) {
     console.error("[SMART-UPLOAD] AI error:", response.status, rawText.substring(0, 1000));
     if (response.status === 429) throw new Error("Rate limit atingido. Tente novamente em alguns segundos.");
     if (response.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
-    throw new Error(`AI extraction failed (${response.status})`);
+    throw new Error(`AI extraction failed (${response.status}): ${rawText.substring(0, 200)}`);
   }
 
-  // Try to parse as JSON (OpenAI-compatible response)
-  if (rawText.trim()) {
-    try {
-      const data = JSON.parse(rawText);
-      const content = data?.choices?.[0]?.message?.content;
-      if (content) return content;
-      // If parsed but no content, log and return raw
-      console.warn("[SMART-UPLOAD] Parsed JSON but no choices content, using raw");
-      return rawText;
-    } catch {
-      // Not JSON — Gemini sometimes returns plain text
-      console.log("[SMART-UPLOAD] Response is not JSON, using as plain text");
-      return rawText;
-    }
+  if (!rawText.trim()) {
+    throw new Error("AI returned empty response");
   }
 
-  throw new Error("AI returned empty response");
+  // Parse as OpenAI-compatible JSON
+  try {
+    const data = JSON.parse(rawText);
+    const content = data?.choices?.[0]?.message?.content;
+    if (content) return content;
+    console.warn("[SMART-UPLOAD] Parsed JSON but no choices.content");
+    return rawText;
+  } catch {
+    // Not JSON — return as plain text
+    console.log("[SMART-UPLOAD] Response is plain text, using directly");
+    return rawText;
+  }
 }
