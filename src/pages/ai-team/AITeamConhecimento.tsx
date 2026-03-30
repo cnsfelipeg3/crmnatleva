@@ -520,6 +520,7 @@ export default function AITeamConhecimento() {
   const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState<KBDoc | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [showSmartUpload, setShowSmartUpload] = useState(false);
   const [showYouTube, setShowYouTube] = useState(false);
   const [ytDetailDoc, setYtDetailDoc] = useState<KBDoc | null>(null);
   const [uploading, setUploading] = useState(false);
