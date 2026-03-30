@@ -23,6 +23,12 @@ let cachedAgentConfigs: Record<string, AgentComplianceProfile> = {};
 let cacheTimestamp = 0;
 const CACHE_TTL_MS = 60_000;
 
+/** Clears the compliance cache — call on session reset to avoid cross-session contamination. */
+export function clearComplianceCache() {
+  cachedAgentConfigs = {};
+  cacheTimestamp = 0;
+}
+
 export interface AgentComplianceProfile {
   agentId: string;
   agentName: string;
