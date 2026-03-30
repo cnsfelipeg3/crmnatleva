@@ -504,7 +504,9 @@ export function buildAgentSysPrompt(
   workflowBlock: string = "",
 ) {
   const minTrocas = MIN_TROCAS_POR_AGENTE[agent.id] || 4;
-  const transferInstr = hasNext && enableTransfers ? `\nSOBRE [TRANSFERIR]:
+  // Atlas doesn't transfer — he ends the collection and prepares the proposal
+  const agentSkipsTransfer = agent.id === "atlas";
+  const transferInstr = hasNext && enableTransfers && !agentSkipsTransfer ? `\nSOBRE [TRANSFERIR]:
 Use [TRANSFERIR] SOMENTE quando TUDO isso for verdade:
 1. Voce teve ao menos ${minTrocas} trocas reais com este lead
 2. O lead demonstrou entusiasmo genuino — nao apenas respondeu, se engajou
