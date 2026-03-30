@@ -1,15 +1,13 @@
 import { useState, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Upload, Trash2, Sparkles, FileText, Image, Mic, Video, File } from "lucide-react";
+import { Upload, X, Sparkles, FileText, Image, Mic, Video, File, AlertCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import UploadProgressBar, { type UploadPhase } from "./UploadProgressBar";
 
 const CATEGORIES = [
@@ -42,6 +40,12 @@ function getFileTypeLabel(mime: string): string {
   return "text";
 }
 
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + " KB";
+  return (bytes / 1024 / 1024).toFixed(1) + " MB";
+}
+
 interface SmartUploadModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -60,6 +64,7 @@ export default function SmartUploadModal({ open, onOpenChange, onSaved }: SmartU
   const [error, setError] = useState("");
 
   const isProcessing = phase !== null && phase !== "done" && phase !== "error";
+  const canSubmit = (!!file || manualText.trim().length > 0) && title.trim().length > 0;
 
   const reset = () => {
     setFile(null); setTitle(""); setCategory("geral"); setManualText("");
@@ -79,6 +84,8 @@ export default function SmartUploadModal({ open, onOpenChange, onSaved }: SmartU
     if (f) {
       setFile(f);
       if (!title) setTitle(f.name.replace(/\.[^.]+$/, ""));
+      setError("");
+      setPhase(null);
     }
   }, [title]);
 
@@ -87,21 +94,18 @@ export default function SmartUploadModal({ open, onOpenChange, onSaved }: SmartU
     if (f) {
       setFile(f);
       if (!title) setTitle(f.name.replace(/\.[^.]+$/, ""));
+      setError("");
+      setPhase(null);
     }
   };
 
   const handleSubmit = async () => {
-    // Validate
     const hasFile = !!file;
     const hasText = manualText.trim().length > 0;
-    if (!hasFile && !hasText) {
-      toast.error("Forneça um arquivo ou texto para processar");
-      return;
-    }
-    if (!title.trim()) {
-      toast.error("Título obrigatório");
-      return;
-    }
+    if (!hasFile && !hasText) return;
+    if (!title.trim()) return;
+
+    setError("");
 
     try {
       let storageKey = "";
@@ -110,12 +114,15 @@ export default function SmartUploadModal({ open, onOpenChange, onSaved }: SmartU
       let extractedContent = "";
 
       if (hasFile) {
-        // Phase 1: Upload to storage
         setPhase("uploading");
         setProgress(20);
         mimeType = file!.type || "application/octet-stream";
         fileType = getFileTypeLabel(mimeType);
-        const safeName = file!.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]/g, "_");
+        const safeName = file!.name
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-zA-Z0-9._-]/g, "-")
+          .replace(/-+/g, "-")
+          .toLowerCase();
         storageKey = `kb-uploads/${Date.now()}-${safeName}`;
 
         const { error: upErr } = await supabase.storage
@@ -124,7 +131,6 @@ export default function SmartUploadModal({ open, onOpenChange, onSaved }: SmartU
         if (upErr) throw upErr;
         setProgress(40);
 
-        // Phase 2: Extract content via edge function
         setPhase("extracting");
         setProgress(50);
         const { data: extractData, error: extractErr } = await supabase.functions.invoke("smart-upload-process", {
@@ -134,14 +140,12 @@ export default function SmartUploadModal({ open, onOpenChange, onSaved }: SmartU
         extractedContent = extractData?.content || "";
         setProgress(70);
       } else {
-        // Text-only: skip upload/extraction
         extractedContent = manualText.trim();
         fileType = "text";
         setPhase("extracting");
         setProgress(70);
       }
 
-      // Phase 3: Save to KB
       const { data: urlData } = storageKey
         ? supabase.storage.from("ai-knowledge-base").getPublicUrl(storageKey)
         : { data: { publicUrl: null } };
@@ -165,17 +169,12 @@ export default function SmartUploadModal({ open, onOpenChange, onSaved }: SmartU
         .single();
       if (insertErr) throw insertErr;
 
-      // Phase 4: ÓRION enrichment (async, non-blocking on failure)
       if (extractedContent && extractedContent.length > 50) {
         setPhase("orion");
         setProgress(80);
         try {
           const { data: orgData } = await supabase.functions.invoke("organize-knowledge", {
-            body: {
-              content: extractedContent,
-              title: title.trim(),
-              tipo: fileType,
-            },
+            body: { content: extractedContent, title: title.trim(), tipo: fileType },
           });
           if (orgData?.taxonomy) {
             const tax = orgData.taxonomy;
@@ -193,18 +192,16 @@ export default function SmartUploadModal({ open, onOpenChange, onSaved }: SmartU
 
       setPhase("done");
       setProgress(100);
-      toast.success("Item adicionado à Base de Conhecimento!");
 
       setTimeout(() => {
         reset();
         onOpenChange(false);
         onSaved();
-      }, 800);
+      }, 1200);
     } catch (err: any) {
       console.error("SmartUpload error:", err);
       setPhase("error");
-      setError(err.message || "Erro desconhecido");
-      toast.error("Erro: " + (err.message || "Erro no upload"));
+      setError(err.message || "Erro desconhecido ao processar arquivo");
     }
   };
 
@@ -212,106 +209,100 @@ export default function SmartUploadModal({ open, onOpenChange, onSaved }: SmartU
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="w-[520px] max-w-[95vw] max-h-[80vh] overflow-y-auto p-0">
+        <DialogHeader className="px-5 pt-5 pb-0">
           <DialogTitle className="text-sm flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
             Upload Inteligente
           </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Envie arquivos para extração automática de conteúdo via IA.
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
-          {/* Drag & Drop Zone */}
-          <div
-            className={cn(
-              "border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer",
-              dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
-              file && "border-primary/30 bg-primary/5",
-              isProcessing && "pointer-events-none opacity-60",
-            )}
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
-            onClick={() => !isProcessing && document.getElementById("smart-upload-input")?.click()}
-          >
-            <FileIcon className={cn("w-8 h-8 mx-auto mb-2", file ? "text-primary" : "text-muted-foreground")} />
-            {file ? (
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
-                <p className="text-[10px] text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
-                <Button
-                  variant="ghost" size="sm" className="text-[10px] h-6 text-destructive"
-                  onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                >
-                  <Trash2 className="w-3 h-3 mr-1" /> Remover
-                </Button>
-              </div>
-            ) : (
-              <>
-                <p className="text-xs text-muted-foreground">Arraste um arquivo aqui ou clique para selecionar</p>
-                <p className="text-[10px] text-muted-foreground mt-1">TXT, PDF, JPG, PNG, MP3, WAV, MP4 (até 20MB)</p>
-              </>
-            )}
-            <input
-              type="file" id="smart-upload-input" className="hidden"
-              accept={ACCEPT_TYPES}
-              onChange={handleFileSelect}
-            />
-          </div>
-
-          {/* Manual text toggle */}
-          {!file && (
-            <button
-              type="button"
-              className="text-[11px] text-muted-foreground hover:text-primary underline underline-offset-2 transition-colors"
-              onClick={() => setShowManualText(!showManualText)}
+        <div className="px-5 pb-5 space-y-4">
+          {/* ── Drag & Drop Zone OR File Card ── */}
+          {!file ? (
+            <div
+              className={cn(
+                "border-2 border-dashed rounded-lg h-[160px] flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer",
+                dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+                isProcessing && "pointer-events-none opacity-50",
+              )}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => !isProcessing && document.getElementById("smart-upload-input")?.click()}
             >
-              {showManualText ? "Ocultar texto manual" : "Ou cole texto manualmente"}
-            </button>
-          )}
-
-          {/* Manual text input */}
-          {showManualText && !file && (
-            <div className="space-y-1">
-              <Label className="text-xs">Texto</Label>
-              <Textarea
-                value={manualText}
-                onChange={(e) => setManualText(e.target.value)}
-                placeholder="Cole o conteúdo aqui: roteiros, scripts, informações de destinos..."
-                rows={5}
-                className="text-xs"
-                disabled={isProcessing}
+              <Upload className="w-8 h-8 text-muted-foreground" />
+              <p className="text-xs text-muted-foreground">Arraste um arquivo ou clique para selecionar</p>
+              <p className="text-[10px] text-muted-foreground/70">Vídeo, PDF, imagem, áudio, texto (até 500MB)</p>
+              <input
+                type="file" id="smart-upload-input" className="hidden"
+                accept={ACCEPT_TYPES}
+                onChange={handleFileSelect}
               />
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+              <FileIcon className="w-5 h-5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">{file.name}</p>
+                <p className="text-[10px] text-muted-foreground">{formatSize(file.size)}</p>
+              </div>
+              {!isProcessing && (
+                <button
+                  onClick={() => { setFile(null); setPhase(null); setError(""); }}
+                  className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           )}
 
-          {/* Title */}
-          <div className="space-y-1">
+          {/* ── Title ── */}
+          <div className="space-y-1.5">
             <Label className="text-xs">Título *</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ex: Roteiro Tailândia 10 dias"
-              className="text-xs h-8"
+              className="text-xs h-9"
               disabled={isProcessing}
             />
           </div>
 
-          {/* Category */}
-          <div className="space-y-1">
+          {/* ── Category ── */}
+          <div className="space-y-1.5">
             <Label className="text-xs">Categoria</Label>
             <Select value={category} onValueChange={setCategory} disabled={isProcessing}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map(c => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  <SelectItem key={c.value} value={c.value} className="text-xs">{c.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Progress */}
-          {phase && (
+          {/* ── Manual text ── */}
+          {showManualText && !file && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Texto</Label>
+              <Textarea
+                value={manualText}
+                onChange={(e) => setManualText(e.target.value)}
+                placeholder="Cole o conteúdo aqui: roteiros, scripts, informações de destinos..."
+                rows={4}
+                className="text-xs resize-none"
+                disabled={isProcessing}
+              />
+            </div>
+          )}
+
+          {/* ── Progress Bar (replaces button when processing) ── */}
+          {phase && phase !== "error" && (
             <UploadProgressBar
               phase={phase}
               progress={progress}
@@ -320,16 +311,48 @@ export default function SmartUploadModal({ open, onOpenChange, onSaved }: SmartU
             />
           )}
 
-          {/* Submit */}
-          <Button
-            onClick={handleSubmit}
-            disabled={isProcessing || (!file && !manualText.trim())}
-            className="w-full text-xs"
-            size="sm"
-          >
-            <Sparkles className="w-3 h-3 mr-1" />
-            {isProcessing ? "Processando..." : "Processar e Salvar"}
-          </Button>
+          {/* ── Error display ── */}
+          {phase === "error" && error && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                <p className="text-xs text-destructive">{error}</p>
+              </div>
+              <Button
+                onClick={() => { setPhase(null); setError(""); setProgress(0); handleSubmit(); }}
+                variant="outline"
+                size="sm"
+                className="w-full text-xs h-8 border-destructive/30 text-destructive hover:bg-destructive/10"
+              >
+                <RefreshCw className="w-3 h-3 mr-1.5" />
+                Tentar novamente
+              </Button>
+            </div>
+          )}
+
+          {/* ── Submit button (hidden during processing/error) ── */}
+          {(!phase || phase === "done") && (
+            <Button
+              onClick={handleSubmit}
+              disabled={!canSubmit || isProcessing}
+              className="w-full text-xs h-9 bg-emerald-600 hover:bg-emerald-700 text-white"
+              size="sm"
+            >
+              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+              Processar e Salvar
+            </Button>
+          )}
+
+          {/* ── Manual text toggle ── */}
+          {!file && !isProcessing && phase !== "error" && (
+            <button
+              type="button"
+              className="w-full text-center text-[11px] text-muted-foreground hover:text-primary transition-colors"
+              onClick={() => setShowManualText(!showManualText)}
+            >
+              {showManualText ? "Ocultar texto manual" : "Ou cole um texto manualmente"}
+            </button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
