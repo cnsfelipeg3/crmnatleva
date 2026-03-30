@@ -214,7 +214,7 @@ export async function callSimulatorAI(sysPrompt: string, history: { role: string
   if (resp.status === 429 && _retryCount < 2) {
     registerSimulator429(_retryCount);
     await waitForSimulatorCooldown();
-    return callSimulatorAI(sysPrompt, history, type, agentBehaviorPrompt, _retryCount + 1);
+    return callSimulatorAI(sysPrompt, history, type, agentBehaviorPrompt, _retryCount + 1, agentId);
   }
 
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
