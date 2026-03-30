@@ -1,4 +1,4 @@
-import { BookOpen, Search, Upload, FileText, Image, Video, Link, Music, Eye, Trash2, Download, Loader2, Plus, Youtube, Sparkles, CheckCircle, X, RefreshCw, AlertCircle } from "lucide-react";
+import { BookOpen, Search, Upload, FileText, Image, Video, Link, Music, Eye, Trash2, Download, Loader2, Plus, Youtube, Sparkles, CheckCircle, X, RefreshCw, AlertCircle, Pencil, Save } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
