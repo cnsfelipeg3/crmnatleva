@@ -9,8 +9,9 @@ import {
   Search, RefreshCw, Plus, Pencil, Trash2, CheckCircle,
   Archive, Upload, Zap, ZapOff, Bot, BookOpen, Shield, Wand2,
   GitBranch, Brain, FlaskConical, Settings, Clock, User,
-  Activity, ChevronRight, Sparkles, Radio, Eye,
+  Activity, ChevronRight, Sparkles, Radio, Eye, RotateCcw,
 } from "lucide-react";
+import UndoChangeDialog from "@/components/ai-team/UndoChangeDialog";
 import { format, formatDistanceToNow, isToday, isYesterday, subDays, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -103,7 +104,7 @@ function ActivityHeatmap({ entries }: { entries: any[] }) {
 }
 
 /* ═══ Single entry card ═══ */
-function EntryCard({ entry, isExpanded, onToggle }: { entry: any; isExpanded: boolean; onToggle: () => void }) {
+function EntryCard({ entry, isExpanded, onToggle, onUndo }: { entry: any; isExpanded: boolean; onToggle: () => void; onUndo: () => void }) {
   const action = ACTION_META[entry.action_type] || ACTION_META.create;
   const entity = ENTITY_META[entry.entity_type] || ENTITY_META.config;
   const ActionIcon = action.icon;
@@ -188,11 +189,20 @@ function EntryCard({ entry, isExpanded, onToggle }: { entry: any; isExpanded: bo
           </div>
         </div>
 
-        {/* Chevron */}
-        <ChevronRight className={cn(
-          "w-4 h-4 shrink-0 text-muted-foreground/30 transition-transform mt-1",
-          isExpanded && "rotate-90 text-primary/60"
-        )} />
+        {/* Undo + Chevron */}
+        <div className="flex items-center gap-1 shrink-0 mt-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); onUndo(); }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-amber-500/10 text-muted-foreground/40 hover:text-amber-500"
+            title="Desfazer mudança"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+          <ChevronRight className={cn(
+            "w-4 h-4 text-muted-foreground/30 transition-transform",
+            isExpanded && "rotate-90 text-primary/60"
+          )} />
+        </div>
       </div>
 
       {/* Expanded panel */}
@@ -225,6 +235,7 @@ export default function AITeamExtrato() {
   const [search, setSearch] = useState("");
   const [filterEntity, setFilterEntity] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [undoEntry, setUndoEntry] = useState<any>(null);
 
   const { data: entries = [], isLoading, refetch } = useQuery({
     queryKey: ["ai_team_audit_log", filterEntity],
@@ -398,6 +409,7 @@ export default function AITeamExtrato() {
                       entry={entry}
                       isExpanded={expandedId === entry.id}
                       onToggle={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
+                      onUndo={() => setUndoEntry(entry)}
                     />
                   ))}
                 </div>
@@ -406,6 +418,14 @@ export default function AITeamExtrato() {
           </div>
         )}
       </ScrollArea>
+
+      {/* Undo Dialog */}
+      <UndoChangeDialog
+        entry={undoEntry}
+        open={!!undoEntry}
+        onOpenChange={(open) => { if (!open) setUndoEntry(null); }}
+        onUndone={() => { setUndoEntry(null); refetch(); }}
+      />
     </div>
   );
 }
