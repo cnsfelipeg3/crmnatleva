@@ -34,8 +34,8 @@ function enforceAgentFormatting(text: string): string {
   cleaned = cleaned.replace(/,\s*,/g, ",");
   // Remove trailing comma before period
   cleaned = cleaned.replace(/,\s*\./g, ".");
-  // Strip leaked internal state labels (ESTADO_X, FASE_X, STEP_X, ETAPA_X)
-  cleaned = cleaned.replace(/^(ESTADO_|FASE_|STEP_|ETAPA_|STAGE_)\S*[^\S\n]*.*/gm, "");
+  // Strip leaked internal state labels (ESTADO_X, FASE_X, STEP_X, ETAPA_X) — entire line
+  cleaned = cleaned.replace(/^.*\b(ESTADO|FASE|STEP|ETAPA|STAGE|QUALIFICA[ÇC][ÃA]O|TRANSFER[ÊE]NCIA)[_\s]*\d*[+,;]*\s*.*$/gm, "");
   // Remove any remaining lines that look like workflow metadata (e.g. "[ESTADO 3]", "**ESTADO_3**")
   cleaned = cleaned.replace(/^.*\b(ESTADO|FASE|STEP|ETAPA)[\s_]*\d+.*$/gm, "");
   // Clean up multiple blank lines left after stripping
