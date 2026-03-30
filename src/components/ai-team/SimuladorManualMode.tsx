@@ -222,6 +222,7 @@ export default function SimuladorManualMode() {
   const [currentStage, setCurrentStage] = useState(0);
   const [showPanel, setShowPanel] = useState(false); // mobile bottom sheet
   const [manualObsSelectedMsg, setManualObsSelectedMsg] = useState<SelectedMessage | null>(null);
+  const [replyingTo, setReplyingTo] = useState<ChatMsg | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const messagesRef = useRef<ChatMsg[]>([]);
