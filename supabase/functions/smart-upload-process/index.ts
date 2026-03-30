@@ -172,6 +172,12 @@ async function extractWithGeminiUrl(fileUrl: string, mimeType: string, title: st
     throw new Error(`AI extraction failed: ${response.status}`);
   }
 
-  const data = await response.json();
-  return data?.choices?.[0]?.message?.content || "";
+  const text = await response.text();
+  try {
+    const data = JSON.parse(text);
+    return data?.choices?.[0]?.message?.content || "";
+  } catch {
+    console.error("Gemini URL: invalid JSON response:", text.substring(0, 500));
+    throw new Error("AI returned invalid response");
+  }
 }
