@@ -481,6 +481,26 @@ export default function SimulatorChatLayout({
         onChange={handleFileSelect}
       />
 
+      {/* Reply preview bar */}
+      {replyingTo && onCancelReply && (
+        <div className="border-t border-border px-3 py-2 bg-card/80 flex items-center gap-2 shrink-0">
+          <div className="flex-1 min-w-0 rounded-lg bg-muted/50 border-l-[3px] border-primary px-3 py-1.5">
+            <p className="text-[10px] font-bold text-primary">
+              {replyingTo.role === "agent" ? (replyingTo.agentName || "Agente") : "Você"}
+            </p>
+            <p className="text-[11px] text-muted-foreground truncate">
+              {replyingTo.content.slice(0, 100)}
+            </p>
+          </div>
+          <button
+            onClick={onCancelReply}
+            className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-muted transition-colors shrink-0"
+          >
+            <X className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
+        </div>
+      )}
+
       {/* Input — WhatsApp style */}
       <div
         className="border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card shrink-0"
