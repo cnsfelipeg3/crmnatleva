@@ -35,14 +35,40 @@ serve(async (req) => {
       const instruction = getInstruction(mimeType);
       const prompt = `Título: "${title}"\n\n${instruction}`;
 
-      // Generate a signed URL for ALL binary files — pass as image_url so the AI can fetch it
-      const { data: signedData, error: signErr } = await supabase.storage
-        .from("ai-knowledge-base")
-        .createSignedUrl(storageKey, 600); // 10 min expiry
-      if (signErr) throw signErr;
+      const isMediaFile = mimeType.startsWith("video/") || mimeType.startsWith("audio/");
 
-      console.log("[SMART-UPLOAD] Using signed URL for", mimeType, "size strategy: url");
-      content = await callAI(prompt, signedData.signedUrl, mimeType);
+      if (isMediaFile) {
+        // Video/audio: gateway doesn't support URLs for non-image types
+        // Download and send as base64 data URL
+        const { data: fileData, error: dlErr } = await supabase.storage
+          .from("ai-knowledge-base").download(storageKey);
+        if (dlErr) throw dlErr;
+
+        const arrayBuffer = await fileData.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        const sizeMB = bytes.length / (1024 * 1024);
+        console.log(`[SMART-UPLOAD] Downloaded ${mimeType}, size=${sizeMB.toFixed(1)}MB`);
+
+        if (sizeMB > 20) {
+          throw new Error(`Arquivo muito grande (${sizeMB.toFixed(0)}MB). Máximo suportado: 20MB para processamento de IA.`);
+        }
+
+        // Convert to base64 data URL
+        const { encode: base64Encode } = await import("https://deno.land/std@0.168.0/encoding/base64.ts");
+        const base64 = base64Encode(bytes);
+        const dataUrl = `data:${mimeType};base64,${base64}`;
+
+        content = await callAI(prompt, dataUrl, mimeType);
+      } else {
+        // Images/PDFs: use signed URL (gateway supports image URLs)
+        const { data: signedData, error: signErr } = await supabase.storage
+          .from("ai-knowledge-base")
+          .createSignedUrl(storageKey, 600);
+        if (signErr) throw signErr;
+
+        console.log("[SMART-UPLOAD] Using signed URL for", mimeType);
+        content = await callAI(prompt, signedData.signedUrl, mimeType);
+      }
     }
 
     return new Response(JSON.stringify({
