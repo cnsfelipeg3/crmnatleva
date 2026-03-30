@@ -1,10 +1,10 @@
 /**
  * SimulatorChatLayout — Reuses the EXACT same visual language as OperacaoInbox (WhatsApp).
  * Bubble shapes, colors, typography, status icons, date separators — all identical.
- * Now with WhatsApp-style audio recording + file attachment.
+ * Now with WhatsApp-style audio recording + file attachment + reply-to-message.
  */
 import { memo, Fragment, useRef, useEffect, useCallback, useState } from "react";
-import { Check, CheckCheck, Bot, Send, Loader2, Smile, Clock, Mic, Paperclip, X, Image, FileText as FileTextIcon, Square } from "lucide-react";
+import { Check, CheckCheck, Bot, Send, Loader2, Smile, Clock, Mic, Paperclip, X, Image, FileText as FileTextIcon, Square, Reply } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,6 +26,8 @@ export interface SimChatMessage {
   fileName?: string;
   /** Type of attachment */
   attachmentType?: "audio" | "image" | "file";
+  /** Reply-to reference */
+  replyTo?: { id: string; content: string; role: "user" | "agent"; agentName?: string };
 }
 
 interface SimulatorChatLayoutProps {
@@ -52,6 +54,10 @@ interface SimulatorChatLayoutProps {
   onMessageClick?: (msg: SimChatMessage) => void;
   /** Timestamp of currently selected message for highlight */
   selectedMessageTimestamp?: string;
+  /** Reply-to state */
+  replyingTo?: SimChatMessage | null;
+  onReply?: (msg: SimChatMessage) => void;
+  onCancelReply?: () => void;
 }
 
 // ─── Helpers (same as inbox) ───
