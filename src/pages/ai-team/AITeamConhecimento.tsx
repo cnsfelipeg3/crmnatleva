@@ -663,9 +663,13 @@ export default function AITeamConhecimento() {
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowYouTube(true)}>
             <Youtube className="w-4 h-4 text-red-500" /> YouTube
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setShowUpload(true)}>
-            <Upload className="w-4 h-4" /> Upload Documento
+          <Button size="sm" className="gap-1.5" onClick={() => setShowSmartUpload(true)}>
+            <Sparkles className="w-4 h-4" /> Upload Inteligente
           </Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowUpload(true)}>
+            <Upload className="w-4 h-4" /> Manual
+          </Button>
+          <SmartUploadModal open={showSmartUpload} onOpenChange={setShowSmartUpload} onSaved={loadDocs} />
         </div>
       </div>
 
