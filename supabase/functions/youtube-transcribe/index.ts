@@ -526,7 +526,7 @@ serve(async (req) => {
 
               // Firecrawl returns the whole YouTube page — NOT the transcript.
               // Only use description section, capped aggressively.
-              const MAX_FIRECRAWL = 25000;
+              const MAX_FIRECRAWL = 100000;
               const descMarker = rawMarkdown.indexOf("...more");
               const commentsMarker = rawMarkdown.search(/\d+\s*Comment/i);
               if (descMarker > 0 && commentsMarker > descMarker) {
