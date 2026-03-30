@@ -438,6 +438,10 @@ export default function SimuladorManualMode() {
       const updateAgent = (t: string) => {
         setMessages(prev => {
           const last = prev[prev.length - 1];
+          // Deduplication: skip if last agent message has identical content
+          if (last?.role === "agent" && last?.id !== streamId && last?.content === t) {
+            return prev;
+          }
           let updated: ChatMsg[];
           if (last?.id === streamId) {
             updated = prev.map((m, idx) => idx === prev.length - 1 ? { ...m, content: t } : m);
