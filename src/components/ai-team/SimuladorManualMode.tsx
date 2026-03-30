@@ -718,7 +718,7 @@ export default function SimuladorManualMode() {
     if (debounceTimerRef.current) { clearTimeout(debounceTimerRef.current); debounceTimerRef.current = null; }
     pendingMessagesRef.current = [];
     messagesRef.current = [];
-    setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0);
+    setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0); setReplyingTo(null);
   };
 
   const loadSession = (session: SavedSession) => {
