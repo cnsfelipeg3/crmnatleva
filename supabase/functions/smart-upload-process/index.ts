@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MAX_INLINE_SIZE = 8 * 1024 * 1024; // 8MB — files larger than this use signed URL
+const MAX_INLINE_SIZE = 8 * 1024 * 1024; // 8MB
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -32,11 +32,11 @@ serve(async (req) => {
       if (dlErr) throw dlErr;
       content = await fileData.text();
     }
-    // ─── Binary files: use Gemini for extraction ───
+    // ─── Binary files: use AI for extraction ───
     else {
       const instruction = getInstruction(mimeType);
 
-      // Video/audio files are typically large — always use signed URL to avoid OOM
+      // Video/audio → always use signed URL (too large for inline)
       const alwaysUrl = mimeType.startsWith("video/") || mimeType.startsWith("audio/");
 
       if (alwaysUrl) {
@@ -45,7 +45,10 @@ serve(async (req) => {
           .createSignedUrl(storageKey, 600);
         if (signErr) throw signErr;
 
-        content = await extractWithGeminiUrl(signedData.signedUrl, mimeType, title, instruction);
+        content = await callAI(
+          `Título: "${title}"\n\n${instruction}\n\nURL do arquivo: ${signedData.signedUrl}\n\nAcesse a URL e processe o conteúdo conforme a instrução acima.`,
+          null, null
+        );
       } else {
         // Small file: inline base64
         const { data: fileData, error: dlErr } = await supabase.storage
@@ -54,7 +57,10 @@ serve(async (req) => {
 
         const bytes = new Uint8Array(await fileData.arrayBuffer());
         const base64 = arrayBufferToBase64(bytes);
-        content = await extractWithGeminiInline(base64, mimeType, title, instruction);
+        content = await callAI(
+          `Título: "${title}"\n\n${instruction}`,
+          `data:${mimeType};base64,${base64}`, null
+        );
       }
     }
 
@@ -66,7 +72,7 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
-    console.error("smart-upload-process error:", e);
+    console.error("[SMART-UPLOAD] error:", e);
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -89,7 +95,6 @@ function getInstruction(mimeType: string): string {
   return "Extraia todo o conteúdo textual deste arquivo.";
 }
 
-// Safe base64 encoding for large arrays (avoids stack overflow from spread)
 function arrayBufferToBase64(bytes: Uint8Array): string {
   let binary = "";
   const chunkSize = 8192;
@@ -102,82 +107,67 @@ function arrayBufferToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-// ─── Gemini extraction: inline base64 (for files < 8MB) ───
-async function extractWithGeminiInline(base64Data: string, mimeType: string, title: string, instruction: string): Promise<string> {
+// ─── Unified AI call with robust response handling ───
+async function callAI(textPrompt: string, imageUrl: string | null, _unused: null): Promise<string> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [{
-        role: "user",
-        content: [
-          { type: "text", text: `Título: "${title}"\n\n${instruction}` },
-          { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64Data}` } },
-        ],
-      }],
-      max_tokens: 8000,
-    }),
+  const contentParts: any[] = [{ type: "text", text: textPrompt }];
+  if (imageUrl) {
+    contentParts.push({ type: "image_url", image_url: { url: imageUrl } });
+  }
+
+  console.log("[SMART-UPLOAD] Calling AI gateway...", {
+    hasImage: !!imageUrl,
+    promptLength: textPrompt.length,
   });
 
-  if (!response.ok) {
-    const errText = await response.text();
-    console.error("Gemini inline error:", response.status, errText);
-    throw new Error(`AI extraction failed: ${response.status}`);
-  }
-
-  const text = await response.text();
+  let response: Response;
   try {
-    const data = JSON.parse(text);
-    return data?.choices?.[0]?.message?.content || "";
-  } catch {
-    console.error("Gemini inline: invalid JSON response:", text.substring(0, 500));
-    throw new Error("AI returned invalid response");
+    response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{ role: "user", content: contentParts }],
+        max_tokens: 8000,
+      }),
+    });
+  } catch (fetchErr: any) {
+    console.error("[SMART-UPLOAD] Fetch failed:", fetchErr.message);
+    throw new Error(`AI gateway unreachable: ${fetchErr.message}`);
   }
-}
 
-// ─── Gemini extraction: signed URL (for files > 8MB) ───
-async function extractWithGeminiUrl(fileUrl: string, mimeType: string, title: string, instruction: string): Promise<string> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
-      messages: [{
-        role: "user",
-        content: [
-          { type: "text", text: `Título: "${title}"\n\n${instruction}` },
-          { type: "image_url", image_url: { url: fileUrl } },
-        ],
-      }],
-      max_tokens: 8000,
-    }),
-  });
+  // Read raw text first — never call response.json() directly
+  const rawText = await response.text();
+  console.log("[SMART-UPLOAD] AI response status:", response.status, "length:", rawText.length);
+  console.log("[SMART-UPLOAD] AI raw (first 500):", rawText.substring(0, 500));
 
   if (!response.ok) {
-    const errText = await response.text();
-    console.error("Gemini URL error:", response.status, errText);
-    throw new Error(`AI extraction failed: ${response.status}`);
+    console.error("[SMART-UPLOAD] AI error:", response.status, rawText.substring(0, 1000));
+    if (response.status === 429) throw new Error("Rate limit atingido. Tente novamente em alguns segundos.");
+    if (response.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
+    throw new Error(`AI extraction failed (${response.status})`);
   }
 
-  const text = await response.text();
-  try {
-    const data = JSON.parse(text);
-    return data?.choices?.[0]?.message?.content || "";
-  } catch {
-    console.error("Gemini URL: invalid JSON response:", text.substring(0, 500));
-    throw new Error("AI returned invalid response");
+  // Try to parse as JSON (OpenAI-compatible response)
+  if (rawText.trim()) {
+    try {
+      const data = JSON.parse(rawText);
+      const content = data?.choices?.[0]?.message?.content;
+      if (content) return content;
+      // If parsed but no content, log and return raw
+      console.warn("[SMART-UPLOAD] Parsed JSON but no choices content, using raw");
+      return rawText;
+    } catch {
+      // Not JSON — Gemini sometimes returns plain text
+      console.log("[SMART-UPLOAD] Response is not JSON, using as plain text");
+      return rawText;
+    }
   }
+
+  throw new Error("AI returned empty response");
 }
