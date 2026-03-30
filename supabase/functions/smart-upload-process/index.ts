@@ -42,7 +42,7 @@ serve(async (req) => {
       if (signErr) throw signErr;
 
       console.log("[SMART-UPLOAD] Using signed URL for", mimeType, "size strategy: url");
-      content = await callAI(prompt, signedData.signedUrl);
+      content = await callAI(prompt, signedData.signedUrl, mimeType);
     }
 
     return new Response(JSON.stringify({
