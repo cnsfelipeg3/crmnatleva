@@ -621,6 +621,71 @@ export default function AITeamConhecimento() {
     loadDocs();
   };
 
+  const handleReprocess = async (doc: KBDoc) => {
+    if (!doc.file_name) { toast.error("Sem arquivo para reprocessar"); return; }
+    setReprocessing(true);
+    try {
+      // Find the storage key from the file_url
+      const urlMatch = doc.file_url?.match(/ai-knowledge-base\/(.+)$/);
+      if (!urlMatch) throw new Error("Não foi possível localizar o arquivo no storage");
+      const storageKey = decodeURIComponent(urlMatch[1]);
+      
+      // Determine mimeType from file_type field
+      let mimeType = "application/octet-stream";
+      if (doc.file_type === "video") mimeType = "video/mp4";
+      else if (doc.file_type === "audio") mimeType = "audio/mpeg";
+      else if (doc.file_type === "image") mimeType = "image/jpeg";
+      else if (doc.file_type === "pdf") mimeType = "application/pdf";
+      else if (doc.file_type === "text") mimeType = "text/plain";
+
+      toast.info("Re-processando arquivo com IA...", { duration: 10000 });
+
+      const { data: extractData, error: extractErr } = await supabase.functions.invoke("smart-upload-process", {
+        body: { storageKey, mimeType, title: doc.title },
+      });
+      if (extractErr) throw extractErr;
+      const extractedContent = extractData?.content || "";
+      if (!extractedContent.trim()) throw new Error("IA retornou conteúdo vazio");
+
+      // Update the KB entry
+      await supabase.from("ai_knowledge_base").update({
+        content_text: extractedContent.trim(),
+        raw_transcript: extractedContent.trim(),
+        updated_at: new Date().toISOString(),
+      }).eq("id", doc.id);
+
+      // Try ÓRION enrichment
+      if (extractedContent.length > 50) {
+        toast.info("Enriquecendo com ÓRION...");
+        try {
+          const { data: orgData } = await supabase.functions.invoke("organize-knowledge", {
+            body: { content: extractedContent, title: doc.title, tipo: doc.file_type },
+          });
+          if (orgData?.taxonomy) {
+            const tax = orgData.taxonomy;
+            await supabase.from("ai_knowledge_base").update({
+              taxonomy: tax.taxonomia || tax,
+              tags: tax.tags || [],
+              confidence: tax.taxonomia?.confianca ?? tax.confianca ?? null,
+              updated_at: new Date().toISOString(),
+            }).eq("id", doc.id);
+          }
+        } catch (e) {
+          console.warn("ÓRION enrichment failed:", e);
+        }
+      }
+
+      toast.success("Conteúdo extraído com sucesso!");
+      setSelectedDoc(null);
+      loadDocs();
+    } catch (err: any) {
+      console.error("Reprocess error:", err);
+      toast.error("Erro ao reprocessar: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setReprocessing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
