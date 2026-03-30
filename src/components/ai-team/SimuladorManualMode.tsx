@@ -719,6 +719,7 @@ export default function SimuladorManualMode() {
     pendingMessagesRef.current = [];
     messagesRef.current = [];
     isProcessingRef.current = false;
+    clearComplianceCache();
     setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0); setReplyingTo(null); setManualObsSelectedMsg(null); setLoading(false);
   };
 
