@@ -12,6 +12,7 @@ import {
   Activity, ChevronRight, Sparkles, Radio, Eye, RotateCcw,
 } from "lucide-react";
 import UndoChangeDialog from "@/components/ai-team/UndoChangeDialog";
+import AuditEntryDetailPanel from "@/components/ai-team/AuditEntryDetailPanel";
 import { format, formatDistanceToNow, isToday, isYesterday, subDays, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -207,24 +208,7 @@ function EntryCard({ entry, isExpanded, onToggle, onUndo }: { entry: any; isExpa
 
       {/* Expanded panel */}
       <AnimatePresence>
-        {isExpanded && entry.details && Object.keys(entry.details).length > 0 && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 pb-4 pt-0">
-              <div className="rounded-xl bg-muted/20 border border-border/10 p-3">
-                <p className="text-[10px] text-muted-foreground/50 uppercase tracking-widest font-semibold mb-2">Dados técnicos</p>
-                <pre className="text-[11px] text-muted-foreground/70 font-mono leading-relaxed overflow-x-auto max-h-[200px] whitespace-pre-wrap">
-                  {JSON.stringify(entry.details, null, 2)}
-                </pre>
-              </div>
-            </div>
-          </motion.div>
-        )}
+        {isExpanded && <AuditEntryDetailPanel entry={entry} />}
       </AnimatePresence>
     </motion.div>
   );
