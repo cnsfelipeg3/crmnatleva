@@ -528,6 +528,7 @@ export type Database = {
           file_url: string | null
           id: string
           is_active: boolean | null
+          raw_transcript: string | null
           tags: string[] | null
           taxonomy: Json | null
           title: string
@@ -545,6 +546,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_active?: boolean | null
+          raw_transcript?: string | null
           tags?: string[] | null
           taxonomy?: Json | null
           title: string
@@ -562,6 +564,7 @@ export type Database = {
           file_url?: string | null
           id?: string
           is_active?: boolean | null
+          raw_transcript?: string | null
           tags?: string[] | null
           taxonomy?: Json | null
           title?: string

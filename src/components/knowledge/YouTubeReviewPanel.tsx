@@ -38,6 +38,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
   const [result, setResult] = useState<{
     title: string;
     transcript: string;
+    raw_transcript?: string;
     structured_knowledge: string;
     videoId: string;
   } | null>(null);
@@ -280,6 +281,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
         file_name: `youtube-${videoId}.txt`,
         tags: tags.length > 0 ? tags : null,
         confidence: taxonomy?.confianca || null,
+        raw_transcript: result?.raw_transcript || null,
       };
 
       // Save taxonomy as JSONB

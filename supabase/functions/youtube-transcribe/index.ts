@@ -325,12 +325,20 @@ async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: stri
   throw lastError || new Error("NO_CAPTIONS_FOUND");
 }
 
-/** Use AI to add punctuation to raw auto-generated captions */
-async function addPunctuation(apiKey: string, rawText: string): Promise<string> {
-  const MAX_PUNCT_CHUNK = 20000;
-  if (rawText.length <= MAX_PUNCT_CHUNK) {
-    return await callPunctuationAI(apiKey, rawText);
+/** Clean and format raw transcript using Claude — fixes names, punctuation, paragraphs */
+async function cleanTranscript(rawText: string): Promise<string> {
+  const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!ANTHROPIC_API_KEY) {
+    console.warn("ANTHROPIC_API_KEY not set, skipping cleanTranscript");
+    return rawText;
   }
+
+  const MAX_PUNCT_CHUNK = 30000;
+  if (rawText.length <= MAX_PUNCT_CHUNK) {
+    return await callCleanAI(ANTHROPIC_API_KEY, rawText);
+  }
+
+  // Split into chunks at word boundaries
   const chunks: string[] = [];
   let start = 0;
   while (start < rawText.length) {
@@ -342,33 +350,67 @@ async function addPunctuation(apiKey: string, rawText: string): Promise<string> 
     chunks.push(rawText.slice(start, end).trim());
     start = end;
   }
-  console.log(`Punctuation: splitting into ${chunks.length} chunks`);
+
+  console.log(`cleanTranscript: splitting into ${chunks.length} chunks`);
   const results: string[] = [];
   for (let i = 0; i < chunks.length; i++) {
-    console.log(`Punctuating chunk ${i + 1}/${chunks.length}...`);
-    results.push(await callPunctuationAI(apiKey, chunks[i]));
+    console.log(`Cleaning chunk ${i + 1}/${chunks.length} (${chunks[i].length} chars)...`);
+    results.push(await callCleanAI(ANTHROPIC_API_KEY, chunks[i]));
   }
   return results.join("\n\n");
 }
 
-async function callPunctuationAI(apiKey: string, text: string): Promise<string> {
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "google/gemini-2.5-flash-lite",
-      messages: [
-        { role: "system", content: `Você é um especialista em transcrição. Sua ÚNICA tarefa é adicionar pontuação, maiúsculas e parágrafos ao texto bruto. NÃO altere nenhuma palavra. Retorne APENAS o texto pontuado.` },
-        { role: "user", content: text },
-      ],
-    }),
-  });
-  if (!response.ok) {
-    console.warn(`Punctuation AI failed: ${response.status}`);
+const CLEAN_SYSTEM_PROMPT = `Você recebeu uma transcrição automática de um vídeo do YouTube sobre viagens. O texto tem erros de speech-to-text, nomes próprios errados, falta de pontuação e timestamps misturados.
+
+Sua tarefa: LIMPAR e FORMATAR o texto. Retorne APENAS o texto limpo, sem explicações.
+
+Regras:
+- Corrigir nomes próprios de lugares, hotéis, restaurantes, atrações (ex: Torrei Fé → Torre Eiffel, lá do rei → Ladurée, Jard Trileri → Jardin des Tuileries, Mahé → Le Marais, xanze lizê → Champs-Élysées, sacre cór → Sacré-Cœur, mondimarte → Montmartre, muzê dorsê → Musée d'Orsay)
+- Adicionar pontuação correta (vírgulas, pontos, interrogações)
+- Separar em parágrafos por assunto/tema (quando muda de tópico, novo parágrafo)
+- Remover timestamps, marcações de [Música], ruídos e repetições
+- Remover frases que são claramente falas de produção do vídeo (tipo "ajusta a câmera", "olha ali", "espera", "corta")
+- Manter o conteúdo ORIGINAL, não inventar informação. Apenas limpar e formatar
+- Manter em português brasileiro
+- Se um trecho for ininteligível, omitir em vez de inventar
+- Preservar TODOS os dados úteis: nomes de estabelecimentos, preços, dicas, opiniões, recomendações`;
+
+async function callCleanAI(apiKey: string, text: string): Promise<string> {
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 4000,
+        system: CLEAN_SYSTEM_PROMPT,
+        messages: [{ role: "user", content: text }],
+      }),
+    });
+
+    if (!response.ok) {
+      const status = response.status;
+      console.warn(`cleanTranscript AI failed: HTTP ${status}`);
+      await response.text().catch(() => {});
+      return text; // fallback to raw
+    }
+
+    const data = await response.json();
+    const cleaned = data?.content?.[0]?.text?.trim();
+    if (cleaned && cleaned.length > text.length * 0.3) {
+      console.log(`✅ cleanTranscript: ${text.length} → ${cleaned.length} chars`);
+      return cleaned;
+    }
+    console.warn(`cleanTranscript: output too short (${cleaned?.length || 0}), using raw`);
     return text;
+  } catch (e: any) {
+    console.warn(`cleanTranscript error: ${e.message}`);
+    return text; // fallback to raw
   }
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || text;
 }
 
 const SYSTEM_PROMPT = `Você é um especialista em extrair conhecimento útil de transcrições de vídeos sobre viagens e turismo.
@@ -484,7 +526,7 @@ serve(async (req) => {
 
               // Firecrawl returns the whole YouTube page — NOT the transcript.
               // Only use description section, capped aggressively.
-              const MAX_FIRECRAWL = 25000;
+              const MAX_FIRECRAWL = 100000;
               const descMarker = rawMarkdown.indexOf("...more");
               const commentsMarker = rawMarkdown.search(/\d+\s*Comment/i);
               if (descMarker > 0 && commentsMarker > descMarker) {
@@ -525,24 +567,32 @@ serve(async (req) => {
       }
     }
 
-    // Cap transcript to reasonable size (150k chars)
-    const MAX_TRANSCRIPT = 150000;
+    // Cap transcript to reasonable size (1M chars)
+    const MAX_TRANSCRIPT = 1000000;
     if (transcript.length > MAX_TRANSCRIPT) {
       transcript = transcript.slice(0, MAX_TRANSCRIPT);
+    }
+
+    // Save the raw transcript before cleaning
+    const rawTranscript = transcript;
+
+    // Clean and format transcript using Claude (replaces old addPunctuation)
+    if (transcript.length > 50) {
+      console.log("Cleaning transcript with Claude...");
+      try {
+        transcript = await cleanTranscript(transcript);
+      } catch (e: any) {
+        console.warn(`cleanTranscript failed, using raw: ${e.message}`);
+        // fallback: keep raw transcript
+      }
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-    // Add punctuation to auto-generated captions
-    if (isAutoGenerated && transcript.length > 50 && transcript.length < 80000) {
-      console.log("Adding punctuation to auto-generated captions...");
-      transcript = await addPunctuation(LOVABLE_API_KEY, transcript);
-    }
-
     // Process with AI
     let structuredKnowledge = "";
-    const MAX_AI_INPUT = 25000;
+    const MAX_AI_INPUT = 150000;
 
     if (transcript.length <= MAX_AI_INPUT) {
       structuredKnowledge = await callAI(LOVABLE_API_KEY, SYSTEM_PROMPT,
@@ -568,7 +618,7 @@ serve(async (req) => {
     const title = titleMatch ? titleMatch[1].trim() : (videoTitle || `Vídeo YouTube: ${videoId}`);
 
     return new Response(JSON.stringify({
-      videoId, title, transcript, structured_knowledge: structuredKnowledge, language: "pt",
+      videoId, title, transcript, raw_transcript: rawTranscript, structured_knowledge: structuredKnowledge, language: "pt",
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
