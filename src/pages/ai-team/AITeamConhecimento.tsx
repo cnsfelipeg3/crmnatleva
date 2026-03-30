@@ -275,6 +275,56 @@ function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel:
         toast.error("Extração automática bloqueada pelo YouTube. Use o painel completo com transcrição manual.", { duration: 6000 });
         return;
       }
+      // Handle CLIENT_DOWNLOAD_NEEDED: download captions from user's browser and retry
+      if (data?.error === "CLIENT_DOWNLOAD_NEEDED" && data?.captionTracks?.length) {
+        console.log("Server returned CLIENT_DOWNLOAD_NEEDED, downloading captions from browser...");
+        toast.info("Baixando legendas pelo navegador...", { duration: 4000 });
+        let clientTranscript = "";
+        for (const track of data.captionTracks) {
+          if (clientTranscript) break;
+          try {
+            const trackUrl = (track.baseUrl || "").replace(/&fmt=[^&]*/g, "") + "&fmt=json3";
+            const captionRes = await fetch(trackUrl);
+            if (!captionRes.ok) continue;
+            const captionText = await captionRes.text();
+            if (!captionText || captionText.length < 50) continue;
+            try {
+              const json = JSON.parse(captionText);
+              const segments: string[] = [];
+              for (const event of (json.events || [])) {
+                if (event.segs) {
+                  let line = "";
+                  for (const seg of event.segs) {
+                    if (seg.utf8 && seg.utf8.trim() !== "\n" && seg.utf8.trim() !== "") line += seg.utf8;
+                  }
+                  if (line.trim()) segments.push(line.trim());
+                }
+              }
+              clientTranscript = segments.join(" ").replace(/\s+/g, " ").trim();
+            } catch {}
+            if (!clientTranscript || clientTranscript.length < 100) {
+              const xmlSegments: string[] = [];
+              for (const match of captionText.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)) {
+                const t = match[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;/g, "'").replace(/\n/g, " ").trim();
+                if (t) xmlSegments.push(t);
+              }
+              const xmlT = xmlSegments.join(" ").replace(/\s+/g, " ").trim();
+              if (xmlT.length > (clientTranscript?.length || 0)) clientTranscript = xmlT;
+            }
+          } catch (e) { console.warn("Client caption download failed:", e); }
+        }
+        if (clientTranscript && clientTranscript.split(/\s+/).length >= 50) {
+          toast.success(`Legendas baixadas: ${clientTranscript.split(/\s+/).length} palavras. Processando...`);
+          const retryRes = await supabase.functions.invoke("youtube-transcribe", {
+            body: { url: ytUrl, manual_transcript: clientTranscript },
+          });
+          data = retryRes.data;
+          error = retryRes.error;
+        } else {
+          toast.error("Não foi possível baixar legendas. Use o painel completo com transcrição manual.", { duration: 6000 });
+          return;
+        }
+      }
       if (error) throw error;
       if (data?.error) {
         toast.error(data.error);

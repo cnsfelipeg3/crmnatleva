@@ -81,6 +81,44 @@ export default function YouTubeBatchImport({ onBack, onSaved }: YouTubeBatchImpo
           setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "error", error: "Transcrição indisponível" } : it));
           continue;
         }
+        // Handle CLIENT_DOWNLOAD_NEEDED in batch mode
+        if (data?.error === "CLIENT_DOWNLOAD_NEEDED" && data?.captionTracks?.length) {
+          let clientTranscript = "";
+          for (const track of data.captionTracks) {
+            if (clientTranscript) break;
+            try {
+              const trackUrl = (track.baseUrl || "").replace(/&fmt=[^&]*/g, "") + "&fmt=json3";
+              const captionRes = await fetch(trackUrl);
+              if (!captionRes.ok) continue;
+              const captionText = await captionRes.text();
+              if (!captionText || captionText.length < 50) continue;
+              try {
+                const json = JSON.parse(captionText);
+                const segments: string[] = [];
+                for (const evt of (json.events || [])) {
+                  if (evt.segs) {
+                    let line = "";
+                    for (const seg of evt.segs) {
+                      if (seg.utf8 && seg.utf8.trim() !== "\n" && seg.utf8.trim() !== "") line += seg.utf8;
+                    }
+                    if (line.trim()) segments.push(line.trim());
+                  }
+                }
+                clientTranscript = segments.join(" ").replace(/\s+/g, " ").trim();
+              } catch {}
+            } catch {}
+          }
+          if (clientTranscript && clientTranscript.split(/\s+/).length >= 50) {
+            const retryRes = await supabase.functions.invoke("youtube-transcribe", {
+              body: { url: item.url, manual_transcript: clientTranscript },
+            });
+            data = retryRes.data;
+            error = retryRes.error;
+          } else {
+            setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "error", error: "Legendas bloqueadas" } : it));
+            continue;
+          }
+        }
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
 
