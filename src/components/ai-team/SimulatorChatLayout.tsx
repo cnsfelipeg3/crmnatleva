@@ -346,6 +346,7 @@ export default function SimulatorChatLayout({
   headerContent, emptyContent, bannerContent,
   inputPlaceholder = "Digite como um cliente...",
   disabled, onMessageClick, selectedMessageTimestamp,
+  replyingTo, onReply, onCancelReply,
 }: SimulatorChatLayoutProps) {
   const isMobile = useIsMobile();
   const messagesEndRef = useRef<HTMLDivElement>(null);
