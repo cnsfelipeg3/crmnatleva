@@ -396,10 +396,11 @@ export default function SimuladorManualMode() {
       const resp = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({
+         body: JSON.stringify({
           type: "agent",
           systemPrompt: manualSystemPrompt,
           agentBehaviorPrompt: enrichedBehaviorPrompt,
+          agentId: selectedAgent.id,
           history: buildConversationHistory(currentMessages, selectedDestino, isLivreMode),
           provider: "lovable",
         }),
