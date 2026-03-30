@@ -1,10 +1,10 @@
 /**
  * SimulatorChatLayout — Reuses the EXACT same visual language as OperacaoInbox (WhatsApp).
  * Bubble shapes, colors, typography, status icons, date separators — all identical.
- * Now with WhatsApp-style audio recording + file attachment.
+ * Now with WhatsApp-style audio recording + file attachment + reply-to-message.
  */
 import { memo, Fragment, useRef, useEffect, useCallback, useState } from "react";
-import { Check, CheckCheck, Bot, Send, Loader2, Smile, Clock, Mic, Paperclip, X, Image, FileText as FileTextIcon, Square } from "lucide-react";
+import { Check, CheckCheck, Bot, Send, Loader2, Smile, Clock, Mic, Paperclip, X, Image, FileText as FileTextIcon, Square, Reply } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -26,6 +26,8 @@ export interface SimChatMessage {
   fileName?: string;
   /** Type of attachment */
   attachmentType?: "audio" | "image" | "file";
+  /** Reply-to reference */
+  replyTo?: { id: string; content: string; role: "user" | "agent"; agentName?: string };
 }
 
 interface SimulatorChatLayoutProps {
@@ -52,6 +54,10 @@ interface SimulatorChatLayoutProps {
   onMessageClick?: (msg: SimChatMessage) => void;
   /** Timestamp of currently selected message for highlight */
   selectedMessageTimestamp?: string;
+  /** Reply-to state */
+  replyingTo?: SimChatMessage | null;
+  onReply?: (msg: SimChatMessage) => void;
+  onCancelReply?: () => void;
 }
 
 // ─── Helpers (same as inbox) ───
@@ -155,10 +161,37 @@ function AudioBubblePlayer({ src }: { src: string }) {
   );
 }
 
+// ─── Reply Quote Block ───
+function ReplyQuoteBlock({ replyTo, isUserBubble }: { replyTo: SimChatMessage["replyTo"]; isUserBubble: boolean }) {
+  if (!replyTo) return null;
+  const isReplyFromAgent = replyTo.role === "agent";
+  return (
+    <div className={cn(
+      "rounded-lg px-3 py-1.5 mb-1.5 border-l-[3px] text-[11px] leading-snug",
+      isUserBubble
+        ? "bg-white/10 border-white/40"
+        : "bg-primary/8 border-primary/50"
+    )}>
+      <p className={cn(
+        "font-bold text-[10px] mb-0.5",
+        isUserBubble ? "text-white/80" : "text-primary"
+      )}>
+        {isReplyFromAgent ? (replyTo.agentName || "Agente") : "Você"}
+      </p>
+      <p className={cn(
+        "line-clamp-2",
+        isUserBubble ? "text-white/60" : "text-muted-foreground"
+      )}>
+        {replyTo.content.slice(0, 120)}{replyTo.content.length > 120 ? "…" : ""}
+      </p>
+    </div>
+  );
+}
+
 // ─── Message Bubble — identical to inbox ───
 const ChatBubble = memo(function ChatBubble({
-  msg, messages, index, onClick, isSelected,
-}: { msg: SimChatMessage; messages: SimChatMessage[]; index: number; onClick?: () => void; isSelected?: boolean }) {
+  msg, messages, index, onClick, isSelected, onReply,
+}: { msg: SimChatMessage; messages: SimChatMessage[]; index: number; onClick?: () => void; isSelected?: boolean; onReply?: (msg: SimChatMessage) => void }) {
   const showDate = shouldShowDateSeparator(messages, index);
   const isAgent = msg.role === "agent";
   const isSystem = msg.role === "system";
@@ -194,6 +227,21 @@ const ChatBubble = memo(function ChatBubble({
             )}
             onClick={onClick}
           >
+            {/* Reply button — appears on hover */}
+            {onReply && !isSystem && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onReply(msg); }}
+                className={cn(
+                  "absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10",
+                  "w-7 h-7 rounded-full bg-muted/90 hover:bg-muted flex items-center justify-center shadow-sm border border-border/50",
+                  isUser ? "-left-9" : "-right-9"
+                )}
+                title="Responder"
+              >
+                <Reply className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+            )}
+
             <div className={cn(
               "rounded-2xl px-4 py-2.5",
               isUser
@@ -203,6 +251,9 @@ const ChatBubble = memo(function ChatBubble({
               {showName && msg.agentName && (
                 <p className="text-[10px] font-bold text-primary mb-1">{msg.agentName}</p>
               )}
+
+              {/* Reply quote */}
+              {msg.replyTo && <ReplyQuoteBlock replyTo={msg.replyTo} isUserBubble={isUser} />}
 
               {/* Audio attachment */}
               {msg.audioUrl && (
@@ -242,7 +293,7 @@ const ChatBubble = memo(function ChatBubble({
       </div>
     </Fragment>
   );
-}, (prev, next) => prev.msg.id === next.msg.id && prev.msg.content === next.msg.content && prev.index === next.index && prev.isSelected === next.isSelected);
+}, (prev, next) => prev.msg.id === next.msg.id && prev.msg.content === next.msg.content && prev.index === next.index && prev.isSelected === next.isSelected && prev.onReply === next.onReply);
 
 // ─── Typing Indicator — same as inbox ───
 function TypingIndicator() {
@@ -295,6 +346,7 @@ export default function SimulatorChatLayout({
   headerContent, emptyContent, bannerContent,
   inputPlaceholder = "Digite como um cliente...",
   disabled, onMessageClick, selectedMessageTimestamp,
+  replyingTo, onReply, onCancelReply,
 }: SimulatorChatLayoutProps) {
   const isMobile = useIsMobile();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -413,7 +465,7 @@ export default function SimulatorChatLayout({
         <div className="py-4 space-y-3">
           {messages.length === 0 && emptyContent}
           {messages.map((msg, idx) => (
-            <ChatBubble key={msg.id} msg={msg} messages={messages} index={idx} onClick={onMessageClick ? () => onMessageClick(msg) : undefined} isSelected={selectedMessageTimestamp === msg.timestamp} />
+            <ChatBubble key={msg.id} msg={msg} messages={messages} index={idx} onClick={onMessageClick ? () => onMessageClick(msg) : undefined} isSelected={selectedMessageTimestamp === msg.timestamp} onReply={onReply} />
           ))}
           {loading && <TypingIndicator />}
           <div ref={messagesEndRef} />
@@ -428,6 +480,26 @@ export default function SimulatorChatLayout({
         className="hidden"
         onChange={handleFileSelect}
       />
+
+      {/* Reply preview bar */}
+      {replyingTo && onCancelReply && (
+        <div className="border-t border-border px-3 py-2 bg-card/80 flex items-center gap-2 shrink-0">
+          <div className="flex-1 min-w-0 rounded-lg bg-muted/50 border-l-[3px] border-primary px-3 py-1.5">
+            <p className="text-[10px] font-bold text-primary">
+              {replyingTo.role === "agent" ? (replyingTo.agentName || "Agente") : "Você"}
+            </p>
+            <p className="text-[11px] text-muted-foreground truncate">
+              {replyingTo.content.slice(0, 100)}
+            </p>
+          </div>
+          <button
+            onClick={onCancelReply}
+            className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-muted transition-colors shrink-0"
+          >
+            <X className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
+        </div>
+      )}
 
       {/* Input — WhatsApp style */}
       <div

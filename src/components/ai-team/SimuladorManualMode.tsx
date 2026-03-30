@@ -147,6 +147,7 @@ const SESSIONS_KEY = "natleva_manual_sessions";
 interface ChatMsg {
   id: string; role: "user" | "agent"; content: string; timestamp: string; agentId?: string; agentName?: string;
   audioUrl?: string; imageUrl?: string; fileName?: string; attachmentType?: "audio" | "image" | "file";
+  replyTo?: { id: string; content: string; role: "user" | "agent"; agentName?: string };
 }
 interface SavedSession {
   id: string; agentId: string; agentName: string; agentEmoji: string; destino: string;
@@ -221,6 +222,7 @@ export default function SimuladorManualMode() {
   const [currentStage, setCurrentStage] = useState(0);
   const [showPanel, setShowPanel] = useState(false); // mobile bottom sheet
   const [manualObsSelectedMsg, setManualObsSelectedMsg] = useState<SelectedMessage | null>(null);
+  const [replyingTo, setReplyingTo] = useState<ChatMsg | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const messagesRef = useRef<ChatMsg[]>([]);
@@ -575,11 +577,15 @@ export default function SimuladorManualMode() {
     if (!text) return;
 
     // 1. Always add to visual history immediately
-    const userMsg: ChatMsg = { id: crypto.randomUUID(), role: "user", content: text, timestamp: new Date().toISOString() };
+    const userMsg: ChatMsg = {
+      id: crypto.randomUUID(), role: "user", content: text, timestamp: new Date().toISOString(),
+      ...(replyingTo ? { replyTo: { id: replyingTo.id, content: replyingTo.content, role: replyingTo.role, agentName: replyingTo.agentName } } : {}),
+    };
     const nextMessages = [...messagesRef.current, userMsg];
     messagesRef.current = nextMessages;
     setMessages(nextMessages);
     setInput("");
+    setReplyingTo(null);
 
     // 2. Add to pending queue
     pendingMessagesRef.current = [...pendingMessagesRef.current, userMsg];
@@ -599,7 +605,7 @@ export default function SimuladorManualMode() {
     } else {
       debugLog(`[DEBOUNCE] Agente processando, msg adicionada à fila (${pendingMessagesRef.current.length} msgs pendentes)`);
     }
-  }, [input, triggerAgentResponse]);
+  }, [input, replyingTo, triggerAgentResponse]);
 
   // ─── Audio handler: transcribe then send as text ───
   const handleSendAudio = useCallback(async (blob: Blob) => {
@@ -712,7 +718,7 @@ export default function SimuladorManualMode() {
     if (debounceTimerRef.current) { clearTimeout(debounceTimerRef.current); debounceTimerRef.current = null; }
     pendingMessagesRef.current = [];
     messagesRef.current = [];
-    setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0);
+    setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0); setReplyingTo(null);
   };
 
   const loadSession = (session: SavedSession) => {
@@ -911,6 +917,12 @@ export default function SimuladorManualMode() {
               });
             }}
             selectedMessageTimestamp={manualObsSelectedMsg ? new Date(manualObsSelectedMsg.timestamp).toISOString() : undefined}
+            replyingTo={replyingTo ? { ...replyingTo, role: replyingTo.role as "user" | "agent" } as SimChatMessage : null}
+            onReply={(msg) => {
+              const chatMsg = messages.find(m => m.id === msg.id);
+              if (chatMsg) setReplyingTo(chatMsg);
+            }}
+            onCancelReply={() => setReplyingTo(null)}
             inputPlaceholder="Digite como um cliente..."
             headerContent={
               <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
