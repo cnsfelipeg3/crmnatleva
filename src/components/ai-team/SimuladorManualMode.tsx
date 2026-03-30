@@ -147,6 +147,7 @@ const SESSIONS_KEY = "natleva_manual_sessions";
 interface ChatMsg {
   id: string; role: "user" | "agent"; content: string; timestamp: string; agentId?: string; agentName?: string;
   audioUrl?: string; imageUrl?: string; fileName?: string; attachmentType?: "audio" | "image" | "file";
+  replyTo?: { id: string; content: string; role: "user" | "agent"; agentName?: string };
 }
 interface SavedSession {
   id: string; agentId: string; agentName: string; agentEmoji: string; destino: string;
