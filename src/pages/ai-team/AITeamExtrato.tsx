@@ -189,11 +189,20 @@ function EntryCard({ entry, isExpanded, onToggle, onUndo }: { entry: any; isExpa
           </div>
         </div>
 
-        {/* Chevron */}
-        <ChevronRight className={cn(
-          "w-4 h-4 shrink-0 text-muted-foreground/30 transition-transform mt-1",
-          isExpanded && "rotate-90 text-primary/60"
-        )} />
+        {/* Undo + Chevron */}
+        <div className="flex items-center gap-1 shrink-0 mt-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); onUndo(); }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg hover:bg-amber-500/10 text-muted-foreground/40 hover:text-amber-500"
+            title="Desfazer mudança"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+          <ChevronRight className={cn(
+            "w-4 h-4 text-muted-foreground/30 transition-transform",
+            isExpanded && "rotate-90 text-primary/60"
+          )} />
+        </div>
       </div>
 
       {/* Expanded panel */}
