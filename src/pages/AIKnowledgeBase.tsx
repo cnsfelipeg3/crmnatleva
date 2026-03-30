@@ -29,6 +29,7 @@ import YouTubeReviewPanel from "@/components/knowledge/YouTubeReviewPanel";
 import YouTubeBatchImport from "@/components/knowledge/YouTubeBatchImport";
 import { TaxonomySummary, Taxonomy } from "@/components/knowledge/TaxonomyPreview";
 import TaxonomyPreview from "@/components/knowledge/TaxonomyPreview";
+import SmartUploadModal from "@/components/knowledge/SmartUploadModal";
 
 const CATEGORIES = [
   { value: "atendimento", label: "Atendimento & Scripts", icon: MessageSquare },
@@ -92,6 +93,7 @@ export default function AIKnowledgeBase() {
   const [showBatchYouTube, setShowBatchYouTube] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [showSmartUpload, setShowSmartUpload] = useState(false);
 
   // Reprocess state
   const [reprocessingId, setReprocessingId] = useState<string | null>(null);
@@ -427,9 +429,13 @@ export default function AIKnowledgeBase() {
             <Button size="sm" variant="outline" className="h-9 text-xs gap-1 border-red-300 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950/30" onClick={() => setShowBatchYouTube(true)}>
               <ListPlus className="w-3 h-3" /> Lote YT
             </Button>
+            <Button size="sm" className="h-9 text-xs gap-1" onClick={() => setShowSmartUpload(true)}>
+              <Upload className="w-3 h-3" /> Upload
+            </Button>
+            <SmartUploadModal open={showSmartUpload} onOpenChange={setShowSmartUpload} onSaved={loadEntries} />
             <Dialog open={showAdd} onOpenChange={(o) => { if (!o) resetForm(); setShowAdd(o); }}>
               <DialogTrigger asChild>
-                <Button size="sm" className="h-9 text-xs"><Plus className="w-3 h-3 mr-1" /> Adicionar</Button>
+                <Button size="sm" variant="outline" className="h-9 text-xs"><Plus className="w-3 h-3 mr-1" /> Manual</Button>
               </DialogTrigger>
               <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
                 <DialogHeader>

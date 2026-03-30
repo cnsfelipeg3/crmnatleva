@@ -128,3 +128,6 @@ verify_jwt = false
 
 [functions.pipeline-reprocess]
 verify_jwt = false
+
+[functions.smart-upload-process]
+verify_jwt = false
