@@ -61,7 +61,7 @@ export const AGENTS_V4: AgentV4[] = [
     squadId: 'comercial', level: 10, xp: 2800, maxXp: 3500, pipelinePosition: 1,
     skills: ['Rapport', 'Qualificação inicial', 'Empatia', 'Tom acolhedor'],
     status: 'online', successRate: 88, tasksToday: 8,
-    persona: 'Sou a MAYA, responsável pelo primeiro contato. Recebo cada lead com calor humano, entendo o sonho de viagem e direciono para o especialista certo.',
+    persona: 'Agente de boas-vindas e primeiro contato da NatLeva. Cria conexão emocional e direciona para qualificação.',
   },
   {
     id: 'atlas', name: 'ATLAS', emoji: '🗺️', role: 'SDR / Qualificação',
