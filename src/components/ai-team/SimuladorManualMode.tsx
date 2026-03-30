@@ -469,10 +469,25 @@ export default function SimuladorManualMode() {
         const { text: compliantText, wasRewritten } = await fullCompliancePipeline(
           selectedAgent.id, agentText, conversationCtx,
         );
-        if (wasRewritten) {
+      if (wasRewritten) {
           debugLog(`🛡️ Compliance rewrite applied for ${selectedAgent.name}`);
           updateAgent(compliantText);
         }
+        // ═══ POST-STREAM DEDUP: if last two agent msgs have same content, remove duplicate ═══
+        setMessages(prev => {
+          const agentMsgs = prev.filter(m => m.role === "agent");
+          if (agentMsgs.length >= 2) {
+            const last = agentMsgs[agentMsgs.length - 1];
+            const secondLast = agentMsgs[agentMsgs.length - 2];
+            if (last.content.trim() === secondLast.content.trim() && last.id !== secondLast.id) {
+              debugLog(`🛡️ DEDUP: removed duplicate agent message`);
+              const deduped = prev.filter(m => m.id !== last.id);
+              messagesRef.current = deduped;
+              return deduped;
+            }
+          }
+          return prev;
+        });
       }
 
       if (agentText.includes("[TRANSFERIR]")) {
