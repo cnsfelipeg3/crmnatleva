@@ -1,0 +1,1 @@
+ALTER TABLE public.ai_knowledge_base ADD COLUMN IF NOT EXISTS raw_transcript TEXT;
