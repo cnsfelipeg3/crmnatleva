@@ -1,4 +1,4 @@
-import { BookOpen, Search, Upload, FileText, Image, Video, Link, Music, Eye, Trash2, Download, Loader2, Plus, Youtube, Sparkles, CheckCircle, X } from "lucide-react";
+import { BookOpen, Search, Upload, FileText, Image, Video, Link, Music, Eye, Trash2, Download, Loader2, Plus, Youtube, Sparkles, CheckCircle, X, RefreshCw, AlertCircle } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -524,6 +524,7 @@ export default function AITeamConhecimento() {
   const [showYouTube, setShowYouTube] = useState(false);
   const [ytDetailDoc, setYtDetailDoc] = useState<KBDoc | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [reprocessing, setReprocessing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [newTitle, setNewTitle] = useState("");
@@ -618,6 +619,71 @@ export default function AITeamConhecimento() {
     toast.success("Documento removido");
     setSelectedDoc(null);
     loadDocs();
+  };
+
+  const handleReprocess = async (doc: KBDoc) => {
+    if (!doc.file_name) { toast.error("Sem arquivo para reprocessar"); return; }
+    setReprocessing(true);
+    try {
+      // Find the storage key from the file_url
+      const urlMatch = doc.file_url?.match(/ai-knowledge-base\/(.+)$/);
+      if (!urlMatch) throw new Error("Não foi possível localizar o arquivo no storage");
+      const storageKey = decodeURIComponent(urlMatch[1]);
+      
+      // Determine mimeType from file_type field
+      let mimeType = "application/octet-stream";
+      if (doc.file_type === "video") mimeType = "video/mp4";
+      else if (doc.file_type === "audio") mimeType = "audio/mpeg";
+      else if (doc.file_type === "image") mimeType = "image/jpeg";
+      else if (doc.file_type === "pdf") mimeType = "application/pdf";
+      else if (doc.file_type === "text") mimeType = "text/plain";
+
+      toast.info("Re-processando arquivo com IA...", { duration: 10000 });
+
+      const { data: extractData, error: extractErr } = await supabase.functions.invoke("smart-upload-process", {
+        body: { storageKey, mimeType, title: doc.title },
+      });
+      if (extractErr) throw extractErr;
+      const extractedContent = extractData?.content || "";
+      if (!extractedContent.trim()) throw new Error("IA retornou conteúdo vazio");
+
+      // Update the KB entry
+      await supabase.from("ai_knowledge_base").update({
+        content_text: extractedContent.trim(),
+        raw_transcript: extractedContent.trim(),
+        updated_at: new Date().toISOString(),
+      }).eq("id", doc.id);
+
+      // Try ÓRION enrichment
+      if (extractedContent.length > 50) {
+        toast.info("Enriquecendo com ÓRION...");
+        try {
+          const { data: orgData } = await supabase.functions.invoke("organize-knowledge", {
+            body: { content: extractedContent, title: doc.title, tipo: doc.file_type },
+          });
+          if (orgData?.taxonomy) {
+            const tax = orgData.taxonomy;
+            await supabase.from("ai_knowledge_base").update({
+              taxonomy: tax.taxonomia || tax,
+              tags: tax.tags || [],
+              confidence: tax.taxonomia?.confianca ?? tax.confianca ?? null,
+              updated_at: new Date().toISOString(),
+            }).eq("id", doc.id);
+          }
+        } catch (e) {
+          console.warn("ÓRION enrichment failed:", e);
+        }
+      }
+
+      toast.success("Conteúdo extraído com sucesso!");
+      setSelectedDoc(null);
+      loadDocs();
+    } catch (err: any) {
+      console.error("Reprocess error:", err);
+      toast.error("Erro ao reprocessar: " + (err.message || "Erro desconhecido"));
+    } finally {
+      setReprocessing(false);
+    }
   };
 
   if (loading) {
@@ -891,10 +957,38 @@ export default function AITeamConhecimento() {
               {/* Content text for non-YouTube or as fallback */}
               {selectedDoc.content_text && !selectedDoc.file_type?.includes("youtube") && (
                 <div className="max-h-[300px] overflow-y-auto">
-                  <p className="text-xs font-bold mb-1">Conteúdo</p>
+                  <p className="text-xs font-bold mb-1">Conteúdo Extraído</p>
                   <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted/30 p-3 rounded-lg font-sans">
                     {selectedDoc.content_text}
                   </pre>
+                </div>
+              )}
+
+              {/* Empty content warning + reprocess button */}
+              {!selectedDoc.content_text && !selectedDoc.file_type?.includes("youtube") && selectedDoc.file_name && (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-amber-700 dark:text-amber-300">Conteúdo não extraído</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        O processamento anterior pode ter falhado. Clique abaixo para re-processar o arquivo com IA.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-1.5 border-amber-500/30 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
+                    onClick={() => handleReprocess(selectedDoc)}
+                    disabled={reprocessing}
+                  >
+                    {reprocessing ? (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Re-processando...</>
+                    ) : (
+                      <><RefreshCw className="w-3.5 h-3.5" /> Re-processar com IA</>
+                    )}
+                  </Button>
                 </div>
               )}
 
