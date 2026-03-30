@@ -577,11 +577,15 @@ export default function SimuladorManualMode() {
     if (!text) return;
 
     // 1. Always add to visual history immediately
-    const userMsg: ChatMsg = { id: crypto.randomUUID(), role: "user", content: text, timestamp: new Date().toISOString() };
+    const userMsg: ChatMsg = {
+      id: crypto.randomUUID(), role: "user", content: text, timestamp: new Date().toISOString(),
+      ...(replyingTo ? { replyTo: { id: replyingTo.id, content: replyingTo.content, role: replyingTo.role, agentName: replyingTo.agentName } } : {}),
+    };
     const nextMessages = [...messagesRef.current, userMsg];
     messagesRef.current = nextMessages;
     setMessages(nextMessages);
     setInput("");
+    setReplyingTo(null);
 
     // 2. Add to pending queue
     pendingMessagesRef.current = [...pendingMessagesRef.current, userMsg];
