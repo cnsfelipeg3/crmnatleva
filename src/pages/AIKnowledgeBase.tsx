@@ -29,6 +29,7 @@ import YouTubeReviewPanel from "@/components/knowledge/YouTubeReviewPanel";
 import YouTubeBatchImport from "@/components/knowledge/YouTubeBatchImport";
 import { TaxonomySummary, Taxonomy } from "@/components/knowledge/TaxonomyPreview";
 import TaxonomyPreview from "@/components/knowledge/TaxonomyPreview";
+import SmartUploadModal from "@/components/knowledge/SmartUploadModal";
 
 const CATEGORIES = [
   { value: "atendimento", label: "Atendimento & Scripts", icon: MessageSquare },
