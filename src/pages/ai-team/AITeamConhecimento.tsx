@@ -512,6 +512,259 @@ function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel:
   );
 }
 
+// ─── Doc Detail Dialog with Edit & Delete ───
+function DocDetailDialog({ doc, onClose, onDelete, onSaved, onReprocess, reprocessing, getDocType }: {
+  doc: KBDoc | null;
+  onClose: () => void;
+  onDelete: (id: string) => void;
+  onSaved: () => void;
+  onReprocess: (doc: KBDoc) => void;
+  reprocessing: boolean;
+  getDocType: (doc: KBDoc) => string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editContent, setEditContent] = useState("");
+
+  useEffect(() => {
+    if (doc) {
+      setEditTitle(doc.title || "");
+      setEditCategory(doc.category || "geral");
+      setEditDescription(doc.description || "");
+      setEditContent(doc.content_text || "");
+      setEditing(false);
+      setConfirmDelete(false);
+    }
+  }, [doc]);
+
+  const handleSave = async () => {
+    if (!doc || !editTitle.trim()) { toast.error("Título é obrigatório"); return; }
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("ai_knowledge_base").update({
+        title: editTitle.trim(),
+        category: editCategory,
+        description: editDescription.trim() || null,
+        content_text: editContent.trim() || null,
+        updated_at: new Date().toISOString(),
+      }).eq("id", doc.id);
+      if (error) throw error;
+      toast.success("Documento atualizado!");
+      logAITeamAudit({
+        action_type: AUDIT_ACTIONS.UPDATE,
+        entity_type: AUDIT_ENTITIES.KNOWLEDGE,
+        entity_id: doc.id,
+        entity_name: editTitle.trim(),
+        description: `Documento editado: ${editTitle.trim()}`,
+        performed_by: "gestor",
+      });
+      onSaved();
+    } catch (err: any) {
+      toast.error("Erro ao salvar: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (!doc) return;
+    onDelete(doc.id);
+    setConfirmDelete(false);
+  };
+
+  if (!doc) return null;
+
+  const isYT = doc.file_type?.includes("youtube");
+  const docType = getDocType(doc);
+
+  return (
+    <Dialog open={!!doc} onOpenChange={() => onClose()}>
+      <DialogContent className={cn("max-h-[85vh] overflow-y-auto", isYT && doc.taxonomy ? "max-w-2xl" : "max-w-lg")}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-primary" />
+            {editing ? "Editar Documento" : doc.title}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Action bar */}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              {!editing && <Badge variant="outline">{doc.category}</Badge>}
+              <Badge variant="outline">{isYT ? "YOUTUBE" : docType.toUpperCase()}</Badge>
+              <span className="text-xs text-muted-foreground">{new Date(doc.created_at).toLocaleDateString("pt-BR")}</span>
+            </div>
+            {!editing && (
+              <Button size="sm" variant="ghost" className="gap-1.5 text-xs" onClick={() => setEditing(true)}>
+                <Pencil className="w-3.5 h-3.5" /> Editar
+              </Button>
+            )}
+          </div>
+
+          {editing ? (
+            /* ─── Edit Mode ─── */
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Título *</Label>
+                <Input value={editTitle} onChange={e => setEditTitle(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Categoria</Label>
+                <Select value={editCategory} onValueChange={setEditCategory}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map(c => (
+                      <SelectItem key={c} value={c} className="capitalize">{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Descrição</Label>
+                <Input value={editDescription} onChange={e => setEditDescription(e.target.value)} placeholder="Breve resumo" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold">Conteúdo</Label>
+                <Textarea value={editContent} onChange={e => setEditContent(e.target.value)} rows={8} className="text-xs font-mono" />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancelar</Button>
+                <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
+                  {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* ─── View Mode ─── */
+            <>
+              {/* YouTube embed */}
+              {isYT && doc.file_url && (() => {
+                const vid = extractYouTubeId(doc.file_url!);
+                return vid ? (
+                  <div className="rounded-xl overflow-hidden border border-border/40 bg-black">
+                    <iframe src={`https://www.youtube.com/embed/${vid}`} className="w-full aspect-video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={doc.title} />
+                  </div>
+                ) : null;
+              })()}
+
+              {doc.description && <p className="text-sm text-muted-foreground">{doc.description}</p>}
+
+              {/* Tags */}
+              {isYT && doc.tags && doc.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {doc.tags.map((tag: string, i: number) => (
+                    <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary/10 text-primary">{tag}</span>
+                  ))}
+                </div>
+              )}
+
+              {/* Taxonomy */}
+              {isYT && doc.taxonomy?.taxonomia && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+                    <Sparkles className="w-4 h-4 text-amber-500" />
+                    <span className="text-sm font-bold">Taxonomia ÓRION</span>
+                  </div>
+                  <TaxonomyPreview taxonomy={doc.taxonomy.taxonomia} onChange={() => {}} readOnly />
+                </div>
+              )}
+
+              {/* Chunks */}
+              {isYT && doc.taxonomy?.chunks && doc.taxonomy.chunks.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/40">
+                    <BookOpen className="w-4 h-4 text-blue-500" />
+                    <span className="text-sm font-bold">Chunks de Conhecimento ({doc.taxonomy.chunks.length})</span>
+                  </div>
+                  <div className="space-y-2">
+                    {doc.taxonomy.chunks.map((chunk: any, i: number) => (
+                      <div key={i} className="rounded-xl border border-border/40 bg-muted/20 p-3 space-y-1.5">
+                        <h4 className="text-xs font-bold">{chunk.titulo}</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{chunk.conteudo}</p>
+                        {chunk.tags_chunk && chunk.tags_chunk.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {chunk.tags_chunk.map((t: string, j: number) => (
+                              <span key={j} className="px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-muted text-muted-foreground">{t}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Content text */}
+              {doc.content_text && !isYT && (
+                <div className="max-h-[300px] overflow-y-auto">
+                  <p className="text-xs font-bold mb-1">Conteúdo Extraído</p>
+                  <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted/30 p-3 rounded-lg font-sans">{doc.content_text}</pre>
+                </div>
+              )}
+
+              {/* Empty content warning + reprocess */}
+              {!doc.content_text && !isYT && doc.file_name && (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-amber-700 dark:text-amber-300">Conteúdo não extraído</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">O processamento anterior pode ter falhado.</p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" className="w-full gap-1.5 border-amber-500/30 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300" onClick={() => onReprocess(doc)} disabled={reprocessing}>
+                    {reprocessing ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Re-processando...</> : <><RefreshCw className="w-3.5 h-3.5" /> Re-processar com IA</>}
+                  </Button>
+                </div>
+              )}
+
+              {doc.file_url && !isYT && (
+                <div>
+                  <p className="text-xs font-bold mb-1">Arquivo</p>
+                  <p className="text-xs text-muted-foreground">{doc.file_name}</p>
+                </div>
+              )}
+
+              {/* Footer actions */}
+              <div className="flex gap-2 pt-2 border-t border-border/40">
+                {doc.file_url && !isYT && (
+                  <Button size="sm" variant="outline" className="gap-1 flex-1" asChild>
+                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer"><Download className="w-3.5 h-3.5" /> Download</a>
+                  </Button>
+                )}
+                {doc.file_url && isYT && (
+                  <Button size="sm" variant="outline" className="gap-1 flex-1" asChild>
+                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer"><Youtube className="w-3.5 h-3.5 text-red-500" /> YouTube</a>
+                  </Button>
+                )}
+                {confirmDelete ? (
+                  <div className="flex gap-1.5 items-center">
+                    <span className="text-xs text-destructive font-medium">Confirmar?</span>
+                    <Button size="sm" variant="destructive" className="gap-1 text-xs h-8" onClick={handleConfirmDelete}>
+                      <Trash2 className="w-3 h-3" /> Sim, excluir
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-xs h-8" onClick={() => setConfirmDelete(false)}>Não</Button>
+                  </div>
+                ) : (
+                  <Button size="sm" variant="outline" className="gap-1 text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+                    <Trash2 className="w-3.5 h-3.5" /> Excluir
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── Main Page ───
 export default function AITeamConhecimento() {
   const [search, setSearch] = useState("");
