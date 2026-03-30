@@ -524,6 +524,7 @@ export default function AITeamConhecimento() {
   const [showYouTube, setShowYouTube] = useState(false);
   const [ytDetailDoc, setYtDetailDoc] = useState<KBDoc | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [reprocessing, setReprocessing] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [newTitle, setNewTitle] = useState("");
