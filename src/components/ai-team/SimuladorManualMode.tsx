@@ -917,6 +917,12 @@ export default function SimuladorManualMode() {
               });
             }}
             selectedMessageTimestamp={manualObsSelectedMsg ? new Date(manualObsSelectedMsg.timestamp).toISOString() : undefined}
+            replyingTo={replyingTo ? { ...replyingTo, role: replyingTo.role as "user" | "agent" } as SimChatMessage : null}
+            onReply={(msg) => {
+              const chatMsg = messages.find(m => m.id === msg.id);
+              if (chatMsg) setReplyingTo(chatMsg);
+            }}
+            onCancelReply={() => setReplyingTo(null)}
             inputPlaceholder="Digite como um cliente..."
             headerContent={
               <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
