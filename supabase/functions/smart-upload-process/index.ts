@@ -36,20 +36,13 @@ serve(async (req) => {
     else {
       const instruction = getInstruction(mimeType);
 
-      // Check file size to decide strategy
-      const { data: list } = await supabase.storage
-        .from("ai-knowledge-base")
-        .list(storageKey.substring(0, storageKey.lastIndexOf("/")), {
-          search: storageKey.substring(storageKey.lastIndexOf("/") + 1),
-        });
+      // Video/audio files are typically large — always use signed URL to avoid OOM
+      const alwaysUrl = mimeType.startsWith("video/") || mimeType.startsWith("audio/");
 
-      const fileSize = list?.[0]?.metadata?.size || 0;
-
-      if (fileSize > MAX_INLINE_SIZE) {
-        // Large file: use signed URL approach
+      if (alwaysUrl) {
         const { data: signedData, error: signErr } = await supabase.storage
           .from("ai-knowledge-base")
-          .createSignedUrl(storageKey, 600); // 10 min
+          .createSignedUrl(storageKey, 600);
         if (signErr) throw signErr;
 
         content = await extractWithGeminiUrl(signedData.signedUrl, mimeType, title, instruction);
@@ -139,8 +132,14 @@ async function extractWithGeminiInline(base64Data: string, mimeType: string, tit
     throw new Error(`AI extraction failed: ${response.status}`);
   }
 
-  const data = await response.json();
-  return data?.choices?.[0]?.message?.content || "";
+  const text = await response.text();
+  try {
+    const data = JSON.parse(text);
+    return data?.choices?.[0]?.message?.content || "";
+  } catch {
+    console.error("Gemini inline: invalid JSON response:", text.substring(0, 500));
+    throw new Error("AI returned invalid response");
+  }
 }
 
 // ─── Gemini extraction: signed URL (for files > 8MB) ───
@@ -173,6 +172,12 @@ async function extractWithGeminiUrl(fileUrl: string, mimeType: string, title: st
     throw new Error(`AI extraction failed: ${response.status}`);
   }
 
-  const data = await response.json();
-  return data?.choices?.[0]?.message?.content || "";
+  const text = await response.text();
+  try {
+    const data = JSON.parse(text);
+    return data?.choices?.[0]?.message?.content || "";
+  } catch {
+    console.error("Gemini URL: invalid JSON response:", text.substring(0, 500));
+    throw new Error("AI returned invalid response");
+  }
 }
