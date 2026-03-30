@@ -361,7 +361,8 @@ function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel:
         file_url: ytUrl,
         file_type: "video/youtube",
         file_name: `youtube-${videoId}.txt`,
-      });
+        raw_transcript: result?.raw_transcript || null,
+      } as any);
       if (error) throw error;
       toast.success("Conhecimento do vídeo adicionado à base!");
       onSave();

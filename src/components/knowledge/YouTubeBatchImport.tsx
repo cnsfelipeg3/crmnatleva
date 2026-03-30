@@ -150,6 +150,7 @@ export default function YouTubeBatchImport({ onBack, onSaved }: YouTubeBatchImpo
           file_url: item.url,
           file_type: "video/youtube",
           file_name: `youtube-${item.videoId}.txt`,
+          raw_transcript: data.raw_transcript || null,
         };
         if (taxonomy) payload.taxonomy = taxonomy;
         if (tags.length > 0) payload.tags = tags;
