@@ -218,6 +218,7 @@ function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel:
   const [result, setResult] = useState<{
     title: string;
     transcript: string;
+    raw_transcript?: string;
     structured_knowledge: string;
     videoId: string;
   } | null>(null);
