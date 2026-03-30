@@ -63,7 +63,7 @@ export default function YouTubeBatchImport({ onBack, onSaved }: YouTubeBatchImpo
       setItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: "processing" } : it));
 
       try {
-        const { data, error } = await supabase.functions.invoke("youtube-transcribe", {
+        let { data, error } = await supabase.functions.invoke("youtube-transcribe", {
           body: { url: item.url },
         });
 
