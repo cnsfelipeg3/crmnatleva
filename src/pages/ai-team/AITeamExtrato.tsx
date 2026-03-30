@@ -409,6 +409,7 @@ export default function AITeamExtrato() {
                       entry={entry}
                       isExpanded={expandedId === entry.id}
                       onToggle={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
+                      onUndo={() => setUndoEntry(entry)}
                     />
                   ))}
                 </div>
@@ -417,6 +418,14 @@ export default function AITeamExtrato() {
           </div>
         )}
       </ScrollArea>
+
+      {/* Undo Dialog */}
+      <UndoChangeDialog
+        entry={undoEntry}
+        open={!!undoEntry}
+        onOpenChange={(open) => { if (!open) setUndoEntry(null); }}
+        onUndone={() => { setUndoEntry(null); refetch(); }}
+      />
     </div>
   );
 }
