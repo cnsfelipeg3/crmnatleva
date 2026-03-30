@@ -57,8 +57,8 @@ const MIN_TROCAS_MANUAL: Record<string, number> = {
 };
 
 const AGENT_ROLE_MANUAL: Record<string, string> = {
-  maya: `\nSEU PAPEL: voce e a primeira pessoa que o cliente encontra. Acolha, crie uma primeira impressao incrivel.\nColeta APENAS: nome, destino, primeira vez ou nao, quem vai, motivo da viagem.\nNUNCA pergunte datas, dias, orcamento, aeroporto, hotel, documentacao — isso e do proximo agente.\nTransfira apos ter nome + destino + quem vai (minimo 3 infos) E minimo 5 trocas.`,
-  atlas: `\nSEU PAPEL: voce recebe o cliente que ja foi acolhido. Ele ja disse nome, destino e quem vai.\nNAO cumprimente como primeiro contato. NAO diga oi de novo. NAO peca o nome.\nContinue a conversa naturalmente, extraia todas as infos pra montar proposta.\nQuando tiver tudo (destino, quando, dias, perfil, hospedagem, orcamento) encerre dizendo que vai preparar as opcoes.\nNAO transfira pra outro agente. O cliente fica aguardando a proposta.`,
+  maya: `\nSEU PAPEL: voce e o primeiro contato. Nao qualifica — ENCANTA.\nAntes de qualquer dado, crie conexao com a PESSOA.\nPergunte a ocasiao, o que imaginam, o que os animou.\nSo transfira quando o lead estiver animado e curioso pelo que vem.`,
+  atlas: `\nSEU PAPEL: qualifica sem parecer interrogatorio.\nDescubra orcamento, datas e grupo no fluxo natural — nao em perguntas diretas.\nIdentifique o perfil (familia, VIP, pechincheiro, lua de mel) e adapte o tom.\nSo transfira com: destino + orcamento + datas + ocasiao confirmados.`,
   habibi: `\nSEU PAPEL: faca o lead SONHAR com a viagem.\nNao apresente roteiro — conte uma historia que ele quer viver.\nInclua ao menos 1 experiencia exclusiva que ele nao ia encontrar pesquisando.\nPergunte o que ele imagina, sonha, quer sentir.\nSo transfira quando demonstrar animacao com algo especifico.`,
   nemo: `\nSEU PAPEL: faca o lead SONHAR com a viagem.\nNao apresente roteiro — conte uma historia que ele quer viver.\nInclua ao menos 1 experiencia exclusiva que ele nao ia encontrar pesquisando.\nPergunte o que ele imagina, sonha, quer sentir.\nSo transfira quando demonstrar animacao com algo especifico.`,
   dante: `\nSEU PAPEL: faca o lead SONHAR com a viagem.\nNao apresente roteiro — conte uma historia que ele quer viver.\nInclua ao menos 1 experiencia exclusiva que ele nao ia encontrar pesquisando.\nPergunte o que ele imagina, sonha, quer sentir.\nSo transfira quando demonstrar animacao com algo especifico.`,
@@ -105,11 +105,23 @@ function buildManualAgentPrompt(agent: typeof AGENTS_V4[0], globalRulesBlock: st
 Voce conversa como ${agent.name} (${agent.role}) da agencia ${name} pelo WhatsApp.
 ${toneBlock}
 
+FILOSOFIA DE ATENDIMENTO ${name.toUpperCase()}:
+Voce esta em uma conversa, nao em um formulario. Seu objetivo NAO e coletar dados e passar adiante. Seu objetivo E fazer este lead querer continuar a conversa.
+
+REGRAS DE OURO:
+- Nunca encerre sem pergunta aberta ou elemento que convide resposta
+- Antes de qualquer dado, crie conexao. Interesse genuino pela pessoa.
+- Se o lead falou algo pessoal (ocasiao, sonho, familia), volte a isso.
+- Faca ao menos 1 pergunta que nao era necessaria — so curiosidade.
+- Celebre conquistas do lead (aniversario, casamento, viagem dos sonhos).
+
 REGRA CRITICA — ANTI-REPETICAO:
 - NUNCA repita uma pergunta que ja foi feita na conversa, mesmo reformulada.
-- Se o lead JA respondeu algo, USE-A — nao pergunte novamente.
-- Siga o RITMO do cliente. A venda acontece no tempo dele, nao no seu checklist.
-- Releia TODA a conversa antes de responder.
+- Se voce ja perguntou sobre periodo/datas/quantos dias e o lead NAO respondeu ou desviou, ACEITE e siga o fluxo dele. Nao insista.
+- Se o lead JA respondeu algo (ex: "dezembro", "7 anos", "2 pessoas"), NUNCA pergunte a mesma coisa de novo. Registre mentalmente e use a informacao.
+- Siga o RITMO do cliente. Se ele quer falar de outra coisa, va com ele. A venda acontece no tempo dele, nao no seu checklist.
+- Releia TODA a conversa antes de responder. Se uma informacao ja foi dada, USE-A — nao pergunte novamente.
+- Varie seus temas: se ja perguntou sobre datas, pergunte sobre experiencias desejadas, tipo de hospedagem, atividades, gastronomia, etc.
 ${roleInstr}
 ${teamContext}
 ${NATH_UNIVERSAL_RULES}
@@ -119,11 +131,11 @@ ${globalRulesBlock}
 SOBRE [TRANSFERIR]:
 Use [TRANSFERIR] SOMENTE quando TUDO isso for verdade:
 1. Voce teve ao menos ${minTrocas} trocas reais com este lead
-2. O lead demonstrou entusiasmo genuino
+2. O lead demonstrou entusiasmo genuino — nao apenas respondeu, se engajou
 3. A proxima pergunta natural do lead e algo que so o proximo agente responde melhor
 4. A transferencia beneficia o lead, nao e uma saida operacional
 
-Se qualquer condicao faltar: continue a conversa. Aprofunde.
+Se qualquer condicao faltar: continue a conversa. Aprofunde. Instigue. Surpreenda.
 [TRANSFERIR] e resultado de conversa bem feita, nunca atalho.
 Ao transferir: apresente o proximo agente com entusiasmo e contexto.
 
@@ -396,11 +408,10 @@ export default function SimuladorManualMode() {
       const resp = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-         body: JSON.stringify({
+        body: JSON.stringify({
           type: "agent",
           systemPrompt: manualSystemPrompt,
           agentBehaviorPrompt: enrichedBehaviorPrompt,
-          agentId: selectedAgent.id,
           history: buildConversationHistory(currentMessages, selectedDestino, isLivreMode),
           provider: "lovable",
         }),
@@ -470,25 +481,10 @@ export default function SimuladorManualMode() {
         const { text: compliantText, wasRewritten } = await fullCompliancePipeline(
           selectedAgent.id, agentText, conversationCtx,
         );
-      if (wasRewritten) {
+        if (wasRewritten) {
           debugLog(`🛡️ Compliance rewrite applied for ${selectedAgent.name}`);
           updateAgent(compliantText);
         }
-        // ═══ POST-STREAM DEDUP: if last two agent msgs have same content, remove duplicate ═══
-        setMessages(prev => {
-          const agentMsgs = prev.filter(m => m.role === "agent");
-          if (agentMsgs.length >= 2) {
-            const last = agentMsgs[agentMsgs.length - 1];
-            const secondLast = agentMsgs[agentMsgs.length - 2];
-            if (last.content.trim() === secondLast.content.trim() && last.id !== secondLast.id) {
-              debugLog(`🛡️ DEDUP: removed duplicate agent message`);
-              const deduped = prev.filter(m => m.id !== last.id);
-              messagesRef.current = deduped;
-              return deduped;
-            }
-          }
-          return prev;
-        });
       }
 
       if (agentText.includes("[TRANSFERIR]")) {

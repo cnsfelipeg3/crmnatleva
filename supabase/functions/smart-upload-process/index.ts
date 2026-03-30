@@ -35,16 +35,40 @@ serve(async (req) => {
       const instruction = getInstruction(mimeType);
       const prompt = `Título: "${title}"\n\n${instruction}`;
 
-      // Always use signed URL — avoids downloading large files into memory
-      const { data: signedData, error: signErr } = await supabase.storage
-        .from("ai-knowledge-base")
-        .createSignedUrl(storageKey, 600);
-      if (signErr) throw signErr;
+      const isMediaFile = mimeType.startsWith("video/") || mimeType.startsWith("audio/");
 
-      const fileUrl = signedData.signedUrl;
-      console.log(`[SMART-UPLOAD] Using signed URL for ${mimeType}, key=${storageKey}`);
+      if (isMediaFile) {
+        // Video/audio: gateway doesn't support URLs for non-image types
+        // Download and send as base64 data URL
+        const { data: fileData, error: dlErr } = await supabase.storage
+          .from("ai-knowledge-base").download(storageKey);
+        if (dlErr) throw dlErr;
 
-      content = await callAI(prompt, fileUrl, mimeType);
+        const arrayBuffer = await fileData.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        const sizeMB = bytes.length / (1024 * 1024);
+        console.log(`[SMART-UPLOAD] Downloaded ${mimeType}, size=${sizeMB.toFixed(1)}MB`);
+
+        if (sizeMB > 20) {
+          throw new Error(`Arquivo muito grande (${sizeMB.toFixed(0)}MB). Máximo suportado: 20MB para processamento de IA.`);
+        }
+
+        // Convert to base64 data URL
+        const { encode: base64Encode } = await import("https://deno.land/std@0.168.0/encoding/base64.ts");
+        const base64 = base64Encode(bytes);
+        const dataUrl = `data:${mimeType};base64,${base64}`;
+
+        content = await callAI(prompt, dataUrl, mimeType);
+      } else {
+        // Images/PDFs: use signed URL (gateway supports image URLs)
+        const { data: signedData, error: signErr } = await supabase.storage
+          .from("ai-knowledge-base")
+          .createSignedUrl(storageKey, 600);
+        if (signErr) throw signErr;
+
+        console.log("[SMART-UPLOAD] Using signed URL for", mimeType);
+        content = await callAI(prompt, signedData.signedUrl, mimeType);
+      }
     }
 
     return new Response(JSON.stringify({
@@ -73,7 +97,7 @@ function getInstruction(mimeType: string): string {
     return "Transcreva este áudio COMPLETAMENTE em português, do início ao fim, sem pular nenhuma parte. Retorne apenas a transcrição integral.";
   }
   if (mimeType.startsWith("video/")) {
-    return "IMPORTANTE: Transcreva TODO o conteúdo deste vídeo do INÍCIO AO FIM, sem pular NENHUMA seção. Inclua:\n1. Transcrição COMPLETA de todo o áudio/narração do vídeo inteiro\n2. Descrição do conteúdo visual relevante\n3. Foque em informações úteis sobre destinos, experiências, hotéis, restaurantes, preços e dicas de viagem\n\nNÃO pare no meio. NÃO resuma. Transcreva TUDO até o último segundo do vídeo.";
+    return "IMPORTANTE: Transcreva TODO o conteúdo deste vídeo do INÍCIO AO FIM, sem pular NENHUMA seção. Inclua:\n1. Transcrição COMPLETA de todo o áudio/narração do vídeo inteiro\n2. Descrição do conteúdo visual relevante\n3. Foque em informações úteis sobre destinos, experiências, hotéis, restaurantes, preços e dicas de viagem\n\nNÃO pare no meio. NÃO resuma. Transcreva TUDO até o último segundo do vídeo. O vídeo pode ter 20+ minutos — cubra cada minuto.";
   }
   return "Extraia todo o conteúdo textual deste arquivo.";
 }
@@ -93,8 +117,6 @@ async function callAI(textPrompt: string, fileUrl: string, mimeType: string): Pr
   for (const model of models) {
     console.log(`[SMART-UPLOAD] Trying ${model} for ${mimeType}`);
     try {
-      // For video/audio, use inline_data approach with a small fetch to check,
-      // but actually the gateway supports URLs for all types via image_url field
       const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -119,49 +141,21 @@ async function callAI(textPrompt: string, fileUrl: string, mimeType: string): Pr
       if (!r.ok) {
         errors.push(`${model} → ${r.status}: ${body.substring(0, 500)}`);
         if (r.status === 429) throw new Error("Rate limit atingido. Tente novamente em alguns segundos.");
-        if (r.status === 402) throw new Error("Créditos de IA esgotados.");
-        
-        // If "Unsupported image format" for video/audio, try with file_url content part
-        if (body.includes("Unsupported image format") && isHeavyMedia) {
-          console.log(`[SMART-UPLOAD] Retrying ${model} with file_url approach`);
-          const r2 = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${LOVABLE_API_KEY}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model,
-              messages: [{
-                role: "user",
-                content: [
-                  { type: "text", text: textPrompt },
-                  { type: "file_url", file_url: { url: fileUrl } },
-                ],
-              }],
-            }),
-          });
-          const body2 = await r2.text();
-          console.log(`[SMART-UPLOAD] ${model} file_url → ${r2.status}, len=${body2.length}`);
-          if (r2.ok) {
-            const text2 = JSON.parse(body2)?.choices?.[0]?.message?.content?.trim();
-            if (text2) return text2;
-          }
-          errors.push(`${model} file_url → ${r2.status}: ${body2.substring(0, 500)}`);
-        }
+        if (r.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
         continue;
       }
 
       const text = JSON.parse(body)?.choices?.[0]?.message?.content?.trim();
       if (text) return text;
-      errors.push(`${model} → empty content`);
+      errors.push(`${model} → empty content: ${body.substring(0, 500)}`);
     } catch (err: any) {
       if (err.message.includes("Rate limit") || err.message.includes("Créditos")) throw err;
       errors.push(`${model} → ${err.message}`);
     }
   }
 
+  // Surface the REAL errors instead of generic message
   const detail = errors.join(" | ");
   console.error(`[SMART-UPLOAD] All failed: ${detail}`);
-  throw new Error(`Falha na extração de IA. ${detail.includes("Unsupported") ? "Vídeos muito grandes podem não ser suportados. Tente usar a importação via YouTube." : "Tente novamente em alguns minutos."}`);
+  throw new Error(`AI extraction failed: ${detail}`);
 }

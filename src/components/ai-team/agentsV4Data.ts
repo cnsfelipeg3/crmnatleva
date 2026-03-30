@@ -61,14 +61,14 @@ export const AGENTS_V4: AgentV4[] = [
     squadId: 'comercial', level: 10, xp: 2800, maxXp: 3500, pipelinePosition: 1,
     skills: ['Rapport', 'Qualificação inicial', 'Empatia', 'Tom acolhedor'],
     status: 'online', successRate: 88, tasksToday: 8,
-    persona: 'Agente de boas-vindas e primeiro contato da NatLeva. Cria conexão emocional e direciona para qualificação.',
+    persona: 'Sou a MAYA, responsável pelo primeiro contato. Recebo cada lead com calor humano, entendo o sonho de viagem e direciono para o especialista certo.',
   },
   {
     id: 'atlas', name: 'ATLAS', emoji: '🗺️', role: 'SDR / Qualificação',
     squadId: 'comercial', level: 11, xp: 3100, maxXp: 3500, pipelinePosition: 2,
     skills: ['Qualificação', 'Perguntas estratégicas', 'Scoring', 'Perfil de viajante'],
     status: 'busy', successRate: 85, tasksToday: 6,
-    persona: 'Agente SDR de qualificação da NatLeva. Mapeia perfil, orçamento, datas e preferências para montar proposta.',
+    persona: 'Sou o ATLAS, SDR especialista em qualificação. Mapeio perfil, orçamento, datas e preferências para entregar o lead perfeito ao consultor.',
   },
   {
     id: 'habibi', name: 'HABIBI', emoji: '🏜️', role: 'Especialista Dubai & Oriente',

@@ -182,8 +182,6 @@ export default function SimuladorAutoMode() {
   const stopSimulationRef = useRef(() => {});
   stopSimulationRef.current = () => { simAtivaRef.current = false; abortRef.current = true; setRunning(false); if (timerRef.current) clearInterval(timerRef.current); setPhase("report"); };
   const dbAgentOverridesRef = useRef<Record<string, DbAgentOverride>>({});
-  const kbBlockRef = useRef<Record<string, string>>({});
-  const workflowBlockRef = useRef<string>("");
 
   // ===== PRESETS =====
   const PRESET_STORAGE_KEY = "natleva_sim_presets";
@@ -238,65 +236,6 @@ export default function SimuladorAutoMode() {
       });
       dbAgentOverridesRef.current = overrides;
     } catch { dbAgentOverridesRef.current = {}; }
-
-    // ─── KB enrichment (same logic as manual mode) ───
-    try {
-      const { data: kbDocs } = await supabase.from("ai_knowledge_base")
-        .select("title, content_text, category")
-        .eq("is_active", true)
-        .order("updated_at", { ascending: false })
-        .limit(30);
-      const agentKb: Record<string, string[]> = {};
-      if (kbDocs) {
-        for (const doc of kbDocs) {
-          if (!doc.content_text || !doc.title) continue;
-          const title = (doc.title || "").toLowerCase();
-          const cat = (doc.category || "").toLowerCase();
-          if (cat === "destinos" || title.includes("dubai") || title.includes("oriente")) {
-            (agentKb["habibi"] ??= []).push(`- ${doc.title}: ${doc.content_text.slice(0, 200)}`);
-          }
-          if (cat === "destinos" || title.includes("orlando") || title.includes("américas") || title.includes("americas")) {
-            (agentKb["nemo"] ??= []).push(`- ${doc.title}: ${doc.content_text.slice(0, 200)}`);
-          }
-          if (cat === "destinos" || title.includes("europa")) {
-            (agentKb["dante"] ??= []).push(`- ${doc.title}: ${doc.content_text.slice(0, 200)}`);
-          }
-          if (cat === "cultura" || cat === "atendimento" || cat === "regras") {
-            for (const aid of ["maya", "atlas", "habibi", "nemo", "dante", "luna", "nero", "iris"]) {
-              (agentKb[aid] ??= []).push(`- ${doc.title}: ${doc.content_text.slice(0, 200)}`);
-            }
-          }
-        }
-      }
-      const kbMap: Record<string, string> = {};
-      for (const [aid, docs] of Object.entries(agentKb)) {
-        kbMap[aid] = `\n=== BASE DE CONHECIMENTO ===\n${docs.join("\n")}`;
-      }
-      kbBlockRef.current = kbMap;
-    } catch { kbBlockRef.current = {}; }
-
-    // ─── Workflow enrichment (same logic as manual mode) ───
-    try {
-      const { data: flows } = await supabase.from("automation_flows")
-        .select("id, name, description")
-        .eq("status", "active")
-        .limit(3);
-      if (flows && flows.length > 0) {
-        const wfParts: string[] = [];
-        for (const flow of flows) {
-          const { data: flowNodes } = await supabase.from("automation_nodes")
-            .select("label, node_type")
-            .eq("flow_id", flow.id)
-            .order("position_y", { ascending: true })
-            .limit(15);
-          if (flowNodes && flowNodes.length > 0) {
-            const steps = flowNodes.map(n => n.label || n.node_type).join(" → ");
-            wfParts.push(`Fluxo "${flow.name}": ${steps}`);
-          }
-        }
-        workflowBlockRef.current = wfParts.length > 0 ? `\n=== FLUXOS DE TRABALHO ATIVOS ===\n${wfParts.join("\n")}` : "";
-      }
-    } catch { workflowBlockRef.current = ""; }
 
     timerRef.current = setInterval(() => setElapsedSeconds(p => p + 1), 1000);
 
@@ -435,14 +374,14 @@ export default function SimuladorAutoMode() {
           }
           const leadChunks = chunksRef.current.get(lead.id) || [];
           const compressedHistory = leadChunks.length > 0 ? buildActiveContext(lead, leadChunks) : compressConversation(lead.mensagens);
-          let agentSysPrompt = buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id], kbBlockRef.current[agent.id] || "", workflowBlockRef.current);
+          let agentSysPrompt = buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]);
           if ((lead as any)._lengthWarning) {
             agentSysPrompt += "\n\nAVISO CRITICO: sua ultima resposta foi LONGA DEMAIS e foi truncada. Respostas devem ter no maximo 60 palavras. Seja MUITO mais breve. UMA ideia por mensagem. ZERO listas.";
             (lead as any)._lengthWarning = false;
           }
           let agentResp = await callSimulatorAI(
             agentSysPrompt,
-            compressedHistory, "agent", undefined, 0, agent.id
+            compressedHistory, "agent"
           );
           if (!simAtivaRef.current) return;
 
@@ -565,8 +504,8 @@ export default function SimuladorAutoMode() {
 
             const objCompressed = compressConversation(lead.mensagens);
             let objResp = await callSimulatorAI(
-              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id], kbBlockRef.current[agent.id] || "", workflowBlockRef.current),
-              objCompressed, "agent", undefined, 0, agent.id
+              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]),
+              objCompressed, "agent"
             );
             if (!simAtivaRef.current) return;
             // 🛡️ Compliance on objection response too

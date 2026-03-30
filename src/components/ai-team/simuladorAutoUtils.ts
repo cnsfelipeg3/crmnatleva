@@ -1,6 +1,5 @@
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining } from "@/components/ai-team/agentTrainingStore";
-import { buildTeamContextBlock, NATH_UNIVERSAL_RULES } from "@/components/ai-team/agentTeamContext";
 import {
   type LeadInteligente, type MensagemLead,
   ETAPAS_FUNIL,
@@ -186,7 +185,7 @@ export function pushUniqueSimMessage(
   return true;
 }
 
-export async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent", agentBehaviorPrompt?: string, _retryCount = 0, agentId?: string): Promise<string> {
+export async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent", agentBehaviorPrompt?: string, _retryCount = 0): Promise<string> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
   const compactSystemPrompt = compactSystemPromptForTransport(sysPrompt, type, _retryCount);
   const compactAgentBehaviorPrompt = compactText(agentBehaviorPrompt || "", _retryCount >= 1 ? 400 : 700);
@@ -206,7 +205,6 @@ export async function callSimulatorAI(sysPrompt: string, history: { role: string
       systemPrompt: compactSystemPrompt,
       history: requestHistory,
       agentBehaviorPrompt: compactAgentBehaviorPrompt,
-      agentId,
       provider: "lovable",
     }),
   }));
@@ -214,7 +212,7 @@ export async function callSimulatorAI(sysPrompt: string, history: { role: string
   if (resp.status === 429 && _retryCount < 2) {
     registerSimulator429(_retryCount);
     await waitForSimulatorCooldown();
-    return callSimulatorAI(sysPrompt, history, type, agentBehaviorPrompt, _retryCount + 1, agentId);
+    return callSimulatorAI(sysPrompt, history, type, agentBehaviorPrompt, _retryCount + 1);
   }
 
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
@@ -445,8 +443,8 @@ export const MIN_TROCAS_POR_AGENTE: Record<string, number> = {
 };
 
 export const AGENT_ROLE_INSTRUCTIONS: Record<string, string> = {
-  maya: `\nSEU PAPEL: voce e a primeira pessoa que o cliente encontra. Acolha, crie uma primeira impressao incrivel.\nColeta APENAS: nome, destino, primeira vez ou nao, quem vai, motivo da viagem.\nNUNCA pergunte datas, dias, orcamento, aeroporto, hotel, documentacao — isso e do proximo agente.\nTransfira apos ter nome + destino + quem vai (minimo 3 infos) E minimo 5 trocas.`,
-  atlas: `\nSEU PAPEL: voce recebe o cliente que ja foi acolhido. Ele ja disse nome, destino e quem vai.\nNAO cumprimente como primeiro contato. NAO diga oi de novo. NAO peca o nome.\nContinue a conversa naturalmente, extraia todas as infos pra montar proposta.\nQuando tiver tudo (destino, quando, dias, perfil, hospedagem, orcamento) encerre dizendo que vai preparar as opcoes.\nNAO transfira pra outro agente. O cliente fica aguardando a proposta.`,
+  maya: `\nSEU PAPEL: voce e o primeiro contato. Nao qualifica — ENCANTA.\nAntes de qualquer dado, crie conexao com a PESSOA.\nPergunte a ocasiao, o que imaginam, o que os animou.\nSo transfira quando o lead estiver animado e curioso pelo que vem.`,
+  atlas: `\nSEU PAPEL: qualifica sem parecer interrogatorio.\nDescubra orcamento, datas e grupo no fluxo natural — nao em perguntas diretas.\nIdentifique o perfil (familia, VIP, pechincheiro, lua de mel) e adapte o tom.\nSo transfira com: destino + orcamento + datas + ocasiao confirmados.`,
   habibi: `\nSEU PAPEL: faca o lead SONHAR com a viagem.\nNao apresente roteiro — conte uma historia que ele quer viver.\nInclua ao menos 1 experiencia exclusiva que ele nao ia encontrar pesquisando.\nPergunte o que ele imagina, sonha, quer sentir.\nSo transfira quando demonstrar animacao com algo especifico.`,
   nemo: `\nSEU PAPEL: faca o lead SONHAR com a viagem.\nNao apresente roteiro — conte uma historia que ele quer viver.\nInclua ao menos 1 experiencia exclusiva que ele nao ia encontrar pesquisando.\nPergunte o que ele imagina, sonha, quer sentir.\nSo transfira quando demonstrar animacao com algo especifico.`,
   dante: `\nSEU PAPEL: faca o lead SONHAR com a viagem.\nNao apresente roteiro — conte uma historia que ele quer viver.\nInclua ao menos 1 experiencia exclusiva que ele nao ia encontrar pesquisando.\nPergunte o que ele imagina, sonha, quer sentir.\nSo transfira quando demonstrar animacao com algo especifico.`,
@@ -501,13 +499,9 @@ export function buildAgentSysPrompt(
   responseLength: "curta" | "media" | "longa",
   globalRulesBlock: string = "",
   dbOverride?: DbAgentOverride,
-  kbBlock: string = "",
-  workflowBlock: string = "",
 ) {
   const minTrocas = MIN_TROCAS_POR_AGENTE[agent.id] || 4;
-  // Atlas doesn't transfer — he ends the collection and prepares the proposal
-  const agentSkipsTransfer = agent.id === "atlas";
-  const transferInstr = hasNext && enableTransfers && !agentSkipsTransfer ? `\nSOBRE [TRANSFERIR]:
+  const transferInstr = hasNext && enableTransfers ? `\nSOBRE [TRANSFERIR]:
 Use [TRANSFERIR] SOMENTE quando TUDO isso for verdade:
 1. Voce teve ao menos ${minTrocas} trocas reais com este lead
 2. O lead demonstrou entusiasmo genuino — nao apenas respondeu, se engajou
@@ -557,11 +551,8 @@ Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
     }
     trainingBlock = parts.join("\n");
   }
-
-  // ─── Team context block (PIPELINE_MAP + COMMERCIAL_RULES) ───
-  const teamContext = buildTeamContextBlock(agent.id);
-
-  return `${IDENTIDADE_NATH}\n${FORMATO_WHATSAPP}\n${dbPersona}\nVoce atua internamente como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp, mas para o cliente voce e SEMPRE a Nath.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${teamContext}\n${NATH_UNIVERSAL_RULES}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${kbBlock}${workflowBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}`;
+  
+  return `${IDENTIDADE_NATH}\n${FORMATO_WHATSAPP}\n${dbPersona}\nVoce atua internamente como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp, mas para o cliente voce e SEMPRE a Nath.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}`;
 }
 
 export const SPEED_OPTIONS = [
