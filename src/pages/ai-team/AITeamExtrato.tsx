@@ -104,7 +104,7 @@ function ActivityHeatmap({ entries }: { entries: any[] }) {
 }
 
 /* ═══ Single entry card ═══ */
-function EntryCard({ entry, isExpanded, onToggle }: { entry: any; isExpanded: boolean; onToggle: () => void }) {
+function EntryCard({ entry, isExpanded, onToggle, onUndo }: { entry: any; isExpanded: boolean; onToggle: () => void; onUndo: () => void }) {
   const action = ACTION_META[entry.action_type] || ACTION_META.create;
   const entity = ENTITY_META[entry.entity_type] || ENTITY_META.config;
   const ActionIcon = action.icon;
