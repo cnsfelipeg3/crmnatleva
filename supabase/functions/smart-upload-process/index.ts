@@ -76,64 +76,67 @@ function getInstruction(mimeType: string): string {
   return "Extraia todo o conteúdo textual deste arquivo.";
 }
 
-// ─── Unified AI call — always passes file as image_url so gateway can fetch it ───
+// ─── Unified AI call with fallback model ───
 async function callAI(textPrompt: string, fileUrl: string): Promise<string> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-  console.log("[SMART-UPLOAD] Calling AI gateway with file URL...");
+  const models = ["google/gemini-2.5-flash", "google/gemini-2.5-flash-lite"];
 
-  let response: Response;
-  try {
-    response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [{
-          role: "user",
-          content: [
-            { type: "text", text: textPrompt },
-            { type: "image_url", image_url: { url: fileUrl } },
-          ],
-        }],
-        max_tokens: 65000,
-      }),
-    });
-  } catch (fetchErr: any) {
-    console.error("[SMART-UPLOAD] Fetch failed:", fetchErr.message);
-    throw new Error(`AI gateway unreachable: ${fetchErr.message}`);
+  for (const model of models) {
+    console.log(`[SMART-UPLOAD] Trying model ${model} with file URL...`);
+    try {
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: textPrompt },
+              { type: "image_url", image_url: { url: fileUrl } },
+            ],
+          }],
+          max_tokens: 65000,
+        }),
+      });
+
+      const rawText = await response.text();
+      console.log(`[SMART-UPLOAD] ${model} status: ${response.status}, length: ${rawText.length}`);
+
+      if (!response.ok) {
+        console.warn(`[SMART-UPLOAD] ${model} failed: ${response.status} ${rawText.substring(0, 200)}`);
+        if (response.status === 429) throw new Error("Rate limit atingido. Tente novamente em alguns segundos.");
+        if (response.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
+        // For 503/5xx, try next model
+        continue;
+      }
+
+      if (!rawText.trim()) {
+        console.warn(`[SMART-UPLOAD] ${model} returned empty, trying next...`);
+        continue;
+      }
+
+      try {
+        const data = JSON.parse(rawText);
+        const content = data?.choices?.[0]?.message?.content;
+        if (content) return content;
+        console.warn(`[SMART-UPLOAD] Parsed JSON but no choices.content`);
+        return rawText;
+      } catch {
+        return rawText;
+      }
+    } catch (err: any) {
+      // Re-throw user-facing errors (rate limit, credits)
+      if (err.message.includes("Rate limit") || err.message.includes("Créditos")) throw err;
+      console.warn(`[SMART-UPLOAD] ${model} error: ${err.message}`);
+      continue;
+    }
   }
 
-  // Always read as text first to avoid JSON parse errors
-  const rawText = await response.text();
-  console.log("[SMART-UPLOAD] AI status:", response.status, "body length:", rawText.length);
-  console.log("[SMART-UPLOAD] AI raw (first 500):", rawText.substring(0, 500));
-
-  if (!response.ok) {
-    console.error("[SMART-UPLOAD] AI error:", response.status, rawText.substring(0, 1000));
-    if (response.status === 429) throw new Error("Rate limit atingido. Tente novamente em alguns segundos.");
-    if (response.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
-    throw new Error(`AI extraction failed (${response.status}): ${rawText.substring(0, 200)}`);
-  }
-
-  if (!rawText.trim()) {
-    throw new Error("AI returned empty response");
-  }
-
-  // Parse as OpenAI-compatible JSON
-  try {
-    const data = JSON.parse(rawText);
-    const content = data?.choices?.[0]?.message?.content;
-    if (content) return content;
-    console.warn("[SMART-UPLOAD] Parsed JSON but no choices.content");
-    return rawText;
-  } catch {
-    // Not JSON — return as plain text
-    console.log("[SMART-UPLOAD] Response is plain text, using directly");
-    return rawText;
-  }
+  throw new Error("Todos os modelos de IA falharam. Tente novamente em alguns minutos.");
 }
