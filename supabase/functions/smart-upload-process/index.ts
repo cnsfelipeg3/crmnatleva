@@ -68,10 +68,10 @@ function getInstruction(mimeType: string): string {
     return "Descreva detalhadamente esta imagem. Se for um destino turístico, descreva o local, pontos de interesse visíveis, clima aparente, e qualquer informação útil para um agente de viagens vender esse destino.";
   }
   if (mimeType.startsWith("audio/")) {
-    return "Transcreva este áudio completamente em português. Retorne apenas a transcrição.";
+    return "Transcreva este áudio COMPLETAMENTE em português, do início ao fim, sem pular nenhuma parte. Retorne apenas a transcrição integral.";
   }
   if (mimeType.startsWith("video/")) {
-    return "Transcreva o áudio deste vídeo e descreva o conteúdo visual. Foque em informações úteis sobre destinos, experiências, hotéis, restaurantes e dicas de viagem. Retorne o conteúdo completo em português.";
+    return "IMPORTANTE: Transcreva TODO o conteúdo deste vídeo do INÍCIO AO FIM, sem pular NENHUMA seção. Inclua:\n1. Transcrição COMPLETA de todo o áudio/narração do vídeo inteiro\n2. Descrição do conteúdo visual relevante\n3. Foque em informações úteis sobre destinos, experiências, hotéis, restaurantes, preços e dicas de viagem\n\nNÃO pare no meio. NÃO resuma. Transcreva TUDO até o último segundo do vídeo. O vídeo pode ter 20+ minutos — cubra cada minuto.";
   }
   return "Extraia todo o conteúdo textual deste arquivo.";
 }
@@ -92,7 +92,7 @@ async function callAI(textPrompt: string, fileUrl: string): Promise<string> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [{
           role: "user",
           content: [
@@ -100,7 +100,7 @@ async function callAI(textPrompt: string, fileUrl: string): Promise<string> {
             { type: "image_url", image_url: { url: fileUrl } },
           ],
         }],
-        max_tokens: 8000,
+        max_tokens: 65000,
       }),
     });
   } catch (fetchErr: any) {
