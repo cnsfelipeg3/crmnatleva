@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import YouTubeReviewPanel from "@/components/knowledge/YouTubeReviewPanel";
 import TaxonomyPreview from "@/components/knowledge/TaxonomyPreview";
 import YouTubeKnowledgeDetail from "@/components/knowledge/YouTubeKnowledgeDetail";
+import SmartUploadModal from "@/components/knowledge/SmartUploadModal";
 
 const KB_TIPOS = [
   { id: "all", label: "Todos" },
@@ -519,6 +520,7 @@ export default function AITeamConhecimento() {
   const [loading, setLoading] = useState(true);
   const [selectedDoc, setSelectedDoc] = useState<KBDoc | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [showSmartUpload, setShowSmartUpload] = useState(false);
   const [showYouTube, setShowYouTube] = useState(false);
   const [ytDetailDoc, setYtDetailDoc] = useState<KBDoc | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -572,7 +574,8 @@ export default function AITeamConhecimento() {
       if (newFile) {
         fileName = newFile.name;
         fileType = newFile.type;
-        const path = `knowledge/${Date.now()}_${newFile.name}`;
+        const safeName = newFile.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]/g, "-").replace(/-+/g, "-").toLowerCase();
+        const path = `knowledge/${Date.now()}_${safeName}`;
         const { error: uploadErr } = await supabase.storage.from("ai-knowledge-base").upload(path, newFile);
         if (uploadErr) throw uploadErr;
         const { data: urlData } = supabase.storage.from("ai-knowledge-base").getPublicUrl(path);
@@ -660,9 +663,13 @@ export default function AITeamConhecimento() {
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowYouTube(true)}>
             <Youtube className="w-4 h-4 text-red-500" /> YouTube
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => setShowUpload(true)}>
-            <Upload className="w-4 h-4" /> Upload Documento
+          <Button size="sm" className="gap-1.5" onClick={() => setShowSmartUpload(true)}>
+            <Sparkles className="w-4 h-4" /> Upload Inteligente
           </Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setShowUpload(true)}>
+            <Upload className="w-4 h-4" /> Manual
+          </Button>
+          <SmartUploadModal open={showSmartUpload} onOpenChange={setShowSmartUpload} onSaved={loadDocs} />
         </div>
       </div>
 
