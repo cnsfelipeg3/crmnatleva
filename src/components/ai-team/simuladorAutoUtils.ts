@@ -500,6 +500,8 @@ export function buildAgentSysPrompt(
   responseLength: "curta" | "media" | "longa",
   globalRulesBlock: string = "",
   dbOverride?: DbAgentOverride,
+  kbBlock: string = "",
+  workflowBlock: string = "",
 ) {
   const minTrocas = MIN_TROCAS_POR_AGENTE[agent.id] || 4;
   const transferInstr = hasNext && enableTransfers ? `\nSOBRE [TRANSFERIR]:
@@ -552,8 +554,11 @@ Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
     }
     trainingBlock = parts.join("\n");
   }
-  
-  return `${IDENTIDADE_NATH}\n${FORMATO_WHATSAPP}\n${dbPersona}\nVoce atua internamente como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp, mas para o cliente voce e SEMPRE a Nath.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}`;
+
+  // ─── Team context block (PIPELINE_MAP + COMMERCIAL_RULES) ───
+  const teamContext = buildTeamContextBlock(agent.id);
+
+  return `${IDENTIDADE_NATH}\n${FORMATO_WHATSAPP}\n${dbPersona}\nVoce atua internamente como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp, mas para o cliente voce e SEMPRE a Nath.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${teamContext}\n${NATH_UNIVERSAL_RULES}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${kbBlock}${workflowBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}`;
 }
 
 export const SPEED_OPTIONS = [
