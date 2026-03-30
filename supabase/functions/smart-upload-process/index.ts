@@ -81,7 +81,6 @@ async function callAI(textPrompt: string, fileUrl: string, mimeType: string): Pr
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
-  // Video/audio need Pro model for reliable processing; images/PDFs work with Flash
   const isHeavyMedia = mimeType.startsWith("video/") || mimeType.startsWith("audio/");
   const models = isHeavyMedia
     ? ["google/gemini-2.5-pro", "google/gemini-2.5-flash"]
@@ -90,12 +89,12 @@ async function callAI(textPrompt: string, fileUrl: string, mimeType: string): Pr
   const errors: string[] = [];
 
   for (const model of models) {
-    console.log(`[SMART-UPLOAD] Trying model ${model} for ${mimeType}, URL length=${fileUrl.length}`);
+    console.log(`[SMART-UPLOAD] Trying ${model} for ${mimeType}`);
     try {
-      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -107,51 +106,30 @@ async function callAI(textPrompt: string, fileUrl: string, mimeType: string): Pr
               { type: "image_url", image_url: { url: fileUrl } },
             ],
           }],
-          max_tokens: 65000,
         }),
       });
 
-      const rawText = await response.text();
-      console.log(`[SMART-UPLOAD] ${model} status: ${response.status}, response length: ${rawText.length}`);
+      const body = await r.text();
+      console.log(`[SMART-UPLOAD] ${model} → ${r.status}, body length=${body.length}`);
 
-      if (!response.ok) {
-        const snippet = rawText.substring(0, 300);
-        console.warn(`[SMART-UPLOAD] ${model} failed: ${response.status} ${snippet}`);
-        errors.push(`${model}: ${response.status} ${snippet}`);
-        if (response.status === 429) throw new Error("Rate limit atingido. Tente novamente em alguns segundos.");
-        if (response.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
+      if (!r.ok) {
+        errors.push(`${model} → ${r.status}: ${body.substring(0, 500)}`);
+        if (r.status === 429) throw new Error("Rate limit atingido. Tente novamente em alguns segundos.");
+        if (r.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
         continue;
       }
 
-      if (!rawText.trim()) {
-        console.warn(`[SMART-UPLOAD] ${model} returned empty body`);
-        errors.push(`${model}: empty response`);
-        continue;
-      }
-
-      try {
-        const data = JSON.parse(rawText);
-        const content = data?.choices?.[0]?.message?.content;
-        if (content && content.trim().length > 0) return content;
-        // If parsed but no content, check finish_reason
-        const finishReason = data?.choices?.[0]?.finish_reason;
-        console.warn(`[SMART-UPLOAD] ${model} parsed OK but no content. finish_reason=${finishReason}`);
-        errors.push(`${model}: no content, finish_reason=${finishReason}`);
-        continue;
-      } catch {
-        // Not JSON, return raw if it has content
-        if (rawText.trim().length > 10) return rawText;
-        errors.push(`${model}: unparseable short response`);
-        continue;
-      }
+      const text = JSON.parse(body)?.choices?.[0]?.message?.content?.trim();
+      if (text) return text;
+      errors.push(`${model} → empty content: ${body.substring(0, 500)}`);
     } catch (err: any) {
       if (err.message.includes("Rate limit") || err.message.includes("Créditos")) throw err;
-      console.warn(`[SMART-UPLOAD] ${model} error: ${err.message}`);
-      errors.push(`${model}: ${err.message}`);
-      continue;
+      errors.push(`${model} → ${err.message}`);
     }
   }
 
-  console.error(`[SMART-UPLOAD] All models failed. Errors: ${JSON.stringify(errors)}`);
-  throw new Error("Todos os modelos de IA falharam. Tente novamente em alguns minutos.");
+  // Surface the REAL errors instead of generic message
+  const detail = errors.join(" | ");
+  console.error(`[SMART-UPLOAD] All failed: ${detail}`);
+  throw new Error(`AI extraction failed: ${detail}`);
 }
