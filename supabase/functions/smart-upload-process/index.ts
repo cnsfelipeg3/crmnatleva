@@ -92,7 +92,7 @@ async function callAI(textPrompt: string, fileUrl: string): Promise<string> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [{
           role: "user",
           content: [
@@ -100,7 +100,7 @@ async function callAI(textPrompt: string, fileUrl: string): Promise<string> {
             { type: "image_url", image_url: { url: fileUrl } },
           ],
         }],
-        max_tokens: 8000,
+        max_tokens: 65000,
       }),
     });
   } catch (fetchErr: any) {
