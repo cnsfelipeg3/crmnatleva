@@ -161,10 +161,37 @@ function AudioBubblePlayer({ src }: { src: string }) {
   );
 }
 
+// ─── Reply Quote Block ───
+function ReplyQuoteBlock({ replyTo, isUserBubble }: { replyTo: SimChatMessage["replyTo"]; isUserBubble: boolean }) {
+  if (!replyTo) return null;
+  const isReplyFromAgent = replyTo.role === "agent";
+  return (
+    <div className={cn(
+      "rounded-lg px-3 py-1.5 mb-1.5 border-l-[3px] text-[11px] leading-snug",
+      isUserBubble
+        ? "bg-white/10 border-white/40"
+        : "bg-primary/8 border-primary/50"
+    )}>
+      <p className={cn(
+        "font-bold text-[10px] mb-0.5",
+        isUserBubble ? "text-white/80" : "text-primary"
+      )}>
+        {isReplyFromAgent ? (replyTo.agentName || "Agente") : "Você"}
+      </p>
+      <p className={cn(
+        "line-clamp-2",
+        isUserBubble ? "text-white/60" : "text-muted-foreground"
+      )}>
+        {replyTo.content.slice(0, 120)}{replyTo.content.length > 120 ? "…" : ""}
+      </p>
+    </div>
+  );
+}
+
 // ─── Message Bubble — identical to inbox ───
 const ChatBubble = memo(function ChatBubble({
-  msg, messages, index, onClick, isSelected,
-}: { msg: SimChatMessage; messages: SimChatMessage[]; index: number; onClick?: () => void; isSelected?: boolean }) {
+  msg, messages, index, onClick, isSelected, onReply,
+}: { msg: SimChatMessage; messages: SimChatMessage[]; index: number; onClick?: () => void; isSelected?: boolean; onReply?: (msg: SimChatMessage) => void }) {
   const showDate = shouldShowDateSeparator(messages, index);
   const isAgent = msg.role === "agent";
   const isSystem = msg.role === "system";
@@ -200,6 +227,21 @@ const ChatBubble = memo(function ChatBubble({
             )}
             onClick={onClick}
           >
+            {/* Reply button — appears on hover */}
+            {onReply && !isSystem && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onReply(msg); }}
+                className={cn(
+                  "absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-10",
+                  "w-7 h-7 rounded-full bg-muted/90 hover:bg-muted flex items-center justify-center shadow-sm border border-border/50",
+                  isUser ? "-left-9" : "-right-9"
+                )}
+                title="Responder"
+              >
+                <Reply className="w-3.5 h-3.5 text-muted-foreground" />
+              </button>
+            )}
+
             <div className={cn(
               "rounded-2xl px-4 py-2.5",
               isUser
@@ -209,6 +251,9 @@ const ChatBubble = memo(function ChatBubble({
               {showName && msg.agentName && (
                 <p className="text-[10px] font-bold text-primary mb-1">{msg.agentName}</p>
               )}
+
+              {/* Reply quote */}
+              {msg.replyTo && <ReplyQuoteBlock replyTo={msg.replyTo} isUserBubble={isUser} />}
 
               {/* Audio attachment */}
               {msg.audioUrl && (
@@ -248,7 +293,7 @@ const ChatBubble = memo(function ChatBubble({
       </div>
     </Fragment>
   );
-}, (prev, next) => prev.msg.id === next.msg.id && prev.msg.content === next.msg.content && prev.index === next.index && prev.isSelected === next.isSelected);
+}, (prev, next) => prev.msg.id === next.msg.id && prev.msg.content === next.msg.content && prev.index === next.index && prev.isSelected === next.isSelected && prev.onReply === next.onReply);
 
 // ─── Typing Indicator — same as inbox ───
 function TypingIndicator() {
