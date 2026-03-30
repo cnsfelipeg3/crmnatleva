@@ -235,6 +235,7 @@ export default function AITeamExtrato() {
   const [search, setSearch] = useState("");
   const [filterEntity, setFilterEntity] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [undoEntry, setUndoEntry] = useState<any>(null);
 
   const { data: entries = [], isLoading, refetch } = useQuery({
     queryKey: ["ai_team_audit_log", filterEntity],
