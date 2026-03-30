@@ -230,21 +230,44 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { type = "agent", systemPrompt, userPrompt, history, provider = "anthropic", agentBehaviorPrompt } = body as {
+    const { type = "agent", systemPrompt, userPrompt, history, provider = "anthropic", agentBehaviorPrompt, agentId } = body as {
       type?: CallType;
       systemPrompt?: string;
       userPrompt?: string;
       history?: Array<{ role: string; content: string }>;
       provider?: string;
       agentBehaviorPrompt?: string;
+      agentId?: string;
     };
 
     const config = getModelConfig(type as CallType, provider);
 
     // Build enriched system prompt with behavioral directives for agent types
+    // MAYA and ATLAS get a simplified core (no storytelling/venda invisível)
+    const RECEPTION_SDR_AGENTS = ["maya", "atlas"];
+    const isReceptionOrSDR = agentId && RECEPTION_SDR_AGENTS.includes(agentId);
+
+    const NATLEVA_BEHAVIOR_CORE_LITE = `
+DIRETIVAS COMPORTAMENTAIS NATLEVA:
+
+1. RAPPORT ANTES DE TUDO: Sempre reaja ao que o lead disse ANTES de fazer qualquer pergunta.
+
+2. PROIBIDO COMPORTAMENTO MECÂNICO: NUNCA faça perguntas em sequência como formulário.
+
+3. ADAPTAÇÃO DINÂMICA: Ajuste linguagem e ritmo conforme o perfil do lead.
+
+4. FORMATO: Máximo 1 emoji por mensagem. NUNCA use travessão. NUNCA use tabelas. Tom premium e acessível.
+
+5. CONTINUIDADE: Mantenha contexto total. NUNCA repita perguntas já respondidas.
+
+6. RITMO HUMANO: Construção progressiva. Não responda tudo de uma vez. Fluidez natural.
+`;
+
+    const coreToUse = isReceptionOrSDR ? NATLEVA_BEHAVIOR_CORE_LITE : NATLEVA_BEHAVIOR_CORE;
+
     let enrichedSystemPrompt = systemPrompt || "";
     if (type === "agent" && enrichedSystemPrompt) {
-      enrichedSystemPrompt = `${NATLEVA_BEHAVIOR_CORE}\n\n${agentBehaviorPrompt ? `DIRETIVAS ESPECÍFICAS DO AGENTE:\n${agentBehaviorPrompt}\n\n` : ""}${enrichedSystemPrompt}`;
+      enrichedSystemPrompt = `${coreToUse}\n\n${agentBehaviorPrompt ? `DIRETIVAS ESPECÍFICAS DO AGENTE:\n${agentBehaviorPrompt}\n\n` : ""}${enrichedSystemPrompt}`;
     }
 
     // Build messages array

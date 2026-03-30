@@ -442,7 +442,7 @@ export default function SimuladorAutoMode() {
           }
           let agentResp = await callSimulatorAI(
             agentSysPrompt,
-            compressedHistory, "agent"
+            compressedHistory, "agent", undefined, 0, agent.id
           );
           if (!simAtivaRef.current) return;
 
@@ -566,7 +566,7 @@ export default function SimuladorAutoMode() {
             const objCompressed = compressConversation(lead.mensagens);
             let objResp = await callSimulatorAI(
               buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id], kbBlockRef.current[agent.id] || "", workflowBlockRef.current),
-              objCompressed, "agent"
+              objCompressed, "agent", undefined, 0, agent.id
             );
             if (!simAtivaRef.current) return;
             // 🛡️ Compliance on objection response too

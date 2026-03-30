@@ -105,23 +105,11 @@ function buildManualAgentPrompt(agent: typeof AGENTS_V4[0], globalRulesBlock: st
 Voce conversa como ${agent.name} (${agent.role}) da agencia ${name} pelo WhatsApp.
 ${toneBlock}
 
-FILOSOFIA DE ATENDIMENTO ${name.toUpperCase()}:
-Voce esta em uma conversa, nao em um formulario. Seu objetivo NAO e coletar dados e passar adiante. Seu objetivo E fazer este lead querer continuar a conversa.
-
-REGRAS DE OURO:
-- Nunca encerre sem pergunta aberta ou elemento que convide resposta
-- Antes de qualquer dado, crie conexao. Interesse genuino pela pessoa.
-- Se o lead falou algo pessoal (ocasiao, sonho, familia), volte a isso.
-- Faca ao menos 1 pergunta que nao era necessaria — so curiosidade.
-- Celebre conquistas do lead (aniversario, casamento, viagem dos sonhos).
-
 REGRA CRITICA — ANTI-REPETICAO:
 - NUNCA repita uma pergunta que ja foi feita na conversa, mesmo reformulada.
-- Se voce ja perguntou sobre periodo/datas/quantos dias e o lead NAO respondeu ou desviou, ACEITE e siga o fluxo dele. Nao insista.
-- Se o lead JA respondeu algo (ex: "dezembro", "7 anos", "2 pessoas"), NUNCA pergunte a mesma coisa de novo. Registre mentalmente e use a informacao.
-- Siga o RITMO do cliente. Se ele quer falar de outra coisa, va com ele. A venda acontece no tempo dele, nao no seu checklist.
-- Releia TODA a conversa antes de responder. Se uma informacao ja foi dada, USE-A — nao pergunte novamente.
-- Varie seus temas: se ja perguntou sobre datas, pergunte sobre experiencias desejadas, tipo de hospedagem, atividades, gastronomia, etc.
+- Se o lead JA respondeu algo, USE-A — nao pergunte novamente.
+- Siga o RITMO do cliente. A venda acontece no tempo dele, nao no seu checklist.
+- Releia TODA a conversa antes de responder.
 ${roleInstr}
 ${teamContext}
 ${NATH_UNIVERSAL_RULES}
@@ -131,11 +119,11 @@ ${globalRulesBlock}
 SOBRE [TRANSFERIR]:
 Use [TRANSFERIR] SOMENTE quando TUDO isso for verdade:
 1. Voce teve ao menos ${minTrocas} trocas reais com este lead
-2. O lead demonstrou entusiasmo genuino — nao apenas respondeu, se engajou
+2. O lead demonstrou entusiasmo genuino
 3. A proxima pergunta natural do lead e algo que so o proximo agente responde melhor
 4. A transferencia beneficia o lead, nao e uma saida operacional
 
-Se qualquer condicao faltar: continue a conversa. Aprofunde. Instigue. Surpreenda.
+Se qualquer condicao faltar: continue a conversa. Aprofunde.
 [TRANSFERIR] e resultado de conversa bem feita, nunca atalho.
 Ao transferir: apresente o proximo agente com entusiasmo e contexto.
 
@@ -408,10 +396,11 @@ export default function SimuladorManualMode() {
       const resp = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
-        body: JSON.stringify({
+         body: JSON.stringify({
           type: "agent",
           systemPrompt: manualSystemPrompt,
           agentBehaviorPrompt: enrichedBehaviorPrompt,
+          agentId: selectedAgent.id,
           history: buildConversationHistory(currentMessages, selectedDestino, isLivreMode),
           provider: "lovable",
         }),
@@ -481,10 +470,25 @@ export default function SimuladorManualMode() {
         const { text: compliantText, wasRewritten } = await fullCompliancePipeline(
           selectedAgent.id, agentText, conversationCtx,
         );
-        if (wasRewritten) {
+      if (wasRewritten) {
           debugLog(`🛡️ Compliance rewrite applied for ${selectedAgent.name}`);
           updateAgent(compliantText);
         }
+        // ═══ POST-STREAM DEDUP: if last two agent msgs have same content, remove duplicate ═══
+        setMessages(prev => {
+          const agentMsgs = prev.filter(m => m.role === "agent");
+          if (agentMsgs.length >= 2) {
+            const last = agentMsgs[agentMsgs.length - 1];
+            const secondLast = agentMsgs[agentMsgs.length - 2];
+            if (last.content.trim() === secondLast.content.trim() && last.id !== secondLast.id) {
+              debugLog(`🛡️ DEDUP: removed duplicate agent message`);
+              const deduped = prev.filter(m => m.id !== last.id);
+              messagesRef.current = deduped;
+              return deduped;
+            }
+          }
+          return prev;
+        });
       }
 
       if (agentText.includes("[TRANSFERIR]")) {
