@@ -957,10 +957,38 @@ export default function AITeamConhecimento() {
               {/* Content text for non-YouTube or as fallback */}
               {selectedDoc.content_text && !selectedDoc.file_type?.includes("youtube") && (
                 <div className="max-h-[300px] overflow-y-auto">
-                  <p className="text-xs font-bold mb-1">Conteúdo</p>
+                  <p className="text-xs font-bold mb-1">Conteúdo Extraído</p>
                   <pre className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted/30 p-3 rounded-lg font-sans">
                     {selectedDoc.content_text}
                   </pre>
+                </div>
+              )}
+
+              {/* Empty content warning + reprocess button */}
+              {!selectedDoc.content_text && !selectedDoc.file_type?.includes("youtube") && selectedDoc.file_name && (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-bold text-amber-700 dark:text-amber-300">Conteúdo não extraído</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        O processamento anterior pode ter falhado. Clique abaixo para re-processar o arquivo com IA.
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-1.5 border-amber-500/30 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300"
+                    onClick={() => handleReprocess(selectedDoc)}
+                    disabled={reprocessing}
+                  >
+                    {reprocessing ? (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Re-processando...</>
+                    ) : (
+                      <><RefreshCw className="w-3.5 h-3.5" /> Re-processar com IA</>
+                    )}
+                  </Button>
                 </div>
               )}
 
