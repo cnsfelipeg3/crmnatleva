@@ -182,6 +182,8 @@ export default function SimuladorAutoMode() {
   const stopSimulationRef = useRef(() => {});
   stopSimulationRef.current = () => { simAtivaRef.current = false; abortRef.current = true; setRunning(false); if (timerRef.current) clearInterval(timerRef.current); setPhase("report"); };
   const dbAgentOverridesRef = useRef<Record<string, DbAgentOverride>>({});
+  const kbBlockRef = useRef<Record<string, string>>({});
+  const workflowBlockRef = useRef<string>("");
 
   // ===== PRESETS =====
   const PRESET_STORAGE_KEY = "natleva_sim_presets";
