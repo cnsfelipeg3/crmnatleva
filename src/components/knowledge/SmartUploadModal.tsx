@@ -115,7 +115,8 @@ export default function SmartUploadModal({ open, onOpenChange, onSaved }: SmartU
         setProgress(20);
         mimeType = file!.type || "application/octet-stream";
         fileType = getFileTypeLabel(mimeType);
-        storageKey = `kb-uploads/${Date.now()}-${file!.name}`;
+        const safeName = file!.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]/g, "_");
+        storageKey = `kb-uploads/${Date.now()}-${safeName}`;
 
         const { error: upErr } = await supabase.storage
           .from("ai-knowledge-base")
