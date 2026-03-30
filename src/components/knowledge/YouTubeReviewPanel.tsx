@@ -38,6 +38,7 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
   const [result, setResult] = useState<{
     title: string;
     transcript: string;
+    raw_transcript?: string;
     structured_knowledge: string;
     videoId: string;
   } | null>(null);
