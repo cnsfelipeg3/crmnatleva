@@ -250,10 +250,22 @@ export async function runComplianceCheck(
       /validador/i, /compliance/i, /verificando/i, /analis(e|ar)/i,
       /preciso que voc[eê] forne[cç]a/i, /aguardando/i, /minha fun[cç][aã]o/i,
       /vou verificar/i, /documento/i, /STATUS/,
+      // Patterns that catch full analysis outputs leaking into chat
+      /VIOLA[ÇC][ÃA]O/i, /VIOLA[ÇC][ÕO]ES/i, /VEREDICTO/i, /RESPOSTA\s+(REPROVADA|APROVADA)/i,
+      /ESTADO_\d/i, /FASE_\d/i, /ETAPA_\d/i,
+      /##\s+\d+\.\s+VIOLA/i, /RESPOSTA\s+CORRETA\s+PARA/i,
+      /AN[ÁA]LISE\s+ADICIONAL/i, /REGRA\s+VIOLADA/i,
     ];
-    const isMetaResponse = metaPatterns.filter(p => p.test(result)).length >= 2;
+    const isMetaResponse = metaPatterns.filter(p => p.test(result)).length >= 1;
     if (isMetaResponse) {
-      console.warn(`🛡️ Compliance returned meta-commentary instead of rewrite, keeping original for ${profile.agentName}`);
+      console.warn(`🛡️ Compliance returned meta-commentary/analysis instead of rewrite, keeping original for ${profile.agentName}`);
+      return { text: agentResponse, wasRewritten: false, profile };
+    }
+
+    // Safety: reject if result contains markdown headers (##) — rewrites should be plain chat text
+    const markdownHeaderCount = (result.match(/^#{1,3}\s+/gm) || []).length;
+    if (markdownHeaderCount >= 2) {
+      console.warn(`🛡️ Compliance rewrite contains ${markdownHeaderCount} markdown headers, keeping original for ${profile.agentName}`);
       return { text: agentResponse, wasRewritten: false, profile };
     }
 
