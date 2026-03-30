@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { debugLog } from "@/lib/debugMode";
-import { fullCompliancePipeline } from "./complianceEngine";
+import { fullCompliancePipeline, clearComplianceCache } from "./complianceEngine";
 import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X, Mic } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
 import SimulatorChatLayout, { type SimChatMessage } from "./SimulatorChatLayout";
@@ -718,7 +718,9 @@ export default function SimuladorManualMode() {
     if (debounceTimerRef.current) { clearTimeout(debounceTimerRef.current); debounceTimerRef.current = null; }
     pendingMessagesRef.current = [];
     messagesRef.current = [];
-    setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0); setReplyingTo(null);
+    isProcessingRef.current = false;
+    clearComplianceCache();
+    setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0); setReplyingTo(null); setManualObsSelectedMsg(null); setLoading(false);
   };
 
   const loadSession = (session: SavedSession) => {
