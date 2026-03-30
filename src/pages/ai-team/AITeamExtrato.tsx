@@ -12,6 +12,7 @@ import {
   Activity, ChevronRight, Sparkles, Radio, Eye, RotateCcw,
 } from "lucide-react";
 import UndoChangeDialog from "@/components/ai-team/UndoChangeDialog";
+import AuditEntryDetailPanel from "@/components/ai-team/AuditEntryDetailPanel";
 import { format, formatDistanceToNow, isToday, isYesterday, subDays, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
