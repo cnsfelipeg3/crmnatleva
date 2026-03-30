@@ -442,7 +442,7 @@ export default function SimuladorAutoMode() {
           }
           let agentResp = await callSimulatorAI(
             agentSysPrompt,
-            compressedHistory, "agent"
+            compressedHistory, "agent", undefined, 0, agent.id
           );
           if (!simAtivaRef.current) return;
 
