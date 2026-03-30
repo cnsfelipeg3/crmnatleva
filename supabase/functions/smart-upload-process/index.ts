@@ -36,20 +36,13 @@ serve(async (req) => {
     else {
       const instruction = getInstruction(mimeType);
 
-      // Check file size to decide strategy
-      const { data: list } = await supabase.storage
-        .from("ai-knowledge-base")
-        .list(storageKey.substring(0, storageKey.lastIndexOf("/")), {
-          search: storageKey.substring(storageKey.lastIndexOf("/") + 1),
-        });
+      // Video/audio files are typically large — always use signed URL to avoid OOM
+      const alwaysUrl = mimeType.startsWith("video/") || mimeType.startsWith("audio/");
 
-      const fileSize = list?.[0]?.metadata?.size || 0;
-
-      if (fileSize > MAX_INLINE_SIZE) {
-        // Large file: use signed URL approach
+      if (alwaysUrl) {
         const { data: signedData, error: signErr } = await supabase.storage
           .from("ai-knowledge-base")
-          .createSignedUrl(storageKey, 600); // 10 min
+          .createSignedUrl(storageKey, 600);
         if (signErr) throw signErr;
 
         content = await extractWithGeminiUrl(signedData.signedUrl, mimeType, title, instruction);
