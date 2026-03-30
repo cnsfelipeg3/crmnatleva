@@ -7,7 +7,7 @@ const corsHeaders = {
 
 function extractVideoId(url: string): string | null {
   const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
     /^([a-zA-Z0-9_-]{11})$/,
   ];
   for (const p of patterns) {
@@ -29,14 +29,159 @@ async function getVideoTitle(videoId: string): Promise<string> {
   return `Video ${videoId}`;
 }
 
-/** Try InnerTube iOS client API — bypasses many cloud IP blocks */
+const DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
+const IOS_UA = "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)";
+
+/** Download and parse a caption track URL — tries multiple formats and user agents */
+async function downloadCaptionTrack(track: any, callerUA?: string): Promise<string> {
+  let captionUrl = track.baseUrl || "";
+  const lang = track.languageCode || "?";
+  const kind = track.kind || "manual";
+  console.log(`Downloading captions: lang=${lang}, kind=${kind}`);
+
+  // Try multiple format+UA combinations
+  const attempts = [
+    { url: captionUrl.replace(/&fmt=[^&]*/g, "") + "&fmt=json3", ua: callerUA || DESKTOP_UA, label: "json3+caller" },
+    { url: captionUrl.replace(/&fmt=[^&]*/g, ""), ua: callerUA || DESKTOP_UA, label: "xml+caller" },
+    { url: captionUrl.replace(/&fmt=[^&]*/g, "") + "&fmt=json3", ua: DESKTOP_UA, label: "json3+desktop" },
+    { url: captionUrl.replace(/&fmt=[^&]*/g, ""), ua: DESKTOP_UA, label: "xml+desktop" },
+    { url: captionUrl.replace(/&fmt=[^&]*/g, "") + "&fmt=json3", ua: IOS_UA, label: "json3+ios" },
+    { url: captionUrl.replace(/&fmt=[^&]*/g, ""), ua: IOS_UA, label: "xml+ios" },
+  ];
+
+  // Deduplicate by url+ua
+  const seen = new Set<string>();
+  const uniqueAttempts = attempts.filter(a => {
+    const key = a.url + "|" + a.ua;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  for (const attempt of uniqueAttempts) {
+    try {
+      const captionRes = await fetch(attempt.url, {
+        headers: { "User-Agent": attempt.ua },
+      });
+      if (!captionRes.ok) {
+        console.warn(`Caption fetch (${attempt.label}): HTTP ${captionRes.status}`);
+        await captionRes.text().catch(() => {});
+        continue;
+      }
+
+      const captionText = await captionRes.text();
+      if (!captionText || captionText.length < 20) {
+        console.warn(`Caption fetch (${attempt.label}): empty response`);
+        continue;
+      }
+
+      let transcript = "";
+
+      // Try JSON parsing
+      if (attempt.url.includes("json3") || captionText.trimStart().startsWith("{")) {
+        try {
+          const json = JSON.parse(captionText);
+          const segments: string[] = [];
+          for (const event of (json.events || [])) {
+            if (event.segs) {
+              let line = "";
+              for (const seg of event.segs) {
+                if (seg.utf8 && seg.utf8.trim() !== "\n" && seg.utf8.trim() !== "") line += seg.utf8;
+              }
+              if (line.trim()) segments.push(line.trim());
+            }
+          }
+          transcript = segments.join(" ").replace(/\s+/g, " ").trim();
+        } catch {}
+      }
+
+      // Try XML parsing if JSON didn't work or was empty
+      if (!transcript || transcript.length < 20) {
+        const segments: string[] = [];
+        for (const match of captionText.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)) {
+          const text = match[1]
+            .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\n/g, " ").trim();
+          if (text) segments.push(text);
+        }
+        const xmlTranscript = segments.join(" ").replace(/\s+/g, " ").trim();
+        if (xmlTranscript.length > (transcript?.length || 0)) {
+          transcript = xmlTranscript;
+        }
+      }
+
+      if (transcript && transcript.length >= 20) {
+        console.log(`✅ Caption download (${attempt.label}): ${transcript.length} chars`);
+        return transcript;
+      }
+      console.warn(`Caption fetch (${attempt.label}): parsed but too short (${transcript?.length || 0})`);
+    } catch (e: any) {
+      console.warn(`Caption fetch (${attempt.label}): ${e.message}`);
+    }
+  }
+
+  throw new Error("EMPTY_TRANSCRIPT");
+}
+
+/** Pick best caption track: manual PT > manual any > auto PT > auto any */
+function pickBestTrack(tracks: any[]): any {
+  return (
+    tracks.find((t: any) => t.languageCode === "pt" && t.kind !== "asr") ||
+    tracks.find((t: any) => t.languageCode?.startsWith("pt") && t.kind !== "asr") ||
+    tracks.find((t: any) => t.kind !== "asr") ||
+    tracks.find((t: any) => t.languageCode === "pt") ||
+    tracks.find((t: any) => t.languageCode?.startsWith("pt")) ||
+    tracks[0]
+  );
+}
+
+/** Try timedtext API directly — simplest method */
+async function fetchViaTimedText(videoId: string): Promise<{ transcript: string; title: string; isAutoGenerated: boolean }> {
+  console.log(`Trying timedtext API for ${videoId}...`);
+  const title = await getVideoTitle(videoId);
+
+  // Try multiple language codes
+  const langs = ["pt", "pt-BR", "en", "es"];
+  for (const lang of langs) {
+    for (const kind of ["", "asr"]) {
+      const url = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}${kind ? `&kind=${kind}` : ""}&fmt=json3`;
+      try {
+        const res = await fetch(url, { headers: { "User-Agent": DESKTOP_UA } });
+        if (!res.ok) { await res.text().catch(() => {}); continue; }
+        const text = await res.text();
+        if (!text || text.length < 30) continue;
+        
+        try {
+          const json = JSON.parse(text);
+          const segments: string[] = [];
+          for (const event of (json.events || [])) {
+            if (event.segs) {
+              let line = "";
+              for (const seg of event.segs) {
+                if (seg.utf8 && seg.utf8.trim() !== "\n" && seg.utf8.trim() !== "") line += seg.utf8;
+              }
+              if (line.trim()) segments.push(line.trim());
+            }
+          }
+          const transcript = segments.join(" ").replace(/\s+/g, " ").trim();
+          if (transcript.length >= 20) {
+            console.log(`✅ timedtext (lang=${lang}, kind=${kind || "manual"}): ${transcript.length} chars`);
+            return { transcript, title, isAutoGenerated: kind === "asr" };
+          }
+        } catch {}
+      } catch {}
+    }
+  }
+  throw new Error("NO_CAPTIONS_TIMEDTEXT");
+}
+
+/** Try InnerTube iOS client API */
 async function fetchViaInnerTubeIOS(videoId: string): Promise<{ transcript: string; title: string; isAutoGenerated: boolean }> {
   console.log(`Trying InnerTube iOS client for ${videoId}...`);
 
-  // Step 1: get video info + caption tracks via iOS client
   const playerRes = await fetch("https://www.youtube.com/youtubei/v1/player", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "User-Agent": "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)" },
+    headers: { "Content-Type": "application/json", "User-Agent": IOS_UA },
     body: JSON.stringify({
       videoId,
       context: {
@@ -57,12 +202,11 @@ async function fetchViaInnerTubeIOS(videoId: string): Promise<{ transcript: stri
 
   const preferred = pickBestTrack(captionTracks);
   const isAutoGenerated = preferred.kind === "asr";
-
-  const transcript = await downloadCaptionTrack(preferred);
+  const transcript = await downloadCaptionTrack(preferred, IOS_UA);
   return { transcript, title: videoTitle, isAutoGenerated };
 }
 
-/** Try HTML page scrape — the original working method */
+/** Try HTML page scrape */
 async function fetchViaHTMLScrape(videoId: string): Promise<{ transcript: string; title: string; isAutoGenerated: boolean }> {
   console.log(`Trying HTML scrape for ${videoId}...`);
   const pageUrl = `https://www.youtube.com/watch?v=${videoId}`;
@@ -76,7 +220,7 @@ async function fetchViaHTMLScrape(videoId: string): Promise<{ transcript: string
   let html = "";
   for (const cookie of cookieStrategies) {
     const headers: Record<string, string> = {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      "User-Agent": DESKTOP_UA,
       "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
     };
     if (cookie) headers["Cookie"] = cookie;
@@ -109,19 +253,21 @@ async function fetchViaHTMLScrape(videoId: string): Promise<{ transcript: string
 
   if (!captionTracks || captionTracks.length === 0) throw new Error("NO_CAPTIONS_HTML");
 
+  console.log(`HTML: Found ${captionTracks.length} tracks: ${captionTracks.map((t: any) => `${t.languageCode}(${t.kind || "manual"})`).join(", ")}`);
+
   const preferred = pickBestTrack(captionTracks);
   const isAutoGenerated = preferred.kind === "asr";
-  const transcript = await downloadCaptionTrack(preferred);
+  const transcript = await downloadCaptionTrack(preferred, DESKTOP_UA);
   return { transcript, title: rawTitle, isAutoGenerated };
 }
 
-/** Try InnerTube WEB client as another fallback */
+/** Try InnerTube WEB client */
 async function fetchViaInnerTubeWEB(videoId: string): Promise<{ transcript: string; title: string; isAutoGenerated: boolean }> {
   console.log(`Trying InnerTube WEB client for ${videoId}...`);
 
   const playerRes = await fetch("https://www.youtube.com/youtubei/v1/player", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36" },
+    headers: { "Content-Type": "application/json", "User-Agent": DESKTOP_UA },
     body: JSON.stringify({
       videoId,
       context: { client: { clientName: "WEB", clientVersion: "2.20250101.00.00", hl: "pt", gl: "BR" } },
@@ -138,72 +284,46 @@ async function fetchViaInnerTubeWEB(videoId: string): Promise<{ transcript: stri
 
   const preferred = pickBestTrack(captionTracks);
   const isAutoGenerated = preferred.kind === "asr";
-  const transcript = await downloadCaptionTrack(preferred);
+  const transcript = await downloadCaptionTrack(preferred, DESKTOP_UA);
   return { transcript, title: videoTitle, isAutoGenerated };
 }
 
-/** Pick best caption track: manual PT > manual any > auto PT > auto any */
-function pickBestTrack(tracks: any[]): any {
-  return (
-    tracks.find((t: any) => t.languageCode === "pt" && t.kind !== "asr") ||
-    tracks.find((t: any) => t.languageCode?.startsWith("pt") && t.kind !== "asr") ||
-    tracks.find((t: any) => t.kind !== "asr") ||
-    tracks.find((t: any) => t.languageCode === "pt") ||
-    tracks.find((t: any) => t.languageCode?.startsWith("pt")) ||
-    tracks[0]
-  );
-}
+/** Try ANDROID client — often works when iOS is blocked */
+async function fetchViaInnerTubeAndroid(videoId: string): Promise<{ transcript: string; title: string; isAutoGenerated: boolean }> {
+  console.log(`Trying InnerTube Android client for ${videoId}...`);
+  const ANDROID_UA = "com.google.android.youtube/19.29.37 (Linux; U; Android 14; en_US) gzip";
 
-/** Download and parse a caption track URL */
-async function downloadCaptionTrack(track: any): Promise<string> {
-  let captionUrl = track.baseUrl || "";
-  if (!captionUrl.includes("fmt=")) captionUrl += "&fmt=json3";
-
-  console.log(`Downloading captions: lang=${track.languageCode}, kind=${track.kind || "manual"}`);
-
-  const captionRes = await fetch(captionUrl, {
-    headers: { "User-Agent": "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)" },
+  const playerRes = await fetch("https://www.youtube.com/youtubei/v1/player", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "User-Agent": ANDROID_UA },
+    body: JSON.stringify({
+      videoId,
+      context: {
+        client: { clientName: "ANDROID", clientVersion: "19.29.37", androidSdkVersion: 34, hl: "pt", gl: "BR" },
+      },
+    }),
   });
-  if (!captionRes.ok) throw new Error(`Caption fetch failed: ${captionRes.status}`);
 
-  const captionText = await captionRes.text();
-  let transcript = "";
+  if (!playerRes.ok) { await playerRes.text().catch(() => {}); throw new Error(`InnerTube Android player: ${playerRes.status}`); }
+  const playerData = await playerRes.json();
 
-  // Try JSON first
-  if (captionUrl.includes("json3") || captionText.trimStart().startsWith("{")) {
-    try {
-      const json = JSON.parse(captionText);
-      const segments: string[] = [];
-      for (const event of (json.events || [])) {
-        if (event.segs) {
-          let line = "";
-          for (const seg of event.segs) {
-            if (seg.utf8 && seg.utf8.trim() !== "\n" && seg.utf8.trim() !== "") line += seg.utf8;
-          }
-          if (line.trim()) segments.push(line.trim());
-        }
-      }
-      transcript = segments.join(" ").replace(/\s+/g, " ").trim();
-      if (transcript.length >= 20) return transcript;
-    } catch {}
-  }
+  const videoTitle = playerData?.videoDetails?.title || `Video ${videoId}`;
+  const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
 
-  // XML fallback
-  const segments: string[] = [];
-  for (const match of captionText.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)) {
-    const text = match[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\n/g, " ").trim();
-    if (text) segments.push(text);
-  }
-  transcript = segments.join(" ").replace(/\s+/g, " ").trim();
+  if (!captionTracks || captionTracks.length === 0) throw new Error("NO_CAPTIONS_ANDROID");
 
-  if (!transcript || transcript.length < 20) throw new Error("EMPTY_TRANSCRIPT");
-  return transcript;
+  const preferred = pickBestTrack(captionTracks);
+  const isAutoGenerated = preferred.kind === "asr";
+  const transcript = await downloadCaptionTrack(preferred, ANDROID_UA);
+  return { transcript, title: videoTitle, isAutoGenerated };
 }
 
 /** Main extraction with multiple fallback strategies */
 async function fetchYouTubeCaptions(videoId: string): Promise<{ transcript: string; title: string; isAutoGenerated: boolean }> {
   const strategies = [
+    { name: "TimedText API", fn: () => fetchViaTimedText(videoId) },
     { name: "InnerTube iOS", fn: () => fetchViaInnerTubeIOS(videoId) },
+    { name: "InnerTube Android", fn: () => fetchViaInnerTubeAndroid(videoId) },
     { name: "HTML Scrape", fn: () => fetchViaHTMLScrape(videoId) },
     { name: "InnerTube WEB", fn: () => fetchViaInnerTubeWEB(videoId) },
   ];
@@ -257,21 +377,9 @@ async function callPunctuationAI(apiKey: string, text: string): Promise<string> 
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-2.5-flash-lite",
       messages: [
-        { role: "system", content: `Você é um especialista em transcrição de vídeos em português brasileiro.
-
-Sua ÚNICA tarefa é adicionar pontuação, letras maiúsculas e quebras de parágrafo ao texto bruto de legendas automáticas do YouTube.
-
-REGRAS ABSOLUTAS:
-- NÃO altere, remova, adicione ou substitua NENHUMA palavra.
-- NÃO corrija gírias, regionalismos ou informalidades.
-- NÃO traduza palavras em outros idiomas.
-- NÃO adicione títulos, cabeçalhos, marcadores ou formatação markdown.
-- Adicione: vírgulas, pontos finais, pontos de interrogação, exclamação, dois-pontos, reticências.
-- Adicione letras maiúsculas no início de frases e em nomes próprios.
-- Quebre em parágrafos a cada mudança de assunto ou a cada 3-5 frases.
-- Retorne APENAS o texto pontuado, sem comentários.` },
+        { role: "system", content: `Você é um especialista em transcrição. Sua ÚNICA tarefa é adicionar pontuação, maiúsculas e parágrafos ao texto bruto. NÃO altere nenhuma palavra. Retorne APENAS o texto pontuado.` },
         { role: "user", content: text },
       ],
     }),
@@ -346,12 +454,10 @@ serve(async (req) => {
     let isAutoGenerated = false;
 
     if (manual_transcript && manual_transcript.trim().length > 20) {
-      // Manual transcript provided by user
       transcript = manual_transcript.trim();
       videoTitle = await getVideoTitle(videoId);
       console.log(`Using manual transcript: ${transcript.length} chars`);
     } else {
-      // Automatic extraction — original working method: direct HTML page fetch
       try {
         const result = await fetchYouTubeCaptions(videoId);
         transcript = result.transcript;
@@ -359,12 +465,13 @@ serve(async (req) => {
         isAutoGenerated = result.isAutoGenerated;
         console.log(`Got transcript: ${transcript.length} chars, auto=${isAutoGenerated}`);
       } catch (captionErr: any) {
-        console.warn(`Caption extraction failed: ${captionErr.message}, trying Firecrawl fallback`);
-        
-        // Fallback: Firecrawl
+        console.warn(`All caption strategies failed: ${captionErr.message}`);
+
+        // Firecrawl as absolute last resort — but limit content aggressively
         const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
         if (FIRECRAWL_API_KEY) {
           try {
+            console.log("Trying Firecrawl as last resort...");
             const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
               method: "POST",
               headers: { Authorization: `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
@@ -374,22 +481,28 @@ serve(async (req) => {
               const scrapeData = await scrapeRes.json();
               let rawMarkdown = scrapeData?.data?.markdown || "";
               videoTitle = scrapeData?.data?.metadata?.title || `Vídeo YouTube: ${videoId}`;
+
+              // Firecrawl returns the whole YouTube page. Extract only useful text.
+              // The transcript is NOT in the page markdown — this is description + comments.
+              // Cap to 25k to avoid massive AI processing.
+              const MAX_FIRECRAWL = 25000;
               
-              // Firecrawl returns the entire YouTube page as markdown (100k+).
-              // Extract only the video description / relevant text, not nav/comments/etc.
-              // Look for the description section and limit to 25k chars max
+              // Try to find description section only
               const descMarker = rawMarkdown.indexOf("...more");
               const commentsMarker = rawMarkdown.search(/\d+\s*Comment/i);
               if (descMarker > 0 && commentsMarker > descMarker) {
                 rawMarkdown = rawMarkdown.slice(0, commentsMarker);
               }
-              // Hard cap for Firecrawl page content (generous limit for full transcripts)
-              const MAX_FIRECRAWL = 150000;
+              
               if (rawMarkdown.length > MAX_FIRECRAWL) {
                 rawMarkdown = rawMarkdown.slice(0, MAX_FIRECRAWL);
               }
-              transcript = rawMarkdown;
-              console.log(`Firecrawl fallback: ${transcript.length} chars (trimmed from ${scrapeData?.data?.markdown?.length || 0})`);
+              
+              // Only use if we got meaningful content (not just nav/boilerplate)
+              if (rawMarkdown.length > 200) {
+                transcript = rawMarkdown;
+                console.log(`Firecrawl fallback: ${transcript.length} chars`);
+              }
             } else {
               console.warn(`Firecrawl: ${scrapeRes.status}`);
               await scrapeRes.text().catch(() => {});
@@ -414,45 +527,38 @@ serve(async (req) => {
       }
     }
 
+    // Cap transcript to reasonable size (150k chars)
+    const MAX_TRANSCRIPT = 150000;
+    if (transcript.length > MAX_TRANSCRIPT) {
+      transcript = transcript.slice(0, MAX_TRANSCRIPT);
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     // Add punctuation to auto-generated captions
-    if (isAutoGenerated && transcript.length > 50) {
+    if (isAutoGenerated && transcript.length > 50 && transcript.length < 80000) {
       console.log("Adding punctuation to auto-generated captions...");
       transcript = await addPunctuation(LOVABLE_API_KEY, transcript);
     }
 
-    // Process with AI
+    // Process with AI — use a single pass with truncated input for speed
     let structuredKnowledge = "";
-    const MAX_CHUNK = 25000;
+    const MAX_AI_INPUT = 25000;
 
-    if (transcript.length <= MAX_CHUNK) {
+    if (transcript.length <= MAX_AI_INPUT) {
       structuredKnowledge = await callAI(LOVABLE_API_KEY, SYSTEM_PROMPT,
         `Analise a transcrição COMPLETA deste vídeo do YouTube chamado "${videoTitle}" e extraia TODOS os detalhes específicos mencionados.\n\nTRANSCRIÇÃO COMPLETA:\n${transcript}`
       );
     } else {
-      console.log(`Long transcript (${transcript.length} chars), chunking...`);
-      const chunks: string[] = [];
-      for (let i = 0; i < transcript.length; i += MAX_CHUNK) {
-        chunks.push(transcript.slice(i, i + MAX_CHUNK));
-      }
-
-      const chunkSummaries: string[] = [];
-      for (let i = 0; i < chunks.length; i++) {
-        console.log(`Processing chunk ${i + 1}/${chunks.length}...`);
-        const chunkResult = await callAI(LOVABLE_API_KEY,
-          `Você é um especialista em extrair informações detalhadas de transcrições de vídeos de viagem. Extraia TODAS as informações específicas: nomes de lugares, preços, dicas, recomendações, horários, experiências. Seja extremamente detalhado.`,
-          `PARTE ${i + 1} de ${chunks.length} do vídeo "${videoTitle}". Extraia TODOS os detalhes.\n\nTRECHO:\n${chunks[i]}`
-        );
-        chunkSummaries.push(`--- PARTE ${i + 1} ---\n${chunkResult}`);
-      }
-
-      const combined = chunkSummaries.join("\n\n");
-      const summaryInput = combined.length > 30000 ? combined.slice(0, 30000) + "\n\n[... truncado]" : combined;
-
+      // For long transcripts: take beginning + end (most important parts)
+      console.log(`Long transcript (${transcript.length} chars), using smart truncation...`);
+      const headSize = Math.floor(MAX_AI_INPUT * 0.6);
+      const tailSize = Math.floor(MAX_AI_INPUT * 0.35);
+      const truncated = transcript.slice(0, headSize) + "\n\n[... parte central omitida por tamanho ...]\n\n" + transcript.slice(-tailSize);
+      
       structuredKnowledge = await callAI(LOVABLE_API_KEY, SYSTEM_PROMPT,
-        `Organize as notas de ${chunks.length} partes do vídeo "${videoTitle}" em um documento ÚNICO e completo. Mantenha TODOS os detalhes.\n\nNOTAS:\n${summaryInput}`
+        `Analise esta transcrição (truncada por tamanho) do vídeo "${videoTitle}" e extraia TODOS os detalhes específicos mencionados.\n\nTRANSCRIÇÃO:\n${truncated}`
       );
     }
 
