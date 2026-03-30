@@ -574,7 +574,8 @@ export default function AITeamConhecimento() {
       if (newFile) {
         fileName = newFile.name;
         fileType = newFile.type;
-        const path = `knowledge/${Date.now()}_${newFile.name}`;
+        const safeName = newFile.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]/g, "-").replace(/-+/g, "-").toLowerCase();
+        const path = `knowledge/${Date.now()}_${safeName}`;
         const { error: uploadErr } = await supabase.storage.from("ai-knowledge-base").upload(path, newFile);
         if (uploadErr) throw uploadErr;
         const { data: urlData } = supabase.storage.from("ai-knowledge-base").getPublicUrl(path);
