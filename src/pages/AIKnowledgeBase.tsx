@@ -93,6 +93,7 @@ export default function AIKnowledgeBase() {
   const [showBatchYouTube, setShowBatchYouTube] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [showSmartUpload, setShowSmartUpload] = useState(false);
 
   // Reprocess state
   const [reprocessingId, setReprocessingId] = useState<string | null>(null);
