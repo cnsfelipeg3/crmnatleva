@@ -605,7 +605,7 @@ export default function SimuladorManualMode() {
     } else {
       debugLog(`[DEBOUNCE] Agente processando, msg adicionada à fila (${pendingMessagesRef.current.length} msgs pendentes)`);
     }
-  }, [input, triggerAgentResponse]);
+  }, [input, replyingTo, triggerAgentResponse]);
 
   // ─── Audio handler: transcribe then send as text ───
   const handleSendAudio = useCallback(async (blob: Blob) => {
