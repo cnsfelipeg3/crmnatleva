@@ -567,7 +567,7 @@ export default function SimulatorChatLayout({
                           }
                         }}
                       >
-                        <FileTextIcon className="w-4 h-4 text-amber-500" />
+                        <FileTextIcon className="w-4 h-4 text-champagne" />
                         Documento
                       </button>
                     </div>
