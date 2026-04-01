@@ -195,7 +195,7 @@ export default function ChameleonConfig({ onStart, loading }: Props) {
           border: "1px solid rgba(239,68,68,0.15)",
         }}>
           <p className="text-xs font-bold" style={{ color: "#FCA5A5" }}>Perfis Desafio</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className={cn("grid gap-2", isMobile ? "grid-cols-1" : "grid-cols-2")}>
             {CHALLENGE_PROFILES.map(ch => (
               <button
                 key={ch.id}
