@@ -222,8 +222,11 @@ export default function SimuladorManualMode() {
       globalRulesBlock,
       agencyName: agencyConfig.agency_name,
       agencyTone: agencyConfig.tom_comunicacao,
+      dbOverride: {
+        behavior_prompt: agentBehaviors[selectedAgent.id] || null,
+      },
     }),
-    [selectedAgent, globalRulesBlock, agencyConfig.agency_name, agencyConfig.tom_comunicacao],
+    [selectedAgent, globalRulesBlock, agencyConfig.agency_name, agencyConfig.tom_comunicacao, agentBehaviors],
   );
 
   // ═══ DEBOUNCE CHAT — Input livre, fila de mensagens, resposta em lote ═══
