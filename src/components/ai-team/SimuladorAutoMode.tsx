@@ -421,6 +421,10 @@ export default function SimuladorAutoMode() {
           const addedAgentResp = pushUniqueSimMessage(lead, { role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
           if (addedAgentResp) setLeads(prev => [...prev]);
 
+          // Progressive monitor field reveal
+          const mBid = monitorBriefingIds[lead.id];
+          if (mBid) revealMonitorFields(mBid, r, lead).catch(() => {});
+
           // Detect price print mention → generate actual image
           if (detectsPricePrint(agentResp)) {
             addEvent("#8B5CF6", `📸 ${agent.name} gerando print de preço para ${lead.nome}...`, "🖼️");
