@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { Dice5, Target, Skull, Play, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { AGENTS_V4 } from "@/components/ai-team/agentsV4Data";
 import {
   generateRandomProfile,
