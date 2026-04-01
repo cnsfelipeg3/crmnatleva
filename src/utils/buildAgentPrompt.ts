@@ -194,13 +194,31 @@ export function buildUnifiedAgentPrompt(options: UnifiedPromptOptions): string {
   const roleInstr = AGENT_ROLE_INSTRUCTIONS[agent.id] || "";
   const teamContext = buildTeamContextBlock(agent.id);
 
-  // Persona: DB override takes precedence
-  const persona = dbOverride?.persona || agent.persona;
+  // Commercial funnel agents all present as "Nath" to the client
+  const COMMERCIAL_AGENT_IDS = ["maya", "atlas", "habibi", "nemo", "dante", "luna", "nero", "iris"];
+  const isCommercial = COMMERCIAL_AGENT_IDS.includes(agent.id);
+  const displayName = isCommercial ? "Nath" : agent.name;
+  const displayRole = isCommercial ? "Consultora de viagens" : agent.role;
 
-  // DB behavior block (highest priority override)
+  // DB behavior block — HIGHEST PRIORITY, goes at the TOP
   let dbBehaviorBlock = "";
   if (dbOverride?.behavior_prompt) {
-    dbBehaviorBlock = `\n=== DIRETIVAS COMPORTAMENTAIS (banco de dados — PRIORIDADE MÁXIMA) ===\nVocê DEVE seguir rigorosamente estas instruções:\n${dbOverride.behavior_prompt}\n`;
+    dbBehaviorBlock = `=== DIRETIVAS COMPORTAMENTAIS (PRIORIDADE MÁXIMA — seguir SEMPRE) ===\n${dbOverride.behavior_prompt}\n\n`;
+  }
+
+  // Persona: DB override takes precedence, but strip internal name for commercial agents
+  let persona = dbOverride?.persona || agent.persona;
+  if (isCommercial) {
+    // Remove references to internal agent name from persona
+    persona = persona
+      .replace(/\bSou a? ?MAYA\b/gi, "Sou a Nath")
+      .replace(/\bSou o? ?ATLAS\b/gi, "Sou a Nath")
+      .replace(/\bSou a? ?HABIBI\b/gi, "Sou a Nath")
+      .replace(/\bSou o? ?NEMO\b/gi, "Sou a Nath")
+      .replace(/\bSou o? ?DANTE\b/gi, "Sou a Nath")
+      .replace(/\bSou a? ?LUNA\b/gi, "Sou a Nath")
+      .replace(/\bSou o? ?NERO\b/gi, "Sou a Nath")
+      .replace(/\bSou a? ?IRIS\b/gi, "Sou a Nath");
   }
 
   // DB skills block
@@ -230,8 +248,16 @@ Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
 
   const priceInstr = "IMPORTANTE: Quando for hora de enviar valores/orçamento, diga que vai enviar o print com os valores.\nO agente decide o tamanho certo para cada momento da conversa.";
 
-  return `${persona}
-Voce conversa como ${agent.name} (${agent.role}) da agencia ${name} pelo WhatsApp.
+  // ═══ PROMPT STRUCTURE (priority order: top = highest) ═══
+  // 1. DB behavior_prompt (ABSOLUTE RULES — identity, format, limits)
+  // 2. Identity line (uses "Nath" for commercial agents)
+  // 3. Philosophy + anti-repetition
+  // 4. Role instructions
+  // 5. Team context + universal rules
+  // 6. Skills, training, global rules
+  // 7. Transfer rules + price instruction
+  return `${dbBehaviorBlock}${persona}
+Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.
 ${toneBlock}
 
 FILOSOFIA DE ATENDIMENTO ${name.toUpperCase()}:
@@ -254,7 +280,7 @@ REGRA CRITICA — ANTI-REPETICAO:
 ${roleInstr}
 ${teamContext}
 ${NATH_UNIVERSAL_RULES}
-${dbBehaviorBlock}${skillsBlock}${trainingBlock}
+${skillsBlock}${trainingBlock}
 ${globalRulesBlock}
 ${transferInstr}
 ${priceInstr}`;
