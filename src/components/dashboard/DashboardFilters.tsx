@@ -52,42 +52,65 @@ export default function DashboardFilters({
   };
 
   return (
-    <div className="space-y-3">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-accent/10 border border-accent/20">
-            <Activity className="w-5 h-5 text-accent" />
+    <div className="space-y-4">
+      {/* ── Hero Header — Premium Command Center ── */}
+      <div className="relative overflow-hidden rounded-2xl border border-border/20">
+        {/* Layered background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[hsl(152,44%,8%)] via-[hsl(153,35%,13%)] to-[hsl(152,35%,17%)]" />
+        <div className="absolute inset-0 opacity-[0.04]" style={{
+          backgroundImage: 'radial-gradient(circle at 20% 50%, hsl(154 56% 27% / 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, hsl(41 51% 57% / 0.15) 0%, transparent 40%)',
+        }} />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(41,51%,57%,0.3)] to-transparent" />
+
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-5">
+          <div className="flex items-center gap-4">
+            {/* Animated pulse ring icon */}
+            <div className="relative">
+              <div className="absolute inset-0 rounded-2xl bg-primary/20 animate-ping" style={{ animationDuration: '3s' }} />
+              <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/20 flex items-center justify-center backdrop-blur-sm">
+                <Activity className="w-5 h-5 text-champagne" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-[28px] font-display font-bold text-[hsl(41,35%,91%)] tracking-tight leading-tight">
+                {ceoMode ? "Modo CEO" : "Centro de Comando"}
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-champagne animate-pulse" />
+                  <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-champagne/80">
+                    {ceoMode ? "Visão Estratégica" : "Inteligência Estratégica"}
+                  </span>
+                </div>
+                <span className="text-[10px] text-[hsl(158,20%,46%)]">•</span>
+                <span className="text-[10px] font-mono text-[hsl(158,20%,46%)] tabular-nums">
+                  {filteredCount.toLocaleString()} de {totalSales.toLocaleString()} vendas
+                </span>
+              </div>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
-              {ceoMode ? "👑 Modo CEO" : "Centro de Comando"}
-            </h1>
-            <p className="text-[10px] sm:text-xs text-muted-foreground font-mono tracking-wider">
-              {ceoMode ? "VISÃO ESTRATÉGICA EXECUTIVA" : "INTELIGÊNCIA ESTRATÉGICA"} • {filteredCount} de {totalSales} vendas
-            </p>
+
+          <div className="flex items-center gap-2">
+            {onToggleCeoMode && (
+              <Button
+                variant={ceoMode ? "default" : "outline"}
+                size="sm"
+                className={`text-xs gap-1.5 ${ceoMode ? "bg-champagne text-[hsl(153,55%,17%)] hover:bg-champagne/90 shadow-[0_4px_16px_hsl(41,51%,57%,0.25)]" : "border-champagne/30 text-champagne hover:bg-champagne/10"}`}
+                onClick={onToggleCeoMode}
+              >
+                <Crown className="w-3.5 h-3.5" />
+                CEO
+              </Button>
+            )}
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={onClearAll} className="text-xs text-muted-foreground hover:text-destructive">
+                <X className="w-3.5 h-3.5 mr-1" /> Limpar ({activeFilterCount})
+              </Button>
+            )}
+            <Button size="sm" className="glow-hover shadow-[0_4px_12px_hsl(154,56%,27%,0.2)]" onClick={() => navigate("/sales/new")}>
+              <Plus className="w-4 h-4 mr-1" /> Nova Venda
+            </Button>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {onToggleCeoMode && (
-            <Button
-              variant={ceoMode ? "default" : "outline"}
-              size="sm"
-              className={`text-xs gap-1.5 ${ceoMode ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}`}
-              onClick={onToggleCeoMode}
-            >
-              <Crown className="w-3.5 h-3.5" />
-              CEO
-            </Button>
-          )}
-          {activeFilterCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={onClearAll} className="text-xs text-muted-foreground hover:text-destructive">
-              <X className="w-3.5 h-3.5 mr-1" /> Limpar ({activeFilterCount})
-            </Button>
-          )}
-          <Button size="sm" className="glow-hover" onClick={() => navigate("/sales/new")}>
-            <Plus className="w-4 h-4 mr-1" /> Nova Venda
-          </Button>
         </div>
       </div>
 
