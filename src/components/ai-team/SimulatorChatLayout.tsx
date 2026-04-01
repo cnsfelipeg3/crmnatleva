@@ -281,7 +281,7 @@ const ChatBubble = memo(function ChatBubble({
                   {cleanContent && <p className="text-sm leading-relaxed mt-1"><Linkify text={cleanContent} /></p>}
                 </div>
               ) : (
-                cleanContent && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={cleanContent} /></p>
+                cleanContent && <p className="text-[14px] leading-relaxed whitespace-pre-wrap"><Linkify text={cleanContent} /></p>
               )}
               <div className="flex items-center justify-end gap-1 mt-1">
                 <span className="text-[9px] opacity-60">{formatMsgTime(msg.timestamp)}</span>
