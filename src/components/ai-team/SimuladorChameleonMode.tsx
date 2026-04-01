@@ -293,6 +293,13 @@ export default function SimuladorChameleonMode() {
       setDebrief(parsed);
       setPhase("debrief");
 
+      // Complete monitor briefing
+      const mBid = monitorBriefingIdRef.current;
+      if (mBid) {
+        fillAnalysisFields(mBid, p.nome, p.destino, parsed.veredicto).catch(() => {});
+        completeMonitorBriefing(mBid).catch(() => {});
+      }
+
       // Save to DB
       try {
         await supabase.from("chameleon_sessions").insert({
