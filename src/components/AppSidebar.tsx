@@ -29,6 +29,7 @@ const navItems = [
   { to: "/birthdays", icon: Cake, label: "Aniversariantes" },
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
   { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações Portal" },
+  { to: "/briefings", icon: Sparkles, label: "Briefings IA" },
   { to: "/propostas", icon: Presentation, label: "Propostas" },
   { to: "/midias", icon: ImageIcon, label: "Mídias" },
   

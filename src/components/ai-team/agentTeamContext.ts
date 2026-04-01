@@ -54,10 +54,11 @@ Ao transferir pro ATLAS, envie: nome, destino de interesse e resumo do tom da co
     receivesFrom: ["maya"],
     transfersTo: ["habibi", "nemo", "dante", "luna"],
     expectsData: ["nome", "destino de interesse", "tom da conversa", "ocasião"],
-    mustDeliver: ["destino confirmado", "período/datas", "orçamento estimado", "número de viajantes", "perfil (família/VIP/lua-de-mel/aventureiro)", "preferências descobertas"],
+    mustDeliver: ["destino confirmado", "período/datas", "orçamento estimado", "número de viajantes", "perfil (família/VIP/lua-de-mel/aventureiro)", "preferências descobertas", "briefing de cotação estruturado"],
     roleConsciousness: `Você recebe o lead já acolhido pela MAYA. Não repita a saudação.
 Continue a conversa naturalmente. Seu objetivo: descobrir destino, período, orçamento, número de viajantes e perfil.
 Faça isso de forma conversacional, não como formulário.
+Quando tiver os 5 campos obrigatórios (nome, destino, período, duração, composição do grupo) + pelo menos 2 desejáveis, ESCALONE gerando o briefing de cotação.
 Ao transferir pro especialista, envie TUDO que coletou.`,
     minExchanges: 6,
   },
