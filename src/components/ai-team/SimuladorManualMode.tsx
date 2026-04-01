@@ -618,6 +618,24 @@ export default function SimuladorManualMode() {
 
         debugLog(`[TRANSFER] ${selectedAgent.name} → ${nextAgent.name} | Motivo: ${transferReason}`);
 
+        // If ATLAS is transferring, generate a quotation briefing
+        if (selectedAgent.id === "atlas") {
+          const manualMessages = messagesRef.current.map(m => ({
+            role: m.role,
+            content: m.content || "",
+            agentName: m.agentName,
+          }));
+          const leadNameMatch = manualMessages.find(m => m.role === "user")?.content || "Lead";
+          extractAndSaveBriefing(
+            { nome: leadNameMatch.slice(0, 40), messages: manualMessages },
+            "manual",
+          ).then(result => {
+            if (result.success) {
+              toast({ title: "📋 Novo Briefing de Cotação", description: "Briefing gerado com sucesso! Veja em Briefings IA." });
+            }
+          });
+        }
+
         logAITeamAudit({
           action_type: "create",
           entity_type: AUDIT_ENTITIES.FLOW,
