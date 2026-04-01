@@ -38,6 +38,7 @@ import {
   implementImprovement, saveSimHistory, sentimentColor, sentimentLabel,
 } from "./simuladorAutoUtils";
 import { extractAndSaveBriefing } from "./briefingExtractor";
+import { createMonitorBriefing, revealMonitorFields, completeMonitorBriefing, fillAnalysisFields } from "@/lib/quotationMonitor";
 
 function useCountUp(target: number, duration = 500) {
   const [val, setVal] = useState(0);

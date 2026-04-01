@@ -9,6 +9,7 @@ import { useState, useRef, useCallback, useEffect, lazy, Suspense } from "react"
 import { Pause, SkipForward, RotateCcw, User, Bot, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { createMonitorBriefing, revealMonitorFields, completeMonitorBriefing, fillAnalysisFields } from "@/lib/quotationMonitor";
 import { AGENTS_V4 } from "@/components/ai-team/agentsV4Data";
 import { callSimulatorAI } from "@/components/ai-team/simuladorAutoUtils";
 import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
