@@ -59,6 +59,7 @@ export default function SimuladorChameleonMode() {
   const [startLoading, setStartLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef(false);
+  const monitorBriefingIdRef = useRef<string | null>(null);
   const { data: globalRules = [] } = useGlobalRules();
   const globalRulesBlock = buildGlobalRulesBlock(globalRules);
 
