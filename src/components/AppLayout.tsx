@@ -76,7 +76,7 @@ export default function AppLayout() {
       <AppSidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         {!isImmersive && (
-          <header className="flex items-center justify-between px-4 h-12 border-b border-border/40 bg-card/50 backdrop-blur-md shrink-0 z-20">
+          <header className="flex items-center justify-between px-5 h-[3.3rem] border-b border-accent/15 bg-card/50 backdrop-blur-md shrink-0 z-20">
             <GlobalSearch />
             <div className="flex items-center gap-3">
               <AIPageSummaryButton />
