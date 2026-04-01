@@ -98,7 +98,7 @@ function Linkify({ text }: { text: string }) {
     <>
       {parts.map((part, i) =>
         URL_REGEX.test(part) ? (
-          <a key={i} href={part.startsWith("http") ? part : `https://${part}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline hover:text-blue-600 break-all">{part}</a>
+          <a key={i} href={part.startsWith("http") ? part : `https://${part}`} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80 break-all">{part}</a>
         ) : (
           <Fragment key={i}>{part}</Fragment>
         )
