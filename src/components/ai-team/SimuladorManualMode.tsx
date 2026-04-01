@@ -631,7 +631,7 @@ export default function SimuladorManualMode() {
             "manual",
           ).then(result => {
             if (result.success) {
-              toast({ title: "📋 Novo Briefing de Cotação", description: "Briefing gerado com sucesso! Veja em Briefings IA." });
+              toast({ title: "📋 Novo Briefing de Cotação", description: "Briefing gerado com sucesso! Veja em Cotações." });
             }
           });
         }
