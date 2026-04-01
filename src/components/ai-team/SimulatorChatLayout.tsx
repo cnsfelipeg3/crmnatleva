@@ -583,7 +583,7 @@ export default function SimulatorChatLayout({
               onChange={(e) => onInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={disabled}
-              className="flex-1 min-h-[40px] max-h-[120px] text-sm resize-none bg-background/50 border-border/50 rounded-3xl"
+              className="flex-1 min-h-[40px] max-h-[120px] text-[14px] resize-none bg-background/50 border-border/20 rounded-3xl"
               rows={1}
             />
 
