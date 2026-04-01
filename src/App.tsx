@@ -274,6 +274,7 @@ function AppRoutes() {
             <Route path="extrato" element={<AITeamExtrato />} />
             <Route path="saude" element={<AITeamSaude />} />
             <Route path="config" element={<AITeamConfig />} />
+            <Route path="changelog" element={<AITeamChangelog />} />
             <Route path="agent/:agentId" element={<AITeamAgentDetail />} />
           </Route>
 
