@@ -359,8 +359,6 @@ export default function SimuladorChameleonMode() {
   };
 
   const currentAgent = AGENTS_V4.find(a => a.id === currentAgentId);
-  const isMobile = useIsMobile();
-  const [showMobilePanel, setShowMobilePanel] = useState(false);
 
   // ─── CONFIG PHASE ───
   if (phase === "config") {
