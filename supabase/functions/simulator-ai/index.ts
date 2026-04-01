@@ -100,7 +100,7 @@ async function callAnthropic(
   const compactMessages = sanitized;
 
   const compactSystem = systemMsg?.content
-    ? (systemMsg.content.length > 2500 ? `${systemMsg.content.slice(0, 2500)}...` : systemMsg.content)
+    ? (systemMsg.content.length > 6000 ? `${systemMsg.content.slice(0, 6000)}...` : systemMsg.content)
     : "";
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
