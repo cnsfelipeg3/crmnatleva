@@ -27,6 +27,7 @@ interface Props {
 }
 
 export default function ChameleonConfig({ onStart, loading }: Props) {
+  const isMobile = useIsMobile();
   const [sessionType, setSessionType] = useState<SessionType>("random");
   const [selectedAgents, setSelectedAgents] = useState<string[]>(["maya", "atlas"]);
   const [maxExchanges, setMaxExchanges] = useState(20);
