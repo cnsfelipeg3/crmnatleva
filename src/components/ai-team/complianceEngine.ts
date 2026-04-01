@@ -261,6 +261,11 @@ export async function runComplianceCheck(
       /ESTADO_\d/i, /FASE_\d/i, /ETAPA_\d/i,
       /##\s+\d+\.\s+VIOLA/i, /RESPOSTA\s+CORRETA\s+PARA/i,
       /AN[ÁA]LISE\s+ADICIONAL/i, /REGRA\s+VIOLADA/i,
+      // Catch compliance validator asking for input instead of processing
+      /RESPOSTA DO AGENTE/i, /para validar/i, /forne[cç]a/i,
+      /resposta completa/i, /contexto da conversa/i,
+      /Por favor,?\s*(forne|envie|mande|informe)/i,
+      /Preciso d[aoe]/i,
     ];
     const isMetaResponse = metaPatterns.filter(p => p.test(result)).length >= 1;
     if (isMetaResponse) {
