@@ -326,14 +326,26 @@ export default function SimuladorManualMode() {
     }
 
     try {
+      // Merge enrichment INTO the system prompt (edge function only uses systemPrompt)
+      const finalSystemPrompt = enrichedBehaviorPrompt
+        ? manualSystemPrompt + "\n" + enrichedBehaviorPrompt
+        : manualSystemPrompt;
+
+      // ═══ TEMP DEBUG — remove after confirming ═══
+      if (selectedAgent.id === "maya") {
+        console.log("=== PROMPT COMPLETO MAYA ===");
+        console.log("Tamanho:", finalSystemPrompt.length, "chars");
+        console.log(finalSystemPrompt);
+        console.log("=== FIM PROMPT MAYA ===");
+      }
+
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
       const resp = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
         body: JSON.stringify({
           type: "agent",
-          systemPrompt: manualSystemPrompt,
-          agentBehaviorPrompt: enrichedBehaviorPrompt,
+          systemPrompt: finalSystemPrompt,
           history: buildConversationHistory(currentMessages, selectedDestino, isLivreMode),
           provider: "lovable",
         }),
