@@ -1,0 +1,36 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PlaneTakeoff, Sparkles } from "lucide-react";
+import { lazy, Suspense } from "react";
+import NatLevaLoader from "@/components/NatLevaLoader";
+
+const QuoteRequests = lazy(() => import("@/pages/QuoteRequests"));
+const QuotationBriefings = lazy(() => import("@/pages/QuotationBriefings"));
+
+export default function CotacoesUnified() {
+  return (
+    <div className="p-4 md:p-6 space-y-4">
+      <Tabs defaultValue="briefings" className="w-full">
+        <TabsList className="w-full max-w-md">
+          <TabsTrigger value="briefings" className="flex-1 gap-1.5">
+            <Sparkles className="w-4 h-4" /> Briefings IA
+          </TabsTrigger>
+          <TabsTrigger value="portal" className="flex-1 gap-1.5">
+            <PlaneTakeoff className="w-4 h-4" /> Solicitações Portal
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="briefings" className="mt-4">
+          <Suspense fallback={<NatLevaLoader />}>
+            <QuotationBriefings />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="portal" className="mt-4">
+          <Suspense fallback={<NatLevaLoader />}>
+            <QuoteRequests />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
