@@ -37,6 +37,7 @@ import {
   TIPO_COLORS, STORAGE_KEYS, loadJson, saveJson,
   implementImprovement, saveSimHistory, sentimentColor, sentimentLabel,
 } from "./simuladorAutoUtils";
+import { extractAndSaveBriefing } from "./briefingExtractor";
 
 function useCountUp(target: number, duration = 500) {
   const [val, setVal] = useState(0);
