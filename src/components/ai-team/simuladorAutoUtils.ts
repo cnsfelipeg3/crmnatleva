@@ -1,5 +1,6 @@
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining } from "@/components/ai-team/agentTrainingStore";
+import { buildUnifiedAgentPrompt } from "@/utils/buildAgentPrompt";
 import {
   type LeadInteligente, type MensagemLead,
   ETAPAS_FUNIL,
@@ -104,9 +105,14 @@ function compactText(text: string, maxChars: number) {
 }
 
 function compactSystemPromptForTransport(sysPrompt: string, type: SimCallType, retryCount: number) {
+  // CRITICAL: Agent prompts are NEVER truncated — this was the root cause of auto vs manual divergence
+  if (type === "agent") {
+    return sysPrompt;
+  }
+
   const maxCharsByType: Record<SimCallType, number> = {
     lead: retryCount >= 1 ? 900 : 1200,
-    agent: retryCount >= 1 ? 5500 : 7000,
+    agent: 999999, // never reached due to early return above
     evaluate: 700,
     debrief: retryCount >= 1 ? 900 : 1200,
     objection: 850,
@@ -119,9 +125,19 @@ function compactSystemPromptForTransport(sysPrompt: string, type: SimCallType, r
 }
 
 function compactHistoryForTransport(history: { role: string; content: string }[], type: SimCallType, retryCount: number) {
+  // Agent type: send more history to preserve conversation memory
+  if (type === "agent") {
+    const maxMessages = retryCount >= 1 ? 6 : 10;
+    const maxCharsPerMessage = retryCount >= 1 ? 350 : 500;
+    return history.slice(-maxMessages).map((message) => ({
+      role: message.role,
+      content: compactText(message.content, maxCharsPerMessage),
+    }));
+  }
+
   const maxMessagesByType: Record<SimCallType, number> = {
     lead: 1,
-    agent: retryCount >= 1 ? 3 : 4,
+    agent: 10, // not reached
     evaluate: 1,
     debrief: 1,
     objection: 1,
@@ -131,7 +147,7 @@ function compactHistoryForTransport(history: { role: string; content: string }[]
   };
   const maxCharsPerMessageByType: Record<SimCallType, number> = {
     lead: 550,
-    agent: retryCount >= 1 ? 280 : 360,
+    agent: 500, // not reached
     evaluate: 800,
     debrief: retryCount >= 1 ? 1000 : 1400,
     objection: 420,
@@ -577,6 +593,12 @@ export interface DbAgentOverride {
   skills?: string[];
 }
 
+/**
+ * buildAgentSysPrompt — NOW uses the UNIFIED prompt builder.
+ * This ensures auto mode produces IDENTICAL prompts to manual mode.
+ * The old separate prompt assembly (IDENTIDADE_NATH + FORMATO_WHATSAPP + separate rules)
+ * has been replaced by buildUnifiedAgentPrompt which matches the manual mode exactly.
+ */
 export function buildAgentSysPrompt(
   agent: typeof AGENTS_V4[0],
   hasNext: boolean,
@@ -585,61 +607,13 @@ export function buildAgentSysPrompt(
   globalRulesBlock: string = "",
   dbOverride?: DbAgentOverride,
 ) {
-  const minTrocas = MIN_TROCAS_POR_AGENTE[agent.id] || 4;
-  const transferInstr = hasNext && enableTransfers ? `\nSOBRE [TRANSFERIR]:
-Use [TRANSFERIR] SOMENTE quando TUDO isso for verdade:
-1. Voce teve ao menos ${minTrocas} trocas reais com este lead
-2. O lead demonstrou entusiasmo genuino — nao apenas respondeu, se engajou
-3. A proxima pergunta natural do lead e algo que so o proximo agente responde melhor
-4. A transferencia beneficia o lead, nao e uma saida operacional
-
-Se qualquer condicao faltar: continue a conversa. Aprofunde. Instigue. Surpreenda.
-[TRANSFERIR] e resultado de conversa bem feita, nunca atalho.
-Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
-  const priceInstr = "IMPORTANTE: Quando for hora de enviar valores/orçamento, diga que vai enviar o print com os valores (ex: 'Segue o print com os valores!', 'Vou te enviar o orçamento agora!', 'Olha só o print com as opções de preço!'). Isso é fundamental para a experiência do cliente.\n";
-  const roleInstr = AGENT_ROLE_INSTRUCTIONS[agent.id] || "";
-
-  // DB behavior_prompt takes priority over localStorage training
-  const dbBehavior = dbOverride?.behavior_prompt || "";
-  const dbPersona = dbOverride?.persona || agent.persona;
-  const dbSkills = dbOverride?.skills;
-
-  // Build DB behavior block
-  let dbBehaviorBlock = "";
-  if (dbBehavior) {
-    dbBehaviorBlock = `\n=== DIRETIVAS COMPORTAMENTAIS (banco de dados — PRIORIDADE MÁXIMA) ===\nVocê DEVE seguir rigorosamente estas instruções:\n${dbBehavior}\n`;
-  }
-
-  // Build skills block from DB if available
-  let skillsBlock = "";
-  if (dbSkills && dbSkills.length > 0) {
-    skillsBlock = `\n=== HABILIDADES ATIVAS ===\n${dbSkills.map(s => `- ${s}`).join("\n")}\n`;
-  }
-  
-  // localStorage training as fallback (only for fields not covered by DB)
-  const training = getAgentTraining(agent.id);
-  let trainingBlock = "";
-  if (training) {
-    const parts: string[] = [];
-    // Only use localStorage behavior if DB doesn't have one
-    if (!dbBehavior && training.behaviorPrompt) {
-      parts.push(`\n=== DIRETIVAS COMPORTAMENTAIS (configuradas pela gestão — PRIORIDADE MÁXIMA) ===\nVocê DEVE seguir rigorosamente estas instruções:\n${training.behaviorPrompt}`);
-    }
-    if (training.customRules && training.customRules.length > 0) {
-      const activeRules = training.customRules.filter(r => r.active);
-      if (activeRules.length > 0) {
-        parts.push(`\n=== REGRAS ESPECÍFICAS ===\n${activeRules.map(r => `- [${r.impact.toUpperCase()}] ${r.name}: ${r.description}`).join("\n")}`);
-      }
-    }
-    if (training.knowledgeSummaries && training.knowledgeSummaries.length > 0) {
-      parts.push(`\n=== BASE DE CONHECIMENTO ===\n${training.knowledgeSummaries.join("\n")}`);
-    }
-    trainingBlock = parts.join("\n");
-  }
-  
-  // CRITICAL: Identity + Format + Urgency + Emoji + Role instructions FIRST (highest priority, survives truncation)
-  // Then persona, filosofia, extras AFTER
-  return `${IDENTIDADE_NATH}\n${FORMATO_WHATSAPP}\n${REGRA_URGENCIA_REFORCADA}\n${REGRA_VARIACAO_EMOJI}\n${roleInstr}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${globalRulesBlock}\n${dbPersona}\nVoce atua internamente como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp, mas para o cliente voce e SEMPRE a Nath.\n${FILOSOFIA_NATLEVA}\n${priceInstr}${transferInstr}`;
+  return buildUnifiedAgentPrompt({
+    agent,
+    globalRulesBlock,
+    dbOverride,
+    enableTransfers,
+    hasNextAgent: hasNext,
+  });
 }
 
 export const SPEED_OPTIONS = [

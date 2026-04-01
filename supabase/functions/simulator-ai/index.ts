@@ -241,11 +241,9 @@ serve(async (req) => {
 
     const config = getModelConfig(type as CallType, provider);
 
-    // Build enriched system prompt with behavioral directives for agent types
+    // v4.2: System prompt arrives FULLY BUILT from frontend (unified builder).
+    // No additional behavioral injection needed — the prompt is identical for manual + auto.
     let enrichedSystemPrompt = systemPrompt || "";
-    if (type === "agent" && enrichedSystemPrompt) {
-      enrichedSystemPrompt = `${NATLEVA_BEHAVIOR_CORE}\n\n${agentBehaviorPrompt ? `DIRETIVAS ESPECÍFICAS DO AGENTE:\n${agentBehaviorPrompt}\n\n` : ""}${enrichedSystemPrompt}`;
-    }
 
     // Build messages array
     const messages: Array<{ role: string; content: string }> = [];
