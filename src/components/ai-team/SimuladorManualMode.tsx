@@ -314,13 +314,8 @@ export default function SimuladorManualMode() {
         + (kbBlock ? "\n" + kbBlock : "")
         + (enrichmentExtras ? "\n" + enrichmentExtras : "");
 
-      // ═══ TEMP DEBUG — remove after confirming ═══
-      if (selectedAgent.id === "maya") {
-        console.log("=== PROMPT COMPLETO MAYA ===");
-        console.log("Tamanho:", finalSystemPrompt.length, "chars");
-        console.log(finalSystemPrompt);
-        console.log("=== FIM PROMPT MAYA ===");
-      }
+      // Use configured provider from ai_config
+      const configuredProvider = agencyConfig.default_provider || "anthropic";
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
       const resp = await fetch(url, {
@@ -330,7 +325,7 @@ export default function SimuladorManualMode() {
           type: "agent",
           systemPrompt: finalSystemPrompt,
           history: buildConversationHistory(currentMessages, selectedDestino, isLivreMode),
-          provider: "lovable",
+          provider: configuredProvider,
         }),
       });
 
