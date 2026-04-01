@@ -27,8 +27,8 @@ export default function AppLayout() {
     return (
       <div className="flex flex-col h-screen overflow-hidden bg-background">
         {!isImmersive && (
-          <header className="flex items-center justify-between px-4 h-14 border-b border-border bg-card/80 backdrop-blur-md shrink-0 z-30">
-            <button onClick={() => setMobileOpen(true)} className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors">
+          <header className="flex items-center justify-between px-4 h-14 border-b border-border/20 bg-card/60 backdrop-blur-xl saturate-[1.8] shrink-0 z-30">
+            <button onClick={() => setMobileOpen(true)} className="p-2 -ml-2 rounded-xl hover:bg-primary/5 transition-colors">
               <Menu className="w-5 h-5 text-foreground" />
             </button>
             <GlobalSearch />
@@ -39,7 +39,7 @@ export default function AppLayout() {
                   <TooltipTrigger asChild>
                     <button
                       onClick={toggleFullscreen}
-                      className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-colors"
                     >
                       {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
                     </button>
@@ -49,7 +49,12 @@ export default function AppLayout() {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <img src={logoNatleva} alt="NatLeva" className="h-5 brightness-0 dark:invert opacity-80" />
+              <img
+                src={logoNatleva}
+                alt="NatLeva"
+                className="h-5"
+                style={{ filter: 'brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg) brightness(0.85)' }}
+              />
             </div>
           </header>
         )}
@@ -63,7 +68,7 @@ export default function AppLayout() {
 
         <main className={cn("flex-1 min-h-0", isImmersive ? "overflow-hidden" : "overflow-auto")}>
           <Suspense fallback={<NatLevaLoader />}>
-            <div className="animate-fade-in">
+            <div className="page-enter">
               <Outlet />
             </div>
           </Suspense>
@@ -78,7 +83,7 @@ export default function AppLayout() {
       <AppSidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         {!isImmersive && (
-          <header className="flex items-center justify-between px-5 h-[3.7rem] border-b border-accent/15 bg-card/50 backdrop-blur-md shrink-0 z-20">
+          <header className="flex items-center justify-between px-5 h-[3.5rem] border-b border-border/15 bg-card/40 backdrop-blur-xl saturate-[1.8] shrink-0 z-20">
             <GlobalSearch />
             <div className="flex items-center gap-3">
               <AIPageSummaryButton />
@@ -87,7 +92,7 @@ export default function AppLayout() {
                   <TooltipTrigger asChild>
                     <button
                       onClick={toggleFullscreen}
-                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-colors"
                     >
                       {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
                     </button>
@@ -99,14 +104,14 @@ export default function AppLayout() {
               </TooltipProvider>
               <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono">
                 <span className="hidden md:inline">NatLeva Intelligence</span>
-                <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
               </div>
             </div>
           </header>
         )}
         <main className={cn("flex-1 overflow-auto min-h-0", isImmersive && "overflow-hidden")}>
           <Suspense fallback={<NatLevaLoader />}>
-            <div className="animate-fade-in">
+            <div className="page-enter">
               <Outlet />
             </div>
           </Suspense>
