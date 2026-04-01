@@ -161,8 +161,8 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         style={{ background: 'linear-gradient(90deg, transparent, hsl(160 60% 50% / 0.5), transparent)' }}
       />
 
-      <div className="relative flex items-center gap-2 p-4 border-b border-sidebar-border min-h-[64px]">
-        {!isCollapsed && <img src={logoNatleva} alt="NatLeva" className="h-8 brightness-0 invert opacity-90" />}
+      <div className="relative flex items-center justify-center gap-2 px-4 border-b border-sidebar-border h-[3.3rem]">
+        {!isCollapsed && <img src={logoNatleva} alt="NatLeva" className="h-[2.1rem] brightness-0 invert opacity-90" />}
         {isCollapsed && <Plane className="w-6 h-6 text-sidebar-primary mx-auto" />}
       </div>
 
