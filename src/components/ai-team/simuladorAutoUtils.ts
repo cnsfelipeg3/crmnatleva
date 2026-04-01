@@ -524,7 +524,7 @@ const FORMATO_WHATSAPP = `
 FORMATO DE RESPOSTA (OBRIGATORIO):
 - Maximo 60 palavras por mensagem. Isso e INEGOCIAVEL.
 - NUNCA use bullet points (- ou *). NUNCA faca listas.
-- NUNCA use travessao (— ou –).
+- NUNCA use travessao (em-dash ou en-dash).
 - Maximo 1 emoji por mensagem.
 - Maximo 1 pergunta por mensagem.
 - Escreva como WhatsApp real: curto, direto, conversacional.
