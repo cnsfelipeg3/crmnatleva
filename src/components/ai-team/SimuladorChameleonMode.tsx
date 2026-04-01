@@ -60,7 +60,8 @@ export default function SimuladorChameleonMode() {
   const [startLoading, setStartLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef(false);
-  const { globalRulesBlock } = useGlobalRules();
+  const { data: globalRules = [] } = useGlobalRules();
+  const globalRulesBlock = buildGlobalRulesBlock(globalRules);
 
   // Auto scroll
   useEffect(() => {
