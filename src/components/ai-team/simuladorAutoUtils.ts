@@ -623,7 +623,9 @@ Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
     trainingBlock = parts.join("\n");
   }
   
-  return `${IDENTIDADE_NATH}\n${FORMATO_WHATSAPP}\n${dbPersona}\nVoce atua internamente como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp, mas para o cliente voce e SEMPRE a Nath.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}`;
+  // CRITICAL: Identity + Format + Urgency + Emoji + Role instructions FIRST (highest priority, survives truncation)
+  // Then persona, filosofia, extras AFTER
+  return `${IDENTIDADE_NATH}\n${FORMATO_WHATSAPP}\n${REGRA_URGENCIA_REFORCADA}\n${REGRA_VARIACAO_EMOJI}\n${roleInstr}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${globalRulesBlock}\n${dbPersona}\nVoce atua internamente como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp, mas para o cliente voce e SEMPRE a Nath.\n${FILOSOFIA_NATLEVA}\n${priceInstr}${transferInstr}`;
 }
 
 export const SPEED_OPTIONS = [
