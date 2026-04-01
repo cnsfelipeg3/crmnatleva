@@ -45,6 +45,7 @@ function getNextAgentInPipeline(currentAgentId: string, selectedAgents: string[]
 }
 
 export default function SimuladorChameleonMode() {
+  const isMobile = useIsMobile();
   const [phase, setPhase] = useState<Phase>("config");
   const [profile, setProfile] = useState<ChameleonProfile | null>(null);
   const [messages, setMessages] = useState<ChameleonMessage[]>([]);
@@ -58,6 +59,7 @@ export default function SimuladorChameleonMode() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusText, setStatusText] = useState("");
   const [startLoading, setStartLoading] = useState(false);
+  const [showMobilePanel, setShowMobilePanel] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef(false);
   const monitorBriefingIdRef = useRef<string | null>(null);
