@@ -70,7 +70,24 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [adminOpen, setAdminOpen] = useState(false);
   const [portalAdminOpen, setPortalAdminOpen] = useState(false);
   const isCollapsed = mobile ? false : collapsed;
+  const [pendingBriefings, setPendingBriefings] = useState(0);
 
+  // Fetch pending briefings count
+  useEffect(() => {
+    const fetchCount = async () => {
+      const { count } = await (supabase as any)
+        .from("quotation_briefings")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pendente");
+      setPendingBriefings(count || 0);
+    };
+    fetchCount();
+    const channel = supabase
+      .channel("sidebar-briefings")
+      .on("postgres_changes", { event: "*", schema: "public", table: "quotation_briefings" }, () => fetchCount())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
   useEffect(() => {
     if (dark) {
       document.documentElement.classList.add("dark");
