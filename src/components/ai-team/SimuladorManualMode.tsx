@@ -248,10 +248,12 @@ export default function SimuladorManualMode() {
     const currentMessages = messagesRef.current;
 
     // ═══ ENRICHMENT LAYER — additive, safe, no-break ═══
-    let enrichedBehaviorPrompt = (agentBehaviors[selectedAgent.id] || "") + (kbContent[selectedAgent.id] || "");
+    // behavior_prompt and KB are already in manualSystemPrompt via dbOverride.
+    // This layer adds ONLY skills and workflows that aren't already present.
+    let enrichmentExtras = "";
     try {
-      const behaviorLower = enrichedBehaviorPrompt.toLowerCase();
-      let addedSkills = 0, addedKb = 0, addedWorkflows = 0;
+      const baseLower = manualSystemPrompt.toLowerCase();
+      let addedSkills = 0, addedWorkflows = 0;
       const extras: string[] = [];
 
       // 1) Skills from DB
@@ -265,7 +267,7 @@ export default function SimuladorManualMode() {
         for (const sa of skillAssignments) {
           const skill = sa.agent_skills as any;
           if (!skill || !skill.is_active || !skill.prompt_instruction) continue;
-          if (behaviorLower.includes(skill.name.toLowerCase())) continue;
+          if (baseLower.includes(skill.name.toLowerCase())) continue;
           newSkills.push(`- ${skill.name}: ${(skill.prompt_instruction || "").slice(0, 150)}`);
         }
         if (newSkills.length > 0) {
@@ -274,70 +276,46 @@ export default function SimuladorManualMode() {
         }
       }
 
-      // 2) KB items from DB
-      const { data: kbDocs } = await supabase
-        .from("ai_knowledge_base")
-        .select("title, content_text, category")
-        .eq("is_active", true)
-        .order("updated_at", { ascending: false })
-        .limit(30);
-      if (kbDocs && kbDocs.length > 0) {
-        const newKb: string[] = [];
-        for (const doc of kbDocs) {
-          if (!doc.content_text || !doc.title) continue;
-          if (behaviorLower.includes(doc.title.toLowerCase())) continue;
-          newKb.push(`- ${doc.title}: ${doc.content_text.slice(0, 200)}`);
-        }
-        if (newKb.length > 0) {
-          extras.push(`\n[CONHECIMENTO ATUALIZADO]\n${newKb.join("\n")}`);
-          addedKb = newKb.length;
-        }
-      }
-
-      // 3) Active workflow from Flow Builder
+      // 2) Active workflow from Flow Builder (lower priority, keep brief)
       const { data: flows } = await supabase
         .from("automation_flows")
         .select("id, name, description")
         .eq("status", "active")
-        .limit(3);
+        .limit(2);
       if (flows && flows.length > 0) {
         for (const flow of flows) {
-          if (behaviorLower.includes(flow.name.toLowerCase())) continue;
+          if (baseLower.includes(flow.name.toLowerCase())) continue;
           const { data: flowNodes } = await supabase
             .from("automation_nodes")
             .select("label, node_type")
             .eq("flow_id", flow.id)
             .order("position_y", { ascending: true })
-            .limit(15);
+            .limit(10);
           if (flowNodes && flowNodes.length > 0) {
             const steps = flowNodes.map(n => n.label || n.node_type).join(" → ");
-            extras.push(`\n[FLUXO DE TRABALHO ATUALIZADO]\nFluxo "${flow.name}": ${steps}`);
+            extras.push(`\n[FLUXO]\n"${flow.name}": ${steps}`);
             addedWorkflows++;
           }
         }
       }
 
       if (extras.length > 0) {
-        enrichedBehaviorPrompt += extras.join("\n");
+        enrichmentExtras = extras.join("\n");
       }
-      debugLog(`[ENRICHMENT] ${addedSkills} skills adicionadas, ${addedKb} KB items, ${addedWorkflows} workflows`);
+      debugLog(`[ENRICHMENT] ${addedSkills} skills, ${addedWorkflows} workflows`);
     } catch (err) {
-      debugLog("[ENRICHMENT] Falha silenciosa, usando prompt original", err);
+      debugLog("[ENRICHMENT] Falha silenciosa", err);
     }
 
     try {
-      // Merge enrichment INTO the system prompt (edge function only uses systemPrompt)
-      const finalSystemPrompt = enrichedBehaviorPrompt
-        ? manualSystemPrompt + "\n" + enrichedBehaviorPrompt
-        : manualSystemPrompt;
+      // KB content is appended separately (already loaded in useEffect, not duplicated from DB)
+      const kbBlock = kbContent[selectedAgent.id] || "";
+      const finalSystemPrompt = manualSystemPrompt
+        + (kbBlock ? "\n" + kbBlock : "")
+        + (enrichmentExtras ? "\n" + enrichmentExtras : "");
 
-      // ═══ TEMP DEBUG — remove after confirming ═══
-      if (selectedAgent.id === "maya") {
-        console.log("=== PROMPT COMPLETO MAYA ===");
-        console.log("Tamanho:", finalSystemPrompt.length, "chars");
-        console.log(finalSystemPrompt);
-        console.log("=== FIM PROMPT MAYA ===");
-      }
+      // Use configured provider from ai_config
+      const configuredProvider = agencyConfig.default_provider || "anthropic";
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
       const resp = await fetch(url, {
@@ -347,7 +325,7 @@ export default function SimuladorManualMode() {
           type: "agent",
           systemPrompt: finalSystemPrompt,
           history: buildConversationHistory(currentMessages, selectedDestino, isLivreMode),
-          provider: "lovable",
+          provider: configuredProvider,
         }),
       });
 
