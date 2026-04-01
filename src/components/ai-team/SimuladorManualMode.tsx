@@ -502,13 +502,17 @@ export default function SimuladorManualMode() {
       const streamId = "stream-" + crypto.randomUUID();
       const updateAgent = (t: string) => {
         setMessages(prev => {
-          const last = prev[prev.length - 1];
-          // Deduplication: skip if last agent message has identical content
-          if (last?.role === "agent" && last?.id !== streamId && last?.content === t) {
-            return prev;
+          // Dedup: if last non-stream agent message has very similar content, skip
+          const lastNonStream = [...prev].reverse().find(m => m.role === "agent" && m.id !== streamId);
+          if (lastNonStream && lastNonStream.content) {
+            const normA = t.replace(/\s+/g, " ").trim().toLowerCase();
+            const normB = lastNonStream.content.replace(/\s+/g, " ").trim().toLowerCase();
+            if (normA === normB || (normA.length > 20 && normB.startsWith(normA.slice(0, Math.floor(normA.length * 0.8))))) {
+              return prev;
+            }
           }
           let updated: ChatMsg[];
-          if (last?.id === streamId) {
+          if (prev[prev.length - 1]?.id === streamId) {
             updated = prev.map((m, idx) => idx === prev.length - 1 ? { ...m, content: t } : m);
           } else {
             updated = [...prev, { id: streamId, role: "agent" as const, content: t, timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name }];
