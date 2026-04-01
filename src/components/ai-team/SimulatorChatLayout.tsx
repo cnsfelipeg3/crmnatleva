@@ -243,13 +243,13 @@ const ChatBubble = memo(function ChatBubble({
             )}
 
             <div className={cn(
-              "rounded-2xl px-4 py-2.5",
+              "rounded-2xl px-[18px] py-3 shadow-[0_2px_8px_rgba(12,31,22,0.1)]",
               isUser
-                ? "bg-primary text-primary-foreground rounded-br-md"
-                : "bg-secondary text-secondary-foreground rounded-bl-md"
+                ? "bg-primary text-primary-foreground rounded-br-sm"
+                : "bg-secondary text-secondary-foreground rounded-bl-sm"
             )}>
               {showName && msg.agentName && (
-                <p className="text-[10px] font-bold text-primary mb-1">{msg.agentName}</p>
+                <p className="text-[11px] font-bold text-champagne mb-1 tracking-wide">{msg.agentName}</p>
               )}
 
               {/* Reply quote */}
