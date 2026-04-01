@@ -616,6 +616,12 @@ export default function SimuladorAutoMode() {
           setLeads(prev => [...prev]);
           // Persist final lead state to DB
           simPersistence.updateLeadState(lead);
+          // Complete monitor briefing
+          const mBid = monitorBriefingIds[lead.id];
+          if (mBid) {
+            fillAnalysisFields(mBid, lead.nome, lead.destino).catch(() => {});
+            completeMonitorBriefing(mBid).catch(() => {});
+          }
         }
       } catch (err) {
         console.error("Lead sim error:", err);
