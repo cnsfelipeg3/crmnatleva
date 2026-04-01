@@ -105,9 +105,14 @@ function compactText(text: string, maxChars: number) {
 }
 
 function compactSystemPromptForTransport(sysPrompt: string, type: SimCallType, retryCount: number) {
+  // CRITICAL: Agent prompts are NEVER truncated — this was the root cause of auto vs manual divergence
+  if (type === "agent") {
+    return sysPrompt;
+  }
+
   const maxCharsByType: Record<SimCallType, number> = {
     lead: retryCount >= 1 ? 900 : 1200,
-    agent: retryCount >= 1 ? 5500 : 7000,
+    agent: 999999, // never reached due to early return above
     evaluate: 700,
     debrief: retryCount >= 1 ? 900 : 1200,
     objection: 850,
