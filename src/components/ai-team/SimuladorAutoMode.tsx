@@ -328,6 +328,13 @@ export default function SimuladorAutoMode() {
       await simPersistence.registerLead(lead);
     }
 
+    // Create monitor briefings for real-time quotation tracking
+    const monitorBriefingIds: Record<string, string> = {};
+    for (const lead of allLeads) {
+      const bId = await createMonitorBriefing(lead);
+      if (bId) monitorBriefingIds[lead.id] = bId;
+    }
+
     // ===== Per-lead simulation logic (extracted for parallel use) =====
     const simulateLead = async (lead: LeadInteligente) => {
       if (!simAtivaRef.current || abortRef.current) return;
