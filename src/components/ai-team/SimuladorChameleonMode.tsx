@@ -9,6 +9,7 @@ import { useState, useRef, useCallback, useEffect, lazy, Suspense } from "react"
 import { Pause, SkipForward, RotateCcw, User, Bot, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { createMonitorBriefing, revealMonitorFields, completeMonitorBriefing, fillAnalysisFields } from "@/lib/quotationMonitor";
 import { AGENTS_V4 } from "@/components/ai-team/agentsV4Data";
 import { callSimulatorAI } from "@/components/ai-team/simuladorAutoUtils";
 import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
@@ -58,6 +59,7 @@ export default function SimuladorChameleonMode() {
   const [startLoading, setStartLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef(false);
+  const monitorBriefingIdRef = useRef<string | null>(null);
   const { data: globalRules = [] } = useGlobalRules();
   const globalRulesBlock = buildGlobalRulesBlock(globalRules);
 
@@ -103,6 +105,12 @@ export default function SimuladorChameleonMode() {
     setMessages([msg]);
     setPhase("running");
     setStartLoading(false);
+
+    // Create monitor briefing for real-time tracking
+    createMonitorBriefing({ nome: p.nome, destino: p.destino, orcamento: p.orcamentoLabel, paxLabel: p.composicaoLabel, motivacao: p.motivacao, origem: "Camaleão" }).then(bId => {
+      monitorBriefingIdRef.current = bId;
+      if (bId) revealMonitorFields(bId, 0, p).catch(() => {});
+    });
 
     // Kick off the conversation loop
     setTimeout(() => runConversationStep(p, [msg], firstAgent, agents, maxEx, 0, sType, chId), 1500);
@@ -222,6 +230,10 @@ export default function SimuladorChameleonMode() {
       setExchangeCount(newExchanges);
       setIsProcessing(false);
 
+      // Progressive monitor field reveal
+      const mBid = monitorBriefingIdRef.current;
+      if (mBid) revealMonitorFields(mBid, newExchanges, p).catch(() => {});
+
       // Continue loop
       if (!abortRef.current && newExchanges < maxEx) {
         setTimeout(() => runConversationStep(p, finalMessages, nextAgentId, agents, maxEx, newExchanges, sType, chId), 2000);
@@ -280,6 +292,13 @@ export default function SimuladorChameleonMode() {
 
       setDebrief(parsed);
       setPhase("debrief");
+
+      // Complete monitor briefing
+      const mBid = monitorBriefingIdRef.current;
+      if (mBid) {
+        fillAnalysisFields(mBid, p.nome, p.destino, parsed.veredicto).catch(() => {});
+        completeMonitorBriefing(mBid).catch(() => {});
+      }
 
       // Save to DB
       try {

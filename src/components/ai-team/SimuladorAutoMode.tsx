@@ -38,6 +38,7 @@ import {
   implementImprovement, saveSimHistory, sentimentColor, sentimentLabel,
 } from "./simuladorAutoUtils";
 import { extractAndSaveBriefing } from "./briefingExtractor";
+import { createMonitorBriefing, revealMonitorFields, completeMonitorBriefing, fillAnalysisFields } from "@/lib/quotationMonitor";
 
 function useCountUp(target: number, duration = 500) {
   const [val, setVal] = useState(0);
@@ -328,6 +329,13 @@ export default function SimuladorAutoMode() {
       await simPersistence.registerLead(lead);
     }
 
+    // Create monitor briefings for real-time quotation tracking
+    const monitorBriefingIds: Record<string, string> = {};
+    for (const lead of allLeads) {
+      const bId = await createMonitorBriefing(lead);
+      if (bId) monitorBriefingIds[lead.id] = bId;
+    }
+
     // ===== Per-lead simulation logic (extracted for parallel use) =====
     const simulateLead = async (lead: LeadInteligente) => {
       if (!simAtivaRef.current || abortRef.current) return;
@@ -413,6 +421,10 @@ export default function SimuladorAutoMode() {
 
           const addedAgentResp = pushUniqueSimMessage(lead, { role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
           if (addedAgentResp) setLeads(prev => [...prev]);
+
+          // Progressive monitor field reveal
+          const mBid = monitorBriefingIds[lead.id];
+          if (mBid) revealMonitorFields(mBid, r, lead).catch(() => {});
 
           // Detect price print mention → generate actual image
           if (detectsPricePrint(agentResp)) {
@@ -605,6 +617,12 @@ export default function SimuladorAutoMode() {
           setLeads(prev => [...prev]);
           // Persist final lead state to DB
           simPersistence.updateLeadState(lead);
+          // Complete monitor briefing
+          const mBid = monitorBriefingIds[lead.id];
+          if (mBid) {
+            fillAnalysisFields(mBid, lead.nome, lead.destino).catch(() => {});
+            completeMonitorBriefing(mBid).catch(() => {});
+          }
         }
       } catch (err) {
         console.error("Lead sim error:", err);
