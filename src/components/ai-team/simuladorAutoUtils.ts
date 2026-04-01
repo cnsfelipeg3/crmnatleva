@@ -125,9 +125,19 @@ function compactSystemPromptForTransport(sysPrompt: string, type: SimCallType, r
 }
 
 function compactHistoryForTransport(history: { role: string; content: string }[], type: SimCallType, retryCount: number) {
+  // Agent type: send more history to preserve conversation memory
+  if (type === "agent") {
+    const maxMessages = retryCount >= 1 ? 6 : 10;
+    const maxCharsPerMessage = retryCount >= 1 ? 350 : 500;
+    return history.slice(-maxMessages).map((message) => ({
+      role: message.role,
+      content: compactText(message.content, maxCharsPerMessage),
+    }));
+  }
+
   const maxMessagesByType: Record<SimCallType, number> = {
     lead: 1,
-    agent: retryCount >= 1 ? 3 : 4,
+    agent: 10, // not reached
     evaluate: 1,
     debrief: 1,
     objection: 1,
@@ -137,7 +147,7 @@ function compactHistoryForTransport(history: { role: string; content: string }[]
   };
   const maxCharsPerMessageByType: Record<SimCallType, number> = {
     lead: 550,
-    agent: retryCount >= 1 ? 280 : 360,
+    agent: 500, // not reached
     evaluate: 800,
     debrief: retryCount >= 1 ? 1000 : 1400,
     objection: 420,
