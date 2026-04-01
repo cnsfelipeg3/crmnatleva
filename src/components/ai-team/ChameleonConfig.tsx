@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { Dice5, Target, Skull, Play, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { AGENTS_V4 } from "@/components/ai-team/agentsV4Data";
 import {
   generateRandomProfile,
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export default function ChameleonConfig({ onStart, loading }: Props) {
+  const isMobile = useIsMobile();
   const [sessionType, setSessionType] = useState<SessionType>("random");
   const [selectedAgents, setSelectedAgents] = useState<string[]>(["maya", "atlas"]);
   const [maxExchanges, setMaxExchanges] = useState(20);
@@ -90,7 +92,7 @@ export default function ChameleonConfig({ onStart, loading }: Props) {
   return (
     <div className="space-y-5">
       {/* Session type selector */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className={cn("grid gap-3", isMobile ? "grid-cols-1" : "grid-cols-3")}>
         {typeCards.map(({ type, icon: Icon, label, desc, color }) => (
           <button
             key={type}
@@ -157,7 +159,7 @@ export default function ChameleonConfig({ onStart, loading }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className={cn("grid gap-3", isMobile ? "grid-cols-1" : "grid-cols-2")}>
             <div>
               <label className="text-[11px] font-medium block mb-1.5" style={{ color: "#94A3B8" }}>Composição</label>
               <select
@@ -193,7 +195,7 @@ export default function ChameleonConfig({ onStart, loading }: Props) {
           border: "1px solid rgba(239,68,68,0.15)",
         }}>
           <p className="text-xs font-bold" style={{ color: "#FCA5A5" }}>Perfis Desafio</p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className={cn("grid gap-2", isMobile ? "grid-cols-1" : "grid-cols-2")}>
             {CHALLENGE_PROFILES.map(ch => (
               <button
                 key={ch.id}
