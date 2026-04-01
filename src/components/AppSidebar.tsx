@@ -29,8 +29,7 @@ const navItems = [
   { to: "/natleva-intelligence", icon: Sparkles, label: "NatLeva Intelligence" },
   { to: "/birthdays", icon: Cake, label: "Aniversariantes" },
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
-  { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações Portal" },
-  { to: "/briefings", icon: Sparkles, label: "Briefings IA" },
+  { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações" },
   { to: "/propostas", icon: Presentation, label: "Propostas" },
   { to: "/midias", icon: ImageIcon, label: "Mídias" },
   
@@ -132,7 +131,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           )}
           <item.icon className={cn("w-5 h-5 shrink-0 transition-colors", isActive && "text-sidebar-primary")} />
           {!isCollapsed && <span className={indent ? "text-xs" : ""}>{item.label}</span>}
-          {item.to === "/briefings" && pendingBriefings > 0 && (
+          {item.to === "/cotacoes" && pendingBriefings > 0 && (
             <span className="ml-auto shrink-0 min-w-5 h-5 flex items-center justify-center rounded-full bg-accent text-accent-foreground text-[10px] font-bold px-1.5 animate-pulse">
               {pendingBriefings}
             </span>

@@ -483,7 +483,7 @@ export default function SimuladorAutoMode() {
               extractAndSaveBriefing(lead, "auto").then(result => {
                 if (result.success) {
                   addEvent("#10B981", `✅ Briefing de cotação criado para ${lead.nome}`, "📋");
-                  toast({ title: "📋 Novo Briefing de Cotação", description: `${lead.nome} → ${lead.destino || "destino"}. Veja em Briefings IA.` });
+                  toast({ title: "📋 Novo Briefing de Cotação", description: `${lead.nome} → ${lead.destino || "destino"}. Veja em Cotações.` });
                 } else {
                   addEvent("#F59E0B", `⚠️ Falha ao gerar briefing: ${result.error}`, "📋");
                 }
