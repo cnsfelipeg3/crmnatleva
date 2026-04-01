@@ -97,14 +97,14 @@ export default function ChameleonConfig({ onStart, loading }: Props) {
             onClick={() => setSessionType(type)}
             className={cn(
               "rounded-xl p-4 text-left transition-all",
-              sessionType === type ? "ring-2 scale-[1.02]" : "hover:scale-[1.01]"
-            )}
-            style={{
-              background: sessionType === type
-                ? `linear-gradient(135deg, ${color}15, ${color}08)`
-                : "rgba(15,23,42,0.6)",
-              border: `1px solid ${sessionType === type ? color + "40" : "rgba(255,255,255,0.06)"}`,
-              ringColor: color,
+                  sessionType === type ? "scale-[1.02]" : "hover:scale-[1.01]"
+                )}
+                style={{
+                  background: sessionType === type
+                    ? `linear-gradient(135deg, ${color}15, ${color}08)`
+                    : "rgba(15,23,42,0.6)",
+                  border: `1px solid ${sessionType === type ? color + "40" : "rgba(255,255,255,0.06)"}`,
+                  boxShadow: sessionType === type ? `0 0 0 2px ${color}50` : "none",
             }}
           >
             <Icon className="w-5 h-5 mb-2" style={{ color }} />
