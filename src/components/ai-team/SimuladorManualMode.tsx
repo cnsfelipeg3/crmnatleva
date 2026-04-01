@@ -217,7 +217,12 @@ export default function SimuladorManualMode() {
 
   const filteredAgents = activeSquad === "all" ? AGENTS_V4 : AGENTS_V4.filter(a => a.squadId === activeSquad);
   const manualSystemPrompt = useMemo(
-    () => buildManualAgentPrompt(selectedAgent, globalRulesBlock, agencyConfig.agency_name, agencyConfig.tom_comunicacao),
+    () => buildUnifiedAgentPrompt({
+      agent: selectedAgent,
+      globalRulesBlock,
+      agencyName: agencyConfig.agency_name,
+      agencyTone: agencyConfig.tom_comunicacao,
+    }),
     [selectedAgent, globalRulesBlock, agencyConfig.agency_name, agencyConfig.tom_comunicacao],
   );
 
