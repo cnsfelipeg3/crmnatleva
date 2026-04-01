@@ -328,9 +328,9 @@ export default function CotacoesMonitorView() {
 
     if (!error && data) {
       // Detect new entries
-      const currentIds = new Set(data.map((d: any) => d.id));
+      const currentIds = new Set<string>(data.map((d: any) => d.id as string));
       const fresh = new Set<string>();
-      currentIds.forEach((id: string) => {
+      currentIds.forEach((id) => {
         if (!prevIdsRef.current.has(id)) fresh.add(id);
       });
       if (fresh.size > 0) {
