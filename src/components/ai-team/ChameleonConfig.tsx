@@ -198,13 +198,11 @@ export default function ChameleonConfig({ onStart, loading }: Props) {
               <button
                 key={ch.id}
                 onClick={() => setSelectedChallenge(ch.id)}
-                className={cn("rounded-lg p-3 text-left transition-all",
-                  selectedChallenge === ch.id ? "ring-1" : ""
-                )}
+                className="rounded-lg p-3 text-left transition-all"
                 style={{
                   background: selectedChallenge === ch.id ? "rgba(239,68,68,0.08)" : "rgba(0,0,0,0.2)",
                   border: `1px solid ${selectedChallenge === ch.id ? "rgba(239,68,68,0.3)" : "rgba(255,255,255,0.05)"}`,
-                  ringColor: "#EF4444",
+                  boxShadow: selectedChallenge === ch.id ? "0 0 0 1px rgba(239,68,68,0.4)" : "none",
                 }}
               >
                 <span className="text-lg">{ch.emoji}</span>
