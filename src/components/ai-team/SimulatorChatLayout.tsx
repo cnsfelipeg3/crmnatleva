@@ -98,7 +98,7 @@ function Linkify({ text }: { text: string }) {
     <>
       {parts.map((part, i) =>
         URL_REGEX.test(part) ? (
-          <a key={i} href={part.startsWith("http") ? part : `https://${part}`} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline hover:text-blue-600 break-all">{part}</a>
+          <a key={i} href={part.startsWith("http") ? part : `https://${part}`} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80 break-all">{part}</a>
         ) : (
           <Fragment key={i}>{part}</Fragment>
         )
@@ -567,7 +567,7 @@ export default function SimulatorChatLayout({
                           }
                         }}
                       >
-                        <FileTextIcon className="w-4 h-4 text-amber-500" />
+                        <FileTextIcon className="w-4 h-4 text-champagne" />
                         Documento
                       </button>
                     </div>
@@ -583,7 +583,7 @@ export default function SimulatorChatLayout({
               onChange={(e) => onInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={disabled}
-              className="flex-1 min-h-[40px] max-h-[120px] text-sm resize-none bg-background/50 border-border/50"
+              className="flex-1 min-h-[40px] max-h-[120px] text-sm resize-none bg-background/50 border-border/50 rounded-3xl"
               rows={1}
             />
 
