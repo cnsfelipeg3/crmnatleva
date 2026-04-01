@@ -92,7 +92,7 @@ export default function ChameleonConfig({ onStart, loading }: Props) {
   return (
     <div className="space-y-5">
       {/* Session type selector */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className={cn("grid gap-3", isMobile ? "grid-cols-1" : "grid-cols-3")}>
         {typeCards.map(({ type, icon: Icon, label, desc, color }) => (
           <button
             key={type}
