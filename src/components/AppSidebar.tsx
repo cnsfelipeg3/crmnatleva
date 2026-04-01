@@ -1,3 +1,4 @@
+import React from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import logoNatleva from "@/assets/logo-natleva.png";
@@ -32,7 +33,6 @@ const navItems = [
   { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações" },
   { to: "/propostas", icon: Presentation, label: "Propostas" },
   { to: "/midias", icon: ImageIcon, label: "Mídias" },
-  
 ];
 
 const financeItems = [
@@ -62,7 +62,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const [financeOpen, setFinanceOpen] = useState(false);
   const [rhOpen, setRhOpen] = useState(false);
-  
   const [operacaoOpen, setOperacaoOpen] = useState(false);
   const [aiTeamOpen, setAiTeamOpen] = useState(false);
   const [implOpen, setImplOpen] = useState(false);
@@ -71,7 +70,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const isCollapsed = mobile ? false : collapsed;
   const [pendingBriefings, setPendingBriefings] = useState(0);
 
-  // Fetch pending briefings count
   useEffect(() => {
     const fetchCount = async () => {
       const { count } = await (supabase as any)
@@ -87,6 +85,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
+
   useEffect(() => {
     if (dark) {
       document.documentElement.classList.add("dark");
@@ -100,7 +99,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   useEffect(() => {
     if (window.location.pathname.startsWith("/financeiro")) setFinanceOpen(true);
     if (window.location.pathname.startsWith("/rh")) setRhOpen(true);
-    
     if (window.location.pathname.startsWith("/operacao")) setOperacaoOpen(true);
     if (window.location.pathname.startsWith("/ai-team") || window.location.pathname.startsWith("/implementacao/estrategia") || window.location.pathname.startsWith("/implementacao/aprendizados") || window.location.pathname.startsWith("/implementacao/cerebro")) setAiTeamOpen(true);
     if (window.location.pathname.startsWith("/implementacao") || window.location.pathname.startsWith("/import") || window.location.pathname.startsWith("/livechat/import")) setImplOpen(true);
@@ -116,29 +114,55 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
       onClick={onNavigate}
       className={({ isActive }) =>
         cn(
-          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
+          "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 relative group",
           indent && "pl-8",
           isActive
-            ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-[inset_0_0_12px_hsl(160_60%_50%_/_0.08)]"
-            : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
+            ? "bg-primary/8 text-champagne font-bold"
+            : "text-sidebar-foreground hover:bg-primary/5 hover:text-foreground hover:translate-x-[2px]"
         )
       }
     >
       {({ isActive }) => (
         <>
           {isActive && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-sidebar-primary shadow-[0_0_8px_hsl(160_60%_50%_/_0.5)]" />
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r bg-champagne" />
           )}
-          <item.icon className={cn("w-5 h-5 shrink-0 transition-colors", isActive && "text-sidebar-primary")} />
+          <item.icon className={cn("w-[18px] h-[18px] shrink-0 transition-colors", isActive ? "text-champagne" : "text-sidebar-foreground")} />
           {!isCollapsed && <span className={indent ? "text-xs" : ""}>{item.label}</span>}
           {item.to === "/cotacoes" && pendingBriefings > 0 && (
-            <span className="ml-auto shrink-0 min-w-5 h-5 flex items-center justify-center rounded-full bg-accent text-accent-foreground text-[10px] font-bold px-1.5 animate-pulse">
+            <span className="ml-auto shrink-0 min-w-5 h-5 flex items-center justify-center rounded-full bg-champagne text-champagne-foreground text-[10px] font-bold px-1.5 animate-pulse">
               {pendingBriefings}
             </span>
           )}
         </>
       )}
     </NavLink>
+  );
+
+  const renderGroupButton = (label: string, icon: React.ElementType, isOpen: boolean, toggle: () => void) => (
+    <button
+      onClick={toggle}
+      className={cn(
+        "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 w-full",
+        isOpen
+          ? "bg-primary/8 text-foreground"
+          : "text-sidebar-foreground hover:bg-primary/5 hover:text-foreground"
+      )}
+    >
+      {React.createElement(icon, { className: cn("w-[18px] h-[18px] shrink-0", isOpen && "text-champagne") })}
+      {!isCollapsed && (
+        <>
+          <span className="flex-1 text-left">{label}</span>
+          <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", isOpen && "rotate-180")} />
+        </>
+      )}
+    </button>
+  );
+
+  const renderSubGroup = (items: typeof navItems[0][]) => (
+    <div className="space-y-0.5 ml-2 border-l border-border/10 pl-1">
+      {items.map((item) => renderNavItem(item, true))}
+    </div>
   );
 
   return (
@@ -148,155 +172,70 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         mobile ? "w-full" : (isCollapsed ? "w-[68px]" : "w-[240px]")
       )}
       style={{
-        background: `linear-gradient(180deg, hsl(var(--sidebar-background)) 0%, hsl(var(--sidebar-background) / 0.95) 100%)`,
+        background: `linear-gradient(180deg, hsl(150 40% 4%) 0%, hsl(150 40% 6%) 100%)`,
       }}
     >
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: 'linear-gradient(hsl(160 60% 50% / 0.3) 1px, transparent 1px), linear-gradient(90deg, hsl(160 60% 50% / 0.3) 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
-        }}
-      />
-      <div className="absolute top-0 left-0 right-0 h-[1px]"
-        style={{ background: 'linear-gradient(90deg, transparent, hsl(160 60% 50% / 0.5), transparent)' }}
-      />
-
-      <div className="relative flex items-center justify-center gap-2 px-4 border-b border-sidebar-border h-[3.7rem]">
-        {!isCollapsed && (
-          <img
-            src={logoNatleva}
-            alt="NatLeva"
-            className="h-[2.35rem]"
-            style={{ filter: 'brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg) brightness(0.85)' }}
-          />
+      {/* Logo area */}
+      <div className="relative flex items-center justify-center gap-2 px-4 h-[3.7rem] border-b border-sidebar-border/50">
+        {!isCollapsed ? (
+          <div className="flex flex-col items-center">
+            <img
+              src={logoNatleva}
+              alt="NatLeva"
+              className="h-[2.2rem]"
+              style={{ filter: 'brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg) brightness(0.85)' }}
+            />
+            {/* Gold signature line */}
+            <div className="w-10 h-px mt-1.5 rounded-full bg-gradient-to-r from-transparent via-champagne/30 to-transparent" />
+          </div>
+        ) : (
+          <Plane className="w-5 h-5 text-champagne mx-auto" />
         )}
-        {isCollapsed && <Plane className="w-6 h-6 text-sidebar-primary mx-auto" />}
       </div>
 
       <nav className="relative flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => renderNavItem(item))}
 
         {/* AI Team section */}
-        <button
-          onClick={() => setAiTeamOpen(!aiTeamOpen)}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
-            aiTeamOpen
-              ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
-              : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
-          )}
-        >
-          <Brain className={cn("w-5 h-5 shrink-0", aiTeamOpen && "text-sidebar-primary")} />
-          {!isCollapsed && (
-            <>
-              <span className="flex-1 text-left">🧠 AI Team</span>
-              <ChevronDown className={cn("w-4 h-4 transition-transform", aiTeamOpen && "rotate-180")} />
-            </>
-          )}
-        </button>
+        {renderGroupButton("🧠 AI Team", Brain, aiTeamOpen, () => setAiTeamOpen(!aiTeamOpen))}
+        {aiTeamOpen && !isCollapsed && renderSubGroup([
+          { to: "/ai-team", icon: Brain, label: "Mission Control" },
+          { to: "/ai-team/equipe", icon: Users, label: "Equipe" },
+          { to: "/ai-team/evolution", icon: Sparkles, label: "Evolution Engine" },
+          { to: "/ai-team/conhecimento", icon: BookOpen, label: "Conhecimento" },
+          { to: "/ai-team/skills", icon: Zap, label: "Skills" },
+          { to: "/ai-team/workflow", icon: GitBranch, label: "Flow Builder" },
+          { to: "/ai-team/memoria", icon: Database, label: "Memória & Fiscal" },
+          { to: "/ai-team/academia", icon: Star, label: "Academia" },
+          { to: "/ai-team/simulador", icon: MessageSquare, label: "Simulador" },
+          { to: "/ai-team/config", icon: Cog, label: "Configurações" },
+          { to: "/implementacao/estrategia-ia", icon: Shield, label: "⚖️ Regras Globais" },
+          { to: "/implementacao/aprendizados-ia", icon: Sparkles, label: "Aprendizados IA" },
+          { to: "/implementacao/cerebro-natleva", icon: Zap, label: "Cérebro NatLeva" },
+        ])}
 
-        {aiTeamOpen && !isCollapsed && (
-          <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
-            {[
-              { to: "/ai-team", icon: Brain, label: "Mission Control" },
-              { to: "/ai-team/equipe", icon: Users, label: "Equipe" },
-              { to: "/ai-team/evolution", icon: Sparkles, label: "Evolution Engine" },
-              { to: "/ai-team/conhecimento", icon: BookOpen, label: "Conhecimento" },
-              { to: "/ai-team/skills", icon: Zap, label: "Skills" },
-              { to: "/ai-team/workflow", icon: GitBranch, label: "Flow Builder" },
-              { to: "/ai-team/memoria", icon: Database, label: "Memória & Fiscal" },
-              { to: "/ai-team/academia", icon: Star, label: "Academia" },
-              { to: "/ai-team/simulador", icon: MessageSquare, label: "Simulador" },
-              { to: "/ai-team/config", icon: Cog, label: "Configurações" },
-              { to: "/implementacao/estrategia-ia", icon: Shield, label: "⚖️ Regras Globais" },
-              { to: "/implementacao/aprendizados-ia", icon: Sparkles, label: "Aprendizados IA" },
-              { to: "/implementacao/cerebro-natleva", icon: Zap, label: "Cérebro NatLeva" },
-            ].map((item) => renderNavItem(item, true))}
-          </div>
-        )}
+        {/* Operação Diária */}
+        {renderGroupButton("Operação Diária", Zap, operacaoOpen, () => setOperacaoOpen(!operacaoOpen))}
+        {operacaoOpen && !isCollapsed && renderSubGroup([
+          { to: "/operacao/inbox", icon: Inbox, label: "WhatsApp" },
+          { to: "/operacao/integracoes", icon: Plug, label: "Integrações" },
+          { to: "/operacao/pipeline", icon: Tag, label: "Tags & Pipeline" },
+          { to: "/operacao/simulador", icon: TestTube, label: "Simulador" },
+          { to: "/operacao/logs", icon: ScrollText, label: "Logs & Auditoria" },
+        ])}
 
+        {/* Implementação */}
+        {renderGroupButton("Implementação", PackageOpen, implOpen, () => setImplOpen(!implOpen))}
+        {implOpen && !isCollapsed && renderSubGroup([
+          { to: "/import", icon: FileUp, label: "Importar Planilhas" },
+          { to: "/livechat/import-chatguru", icon: FileDown, label: "Importar Conversas" },
+          { to: "/implementacao/base-conhecimento", icon: BookOpen, label: "Base de Conhecimento" },
+        ])}
 
-        {/* Operação Diária section */}
-        <button
-          onClick={() => setOperacaoOpen(!operacaoOpen)}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
-            operacaoOpen
-              ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
-              : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
-          )}
-        >
-          <Zap className={cn("w-5 h-5 shrink-0", operacaoOpen && "text-sidebar-primary")} />
-          {!isCollapsed && (
-            <>
-              <span className="flex-1 text-left">Operação Diária</span>
-              <ChevronDown className={cn("w-4 h-4 transition-transform", operacaoOpen && "rotate-180")} />
-            </>
-          )}
-        </button>
-
-        {operacaoOpen && !isCollapsed && (
-          <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
-            {[
-              { to: "/operacao/inbox", icon: Inbox, label: "WhatsApp" },
-              { to: "/operacao/integracoes", icon: Plug, label: "Integrações" },
-              { to: "/operacao/pipeline", icon: Tag, label: "Tags & Pipeline" },
-              { to: "/operacao/simulador", icon: TestTube, label: "Simulador" },
-              { to: "/operacao/logs", icon: ScrollText, label: "Logs & Auditoria" },
-            ].map((item) => renderNavItem(item, true))}
-          </div>
-        )}
-
-        {/* Implementação section */}
-        <button
-          onClick={() => setImplOpen(!implOpen)}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
-            implOpen
-              ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
-              : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
-          )}
-        >
-          <PackageOpen className={cn("w-5 h-5 shrink-0", implOpen && "text-sidebar-primary")} />
-          {!isCollapsed && (
-            <>
-              <span className="flex-1 text-left">Implementação</span>
-              <ChevronDown className={cn("w-4 h-4 transition-transform", implOpen && "rotate-180")} />
-            </>
-          )}
-        </button>
-
-        {implOpen && !isCollapsed && (
-          <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
-            {[
-              { to: "/import", icon: FileUp, label: "Importar Planilhas" },
-              { to: "/livechat/import-chatguru", icon: FileDown, label: "Importar Conversas" },
-              { to: "/implementacao/base-conhecimento", icon: BookOpen, label: "Base de Conhecimento" },
-            ].map((item) => renderNavItem(item, true))}
-          </div>
-        )}
-
-        {/* Portal do Viajante section */}
-        <button
-          onClick={() => setPortalAdminOpen(!portalAdminOpen)}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
-            portalAdminOpen
-              ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
-              : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
-          )}
-        >
-          <Globe className={cn("w-5 h-5 shrink-0", portalAdminOpen && "text-sidebar-primary")} />
-          {!isCollapsed && (
-            <>
-              <span className="flex-1 text-left">Portal do Viajante</span>
-              <ChevronDown className={cn("w-4 h-4 transition-transform", portalAdminOpen && "rotate-180")} />
-            </>
-          )}
-        </button>
-
+        {/* Portal do Viajante */}
+        {renderGroupButton("Portal do Viajante", Globe, portalAdminOpen, () => setPortalAdminOpen(!portalAdminOpen))}
         {portalAdminOpen && !isCollapsed && (
-          <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
+          <div className="space-y-0.5 ml-2 border-l border-border/10 pl-1">
             {[
               { to: "/portal-admin", icon: BarChart3, label: "Dashboard" },
               { to: "/portal-admin/viagens", icon: Plane, label: "Viagens" },
@@ -311,7 +250,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={onNavigate}
-              className="flex items-center gap-3 pl-8 px-3 py-2.5 rounded-lg text-xs font-medium text-sidebar-primary/80 hover:bg-sidebar-accent/40 hover:text-sidebar-primary transition-all duration-200"
+              className="flex items-center gap-3 pl-8 px-3 py-2 rounded-lg text-xs font-medium text-champagne/70 hover:bg-primary/5 hover:text-champagne transition-all duration-200"
             >
               <TestTube className="w-4 h-4 shrink-0" />
               <span>Acessar ambiente teste</span>
@@ -320,126 +259,63 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           </div>
         )}
 
-        {/* Finance section */}
-        <button
-          onClick={() => setFinanceOpen(!financeOpen)}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
-            financeOpen
-              ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
-              : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
-          )}
-        >
-          <DollarSign className={cn("w-5 h-5 shrink-0", financeOpen && "text-sidebar-primary")} />
-          {!isCollapsed && (
-            <>
-              <span className="flex-1 text-left">Financeiro</span>
-              <ChevronDown className={cn("w-4 h-4 transition-transform", financeOpen && "rotate-180")} />
-            </>
-          )}
-        </button>
+        {/* Finance */}
+        {renderGroupButton("Financeiro", DollarSign, financeOpen, () => setFinanceOpen(!financeOpen))}
+        {financeOpen && !isCollapsed && renderSubGroup(financeItems)}
 
-        {financeOpen && !isCollapsed && (
-          <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
-            {financeItems.map((item) => renderNavItem(item, true))}
-          </div>
-        )}
+        {/* RH */}
+        {renderGroupButton("RH", Users2, rhOpen, () => setRhOpen(!rhOpen))}
+        {rhOpen && !isCollapsed && renderSubGroup([
+          { to: "/rh", icon: BarChart3, label: "Visão Geral" },
+          { to: "/rh/colaboradores", icon: UserCheck, label: "Colaboradores" },
+          { to: "/rh/ponto", icon: Clock, label: "Ponto" },
+          { to: "/rh/folha", icon: Receipt, label: "Folha & Pagamentos" },
+          { to: "/rh/metas", icon: Target, label: "Metas & Bônus" },
+          { to: "/rh/desempenho", icon: Star, label: "Desempenho" },
+          { to: "/rh/feedbacks", icon: MessageSquare, label: "Feedbacks & 1:1" },
+          { to: "/rh/advertencias", icon: ShieldAlert, label: "Advertências" },
+          { to: "/rh/documentos", icon: FileArchive, label: "Contratos & Docs" },
+          { to: "/rh/permissoes", icon: Shield, label: "Permissões" },
+          { to: "/rh/clima", icon: Smile, label: "Clima do Time" },
+          { to: "/rh/relatorios", icon: PieChart, label: "Relatórios" },
+          { to: "/rh/config", icon: Cog, label: "Configurações" },
+        ])}
 
-        {/* RH section */}
-        <button
-          onClick={() => setRhOpen(!rhOpen)}
-          className={cn(
-            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
-            rhOpen
-              ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
-              : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
-          )}
-        >
-          <Users2 className={cn("w-5 h-5 shrink-0", rhOpen && "text-sidebar-primary")} />
-          {!isCollapsed && (
-            <>
-              <span className="flex-1 text-left">RH</span>
-              <ChevronDown className={cn("w-4 h-4 transition-transform", rhOpen && "rotate-180")} />
-            </>
-          )}
-        </button>
-
-        {rhOpen && !isCollapsed && (
-          <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
-            {[
-              { to: "/rh", icon: BarChart3, label: "Visão Geral" },
-              { to: "/rh/colaboradores", icon: UserCheck, label: "Colaboradores" },
-              { to: "/rh/ponto", icon: Clock, label: "Ponto" },
-              { to: "/rh/folha", icon: Receipt, label: "Folha & Pagamentos" },
-              { to: "/rh/metas", icon: Target, label: "Metas & Bônus" },
-              { to: "/rh/desempenho", icon: Star, label: "Desempenho" },
-              { to: "/rh/feedbacks", icon: MessageSquare, label: "Feedbacks & 1:1" },
-              { to: "/rh/advertencias", icon: ShieldAlert, label: "Advertências" },
-              { to: "/rh/documentos", icon: FileArchive, label: "Contratos & Docs" },
-              { to: "/rh/permissoes", icon: Shield, label: "Permissões" },
-              { to: "/rh/clima", icon: Smile, label: "Clima do Time" },
-              { to: "/rh/relatorios", icon: PieChart, label: "Relatórios" },
-              { to: "/rh/config", icon: Cog, label: "Configurações" },
-            ].map((item) => renderNavItem(item, true))}
-          </div>
-        )}
-
-        {/* Admin section - only for admins */}
+        {/* Admin */}
         {role === "admin" && (
           <>
-            <button
-              onClick={() => setAdminOpen(!adminOpen)}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 w-full",
-                adminOpen
-                  ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground"
-              )}
-            >
-              <Shield className={cn("w-5 h-5 shrink-0", adminOpen && "text-sidebar-primary")} />
-              {!isCollapsed && (
-                <>
-                  <span className="flex-1 text-left">Admin</span>
-                  <ChevronDown className={cn("w-4 h-4 transition-transform", adminOpen && "rotate-180")} />
-                </>
-              )}
-            </button>
-
-            {adminOpen && !isCollapsed && (
-              <div className="space-y-0.5 ml-1 border-l border-sidebar-border/30 pl-1">
-                {[
-                  { to: "/admin/users", icon: Users, label: "Usuários & Permissões" },
-                  { to: "/settings", icon: Settings, label: "Configurações" },
-                ].map((item) => renderNavItem(item, true))}
-              </div>
-            )}
+            {renderGroupButton("Admin", Shield, adminOpen, () => setAdminOpen(!adminOpen))}
+            {adminOpen && !isCollapsed && renderSubGroup([
+              { to: "/admin/users", icon: Users, label: "Usuários & Permissões" },
+              { to: "/settings", icon: Settings, label: "Configurações" },
+            ])}
           </>
         )}
 
         {role !== "admin" && renderNavItem({ to: "/settings", icon: Settings, label: "Configurações" })}
 
-        {/* Apresentação Geral */}
-        <div className="mt-2 pt-2 border-t border-sidebar-border/30">
+        <div className="mt-2 pt-2 border-t border-border/8">
           {renderNavItem({ to: "/apresentacao", icon: Presentation, label: "Apresentação Geral" })}
         </div>
       </nav>
 
-      <div className="relative border-t border-sidebar-border p-3 space-y-1.5">
+      {/* Footer */}
+      <div className="relative border-t border-sidebar-border/50 p-3 space-y-1">
         {!isCollapsed && profile && (
           <div className="px-2 mb-2">
-            <p className="text-xs font-semibold truncate text-sidebar-foreground">{profile.full_name || profile.email}</p>
-            <p className="text-[10px] text-sidebar-foreground/40 capitalize font-mono tracking-wider">{role}</p>
+            <p className="text-xs font-semibold truncate text-foreground">{profile.full_name || profile.email}</p>
+            <p className="text-[10px] text-muted-foreground capitalize font-mono tracking-wider">{role}</p>
           </div>
         )}
-        <button onClick={signOut} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/50 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground w-full transition-all duration-200">
+        <button onClick={signOut} className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-[13px] text-sidebar-foreground hover:bg-primary/5 hover:text-foreground w-full transition-all duration-200">
           <LogOut className="w-4 h-4 shrink-0" />{!isCollapsed && <span>Sair</span>}
         </button>
-        <button onClick={() => setDark(!dark)} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/50 hover:bg-sidebar-accent/40 hover:text-sidebar-foreground w-full transition-all duration-200">
+        <button onClick={() => setDark(!dark)} className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-[13px] text-sidebar-foreground hover:bg-primary/5 hover:text-foreground w-full transition-all duration-200">
           {dark ? <Sun className="w-4 h-4 shrink-0" /> : <Moon className="w-4 h-4 shrink-0" />}
           {!isCollapsed && <span>{dark ? "Tema Claro" : "Tema Escuro"}</span>}
         </button>
         {!mobile && (
-          <button onClick={() => setCollapsed(!collapsed)} className="flex items-center justify-center p-2 rounded-lg text-sidebar-foreground/30 hover:text-sidebar-foreground hover:bg-sidebar-accent/40 w-full transition-all duration-200">
+          <button onClick={() => setCollapsed(!collapsed)} className="flex items-center justify-center p-1.5 rounded-lg text-sidebar-foreground/30 hover:text-foreground hover:bg-primary/5 w-full transition-all duration-200">
             {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
         )}

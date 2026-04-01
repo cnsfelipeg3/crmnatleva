@@ -243,13 +243,13 @@ const ChatBubble = memo(function ChatBubble({
             )}
 
             <div className={cn(
-              "rounded-2xl px-[18px] py-3 shadow-[0_2px_8px_rgba(12,31,22,0.1)]",
+              "rounded-[18px] px-5 py-3.5 shadow-[0_2px_10px_hsl(150_40%_7%_/_0.1)]",
               isUser
                 ? "bg-primary text-primary-foreground rounded-br-sm"
                 : "bg-secondary text-secondary-foreground rounded-bl-sm"
             )}>
               {showName && msg.agentName && (
-                <p className="text-[11px] font-bold text-champagne mb-1 tracking-wide">{msg.agentName}</p>
+                <p className="text-[10px] font-bold text-champagne mb-1.5 tracking-[0.05em] uppercase">{msg.agentName}</p>
               )}
 
               {/* Reply quote */}
@@ -281,7 +281,7 @@ const ChatBubble = memo(function ChatBubble({
                   {cleanContent && <p className="text-sm leading-relaxed mt-1"><Linkify text={cleanContent} /></p>}
                 </div>
               ) : (
-                cleanContent && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={cleanContent} /></p>
+                cleanContent && <p className="text-[14px] leading-relaxed whitespace-pre-wrap"><Linkify text={cleanContent} /></p>
               )}
               <div className="flex items-center justify-end gap-1 mt-1">
                 <span className="text-[9px] opacity-60">{formatMsgTime(msg.timestamp)}</span>
@@ -448,9 +448,9 @@ export default function SimulatorChatLayout({
   const hasText = inputValue.trim().length > 0;
 
   return (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-background rounded-2xl border border-border">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden bg-background rounded-2xl border border-border/15">
       {/* Header — identical structure to inbox chat header */}
-      <div className="flex items-center justify-between px-2 md:px-4 py-2 md:py-2.5 border-b border-border bg-card/50 shrink-0">
+      <div className="flex items-center justify-between px-2 md:px-4 py-2 md:py-2.5 border-b border-border/15 bg-card/40 backdrop-blur-md shrink-0">
         {headerContent}
       </div>
 
@@ -583,7 +583,7 @@ export default function SimulatorChatLayout({
               onChange={(e) => onInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={disabled}
-              className="flex-1 min-h-[40px] max-h-[120px] text-sm resize-none bg-background/50 border-border/50 rounded-3xl"
+              className="flex-1 min-h-[40px] max-h-[120px] text-[14px] resize-none bg-background/50 border-border/20 rounded-3xl"
               rows={1}
             />
 
