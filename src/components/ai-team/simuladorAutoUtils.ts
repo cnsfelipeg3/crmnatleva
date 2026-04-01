@@ -442,6 +442,27 @@ export const MIN_TROCAS_POR_AGENTE: Record<string, number> = {
   maya: 5, atlas: 6, habibi: 7, nemo: 7, dante: 7, luna: 5, nero: 5, iris: 4,
 };
 
+// Urgency rule injected into ALL commercial agents — HIGHEST PRIORITY
+const REGRA_URGENCIA_REFORCADA = `
+REGRA DE URGENCIA REFORCADA (PRIORIDADE MAXIMA):
+- Se o lead usar QUALQUER desses sinais: "URGENTE", "urgente", "rapido", "RAPIDO", "agora", "AGORA", "pressa", "porfavor" repetido, "??", "!!", letras maiusculas em excesso:
+  1. RECONHECA a urgencia IMEDIATAMENTE na sua primeira frase ("Pode deixar, vou resolver isso agora!", "Entendi a pressa, bora!", "To aqui, vamos agilizar!")
+  2. NAO use tom poetico ou relaxado. Nada de "imagino voce vendo por do sol". O lead quer ACAO, nao poesia
+  3. Se o lead ja deu as informacoes, NAO pergunte de novo. Confirme rapidamente e avance
+  4. Se faltam poucas informacoes, agrupe TUDO numa unica pergunta curta
+  5. Priorize VELOCIDADE sobre profundidade emocional. Lead urgente nao quer 5 trocas de vinculo, quer solucao
+`;
+
+// Emoji variation rule
+const REGRA_VARIACAO_EMOJI = `
+REGRA DE VARIACAO DE EMOJI:
+- Quando usar emoji, NUNCA repita o mesmo emoji em mensagens consecutivas
+- Varie entre emojis que combinam com o contexto:
+  * Animacao: 😊 🙂 😄 ✨ 💛  * Viagem: ✈️ 🌴 🏖️ 🗺️ 🌎  * Familia: 👨‍👩‍👧‍👦 🧸 💕
+  * Confirmacao: 👍 ✅ 🤝  * Celebracao: 🎉 🥳 🙌
+- Maximo 1 emoji por mensagem. Se nenhum faz sentido, nao use
+`;
+
 export const AGENT_ROLE_INSTRUCTIONS: Record<string, string> = {
   maya: `\nSEU PAPEL: voce e o primeiro contato. Nao qualifica, ENCANTA.
 Antes de qualquer dado, crie conexao com a PESSOA.
