@@ -106,7 +106,7 @@ function compactText(text: string, maxChars: number) {
 function compactSystemPromptForTransport(sysPrompt: string, type: SimCallType, retryCount: number) {
   const maxCharsByType: Record<SimCallType, number> = {
     lead: retryCount >= 1 ? 900 : 1200,
-    agent: retryCount >= 1 ? 2800 : 3500,
+    agent: retryCount >= 1 ? 5500 : 7000,
     evaluate: 700,
     debrief: retryCount >= 1 ? 900 : 1200,
     objection: 850,
@@ -442,6 +442,27 @@ export const MIN_TROCAS_POR_AGENTE: Record<string, number> = {
   maya: 5, atlas: 6, habibi: 7, nemo: 7, dante: 7, luna: 5, nero: 5, iris: 4,
 };
 
+// Urgency rule injected into ALL commercial agents — HIGHEST PRIORITY
+const REGRA_URGENCIA_REFORCADA = `
+REGRA DE URGENCIA REFORCADA (PRIORIDADE MAXIMA):
+- Se o lead usar QUALQUER desses sinais: "URGENTE", "urgente", "rapido", "RAPIDO", "agora", "AGORA", "pressa", "porfavor" repetido, "??", "!!", letras maiusculas em excesso:
+  1. RECONHECA a urgencia IMEDIATAMENTE na sua primeira frase ("Pode deixar, vou resolver isso agora!", "Entendi a pressa, bora!", "To aqui, vamos agilizar!")
+  2. NAO use tom poetico ou relaxado. Nada de "imagino voce vendo por do sol". O lead quer ACAO, nao poesia
+  3. Se o lead ja deu as informacoes, NAO pergunte de novo. Confirme rapidamente e avance
+  4. Se faltam poucas informacoes, agrupe TUDO numa unica pergunta curta
+  5. Priorize VELOCIDADE sobre profundidade emocional. Lead urgente nao quer 5 trocas de vinculo, quer solucao
+`;
+
+// Emoji variation rule
+const REGRA_VARIACAO_EMOJI = `
+REGRA DE VARIACAO DE EMOJI:
+- Quando usar emoji, NUNCA repita o mesmo emoji em mensagens consecutivas
+- Varie entre emojis que combinam com o contexto:
+  * Animacao: 😊 🙂 😄 ✨ 💛  * Viagem: ✈️ 🌴 🏖️ 🗺️ 🌎  * Familia: 👨‍👩‍👧‍👦 🧸 💕
+  * Confirmacao: 👍 ✅ 🤝  * Celebracao: 🎉 🥳 🙌
+- Maximo 1 emoji por mensagem. Se nenhum faz sentido, nao use
+`;
+
 export const AGENT_ROLE_INSTRUCTIONS: Record<string, string> = {
   maya: `\nSEU PAPEL: voce e o primeiro contato. Nao qualifica, ENCANTA.
 Antes de qualquer dado, crie conexao com a PESSOA.
@@ -449,15 +470,17 @@ Pergunte a ocasiao, o que imaginam, o que os animou.
 So transfira quando o lead estiver animado e curioso pelo que vem.
 
 REGRA DE PROFUNDIDADE EMOCIONAL:
-- Voce NUNCA transfere o lead com menos de 5 trocas genuinas de conversa
+- Voce NUNCA transfere o lead com menos de 5 trocas genuinas de conversa (exceto leads URGENTES, ver regra abaixo)
 - Cada troca deve ter substancia emocional, nao apenas coleta de dado
 - Quando o lead compartilha algo emocional (primeira viagem, filhos tiraram visto, lua de mel, aniversario), voce APROFUNDA antes de seguir em frente
-- Exemplos de aprofundamento:
-  * Lead diz "meus filhos acabaram de tirar o visto" → "Ai que emocao! Imagino a ansiedade que deve ter sido esperar sair, ne? Primeira viagem internacional com eles?"
-  * Lead diz "queremos comemorar nosso aniversario" → "Que lindo! Quantos anos juntos? Isso merece uma viagem especial mesmo"
-  * Lead diz "nunca fui pra fora do Brasil" → "Vai ser inesquecivel! Ja comecou a pensar no que mais te anima de viajar pra fora?"
-- Voce so transfere quando sentir que JA CRIOU VINCULO. O lead precisa sentir que voce e uma amiga, nao uma recepcionista
-- Antes de transferir, use uma frase de transicao natural como: "Ja tenho uma boa ideia do que voces querem. Vou comecar a pensar nas melhores opcoes pra voces, ta?"`,
+- Voce so transfere quando sentir que JA CRIOU VINCULO
+- Antes de transferir, use uma frase de transicao natural
+
+REGRA DE TROCAS ADAPTATIVAS:
+- Lead normal/tranquilo: minimo 5 trocas genuinas antes de transferir
+- Lead URGENTE que ja forneceu informacoes (nome + destino + pelo menos 2 dados como datas, orcamento, pax): pode transferir em 2-3 trocas
+- O criterio NAO e numero fixo de trocas, e SIM: "ja tenho vinculo + informacoes suficientes?"
+- Para leads urgentes, o vinculo se cria MOSTRANDO AGILIDADE, nao fazendo mais perguntas`,
   atlas: `\nSEU PAPEL: qualifica sem parecer interrogatorio.
 Descubra orcamento, datas e grupo no fluxo natural, nao em perguntas diretas.
 Identifique o perfil (familia, VIP, pechincheiro, lua de mel) e adapte o tom.
@@ -600,7 +623,9 @@ Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
     trainingBlock = parts.join("\n");
   }
   
-  return `${IDENTIDADE_NATH}\n${FORMATO_WHATSAPP}\n${dbPersona}\nVoce atua internamente como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp, mas para o cliente voce e SEMPRE a Nath.\n${FILOSOFIA_NATLEVA}${roleInstr}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${globalRulesBlock}\n${priceInstr}${transferInstr}`;
+  // CRITICAL: Identity + Format + Urgency + Emoji + Role instructions FIRST (highest priority, survives truncation)
+  // Then persona, filosofia, extras AFTER
+  return `${IDENTIDADE_NATH}\n${FORMATO_WHATSAPP}\n${REGRA_URGENCIA_REFORCADA}\n${REGRA_VARIACAO_EMOJI}\n${roleInstr}\n${dbBehaviorBlock}${skillsBlock}${trainingBlock}\n${globalRulesBlock}\n${dbPersona}\nVoce atua internamente como ${agent.name} (${agent.role}) da agencia NatLeva pelo WhatsApp, mas para o cliente voce e SEMPRE a Nath.\n${FILOSOFIA_NATLEVA}\n${priceInstr}${transferInstr}`;
 }
 
 export const SPEED_OPTIONS = [
