@@ -106,6 +106,12 @@ export default function SimuladorChameleonMode() {
     setPhase("running");
     setStartLoading(false);
 
+    // Create monitor briefing for real-time tracking
+    createMonitorBriefing({ nome: p.nome, destino: p.destino, orcamento: p.orcamentoLabel, paxLabel: p.composicaoLabel, motivacao: p.motivacao, origem: "Camaleão" }).then(bId => {
+      monitorBriefingIdRef.current = bId;
+      if (bId) revealMonitorFields(bId, 0, p).catch(() => {});
+    });
+
     // Kick off the conversation loop
     setTimeout(() => runConversationStep(p, [msg], firstAgent, agents, maxEx, 0, sType, chId), 1500);
   }, [globalRulesBlock]);
