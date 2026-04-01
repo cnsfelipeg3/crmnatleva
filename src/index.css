@@ -2,99 +2,119 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Instrument+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @layer base {
   :root {
-    --background: 160 12% 97%;
-    --foreground: 160 30% 8%;
+    /* ── NatLeva Brandbook · Light Mode ── */
+    --background: 41 35% 91%;        /* Linen #F0EBE0 */
+    --foreground: 153 55% 17%;       /* Rolex Green #14452F */
 
-    --card: 0 0% 100%;
-    --card-foreground: 160 30% 8%;
+    --card: 40 33% 96%;
+    --card-foreground: 153 55% 17%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 160 30% 8%;
+    --popover: 40 33% 96%;
+    --popover-foreground: 153 55% 17%;
 
-    --primary: 158 45% 12%;
-    --primary-foreground: 60 20% 97%;
+    --primary: 154 56% 27%;          /* Hunter #1E6B4A */
+    --primary-foreground: 41 35% 91%;
 
-    --secondary: 158 12% 92%;
-    --secondary-foreground: 160 30% 8%;
+    --secondary: 41 28% 85%;
+    --secondary-foreground: 153 55% 17%;
 
-    --muted: 160 8% 93%;
-    --muted-foreground: 160 8% 44%;
+    --muted: 41 20% 88%;
+    --muted-foreground: 158 20% 46%; /* Eucalyptus #5E8C7B */
 
-    --accent: 160 60% 42%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 154 56% 27%;           /* Hunter */
+    --accent-foreground: 41 35% 91%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive-foreground: 41 35% 91%;
 
-    --success: 158 60% 38%;
-    --success-foreground: 0 0% 100%;
+    --success: 154 56% 27%;
+    --success-foreground: 41 35% 91%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 38 90% 10%;
+    --warning: 41 51% 57%;           /* Champagne #C9A55A */
+    --warning-foreground: 153 55% 17%;
 
     --info: 210 80% 52%;
-    --info-foreground: 0 0% 100%;
+    --info-foreground: 41 35% 91%;
 
-    --border: 160 10% 90%;
-    --input: 160 10% 90%;
-    --ring: 160 60% 42%;
+    --border: 153 18% 82%;
+    --input: 153 18% 82%;
+    --ring: 154 56% 27%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 158 50% 8%;
-    --sidebar-foreground: 158 12% 82%;
-    --sidebar-primary: 160 60% 50%;
-    --sidebar-primary-foreground: 158 50% 6%;
-    --sidebar-accent: 158 35% 14%;
-    --sidebar-accent-foreground: 158 12% 95%;
-    --sidebar-border: 158 30% 15%;
-    --sidebar-ring: 160 60% 50%;
+    /* Champagne / Gold token */
+    --champagne: 41 51% 57%;
+    --champagne-foreground: 153 55% 17%;
 
-    --chart-1: 160 60% 42%;
-    --chart-2: 38 92% 50%;
+    /* Sidebar — dark green even in light mode */
+    --sidebar-background: 152 44% 8%;     /* #0C1F16 */
+    --sidebar-foreground: 158 20% 46%;    /* Eucalyptus */
+    --sidebar-primary: 41 51% 57%;        /* Champagne */
+    --sidebar-primary-foreground: 153 55% 17%;
+    --sidebar-accent: 152 35% 17%;
+    --sidebar-accent-foreground: 41 35% 91%;
+    --sidebar-border: 152 36% 18%;
+    --sidebar-ring: 154 56% 27%;
+
+    --chart-1: 154 56% 27%;
+    --chart-2: 41 51% 57%;
     --chart-3: 210 80% 52%;
-    --chart-4: 158 60% 38%;
+    --chart-4: 153 55% 17%;
     --chart-5: 280 60% 50%;
 
-    --glow-primary: 160 60% 42%;
-    --glow-accent: 160 80% 60%;
+    --glow-primary: 154 56% 27%;
+    --glow-accent: 41 51% 57%;
 
-    --font-sans: 'Space Grotesk', 'Inter', system-ui, -apple-system, sans-serif;
+    --font-sans: 'Instrument Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   }
 
   .dark {
-    --background: 160 20% 4%;
-    --foreground: 158 10% 92%;
-    --card: 160 22% 7%;
-    --card-foreground: 158 10% 92%;
-    --popover: 160 22% 7%;
-    --popover-foreground: 158 10% 92%;
-    --primary: 160 60% 50%;
-    --primary-foreground: 160 30% 4%;
-    --secondary: 158 18% 12%;
-    --secondary-foreground: 158 10% 92%;
-    --muted: 160 15% 10%;
-    --muted-foreground: 158 8% 48%;
-    --accent: 160 60% 42%;
-    --accent-foreground: 0 0% 100%;
+    /* ── NatLeva Brandbook · Dark Mode (Primary Experience) ── */
+    --background: 152 44% 8%;         /* #0C1F16 Rolex Green ultra-dark */
+    --foreground: 41 35% 91%;         /* #F0EBE0 Linen */
+
+    --card: 153 35% 13%;              /* #162E23 */
+    --card-foreground: 41 35% 91%;
+
+    --popover: 152 35% 17%;           /* #1C3A2C */
+    --popover-foreground: 41 35% 91%;
+
+    --primary: 154 56% 27%;           /* #1E6B4A Hunter */
+    --primary-foreground: 41 35% 91%;
+
+    --secondary: 153 35% 13%;
+    --secondary-foreground: 41 34% 77%;  /* Sand */
+
+    --muted: 152 35% 17%;             /* #1C3A2C */
+    --muted-foreground: 158 20% 46%;  /* Eucalyptus #5E8C7B */
+
+    --accent: 154 56% 27%;            /* Hunter */
+    --accent-foreground: 41 35% 91%;
+
     --destructive: 0 62% 45%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 158 18% 12%;
-    --input: 158 18% 12%;
-    --ring: 160 60% 50%;
-    --sidebar-background: 160 30% 3%;
-    --sidebar-foreground: 158 10% 78%;
-    --sidebar-primary: 160 60% 50%;
-    --sidebar-primary-foreground: 160 30% 4%;
-    --sidebar-accent: 158 25% 8%;
-    --sidebar-accent-foreground: 158 10% 90%;
-    --sidebar-border: 158 20% 8%;
-    --sidebar-ring: 160 60% 50%;
+    --destructive-foreground: 41 35% 91%;
+
+    --border: 152 36% 18%;            /* #1E4030 */
+    --input: 152 36% 18%;
+    --ring: 154 56% 27%;
+
+    --champagne: 41 51% 57%;
+    --champagne-foreground: 153 55% 17%;
+
+    --sidebar-background: 152 44% 8%;
+    --sidebar-foreground: 158 20% 46%;
+    --sidebar-primary: 41 51% 57%;     /* Champagne */
+    --sidebar-primary-foreground: 152 44% 8%;
+    --sidebar-accent: 152 35% 17%;
+    --sidebar-accent-foreground: 41 35% 91%;
+    --sidebar-border: 152 36% 18%;
+    --sidebar-ring: 154 56% 27%;
   }
 }
 
@@ -111,36 +131,50 @@
   }
 
   h1, h2, h3 {
-    font-family: 'Space Grotesk', system-ui, sans-serif;
-    @apply font-semibold tracking-tight;
-    letter-spacing: -0.03em;
+    font-family: var(--font-display);
+    @apply font-bold tracking-tight;
+    letter-spacing: -0.02em;
   }
 
   /* Smooth scrolling on iOS */
   main, .overflow-auto {
     -webkit-overflow-scrolling: touch;
   }
+
+  /* Brandbook scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.2);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.35);
+  }
 }
 
 @layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
   .glass-card {
     @apply bg-card/70 backdrop-blur-md border border-border/40 shadow-sm;
     transition: box-shadow 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
   }
 
   .glass-card:hover {
-    @apply shadow-lg border-border/70;
-    transform: translateY(-1px);
+    @apply shadow-lg;
+    border-color: hsl(var(--champagne) / 0.2);
+    transform: translateY(-2px);
   }
 
   .dark .glass-card {
-    box-shadow: 0 0 20px -5px hsl(var(--glow-primary) / 0.06),
-                0 4px 16px -4px hsl(0 0% 0% / 0.3);
+    box-shadow: 0 4px 24px hsl(var(--glow-primary) / 0.08);
   }
 
   .dark .glass-card:hover {
-    box-shadow: 0 0 30px -5px hsl(var(--glow-primary) / 0.12),
-                0 8px 24px -4px hsl(0 0% 0% / 0.4);
+    box-shadow: 0 8px 32px hsl(var(--glow-primary) / 0.14);
   }
 
   .font-mono {
@@ -220,7 +254,8 @@
 
   /* Section header with line */
   .section-title {
-    @apply text-lg font-semibold text-foreground flex items-center gap-3;
+    @apply text-lg font-bold text-foreground flex items-center gap-3;
+    font-family: var(--font-display);
   }
   .section-title::after {
     content: '';
@@ -241,12 +276,48 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: linear-gradient(90deg, transparent, hsl(var(--accent)), transparent);
+    background: linear-gradient(90deg, transparent, hsl(var(--champagne)), transparent);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
   .card-premium:hover::before {
     opacity: 1;
+  }
+
+  /* Champagne shimmer for premium elements */
+  .shimmer-champagne {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer-champagne::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, hsl(var(--champagne) / 0.08), transparent);
+    animation: shimmer-slide 5s ease-in-out infinite;
+  }
+  @keyframes shimmer-slide {
+    0% { left: -100%; }
+    40%, 100% { left: 200%; }
+  }
+
+  /* Skeleton loading with green shimmer (brandbook) */
+  .skeleton-brand {
+    @apply rounded-md;
+    background: linear-gradient(90deg,
+      hsl(var(--muted)),
+      hsl(var(--muted-foreground) / 0.08),
+      hsl(var(--muted))
+    );
+    background-size: 200% 100%;
+    animation: skeleton-brand-slide 1.5s ease-in-out infinite;
+  }
+  @keyframes skeleton-brand-slide {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
 }
 
@@ -285,6 +356,5 @@
 .neural-block-scan { animation: neural-block-scan-kf 4s ease-in-out infinite; }
 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--primary) / 0.12); border-radius: 4px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.25); }
