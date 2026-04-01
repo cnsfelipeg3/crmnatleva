@@ -5,8 +5,9 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 const SimuladorAutoMode = lazy(() => import("@/components/ai-team/SimuladorAutoMode"));
 const SimuladorManualMode = lazy(() => import("@/components/ai-team/SimuladorManualMode"));
+const SimuladorChameleonMode = lazy(() => import("@/components/ai-team/SimuladorChameleonMode"));
 
-type Mode = "manual" | "auto";
+type Mode = "manual" | "auto" | "chameleon";
 
 const LoadingFallback = memo(() => (
   <div className="flex items-center justify-center py-32">
@@ -34,9 +35,24 @@ export default function AITeamSimulador() {
     setMode(newMode);
   };
 
+  const modeDescriptions: Record<Mode, string> = {
+    manual: "Converse em tempo real com qualquer dos 21 agentes IA",
+    auto: "Teste de estresse automático com IA juiz e múltiplos perfis",
+    chameleon: "IA vs IA — Lead inteligente testa seus agentes automaticamente",
+  };
+
+  const modeButtons: Array<{ id: Mode; label: string; icon: typeof MessageSquare; gradient: string; shadow: string }> = [
+    { id: "manual", label: "Manual", icon: MessageSquare, gradient: "linear-gradient(135deg, #10B981, #059669)", shadow: "0 4px 16px rgba(16,185,129,0.3)" },
+    { id: "auto", label: "Automático", icon: Zap, gradient: "linear-gradient(135deg, #8B5CF6, #7C3AED)", shadow: "0 4px 16px rgba(139,92,246,0.3)" },
+    { id: "chameleon", label: "🦎 Camaleão", icon: Sparkles, gradient: "linear-gradient(135deg, #F59E0B, #D97706)", shadow: "0 4px 16px rgba(245,158,11,0.3)" },
+  ];
+
+  const activeIdx = modeButtons.findIndex(b => b.id === mode);
+  const activeBtn = modeButtons[activeIdx];
+
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ background: "#060A12", contain: "layout style paint" }}>
-      {/* Lightweight ambient — no blur, GPU-composited */}
+      {/* Lightweight ambient */}
       <div className="absolute inset-0 pointer-events-none" style={{ contain: "strict" }}>
         <div className="absolute rounded-full" style={{
           width: isMobile ? 250 : 400, height: isMobile ? 250 : 400,
@@ -68,7 +84,7 @@ export default function AITeamSimulador() {
           border: "1px solid rgba(255,255,255,0.06)",
           contain: "layout style",
         }}>
-          {/* Top shimmer — CSS-only */}
+          {/* Top shimmer */}
           <div className="absolute top-0 left-0 right-0 h-px overflow-hidden">
             <div className="h-full w-1/3 shimmer-line" style={{
               background: "linear-gradient(90deg, transparent, rgba(16,185,129,0.5), transparent)",
@@ -97,41 +113,40 @@ export default function AITeamSimulador() {
                 </h1>
                 {!isMobile && (
                   <p className="text-[13px] mt-0.5" style={{ color: "#64748B" }}>
-                    {mode === "manual"
-                      ? "Converse em tempo real com qualquer dos 21 agentes IA"
-                      : "Teste de estresse automático com IA juiz e múltiplos perfis"}
+                    {modeDescriptions[mode]}
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Pill selector */}
+            {/* Pill selector — 3 buttons */}
             <div className="relative rounded-2xl p-1" style={{
               background: "rgba(255,255,255,0.03)",
               border: "1px solid rgba(255,255,255,0.06)",
             }}>
               <div className="absolute top-1 bottom-1 rounded-xl" style={{
-                left: mode === "manual" ? "4px" : "calc(50% + 2px)",
-                width: "calc(50% - 6px)",
-                background: mode === "manual"
-                  ? "linear-gradient(135deg, #10B981, #059669)"
-                  : "linear-gradient(135deg, #8B5CF6, #7C3AED)",
-                boxShadow: mode === "manual"
-                  ? "0 4px 16px rgba(16,185,129,0.3)"
-                  : "0 4px 16px rgba(139,92,246,0.3)",
+                left: `calc(${activeIdx * (100 / 3)}% + 4px)`,
+                width: `calc(${100 / 3}% - 6px)`,
+                background: activeBtn.gradient,
+                boxShadow: activeBtn.shadow,
                 transition: "left 0.35s cubic-bezier(0.4,0,0.2,1), background 0.35s ease, box-shadow 0.35s ease",
               }} />
               <div className="relative flex">
-                <button onClick={() => handleModeSwitch("manual")}
-                  className={cn("flex items-center gap-1.5 rounded-xl font-bold z-10", isMobile ? "px-4 py-2 text-[12px]" : "px-6 py-2.5 text-[13px]")}
-                  style={{ color: mode === "manual" ? "#fff" : "#64748B", transition: "color 0.25s ease" }}>
-                  <MessageSquare className="w-3.5 h-3.5" /> Manual
-                </button>
-                <button onClick={() => handleModeSwitch("auto")}
-                  className={cn("flex items-center gap-1.5 rounded-xl font-bold z-10", isMobile ? "px-4 py-2 text-[12px]" : "px-6 py-2.5 text-[13px]")}
-                  style={{ color: mode === "auto" ? "#fff" : "#64748B", transition: "color 0.25s ease" }}>
-                  <Zap className="w-3.5 h-3.5" /> Automático
-                </button>
+                {modeButtons.map(btn => (
+                  <button
+                    key={btn.id}
+                    onClick={() => handleModeSwitch(btn.id)}
+                    className={cn("flex items-center gap-1.5 rounded-xl font-bold z-10", isMobile ? "px-3 py-2 text-[11px]" : "px-5 py-2.5 text-[13px]")}
+                    style={{ color: mode === btn.id ? "#fff" : "#64748B", transition: "color 0.25s ease" }}
+                  >
+                    {btn.id === "chameleon" ? (
+                      <span className="text-sm">🦎</span>
+                    ) : (
+                      <btn.icon className="w-3.5 h-3.5" />
+                    )}
+                    {btn.id === "chameleon" ? "Camaleão" : btn.label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -139,12 +154,13 @@ export default function AITeamSimulador() {
           <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(16,185,129,0.12), rgba(139,92,246,0.12), transparent)" }} />
         </div>
 
-        {/* Content — lazy loaded, no key remount */}
+        {/* Content */}
         <Suspense fallback={<LoadingFallback />}>
           <div style={{ display: mode === "manual" ? "block" : "none", contain: "layout style" }}>
             <SimuladorManualMode />
           </div>
           {mode === "auto" && <SimuladorAutoMode />}
+          {mode === "chameleon" && <SimuladorChameleonMode />}
         </Suspense>
       </div>
 
