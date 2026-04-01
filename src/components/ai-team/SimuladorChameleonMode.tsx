@@ -230,6 +230,10 @@ export default function SimuladorChameleonMode() {
       setExchangeCount(newExchanges);
       setIsProcessing(false);
 
+      // Progressive monitor field reveal
+      const mBid = monitorBriefingIdRef.current;
+      if (mBid) revealMonitorFields(mBid, newExchanges, p).catch(() => {});
+
       // Continue loop
       if (!abortRef.current && newExchanges < maxEx) {
         setTimeout(() => runConversationStep(p, finalMessages, nextAgentId, agents, maxEx, newExchanges, sType, chId), 2000);
