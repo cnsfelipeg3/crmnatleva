@@ -197,6 +197,7 @@ function AppRoutes() {
           <Route path="/import" element={<ImportData />} />
           <Route path="/pendencias" element={<Pendencias />} />
           <Route path="/cotacoes" element={<QuoteRequests />} />
+          <Route path="/briefings" element={<QuotationBriefings />} />
           <Route path="/propostas" element={<Proposals />} />
           <Route path="/propostas/modelos" element={<ProposalTemplates />} />
           <Route path="/propostas/modelos/novo" element={<ProposalTemplateEditor />} />
