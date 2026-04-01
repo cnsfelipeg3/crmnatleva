@@ -106,7 +106,9 @@ export default function AppLayout() {
         )}
         <main className={cn("flex-1 overflow-auto min-h-0", isImmersive && "overflow-hidden")}>
           <Suspense fallback={<NatLevaLoader />}>
-            <Outlet />
+            <div className="animate-fade-in">
+              <Outlet />
+            </div>
           </Suspense>
         </main>
         <PanelHelpButton />
