@@ -59,7 +59,12 @@ interface Props {
 export default function AppSidebar({ mobile, onNavigate }: Props) {
   const { profile, role, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
-  const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
+  const [dark, setDark] = useState(() => {
+    const saved = localStorage.getItem("theme");
+    if (saved) return saved === "dark";
+    // Default to dark (brandbook palette)
+    return true;
+  });
   const [financeOpen, setFinanceOpen] = useState(false);
   const [rhOpen, setRhOpen] = useState(false);
   const [operacaoOpen, setOperacaoOpen] = useState(false);
