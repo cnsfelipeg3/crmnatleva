@@ -1,5 +1,6 @@
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining } from "@/components/ai-team/agentTrainingStore";
+import { buildUnifiedAgentPrompt } from "@/utils/buildAgentPrompt";
 import {
   type LeadInteligente, type MensagemLead,
   ETAPAS_FUNIL,
