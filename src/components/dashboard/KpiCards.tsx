@@ -128,30 +128,28 @@ export default function KpiCards({ kpiData, filtered = [], previous = [], client
     { label: "Internacional", value: `${intlPct.toFixed(0)}%`, icon: Globe, color: "text-info", change: null, size: "sm", sales: filtered.filter(s => s.is_international) },
   ];
 
-  return (
+    return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 md:gap-3">
-        {kpis.map(k => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 md:gap-3">
+        {kpis.map((k, i) => (
           <Card
             key={k.label}
-            className="p-3 md:p-4 glass-card group relative overflow-hidden cursor-pointer hover:ring-1 hover:ring-accent/30 transition-all"
+            className="p-4 md:p-5 card-premium group relative overflow-hidden cursor-pointer transition-all duration-[350ms]"
+            style={{ animationDelay: `${i * 40}ms` }}
             onClick={() => hasDrilldown && k.sales && setDrilldown({ label: k.label, sales: k.sales })}
           >
-            <div className="absolute top-0 left-2 right-2 h-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-              style={{ background: 'linear-gradient(90deg, transparent, hsl(var(--glow-primary) / 0.4), transparent)' }}
-            />
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <div className="p-1 rounded-md bg-muted/50">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="p-1.5 rounded-lg bg-primary/8 border border-primary/10">
                 <k.icon className={`w-3.5 h-3.5 ${k.color}`} />
               </div>
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider truncate">{k.label}</span>
+              <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.06em] truncate">{k.label}</span>
             </div>
-            <p className={`${k.size === 'lg' ? 'text-base md:text-lg' : 'text-sm md:text-base'} font-bold text-foreground leading-tight font-sans truncate`}>
+            <p className={`${k.size === 'lg' ? 'text-lg md:text-xl' : 'text-base md:text-lg'} font-bold text-foreground leading-tight font-display truncate data-glow`}>
               {k.value}
-              {(k as any).extra && <span className={`text-[10px] ml-1 font-normal ${k.color}`}>{(k as any).extra}</span>}
+              {(k as any).extra && <span className={`text-[10px] ml-1.5 font-normal font-sans ${k.color}`}>{(k as any).extra}</span>}
             </p>
             {k.change !== null && (
-              <div className={`flex items-center gap-0.5 mt-1 text-[10px] font-medium ${k.change >= 0 ? "text-success" : "text-destructive"}`}>
+              <div className={`flex items-center gap-0.5 mt-1.5 text-[10px] font-semibold ${k.change >= 0 ? "text-success" : "text-destructive"}`}>
                 {k.change >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                 {Math.abs(k.change).toFixed(1)}%
               </div>
