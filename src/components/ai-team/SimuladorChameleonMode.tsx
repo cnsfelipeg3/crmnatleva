@@ -12,8 +12,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { AGENTS_V4 } from "@/components/ai-team/agentsV4Data";
 import { callSimulatorAI } from "@/components/ai-team/simuladorAutoUtils";
 import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
-import { callSimulatorAI } from "@/components/ai-team/simuladorAutoUtils";
-import { useGlobalRules } from "@/hooks/useGlobalRules";
 import ChameleonConfig, { type SessionType } from "./ChameleonConfig";
 import {
   type ChameleonProfile,
