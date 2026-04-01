@@ -243,7 +243,7 @@ const ChatBubble = memo(function ChatBubble({
             )}
 
             <div className={cn(
-              "rounded-2xl px-[18px] py-3 shadow-[0_2px_8px_rgba(12,31,22,0.1)]",
+              "rounded-[18px] px-5 py-3.5 shadow-[0_2px_10px_hsl(150_40%_7%_/_0.1)]",
               isUser
                 ? "bg-primary text-primary-foreground rounded-br-sm"
                 : "bg-secondary text-secondary-foreground rounded-bl-sm"
