@@ -53,40 +53,27 @@ export default function DashboardFilters({
 
   return (
     <div className="space-y-4">
-      {/* ── Hero Header — Premium Command Center ── */}
-      <div className="relative overflow-hidden rounded-2xl border border-border/20">
-        {/* Layered background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[hsl(152,44%,8%)] via-[hsl(153,35%,13%)] to-[hsl(152,35%,17%)]" />
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: 'radial-gradient(circle at 20% 50%, hsl(154 56% 27% / 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, hsl(41 51% 57% / 0.15) 0%, transparent 40%)',
+      {/* ── Hero Header — NatLeva Power Strip ── */}
+      <div className="relative overflow-hidden rounded-2xl border border-primary/10">
+        <div className="absolute inset-0 bg-gradient-to-r from-[hsl(152,44%,7%)] via-[hsl(153,38%,11%)] to-[hsl(152,32%,14%)]" />
+        <div className="absolute inset-0" style={{
+          backgroundImage: 'radial-gradient(ellipse 60% 80% at 0% 50%, hsl(154 56% 27% / 0.12) 0%, transparent 60%), radial-gradient(ellipse 40% 60% at 100% 30%, hsl(41 51% 57% / 0.06) 0%, transparent 50%)',
         }} />
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[hsl(41,51%,57%,0.3)] to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-champagne/25 to-transparent" />
 
-        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-5">
-          <div className="flex items-center gap-4">
-            {/* Animated pulse ring icon */}
-            <div className="relative">
-              <div className="absolute inset-0 rounded-2xl bg-primary/20 animate-ping" style={{ animationDuration: '3s' }} />
-              <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-primary/30 to-primary/10 border border-primary/20 flex items-center justify-center backdrop-blur-sm">
-                <Activity className="w-5 h-5 text-champagne" />
-              </div>
+        <div className="relative flex items-center justify-between gap-4 px-5 py-3.5">
+          <div className="flex items-center gap-3">
+            <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-champagne/20 to-champagne/5 border border-champagne/15 flex items-center justify-center">
+              <Activity className="w-4 h-4 text-champagne" />
+              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-[28px] font-display font-bold text-[hsl(41,35%,91%)] tracking-tight leading-tight">
-                {ceoMode ? "Modo CEO" : "Centro de Comando"}
+              <h1 className="text-lg font-display font-bold text-foreground tracking-tight leading-none">
+                {ceoMode ? "Visão CEO" : "Dashboard"}
               </h1>
-              <div className="flex items-center gap-2 mt-1">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-champagne animate-pulse" />
-                  <span className="text-[10px] font-semibold tracking-[0.15em] uppercase text-champagne/80">
-                    {ceoMode ? "Visão Estratégica" : "Inteligência Estratégica"}
-                  </span>
-                </div>
-                <span className="text-[10px] text-[hsl(158,20%,46%)]">•</span>
-                <span className="text-[10px] font-mono text-[hsl(158,20%,46%)] tabular-nums">
-                  {filteredCount.toLocaleString()} de {totalSales.toLocaleString()} vendas
-                </span>
-              </div>
+              <span className="text-[10px] text-muted-foreground mt-0.5 block">
+                Operação em tempo real
+              </span>
             </div>
           </div>
 
@@ -95,7 +82,7 @@ export default function DashboardFilters({
               <Button
                 variant={ceoMode ? "default" : "outline"}
                 size="sm"
-                className={`text-xs gap-1.5 ${ceoMode ? "bg-champagne text-[hsl(153,55%,17%)] hover:bg-champagne/90 shadow-[0_4px_16px_hsl(41,51%,57%,0.25)]" : "border-champagne/30 text-champagne hover:bg-champagne/10"}`}
+                className={`text-xs gap-1.5 h-8 ${ceoMode ? "bg-champagne text-[hsl(153,55%,10%)] hover:bg-champagne/90 shadow-[0_2px_12px_hsl(41,51%,57%,0.2)]" : "border-champagne/25 text-champagne/80 hover:bg-champagne/10 hover:text-champagne"}`}
                 onClick={onToggleCeoMode}
               >
                 <Crown className="w-3.5 h-3.5" />
@@ -103,11 +90,11 @@ export default function DashboardFilters({
               </Button>
             )}
             {activeFilterCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={onClearAll} className="text-xs text-muted-foreground hover:text-destructive">
+              <Button variant="ghost" size="sm" onClick={onClearAll} className="text-xs h-8 text-muted-foreground hover:text-destructive">
                 <X className="w-3.5 h-3.5 mr-1" /> Limpar ({activeFilterCount})
               </Button>
             )}
-            <Button size="sm" className="glow-hover shadow-[0_4px_12px_hsl(154,56%,27%,0.2)]" onClick={() => navigate("/sales/new")}>
+            <Button size="sm" className="h-8 glow-hover shadow-[0_2px_10px_hsl(154,56%,27%,0.15)]" onClick={() => navigate("/sales/new")}>
               <Plus className="w-4 h-4 mr-1" /> Nova Venda
             </Button>
           </div>
