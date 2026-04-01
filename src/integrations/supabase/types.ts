@@ -1510,6 +1510,51 @@ export type Database = {
           },
         ]
       }
+      chameleon_sessions: {
+        Row: {
+          agents_tested: string[]
+          created_at: string
+          debrief: Json | null
+          id: string
+          max_exchanges: number
+          profile_data: Json
+          score_final: number | null
+          session_type: string
+          status: string
+          transcript: Json
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          agents_tested?: string[]
+          created_at?: string
+          debrief?: Json | null
+          id?: string
+          max_exchanges?: number
+          profile_data?: Json
+          score_final?: number | null
+          session_type?: string
+          status?: string
+          transcript?: Json
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          agents_tested?: string[]
+          created_at?: string
+          debrief?: Json | null
+          id?: string
+          max_exchanges?: number
+          profile_data?: Json
+          score_final?: number | null
+          session_type?: string
+          status?: string
+          transcript?: Json
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       chart_of_accounts: {
         Row: {
           code: string | null
