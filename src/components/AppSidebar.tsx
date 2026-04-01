@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -69,7 +70,24 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [adminOpen, setAdminOpen] = useState(false);
   const [portalAdminOpen, setPortalAdminOpen] = useState(false);
   const isCollapsed = mobile ? false : collapsed;
+  const [pendingBriefings, setPendingBriefings] = useState(0);
 
+  // Fetch pending briefings count
+  useEffect(() => {
+    const fetchCount = async () => {
+      const { count } = await (supabase as any)
+        .from("quotation_briefings")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pendente");
+      setPendingBriefings(count || 0);
+    };
+    fetchCount();
+    const channel = supabase
+      .channel("sidebar-briefings")
+      .on("postgres_changes", { event: "*", schema: "public", table: "quotation_briefings" }, () => fetchCount())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
   useEffect(() => {
     if (dark) {
       document.documentElement.classList.add("dark");
@@ -114,6 +132,11 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           )}
           <item.icon className={cn("w-5 h-5 shrink-0 transition-colors", isActive && "text-sidebar-primary")} />
           {!isCollapsed && <span className={indent ? "text-xs" : ""}>{item.label}</span>}
+          {item.to === "/briefings" && pendingBriefings > 0 && (
+            <span className="ml-auto shrink-0 min-w-5 h-5 flex items-center justify-center rounded-full bg-accent text-accent-foreground text-[10px] font-bold px-1.5 animate-pulse">
+              {pendingBriefings}
+            </span>
+          )}
         </>
       )}
     </NavLink>

@@ -37,6 +37,7 @@ import {
   TIPO_COLORS, STORAGE_KEYS, loadJson, saveJson,
   implementImprovement, saveSimHistory, sentimentColor, sentimentLabel,
 } from "./simuladorAutoUtils";
+import { extractAndSaveBriefing } from "./briefingExtractor";
 
 function useCountUp(target: number, duration = 500) {
   const [val, setVal] = useState(0);
@@ -476,6 +477,18 @@ export default function SimuladorAutoMode() {
 
           // Handle transfer
           if (enableTransfers && hasNext && agentResp.includes("[TRANSFERIR]")) {
+            // If ATLAS is transferring, generate a quotation briefing
+            if (agent.id === "atlas") {
+              addEvent("#8B5CF6", `📋 Gerando briefing de cotação para ${lead.nome}...`, "📋");
+              extractAndSaveBriefing(lead, "auto").then(result => {
+                if (result.success) {
+                  addEvent("#10B981", `✅ Briefing de cotação criado para ${lead.nome}`, "📋");
+                  toast({ title: "📋 Novo Briefing de Cotação", description: `${lead.nome} → ${lead.destino || "destino"}. Veja em Briefings IA.` });
+                } else {
+                  addEvent("#F59E0B", `⚠️ Falha ao gerar briefing: ${result.error}`, "📋");
+                }
+              });
+            }
             agentIdx++;
             const nextAgent = funnelAgents[agentIdx % funnelAgents.length];
             addEvent("#06B6D4", `${agent.name} → ${nextAgent.name}`, "🔄");
