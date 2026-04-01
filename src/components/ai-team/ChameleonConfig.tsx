@@ -159,7 +159,7 @@ export default function ChameleonConfig({ onStart, loading }: Props) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className={cn("grid gap-3", isMobile ? "grid-cols-1" : "grid-cols-2")}>
             <div>
               <label className="text-[11px] font-medium block mb-1.5" style={{ color: "#94A3B8" }}>Composição</label>
               <select
