@@ -84,7 +84,7 @@ const SEVERITY_META: Record<string, { label: string; color: string; bg: string }
 };
 const DEFAULT_SEVERITY = { label: "Info", color: "#94A3B8", bg: "rgba(148,163,184,0.1)" };
 
-// ===== MAIN COMPONENT =====
+// ===== MAIN COMPONENT (forwardRef) =====
 const SimulatorObservationsPanel = forwardRef<HTMLDivElement, Props>(function SimulatorObservationsPanel({
   simulationId,
   selectedMessage,
