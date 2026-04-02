@@ -68,10 +68,10 @@ export default function DashboardFilters({
               <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             </div>
             <div>
-              <h1 className="text-lg font-display font-bold text-foreground tracking-tight leading-none">
+              <h1 className="text-lg font-display font-bold tracking-tight leading-none text-primary-foreground">
                 {ceoMode ? "Visão CEO" : "Dashboard"}
               </h1>
-              <span className="text-[10px] text-muted-foreground mt-0.5 block">
+              <span className="text-[10px] mt-0.5 block text-primary-foreground">
                 Operação em tempo real
               </span>
             </div>
