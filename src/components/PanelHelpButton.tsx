@@ -1649,15 +1649,15 @@ export default function PanelHelpButton() {
       <button
         onClick={() => { setOpen(true); setTab("overview"); }}
         className={cn(
-          "fixed bottom-5 right-5 z-40 flex items-center gap-2 px-4 py-2 rounded-full",
+          "fixed bottom-5 right-5 z-40 flex items-center justify-center w-8 h-8 rounded-full",
           "bg-card border border-border shadow-lg",
-          "text-xs text-muted-foreground font-medium",
+          "text-muted-foreground",
           "hover:bg-accent hover:text-foreground hover:shadow-xl hover:border-primary/30",
           "transition-all duration-200 group"
         )}
+        title="Entenda esse painel"
       >
         <HelpCircle className="w-4 h-4 group-hover:text-primary transition-colors" />
-        <span className="hidden sm:inline">Entenda esse painel</span>
       </button>
 
       <AnimatePresence>
