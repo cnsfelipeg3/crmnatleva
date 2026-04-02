@@ -165,18 +165,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     </div>
   );
 
-  // Use mask-image for pixel-perfect color match with champagne
-  const logoMaskStyle: React.CSSProperties = {
-    maskImage: `url(${logoNatleva})`,
-    WebkitMaskImage: `url(${logoNatleva})`,
-    maskSize: 'contain',
-    WebkitMaskSize: 'contain',
-    maskRepeat: 'no-repeat',
-    WebkitMaskRepeat: 'no-repeat',
-    maskPosition: 'center',
-    WebkitMaskPosition: 'center',
-    backgroundColor: 'hsl(var(--champagne))',
-  };
 
   return (
     <aside
@@ -204,12 +192,19 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
       {/* Logo area */}
       <div className="relative flex items-center justify-center px-5 h-[3.7rem] border-b border-sidebar-border/50">
         {!isCollapsed ? (
-          <div
-            className="h-[2.6rem] w-full"
-            style={logoMaskStyle}
-            role="img"
-            aria-label="NatLeva"
-          />
+          <div className="relative h-[2.6rem] w-full flex items-center justify-center">
+            <img
+              src={logoNatleva}
+              alt="NatLeva"
+              className="h-full w-auto object-contain"
+              style={{ filter: 'brightness(0) invert(1)' }}
+              draggable={false}
+            />
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ backgroundColor: 'hsl(var(--champagne))', mixBlendMode: 'multiply' }}
+            />
+          </div>
         ) : (
           <Plane className="w-5 h-5 text-champagne mx-auto" />
         )}
