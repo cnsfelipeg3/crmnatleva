@@ -178,8 +178,8 @@ export default function SimuladorManualMode() {
           if (cat === "destinos" || title.includes("europa")) {
             (agentKb["dante"] ??= []).push(content);
           }
-          // Culture/atendimento docs → all funnel agents
-          if (cat === "cultura" || cat === "atendimento" || cat === "regras") {
+          // Culture/atendimento/events docs → all funnel agents
+          if (cat === "cultura" || cat === "atendimento" || cat === "regras" || cat === "eventos") {
             for (const aid of ["maya", "atlas", "habibi", "nemo", "dante", "luna", "nero", "iris"]) {
               (agentKb[aid] ??= []).push(content);
             }
@@ -313,9 +313,9 @@ export default function SimuladorManualMode() {
     }
 
     try {
-      // Maya gets ONLY her behavior_prompt — no KB, skills, or workflows to avoid dilution
+      // Maya gets KB (for critical event info) but no skills or workflows to avoid dilution
       const isMayaAgent = selectedAgent.id === "maya";
-      const kbBlock = isMayaAgent ? "" : (kbContent[selectedAgent.id] || "");
+      const kbBlock = kbContent[selectedAgent.id] || "";
       const finalSystemPrompt = manualSystemPrompt
         + (kbBlock ? "\n" + kbBlock : "")
         + (isMayaAgent ? "" : enrichmentExtras ? "\n" + enrichmentExtras : "");
