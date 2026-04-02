@@ -370,10 +370,7 @@ export default function SimuladorChameleonMode() {
     <>
       {/* Profile card */}
       {profile && (
-        <div className="rounded-xl p-3 md:p-4" style={{
-          background: "rgba(15,23,42,0.7)",
-          border: "1px solid rgba(139,92,246,0.15)",
-        }}>
+        <div className="rounded-xl p-3 md:p-4 bg-card border border-border">
           <div className="flex items-center gap-2 mb-2 md:mb-3">
             <span className="text-lg md:text-xl">🦎</span>
             <div>
@@ -394,10 +391,7 @@ export default function SimuladorChameleonMode() {
       )}
 
       {/* Status */}
-      <div className="rounded-xl p-3 md:p-4" style={{
-        background: "rgba(15,23,42,0.7)",
-        border: "1px solid rgba(255,255,255,0.06)",
-      }}>
+      <div className="rounded-xl p-3 md:p-4 bg-card border border-border">
         <div className={cn("gap-3", isMobile ? "flex items-center justify-between" : "space-y-3")}>
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-medium" style={{ color: "#94A3B8" }}>Sentimento</span>
@@ -430,10 +424,7 @@ export default function SimuladorChameleonMode() {
 
       {/* Transfer log */}
       {messages.some(m => m.role === "agent") && (
-        <div className="rounded-xl p-3 md:p-4" style={{
-          background: "rgba(15,23,42,0.7)",
-          border: "1px solid rgba(255,255,255,0.06)",
-        }}>
+        <div className="rounded-xl p-3 md:p-4 bg-card border border-border">
           <p className="text-[11px] font-bold mb-2" style={{ color: "#94A3B8" }}>Pipeline</p>
           <div className="flex flex-wrap gap-1.5">
             {[...new Set(messages.filter(m => m.agentId).map(m => m.agentId!))].map(aid => {
@@ -472,7 +463,7 @@ export default function SimuladorChameleonMode() {
 
   // ─── CONVERSATION / DEBRIEF PHASE ───
   return (
-    <div className={cn("flex", isMobile ? "flex-col" : "gap-4")} style={{ height: isMobile ? "calc(100vh - 200px)" : "calc(100vh - 220px)" }}>
+    <div className={cn("flex flex-1 min-h-0", isMobile ? "flex-col" : "gap-4")}>
       {/* Mobile: collapsible info bar */}
       {isMobile && (
         <div className="shrink-0">
@@ -502,10 +493,7 @@ export default function SimuladorChameleonMode() {
       )}
 
       {/* Chat area */}
-      <div className="flex-1 flex flex-col rounded-2xl overflow-hidden min-h-0" style={{
-        background: "rgba(15,23,42,0.7)",
-        border: "1px solid rgba(255,255,255,0.06)",
-      }}>
+      <div className="flex-1 flex flex-col rounded-2xl overflow-hidden min-h-0 bg-card border border-border">
         {/* Chat header */}
         <div className="flex items-center justify-between px-3 md:px-4 py-2 md:py-3 shrink-0" style={{
           background: "rgba(0,0,0,0.3)",
@@ -600,7 +588,7 @@ export default function SimuladorChameleonMode() {
 
       {/* Desktop sidebar */}
       {!isMobile && (
-        <div className="w-[280px] shrink-0 space-y-3 overflow-y-auto">
+        <div className="w-[300px] shrink-0 space-y-3 overflow-y-auto">
           {sidebarContent}
         </div>
       )}

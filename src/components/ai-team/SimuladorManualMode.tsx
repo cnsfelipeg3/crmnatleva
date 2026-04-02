@@ -835,9 +835,9 @@ export default function SimuladorManualMode() {
   return (
     <>
       <div className={cn(
-        "flex animate-in fade-in slide-in-from-bottom-2 duration-500",
-        isMobile ? "flex-col" : "gap-5"
-      )} style={{ height: isMobile ? "calc(100vh - 160px)" : "calc(100vh - 220px)", minHeight: isMobile ? 400 : 550 }}>
+        "flex flex-1 min-h-0 animate-in fade-in slide-in-from-bottom-2 duration-500",
+        isMobile ? "flex-col" : "gap-4"
+      )}>
 
         {/* ═══════════ CHAT AREA ═══════════ */}
         <div className="flex-1 min-w-0 min-h-0">
@@ -960,7 +960,7 @@ export default function SimuladorManualMode() {
 
         {/* ═══════════ RIGHT PANEL — Desktop only ═══════════ */}
         {!isMobile && (
-          <div className="w-[320px] shrink-0 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-1">
+          <div className="w-[300px] shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1">
             {/* Quick actions */}
             <div className="space-y-2.5">
               <NathOpinionButton
@@ -983,7 +983,7 @@ export default function SimuladorManualMode() {
             </div>
 
             {/* Agent profile card */}
-            <div className="rounded-2xl relative" style={{ background: "linear-gradient(145deg, rgba(15,20,35,0.95), rgba(15,20,35,0.75))", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="rounded-2xl relative bg-card border border-border overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-[2px] rounded-t-2xl" style={{ background: `linear-gradient(90deg, transparent, ${agentColor}, transparent)` }} />
               <div className="p-4 pb-3">
                 <div className="flex items-center gap-3">
@@ -1019,7 +1019,7 @@ export default function SimuladorManualMode() {
             </div>
 
             {/* Squad filter + agents */}
-            <div className="rounded-2xl p-5" style={{ background: "rgba(15,20,35,0.75)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="rounded-2xl p-4 bg-card border border-border">
               <p className="text-[10px] uppercase tracking-[0.14em] font-bold mb-3" style={{ color: "#64748B" }}>Agentes</p>
               <div className="flex gap-1.5 flex-wrap mb-4">
                 <button onClick={() => setActiveSquad("all")} className="text-[11px] px-3 py-1.5 rounded-lg font-semibold transition-all"
@@ -1057,7 +1057,7 @@ export default function SimuladorManualMode() {
             </div>
 
             {/* Destinos */}
-            <div className="rounded-2xl p-5" style={{ background: "rgba(15,20,35,0.75)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="rounded-2xl p-4 bg-card border border-border">
               <p className="text-[10px] uppercase tracking-[0.14em] font-bold mb-3" style={{ color: "#64748B" }}>Destino</p>
               <div className="flex flex-wrap gap-2">
                 {DESTINOS.map(d => {
@@ -1078,7 +1078,7 @@ export default function SimuladorManualMode() {
             </div>
 
             {/* Sessions */}
-            <div className="rounded-2xl p-5" style={{ background: "rgba(15,20,35,0.75)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="rounded-2xl p-4 bg-card border border-border">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[10px] uppercase tracking-[0.14em] font-bold" style={{ color: "#64748B" }}>Sessões</p>
                 <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.04)", color: "#94A3B8" }}>{sessions.length}</span>

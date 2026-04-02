@@ -41,7 +41,7 @@ export default function AITeamSimulador() {
   const activeIdx = modeButtons.findIndex(b => b.id === mode);
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-background" style={{ contain: "layout style paint" }}>
+    <div className="relative overflow-hidden bg-background flex flex-col" style={{ contain: "layout style paint", height: isMobile ? "auto" : "calc(100vh - 3.7rem)" }}>
       {/* Ambient glow — brandbook green */}
       <div className="absolute inset-0 pointer-events-none" style={{ contain: "strict" }}>
         <div className="absolute rounded-full" style={{
@@ -63,13 +63,13 @@ export default function AITeamSimulador() {
       </div>
 
       <div className={cn(
-        "relative z-10 space-y-3 mx-auto",
-        isMobile ? "p-3 pb-6" : "p-3 px-4",
+        "relative z-10 flex flex-col flex-1 min-h-0 mx-auto w-full",
+        isMobile ? "p-2 pb-4 gap-2" : "p-3 px-4 gap-3",
         mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
       )} style={{ transition: "opacity 0.4s ease-out, transform 0.4s ease-out" }}>
 
         {/* Header */}
-        <div className="relative rounded-2xl overflow-hidden bg-card border border-border" style={{ contain: "layout style" }}>
+        <div className="relative rounded-2xl overflow-hidden bg-card border border-border shrink-0" style={{ contain: "layout style" }}>
           {/* Top shimmer — champagne */}
           <div className="absolute top-0 left-0 right-0 h-px overflow-hidden">
             <div className="h-full w-1/3 shimmer-line" style={{
@@ -146,11 +146,11 @@ export default function AITeamSimulador() {
 
         {/* Content */}
         <Suspense fallback={<NatLevaLoader />}>
-          <div style={{ display: mode === "manual" ? "block" : "none", contain: "layout style" }}>
+          <div className="flex-1 min-h-0" style={{ display: mode === "manual" ? "flex" : "none", flexDirection: "column", contain: "layout style" }}>
             <SimuladorManualMode />
           </div>
-          {mode === "auto" && <SimuladorAutoMode />}
-          {mode === "chameleon" && <SimuladorChameleonMode />}
+          {mode === "auto" && <div className="flex-1 min-h-0 flex flex-col overflow-y-auto"><SimuladorAutoMode /></div>}
+          {mode === "chameleon" && <div className="flex-1 min-h-0 flex flex-col"><SimuladorChameleonMode /></div>}
         </Suspense>
       </div>
 
