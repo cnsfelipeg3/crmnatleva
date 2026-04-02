@@ -835,9 +835,9 @@ export default function SimuladorManualMode() {
   return (
     <>
       <div className={cn(
-        "flex animate-in fade-in slide-in-from-bottom-2 duration-500",
-        isMobile ? "flex-col" : "gap-5"
-      )} style={{ height: isMobile ? "calc(100vh - 160px)" : "calc(100vh - 220px)", minHeight: isMobile ? 400 : 550 }}>
+        "flex flex-1 min-h-0 animate-in fade-in slide-in-from-bottom-2 duration-500",
+        isMobile ? "flex-col" : "gap-4"
+      )}>
 
         {/* ═══════════ CHAT AREA ═══════════ */}
         <div className="flex-1 min-w-0 min-h-0">
