@@ -85,12 +85,12 @@ const SEVERITY_META: Record<string, { label: string; color: string; bg: string }
 const DEFAULT_SEVERITY = { label: "Info", color: "#94A3B8", bg: "rgba(148,163,184,0.1)" };
 
 // ===== MAIN COMPONENT =====
-export default function SimulatorObservationsPanel({
+const SimulatorObservationsPanel = forwardRef<HTMLDivElement, Props>(function SimulatorObservationsPanel({
   simulationId,
   selectedMessage,
   onClearSelectedMessage,
   className,
-}: Props) {
+}, _ref) {
   const [observations, setObservations] = useState<Observation[]>([]);
   const [improvements, setImprovements] = useState<SynthesizedImprovement[]>([]);
   const [inputText, setInputText] = useState("");
