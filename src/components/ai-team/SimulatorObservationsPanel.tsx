@@ -997,4 +997,6 @@ REGRAS:
       )}
     </div>
   );
-}
+});
+
+export default SimulatorObservationsPanel;
