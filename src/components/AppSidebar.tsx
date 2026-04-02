@@ -330,11 +330,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           {dark ? <Sun className="w-4 h-4 shrink-0" /> : <Moon className="w-4 h-4 shrink-0" />}
           {!isCollapsed && <span>{dark ? "Tema Claro" : "Tema Escuro"}</span>}
         </button>
-        {!mobile && (
-          <button onClick={() => setCollapsed(!collapsed)} className="flex items-center justify-center p-1.5 rounded-lg text-sidebar-foreground/30 hover:text-foreground hover:bg-primary/5 w-full transition-all duration-200">
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
-        )}
       </div>
     </aside>
   );
