@@ -16,6 +16,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { getAgentTraining } from "./agentTrainingStore";
 import { AGENTS_V4 } from "./agentsV4Data";
+import { buildKnowledgeBlocksByAgent } from "./knowledgeRouting";
 import type { GlobalRule } from "@/hooks/useGlobalRules";
 
 // ─── Cache for expensive DB queries (refreshed every 60s) ───
@@ -104,7 +105,11 @@ export async function loadAgentComplianceProfile(agentId: string): Promise<Agent
   const globalRules = (globalRulesRes.data || []).map((r: any) => ({
     title: r.title, rule: r.rule, category: r.category, impact: r.estimated_impact || "médio",
   }));
-  const knowledgeSummaries = training?.knowledgeSummaries || [];
+  const dbKnowledgeBlock = buildKnowledgeBlocksByAgent(kbRes.data || [])[agentId] || "";
+  const knowledgeSummaries = [
+    ...(training?.knowledgeSummaries || []),
+    ...(dbKnowledgeBlock ? [dbKnowledgeBlock.slice(0, 4000)] : []),
+  ];
   const skills = skillInstructions.length > 0 ? skillInstructions : (agent?.skills || (dbAgentRes.data?.skills as string[]) || []);
   const approvedImprovements = (improvementsRes.data || []).map((i: any) => `${i.title}: ${i.description || ""}`);
 
