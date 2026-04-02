@@ -63,10 +63,10 @@ export default function AITeamSimulador() {
       </div>
 
       <div className={cn(
-        "relative z-10 space-y-3 mx-auto",
-        isMobile ? "p-3 pb-6" : "p-3 px-4",
+        "relative z-10 flex flex-col mx-auto",
+        isMobile ? "p-2 pb-4 gap-2" : "p-3 px-4 gap-3",
         mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
-      )} style={{ transition: "opacity 0.4s ease-out, transform 0.4s ease-out" }}>
+      )} style={{ transition: "opacity 0.4s ease-out, transform 0.4s ease-out", height: isMobile ? "auto" : "calc(100vh - 64px)" }}>
 
         {/* Header */}
         <div className="relative rounded-2xl overflow-hidden bg-card border border-border" style={{ contain: "layout style" }}>
