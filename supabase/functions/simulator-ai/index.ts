@@ -124,6 +124,7 @@ async function callAnthropic(
     const t = await response.text();
     console.error("Anthropic API error:", status, t);
 
+    // Retry on 429 (rate limit)
     if (status === 429 && retryCount < 5) {
       const delayMs = Math.min(20000, 2500 * Math.pow(2, retryCount)) + Math.floor(Math.random() * 1200);
       await new Promise(resolve => setTimeout(resolve, delayMs));
@@ -135,6 +136,13 @@ async function callAnthropic(
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // 529 = Anthropic overloaded → fallback to Lovable AI Gateway
+    if (status === 529 || status === 503 || status === 500) {
+      console.log(`Anthropic ${status}, falling back to Lovable AI Gateway`);
+      return "FALLBACK" as any;
+    }
+
     return new Response(JSON.stringify({ error: `Erro Anthropic: ${status}` }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
