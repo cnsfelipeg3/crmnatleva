@@ -1019,7 +1019,7 @@ export default function SimuladorManualMode() {
             </div>
 
             {/* Squad filter + agents */}
-            <div className="rounded-2xl p-5" style={{ background: "rgba(15,20,35,0.75)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="rounded-2xl p-4 bg-card border border-border">
               <p className="text-[10px] uppercase tracking-[0.14em] font-bold mb-3" style={{ color: "#64748B" }}>Agentes</p>
               <div className="flex gap-1.5 flex-wrap mb-4">
                 <button onClick={() => setActiveSquad("all")} className="text-[11px] px-3 py-1.5 rounded-lg font-semibold transition-all"
