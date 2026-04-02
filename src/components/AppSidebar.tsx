@@ -199,7 +199,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               src={logoNatleva}
               alt="NatLeva"
               className="h-[2.2rem]"
-              style={{ filter: 'brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg) brightness(0.85)' }}
+              style={{ filter: logoFilter }}
             />
             {/* Gold signature line */}
             <div className="w-10 h-px mt-1.5 rounded-full bg-gradient-to-r from-transparent via-champagne/30 to-transparent" />
