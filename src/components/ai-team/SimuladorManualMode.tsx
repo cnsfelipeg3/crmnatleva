@@ -1078,7 +1078,7 @@ export default function SimuladorManualMode() {
             </div>
 
             {/* Sessions */}
-            <div className="rounded-2xl p-5" style={{ background: "rgba(15,20,35,0.75)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="rounded-2xl p-4 bg-card border border-border">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-[10px] uppercase tracking-[0.14em] font-bold" style={{ color: "#64748B" }}>Sessões</p>
                 <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.04)", color: "#94A3B8" }}>{sessions.length}</span>
