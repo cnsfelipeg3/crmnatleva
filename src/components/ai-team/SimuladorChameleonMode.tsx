@@ -472,7 +472,7 @@ export default function SimuladorChameleonMode() {
 
   // ─── CONVERSATION / DEBRIEF PHASE ───
   return (
-    <div className={cn("flex", isMobile ? "flex-col" : "gap-4")} style={{ height: isMobile ? "calc(100vh - 200px)" : "calc(100vh - 220px)" }}>
+    <div className={cn("flex flex-1 min-h-0", isMobile ? "flex-col" : "gap-4")}>
       {/* Mobile: collapsible info bar */}
       {isMobile && (
         <div className="shrink-0">
