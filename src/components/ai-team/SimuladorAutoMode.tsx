@@ -1192,8 +1192,8 @@ Retorne JSON:
     const allFunnelAgents = AGENTS_V4.filter(a => ["comercial", "atendimento"].includes(a.squadId));
 
     return (
-      <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
-        <div className={cn("mx-auto space-y-5", isMobile ? "px-0" : "max-w-[1100px]")}>
+      <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 flex flex-col flex-1 min-h-0">
+        <div className={cn("mx-auto space-y-5 flex-1 min-h-0 overflow-y-auto pb-20", isMobile ? "px-0" : "max-w-[1100px] w-full")}>
 
           {/* ── Section 1: Volume ── */}
           <div className="rounded-2xl overflow-hidden" style={{
@@ -1425,23 +1425,26 @@ Retorne JSON:
             </div>
           </div>
 
-          {/* ── CTA: Start Simulation ── */}
-          <div className="sticky bottom-2 z-20">
+          {/* spacer for fixed button */}
+        </div>
+
+        {/* ── CTA: Start Simulation — fixed bottom ── */}
+        <div className={cn("shrink-0 pt-2 pb-1", isMobile ? "px-2" : "px-0")}>
+          <div className={cn("mx-auto", isMobile ? "" : "max-w-[1100px]")}>
             <button onClick={runSimulation}
               className={cn("w-full rounded-2xl font-extrabold tracking-wide transition-all duration-300 relative overflow-hidden group", isMobile ? "py-4 text-base" : "py-4 text-[15px]")}
               style={{
-                background: "linear-gradient(135deg, #10B981, #06B6D4)",
-                color: "#000",
-                boxShadow: "0 8px 32px rgba(16,185,129,0.3), 0 0 0 1px rgba(16,185,129,0.2)",
+                background: "linear-gradient(135deg, hsl(var(--primary)), hsl(160, 60%, 40%))",
+                color: "hsl(var(--primary-foreground))",
+                boxShadow: "0 8px 32px hsl(var(--primary) / 0.3), 0 0 0 1px hsl(var(--primary) / 0.2)",
               }}>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "linear-gradient(135deg, #059669, #0891B2)" }} />
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.85), hsl(160, 60%, 35%))" }} />
               <span className="relative flex items-center justify-center gap-2">
                 <Play className="w-5 h-5" />
                 Iniciar Simulação · {numLeads} leads · {msgsPerLead} msgs
               </span>
             </button>
           </div>
-
         </div>
       </div>
     );
