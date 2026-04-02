@@ -40,7 +40,7 @@ export default function AITeamLayout() {
           >
             {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
-          <span className="text-xs font-bold tracking-widest text-muted-foreground uppercase">AI Team</span>
+          <span className="tracking-widest uppercase text-center text-sm text-secondary rounded-none shadow-none font-sans font-semibold">Batalhão NatLeva</span>
           {/* Current page indicator */}
           <span className="ml-auto text-[10px] text-muted-foreground/60">
             {AI_TEAM_MENUS.find(m => m.end ? location.pathname === m.to : location.pathname.startsWith(m.to) && location.pathname !== "/ai-team")?.label || "Mission Control"}
