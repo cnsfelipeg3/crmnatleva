@@ -1192,8 +1192,8 @@ Retorne JSON:
     const allFunnelAgents = AGENTS_V4.filter(a => ["comercial", "atendimento"].includes(a.squadId));
 
     return (
-      <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
-        <div className={cn("mx-auto space-y-5", isMobile ? "px-0" : "max-w-[1100px]")}>
+      <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 flex flex-col flex-1 min-h-0">
+        <div className={cn("mx-auto space-y-5 flex-1 min-h-0 overflow-y-auto pb-20", isMobile ? "px-0" : "max-w-[1100px] w-full")}>
 
           {/* ── Section 1: Volume ── */}
           <div className="rounded-2xl overflow-hidden" style={{
