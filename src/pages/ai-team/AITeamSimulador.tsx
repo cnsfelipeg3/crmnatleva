@@ -41,7 +41,7 @@ export default function AITeamSimulador() {
   const activeIdx = modeButtons.findIndex(b => b.id === mode);
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-background" style={{ contain: "layout style paint" }}>
+    <div className="h-full relative overflow-hidden bg-background flex flex-col" style={{ contain: "layout style paint" }}>
       {/* Ambient glow — brandbook green */}
       <div className="absolute inset-0 pointer-events-none" style={{ contain: "strict" }}>
         <div className="absolute rounded-full" style={{
