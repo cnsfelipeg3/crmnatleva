@@ -53,7 +53,7 @@ export default function AppLayout() {
                 src={logoNatleva}
                 alt="NatLeva"
                 className="h-5"
-                style={{ filter: 'brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg) brightness(0.85)' }}
+                style={{ filter: 'brightness(0) invert(1) sepia(1) saturate(1.2) hue-rotate(350deg) brightness(0.75)' }}
               />
             </div>
           </header>

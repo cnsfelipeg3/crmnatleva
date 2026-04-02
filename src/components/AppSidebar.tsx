@@ -165,16 +165,32 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     </div>
   );
 
+  // Logo filter: target hsl(41, 51%, 57%) — warm olive/khaki matching chart-2 (Custo bar)
+  const logoFilter = 'brightness(0) invert(1) sepia(1) saturate(1.2) hue-rotate(350deg) brightness(0.75)';
+
   return (
     <aside
       className={cn(
-        "flex flex-col shrink-0 border-r border-sidebar-border transition-all duration-300 relative overflow-hidden h-full",
-        mobile ? "w-full" : (isCollapsed ? "w-[68px]" : "w-[240px]")
+        "flex flex-col shrink-0 border-r border-sidebar-border transition-all duration-300 relative h-full",
+        mobile ? "w-full overflow-hidden" : (isCollapsed ? "w-[68px] overflow-hidden" : "w-[240px] overflow-hidden")
       )}
       style={{
         background: `linear-gradient(180deg, hsl(150 40% 4%) 0%, hsl(150 40% 6%) 100%)`,
       }}
     >
+      {/* Floating collapse toggle — desktop only */}
+      {!mobile && (
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="absolute top-[4.5rem] -right-0 z-50 w-5 h-10 flex items-center justify-center rounded-l-md bg-card/80 border border-r-0 border-border/30 text-muted-foreground hover:text-foreground hover:bg-card transition-all duration-200 opacity-0 hover:opacity-100 group-hover:opacity-100"
+          style={{ opacity: 0.4 }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.4')}
+          title={collapsed ? "Expandir menu" : "Recolher menu"}
+        >
+          {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+        </button>
+      )}
       {/* Logo area */}
       <div className="relative flex items-center justify-center gap-2 px-4 h-[3.7rem] border-b border-sidebar-border/50">
         {!isCollapsed ? (
@@ -183,7 +199,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               src={logoNatleva}
               alt="NatLeva"
               className="h-[2.2rem]"
-              style={{ filter: 'brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(5deg) brightness(0.85)' }}
+              style={{ filter: logoFilter }}
             />
             {/* Gold signature line */}
             <div className="w-10 h-px mt-1.5 rounded-full bg-gradient-to-r from-transparent via-champagne/30 to-transparent" />
@@ -314,11 +330,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           {dark ? <Sun className="w-4 h-4 shrink-0" /> : <Moon className="w-4 h-4 shrink-0" />}
           {!isCollapsed && <span>{dark ? "Tema Claro" : "Tema Escuro"}</span>}
         </button>
-        {!mobile && (
-          <button onClick={() => setCollapsed(!collapsed)} className="flex items-center justify-center p-1.5 rounded-lg text-sidebar-foreground/30 hover:text-foreground hover:bg-primary/5 w-full transition-all duration-200">
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
-        )}
       </div>
     </aside>
   );
