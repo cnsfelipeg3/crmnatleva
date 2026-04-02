@@ -170,11 +170,15 @@ Responda sempre em português brasileiro.`;
       userMessages.push({ role: "user", content: question });
     }
 
-    // Route to Anthropic
+    // Route to Anthropic (with fallback on 529/503/500)
     if (provider === "anthropic") {
       const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
       if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
-      return await callAnthropic(ANTHROPIC_API_KEY, systemPrompt, userMessages, model);
+      const anthropicResult = await callAnthropic(ANTHROPIC_API_KEY, systemPrompt, userMessages, model);
+      if (anthropicResult !== ("FALLBACK" as any)) {
+        return anthropicResult;
+      }
+      console.log("Anthropic unavailable, falling back to Lovable AI Gateway");
     }
 
     // Fallback to Lovable AI Gateway
