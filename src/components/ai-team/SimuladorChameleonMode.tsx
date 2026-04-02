@@ -370,10 +370,7 @@ export default function SimuladorChameleonMode() {
     <>
       {/* Profile card */}
       {profile && (
-        <div className="rounded-xl p-3 md:p-4" style={{
-          background: "rgba(15,23,42,0.7)",
-          border: "1px solid rgba(139,92,246,0.15)",
-        }}>
+        <div className="rounded-xl p-3 md:p-4 bg-card border border-border">
           <div className="flex items-center gap-2 mb-2 md:mb-3">
             <span className="text-lg md:text-xl">🦎</span>
             <div>
