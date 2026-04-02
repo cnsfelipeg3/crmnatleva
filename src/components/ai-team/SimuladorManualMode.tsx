@@ -313,9 +313,9 @@ export default function SimuladorManualMode() {
     }
 
     try {
-      // Maya gets ONLY her behavior_prompt — no KB, skills, or workflows to avoid dilution
+      // Maya gets KB (for critical event info) but no skills or workflows to avoid dilution
       const isMayaAgent = selectedAgent.id === "maya";
-      const kbBlock = isMayaAgent ? "" : (kbContent[selectedAgent.id] || "");
+      const kbBlock = kbContent[selectedAgent.id] || "";
       const finalSystemPrompt = manualSystemPrompt
         + (kbBlock ? "\n" + kbBlock : "")
         + (isMayaAgent ? "" : enrichmentExtras ? "\n" + enrichmentExtras : "");
