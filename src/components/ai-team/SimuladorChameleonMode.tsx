@@ -391,10 +391,7 @@ export default function SimuladorChameleonMode() {
       )}
 
       {/* Status */}
-      <div className="rounded-xl p-3 md:p-4" style={{
-        background: "rgba(15,23,42,0.7)",
-        border: "1px solid rgba(255,255,255,0.06)",
-      }}>
+      <div className="rounded-xl p-3 md:p-4 bg-card border border-border">
         <div className={cn("gap-3", isMobile ? "flex items-center justify-between" : "space-y-3")}>
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-medium" style={{ color: "#94A3B8" }}>Sentimento</span>
