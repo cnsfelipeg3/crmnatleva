@@ -496,10 +496,7 @@ export default function SimuladorChameleonMode() {
       )}
 
       {/* Chat area */}
-      <div className="flex-1 flex flex-col rounded-2xl overflow-hidden min-h-0" style={{
-        background: "rgba(15,23,42,0.7)",
-        border: "1px solid rgba(255,255,255,0.06)",
-      }}>
+      <div className="flex-1 flex flex-col rounded-2xl overflow-hidden min-h-0 bg-card border border-border">
         {/* Chat header */}
         <div className="flex items-center justify-between px-3 md:px-4 py-2 md:py-3 shrink-0" style={{
           background: "rgba(0,0,0,0.3)",
