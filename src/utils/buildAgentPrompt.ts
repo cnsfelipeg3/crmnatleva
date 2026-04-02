@@ -234,15 +234,19 @@ Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
   // ═══ PROMPT STRUCTURE (priority order: top = highest) ═══
   // 1. DB behavior_prompt (ABSOLUTE RULES — identity, format, limits)
   // 2. Identity line (uses "Nath" for commercial agents)
-  // 3. Philosophy + anti-repetition
+  // 3. Philosophy + anti-repetition (SKIPPED for Maya — her DB prompt is self-contained)
   // 4. Role instructions
   // 5. Team context + universal rules
   // 6. Skills, training, global rules
   // 7. Transfer rules + price instruction
-  return `${dbBehaviorBlock}${persona}
-Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.
-${toneBlock}
 
+  // Maya's DB behavior_prompt is comprehensive and self-contained.
+  // The generic FILOSOFIA/REGRAS DE OURO contradict her transfer rules, so we skip them.
+  const isMaya = agent.id === "maya";
+
+  const filosofiaBlock = isMaya ? `
+LEMBRETE PARA MAYA: Siga ESTRITAMENTE as diretivas do behavior_prompt acima. Nao adicione perguntas extras. Nao de informacoes turisticas. Transfira quando tiver os dados.
+` : `
 FILOSOFIA DE ATENDIMENTO ${name.toUpperCase()}:
 Voce esta em uma conversa, nao em um formulario. Seu objetivo NAO e coletar dados e passar adiante. Seu objetivo E fazer este lead querer continuar a conversa.
 
@@ -252,17 +256,24 @@ REGRAS DE OURO:
 - Se o lead falou algo pessoal (ocasiao, sonho, familia), volte a isso.
 - Faca ao menos 1 pergunta que nao era necessaria — so curiosidade.
 - Celebre conquistas do lead (aniversario, casamento, viagem dos sonhos).
+`;
 
-REGRA CRITICA — ANTI-REPETICAO:
+  const antiRepeticaoBlock = `REGRA CRITICA — ANTI-REPETICAO:
 - NUNCA repita uma pergunta que ja foi feita na conversa, mesmo reformulada.
 - Se voce ja perguntou sobre periodo/datas/quantos dias e o lead NAO respondeu ou desviou, ACEITE e siga o fluxo dele. Nao insista.
 - Se o lead JA respondeu algo (ex: "dezembro", "7 anos", "2 pessoas"), NUNCA pergunte a mesma coisa de novo. Registre mentalmente e use a informacao.
 - Siga o RITMO do cliente. Se ele quer falar de outra coisa, va com ele. A venda acontece no tempo dele, nao no seu checklist.
 - Releia TODA a conversa antes de responder. Se uma informacao ja foi dada, USE-A — nao pergunte novamente.
-- Varie seus temas: se ja perguntou sobre datas, pergunte sobre experiencias desejadas, tipo de hospedagem, atividades, gastronomia, etc.
+${isMaya ? "" : "- Varie seus temas: se ja perguntou sobre datas, pergunte sobre experiencias desejadas, tipo de hospedagem, atividades, gastronomia, etc."}`;
+
+  return `${dbBehaviorBlock}${persona}
+Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.
+${toneBlock}
+${filosofiaBlock}
+${antiRepeticaoBlock}
 ${roleInstr}
 ${teamContext}
-${NATH_UNIVERSAL_RULES}
+${isMaya ? "" : NATH_UNIVERSAL_RULES}
 ${skillsBlock}${trainingBlock}
 ${globalRulesBlock}
 ${transferInstr}
