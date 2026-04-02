@@ -1193,7 +1193,7 @@ Retorne JSON:
 
     return (
       <div className="animate-in fade-in slide-in-from-bottom-3 duration-500">
-        <div className={cn("mx-auto space-y-6", isMobile ? "px-0" : "max-w-[900px]")}>
+        <div className={cn("mx-auto space-y-5", isMobile ? "px-0" : "max-w-[1100px]")}>
 
           {/* ── Section 1: Volume ── */}
           <div className="rounded-2xl overflow-hidden" style={{
