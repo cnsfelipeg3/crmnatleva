@@ -124,23 +124,18 @@ async function callAnthropic(
     const t = await response.text();
     console.error("Anthropic API error:", status, t);
 
-    // Retry on 429 (rate limit)
-    if (status === 429 && retryCount < 5) {
+    // Retry on 429 (rate limit) and 529 (overloaded)
+    if ((status === 429 || status === 529 || status === 503) && retryCount < 5) {
       const delayMs = Math.min(20000, 2500 * Math.pow(2, retryCount)) + Math.floor(Math.random() * 1200);
+      console.log(`Anthropic ${status}, retrying in ${delayMs}ms (attempt ${retryCount + 1}/5)`);
       await new Promise(resolve => setTimeout(resolve, delayMs));
       return callAnthropic(apiKey, messages, model, stream, Math.max(250, Math.floor(maxTokens * 0.6)), retryCount + 1);
     }
 
-    if (status === 429) {
-      return new Response(JSON.stringify({ error: "Rate limit Anthropic excedido. Aguarde alguns segundos e tente novamente." }), {
+    if (status === 429 || status === 529 || status === 503) {
+      return new Response(JSON.stringify({ error: "Anthropic sobrecarregada. Aguarde alguns segundos e tente novamente." }), {
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
-
-    // 529 = Anthropic overloaded → fallback to Lovable AI Gateway
-    if (status === 529 || status === 503 || status === 500) {
-      console.log(`Anthropic ${status}, falling back to Lovable AI Gateway`);
-      return "FALLBACK" as any;
     }
 
     return new Response(JSON.stringify({ error: `Erro Anthropic: ${status}` }), {
