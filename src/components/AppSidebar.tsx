@@ -165,8 +165,8 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     </div>
   );
 
-  // Logo filter: target Champagne (#C9A55A) gold tone
-  const logoFilter = 'brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(2deg) brightness(0.82)';
+  // Logo filter: target exact chart-2 Champagne (#C9A559) — hsl(41,51%,57%)
+  const logoFilter = 'brightness(0) invert(1) sepia(1) saturate(2.5) hue-rotate(3deg) brightness(0.78)';
 
   return (
     <aside
