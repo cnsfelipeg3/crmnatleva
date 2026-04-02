@@ -61,7 +61,7 @@ export default function AppLayout() {
                   className="absolute inset-0 pointer-events-none"
                   style={{ backgroundColor: 'hsl(var(--champagne))', mixBlendMode: 'multiply' }}
                 />
-              />
+              </div>
             </div>
           </header>
         )}
