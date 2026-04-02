@@ -308,11 +308,12 @@ export default function SimuladorManualMode() {
     }
 
     try {
-      // KB content is appended separately (already loaded in useEffect, not duplicated from DB)
-      const kbBlock = kbContent[selectedAgent.id] || "";
+      // Maya gets ONLY her behavior_prompt — no KB, skills, or workflows to avoid dilution
+      const isMayaAgent = selectedAgent.id === "maya";
+      const kbBlock = isMayaAgent ? "" : (kbContent[selectedAgent.id] || "");
       const finalSystemPrompt = manualSystemPrompt
         + (kbBlock ? "\n" + kbBlock : "")
-        + (enrichmentExtras ? "\n" + enrichmentExtras : "");
+        + (isMayaAgent ? "" : enrichmentExtras ? "\n" + enrichmentExtras : "");
 
       // Use configured provider from ai_config
       const configuredProvider = agencyConfig.default_provider || "anthropic";

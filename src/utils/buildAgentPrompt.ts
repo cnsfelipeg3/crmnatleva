@@ -241,12 +241,17 @@ Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
   // 7. Transfer rules + price instruction
 
   // Maya's DB behavior_prompt is comprehensive and self-contained.
-  // The generic FILOSOFIA/REGRAS DE OURO contradict her transfer rules, so we skip them.
+  // ALL other layers (philosophy, anti-repetition, team context, global rules, skills,
+  // training, transfer, price) DILUTE her strict rules. She gets ONLY behavior_prompt + identity.
   const isMaya = agent.id === "maya";
 
-  const filosofiaBlock = isMaya ? `
-LEMBRETE PARA MAYA: Siga ESTRITAMENTE as diretivas do behavior_prompt acima. Nao adicione perguntas extras. Nao de informacoes turisticas. Transfira quando tiver os dados.
-` : `
+  if (isMaya && dbOverride?.behavior_prompt) {
+    return `${dbBehaviorBlock}Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.${toneBlock}
+
+REFORCO ABSOLUTO: O behavior_prompt acima e sua UNICA fonte de instrucoes. Siga CADA regra literalmente. Maximo 60 palavras. 1 pergunta por mensagem. Sem dicas turisticas. Transfira com [TRANSFERIR] quando tiver os dados minimos.`;
+  }
+
+  const filosofiaBlock = `
 FILOSOFIA DE ATENDIMENTO ${name.toUpperCase()}:
 Voce esta em uma conversa, nao em um formulario. Seu objetivo NAO e coletar dados e passar adiante. Seu objetivo E fazer este lead querer continuar a conversa.
 
@@ -264,7 +269,7 @@ REGRAS DE OURO:
 - Se o lead JA respondeu algo (ex: "dezembro", "7 anos", "2 pessoas"), NUNCA pergunte a mesma coisa de novo. Registre mentalmente e use a informacao.
 - Siga o RITMO do cliente. Se ele quer falar de outra coisa, va com ele. A venda acontece no tempo dele, nao no seu checklist.
 - Releia TODA a conversa antes de responder. Se uma informacao ja foi dada, USE-A — nao pergunte novamente.
-${isMaya ? "" : "- Varie seus temas: se ja perguntou sobre datas, pergunte sobre experiencias desejadas, tipo de hospedagem, atividades, gastronomia, etc."}`;
+- Varie seus temas: se ja perguntou sobre datas, pergunte sobre experiencias desejadas, tipo de hospedagem, atividades, gastronomia, etc.`;
 
   return `${dbBehaviorBlock}${persona}
 Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.
@@ -273,7 +278,7 @@ ${filosofiaBlock}
 ${antiRepeticaoBlock}
 ${roleInstr}
 ${teamContext}
-${isMaya ? "" : NATH_UNIVERSAL_RULES}
+${NATH_UNIVERSAL_RULES}
 ${skillsBlock}${trainingBlock}
 ${globalRulesBlock}
 ${transferInstr}
