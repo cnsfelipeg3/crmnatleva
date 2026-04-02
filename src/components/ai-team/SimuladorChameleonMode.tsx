@@ -600,7 +600,7 @@ export default function SimuladorChameleonMode() {
 
       {/* Desktop sidebar */}
       {!isMobile && (
-        <div className="w-[280px] shrink-0 space-y-3 overflow-y-auto">
+        <div className="w-[300px] shrink-0 space-y-3 overflow-y-auto">
           {sidebarContent}
         </div>
       )}
