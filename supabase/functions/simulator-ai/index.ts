@@ -124,6 +124,7 @@ async function callAnthropic(
     const t = await response.text();
     console.error("Anthropic API error:", status, t);
 
+    // Retry on 429 (rate limit)
     if (status === 429 && retryCount < 5) {
       const delayMs = Math.min(20000, 2500 * Math.pow(2, retryCount)) + Math.floor(Math.random() * 1200);
       await new Promise(resolve => setTimeout(resolve, delayMs));
@@ -135,6 +136,13 @@ async function callAnthropic(
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // 529 = Anthropic overloaded → fallback to Lovable AI Gateway
+    if (status === 529 || status === 503 || status === 500) {
+      console.log(`Anthropic ${status}, falling back to Lovable AI Gateway`);
+      return "FALLBACK" as any;
+    }
+
     return new Response(JSON.stringify({ error: `Erro Anthropic: ${status}` }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -303,21 +311,29 @@ serve(async (req) => {
       });
     }
 
-    // Route to Anthropic
+    // Route to Anthropic (with fallback to Lovable AI Gateway on 529/503/500)
     if (provider === "anthropic") {
       const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
       if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
-      return await callAnthropic(ANTHROPIC_API_KEY, messages, config.model, config.stream, config.maxTokens);
+      const anthropicResult = await callAnthropic(ANTHROPIC_API_KEY, messages, config.model, config.stream, config.maxTokens);
+      
+      // If Anthropic returned FALLBACK signal, continue to Lovable AI Gateway below
+      if (anthropicResult !== ("FALLBACK" as any)) {
+        return anthropicResult;
+      }
+      console.log("Falling back to Lovable AI Gateway for type:", type);
     }
 
-    // Default: Lovable AI Gateway
+    // Default / Fallback: Lovable AI Gateway
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    // Use Lovable-compatible model (override Anthropic model names on fallback)
+    const fallbackConfig = getModelConfig(type as CallType, "lovable");
     const requestBody: any = {
-      model: config.model,
+      model: fallbackConfig.model,
       messages,
-      stream: config.stream,
+      stream: fallbackConfig.stream,
     };
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
