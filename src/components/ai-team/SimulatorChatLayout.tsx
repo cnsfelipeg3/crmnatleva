@@ -380,13 +380,7 @@ export default function SimulatorChatLayout({
     }
   }, [onSend]);
 
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "40px";
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + "px";
-    }
-  }, [inputValue]);
+  // No auto-resize — fixed height like WhatsApp for stable UX
 
   // ─── Audio Recording ───
   const startRecording = useCallback(async () => {
