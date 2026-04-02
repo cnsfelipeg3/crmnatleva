@@ -131,6 +131,7 @@ export interface UnifiedPromptOptions {
   globalRulesBlock: string;
   agencyName?: string;
   agencyTone?: string;
+  knowledgeBlock?: string;
   /** DB overrides (behavior_prompt, persona, skills) — used by auto mode */
   dbOverride?: {
     behavior_prompt?: string | null;
@@ -166,6 +167,7 @@ export function buildUnifiedAgentPrompt(options: UnifiedPromptOptions): string {
     globalRulesBlock,
     agencyName,
     agencyTone,
+    knowledgeBlock: rawKnowledgeBlock,
     dbOverride,
     enableTransfers = true,
     hasNextAgent = true,
@@ -176,6 +178,7 @@ export function buildUnifiedAgentPrompt(options: UnifiedPromptOptions): string {
   const minTrocas = MIN_TROCAS[agent.id] || 4;
   const roleInstr = AGENT_ROLE_INSTRUCTIONS[agent.id] || "";
   const teamContext = buildTeamContextBlock(agent.id);
+  const knowledgeBlock = rawKnowledgeBlock?.trim() ? `\n${rawKnowledgeBlock.trim()}\n` : "";
 
   // Commercial funnel agents all present as "Nath" to the client
   const COMMERCIAL_AGENT_IDS = ["maya", "atlas", "habibi", "nemo", "dante", "luna", "nero", "iris"];
@@ -241,14 +244,23 @@ Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
   // 7. Transfer rules + price instruction
 
   // Maya's DB behavior_prompt is comprehensive and self-contained.
-  // ALL other layers (philosophy, anti-repetition, team context, global rules, skills,
-  // training, transfer, price) DILUTE her strict rules. She gets ONLY behavior_prompt + identity.
+  // She still needs one explicit exception path for factual event questions from the KB,
+  // otherwise she falls back to the generic greeting/name flow and ignores the lead's real intent.
   const isMaya = agent.id === "maya";
 
   if (isMaya && dbOverride?.behavior_prompt) {
-    return `${dbBehaviorBlock}Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.${toneBlock}
+    return `${dbBehaviorBlock}${knowledgeBlock}Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.${toneBlock}
 
-REFORCO ABSOLUTO: O behavior_prompt acima e sua UNICA fonte de instrucoes. Siga CADA regra literalmente. Maximo 60 palavras. 1 pergunta por mensagem. Sem dicas turisticas. Transfira com [TRANSFERIR] quando tiver os dados minimos.`;
+EXCECOES PRIORITARIAS PARA A MAYA:
+- Se o lead abrir a conversa com uma pergunta factual sobre evento presente na BASE DE CONHECIMENTO, responda essa pergunta PRIMEIRO usando SOMENTE o bloco de conhecimento acima.
+- Se o lead ja chegou com objetivo claro, reconheca esse objetivo na primeira resposta. Nao aja como se a mensagem estivesse vazia.
+- Se o lead ignorar sua pergunta anterior e trouxer outro assunto, NAO repita a mesma pergunta em seguida. Responda o assunto atual primeiro e so retome o nome depois, se ainda fizer sentido.
+- Nunca invente datas, horarios, adversarios, estadios, cidades ou logistica. Se algo nao estiver na base, diga que vai confirmar.
+
+REFORCOS ABSOLUTOS:
+- O behavior_prompt acima governa identidade, formato, limite de palavras e transferencia.
+- A BASE DE CONHECIMENTO acima governa fatos e datas de eventos.
+- Maximo 60 palavras. Maximo 1 pergunta por mensagem. Sem listas, markdown ou nomes internos.`;
   }
 
   const filosofiaBlock = `
@@ -279,6 +291,7 @@ ${antiRepeticaoBlock}
 ${roleInstr}
 ${teamContext}
 ${NATH_UNIVERSAL_RULES}
+${knowledgeBlock}
 ${skillsBlock}${trainingBlock}
 ${globalRulesBlock}
 ${transferInstr}

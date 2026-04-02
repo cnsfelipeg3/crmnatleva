@@ -14,6 +14,7 @@ import { useAgencyConfig } from "@/hooks/useAgencyConfig";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
+import { buildKnowledgeBlocksByAgent } from "./knowledgeRouting";
 import { supabase } from "@/integrations/supabase/client";
 import { logAITeamAudit, AUDIT_ACTIONS, AUDIT_ENTITIES } from "@/lib/aiTeamAudit";
 import { extractAndSaveBriefing } from "./briefingExtractor";
@@ -163,33 +164,7 @@ export default function SimuladorManualMode() {
     // Load KB docs and map to agents by category/title
     supabase.from("ai_knowledge_base").select("title, category, content_text").eq("is_active", true).then(({ data }) => {
       if (data) {
-        const agentKb: Record<string, string[]> = {};
-        for (const doc of data) {
-          const content = doc.content_text || "";
-          const title = (doc.title || "").toLowerCase();
-          const cat = (doc.category || "").toLowerCase();
-          // Destination docs → specialists
-          if (cat === "destinos" || title.includes("dubai") || title.includes("oriente")) {
-            (agentKb["habibi"] ??= []).push(content);
-          }
-          if (cat === "destinos" || title.includes("orlando") || title.includes("américas") || title.includes("americas")) {
-            (agentKb["nemo"] ??= []).push(content);
-          }
-          if (cat === "destinos" || title.includes("europa")) {
-            (agentKb["dante"] ??= []).push(content);
-          }
-          // Culture/atendimento/events docs → all funnel agents
-          if (cat === "cultura" || cat === "atendimento" || cat === "regras" || cat === "eventos") {
-            for (const aid of ["maya", "atlas", "habibi", "nemo", "dante", "luna", "nero", "iris"]) {
-              (agentKb[aid] ??= []).push(content);
-            }
-          }
-        }
-        const kbMap: Record<string, string> = {};
-        for (const [aid, docs] of Object.entries(agentKb)) {
-          kbMap[aid] = `\n=== BASE DE CONHECIMENTO ===\n${docs.join("\n\n")}`;
-        }
-        setKbContent(kbMap);
+        setKbContent(buildKnowledgeBlocksByAgent(data));
       }
     });
   }, []);
@@ -227,11 +202,12 @@ export default function SimuladorManualMode() {
       globalRulesBlock,
       agencyName: agencyConfig.agency_name,
       agencyTone: agencyConfig.tom_comunicacao,
+      knowledgeBlock: kbContent[selectedAgent.id] || "",
       dbOverride: {
         behavior_prompt: agentBehaviors[selectedAgent.id] || null,
       },
     }),
-    [selectedAgent, globalRulesBlock, agencyConfig.agency_name, agencyConfig.tom_comunicacao, agentBehaviors],
+    [selectedAgent, globalRulesBlock, agencyConfig.agency_name, agencyConfig.tom_comunicacao, kbContent, agentBehaviors],
   );
 
   // ═══ DEBOUNCE CHAT — Input livre, fila de mensagens, resposta em lote ═══
@@ -313,11 +289,8 @@ export default function SimuladorManualMode() {
     }
 
     try {
-      // Maya gets KB (for critical event info) but no skills or workflows to avoid dilution
       const isMayaAgent = selectedAgent.id === "maya";
-      const kbBlock = kbContent[selectedAgent.id] || "";
       const finalSystemPrompt = manualSystemPrompt
-        + (kbBlock ? "\n" + kbBlock : "")
         + (isMayaAgent ? "" : enrichmentExtras ? "\n" + enrichmentExtras : "");
 
       // Use configured provider from ai_config
