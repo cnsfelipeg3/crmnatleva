@@ -28,8 +28,10 @@ const DESTINOS = ["💬 Livre", "🎲 Aleatório", "Dubai", "Orlando", "Europa",
  * Runs AFTER the AI response, guaranteeing 100% compliance.
  */
 function enforceAgentFormatting(text: string): string {
-  // Remove em-dashes (—) and en-dashes (–) → replace with comma or nothing
+  // Remove em-dashes (—), en-dashes (–) and hyphens used as dashes ( - ) → replace with comma or period
   let cleaned = text.replace(/\s*[—–]\s*/g, ", ");
+  // Hyphens flanked by spaces (used as dash/travessão) but NOT at line start (lists)
+  cleaned = cleaned.replace(/(?<=\S)\s+-\s+/g, ", ");
   // Remove leading comma if line starts with it after replacement
   cleaned = cleaned.replace(/(^|[\n])，?\s*,\s*/g, "$1");
   // Collapse multiple commas
