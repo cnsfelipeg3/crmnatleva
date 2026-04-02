@@ -983,7 +983,7 @@ export default function SimuladorManualMode() {
             </div>
 
             {/* Agent profile card */}
-            <div className="rounded-2xl relative" style={{ background: "linear-gradient(145deg, rgba(15,20,35,0.95), rgba(15,20,35,0.75))", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="rounded-2xl relative bg-card border border-border overflow-hidden">
               <div className="absolute top-0 left-0 right-0 h-[2px] rounded-t-2xl" style={{ background: `linear-gradient(90deg, transparent, ${agentColor}, transparent)` }} />
               <div className="p-4 pb-3">
                 <div className="flex items-center gap-3">
