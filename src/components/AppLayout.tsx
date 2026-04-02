@@ -49,21 +49,18 @@ export default function AppLayout() {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <div
-                className="h-5 w-24"
-                style={{
-                  maskImage: `url(${logoNatleva})`,
-                  WebkitMaskImage: `url(${logoNatleva})`,
-                  maskSize: 'contain',
-                  WebkitMaskSize: 'contain',
-                  maskRepeat: 'no-repeat',
-                  WebkitMaskRepeat: 'no-repeat',
-                  maskPosition: 'center',
-                  WebkitMaskPosition: 'center',
-                  backgroundColor: 'hsl(var(--champagne))',
-                }}
-                role="img"
-                aria-label="NatLeva"
+              <div className="relative h-5 flex items-center">
+                <img
+                  src={logoNatleva}
+                  alt="NatLeva"
+                  className="h-full w-auto object-contain"
+                  style={{ filter: 'brightness(0) invert(1)' }}
+                  draggable={false}
+                />
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{ backgroundColor: 'hsl(var(--champagne))', mixBlendMode: 'multiply' }}
+                />
               />
             </div>
           </header>
