@@ -49,6 +49,11 @@ async function callAnthropic(
         status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    // 529/503/500 = overloaded/unavailable → signal fallback
+    if (status === 529 || status === 503 || status === 500) {
+      console.log(`Anthropic ${status}, falling back to Lovable AI Gateway`);
+      return "FALLBACK" as any;
+    }
     return new Response(JSON.stringify({ error: "Erro na API Anthropic" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
