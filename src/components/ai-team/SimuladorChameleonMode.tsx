@@ -424,10 +424,7 @@ export default function SimuladorChameleonMode() {
 
       {/* Transfer log */}
       {messages.some(m => m.role === "agent") && (
-        <div className="rounded-xl p-3 md:p-4" style={{
-          background: "rgba(15,23,42,0.7)",
-          border: "1px solid rgba(255,255,255,0.06)",
-        }}>
+        <div className="rounded-xl p-3 md:p-4 bg-card border border-border">
           <p className="text-[11px] font-bold mb-2" style={{ color: "#94A3B8" }}>Pipeline</p>
           <div className="flex flex-wrap gap-1.5">
             {[...new Set(messages.filter(m => m.agentId).map(m => m.agentId!))].map(aid => {
