@@ -324,14 +324,16 @@ serve(async (req) => {
       console.log("Falling back to Lovable AI Gateway for type:", type);
     }
 
-    // Default: Lovable AI Gateway
+    // Default / Fallback: Lovable AI Gateway
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    // Use Lovable-compatible model (override Anthropic model names on fallback)
+    const fallbackConfig = getModelConfig(type as CallType, "lovable");
     const requestBody: any = {
-      model: config.model,
+      model: fallbackConfig.model,
       messages,
-      stream: config.stream,
+      stream: fallbackConfig.stream,
     };
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
