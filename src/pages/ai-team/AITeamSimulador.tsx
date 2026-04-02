@@ -146,11 +146,11 @@ export default function AITeamSimulador() {
 
         {/* Content */}
         <Suspense fallback={<NatLevaLoader />}>
-          <div style={{ display: mode === "manual" ? "block" : "none", contain: "layout style" }}>
+          <div className="flex-1 min-h-0" style={{ display: mode === "manual" ? "flex" : "none", flexDirection: "column", contain: "layout style" }}>
             <SimuladorManualMode />
           </div>
-          {mode === "auto" && <SimuladorAutoMode />}
-          {mode === "chameleon" && <SimuladorChameleonMode />}
+          {mode === "auto" && <div className="flex-1 min-h-0 flex flex-col overflow-y-auto"><SimuladorAutoMode /></div>}
+          {mode === "chameleon" && <div className="flex-1 min-h-0 flex flex-col"><SimuladorChameleonMode /></div>}
         </Suspense>
       </div>
 
