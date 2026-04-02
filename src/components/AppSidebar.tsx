@@ -165,18 +165,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     </div>
   );
 
-  // Use mask-image for pixel-perfect color match with champagne
-  const logoMaskStyle: React.CSSProperties = {
-    maskImage: `url(${logoNatleva})`,
-    WebkitMaskImage: `url(${logoNatleva})`,
-    maskSize: 'contain',
-    WebkitMaskSize: 'contain',
-    maskRepeat: 'no-repeat',
-    WebkitMaskRepeat: 'no-repeat',
-    maskPosition: 'center',
-    WebkitMaskPosition: 'center',
-    backgroundColor: 'hsl(var(--champagne))',
-  };
 
   return (
     <aside
