@@ -49,11 +49,21 @@ export default function AppLayout() {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <img
-                src={logoNatleva}
-                alt="NatLeva"
-                className="h-5"
-                style={{ filter: 'brightness(0) invert(1) sepia(1) saturate(2.5) hue-rotate(3deg) brightness(0.78)' }}
+              <div
+                className="h-5 w-24"
+                style={{
+                  maskImage: `url(${logoNatleva})`,
+                  WebkitMaskImage: `url(${logoNatleva})`,
+                  maskSize: 'contain',
+                  WebkitMaskSize: 'contain',
+                  maskRepeat: 'no-repeat',
+                  WebkitMaskRepeat: 'no-repeat',
+                  maskPosition: 'center',
+                  WebkitMaskPosition: 'center',
+                  backgroundColor: 'hsl(var(--champagne))',
+                }}
+                role="img"
+                aria-label="NatLeva"
               />
             </div>
           </header>
