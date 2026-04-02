@@ -213,7 +213,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         {navItems.map((item) => renderNavItem(item))}
 
         {/* AI Team section */}
-        {renderGroupButton("🧠 AI Team", Brain, aiTeamOpen, () => setAiTeamOpen(!aiTeamOpen))}
+        {renderGroupButton("🧠 Batalhão NatLeva", Brain, aiTeamOpen, () => setAiTeamOpen(!aiTeamOpen))}
         {aiTeamOpen && !isCollapsed && renderSubGroup([
           { to: "/ai-team", icon: Brain, label: "Mission Control" },
           { to: "/ai-team/equipe", icon: Users, label: "Equipe" },
