@@ -6,7 +6,7 @@
  * 3. "Organize with AI" synthesizes into actionable improvements
  * 4. Approve → writes to agent behavior_prompt in DB
  */
-import { useState, useRef, useEffect, useCallback, Fragment } from "react";
+import { useState, useRef, useEffect, useCallback, Fragment, forwardRef } from "react";
 import {
   MessageSquarePlus, X, Send, Eye, Lightbulb, Sparkles, Trash2,
   Bot, Check, XCircle, Loader2, Wand2, ChevronDown, ChevronUp,
