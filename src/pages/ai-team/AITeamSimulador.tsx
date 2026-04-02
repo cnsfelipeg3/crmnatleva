@@ -69,7 +69,7 @@ export default function AITeamSimulador() {
       )} style={{ transition: "opacity 0.4s ease-out, transform 0.4s ease-out" }}>
 
         {/* Header */}
-        <div className="relative rounded-2xl overflow-hidden bg-card border border-border" style={{ contain: "layout style" }}>
+        <div className="relative rounded-2xl overflow-hidden bg-card border border-border shrink-0" style={{ contain: "layout style" }}>
           {/* Top shimmer — champagne */}
           <div className="absolute top-0 left-0 right-0 h-px overflow-hidden">
             <div className="h-full w-1/3 shimmer-line" style={{
