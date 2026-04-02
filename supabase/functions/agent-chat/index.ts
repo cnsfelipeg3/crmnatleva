@@ -17,6 +17,7 @@ async function callAnthropic(
   systemPrompt: string,
   messages: Array<{ role: string; content: string }>,
   model: string,
+  retryCount: number = 0,
 ): Promise<Response> {
   // Anthropic Messages API format
   const anthropicMessages = messages.map(m => ({
