@@ -202,18 +202,14 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         </button>
       )}
       {/* Logo area */}
-      <div className="relative flex items-center justify-center gap-2 px-4 h-[3.7rem] border-b border-sidebar-border/50">
+      <div className="relative flex items-center justify-center px-5 h-[3.7rem] border-b border-sidebar-border/50">
         {!isCollapsed ? (
-          <div className="flex flex-col items-center">
-            <div
-              className="h-[2.2rem] w-full"
-              style={logoMaskStyle}
-              role="img"
-              aria-label="NatLeva"
-            />
-            {/* Gold signature line */}
-            <div className="w-10 h-px mt-1.5 rounded-full bg-gradient-to-r from-transparent via-champagne/30 to-transparent" />
-          </div>
+          <div
+            className="h-[2.6rem] w-full"
+            style={logoMaskStyle}
+            role="img"
+            aria-label="NatLeva"
+          />
         ) : (
           <Plane className="w-5 h-5 text-champagne mx-auto" />
         )}
