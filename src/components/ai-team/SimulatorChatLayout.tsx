@@ -577,8 +577,9 @@ export default function SimulatorChatLayout({
               onChange={(e) => onInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={disabled}
-              className="flex-1 min-h-[40px] max-h-[120px] text-[14px] resize-none bg-background/50 border-border/20 rounded-3xl"
+              className="flex-1 text-[14px] resize-none bg-background/50 border-border/20 rounded-3xl overflow-y-auto"
               rows={1}
+              style={{ height: "42px", minHeight: "42px", maxHeight: "42px" }}
             />
 
             {/* Send or Mic button */}
