@@ -90,7 +90,7 @@ export default function AITeamLayout() {
       )}>
         <div className="flex items-center justify-between px-3 py-3 border-b border-border/30">
           {!collapsed && (
-            <span className="text-xs font-bold tracking-widest text-muted-foreground uppercase">AI Team</span>
+            <span className="tracking-widest uppercase text-center text-sm text-secondary rounded-none shadow-none font-sans font-semibold">Batalhão NatLeva</span>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
