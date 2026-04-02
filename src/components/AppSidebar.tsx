@@ -165,8 +165,18 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     </div>
   );
 
-  // Logo filter: target exact chart-2 Champagne (#C9A559) — hsl(41,51%,57%)
-  const logoFilter = 'brightness(0) invert(1) sepia(1) saturate(2.5) hue-rotate(3deg) brightness(0.78)';
+  // Use mask-image for pixel-perfect color match with champagne
+  const logoMaskStyle: React.CSSProperties = {
+    maskImage: `url(${logoNatleva})`,
+    WebkitMaskImage: `url(${logoNatleva})`,
+    maskSize: 'contain',
+    WebkitMaskSize: 'contain',
+    maskRepeat: 'no-repeat',
+    WebkitMaskRepeat: 'no-repeat',
+    maskPosition: 'center',
+    WebkitMaskPosition: 'center',
+    backgroundColor: 'hsl(var(--champagne))',
+  };
 
   return (
     <aside
