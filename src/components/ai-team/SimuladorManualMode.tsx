@@ -178,8 +178,8 @@ export default function SimuladorManualMode() {
           if (cat === "destinos" || title.includes("europa")) {
             (agentKb["dante"] ??= []).push(content);
           }
-          // Culture/atendimento docs → all funnel agents
-          if (cat === "cultura" || cat === "atendimento" || cat === "regras") {
+          // Culture/atendimento/events docs → all funnel agents
+          if (cat === "cultura" || cat === "atendimento" || cat === "regras" || cat === "eventos") {
             for (const aid of ["maya", "atlas", "habibi", "nemo", "dante", "luna", "nero", "iris"]) {
               (agentKb[aid] ??= []).push(content);
             }
