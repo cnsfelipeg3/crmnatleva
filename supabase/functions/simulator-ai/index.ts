@@ -306,17 +306,11 @@ serve(async (req) => {
       });
     }
 
-    // Route to Anthropic (with fallback to Lovable AI Gateway on 529/503/500)
+    // Route to Anthropic
     if (provider === "anthropic") {
       const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
       if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
-      const anthropicResult = await callAnthropic(ANTHROPIC_API_KEY, messages, config.model, config.stream, config.maxTokens);
-      
-      // If Anthropic returned FALLBACK signal, continue to Lovable AI Gateway below
-      if (anthropicResult !== ("FALLBACK" as any)) {
-        return anthropicResult;
-      }
-      console.log("Falling back to Lovable AI Gateway for type:", type);
+      return await callAnthropic(ANTHROPIC_API_KEY, messages, config.model, config.stream, config.maxTokens);
     }
 
     // Default / Fallback: Lovable AI Gateway
