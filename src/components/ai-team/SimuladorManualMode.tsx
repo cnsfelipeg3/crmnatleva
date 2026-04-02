@@ -38,6 +38,9 @@ function enforceAgentFormatting(text: string): string {
   cleaned = cleaned.replace(/,\s*,/g, ",");
   // Remove trailing comma before period
   cleaned = cleaned.replace(/,\s*\./g, ".");
+  // 🛡️ Invisible handoff: remove any leaked transfer language
+  // Sentences mentioning transfer/specialist/colleague get stripped entirely
+  cleaned = cleaned.replace(/[^.!?\n]*\b(vou te passar|vou te encaminhar|meu colega|nosso especialista|outro consultor|próximo agente|próximo atendente|te transferir|te direcionar)\b[^.!?\n]*[.!?]?\s*/gi, "");
   // Strip leaked internal state labels (ESTADO_X, FASE_X, STEP_X, ETAPA_X) — entire line
   cleaned = cleaned.replace(/^.*\b(ESTADO|FASE|STEP|ETAPA|STAGE|QUALIFICA[ÇC][ÃA]O|TRANSFER[ÊE]NCIA)[_\s]*\d*[+,;]*\s*.*$/gm, "");
   // Remove any remaining lines that look like workflow metadata (e.g. "[ESTADO 3]", "**ESTADO_3**")
