@@ -353,7 +353,7 @@ serve(async (req) => {
       });
     }
 
-    if (config.stream) {
+    if (fallbackConfig.stream) {
       return new Response(response.body, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
       });
