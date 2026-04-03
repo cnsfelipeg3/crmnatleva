@@ -41,7 +41,55 @@ export default function AITeamLayout() {
             {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
           <span className="tracking-widest uppercase text-center text-sm rounded-none shadow-none font-sans font-semibold text-primary">Batalhão NatLeva</span>
-...
+          {/* Current page indicator */}
+          <span className="ml-auto text-[10px] text-muted-foreground/60">
+            {AI_TEAM_MENUS.find(m => m.end ? location.pathname === m.to : location.pathname.startsWith(m.to) && location.pathname !== "/ai-team")?.label || "Mission Control"}
+          </span>
+        </div>
+
+        {/* Mobile nav drawer */}
+        {mobileOpen && (
+          <>
+            <div className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+            <nav className="absolute top-[calc(3.7rem+2.5rem)] left-0 z-50 w-56 max-h-[60vh] overflow-y-auto bg-card border border-border/30 rounded-br-xl shadow-xl p-2 space-y-0.5">
+              {AI_TEAM_MENUS.map(item => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  onClick={() => setMobileOpen(false)}
+                  className={({ isActive }) => cn(
+                    "flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs font-medium transition-all",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <item.icon className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{item.label}</span>
+                </NavLink>
+              ))}
+            </nav>
+          </>
+        )}
+
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto">
+          <Outlet />
+        </main>
+      </div>
+    );
+  }
+
+  // Desktop
+  return (
+    <div className="flex h-[calc(100vh-3.7rem)] overflow-hidden">
+      <aside className={cn(
+        "shrink-0 border-r border-border/50 bg-card/50 flex flex-col transition-all duration-300 overflow-hidden",
+        collapsed ? "w-[52px]" : "w-[200px]"
+      )}>
+        <div className="flex items-center justify-between px-3 py-3 border-b border-border/30">
+          {!collapsed && (
             <span className="tracking-widest uppercase text-center text-sm rounded-none shadow-none font-sans font-semibold text-primary">Batalhão NatLeva</span>
           )}
           <button
