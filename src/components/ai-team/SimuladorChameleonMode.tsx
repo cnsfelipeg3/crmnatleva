@@ -17,6 +17,8 @@ import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
 import { useAgencyConfig } from "@/hooks/useAgencyConfig";
 import { buildKnowledgeBlocksByAgent } from "@/components/ai-team/knowledgeRouting";
 import { debugLog } from "@/lib/debugMode";
+import { enforceAgentFormatting } from "./agentFormatting";
+import { fullCompliancePipeline } from "./complianceEngine";
 import ChameleonConfig, { type SessionType } from "./ChameleonConfig";
 import {
   type ChameleonProfile,
