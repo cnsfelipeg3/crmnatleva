@@ -586,7 +586,7 @@ export default function SimuladorChameleonMode() {
             debrief.scoreGeral >= 7 ? "text-emerald-400" :
             debrief.scoreGeral >= 5 ? "text-amber-400" : "text-red-400"
           )}>
-            {debrief.scoreGeral.toFixed(1)}
+            {(debrief.scoreGeral ?? 0).toFixed(1)}
           </p>
         </div>
       )}
