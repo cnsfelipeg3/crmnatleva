@@ -19,7 +19,12 @@ export function enforceAgentFormatting(text: string): string {
   // Remove trailing comma before period
   cleaned = cleaned.replace(/,\s*\./g, ".");
   // 🛡️ Invisible handoff: remove any leaked transfer language
-  cleaned = cleaned.replace(/[^.!?\n]*\b(vou te passar|vou te encaminhar|meu colega|nosso especialista|outro consultor|próximo agente|próximo atendente|te transferir|te direcionar)\b[^.!?\n]*[.!?]?\s*/gi, "");
+  cleaned = cleaned.replace(/[^.!?\n]*\b(vou te passar|vou te encaminhar|meu colega|minha colega|minha parceira|meu parceiro|nosso especialista|nossa especialista|nossa equipe vai|outro consultor|outra consultora|próximo agente|próximo atendente|te transferir|te direcionar)\b[^.!?\n]*[.!?]?\s*/gi, "");
+  // Strip internal tags that should never reach UI
+  cleaned = cleaned.replace(/\[TRANSFERIR\]/g, "");
+  cleaned = cleaned.replace(/\[BRIEFING[^\]]*\]:?\s*/gi, "");
+  cleaned = cleaned.replace(/\[ESCALON[^\]]*\]:?\s*/gi, "");
+  cleaned = cleaned.replace(/\[INTERNO[^\]]*\]:?\s*/gi, "");
   // Strip leaked internal state labels
   cleaned = cleaned.replace(/^.*\b(ESTADO|FASE|STEP|ETAPA|STAGE|QUALIFICA[ÇC][ÃA]O|TRANSFER[ÊE]NCIA)[_\s]*\d*[+,;]*\s*.*$/gm, "");
   cleaned = cleaned.replace(/^.*\b(ESTADO|FASE|STEP|ETAPA)[\s_]*\d+.*$/gm, "");

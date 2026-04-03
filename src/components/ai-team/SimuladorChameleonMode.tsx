@@ -272,11 +272,8 @@ export default function SimuladorChameleonMode() {
 
       if (abortRef.current) return;
 
-      // Remove [TRANSFERIR] from raw response; transfer check happens AFTER compliance
-      let cleanResponse = agentResponse.replace(/\[TRANSFERIR\]/g, "").trim();
-
       // ── Post-processing: enforce formatting (identical to manual simulator) ──
-      cleanResponse = enforceAgentFormatting(cleanResponse);
+      let cleanResponse = enforceAgentFormatting(agentResponse);
 
       // ── Compliance Engine: validate against all rules ──
       try {
@@ -291,8 +288,17 @@ export default function SimuladorChameleonMode() {
         debugLog("[CHAMELEON] Compliance check failed (non-fatal)", compErr);
       }
 
+      // ── Detect transfer BEFORE stripping tags ──
+      const isTransfer = agentResponse.includes("[TRANSFERIR]") || cleanResponse.includes("[TRANSFERIR]");
+
+      // ── Strip ALL internal tags before UI ──
+      cleanResponse = cleanResponse.replace(/\[TRANSFERIR\]/g, "").trim();
+      cleanResponse = cleanResponse.replace(/\[BRIEFING[^\]]*\]:?\s*/gi, "").trim();
+      cleanResponse = cleanResponse.replace(/\[ESCALON[^\]]*\]:?\s*/gi, "").trim();
+      cleanResponse = cleanResponse.replace(/\[INTERNO[^\]]*\]:?\s*/gi, "").trim();
+
       // ── Final word-count enforcer (deterministic safety net) ──
-      const wordLimit = agentId === "maya" ? 70 : 130;
+      const wordLimit = agentId === "maya" ? 70 : 100;
       const wordCount = cleanResponse.split(/\s+/).length;
       if (wordCount > wordLimit) {
         const words = cleanResponse.split(/\s+/).slice(0, wordLimit).join(" ");
@@ -312,10 +318,8 @@ export default function SimuladorChameleonMode() {
       const updatedMessages = [...currentMessages, agentMsg];
       setMessages(updatedMessages);
 
-      // Handle transfer — check compliantText (post-compliance) since pivot detector injects [TRANSFERIR] there
+      // Handle transfer
       let nextAgentId = agentId;
-      const isTransfer = agentResponse.includes("[TRANSFERIR]") || cleanResponse.includes("[TRANSFERIR]");
-      cleanResponse = cleanResponse.replace(/\[TRANSFERIR\]/g, "").trim();
       if (isTransfer) {
         const next = getNextAgentInPipeline(agentId, agents);
         if (next) {
