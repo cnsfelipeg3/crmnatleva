@@ -1,50 +1,58 @@
 
 
-## Diagnóstico: Maya AINDA verbosa no Camaleão
+## Diagnóstico: Maya ainda com problemas comportamentais (não é mais word-count)
 
-### O que está acontecendo nas screenshots
+### O que a screenshot mostra
 
-A Maya continua produzindo mensagens com 100-150+ palavras (deveria ser ~60), com info dumping de serviços e parágrafos longos. O `fullCompliancePipeline` e `enforceAgentFormatting` **já foram adicionados** no código, mas **não estão funcionando** na prática.
+O limite de palavras (~60) **está funcionando** — as mensagens da Maya estão dentro do limite. O problema agora é **comportamental**:
 
-### Causa raiz: 3 falhas no pipeline de compliance
-
-| Problema | Onde | Por que falha |
+| Problema | Exemplo na screenshot | Regra violada |
 |---|---|---|
-| **Safety check rejeita reescritas curtas** | `complianceEngine.ts` linha 289 | Se a reescrita tem menos de 20% do tamanho original, é descartada. Uma resposta de 150 palavras cortada para 60 seria rejeitada (60 < 150 × 0.2 = 30... ok, mas se for mais agressivo, falha) |
-| **Compliance prompt instrui "mantenha o mesmo comprimento"** | `complianceEngine.ts` linha 195 | Contradiz diretamente o objetivo de encurtar respostas verbosas |
-| **Sem enforcement determinístico de limite de palavras** | `enforceHardRules()` | Remove travessões e emojis, mas NÃO verifica limite de palavras. Respostas longas passam intactas |
+| **2 perguntas numa mensagem** | "como posso te chamar? E me conta, o que mais te chama atenção em Buenos Aires?" | "Máximo 1 pergunta por mensagem" |
+| **Storytelling/marketing** | "A cidade tem uma energia única, aquela mistura de Europa com América Latina que é impossível de resistir" | Maya deve criar conexão rápida, sem fazer turismo |
+| **Não transfere quando lead pede preço/hotel** | Lead: "Me mostra 2-3 opções de hotel" → Maya continua respondendo | "Se questionada sobre dicas ou logística, admitir incerteza e disparar [TRANSFERIR]" |
+| **Não transfere com dados completos** | Na mensagem 2 já tinha Nome + Destino + Período + Composição → Maya continua | "Quando tiver dados mínimos + 5 trocas, TRANSFIRA IMEDIATAMENTE" |
 
-### Em resumo
-O compliance engine foca em violações de regras (bullets, linguagem formal, etc.), mas **não enxerga "resposta longa" como violação**. E mesmo quando reescreve mais curto, o safety check pode rejeitar por diferença de tamanho.
+### Causa raiz: 3 problemas
+
+1. **Enrichment dilui o prompt da Maya** — Após `buildUnifiedAgentPrompt` retornar o prompt compacto da Maya (~500 palavras), o Chameleon **apenda Skills + Workflows** (linha 258-259), adicionando contexto desnecessário que dilui as instruções.
+
+2. **Sem enforcement determinístico de regras comportamentais** — `enforceHardRules` valida word-count e formatação, mas NÃO detecta:
+   - Múltiplas interrogações (2+ "?" = violação)
+   - Padrões de storytelling/turismo
+   - Lead pedindo preço/hotel/logística (deveria forçar transfer)
+
+3. **Compliance Engine é genérico** — O AI compliance valida "contra todas as regras", mas a Maya tem regras muito específicas (1 pergunta, pivot em logística) que o validador generalista não enforça consistentemente.
 
 ---
 
-### Plano de correção (3 alterações)
+### Plano de correção
 
-#### 1. Adicionar truncamento inteligente por palavras em `enforceHardRules`
-**Arquivo:** `src/components/ai-team/complianceEngine.ts`
-
-- Adicionar lógica: se agentId é `maya`, limite = 60 palavras; outros agentes = 120 palavras
-- Truncar na última frase completa dentro do limite
-- Isso é determinístico (100% garantido, sem depender de IA)
-
-#### 2. Corrigir o compliance prompt para permitir encurtamento
-**Arquivo:** `src/components/ai-team/complianceEngine.ts`
-
-- Linha 195: trocar "Mantenha o mesmo comprimento aproximado" por "Se a resposta excede os limites de palavras definidos, ENCURTE mantendo o essencial"
-- Linha 289: relaxar o safety check de `0.2` para `0.1` (permitir reescritas até 90% menores)
-
-#### 3. Adicionar word-count enforcer no Camaleão como camada final
+#### 1. Bloquear enrichment para Maya
 **Arquivo:** `src/components/ai-team/SimuladorChameleonMode.tsx`
 
-- Após o compliance pipeline, adicionar um check final: contar palavras da resposta
-- Se Maya e > 70 palavras: truncar na última frase completa
-- Log de debug quando truncamento é aplicado
+- Na linha 257-260: adicionar `if (agentId !== "maya")` antes de aplicar enrichment
+- Maya não precisa de skills/workflows — seu prompt é auto-contido
+
+#### 2. Adicionar enforcement determinístico de comportamento em `enforceHardRules`
+**Arquivo:** `src/components/ai-team/complianceEngine.ts`
+
+Novas regras codificadas (sem depender de IA):
+- **Multi-pergunta**: contar "?" na resposta; se Maya e 2+, remover tudo após o primeiro "?"+ frase
+- **Storytelling detector**: regex para padrões como "uma energia única", "impossível de resistir", "foi feita pra", "capítulo à parte" → cortar a frase inteira
+- **Pivot detector**: se a última mensagem do lead contém "hotel", "preço", "opção", "valor", "desconto" → injetar "[TRANSFERIR]" no final da resposta
+
+#### 3. Também bloquear enrichment no Manual Mode para Maya
+**Arquivo:** `src/components/ai-team/SimuladorManualMode.tsx`
+
+- Mesma lógica: pular enrichment layer para Maya (consistência entre modos)
 
 ### Resultado esperado
-Maya no Camaleão vai responder com no máximo ~60-70 palavras, idêntico ao manual. O enforcement é determinístico (código), não depende da IA "obedecer".
+- Maya: 1 pergunta por mensagem, sem storytelling, transfere imediatamente ao detectar pedido de logística/preço
+- Enrichment preservado para todos os outros agentes
 
 ### Arquivos alterados
-- `src/components/ai-team/complianceEngine.ts` — word limit em `enforceHardRules` + fix no prompt + safety check
-- `src/components/ai-team/SimuladorChameleonMode.tsx` — word-count enforcer final
+- `src/components/ai-team/complianceEngine.ts` — regras comportamentais determinísticas
+- `src/components/ai-team/SimuladorChameleonMode.tsx` — skip enrichment para Maya
+- `src/components/ai-team/SimuladorManualMode.tsx` — skip enrichment para Maya
 
