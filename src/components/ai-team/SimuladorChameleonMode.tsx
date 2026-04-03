@@ -282,7 +282,8 @@ export default function SimuladorChameleonMode() {
       // ── Compliance Engine: validate against all rules ──
       try {
         const conversationContext = currentMessages.map(m => `${m.role === "lead" ? "Lead" : "Agente"}: ${m.content}`).join("\n");
-        const { text: compliantText, wasRewritten } = await fullCompliancePipeline(agentId, cleanResponse, conversationContext);
+        const lastLead = [...currentMessages].reverse().find(m => m.role === "lead")?.content || "";
+        const { text: compliantText, wasRewritten } = await fullCompliancePipeline(agentId, cleanResponse, conversationContext, lastLead);
         if (wasRewritten) {
           debugLog(`[CHAMELEON] Compliance rewrite applied for ${agent.name}`);
         }
