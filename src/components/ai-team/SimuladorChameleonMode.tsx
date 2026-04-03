@@ -236,21 +236,10 @@ export default function SimuladorChameleonMode() {
     setStatusText(`${agent.emoji} ${agent.name} está respondendo...`);
 
     try {
-      // Fetch DB overrides for agent (same as manual simulator)
-      let dbData: { behavior_prompt?: string | null; persona?: string | null; skills?: string[] } | undefined;
-      try {
-        const { data } = await supabase
-          .from("ai_team_agents")
-          .select("behavior_prompt, persona, skills")
-          .eq("id", agentId)
-          .maybeSingle();
-        if (data) dbData = data;
-      } catch { /* fallback to static */ }
-
-      // Use behavior_prompt from pre-loaded map if DB query didn't return one
-      if (!dbData?.behavior_prompt && agentBehaviors[agentId]) {
-        dbData = { ...dbData, behavior_prompt: agentBehaviors[agentId] };
-      }
+      // Use pre-loaded behavior_prompt (no per-step DB query needed)
+      const dbData: { behavior_prompt?: string | null; persona?: string | null; skills?: string[] } = {
+        behavior_prompt: agentBehaviors[agentId] || null,
+      };
 
       // Build prompt with agency config + KB (identical to manual simulator)
       let agentPrompt = buildAgentPromptForChameleon(
@@ -262,56 +251,10 @@ export default function SimuladorChameleonMode() {
         kbContent[agentId] || "",
       );
 
-      // ═══ ENRICHMENT LAYER — same as manual simulator ═══
-      try {
-        const baseLower = agentPrompt.toLowerCase();
-        const extras: string[] = [];
-
-        // 1) Skills from DB
-        const { data: skillAssignments } = await supabase
-          .from("agent_skill_assignments")
-          .select("skill_id, agent_skills(name, prompt_instruction, is_active)")
-          .eq("agent_id", agentId)
-          .eq("is_active", true);
-        if (skillAssignments && skillAssignments.length > 0) {
-          const newSkills: string[] = [];
-          for (const sa of skillAssignments) {
-            const skill = sa.agent_skills as any;
-            if (!skill || !skill.is_active || !skill.prompt_instruction) continue;
-            if (baseLower.includes(skill.name.toLowerCase())) continue;
-            newSkills.push(`- ${skill.name}: ${(skill.prompt_instruction || "").slice(0, 150)}`);
-          }
-          if (newSkills.length > 0) extras.push(`\n[SKILLS ATUALIZADAS]\n${newSkills.join("\n")}`);
-        }
-
-        // 2) Active workflows
-        const { data: flows } = await supabase
-          .from("automation_flows")
-          .select("id, name, description")
-          .eq("status", "active")
-          .limit(2);
-        if (flows && flows.length > 0) {
-          for (const flow of flows) {
-            if (baseLower.includes(flow.name.toLowerCase())) continue;
-            const { data: flowNodes } = await supabase
-              .from("automation_nodes")
-              .select("label, node_type")
-              .eq("flow_id", flow.id)
-              .order("position_y", { ascending: true })
-              .limit(10);
-            if (flowNodes && flowNodes.length > 0) {
-              const steps = flowNodes.map(n => n.label || n.node_type).join(" → ");
-              extras.push(`\n[FLUXO]\n"${flow.name}": ${steps}`);
-            }
-          }
-        }
-
-        if (extras.length > 0) {
-          agentPrompt += extras.join("\n");
-          debugLog(`[CHAMELEON ENRICHMENT] agent=${agentId}, extras=${extras.length}`);
-        }
-      } catch (err) {
-        debugLog("[CHAMELEON ENRICHMENT] Falha silenciosa", err);
+      // Apply pre-cached enrichment (skills + workflows — loaded once at mount)
+      const enrichment = enrichmentCacheRef.current[agentId];
+      if (enrichment) {
+        agentPrompt += enrichment;
       }
 
       // Build history in OpenAI format
@@ -351,8 +294,8 @@ export default function SimuladorChameleonMode() {
 
       if (abortRef.current) return;
 
-      // ── Step 2: Chameleon responds ──
-      await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
+      // ── Step 2: Chameleon responds (reduced delay for speed) ──
+      await new Promise(r => setTimeout(r, 800 + Math.random() * 700));
       if (abortRef.current) return;
 
       setStatusText(`🦎 ${p.nome} está digitando...`);
@@ -390,13 +333,13 @@ export default function SimuladorChameleonMode() {
       setExchangeCount(newExchanges);
       setIsProcessing(false);
 
-      // Progressive monitor field reveal
+      // Progressive monitor field reveal (fire-and-forget)
       const mBid = monitorBriefingIdRef.current;
       if (mBid) revealMonitorFields(mBid, newExchanges, p).catch(() => {});
 
-      // Continue loop
+      // Continue loop (reduced delay)
       if (!abortRef.current && newExchanges < maxEx) {
-        setTimeout(() => runConversationStep(p, finalMessages, nextAgentId, agents, maxEx, newExchanges, sType, chId), 2000);
+        setTimeout(() => runConversationStep(p, finalMessages, nextAgentId, agents, maxEx, newExchanges, sType, chId), 600);
       } else {
         runDebrief(p, finalMessages, sType, chId);
       }
