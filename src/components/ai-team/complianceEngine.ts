@@ -192,7 +192,8 @@ INSTRUÇÕES:
 3. Se encontrar QUALQUER violação (mesmo mínima), reescreva a resposta corrigindo TODAS as violações, mantendo o sentido e o tom original.
 
 REGRAS DA REESCRITA:
-- Mantenha o mesmo comprimento aproximado
+- Se a resposta excede os limites de palavras definidos nas diretivas, ENCURTE mantendo apenas o essencial
+- Priorize brevidade: respostas de WhatsApp devem ser curtas e diretas
 - Mantenha o mesmo tom e intenção
 - Corrija APENAS o que viola as regras
 - NÃO adicione explicações sobre o que foi corrigido
