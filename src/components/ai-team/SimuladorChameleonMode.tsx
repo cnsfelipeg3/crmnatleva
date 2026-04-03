@@ -73,17 +73,89 @@ export default function SimuladorChameleonMode() {
   // Load KB and behavior_prompts from DB (same as manual simulator)
   const [kbContent, setKbContent] = useState<Record<string, string>>({});
   const [agentBehaviors, setAgentBehaviors] = useState<Record<string, string>>({});
+  // Cache enrichment data (skills + workflows) at mount — avoids repeated DB queries per turn
+  const enrichmentCacheRef = useRef<Record<string, string>>({});
+  const enrichmentLoadedRef = useRef(false);
+
   useEffect(() => {
-    supabase.from("ai_team_agents").select("id, behavior_prompt").then(({ data }) => {
-      if (data) {
-        const map: Record<string, string> = {};
-        data.forEach((a: any) => { if (a.behavior_prompt) map[a.id] = a.behavior_prompt; });
-        setAgentBehaviors(map);
-      }
-    });
-    supabase.from("ai_knowledge_base").select("title, category, content_text").eq("is_active", true).then(({ data }) => {
-      if (data) setKbContent(buildKnowledgeBlocksByAgent(data));
-    });
+    // Parallel load: behaviors, KB, and enrichment cache
+    Promise.all([
+      supabase.from("ai_team_agents").select("id, behavior_prompt").then(({ data }) => {
+        if (data) {
+          const map: Record<string, string> = {};
+          data.forEach((a: any) => { if (a.behavior_prompt) map[a.id] = a.behavior_prompt; });
+          setAgentBehaviors(map);
+        }
+      }),
+      supabase.from("ai_knowledge_base").select("title, category, content_text").eq("is_active", true).then(({ data }) => {
+        if (data) setKbContent(buildKnowledgeBlocksByAgent(data));
+      }),
+      // Pre-load enrichment for ALL agents at once
+      (async () => {
+        try {
+          const cache: Record<string, string> = {};
+          const [skillsRes, flowsRes] = await Promise.all([
+            supabase.from("agent_skill_assignments")
+              .select("agent_id, skill_id, agent_skills(name, prompt_instruction, is_active)")
+              .eq("is_active", true),
+            supabase.from("automation_flows")
+              .select("id, name, description")
+              .eq("status", "active")
+              .limit(3),
+          ]);
+
+          // Index skills by agent
+          const skillsByAgent: Record<string, string[]> = {};
+          if (skillsRes.data) {
+            for (const sa of skillsRes.data) {
+              const skill = (sa as any).agent_skills;
+              if (!skill?.is_active || !skill?.prompt_instruction) continue;
+              const agentId = (sa as any).agent_id;
+              (skillsByAgent[agentId] ??= []).push(`- ${skill.name}: ${(skill.prompt_instruction || "").slice(0, 150)}`);
+            }
+          }
+
+          // Load workflow steps
+          let workflowBlock = "";
+          if (flowsRes.data && flowsRes.data.length > 0) {
+            const flowSteps = await Promise.all(
+              flowsRes.data.map(async (flow) => {
+                const { data: nodes } = await supabase
+                  .from("automation_nodes")
+                  .select("label, node_type")
+                  .eq("flow_id", flow.id)
+                  .order("position_y", { ascending: true })
+                  .limit(10);
+                if (nodes && nodes.length > 0) {
+                  const steps = nodes.map(n => n.label || n.node_type).join(" → ");
+                  return `\n[FLUXO]\n"${flow.name}": ${steps}`;
+                }
+                return "";
+              })
+            );
+            workflowBlock = flowSteps.filter(Boolean).join("\n");
+          }
+
+          // Build per-agent enrichment strings
+          for (const [agentId, skills] of Object.entries(skillsByAgent)) {
+            cache[agentId] = `\n[SKILLS ATUALIZADAS]\n${skills.join("\n")}` + workflowBlock;
+          }
+          // For agents with no skills, still add workflow block
+          if (workflowBlock) {
+            for (const a of AGENTS_V4) {
+              if (!cache[a.id]) cache[a.id] = workflowBlock;
+            }
+          }
+
+          enrichmentCacheRef.current = cache;
+          enrichmentLoadedRef.current = true;
+          debugLog("[CHAMELEON] Enrichment pre-cached for all agents");
+        } catch (err) {
+          debugLog("[CHAMELEON] Enrichment pre-cache failed (non-fatal)", err);
+          enrichmentLoadedRef.current = true;
+        }
+      })(),
+    ]);
   }, []);
 
   // Auto scroll
