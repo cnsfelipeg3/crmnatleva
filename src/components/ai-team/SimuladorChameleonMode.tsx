@@ -73,17 +73,89 @@ export default function SimuladorChameleonMode() {
   // Load KB and behavior_prompts from DB (same as manual simulator)
   const [kbContent, setKbContent] = useState<Record<string, string>>({});
   const [agentBehaviors, setAgentBehaviors] = useState<Record<string, string>>({});
+  // Cache enrichment data (skills + workflows) at mount — avoids repeated DB queries per turn
+  const enrichmentCacheRef = useRef<Record<string, string>>({});
+  const enrichmentLoadedRef = useRef(false);
+
   useEffect(() => {
-    supabase.from("ai_team_agents").select("id, behavior_prompt").then(({ data }) => {
-      if (data) {
-        const map: Record<string, string> = {};
-        data.forEach((a: any) => { if (a.behavior_prompt) map[a.id] = a.behavior_prompt; });
-        setAgentBehaviors(map);
-      }
-    });
-    supabase.from("ai_knowledge_base").select("title, category, content_text").eq("is_active", true).then(({ data }) => {
-      if (data) setKbContent(buildKnowledgeBlocksByAgent(data));
-    });
+    // Parallel load: behaviors, KB, and enrichment cache
+    Promise.all([
+      supabase.from("ai_team_agents").select("id, behavior_prompt").then(({ data }) => {
+        if (data) {
+          const map: Record<string, string> = {};
+          data.forEach((a: any) => { if (a.behavior_prompt) map[a.id] = a.behavior_prompt; });
+          setAgentBehaviors(map);
+        }
+      }),
+      supabase.from("ai_knowledge_base").select("title, category, content_text").eq("is_active", true).then(({ data }) => {
+        if (data) setKbContent(buildKnowledgeBlocksByAgent(data));
+      }),
+      // Pre-load enrichment for ALL agents at once
+      (async () => {
+        try {
+          const cache: Record<string, string> = {};
+          const [skillsRes, flowsRes] = await Promise.all([
+            supabase.from("agent_skill_assignments")
+              .select("agent_id, skill_id, agent_skills(name, prompt_instruction, is_active)")
+              .eq("is_active", true),
+            supabase.from("automation_flows")
+              .select("id, name, description")
+              .eq("status", "active")
+              .limit(3),
+          ]);
+
+          // Index skills by agent
+          const skillsByAgent: Record<string, string[]> = {};
+          if (skillsRes.data) {
+            for (const sa of skillsRes.data) {
+              const skill = (sa as any).agent_skills;
+              if (!skill?.is_active || !skill?.prompt_instruction) continue;
+              const agentId = (sa as any).agent_id;
+              (skillsByAgent[agentId] ??= []).push(`- ${skill.name}: ${(skill.prompt_instruction || "").slice(0, 150)}`);
+            }
+          }
+
+          // Load workflow steps
+          let workflowBlock = "";
+          if (flowsRes.data && flowsRes.data.length > 0) {
+            const flowSteps = await Promise.all(
+              flowsRes.data.map(async (flow) => {
+                const { data: nodes } = await supabase
+                  .from("automation_nodes")
+                  .select("label, node_type")
+                  .eq("flow_id", flow.id)
+                  .order("position_y", { ascending: true })
+                  .limit(10);
+                if (nodes && nodes.length > 0) {
+                  const steps = nodes.map(n => n.label || n.node_type).join(" → ");
+                  return `\n[FLUXO]\n"${flow.name}": ${steps}`;
+                }
+                return "";
+              })
+            );
+            workflowBlock = flowSteps.filter(Boolean).join("\n");
+          }
+
+          // Build per-agent enrichment strings
+          for (const [agentId, skills] of Object.entries(skillsByAgent)) {
+            cache[agentId] = `\n[SKILLS ATUALIZADAS]\n${skills.join("\n")}` + workflowBlock;
+          }
+          // For agents with no skills, still add workflow block
+          if (workflowBlock) {
+            for (const a of AGENTS_V4) {
+              if (!cache[a.id]) cache[a.id] = workflowBlock;
+            }
+          }
+
+          enrichmentCacheRef.current = cache;
+          enrichmentLoadedRef.current = true;
+          debugLog("[CHAMELEON] Enrichment pre-cached for all agents");
+        } catch (err) {
+          debugLog("[CHAMELEON] Enrichment pre-cache failed (non-fatal)", err);
+          enrichmentLoadedRef.current = true;
+        }
+      })(),
+    ]);
   }, []);
 
   // Auto scroll
@@ -136,7 +208,7 @@ export default function SimuladorChameleonMode() {
     });
 
     // Kick off the conversation loop
-    setTimeout(() => runConversationStep(p, [msg], firstAgent, agents, maxEx, 0, sType, chId), 1500);
+    setTimeout(() => runConversationStep(p, [msg], firstAgent, agents, maxEx, 0, sType, chId), 500);
   }, [globalRulesBlock, agencyConfig, kbContent, agentBehaviors]);
 
   // ─── Conversation step (agent responds, then chameleon responds) ───
@@ -164,21 +236,10 @@ export default function SimuladorChameleonMode() {
     setStatusText(`${agent.emoji} ${agent.name} está respondendo...`);
 
     try {
-      // Fetch DB overrides for agent (same as manual simulator)
-      let dbData: { behavior_prompt?: string | null; persona?: string | null; skills?: string[] } | undefined;
-      try {
-        const { data } = await supabase
-          .from("ai_team_agents")
-          .select("behavior_prompt, persona, skills")
-          .eq("id", agentId)
-          .maybeSingle();
-        if (data) dbData = data;
-      } catch { /* fallback to static */ }
-
-      // Use behavior_prompt from pre-loaded map if DB query didn't return one
-      if (!dbData?.behavior_prompt && agentBehaviors[agentId]) {
-        dbData = { ...dbData, behavior_prompt: agentBehaviors[agentId] };
-      }
+      // Use pre-loaded behavior_prompt (no per-step DB query needed)
+      const dbData: { behavior_prompt?: string | null; persona?: string | null; skills?: string[] } = {
+        behavior_prompt: agentBehaviors[agentId] || null,
+      };
 
       // Build prompt with agency config + KB (identical to manual simulator)
       let agentPrompt = buildAgentPromptForChameleon(
@@ -190,56 +251,10 @@ export default function SimuladorChameleonMode() {
         kbContent[agentId] || "",
       );
 
-      // ═══ ENRICHMENT LAYER — same as manual simulator ═══
-      try {
-        const baseLower = agentPrompt.toLowerCase();
-        const extras: string[] = [];
-
-        // 1) Skills from DB
-        const { data: skillAssignments } = await supabase
-          .from("agent_skill_assignments")
-          .select("skill_id, agent_skills(name, prompt_instruction, is_active)")
-          .eq("agent_id", agentId)
-          .eq("is_active", true);
-        if (skillAssignments && skillAssignments.length > 0) {
-          const newSkills: string[] = [];
-          for (const sa of skillAssignments) {
-            const skill = sa.agent_skills as any;
-            if (!skill || !skill.is_active || !skill.prompt_instruction) continue;
-            if (baseLower.includes(skill.name.toLowerCase())) continue;
-            newSkills.push(`- ${skill.name}: ${(skill.prompt_instruction || "").slice(0, 150)}`);
-          }
-          if (newSkills.length > 0) extras.push(`\n[SKILLS ATUALIZADAS]\n${newSkills.join("\n")}`);
-        }
-
-        // 2) Active workflows
-        const { data: flows } = await supabase
-          .from("automation_flows")
-          .select("id, name, description")
-          .eq("status", "active")
-          .limit(2);
-        if (flows && flows.length > 0) {
-          for (const flow of flows) {
-            if (baseLower.includes(flow.name.toLowerCase())) continue;
-            const { data: flowNodes } = await supabase
-              .from("automation_nodes")
-              .select("label, node_type")
-              .eq("flow_id", flow.id)
-              .order("position_y", { ascending: true })
-              .limit(10);
-            if (flowNodes && flowNodes.length > 0) {
-              const steps = flowNodes.map(n => n.label || n.node_type).join(" → ");
-              extras.push(`\n[FLUXO]\n"${flow.name}": ${steps}`);
-            }
-          }
-        }
-
-        if (extras.length > 0) {
-          agentPrompt += extras.join("\n");
-          debugLog(`[CHAMELEON ENRICHMENT] agent=${agentId}, extras=${extras.length}`);
-        }
-      } catch (err) {
-        debugLog("[CHAMELEON ENRICHMENT] Falha silenciosa", err);
+      // Apply pre-cached enrichment (skills + workflows — loaded once at mount)
+      const enrichment = enrichmentCacheRef.current[agentId];
+      if (enrichment) {
+        agentPrompt += enrichment;
       }
 
       // Build history in OpenAI format
@@ -279,8 +294,8 @@ export default function SimuladorChameleonMode() {
 
       if (abortRef.current) return;
 
-      // ── Step 2: Chameleon responds ──
-      await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
+      // ── Step 2: Chameleon responds (reduced delay for speed) ──
+      await new Promise(r => setTimeout(r, 800 + Math.random() * 700));
       if (abortRef.current) return;
 
       setStatusText(`🦎 ${p.nome} está digitando...`);
@@ -318,13 +333,13 @@ export default function SimuladorChameleonMode() {
       setExchangeCount(newExchanges);
       setIsProcessing(false);
 
-      // Progressive monitor field reveal
+      // Progressive monitor field reveal (fire-and-forget)
       const mBid = monitorBriefingIdRef.current;
       if (mBid) revealMonitorFields(mBid, newExchanges, p).catch(() => {});
 
-      // Continue loop
+      // Continue loop (reduced delay)
       if (!abortRef.current && newExchanges < maxEx) {
-        setTimeout(() => runConversationStep(p, finalMessages, nextAgentId, agents, maxEx, newExchanges, sType, chId), 2000);
+        setTimeout(() => runConversationStep(p, finalMessages, nextAgentId, agents, maxEx, newExchanges, sType, chId), 600);
       } else {
         runDebrief(p, finalMessages, sType, chId);
       }
