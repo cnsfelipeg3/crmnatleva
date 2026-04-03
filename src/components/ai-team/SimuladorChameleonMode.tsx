@@ -18,7 +18,6 @@ import { useAgencyConfig } from "@/hooks/useAgencyConfig";
 import { buildKnowledgeBlocksByAgent } from "@/components/ai-team/knowledgeRouting";
 import { debugLog } from "@/lib/debugMode";
 import ChameleonConfig, { type SessionType } from "./ChameleonConfig";
-import ChameleonConfig, { type SessionType } from "./ChameleonConfig";
 import {
   type ChameleonProfile,
   type ChameleonMessage,
