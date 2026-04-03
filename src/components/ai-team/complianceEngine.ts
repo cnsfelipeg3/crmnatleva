@@ -304,8 +304,9 @@ export async function runComplianceCheck(
 /** Word limits per agent role (deterministic, 100% guaranteed). */
 const AGENT_WORD_LIMITS: Record<string, number> = {
   maya: 60,
+  atlas: 90,
 };
-const DEFAULT_WORD_LIMIT = 120;
+const DEFAULT_WORD_LIMIT = 100;
 
 /**
  * Truncates text to the last complete sentence within a word limit.
