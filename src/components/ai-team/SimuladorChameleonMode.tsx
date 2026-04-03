@@ -14,6 +14,10 @@ import { createMonitorBriefing, revealMonitorFields, completeMonitorBriefing, fi
 import { AGENTS_V4 } from "@/components/ai-team/agentsV4Data";
 import { callSimulatorAI } from "@/components/ai-team/simuladorAutoUtils";
 import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
+import { useAgencyConfig } from "@/hooks/useAgencyConfig";
+import { buildKnowledgeBlocksByAgent } from "@/components/ai-team/knowledgeRouting";
+import { debugLog } from "@/lib/debugMode";
+import ChameleonConfig, { type SessionType } from "./ChameleonConfig";
 import ChameleonConfig, { type SessionType } from "./ChameleonConfig";
 import {
   type ChameleonProfile,
