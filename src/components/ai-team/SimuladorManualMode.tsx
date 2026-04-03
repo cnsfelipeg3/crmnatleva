@@ -350,7 +350,7 @@ export default function SimuladorManualMode() {
         // 🛡️ Compliance Engine
         const conversationCtx = currentMessages.map(m => `${m.role}: ${m.content}`).join("\n");
         const lastLeadMsg = [...currentMessages].reverse().find(m => m.role === "user")?.content || "";
-        const { text: compliantText, wasRewritten } = await fullCompliancePipeline(
+        var { text: compliantText, wasRewritten } = await fullCompliancePipeline(
           selectedAgent.id, agentText, conversationCtx, lastLeadMsg,
         );
         if (wasRewritten) {
@@ -359,7 +359,9 @@ export default function SimuladorManualMode() {
         }
       }
 
-      if (agentText.includes("[TRANSFERIR]")) {
+      // Use compliantText (post-compliance) for transfer check — pivot detector injects [TRANSFERIR] there
+      const textForTransferCheck = compliantText ?? agentText;
+      if (textForTransferCheck.includes("[TRANSFERIR]")) {
         // ── Pipeline-aware transfer using PIPELINE_MAP ──
         const pipelineTargets = getTransferTargets(selectedAgent.id);
         let nextAgent: AgentV4 | undefined;

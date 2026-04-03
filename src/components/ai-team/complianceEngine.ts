@@ -373,6 +373,15 @@ export function enforceHardRules(text: string, agentId?: string, lastLeadMessage
       /[^.!?]*experiência\s+[úu]nica[^.!?]*[.!?]/gi,
       /[^.!?]*sonho\s+de\s+consumo[^.!?]*[.!?]/gi,
       /[^.!?]*paraíso\s+(na\s+terra|terrestre)[^.!?]*[.!?]/gi,
+      // New patterns — common tourism clichés
+      /[^.!?]*[áa]guas?\s+cristalinas?[^.!?]*[.!?]/gi,
+      /[^.!?]*de\s+outro\s+mundo[^.!?]*[.!?]/gi,
+      /[^.!?]*destinos?\s+incr[ií]ve(l|is)[^.!?]*[.!?]/gi,
+      /[^.!?]*cen[áa]rios?\s+deslumbrantes?[^.!?]*[.!?]/gi,
+      /[^.!?]*cada\s+viagem\s+[ée]\s+[úu]nica[^.!?]*[.!?]/gi,
+      /[^.!?]*paisagens?\s+de\s+tirar\s+o\s+f[ôo]lego[^.!?]*[.!?]/gi,
+      /[^.!?]*tudo\s+isso\s+influencia[^.!?]*[.!?]/gi,
+      /[^.!?]*depende\s+muito\s+d[oe][^.!?]*[.!?]/gi,
     ];
     for (const pattern of storytellingPatterns) {
       cleaned = cleaned.replace(pattern, "").trim();

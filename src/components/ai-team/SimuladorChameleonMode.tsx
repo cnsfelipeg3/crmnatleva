@@ -272,8 +272,7 @@ export default function SimuladorChameleonMode() {
 
       if (abortRef.current) return;
 
-      // Check for transfer
-      const isTransfer = agentResponse.includes("[TRANSFERIR]");
+      // Remove [TRANSFERIR] from raw response; transfer check happens AFTER compliance
       let cleanResponse = agentResponse.replace(/\[TRANSFERIR\]/g, "").trim();
 
       // ── Post-processing: enforce formatting (identical to manual simulator) ──
@@ -313,8 +312,10 @@ export default function SimuladorChameleonMode() {
       const updatedMessages = [...currentMessages, agentMsg];
       setMessages(updatedMessages);
 
-      // Handle transfer
+      // Handle transfer — check compliantText (post-compliance) since pivot detector injects [TRANSFERIR] there
       let nextAgentId = agentId;
+      const isTransfer = agentResponse.includes("[TRANSFERIR]") || cleanResponse.includes("[TRANSFERIR]");
+      cleanResponse = cleanResponse.replace(/\[TRANSFERIR\]/g, "").trim();
       if (isTransfer) {
         const next = getNextAgentInPipeline(agentId, agents);
         if (next) {
