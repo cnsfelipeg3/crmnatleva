@@ -40,7 +40,7 @@ export default function AITeamLayout() {
           >
             {mobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
-          <span className="tracking-widest uppercase text-center text-sm text-secondary rounded-none shadow-none font-sans font-semibold">Batalhão NatLeva</span>
+          <span className="tracking-widest uppercase text-center text-sm rounded-none shadow-none font-sans font-semibold text-primary">Batalhão NatLeva</span>
           {/* Current page indicator */}
           <span className="ml-auto text-[10px] text-muted-foreground/60">
             {AI_TEAM_MENUS.find(m => m.end ? location.pathname === m.to : location.pathname.startsWith(m.to) && location.pathname !== "/ai-team")?.label || "Mission Control"}
@@ -90,7 +90,7 @@ export default function AITeamLayout() {
       )}>
         <div className="flex items-center justify-between px-3 py-3 border-b border-border/30">
           {!collapsed && (
-            <span className="tracking-widest uppercase text-center text-sm text-secondary rounded-none shadow-none font-sans font-semibold">Batalhão NatLeva</span>
+            <span className="tracking-widest uppercase text-center text-sm rounded-none shadow-none font-sans font-semibold text-primary">Batalhão NatLeva</span>
           )}
           <button
             onClick={() => setCollapsed(!collapsed)}
