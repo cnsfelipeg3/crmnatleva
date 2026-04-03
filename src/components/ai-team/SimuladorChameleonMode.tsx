@@ -334,7 +334,7 @@ export default function SimuladorChameleonMode() {
       setStatusText("Erro na conversa. Gerando análise...");
       setTimeout(() => runDebrief(p, currentMessages, sType, chId), 1000);
     }
-  }, [globalRulesBlock]);
+  }, [globalRulesBlock, agencyConfig, kbContent, agentBehaviors]);
 
   // ─── Debrief ───
   const runDebrief = useCallback(async (
