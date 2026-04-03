@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { debugLog } from "@/lib/debugMode";
 import { fullCompliancePipeline, clearComplianceCache } from "./complianceEngine";
+import { enforceAgentFormatting } from "./agentFormatting";
 import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X, Mic } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
 import SimulatorChatLayout, { type SimChatMessage } from "./SimulatorChatLayout";
@@ -24,32 +25,7 @@ import {
 
 const DESTINOS = ["💬 Livre", "🎲 Aleatório", "Dubai", "Orlando", "Europa", "Maldivas", "Caribe", "Japão", "Egito", "Tailândia", "Nova York", "Paris", "Grécia", "Bali", "Cancún", "Lisboa", "Seychelles"];
 
-/**
- * Post-processing: enforces formatting rules that LLMs sometimes ignore.
- * Runs AFTER the AI response, guaranteeing 100% compliance.
- */
-function enforceAgentFormatting(text: string): string {
-  // Remove em-dashes (—), en-dashes (–) and hyphens used as dashes ( - ) → replace with comma or period
-  let cleaned = text.replace(/\s*[—–]\s*/g, ", ");
-  // Hyphens flanked by spaces (used as dash/travessão) but NOT at line start (lists)
-  cleaned = cleaned.replace(/(?<=\S)\s+-\s+/g, ", ");
-  // Remove leading comma if line starts with it after replacement
-  cleaned = cleaned.replace(/(^|[\n])，?\s*,\s*/g, "$1");
-  // Collapse multiple commas
-  cleaned = cleaned.replace(/,\s*,/g, ",");
-  // Remove trailing comma before period
-  cleaned = cleaned.replace(/,\s*\./g, ".");
-  // 🛡️ Invisible handoff: remove any leaked transfer language
-  // Sentences mentioning transfer/specialist/colleague get stripped entirely
-  cleaned = cleaned.replace(/[^.!?\n]*\b(vou te passar|vou te encaminhar|meu colega|nosso especialista|outro consultor|próximo agente|próximo atendente|te transferir|te direcionar)\b[^.!?\n]*[.!?]?\s*/gi, "");
-  // Strip leaked internal state labels (ESTADO_X, FASE_X, STEP_X, ETAPA_X) — entire line
-  cleaned = cleaned.replace(/^.*\b(ESTADO|FASE|STEP|ETAPA|STAGE|QUALIFICA[ÇC][ÃA]O|TRANSFER[ÊE]NCIA)[_\s]*\d*[+,;]*\s*.*$/gm, "");
-  // Remove any remaining lines that look like workflow metadata (e.g. "[ESTADO 3]", "**ESTADO_3**")
-  cleaned = cleaned.replace(/^.*\b(ESTADO|FASE|STEP|ETAPA)[\s_]*\d+.*$/gm, "");
-  // Clean up multiple blank lines left after stripping
-  cleaned = cleaned.replace(/\n{3,}/g, "\n\n").trim();
-  return cleaned;
-}
+// enforceAgentFormatting is now imported from ./agentFormatting
 
 const DESTINOS_ALEATORIOS = [
   "Butão", "Islândia", "Patagônia", "Fiji", "Tanzânia", "Marrocos", "Sri Lanka",

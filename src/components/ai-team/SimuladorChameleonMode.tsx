@@ -17,6 +17,8 @@ import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
 import { useAgencyConfig } from "@/hooks/useAgencyConfig";
 import { buildKnowledgeBlocksByAgent } from "@/components/ai-team/knowledgeRouting";
 import { debugLog } from "@/lib/debugMode";
+import { enforceAgentFormatting } from "./agentFormatting";
+import { fullCompliancePipeline } from "./complianceEngine";
 import ChameleonConfig, { type SessionType } from "./ChameleonConfig";
 import {
   type ChameleonProfile,
@@ -263,13 +265,28 @@ export default function SimuladorChameleonMode() {
         content: m.content,
       }));
 
-      const agentResponse = await callSimulatorAI(agentPrompt, history, "agent");
+      const agentResponse = await callSimulatorAI(agentPrompt, history, "agent", undefined, 0, agencyConfig.default_provider || "anthropic");
 
       if (abortRef.current) return;
 
       // Check for transfer
       const isTransfer = agentResponse.includes("[TRANSFERIR]");
-      const cleanResponse = agentResponse.replace(/\[TRANSFERIR\]/g, "").trim();
+      let cleanResponse = agentResponse.replace(/\[TRANSFERIR\]/g, "").trim();
+
+      // ── Post-processing: enforce formatting (identical to manual simulator) ──
+      cleanResponse = enforceAgentFormatting(cleanResponse);
+
+      // ── Compliance Engine: validate against all rules ──
+      try {
+        const conversationContext = currentMessages.map(m => `${m.role === "lead" ? "Lead" : "Agente"}: ${m.content}`).join("\n");
+        const { text: compliantText, wasRewritten } = await fullCompliancePipeline(agentId, cleanResponse, conversationContext);
+        if (wasRewritten) {
+          debugLog(`[CHAMELEON] Compliance rewrite applied for ${agent.name}`);
+        }
+        cleanResponse = compliantText;
+      } catch (compErr) {
+        debugLog("[CHAMELEON] Compliance check failed (non-fatal)", compErr);
+      }
 
       const agentMsg: ChameleonMessage = {
         role: "agent",
