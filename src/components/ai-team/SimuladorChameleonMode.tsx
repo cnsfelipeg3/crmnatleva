@@ -312,8 +312,10 @@ export default function SimuladorChameleonMode() {
       const updatedMessages = [...currentMessages, agentMsg];
       setMessages(updatedMessages);
 
-      // Handle transfer
+      // Handle transfer — check compliantText (post-compliance) since pivot detector injects [TRANSFERIR] there
       let nextAgentId = agentId;
+      const isTransfer = agentResponse.includes("[TRANSFERIR]") || cleanResponse.includes("[TRANSFERIR]");
+      cleanResponse = cleanResponse.replace(/\[TRANSFERIR\]/g, "").trim();
       if (isTransfer) {
         const next = getNextAgentInPipeline(agentId, agents);
         if (next) {
