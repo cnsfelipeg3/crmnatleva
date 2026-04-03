@@ -287,7 +287,7 @@ export async function runComplianceCheck(
     }
 
     // Safety: if result is wildly different length, likely not a valid rewrite
-    if (result.length > agentResponse.length * 3 || result.length < agentResponse.length * 0.2) {
+    if (result.length > agentResponse.length * 3 || result.length < agentResponse.length * 0.1) {
       console.warn(`🛡️ Compliance rewrite has suspicious length ratio, keeping original for ${profile.agentName}`);
       return { text: agentResponse, wasRewritten: false, profile };
     }
