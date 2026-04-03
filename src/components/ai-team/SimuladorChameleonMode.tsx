@@ -288,6 +288,14 @@ export default function SimuladorChameleonMode() {
         debugLog("[CHAMELEON] Compliance check failed (non-fatal)", compErr);
       }
 
+      const agentMsg: ChameleonMessage = {
+        role: "agent",
+        content: cleanResponse,
+        agentId,
+        agentName: agent.name,
+        timestamp: Date.now(),
+      };
+
       const updatedMessages = [...currentMessages, agentMsg];
       setMessages(updatedMessages);
 
