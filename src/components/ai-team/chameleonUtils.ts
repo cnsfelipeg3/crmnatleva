@@ -106,12 +106,14 @@ const DESTINOS = [
 const PERSONALIDADES = [
   "ansioso", "decidido", "detalhista", "desconfiado", "empolgado",
   "pechincheiro", "indeciso", "VIP", "sonhador", "pragmático",
+  "apressado", "reservado", "impulsivo", "cauteloso",
 ];
 
 const MOTIVACOES = [
   "lua de mel", "férias em família", "viagem solo", "evento especial",
   "aniversário de casamento", "descanso", "aventura", "formatura",
   "comemoração de promoção", "primeira viagem internacional",
+  "despedida de solteira", "presente de aniversário", "férias escolares",
 ];
 
 const COMPOSICOES = [
@@ -120,6 +122,8 @@ const COMPOSICOES = [
   { label: "família com filhos", value: "família com filhos pequenos (2-3 crianças)" },
   { label: "grupo de amigos", value: "grupo de 4-6 amigos" },
   { label: "corporativo", value: "viagem corporativa, 3-5 executivos" },
+  { label: "casal + filhos adolescentes", value: "casal com 2 filhos adolescentes" },
+  { label: "mãe e filha", value: "mãe e filha viajando juntas" },
 ];
 
 const OBJECOES = [
@@ -130,9 +134,12 @@ const OBJECOES = [
   "parceiro(a) não está convencido(a)",
   "comparando com 3 concorrentes",
   "quer garantia de cancelamento",
-  "preocupado com documentação",
+  "preocupado com documentação e visto",
   "já teve experiência ruim com outra agência",
   "quer tudo incluso mas com orçamento limitado",
+  "precisa convencer o cônjuge",
+  "não sabe se consegue férias nesse período",
+  "preocupado com segurança no destino",
 ];
 
 const GATILHOS_IRRITACAO = [
@@ -143,6 +150,8 @@ const GATILHOS_IRRITACAO = [
   "muitas perguntas seguidas sem agregar valor",
   "ignorar perguntas feitas pelo lead",
   "usar clichês de vendas",
+  "mandar texto muito longo tipo email",
+  "não entender o que o cliente quer",
 ];
 
 // ─── Profile generation ───
