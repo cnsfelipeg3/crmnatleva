@@ -103,6 +103,76 @@ const DESTINOS = [
   "Cairo", "Turquia", "Croácia", "Marrocos", "Santiago", "Buenos Aires",
 ];
 
+// ─── Destination cost tiers (per person baseline) ───
+
+type DestinationTier = "economico" | "medio" | "premium" | "luxury";
+
+const DESTINATION_TIER: Record<string, DestinationTier> = {
+  "Buenos Aires": "economico",
+  "Santiago": "economico",
+  "Cancún": "medio",
+  "Orlando": "medio",
+  "Lisboa": "medio",
+  "Barcelona": "medio",
+  "Marrocos": "medio",
+  "Turquia": "medio",
+  "Cairo": "medio",
+  "Croácia": "medio",
+  "Paris": "premium",
+  "Roma": "premium",
+  "Londres": "premium",
+  "Nova York": "premium",
+  "Tóquio": "premium",
+  "Dubai": "premium",
+  "Grécia": "premium",
+  "Tailândia": "premium",
+  "Maldivas": "luxury",
+  "Bali": "luxury",
+};
+
+// Minimum budget key by tier + whether group/family (2+ people)
+const MIN_BUDGET_BY_TIER: Record<DestinationTier, { solo: string; group: string }> = {
+  economico: { solo: "baixo", group: "baixo" },
+  medio:     { solo: "baixo", group: "medio" },
+  premium:   { solo: "medio", group: "alto" },
+  luxury:    { solo: "alto",  group: "alto" },
+};
+
+const BUDGET_ORDER = ["baixo", "medio", "alto", "ilimitado", "nao_definido"];
+
+function budgetAtLeast(min: string): Array<{ label: string; value: string }> {
+  const allBudgets = [
+    { label: "baixo (até R$5k)", value: "baixo" },
+    { label: "médio (R$5k-15k)", value: "medio" },
+    { label: "alto (R$15k-40k)", value: "alto" },
+    { label: "ilimitado", value: "ilimitado" },
+    { label: "não definido", value: "nao_definido" },
+  ];
+  const minIdx = BUDGET_ORDER.indexOf(min);
+  return allBudgets.filter(b => {
+    const idx = BUDGET_ORDER.indexOf(b.value);
+    // "nao_definido" always allowed
+    return b.value === "nao_definido" || idx >= minIdx;
+  });
+}
+
+// ─── Motivation ↔ Composition coherence ───
+
+const MOTIVATION_COMPOSITION: Record<string, string[]> = {
+  "lua de mel": ["casal"],
+  "aniversário de casamento": ["casal"],
+  "viagem solo": ["solo"],
+  "férias em família": ["família com filhos", "casal + filhos adolescentes"],
+  "férias escolares": ["família com filhos", "casal + filhos adolescentes"],
+  "despedida de solteira": ["grupo de amigos"],
+};
+
+// ─── Experience ↔ Destination coherence ───
+
+const BEGINNER_DESTINATIONS = [
+  "Buenos Aires", "Santiago", "Cancún", "Orlando", "Lisboa",
+];
+
 const PERSONALIDADES = [
   "ansioso", "decidido", "detalhista", "desconfiado", "empolgado",
   "pechincheiro", "indeciso", "VIP", "sonhador", "pragmático",
@@ -172,33 +242,56 @@ function randomAge(): number {
 export function generateRandomProfile(): ChameleonProfile {
   const isFem = Math.random() > 0.5;
   const nome = `${pick(isFem ? NOMES_FEMININOS : NOMES_MASCULINOS)} ${pick(SOBRENOMES)}`;
-  const comp = pick(COMPOSICOES);
-  const orcamentos = [
-    { label: "baixo (até R$5k)", value: "baixo" },
-    { label: "médio (R$5k-15k)", value: "medio" },
-    { label: "alto (R$15k-40k)", value: "alto" },
-    { label: "ilimitado", value: "ilimitado" },
-    { label: "não definido", value: "nao_definido" },
-  ];
-  const orc = pick(orcamentos);
+
+  // 1. Pick motivation first
+  const motivacao = pick(MOTIVACOES);
+
+  // 2. Derive composition coherently from motivation
+  const allowedComps = MOTIVATION_COMPOSITION[motivacao];
+  const comp = allowedComps
+    ? COMPOSICOES.find(c => c.label === pick(allowedComps)) || pick(COMPOSICOES)
+    : pick(COMPOSICOES);
+
+  // 3. Determine experience
+  const isGroup = !["solo", "casal", "mãe e filha"].includes(comp.label);
+  let experiencia = pick(["nunca viajou internacional", "viajou 1-2 vezes", "viajante frequente", "viajante experiente"]);
+
+  // 4. Pick destination coherent with experience
+  let destino: string;
+  if (experiencia === "nunca viajou internacional") {
+    destino = pick(BEGINNER_DESTINATIONS);
+  } else {
+    destino = pick(DESTINOS);
+  }
+
+  // Also enforce: luxury/premium destinations require at least some experience
+  const tier = DESTINATION_TIER[destino] || "medio";
+  if ((tier === "luxury" || tier === "premium") && experiencia === "nunca viajou internacional") {
+    experiencia = "viajou 1-2 vezes";
+  }
+
+  // 5. Pick budget coherent with destination + composition
+  const minBudget = MIN_BUDGET_BY_TIER[tier][isGroup ? "group" : "solo"];
+  const validBudgets = budgetAtLeast(minBudget);
+  const orc = pick(validBudgets);
 
   return {
     nome,
     idade: randomAge(),
     profissao: pick(PROFISSOES),
     cidade: pick(CIDADES),
-    destino: pick(DESTINOS),
+    destino,
     orcamento: orc.value,
     orcamentoLabel: orc.label,
     composicao: comp.label,
     composicaoLabel: comp.value,
     periodo: pick(["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]) + " " + (2026 + Math.floor(Math.random() * 2)),
-    motivacao: pick(MOTIVACOES),
+    motivacao,
     personalidade: pickN(PERSONALIDADES, 2 + Math.floor(Math.random() * 2)),
     nivelDecisao: pick(["decidido", "indeciso", "pesquisando"]),
     objecoes: pickN(OBJECOES, 1 + Math.floor(Math.random() * 2)),
     estadoEmocional: pick(["animado", "ansioso", "neutro", "desconfiado", "empolgado"]),
-    experiencia: pick(["nunca viajou internacional", "viajou 1-2 vezes", "viajante frequente", "viajante experiente"]),
+    experiencia,
     gatilhosIrritacao: pickN(GATILHOS_IRRITACAO, 2),
   };
 }
