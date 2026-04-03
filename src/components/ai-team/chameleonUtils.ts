@@ -453,6 +453,9 @@ export function buildAgentPromptForChameleon(
   agentId: string,
   globalRulesBlock: string,
   dbAgentData?: { behavior_prompt?: string | null; persona?: string | null; skills?: string[] },
+  agencyName?: string,
+  agencyTone?: string,
+  knowledgeBlock?: string,
 ): string {
   const agent = AGENTS_V4.find(a => a.id === agentId);
   if (!agent) return "";
@@ -460,6 +463,9 @@ export function buildAgentPromptForChameleon(
   return buildUnifiedAgentPrompt({
     agent,
     globalRulesBlock,
+    agencyName,
+    agencyTone,
+    knowledgeBlock,
     dbOverride: dbAgentData ? {
       behavior_prompt: dbAgentData.behavior_prompt,
       persona: dbAgentData.persona,

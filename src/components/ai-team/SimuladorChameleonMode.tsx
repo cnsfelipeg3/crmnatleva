@@ -14,6 +14,9 @@ import { createMonitorBriefing, revealMonitorFields, completeMonitorBriefing, fi
 import { AGENTS_V4 } from "@/components/ai-team/agentsV4Data";
 import { callSimulatorAI } from "@/components/ai-team/simuladorAutoUtils";
 import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
+import { useAgencyConfig } from "@/hooks/useAgencyConfig";
+import { buildKnowledgeBlocksByAgent } from "@/components/ai-team/knowledgeRouting";
+import { debugLog } from "@/lib/debugMode";
 import ChameleonConfig, { type SessionType } from "./ChameleonConfig";
 import {
   type ChameleonProfile,
@@ -65,6 +68,23 @@ export default function SimuladorChameleonMode() {
   const monitorBriefingIdRef = useRef<string | null>(null);
   const { data: globalRules = [] } = useGlobalRules();
   const globalRulesBlock = buildGlobalRulesBlock(globalRules);
+  const { config: agencyConfig } = useAgencyConfig();
+
+  // Load KB and behavior_prompts from DB (same as manual simulator)
+  const [kbContent, setKbContent] = useState<Record<string, string>>({});
+  const [agentBehaviors, setAgentBehaviors] = useState<Record<string, string>>({});
+  useEffect(() => {
+    supabase.from("ai_team_agents").select("id, behavior_prompt").then(({ data }) => {
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((a: any) => { if (a.behavior_prompt) map[a.id] = a.behavior_prompt; });
+        setAgentBehaviors(map);
+      }
+    });
+    supabase.from("ai_knowledge_base").select("title, category, content_text").eq("is_active", true).then(({ data }) => {
+      if (data) setKbContent(buildKnowledgeBlocksByAgent(data));
+    });
+  }, []);
 
   // Auto scroll
   useEffect(() => {
@@ -117,7 +137,7 @@ export default function SimuladorChameleonMode() {
 
     // Kick off the conversation loop
     setTimeout(() => runConversationStep(p, [msg], firstAgent, agents, maxEx, 0, sType, chId), 1500);
-  }, [globalRulesBlock]);
+  }, [globalRulesBlock, agencyConfig, kbContent, agentBehaviors]);
 
   // ─── Conversation step (agent responds, then chameleon responds) ───
   const runConversationStep = useCallback(async (
@@ -144,7 +164,7 @@ export default function SimuladorChameleonMode() {
     setStatusText(`${agent.emoji} ${agent.name} está respondendo...`);
 
     try {
-      // Fetch DB overrides for agent
+      // Fetch DB overrides for agent (same as manual simulator)
       let dbData: { behavior_prompt?: string | null; persona?: string | null; skills?: string[] } | undefined;
       try {
         const { data } = await supabase
@@ -155,7 +175,72 @@ export default function SimuladorChameleonMode() {
         if (data) dbData = data;
       } catch { /* fallback to static */ }
 
-      const agentPrompt = buildAgentPromptForChameleon(agentId, globalRulesBlock, dbData);
+      // Use behavior_prompt from pre-loaded map if DB query didn't return one
+      if (!dbData?.behavior_prompt && agentBehaviors[agentId]) {
+        dbData = { ...dbData, behavior_prompt: agentBehaviors[agentId] };
+      }
+
+      // Build prompt with agency config + KB (identical to manual simulator)
+      let agentPrompt = buildAgentPromptForChameleon(
+        agentId,
+        globalRulesBlock,
+        dbData,
+        agencyConfig.agency_name,
+        agencyConfig.tom_comunicacao,
+        kbContent[agentId] || "",
+      );
+
+      // ═══ ENRICHMENT LAYER — same as manual simulator ═══
+      try {
+        const baseLower = agentPrompt.toLowerCase();
+        const extras: string[] = [];
+
+        // 1) Skills from DB
+        const { data: skillAssignments } = await supabase
+          .from("agent_skill_assignments")
+          .select("skill_id, agent_skills(name, prompt_instruction, is_active)")
+          .eq("agent_id", agentId)
+          .eq("is_active", true);
+        if (skillAssignments && skillAssignments.length > 0) {
+          const newSkills: string[] = [];
+          for (const sa of skillAssignments) {
+            const skill = sa.agent_skills as any;
+            if (!skill || !skill.is_active || !skill.prompt_instruction) continue;
+            if (baseLower.includes(skill.name.toLowerCase())) continue;
+            newSkills.push(`- ${skill.name}: ${(skill.prompt_instruction || "").slice(0, 150)}`);
+          }
+          if (newSkills.length > 0) extras.push(`\n[SKILLS ATUALIZADAS]\n${newSkills.join("\n")}`);
+        }
+
+        // 2) Active workflows
+        const { data: flows } = await supabase
+          .from("automation_flows")
+          .select("id, name, description")
+          .eq("status", "active")
+          .limit(2);
+        if (flows && flows.length > 0) {
+          for (const flow of flows) {
+            if (baseLower.includes(flow.name.toLowerCase())) continue;
+            const { data: flowNodes } = await supabase
+              .from("automation_nodes")
+              .select("label, node_type")
+              .eq("flow_id", flow.id)
+              .order("position_y", { ascending: true })
+              .limit(10);
+            if (flowNodes && flowNodes.length > 0) {
+              const steps = flowNodes.map(n => n.label || n.node_type).join(" → ");
+              extras.push(`\n[FLUXO]\n"${flow.name}": ${steps}`);
+            }
+          }
+        }
+
+        if (extras.length > 0) {
+          agentPrompt += extras.join("\n");
+          debugLog(`[CHAMELEON ENRICHMENT] agent=${agentId}, extras=${extras.length}`);
+        }
+      } catch (err) {
+        debugLog("[CHAMELEON ENRICHMENT] Falha silenciosa", err);
+      }
 
       // Build history in OpenAI format
       const history = currentMessages.map(m => ({
@@ -249,7 +334,7 @@ export default function SimuladorChameleonMode() {
       setStatusText("Erro na conversa. Gerando análise...");
       setTimeout(() => runDebrief(p, currentMessages, sType, chId), 1000);
     }
-  }, [globalRulesBlock]);
+  }, [globalRulesBlock, agencyConfig, kbContent, agentBehaviors]);
 
   // ─── Debrief ───
   const runDebrief = useCallback(async (
