@@ -301,10 +301,37 @@ export async function runComplianceCheck(
   }
 }
 
+/** Word limits per agent role (deterministic, 100% guaranteed). */
+const AGENT_WORD_LIMITS: Record<string, number> = {
+  maya: 60,
+};
+const DEFAULT_WORD_LIMIT = 120;
+
+/**
+ * Truncates text to the last complete sentence within a word limit.
+ */
+function truncateToWordLimit(text: string, maxWords: number): string {
+  const words = text.split(/\s+/);
+  if (words.length <= maxWords) return text;
+
+  const truncated = words.slice(0, maxWords).join(" ");
+  // Find the last sentence-ending punctuation within the truncated text
+  const lastSentenceEnd = Math.max(
+    truncated.lastIndexOf("."),
+    truncated.lastIndexOf("!"),
+    truncated.lastIndexOf("?"),
+  );
+  if (lastSentenceEnd > truncated.length * 0.4) {
+    return truncated.slice(0, lastSentenceEnd + 1).trim();
+  }
+  // No good sentence boundary — just cut at word limit
+  return truncated.trim();
+}
+
 /**
  * Code-level enforcement: rules that can be enforced deterministically without AI.
  */
-export function enforceHardRules(text: string): string {
+export function enforceHardRules(text: string, agentId?: string): string {
   // Remove em-dashes (—) and en-dashes (–)
   let cleaned = text.replace(/\s*[—–]\s*/g, ", ");
   // Collapse double commas
@@ -323,6 +350,13 @@ export function enforceHardRules(text: string): string {
       return "";
     });
   }
+
+  // Deterministic word-count enforcement
+  if (agentId) {
+    const limit = AGENT_WORD_LIMITS[agentId] ?? DEFAULT_WORD_LIMIT;
+    cleaned = truncateToWordLimit(cleaned, limit);
+  }
+
   return cleaned.trim();
 }
 
