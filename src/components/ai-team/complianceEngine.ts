@@ -372,7 +372,7 @@ export async function fullCompliancePipeline(
   const { text: checkedText, wasRewritten } = await runComplianceCheck(agentId, agentResponse, conversationContext);
   
   // Step 2: Deterministic hard rules (code-level, 100% guaranteed)
-  const finalText = enforceHardRules(checkedText);
+  const finalText = enforceHardRules(checkedText, agentId);
 
   return { 
     text: finalText, 
