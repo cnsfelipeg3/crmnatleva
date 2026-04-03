@@ -1,54 +1,50 @@
 
 
-## Diagnóstico: Maya no Camaleão — Por que está diferente do Manual
+## Diagnóstico: Maya AINDA verbosa no Camaleão
 
-### Problemas encontrados na screenshot
+### O que está acontecendo nas screenshots
 
-A Maya na simulação está:
-1. **Mensagens longas demais** — bem acima do limite de 60 palavras definido no `behavior_prompt`
-2. **Info dumping** — listando serviços ("passagens, hotéis, transfers, ingressos, visto e seguro") na primeira resposta
-3. **Repetindo o info dump** — na segunda resposta ela lista tudo de novo
-4. **Sem seguir a sequência** — deveria focar em "Nome → Destino → 1ª vez → Quem vai → Motivo", mas está despejando informação
+A Maya continua produzindo mensagens com 100-150+ palavras (deveria ser ~60), com info dumping de serviços e parágrafos longos. O `fullCompliancePipeline` e `enforceAgentFormatting` **já foram adicionados** no código, mas **não estão funcionando** na prática.
 
----
+### Causa raiz: 3 falhas no pipeline de compliance
 
-### Causa raiz: 3 diferenças técnicas entre Camaleão e Manual
+| Problema | Onde | Por que falha |
+|---|---|---|
+| **Safety check rejeita reescritas curtas** | `complianceEngine.ts` linha 289 | Se a reescrita tem menos de 20% do tamanho original, é descartada. Uma resposta de 150 palavras cortada para 60 seria rejeitada (60 < 150 × 0.2 = 30... ok, mas se for mais agressivo, falha) |
+| **Compliance prompt instrui "mantenha o mesmo comprimento"** | `complianceEngine.ts` linha 195 | Contradiz diretamente o objetivo de encurtar respostas verbosas |
+| **Sem enforcement determinístico de limite de palavras** | `enforceHardRules()` | Remove travessões e emojis, mas NÃO verifica limite de palavras. Respostas longas passam intactas |
 
-| Aspecto | Manual | Camaleão | Impacto |
-|---|---|---|---|
-| **Compliance Engine** | ✅ Aplica `fullCompliancePipeline()` + `enforceAgentFormatting()` após CADA resposta do agente | ❌ Nenhum pós-processamento | Maya não tem suas respostas corrigidas/filtradas |
-| **Streaming** | ✅ Usa streaming SSE (resposta parcial visível) | ❌ Usa `callSimulatorAI` que retorna texto completo | Sem streaming, mas isso é cosmético |
-| **Provider** | ✅ Usa `agencyConfig.default_provider` (ex: `anthropic`) | ❌ Força `provider: "lovable"` (Gemini) | **Modelo diferente** pode gerar respostas mais verbosas |
-
-### O problema principal: `callSimulatorAI` no Camaleão
-
-1. **Provider fixo "lovable" (Gemini)**: O modo manual usa o provider configurado pela agência (provavelmente Anthropic/Claude), enquanto o Camaleão força Gemini via `callSimulatorAI`. Gemini tende a ser mais verboso e ignora mais facilmente limites de palavras.
-
-2. **Sem Compliance Engine**: O manual passa TODA resposta por `fullCompliancePipeline()` que detecta violações (texto longo, bullet points, repetições) e reescreve. O Camaleão pula isso completamente.
-
-3. **Sem `enforceAgentFormatting()`**: O manual remove travessões, linguagem de transferência vazada, e metadados internos. O Camaleão não aplica nenhuma dessas correções.
+### Em resumo
+O compliance engine foca em violações de regras (bullets, linguagem formal, etc.), mas **não enxerga "resposta longa" como violação**. E mesmo quando reescreve mais curto, o safety check pode rejeitar por diferença de tamanho.
 
 ---
 
-### Plano de correção
+### Plano de correção (3 alterações)
 
-#### 1. Aplicar `enforceAgentFormatting()` no Camaleão
-- Importar a função do `SimuladorManualMode` (ou extraí-la para um util compartilhado)
-- Aplicar no `cleanResponse` antes de adicionar à lista de mensagens
+#### 1. Adicionar truncamento inteligente por palavras em `enforceHardRules`
+**Arquivo:** `src/components/ai-team/complianceEngine.ts`
 
-#### 2. Aplicar o Compliance Engine
-- Chamar `fullCompliancePipeline()` após cada resposta do agente no Camaleão
-- Idêntico ao que o manual faz nas linhas 374-382
+- Adicionar lógica: se agentId é `maya`, limite = 60 palavras; outros agentes = 120 palavras
+- Truncar na última frase completa dentro do limite
+- Isso é determinístico (100% garantido, sem depender de IA)
 
-#### 3. Usar o provider correto
-- Trocar de `provider: "lovable"` para usar `agencyConfig.default_provider` no `callSimulatorAI` para chamadas tipo "agent"
-- Ou fazer o Camaleão chamar diretamente o edge function como o manual faz, em vez de usar `callSimulatorAI`
+#### 2. Corrigir o compliance prompt para permitir encurtamento
+**Arquivo:** `src/components/ai-team/complianceEngine.ts`
 
-#### 4. Validação pós-resposta para Maya
-- Adicionar check de comprimento: se resposta da Maya > 80 palavras, truncar ou reprocessar
-- Verificar se contém listas de serviços e remover
+- Linha 195: trocar "Mantenha o mesmo comprimento aproximado" por "Se a resposta excede os limites de palavras definidos, ENCURTE mantendo o essencial"
+- Linha 289: relaxar o safety check de `0.2` para `0.1` (permitir reescritas até 90% menores)
 
-### Arquivos a alterar
-- `src/components/ai-team/SimuladorChameleonMode.tsx` — aplicar compliance + formatting + provider correto
-- Possivelmente extrair `enforceAgentFormatting` para um arquivo util compartilhado
+#### 3. Adicionar word-count enforcer no Camaleão como camada final
+**Arquivo:** `src/components/ai-team/SimuladorChameleonMode.tsx`
+
+- Após o compliance pipeline, adicionar um check final: contar palavras da resposta
+- Se Maya e > 70 palavras: truncar na última frase completa
+- Log de debug quando truncamento é aplicado
+
+### Resultado esperado
+Maya no Camaleão vai responder com no máximo ~60-70 palavras, idêntico ao manual. O enforcement é determinístico (código), não depende da IA "obedecer".
+
+### Arquivos alterados
+- `src/components/ai-team/complianceEngine.ts` — word limit em `enforceHardRules` + fix no prompt + safety check
+- `src/components/ai-team/SimuladorChameleonMode.tsx` — word-count enforcer final
 
