@@ -192,7 +192,8 @@ INSTRUÇÕES:
 3. Se encontrar QUALQUER violação (mesmo mínima), reescreva a resposta corrigindo TODAS as violações, mantendo o sentido e o tom original.
 
 REGRAS DA REESCRITA:
-- Mantenha o mesmo comprimento aproximado
+- Se a resposta excede os limites de palavras definidos nas diretivas, ENCURTE mantendo apenas o essencial
+- Priorize brevidade: respostas de WhatsApp devem ser curtas e diretas
 - Mantenha o mesmo tom e intenção
 - Corrija APENAS o que viola as regras
 - NÃO adicione explicações sobre o que foi corrigido
@@ -286,7 +287,7 @@ export async function runComplianceCheck(
     }
 
     // Safety: if result is wildly different length, likely not a valid rewrite
-    if (result.length > agentResponse.length * 3 || result.length < agentResponse.length * 0.2) {
+    if (result.length > agentResponse.length * 3 || result.length < agentResponse.length * 0.1) {
       console.warn(`🛡️ Compliance rewrite has suspicious length ratio, keeping original for ${profile.agentName}`);
       return { text: agentResponse, wasRewritten: false, profile };
     }
@@ -300,10 +301,37 @@ export async function runComplianceCheck(
   }
 }
 
+/** Word limits per agent role (deterministic, 100% guaranteed). */
+const AGENT_WORD_LIMITS: Record<string, number> = {
+  maya: 60,
+};
+const DEFAULT_WORD_LIMIT = 120;
+
+/**
+ * Truncates text to the last complete sentence within a word limit.
+ */
+function truncateToWordLimit(text: string, maxWords: number): string {
+  const words = text.split(/\s+/);
+  if (words.length <= maxWords) return text;
+
+  const truncated = words.slice(0, maxWords).join(" ");
+  // Find the last sentence-ending punctuation within the truncated text
+  const lastSentenceEnd = Math.max(
+    truncated.lastIndexOf("."),
+    truncated.lastIndexOf("!"),
+    truncated.lastIndexOf("?"),
+  );
+  if (lastSentenceEnd > truncated.length * 0.4) {
+    return truncated.slice(0, lastSentenceEnd + 1).trim();
+  }
+  // No good sentence boundary — just cut at word limit
+  return truncated.trim();
+}
+
 /**
  * Code-level enforcement: rules that can be enforced deterministically without AI.
  */
-export function enforceHardRules(text: string): string {
+export function enforceHardRules(text: string, agentId?: string): string {
   // Remove em-dashes (—) and en-dashes (–)
   let cleaned = text.replace(/\s*[—–]\s*/g, ", ");
   // Collapse double commas
@@ -322,6 +350,13 @@ export function enforceHardRules(text: string): string {
       return "";
     });
   }
+
+  // Deterministic word-count enforcement
+  if (agentId) {
+    const limit = AGENT_WORD_LIMITS[agentId] ?? DEFAULT_WORD_LIMIT;
+    cleaned = truncateToWordLimit(cleaned, limit);
+  }
+
   return cleaned.trim();
 }
 
@@ -337,7 +372,7 @@ export async function fullCompliancePipeline(
   const { text: checkedText, wasRewritten } = await runComplianceCheck(agentId, agentResponse, conversationContext);
   
   // Step 2: Deterministic hard rules (code-level, 100% guaranteed)
-  const finalText = enforceHardRules(checkedText);
+  const finalText = enforceHardRules(checkedText, agentId);
 
   return { 
     text: finalText, 

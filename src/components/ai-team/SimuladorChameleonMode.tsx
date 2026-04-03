@@ -288,6 +288,16 @@ export default function SimuladorChameleonMode() {
         debugLog("[CHAMELEON] Compliance check failed (non-fatal)", compErr);
       }
 
+      // ── Final word-count enforcer (deterministic safety net) ──
+      const wordLimit = agentId === "maya" ? 70 : 130;
+      const wordCount = cleanResponse.split(/\s+/).length;
+      if (wordCount > wordLimit) {
+        const words = cleanResponse.split(/\s+/).slice(0, wordLimit).join(" ");
+        const lastEnd = Math.max(words.lastIndexOf("."), words.lastIndexOf("!"), words.lastIndexOf("?"));
+        cleanResponse = lastEnd > words.length * 0.4 ? words.slice(0, lastEnd + 1).trim() : words.trim();
+        debugLog(`[CHAMELEON] Word-count enforcer truncated ${agent.name}: ${wordCount} → ${cleanResponse.split(/\s+/).length} words`);
+      }
+
       const agentMsg: ChameleonMessage = {
         role: "agent",
         content: cleanResponse,
