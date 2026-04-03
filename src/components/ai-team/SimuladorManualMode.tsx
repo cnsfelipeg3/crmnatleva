@@ -359,7 +359,9 @@ export default function SimuladorManualMode() {
         }
       }
 
-      if (agentText.includes("[TRANSFERIR]")) {
+      // Use compliantText (post-compliance) for transfer check — pivot detector injects [TRANSFERIR] there
+      const textForTransferCheck = compliantText ?? agentText;
+      if (textForTransferCheck.includes("[TRANSFERIR]")) {
         // ── Pipeline-aware transfer using PIPELINE_MAP ──
         const pipelineTargets = getTransferTargets(selectedAgent.id);
         let nextAgent: AgentV4 | undefined;
