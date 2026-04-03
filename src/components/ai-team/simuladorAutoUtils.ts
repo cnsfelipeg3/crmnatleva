@@ -201,7 +201,7 @@ export function pushUniqueSimMessage(
   return true;
 }
 
-export async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent", agentBehaviorPrompt?: string, _retryCount = 0): Promise<string> {
+export async function callSimulatorAI(sysPrompt: string, history: { role: string; content: string }[], type: SimCallType = "agent", agentBehaviorPrompt?: string, _retryCount = 0, providerOverride?: string): Promise<string> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
   const compactSystemPrompt = compactSystemPromptForTransport(sysPrompt, type, _retryCount);
   const compactAgentBehaviorPrompt = compactText(agentBehaviorPrompt || "", _retryCount >= 1 ? 400 : 700);
@@ -221,7 +221,7 @@ export async function callSimulatorAI(sysPrompt: string, history: { role: string
       systemPrompt: compactSystemPrompt,
       history: requestHistory,
       agentBehaviorPrompt: compactAgentBehaviorPrompt,
-      provider: "lovable",
+      provider: providerOverride || "lovable",
     }),
   }));
 
