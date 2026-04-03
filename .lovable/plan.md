@@ -1,58 +1,49 @@
 
 
-## Diagnóstico: Maya ainda com problemas comportamentais (não é mais word-count)
+## Perfis de Lead Coerentes no Simulador Camaleão
 
-### O que a screenshot mostra
+### Problema
+O `generateRandomProfile()` escolhe destino, orçamento e composição de forma 100% aleatória e independente. Resultado: combinações absurdas como "Bali + família de 4 + R$5.000" — totalmente fora da realidade.
 
-O limite de palavras (~60) **está funcionando** — as mensagens da Maya estão dentro do limite. O problema agora é **comportamental**:
+### Solução: Tabela de Coerência Destino → Orçamento Mínimo
 
-| Problema | Exemplo na screenshot | Regra violada |
-|---|---|---|
-| **2 perguntas numa mensagem** | "como posso te chamar? E me conta, o que mais te chama atenção em Buenos Aires?" | "Máximo 1 pergunta por mensagem" |
-| **Storytelling/marketing** | "A cidade tem uma energia única, aquela mistura de Europa com América Latina que é impossível de resistir" | Maya deve criar conexão rápida, sem fazer turismo |
-| **Não transfere quando lead pede preço/hotel** | Lead: "Me mostra 2-3 opções de hotel" → Maya continua respondendo | "Se questionada sobre dicas ou logística, admitir incerteza e disparar [TRANSFERIR]" |
-| **Não transfere com dados completos** | Na mensagem 2 já tinha Nome + Destino + Período + Composição → Maya continua | "Quando tiver dados mínimos + 5 trocas, TRANSFIRA IMEDIATAMENTE" |
+Criar um mapa de faixas realistas por destino e composição, e filtrar orçamentos incompatíveis.
 
-### Causa raiz: 3 problemas
+**Arquivo:** `src/components/ai-team/chameleonUtils.ts`
 
-1. **Enrichment dilui o prompt da Maya** — Após `buildUnifiedAgentPrompt` retornar o prompt compacto da Maya (~500 palavras), o Chameleon **apenda Skills + Workflows** (linha 258-259), adicionando contexto desnecessário que dilui as instruções.
+#### 1. Adicionar mapa de custo mínimo por destino (por pessoa)
 
-2. **Sem enforcement determinístico de regras comportamentais** — `enforceHardRules` valida word-count e formatação, mas NÃO detecta:
-   - Múltiplas interrogações (2+ "?" = violação)
-   - Padrões de storytelling/turismo
-   - Lead pedindo preço/hotel/logística (deveria forçar transfer)
+Categorizar destinos em faixas:
+- **Econômico** (Buenos Aires, Santiago): orçamento baixo OK para qualquer composição
+- **Médio** (Cancún, Orlando, Lisboa): mínimo "médio" para famílias/grupos
+- **Premium** (Paris, Londres, Tóquio, Roma, Dubai): mínimo "alto" para famílias
+- **Luxury** (Maldivas, Bali): mínimo "alto" para casal, "ilimitado" para família
 
-3. **Compliance Engine é genérico** — O AI compliance valida "contra todas as regras", mas a Maya tem regras muito específicas (1 pergunta, pivot em logística) que o validador generalista não enforça consistentemente.
+#### 2. Ajustar `generateRandomProfile()` 
 
----
+Lógica:
+1. Escolher destino e composição primeiro
+2. Consultar a faixa mínima de orçamento para essa combinação
+3. Filtrar os orçamentos disponíveis para incluir apenas os compatíveis
+4. Se "baixo" é incompatível com o destino, removê-lo das opções
 
-### Plano de correção
+#### 3. Adicionar coerência motivação ↔ composição
 
-#### 1. Bloquear enrichment para Maya
-**Arquivo:** `src/components/ai-team/SimuladorChameleonMode.tsx`
+Regras simples:
+- "lua de mel" / "aniversário de casamento" → composição = "casal"
+- "viagem solo" → composição = "solo"
+- "férias em família" / "férias escolares" → composição com filhos
+- "despedida de solteira" → grupo de amigos
 
-- Na linha 257-260: adicionar `if (agentId !== "maya")` antes de aplicar enrichment
-- Maya não precisa de skills/workflows — seu prompt é auto-contido
+#### 4. Coerência experiência ↔ destino
 
-#### 2. Adicionar enforcement determinístico de comportamento em `enforceHardRules`
-**Arquivo:** `src/components/ai-team/complianceEngine.ts`
-
-Novas regras codificadas (sem depender de IA):
-- **Multi-pergunta**: contar "?" na resposta; se Maya e 2+, remover tudo após o primeiro "?"+ frase
-- **Storytelling detector**: regex para padrões como "uma energia única", "impossível de resistir", "foi feita pra", "capítulo à parte" → cortar a frase inteira
-- **Pivot detector**: se a última mensagem do lead contém "hotel", "preço", "opção", "valor", "desconto" → injetar "[TRANSFERIR]" no final da resposta
-
-#### 3. Também bloquear enrichment no Manual Mode para Maya
-**Arquivo:** `src/components/ai-team/SimuladorManualMode.tsx`
-
-- Mesma lógica: pular enrichment layer para Maya (consistência entre modos)
+- "nunca viajou internacional" → destinos mais acessíveis (Buenos Aires, Santiago, Cancún, Orlando)
+- Destinos como Maldivas, Bali, Tóquio → mínimo "viajou 1-2 vezes"
 
 ### Resultado esperado
-- Maya: 1 pergunta por mensagem, sem storytelling, transfere imediatamente ao detectar pedido de logística/preço
-- Enrichment preservado para todos os outros agentes
+Perfis gerados serão sempre plausíveis: um lead que quer Bali com família nunca terá orçamento de R$5k. Um solo traveler para Buenos Aires pode ter orçamento baixo normalmente.
 
-### Arquivos alterados
-- `src/components/ai-team/complianceEngine.ts` — regras comportamentais determinísticas
-- `src/components/ai-team/SimuladorChameleonMode.tsx` — skip enrichment para Maya
-- `src/components/ai-team/SimuladorManualMode.tsx` — skip enrichment para Maya
+### Escopo
+- 1 arquivo alterado: `src/components/ai-team/chameleonUtils.ts`
+- Apenas a função `generateRandomProfile()` e dados auxiliares
 
