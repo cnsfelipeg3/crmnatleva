@@ -68,6 +68,23 @@ export default function SimuladorChameleonMode() {
   const monitorBriefingIdRef = useRef<string | null>(null);
   const { data: globalRules = [] } = useGlobalRules();
   const globalRulesBlock = buildGlobalRulesBlock(globalRules);
+  const { config: agencyConfig } = useAgencyConfig();
+
+  // Load KB and behavior_prompts from DB (same as manual simulator)
+  const [kbContent, setKbContent] = useState<Record<string, string>>({});
+  const [agentBehaviors, setAgentBehaviors] = useState<Record<string, string>>({});
+  useEffect(() => {
+    supabase.from("ai_team_agents").select("id, behavior_prompt").then(({ data }) => {
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((a: any) => { if (a.behavior_prompt) map[a.id] = a.behavior_prompt; });
+        setAgentBehaviors(map);
+      }
+    });
+    supabase.from("ai_knowledge_base").select("title, category, content_text").eq("is_active", true).then(({ data }) => {
+      if (data) setKbContent(buildKnowledgeBlocksByAgent(data));
+    });
+  }, []);
 
   // Auto scroll
   useEffect(() => {
