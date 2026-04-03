@@ -384,28 +384,58 @@ IMPORTANTE: Responda APENAS o JSON, sem markdown, sem texto antes ou depois.`;
 // ─── First message from the Chameleon ───
 
 export function buildFirstChameleonMessage(profile: ChameleonProfile): string {
-  const greetings = ["Oi", "Oii", "Ola", "E aí", "Bom dia", "Boa tarde"];
-  const greeting = pick(greetings);
-  
-  // Build a natural first message based on profile
-  const intros: string[] = [];
+  const isYoung = profile.idade < 35;
+  const isFormal = profile.personalidade.includes("VIP") || profile.personalidade.includes("detalhista");
 
-  if (profile.motivacao === "lua de mel") {
-    intros.push(`${greeting}! To noiva e quero organizar a lua de mel, ${profile.destino} parece incrivel`);
-    intros.push(`${greeting}, vou casar e queria saber sobre pacotes pra ${profile.destino}`);
-  } else if (profile.motivacao.includes("família")) {
-    intros.push(`${greeting}! Quero viajar com a familia pra ${profile.destino}, vcs fazem esse destino?`);
-    intros.push(`${greeting}, to planejando ferias com os filhos e queria saber sobre ${profile.destino}`);
-  } else if (profile.motivacao === "viagem solo") {
-    intros.push(`${greeting}! To querendo viajar sozinha pra ${profile.destino}, vcs podem me ajudar?`);
-    intros.push(`${greeting}, quero fazer uma viagem solo pra ${profile.destino}, como funciona?`);
-  } else {
-    intros.push(`${greeting}! Vi o insta de vcs e queria saber sobre viagens pra ${profile.destino}`);
-    intros.push(`${greeting}, to querendo ir pra ${profile.destino} e queria uma cotacao`);
-    intros.push(`${greeting}! Vcs fazem ${profile.destino}? Quero saber mais`);
+  // Casual/young first messages
+  const casualIntros = [
+    `oi, vcs fazem ${profile.destino}?`,
+    `oii, to querendo viajar pra ${profile.destino}`,
+    `oi boa tarde, queria saber sobre ${profile.destino}`,
+    `ola, vi o perfil de vcs e queria saber sobre viagem pra ${profile.destino}`,
+    `e ai, vcs tem pacote pra ${profile.destino}?`,
+    `oi, uma amiga indicou vcs. quero ir pra ${profile.destino}`,
+    `oi tudo bem? queria cotar uma viagem`,
+    `oie, vcs trabalham com ${profile.destino}?`,
+  ];
+
+  // Formal first messages
+  const formalIntros = [
+    `Olá, boa tarde! Gostaria de informações sobre ${profile.destino}`,
+    `Boa tarde, estou pesquisando sobre viagem para ${profile.destino}. Vocês podem me ajudar?`,
+    `Olá! Uma amiga recomendou a agência. Estou interessada em ${profile.destino}`,
+    `Boa tarde! Gostaria de saber sobre pacotes para ${profile.destino}, por favor`,
+    `Olá, vi vocês no Instagram. Quanto custa uma viagem para ${profile.destino}?`,
+  ];
+
+  // Motivation-specific openers (casual)
+  const motivationIntros: Record<string, string[]> = {
+    "lua de mel": [
+      `oi, vou casar e to pesquisando lua de mel`,
+      `oii, queria cotar lua de mel pra ${profile.destino}`,
+      `oi! casamento em ${profile.periodo} e quero lua de mel incrivel`,
+    ],
+    "férias em família": [
+      `oi, to planejando ferias com a familia`,
+      `ola, quero viajar com os filhos pra ${profile.destino}, oq vcs tem?`,
+    ],
+    "viagem solo": [
+      `oi, quero viajar sozinha pra ${profile.destino}`,
+      `oii, to pensando em fazer uma viagem solo`,
+    ],
+    "primeira viagem internacional": [
+      `oi, nunca viajei pra fora e to querendo ir pra ${profile.destino}`,
+      `ola, seria minha primeira viagem internacional e queria ajuda`,
+    ],
+  };
+
+  // Pick based on profile
+  const specificIntros = motivationIntros[profile.motivacao];
+  if (specificIntros && Math.random() < 0.5) {
+    return pick(specificIntros);
   }
 
-  return pick(intros);
+  return pick(isFormal || (!isYoung && Math.random() > 0.4) ? formalIntros : casualIntros);
 }
 
 // ─── Agent prompt building (reads existing pipeline, does NOT modify) ───
