@@ -242,33 +242,56 @@ function randomAge(): number {
 export function generateRandomProfile(): ChameleonProfile {
   const isFem = Math.random() > 0.5;
   const nome = `${pick(isFem ? NOMES_FEMININOS : NOMES_MASCULINOS)} ${pick(SOBRENOMES)}`;
-  const comp = pick(COMPOSICOES);
-  const orcamentos = [
-    { label: "baixo (até R$5k)", value: "baixo" },
-    { label: "médio (R$5k-15k)", value: "medio" },
-    { label: "alto (R$15k-40k)", value: "alto" },
-    { label: "ilimitado", value: "ilimitado" },
-    { label: "não definido", value: "nao_definido" },
-  ];
-  const orc = pick(orcamentos);
+
+  // 1. Pick motivation first
+  const motivacao = pick(MOTIVACOES);
+
+  // 2. Derive composition coherently from motivation
+  const allowedComps = MOTIVATION_COMPOSITION[motivacao];
+  const comp = allowedComps
+    ? COMPOSICOES.find(c => c.label === pick(allowedComps)) || pick(COMPOSICOES)
+    : pick(COMPOSICOES);
+
+  // 3. Determine experience
+  const isGroup = !["solo", "casal", "mãe e filha"].includes(comp.label);
+  let experiencia = pick(["nunca viajou internacional", "viajou 1-2 vezes", "viajante frequente", "viajante experiente"]);
+
+  // 4. Pick destination coherent with experience
+  let destino: string;
+  if (experiencia === "nunca viajou internacional") {
+    destino = pick(BEGINNER_DESTINATIONS);
+  } else {
+    destino = pick(DESTINOS);
+  }
+
+  // Also enforce: luxury/premium destinations require at least some experience
+  const tier = DESTINATION_TIER[destino] || "medio";
+  if ((tier === "luxury" || tier === "premium") && experiencia === "nunca viajou internacional") {
+    experiencia = "viajou 1-2 vezes";
+  }
+
+  // 5. Pick budget coherent with destination + composition
+  const minBudget = MIN_BUDGET_BY_TIER[tier][isGroup ? "group" : "solo"];
+  const validBudgets = budgetAtLeast(minBudget);
+  const orc = pick(validBudgets);
 
   return {
     nome,
     idade: randomAge(),
     profissao: pick(PROFISSOES),
     cidade: pick(CIDADES),
-    destino: pick(DESTINOS),
+    destino,
     orcamento: orc.value,
     orcamentoLabel: orc.label,
     composicao: comp.label,
     composicaoLabel: comp.value,
     periodo: pick(["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]) + " " + (2026 + Math.floor(Math.random() * 2)),
-    motivacao: pick(MOTIVACOES),
+    motivacao,
     personalidade: pickN(PERSONALIDADES, 2 + Math.floor(Math.random() * 2)),
     nivelDecisao: pick(["decidido", "indeciso", "pesquisando"]),
     objecoes: pickN(OBJECOES, 1 + Math.floor(Math.random() * 2)),
     estadoEmocional: pick(["animado", "ansioso", "neutro", "desconfiado", "empolgado"]),
-    experiencia: pick(["nunca viajou internacional", "viajou 1-2 vezes", "viajante frequente", "viajante experiente"]),
+    experiencia,
     gatilhosIrritacao: pickN(GATILHOS_IRRITACAO, 2),
   };
 }
