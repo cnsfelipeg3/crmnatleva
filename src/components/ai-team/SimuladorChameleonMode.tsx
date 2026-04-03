@@ -265,7 +265,7 @@ export default function SimuladorChameleonMode() {
         content: m.content,
       }));
 
-      const agentResponse = await callSimulatorAI(agentPrompt, history, "agent");
+      const agentResponse = await callSimulatorAI(agentPrompt, history, "agent", undefined, 0, agencyConfig.default_provider || "anthropic");
 
       if (abortRef.current) return;
 
