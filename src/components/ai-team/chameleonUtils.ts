@@ -103,6 +103,76 @@ const DESTINOS = [
   "Cairo", "Turquia", "Croácia", "Marrocos", "Santiago", "Buenos Aires",
 ];
 
+// ─── Destination cost tiers (per person baseline) ───
+
+type DestinationTier = "economico" | "medio" | "premium" | "luxury";
+
+const DESTINATION_TIER: Record<string, DestinationTier> = {
+  "Buenos Aires": "economico",
+  "Santiago": "economico",
+  "Cancún": "medio",
+  "Orlando": "medio",
+  "Lisboa": "medio",
+  "Barcelona": "medio",
+  "Marrocos": "medio",
+  "Turquia": "medio",
+  "Cairo": "medio",
+  "Croácia": "medio",
+  "Paris": "premium",
+  "Roma": "premium",
+  "Londres": "premium",
+  "Nova York": "premium",
+  "Tóquio": "premium",
+  "Dubai": "premium",
+  "Grécia": "premium",
+  "Tailândia": "premium",
+  "Maldivas": "luxury",
+  "Bali": "luxury",
+};
+
+// Minimum budget key by tier + whether group/family (2+ people)
+const MIN_BUDGET_BY_TIER: Record<DestinationTier, { solo: string; group: string }> = {
+  economico: { solo: "baixo", group: "baixo" },
+  medio:     { solo: "baixo", group: "medio" },
+  premium:   { solo: "medio", group: "alto" },
+  luxury:    { solo: "alto",  group: "alto" },
+};
+
+const BUDGET_ORDER = ["baixo", "medio", "alto", "ilimitado", "nao_definido"];
+
+function budgetAtLeast(min: string): Array<{ label: string; value: string }> {
+  const allBudgets = [
+    { label: "baixo (até R$5k)", value: "baixo" },
+    { label: "médio (R$5k-15k)", value: "medio" },
+    { label: "alto (R$15k-40k)", value: "alto" },
+    { label: "ilimitado", value: "ilimitado" },
+    { label: "não definido", value: "nao_definido" },
+  ];
+  const minIdx = BUDGET_ORDER.indexOf(min);
+  return allBudgets.filter(b => {
+    const idx = BUDGET_ORDER.indexOf(b.value);
+    // "nao_definido" always allowed
+    return b.value === "nao_definido" || idx >= minIdx;
+  });
+}
+
+// ─── Motivation ↔ Composition coherence ───
+
+const MOTIVATION_COMPOSITION: Record<string, string[]> = {
+  "lua de mel": ["casal"],
+  "aniversário de casamento": ["casal"],
+  "viagem solo": ["solo"],
+  "férias em família": ["família com filhos", "casal + filhos adolescentes"],
+  "férias escolares": ["família com filhos", "casal + filhos adolescentes"],
+  "despedida de solteira": ["grupo de amigos"],
+};
+
+// ─── Experience ↔ Destination coherence ───
+
+const BEGINNER_DESTINATIONS = [
+  "Buenos Aires", "Santiago", "Cancún", "Orlando", "Lisboa",
+];
+
 const PERSONALIDADES = [
   "ansioso", "decidido", "detalhista", "desconfiado", "empolgado",
   "pechincheiro", "indeciso", "VIP", "sonhador", "pragmático",
