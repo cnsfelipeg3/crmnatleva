@@ -208,7 +208,7 @@ export default function SimuladorChameleonMode() {
     });
 
     // Kick off the conversation loop
-    setTimeout(() => runConversationStep(p, [msg], firstAgent, agents, maxEx, 0, sType, chId), 1500);
+    setTimeout(() => runConversationStep(p, [msg], firstAgent, agents, maxEx, 0, sType, chId), 500);
   }, [globalRulesBlock, agencyConfig, kbContent, agentBehaviors]);
 
   // ─── Conversation step (agent responds, then chameleon responds) ───
