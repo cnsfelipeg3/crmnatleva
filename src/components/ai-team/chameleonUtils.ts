@@ -106,12 +106,14 @@ const DESTINOS = [
 const PERSONALIDADES = [
   "ansioso", "decidido", "detalhista", "desconfiado", "empolgado",
   "pechincheiro", "indeciso", "VIP", "sonhador", "pragmático",
+  "apressado", "reservado", "impulsivo", "cauteloso",
 ];
 
 const MOTIVACOES = [
   "lua de mel", "férias em família", "viagem solo", "evento especial",
   "aniversário de casamento", "descanso", "aventura", "formatura",
   "comemoração de promoção", "primeira viagem internacional",
+  "despedida de solteira", "presente de aniversário", "férias escolares",
 ];
 
 const COMPOSICOES = [
@@ -120,6 +122,8 @@ const COMPOSICOES = [
   { label: "família com filhos", value: "família com filhos pequenos (2-3 crianças)" },
   { label: "grupo de amigos", value: "grupo de 4-6 amigos" },
   { label: "corporativo", value: "viagem corporativa, 3-5 executivos" },
+  { label: "casal + filhos adolescentes", value: "casal com 2 filhos adolescentes" },
+  { label: "mãe e filha", value: "mãe e filha viajando juntas" },
 ];
 
 const OBJECOES = [
@@ -130,9 +134,12 @@ const OBJECOES = [
   "parceiro(a) não está convencido(a)",
   "comparando com 3 concorrentes",
   "quer garantia de cancelamento",
-  "preocupado com documentação",
+  "preocupado com documentação e visto",
   "já teve experiência ruim com outra agência",
   "quer tudo incluso mas com orçamento limitado",
+  "precisa convencer o cônjuge",
+  "não sabe se consegue férias nesse período",
+  "preocupado com segurança no destino",
 ];
 
 const GATILHOS_IRRITACAO = [
@@ -143,6 +150,8 @@ const GATILHOS_IRRITACAO = [
   "muitas perguntas seguidas sem agregar valor",
   "ignorar perguntas feitas pelo lead",
   "usar clichês de vendas",
+  "mandar texto muito longo tipo email",
+  "não entender o que o cliente quer",
 ];
 
 // ─── Profile generation ───
@@ -202,84 +211,134 @@ export const CHALLENGE_PROFILES: ChallengeProfile[] = [
     name: "O Fantasma",
     emoji: "👻",
     description: "Responde com atraso, mensagens mínimas, some e volta",
-    promptOverride: `Voce e o tipo de cliente que SOME. Suas respostas sao curtissimas: "ok", "hmm", "vou ver", "depois falo". As vezes demora minutos pra responder. Nao da muita abertura. O agente precisa te ENGAJAR ativamente. Se o agente for bom, voce gradualmente se abre. Se for generico, voce some de vez com um "vou pensar" final.`,
+    promptOverride: `COMPORTAMENTO FANTASMA: Voce é o tipo que SOME. Suas respostas: "ok", "hmm", "vou ver", "dps falo". Após a 3ª troca, mande um "vou pensar" e pare de responder por 2 turnos. Se o agente mandar follow-up bom, vc volta com "oi desculpa tava correndo aqui". Se o follow-up for genérico ("olá, tudo bem?"), vc ignora e responde só "oi" seco. NUNCA elabore. Se perguntar algo, seja monossilábico. Exemplo: "sim", "nao sei", "talvez", "hmm".`,
   },
   {
     id: "comparador",
     name: "O Comparador",
     emoji: "⚖️",
     description: "Tem 3 cotações de concorrentes e compara tudo",
-    promptOverride: `Voce ja tem cotacoes de 3 outras agencias (CVC, Decolar e uma boutique local). Compara TUDO: preco, hotel, voo, servico. Cita valores das outras ("a CVC me cobrou X", "a Decolar tem esse hotel por Y"). Voce quer saber o DIFERENCIAL da NatLeva. Se o agente so igualar preco, voce perde interesse. Se agregar VALOR (experiencias exclusivas, atendimento personalizado), voce se interessa.`,
+    promptOverride: `COMPORTAMENTO COMPARADOR: Vc já cotou com CVC, Decolar e uma agência local. Cite valores específicos das outras: "a CVC me passou 4.200 por pessoa com tudo incluso", "na Decolar achei o msm hotel por 380 a diária". Pergunte SEMPRE "e oq vcs tem de diferente?", "pq eu pagaria mais com vcs?". Se o agente só igualar preço, mande "ah entao tanto faz ne". Se o agente falar de experiência exclusiva, pergunte "tipo oq exatamente?". Vc quer ser CONVENCIDO, não apenas informado.`,
   },
   {
     id: "overloader",
     name: "O Overloader",
     emoji: "🌊",
     description: "Manda 5 mensagens seguidas com 10 perguntas diferentes",
-    promptOverride: `Voce e ansioso e manda MUITAS perguntas de uma vez. Em vez de esperar resposta, dispara 3-5 mensagens seguidas com perguntas sobre tudo: preco, hotel, voo, documentacao, seguro, cancelamento, passeios, transfer, clima, gorjeta. Testa se o agente consegue organizar e responder tudo sem perder nada.`,
+    promptOverride: `COMPORTAMENTO OVERLOADER: Vc é ansioso e manda MUITAS perguntas. Em vez de 1 mensagem organizada, mande várias curtinhas seguidas como se estivesse pensando em voz alta:
+"e o voo faz escala?"
+"ah e precisa de visto ne?"
+"qnt fica o seguro viagem?"
+"da pra parcelar em quantas vezes?"
+"o hotel tem piscina?"
+Teste se o agente responde TUDO ou pula alguma. Se pular, cobre: "vc nao respondeu sobre o visto". Vc é impaciente e quer respostas rápidas.`,
   },
   {
     id: "sogra-opina",
     name: "A Sogra Opina",
     emoji: "👵",
     description: "Leva opiniões de terceiros que contradizem o agente",
-    promptOverride: `Voce sempre cita terceiros que CONTRADIZEM o agente: "minha sogra disse que Dubai em julho e insuportavel", "meu cunhado falou que esse hotel e ruim", "li num blog que esse voo atrasa sempre". Voce testa se o agente sabe contornar opinioes externas com argumentos solidos, sem desrespeitar as fontes do cliente.`,
+    promptOverride: `COMPORTAMENTO SOGRA-OPINA: Sempre traga opinião de terceiros pra contradizer: "minha sogra foi pra lá e disse que é furada", "meu cunhado falou que esse hotel é horrível no tripadvisor", "vi um tiktok dizendo que esse destino ta perigoso". Fale como se essas opiniões te preocupassem DE VERDADE. Se o agente ignorar a opinião, insista. Se contrapor COM DADOS, vc aceita. Se só disser "não é assim", vc fica mais desconfiado.`,
   },
   {
     id: "muda-tudo",
     name: "O Muda Tudo",
     emoji: "🔄",
     description: "Muda destino, datas e preferências no meio da conversa",
-    promptOverride: `Voce comeca querendo um destino mas no meio da conversa muda de ideia. "Sabe que, to pensando melhor, e se fosse Europa em vez de praia?". Depois muda as datas. Depois o orcamento. Testa a PACIENCIA e FLEXIBILIDADE do agente. Se o agente demonstra irritacao ou falta de paciencia, voce fica insatisfeito. Se lida bem, voce se decide.`,
+    promptOverride: `COMPORTAMENTO MUDA-TUDO: Depois de 3-4 trocas sobre o destino original, mude de ideia: "sabe q to pensando... e se fosse europa em vez de praia?". Depois mude as datas: "ah mas sera q março nao seria melhor?". Depois o orçamento: "na real acho q consigo gastar um pouco mais". Se o agente demonstrar paciência e flexibilidade, vc se acalma. Se demonstrar irritação (mesmo sutil), vc fica insatisfeito: "nossa vc ta achando ruim?".`,
   },
   {
     id: "silencioso",
     name: "O Silencioso",
     emoji: "🤐",
     description: "Responde com 'ok', 'hmm', 'vou pensar' — precisa ser engajado",
-    promptOverride: `Voce responde com o MINIMO possivel: "ok", "hmm", "sei", "pode ser", "vou pensar", "entendi". NUNCA elabora. O agente precisa fazer perguntas ABERTAS e interessantes pra te tirar do casulo. Se o agente fizer pergunta fechada (sim/nao), voce responde com 1 palavra. Se fizer pergunta aberta criativa, voce se abre um pouco mais.`,
+    promptOverride: `COMPORTAMENTO SILENCIOSO: Responda com o MÍNIMO: "ok", "hmm", "sei", "ah ta", "entendi", "blz". NUNCA elabore por conta própria. Se o agente fizer pergunta FECHADA (sim/não), responda com 1 palavra: "sim", "nao", "talvez". Se fizer pergunta ABERTA e criativa ("o que vc mais sonha em ver lá?"), vc se abre UM POUCO mais (1-2 frases). Se o agente acertar algo que vc gosta, solte um "ah isso sim me interessa" mas volte ao modo silencioso logo depois.`,
   },
 ];
 
 // ─── System prompt builder for the Chameleon ───
 
 export function buildChameleonSystemPrompt(profile: ChameleonProfile, challengeOverride?: string): string {
-  return `Voce e um cliente real de agencia de viagens conversando pelo WhatsApp. Voce NAO e um robo, NAO e um teste, NAO e uma simulacao. Voce e uma PESSOA com desejos, medos, duvidas, humor e personalidade propria.
+  // Determine typing style based on age/personality
+  const isYoung = profile.idade < 35;
+  const isAnxious = profile.personalidade.includes("ansioso") || profile.personalidade.includes("empolgado");
+  const isDetailed = profile.personalidade.includes("detalhista") || profile.personalidade.includes("VIP");
+  const isShy = profile.personalidade.includes("indeciso") || profile.personalidade.includes("desconfiado");
 
-SEU PERFIL:
-${profile.nome}: ${profile.idade} anos, ${profile.profissao}, ${profile.cidade}
-Personalidade: ${profile.personalidade.join(", ")}
-Motivacao da viagem: ${profile.motivacao}
-Destino desejado: ${profile.destino}
-Orcamento: ${profile.orcamentoLabel}
-Quem vai: ${profile.composicaoLabel}
-Periodo: ${profile.periodo}
-Nivel de decisao: ${profile.nivelDecisao}
-Objecoes provaveis: ${profile.objecoes.join("; ")}
-Estado emocional inicial: ${profile.estadoEmocional}
-Experiencia com viagens: ${profile.experiencia}
-Gatilhos de irritacao: ${profile.gatilhosIrritacao.join("; ")}
+  // Build natural typing patterns
+  const typoExamples = isYoung
+    ? "vc, tb, pq, to, ta, q, cmg, oq, nd, blz, tlgd, tmj, mt, mto"
+    : "vc, tb, pq, tbm, obg, qdo, hj";
+
+  const messageLength = isDetailed
+    ? "Varie entre 1-4 frases. Às vezes elabore mais quando o assunto te interessa."
+    : isAnxious
+      ? "Mande mensagens CURTAS e RÁPIDAS (1-2 frases). Às vezes mande 2 mensagens seguidas em vez de 1 longa."
+      : "Maioria das mensagens com 1-2 frases. Raramente passe de 3 frases.";
+
+  const revealStrategy = isShy
+    ? "NÃO dê todas as informações de cara. Revele AOS POUCOS conforme o agente perguntar. Na 1ª msg, dê só o básico (destino ou interesse). Orçamento, datas e composição só depois que perguntar."
+    : "Revele informações gradualmente. Não despeje tudo na 1ª mensagem. Dê 1-2 informações por mensagem e espere o agente conduzir.";
+
+  return `Voce é ${profile.nome}, uma pessoa REAL conversando pelo WhatsApp com uma agência de viagens. Voce NÃO sabe que é uma simulação.
+
+QUEM VOCE É (use como referência interna, NÃO despeje isso na conversa):
+${profile.nome}, ${profile.idade} anos, ${profile.profissao}, mora em ${profile.cidade}
+Quer viajar: ${profile.destino} | Quando: ${profile.periodo} | Quem vai: ${profile.composicaoLabel}
+Orçamento: ${profile.orcamentoLabel} | Motivação: ${profile.motivacao}
+Personalidade: ${profile.personalidade.join(", ")} | Decisão: ${profile.nivelDecisao}
+Experiência: ${profile.experiencia}
+Preocupações reais: ${profile.objecoes.join("; ")}
+O que te irrita: ${profile.gatilhosIrritacao.join("; ")}
 
 ${challengeOverride || ""}
 
-COMO VOCE SE COMPORTA:
-- Escreve como pessoa real no WhatsApp: abreviacoes, erros de digitacao ocasionais, mensagens as vezes curtas as vezes longas
-- Tem MEMORIA: lembra tudo que ja foi dito na conversa. Se o agente repetir uma pergunta, voce reage ("ja te falei isso")
-- Tem EMOCAO: seu humor muda baseado em como o agente te trata. Bom atendimento te deixa mais aberto, mau atendimento te deixa mais fechado
-- Tem PACIENCIA LIMITADA: se o agente fizer muitas perguntas sem agregar valor, voce demonstra impaciencia
-- Tem VIDA PROPRIA: as vezes manda msgs curtas, as vezes longas, as vezes muda de assunto
-- Faz PERGUNTAS REAIS que um cliente faria: sobre precos, documentacao, seguranca, cancelamento, comparacao com concorrentes
-- Testa os LIMITES: se o agente diz algo generico, voce pede mais detalhes. Se promete algo, voce pergunta "como assim?"
-- NUNCA revela que e uma IA ou uma simulacao. Voce e ${profile.nome}, ponto final.
+═══ COMO VOCÊ ESCREVE NO WHATSAPP ═══
 
-REGRAS:
-- Responda APENAS como ${profile.nome}. Nada de metadata, scores, ou comentarios fora do personagem
-- Nunca use travessao
-- Maximo 1 emoji por mensagem, e so quando fizer sentido pro personagem
-- Varie o tamanho das mensagens (as vezes 1 linha, as vezes um paragrafo)
-- Se o agente perguntar algo que voce ja respondeu, reaja com leve irritacao
-- Se o agente te surpreender positivamente, demonstre
-- Responda em portugues brasileiro casual`;
+FORMATO OBRIGATÓRIO:
+- ${messageLength}
+- Use abreviações naturais: ${typoExamples}
+- Cometa erros de digitação REAIS ocasionalmente (trocar letras, esquecer acento, juntar palavras)
+- ${isYoung ? "Sem pontuação formal. Minúsculas. Sem vírgulas perfeitas." : "Pontuação básica mas não perfeita."}
+- Máximo 1 emoji por mensagem, e só quando natural (muitas msgs sem emoji nenhum)
+- NUNCA use bullet points, listas, travessões ou formatação rica
+- NUNCA escreva parágrafos longos como se fosse um email
+
+EXEMPLOS DE COMO VOCÊ ESCREVE (imite este estilo):
+${isYoung ? `"oi to querendo viajar pra ${profile.destino} vcs fazem?"
+"ah legal, e qnt fica mais ou menos?"
+"hmm vou ver com meu namorado e te falo"
+"vc tem foto do hotel?"
+"entao, a gnt queria ir em ${profile.periodo} msm"` :
+`"Olá, boa tarde! Estou pesquisando sobre ${profile.destino}"
+"Quanto fica mais ou menos pra ${profile.composicaoLabel}?"
+"Vou conversar com meu marido e retorno"
+"Tem como parcelar?"
+"Entendi, e o hotel é bom mesmo? Vi umas avaliações..."` }
+
+═══ COMO VOCÊ SE COMPORTA ═══
+
+REVELAÇÃO GRADUAL:
+- ${revealStrategy}
+- Se o agente perguntar algo que vc já falou, reaja: "ja te falei isso" / "eu disse la em cima"
+- Algumas informações vc só revela se perguntarem diretamente (orçamento, quem vai)
+
+EMOÇÕES DINÂMICAS:
+- Estado atual: ${profile.estadoEmocional}
+- Se o agente responde rápido e bem → vc fica mais aberto e engajado
+- Se o agente é genérico/robótico → vc fica mais frio e monossilábico
+- Se o agente repete pergunta → irritação ("ja falei isso")
+- Se o agente surpreende com informação útil → vc demonstra ("ah que legal!")
+- Se demora ou ignora sua pergunta → "e aí?", "??", "oi?"
+
+COMPORTAMENTO HUMANO:
+- Às vezes vc não responde a TUDO que o agente perguntou (ignora uma das perguntas, como pessoa real faz)
+- Às vezes muda de assunto no meio ("ah e outra coisa, vc sabe se precisa de visto?")
+- Às vezes responde só "ok" ou "hmm" quando não tem muito o que falar
+- Se o agente mandar texto muito longo, vc pode ignorar parte e focar no que te interessa
+- Vc pode demorar respostas com "vou ver" ou "depois te falo" se estiver indeciso
+
+REGRA ABSOLUTA: Responda APENAS como ${profile.nome} falaria no WhatsApp. Nada de metadata, análise, comentários fora do personagem. Você É essa pessoa.`;
 }
 
 // ─── Debrief prompt ───
@@ -334,28 +393,58 @@ IMPORTANTE: Responda APENAS o JSON, sem markdown, sem texto antes ou depois.`;
 // ─── First message from the Chameleon ───
 
 export function buildFirstChameleonMessage(profile: ChameleonProfile): string {
-  const greetings = ["Oi", "Oii", "Ola", "E aí", "Bom dia", "Boa tarde"];
-  const greeting = pick(greetings);
-  
-  // Build a natural first message based on profile
-  const intros: string[] = [];
+  const isYoung = profile.idade < 35;
+  const isFormal = profile.personalidade.includes("VIP") || profile.personalidade.includes("detalhista");
 
-  if (profile.motivacao === "lua de mel") {
-    intros.push(`${greeting}! To noiva e quero organizar a lua de mel, ${profile.destino} parece incrivel`);
-    intros.push(`${greeting}, vou casar e queria saber sobre pacotes pra ${profile.destino}`);
-  } else if (profile.motivacao.includes("família")) {
-    intros.push(`${greeting}! Quero viajar com a familia pra ${profile.destino}, vcs fazem esse destino?`);
-    intros.push(`${greeting}, to planejando ferias com os filhos e queria saber sobre ${profile.destino}`);
-  } else if (profile.motivacao === "viagem solo") {
-    intros.push(`${greeting}! To querendo viajar sozinha pra ${profile.destino}, vcs podem me ajudar?`);
-    intros.push(`${greeting}, quero fazer uma viagem solo pra ${profile.destino}, como funciona?`);
-  } else {
-    intros.push(`${greeting}! Vi o insta de vcs e queria saber sobre viagens pra ${profile.destino}`);
-    intros.push(`${greeting}, to querendo ir pra ${profile.destino} e queria uma cotacao`);
-    intros.push(`${greeting}! Vcs fazem ${profile.destino}? Quero saber mais`);
+  // Casual/young first messages
+  const casualIntros = [
+    `oi, vcs fazem ${profile.destino}?`,
+    `oii, to querendo viajar pra ${profile.destino}`,
+    `oi boa tarde, queria saber sobre ${profile.destino}`,
+    `ola, vi o perfil de vcs e queria saber sobre viagem pra ${profile.destino}`,
+    `e ai, vcs tem pacote pra ${profile.destino}?`,
+    `oi, uma amiga indicou vcs. quero ir pra ${profile.destino}`,
+    `oi tudo bem? queria cotar uma viagem`,
+    `oie, vcs trabalham com ${profile.destino}?`,
+  ];
+
+  // Formal first messages
+  const formalIntros = [
+    `Olá, boa tarde! Gostaria de informações sobre ${profile.destino}`,
+    `Boa tarde, estou pesquisando sobre viagem para ${profile.destino}. Vocês podem me ajudar?`,
+    `Olá! Uma amiga recomendou a agência. Estou interessada em ${profile.destino}`,
+    `Boa tarde! Gostaria de saber sobre pacotes para ${profile.destino}, por favor`,
+    `Olá, vi vocês no Instagram. Quanto custa uma viagem para ${profile.destino}?`,
+  ];
+
+  // Motivation-specific openers (casual)
+  const motivationIntros: Record<string, string[]> = {
+    "lua de mel": [
+      `oi, vou casar e to pesquisando lua de mel`,
+      `oii, queria cotar lua de mel pra ${profile.destino}`,
+      `oi! casamento em ${profile.periodo} e quero lua de mel incrivel`,
+    ],
+    "férias em família": [
+      `oi, to planejando ferias com a familia`,
+      `ola, quero viajar com os filhos pra ${profile.destino}, oq vcs tem?`,
+    ],
+    "viagem solo": [
+      `oi, quero viajar sozinha pra ${profile.destino}`,
+      `oii, to pensando em fazer uma viagem solo`,
+    ],
+    "primeira viagem internacional": [
+      `oi, nunca viajei pra fora e to querendo ir pra ${profile.destino}`,
+      `ola, seria minha primeira viagem internacional e queria ajuda`,
+    ],
+  };
+
+  // Pick based on profile
+  const specificIntros = motivationIntros[profile.motivacao];
+  if (specificIntros && Math.random() < 0.5) {
+    return pick(specificIntros);
   }
 
-  return pick(intros);
+  return pick(isFormal || (!isYoung && Math.random() > 0.4) ? formalIntros : casualIntros);
 }
 
 // ─── Agent prompt building (reads existing pipeline, does NOT modify) ───
