@@ -254,9 +254,12 @@ export default function SimuladorChameleonMode() {
       );
 
       // Apply pre-cached enrichment (skills + workflows — loaded once at mount)
-      const enrichment = enrichmentCacheRef.current[agentId];
-      if (enrichment) {
-        agentPrompt += enrichment;
+      // Skip for Maya — her prompt is self-contained; enrichment dilutes her constraints
+      if (agentId !== "maya") {
+        const enrichment = enrichmentCacheRef.current[agentId];
+        if (enrichment) {
+          agentPrompt += enrichment;
+        }
       }
 
       // Build history in OpenAI format

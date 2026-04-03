@@ -331,7 +331,7 @@ function truncateToWordLimit(text: string, maxWords: number): string {
 /**
  * Code-level enforcement: rules that can be enforced deterministically without AI.
  */
-export function enforceHardRules(text: string, agentId?: string): string {
+export function enforceHardRules(text: string, agentId?: string, lastLeadMessage?: string): string {
   // Remove em-dashes (—) and en-dashes (–)
   let cleaned = text.replace(/\s*[—–]\s*/g, ", ");
   // Collapse double commas
@@ -349,6 +349,42 @@ export function enforceHardRules(text: string, agentId?: string): string {
       if (!kept) { kept = true; return match; }
       return "";
     });
+  }
+
+  // ── Maya-specific behavioral enforcement (deterministic) ──
+  if (agentId === "maya") {
+    // 1. Multi-question block: keep only text up to (and including) first "?"
+    const questionMarks = (cleaned.match(/\?/g) || []).length;
+    if (questionMarks >= 2) {
+      const firstQ = cleaned.indexOf("?");
+      if (firstQ !== -1) {
+        cleaned = cleaned.slice(0, firstQ + 1).trim();
+      }
+    }
+
+    // 2. Storytelling / tourism fluff detector — remove matching sentences
+    const storytellingPatterns = [
+      /[^.!?]*uma?\s+energia\s+[úu]nica[^.!?]*[.!?]/gi,
+      /[^.!?]*imposs[ií]vel\s+de\s+resistir[^.!?]*[.!?]/gi,
+      /[^.!?]*foi\s+feit[ao]\s+pr[ao][^.!?]*[.!?]/gi,
+      /[^.!?]*cap[ií]tulo\s+[àa]\s+parte[^.!?]*[.!?]/gi,
+      /[^.!?]*mistura\s+de\s+\w+\s+com\s+\w+[^.!?]*[.!?]/gi,
+      /[^.!?]*lugar\s+m[áa]gico[^.!?]*[.!?]/gi,
+      /[^.!?]*experiência\s+[úu]nica[^.!?]*[.!?]/gi,
+      /[^.!?]*sonho\s+de\s+consumo[^.!?]*[.!?]/gi,
+      /[^.!?]*paraíso\s+(na\s+terra|terrestre)[^.!?]*[.!?]/gi,
+    ];
+    for (const pattern of storytellingPatterns) {
+      cleaned = cleaned.replace(pattern, "").trim();
+    }
+
+    // 3. Pivot detector: if lead asks about logistics/pricing → append [TRANSFERIR]
+    if (lastLeadMessage) {
+      const pivotKeywords = /\b(hotel|hot[ée]is|pre[çc]o|valor|op[çc][ãa]o|op[çc][õo]es|desconto|or[çc]amento|quanto\s+custa|pacote|tarifa|a[ée]reo|passagem|voo)\b/i;
+      if (pivotKeywords.test(lastLeadMessage) && !cleaned.includes("[TRANSFERIR]")) {
+        cleaned += " [TRANSFERIR]";
+      }
+    }
   }
 
   // Deterministic word-count enforcement
