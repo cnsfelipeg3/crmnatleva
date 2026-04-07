@@ -332,7 +332,7 @@ function truncateToWordLimit(text: string, maxWords: number): string {
 /**
  * Code-level enforcement: rules that can be enforced deterministically without AI.
  */
-export function enforceHardRules(text: string, agentId?: string, lastLeadMessage?: string): string {
+export function enforceHardRules(text: string, agentId?: string, lastLeadMessage?: string, agentMessageCount?: number): string {
   // Remove em-dashes (—) and en-dashes (–)
   let cleaned = text.replace(/\s*[—–]\s*/g, ", ");
   // Collapse double commas
@@ -389,9 +389,12 @@ export function enforceHardRules(text: string, agentId?: string, lastLeadMessage
     }
 
     // 3. Pivot detector: if lead asks about logistics/pricing → append [TRANSFERIR]
+    //    BUT only if Maya has already exchanged at least 4 messages (to avoid premature transfer)
     if (lastLeadMessage) {
       const pivotKeywords = /\b(hotel|hot[ée]is|pre[çc]o|valor|op[çc][ãa]o|op[çc][õo]es|desconto|or[çc]amento|quanto\s+custa|pacote|tarifa|a[ée]reo|passagem|voo)\b/i;
-      if (pivotKeywords.test(lastLeadMessage) && !cleaned.includes("[TRANSFERIR]")) {
+      const minMayaMessages = 4; // Maya must have sent at least 4 messages before auto-pivot
+      const hasEnoughHistory = (agentMessageCount ?? 0) >= minMayaMessages;
+      if (pivotKeywords.test(lastLeadMessage) && !cleaned.includes("[TRANSFERIR]") && hasEnoughHistory) {
         cleaned += " [TRANSFERIR]";
       }
     }
@@ -419,12 +422,13 @@ export async function fullCompliancePipeline(
   agentResponse: string,
   conversationContext: string,
   lastLeadMessage?: string,
+  agentMessageCount?: number,
 ): Promise<{ text: string; wasRewritten: boolean }> {
   // Step 1: AI-powered compliance check (uses Anthropic)
   const { text: checkedText, wasRewritten } = await runComplianceCheck(agentId, agentResponse, conversationContext);
   
   // Step 2: Deterministic hard rules (code-level, 100% guaranteed)
-  const finalText = enforceHardRules(checkedText, agentId, lastLeadMessage);
+  const finalText = enforceHardRules(checkedText, agentId, lastLeadMessage, agentMessageCount);
 
   return { 
     text: finalText, 
