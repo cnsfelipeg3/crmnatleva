@@ -422,12 +422,13 @@ export async function fullCompliancePipeline(
   agentResponse: string,
   conversationContext: string,
   lastLeadMessage?: string,
+  agentMessageCount?: number,
 ): Promise<{ text: string; wasRewritten: boolean }> {
   // Step 1: AI-powered compliance check (uses Anthropic)
   const { text: checkedText, wasRewritten } = await runComplianceCheck(agentId, agentResponse, conversationContext);
   
   // Step 2: Deterministic hard rules (code-level, 100% guaranteed)
-  const finalText = enforceHardRules(checkedText, agentId, lastLeadMessage);
+  const finalText = enforceHardRules(checkedText, agentId, lastLeadMessage, agentMessageCount);
 
   return { 
     text: finalText, 
