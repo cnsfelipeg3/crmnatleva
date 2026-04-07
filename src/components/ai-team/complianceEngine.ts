@@ -547,6 +547,8 @@ export function enforceHardRules(
 
 /**
  * Full compliance pipeline: AI check + hard rules enforcement.
+ * @param knownClientName - Pre-known client name (from lead profile, auto config, etc.)
+ * @param recentAgentMessages - Last N agent messages for name-frequency tracking
  */
 export async function fullCompliancePipeline(
   agentId: string,
@@ -554,6 +556,8 @@ export async function fullCompliancePipeline(
   conversationContext: string,
   lastLeadMessage?: string,
   agentMessageCount?: number,
+  knownClientName?: string,
+  recentAgentMessages?: string[],
 ): Promise<{ text: string; wasRewritten: boolean }> {
   // Step 1: AI-powered compliance check (uses Anthropic)
   const { text: checkedText, wasRewritten } = await runComplianceCheck(agentId, agentResponse, conversationContext);
@@ -561,8 +565,17 @@ export async function fullCompliancePipeline(
   // Step 2: Deterministic hard rules (code-level, 100% guaranteed)
   const finalText = enforceHardRules(checkedText, agentId, lastLeadMessage, agentMessageCount, conversationContext);
 
+  // Step 3: Unified name-frequency sanitization (deterministic, uses known name + aliases)
+  const { extractClientNames, sanitizeClientNameUsage } = await import("./agentFormatting");
+  const nameInfo = extractClientNames(conversationContext, knownClientName);
+  const agentMsgs = recentAgentMessages ?? conversationContext.split("\n")
+    .filter(l => /^(Agente|agent|assistant):/i.test(l))
+    .map(l => l.replace(/^(Agente|agent|assistant):\s*/i, ""))
+    .slice(-5);
+  const sanitizedText = sanitizeClientNameUsage(finalText, nameInfo, agentMsgs);
+
   return { 
-    text: finalText, 
-    wasRewritten: wasRewritten || finalText !== checkedText,
+    text: sanitizedText, 
+    wasRewritten: wasRewritten || sanitizedText !== checkedText,
   };
 }
