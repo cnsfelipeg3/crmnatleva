@@ -2,7 +2,7 @@ import { useState, useEffect, lazy, Suspense, memo } from "react";
 import { MessageSquare, Zap, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import NatLevaLoader from "@/components/NatLevaLoader";
+import { MinimalLoader } from "@/components/AppLoaders";
 
 const SimuladorAutoMode = lazy(() => import("@/components/ai-team/SimuladorAutoMode"));
 const SimuladorManualMode = lazy(() => import("@/components/ai-team/SimuladorManualMode"));
@@ -145,7 +145,7 @@ export default function AITeamSimulador() {
         </div>
 
         {/* Content */}
-        <Suspense fallback={<NatLevaLoader />}>
+        <Suspense fallback={<MinimalLoader inline />}>
           <div className="flex-1 min-h-0" style={{ display: mode === "manual" ? "flex" : "none", flexDirection: "column", contain: "layout style" }}>
             <SimuladorManualMode />
           </div>

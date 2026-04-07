@@ -4,7 +4,7 @@ import AppSidebar from "./AppSidebar";
 import GlobalSearch from "./GlobalSearch";
 import AIPageSummaryButton from "./AIPageSummaryButton";
 import PanelHelpButton from "./PanelHelpButton";
-import NatLevaLoader from "./NatLevaLoader";
+import { MinimalLoader } from "./AppLoaders";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useState } from "react";
@@ -74,7 +74,7 @@ export default function AppLayout() {
         </Sheet>
 
         <main className={cn("flex-1 min-h-0", isImmersive ? "overflow-hidden" : "overflow-auto")}>
-          <Suspense fallback={<NatLevaLoader />}>
+          <Suspense fallback={<MinimalLoader inline />}>
             <div className="page-enter">
               <Outlet />
             </div>
@@ -117,7 +117,7 @@ export default function AppLayout() {
           </header>
         )}
         <main className={cn("flex-1 overflow-auto min-h-0", isImmersive && "overflow-hidden")}>
-          <Suspense fallback={<NatLevaLoader />}>
+          <Suspense fallback={<MinimalLoader inline />}>
             <div className="page-enter">
               <Outlet />
             </div>

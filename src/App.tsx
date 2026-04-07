@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import SmartSuspense from "@/components/SmartSuspense";
-import NatLevaLoader from "@/components/NatLevaLoader";
+import { MinimalLoader, SessionAwareLoader } from "@/components/AppLoaders";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -153,11 +153,7 @@ const queryClient = new QueryClient({
 });
 
 function ScreenLoader() {
-   // After first load, show a minimal spinner instead of the full splash screen
-   if (sessionStorage.getItem("__natleva_first_load_done__")) {
-     return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
-   }
-   return <NatLevaLoader />;
+   return <SessionAwareLoader />;
 }
 
 // TODO: TEMPORÁRIO - Reativar proteção de login depois dos testes
@@ -311,17 +307,17 @@ function AppRoutes() {
         </Route>
 
         {/* Portal do Cliente - rotas separadas fora do CRM */}
-        <Route path="/portal/login" element={<Suspense fallback={<NatLevaLoader />}><PortalLogin /></Suspense>} />
-        <Route path="/portal" element={<Suspense fallback={<NatLevaLoader />}><PortalDashboard /></Suspense>} />
-        <Route path="/portal/viagens" element={<Suspense fallback={<NatLevaLoader />}><PortalMyTrips /></Suspense>} />
-        <Route path="/portal/viagem/:saleId" element={<Suspense fallback={<NatLevaLoader />}><PortalTripDetail /></Suspense>} />
-        <Route path="/portal/modelo" element={<Suspense fallback={<NatLevaLoader />}><PortalDemoTrip /></Suspense>} />
-        <Route path="/portal/financeiro" element={<Suspense fallback={<NatLevaLoader />}><PortalFinance /></Suspense>} />
-        <Route path="/portal/nova-cotacao" element={<Suspense fallback={<NatLevaLoader />}><PortalNewQuote /></Suspense>} />
-        <Route path="/portal/perfil" element={<Suspense fallback={<NatLevaLoader />}><PortalProfile /></Suspense>} />
+        <Route path="/portal/login" element={<Suspense fallback={<MinimalLoader />}><PortalLogin /></Suspense>} />
+        <Route path="/portal" element={<Suspense fallback={<MinimalLoader />}><PortalDashboard /></Suspense>} />
+        <Route path="/portal/viagens" element={<Suspense fallback={<MinimalLoader />}><PortalMyTrips /></Suspense>} />
+        <Route path="/portal/viagem/:saleId" element={<Suspense fallback={<MinimalLoader />}><PortalTripDetail /></Suspense>} />
+        <Route path="/portal/modelo" element={<Suspense fallback={<MinimalLoader />}><PortalDemoTrip /></Suspense>} />
+        <Route path="/portal/financeiro" element={<Suspense fallback={<MinimalLoader />}><PortalFinance /></Suspense>} />
+        <Route path="/portal/nova-cotacao" element={<Suspense fallback={<MinimalLoader />}><PortalNewQuote /></Suspense>} />
+        <Route path="/portal/perfil" element={<Suspense fallback={<MinimalLoader />}><PortalProfile /></Suspense>} />
 
         {/* Proposta pública */}
-        <Route path="/proposta/:slug" element={<Suspense fallback={<NatLevaLoader />}><ProposalPublicView /></Suspense>} />
+        <Route path="/proposta/:slug" element={<Suspense fallback={<MinimalLoader />}><ProposalPublicView /></Suspense>} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
