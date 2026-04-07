@@ -100,7 +100,13 @@ export function sanitizeClientNameUsage(
   const last3 = recentAgentMessages.slice(-3);
   const recentUsageCount = last3.filter(msg => nameInfo.allPatterns.some(p => { p.lastIndex = 0; return p.test(msg); })).length;
 
-  if (prevUsedName || recentUsageCount >= 1) {
+  // Only strip if BOTH previous message used name AND it's been used recently (consecutive block)
+  if (prevUsedName) {
+    return stripAllNameOccurrences(agentText, nameInfo);
+  }
+
+  // If name was used in 2+ of last 3 messages, strip (but 1 out of 3 is fine)
+  if (recentUsageCount >= 2) {
     return stripAllNameOccurrences(agentText, nameInfo);
   }
 

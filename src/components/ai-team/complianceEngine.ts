@@ -407,7 +407,7 @@ function enforceNameFrequency(agentText: string, conversationContext: string): s
   // Rule 2: If name used in >40% of agent messages → strip ALL from current
   const usageRatio = totalAgentMsgs > 0 ? agentMsgsWithName / totalAgentMsgs : 0;
 
-  if (prevUsedName || usageRatio > 0.4) {
+  if (prevUsedName || usageRatio > 0.5) {
     // Strip leading "Name," or "Name!" greeting
     let result = agentText.replace(new RegExp(`^${clientName}\\s*[,!]\\s*`, "i"), "");
     // Strip remaining occurrences like "Name," in the middle
@@ -447,6 +447,22 @@ export function enforceHardRules(
       if (!kept) { kept = true; return match; }
       return "";
     });
+  }
+
+    // ── Rude/dismissive phrase filter (all agents) ──
+  const rudePatterns = [
+    /[^.!?]*j[áa]\s+te\s+expliquei\s+isso[^.!?]*[.!?]?/gi,
+    /[^.!?]*j[áa]\s+(?:falei|disse|respondi)\s+(?:isso|sobre\s+isso)[^.!?]*[.!?]?/gi,
+    /[^.!?]*como\s+(?:eu\s+)?j[áa]\s+(?:mencionei|expliquei|disse)[^.!?]*[.!?]?/gi,
+    /[^.!?]*conforme\s+(?:eu\s+)?j[áa]\s+(?:expliquei|informei|falei)[^.!?]*[.!?]?/gi,
+  ];
+  for (const rp of rudePatterns) {
+    cleaned = cleaned.replace(rp, "").trim();
+  }
+  // Clean leftover artifacts
+  cleaned = cleaned.replace(/^\s*[,.\s]+/, "").trim();
+  if (cleaned.length > 0) {
+    cleaned = cleaned.replace(/^[a-zà-ú]/, c => c.toUpperCase());
   }
 
   // ── Maya-specific behavioral enforcement (deterministic) ──
