@@ -279,7 +279,8 @@ export default function SimuladorChameleonMode() {
       try {
         const conversationContext = currentMessages.map(m => `${m.role === "lead" ? "Lead" : "Agente"}: ${m.content}`).join("\n");
         const lastLead = [...currentMessages].reverse().find(m => m.role === "lead")?.content || "";
-        const { text: compliantText, wasRewritten } = await fullCompliancePipeline(agentId, cleanResponse, conversationContext, lastLead);
+        const agentMsgCount = currentMessages.filter(m => m.role === "agent" && m.agentId === agentId).length;
+        const { text: compliantText, wasRewritten } = await fullCompliancePipeline(agentId, cleanResponse, conversationContext, lastLead, agentMsgCount);
         if (wasRewritten) {
           debugLog(`[CHAMELEON] Compliance rewrite applied for ${agent.name}`);
         }

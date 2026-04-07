@@ -350,8 +350,9 @@ export default function SimuladorManualMode() {
         // 🛡️ Compliance Engine
         const conversationCtx = currentMessages.map(m => `${m.role}: ${m.content}`).join("\n");
         const lastLeadMsg = [...currentMessages].reverse().find(m => m.role === "user")?.content || "";
+        const agentMsgCount = currentMessages.filter(m => m.role === "agent").length;
         var { text: compliantText, wasRewritten } = await fullCompliancePipeline(
-          selectedAgent.id, agentText, conversationCtx, lastLeadMsg,
+          selectedAgent.id, agentText, conversationCtx, lastLeadMsg, agentMsgCount,
         );
         if (wasRewritten) {
           debugLog(`🛡️ Compliance rewrite applied for ${selectedAgent.name}`);
