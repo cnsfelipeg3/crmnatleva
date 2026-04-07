@@ -1,53 +1,73 @@
 
+Diagnóstico
 
-## Diagnóstico NatLeva — Problemas no Simulador Camaleão
+- O problema é real. No print, a agente usa “Fê” em várias respostas seguidas; isso ainda soa mecânico.
+- Pelo código atual, a proteção existe, mas está falhando por alguns motivos objetivos:
+  1. `complianceEngine.ts` não reconhece bem formatos como “Pode me chamar de Fernanda (ou Fê)”;
+  2. apelidos curtos e com acento (`Lu`, `Ju`, `Fê`) têm alta chance de escapar;
+  3. o filtro depende demais do texto recente da conversa, então no automático/camaleão ele pode “esquecer” o nome;
+  4. o modo automático não aplica o mesmo fallback final de limpeza que manual/camaleão;
+  5. a contagem atual de uso do nome está frágil e pode subcontar repetições.
 
-### Problemas identificados nas screenshots
+Plano de correção
 
-| # | Problema | Onde aparece |
-|---|---|---|
-| 1 | **`[TRANSFERIR]` visível no balão da Maya** | Screenshot 1-2 |
-| 2 | **`[BRIEFING PARA ESPECIALISTA ÁSIA, HABIBI]:` visível no balão do Atlas** | Screenshot 5 |
-| 3 | **Atlas diz "Minha colega vai te passar"** — viola regra de transição invisível | Screenshot 3 |
-| 4 | **Atlas responde com texto enorme** (~130 palavras) — deveria ser mais curto para WhatsApp | Screenshots 3-5 |
+1. Fortalecer a leitura de nome e apelido
+- Criar um extrator único para nome do cliente + apelidos.
+- Cobrir padrões como:
+  - “sou a Fernanda”
+  - “me chamo Fernanda”
+  - “pode me chamar de Fernanda”
+  - “pode me chamar de Fernanda (ou Fê)”
+  - apelidos curtos como `Lu`, `Ju`, `Fê`.
 
-### Causa raiz de cada bug
+2. Passar o nome conhecido para o motor
+- `SimuladorAutoMode.tsx`: usar `lead.nome` explicitamente.
+- `SimuladorChameleonMode.tsx`: usar `profile.nome`.
+- `SimuladorManualMode.tsx`: continuar derivando do chat, mas com detector melhor.
+- Vou levar isso para o pipeline de compliance de forma clara, sem mexer no workflow dos agentes.
 
-**Bug 1: `[TRANSFERIR]` visível**
-Em `SimuladorChameleonMode.tsx`, o `cleanResponse` recebe `[TRANSFERIR]` de volta do compliance pipeline (linha 285-289). O conteúdo é salvo no state (linha 304-313) ANTES da remoção do tag (linha 318). Ou seja, o usuário vê a tag no balão.
+3. Unificar a trava nos 3 modos
+- Aplicar a mesma sanitização final em manual, automático e camaleão.
+- Regra segura e humana:
+  - nunca usar o nome em mensagens consecutivas;
+  - no máximo 1 uso nas últimas 3 respostas do agente;
+  - se o modelo insistir, o nome/apelido é removido automaticamente antes de aparecer na UI.
 
-**Bug 2: `[BRIEFING...]` visível**
-Nenhum regex em `enforceAgentFormatting` ou `enforceHardRules` remove tags internas como `[BRIEFING PARA ...]`. A IA do Atlas gera essa tag e ela passa direto para o UI.
+4. Reforço leve de prompt, sem revirar o sistema
+- Em `buildAgentPrompt.ts`, reforçar para agentes comerciais que nome é ocasional, não abertura padrão.
+- A garantia principal continuará sendo determinística no pós-processamento.
 
-**Bug 3: "Minha colega"**
-O regex em `enforceAgentFormatting` (linha 22) captura "meu colega" mas NÃO "minha colega". Falta a variação feminina.
+5. Blindagem contra regressão
+- Não vou mexer em:
+  - transferência
+  - funil
+  - scoring
+  - handoff
+  - lógica central dos agentes
+  - simulador de leads
+- A mudança fica focada em anti-repetição de nome e unificação entre modos.
 
-**Bug 4: Atlas muito longo**
-O `DEFAULT_WORD_LIMIT` é 120 palavras. Para WhatsApp, Atlas deveria ter ~80-90 palavras no máximo.
+6. Testes antes de considerar “resolvido”
+- Adicionar testes para:
+  - `Fernanda / Fê`
+  - `Lu / Ju`
+  - nome conhecido no automático/camaleão mesmo sem reapresentação no chat
+  - remoção em repetição consecutiva
+  - preservação de uso ocasional e natural quando fizer sentido
 
-### Plano de correção
+Arquivos que pretendo tocar
 
-#### 1. `SimuladorChameleonMode.tsx` — Reordenar strip e setState
-Mover a remoção de `[TRANSFERIR]` e tags internas para ANTES de criar o `agentMsg` e setMessages. Sequência correta:
-1. Compliance pipeline → `cleanResponse`
-2. Strip `[TRANSFERIR]` + detectar transfer
-3. Strip `[BRIEFING...]` e outras tags internas
-4. Word-count enforcer
-5. Criar `agentMsg` com texto limpo
-6. `setMessages`
+- `src/components/ai-team/complianceEngine.ts`
+- `src/components/ai-team/agentFormatting.ts`
+- `src/components/ai-team/SimuladorAutoMode.tsx`
+- `src/components/ai-team/SimuladorManualMode.tsx`
+- `src/components/ai-team/SimuladorChameleonMode.tsx`
+- `src/utils/buildAgentPrompt.ts`
+- testes em `src/test/...`
 
-#### 2. `agentFormatting.ts` — Expandir filtros
-- Adicionar regex para "minha colega", "minha parceira", "nossa equipe vai"
-- Adicionar strip de tags internas: `\[BRIEFING[^\]]*\]:?`, `\[TRANSFERIR\]`, `\[ESCALON[^\]]*\]`
+Detalhes técnicos
 
-#### 3. `complianceEngine.ts` — Reduzir word limit do Atlas
-- Adicionar `atlas: 90` no `AGENT_WORD_LIMITS`
-- Reduzir `DEFAULT_WORD_LIMIT` de 120 para 100
-
-### Arquivos alterados
-| Arquivo | Mudança |
-|---|---|
-| `SimuladorChameleonMode.tsx` | Reordenar: strip tags antes de setState |
-| `agentFormatting.ts` | Novos regex para "minha colega" + strip `[BRIEFING...]` |
-| `complianceEngine.ts` | Atlas word limit = 90, default = 100 |
-
+- Vou trocar a lógica atual por uma detecção com suporte a alias/apelido.
+- Vou usar matching seguro para nomes com acento.
+- Vou eliminar a dependência excessiva de “só o trecho recente da conversa”.
+- A correção será aditiva e contida: primeiro fortalecer identidade do cliente, depois unificar a sanitização final nos 3 modos.
