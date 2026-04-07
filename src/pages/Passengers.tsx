@@ -435,7 +435,7 @@ export default function Passengers() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map((p) => (
+          {filtered.slice(0, visibleCount).map((p) => (
             <Card
               key={p.id}
               className={`p-4 glass-card cursor-pointer hover:shadow-md transition-shadow ${bulkMode && bulkSelection.has(p.id) ? "ring-2 ring-primary" : ""}`}

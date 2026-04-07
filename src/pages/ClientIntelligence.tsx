@@ -478,20 +478,26 @@ export default function ClientIntelligence() {
             {/* Segmento Distribution */}
             <Card className="p-5 glass-card">
               <h3 className="text-sm font-semibold mb-4 flex items-center gap-2"><Crown className="w-4 h-4 text-primary" /> Distribuição por Segmento</h3>
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie data={crossData.segData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={3} dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    onClick={(_, i) => {
-                      const seg = crossData.segData[i]?.name;
-                      if (seg) openDrilldown(`Segmento: ${seg}`, analysisData.filter(c => c.segmento === seg));
-                    }}
-                    className="cursor-pointer">
-                    {crossData.segData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => [v, "Clientes"]} />
-                </PieChart>
-              </ResponsiveContainer>
+              {crossData.segData.length === 0 ? (
+                <div className="flex items-center justify-center h-[260px] text-muted-foreground text-sm">
+                  Nenhum segmento atribuído
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={260}>
+                  <PieChart>
+                    <Pie data={crossData.segData} cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={3} dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      onClick={(_, i) => {
+                        const seg = crossData.segData[i]?.name;
+                        if (seg) openDrilldown(`Segmento: ${seg}`, analysisData.filter(c => c.segmento === seg));
+                      }}
+                      className="cursor-pointer">
+                      {crossData.segData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip formatter={(v: number) => [v, "Clientes"]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </Card>
 
             {/* Score Distribution */}
@@ -533,11 +539,11 @@ export default function ClientIntelligence() {
             <Card className="p-4 glass-card">
               <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><DollarSign className="w-4 h-4 text-success" /> Top 5 Receita</h3>
               <div className="space-y-2">
-                {rankings.byRevenue.slice(0, 5).map((c, i) => (
+                {rankings.byRevenue.filter(c => c.name && c.name !== "Sem Nome").slice(0, 5).map((c, i) => (
                   <div key={c.key} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded-lg p-1.5 transition-colors"
                     onClick={() => setSelectedClient(c)}>
                     <span className="text-xs font-mono text-muted-foreground w-5">{i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i + 1}.`}</span>
-                    <span className="text-xs font-medium text-foreground flex-1 truncate">{c.name}</span>
+                    <span className="text-xs font-medium text-foreground flex-1 truncate">{c.name || `Cliente #${c.key.slice(0, 6)}`}</span>
                     <span className="text-xs font-mono text-success">{fmt(c.totalRevenue)}</span>
                   </div>
                 ))}
