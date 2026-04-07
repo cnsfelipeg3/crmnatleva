@@ -536,8 +536,10 @@ export default function SimuladorAutoMode() {
             );
             if (!simAtivaRef.current) return;
             // 🛡️ Compliance on objection response too
-            const objCtx = lead.mensagens.slice(-8).map(m => `${m.role}: ${m.content}`).join("\n");
-            const { text: compliantObj, wasRewritten: objRewritten } = await fullCompliancePipeline(agent.id, objResp, objCtx);
+            const objCtx = lead.mensagens.slice(-8).map(m => `${m.role === "client" ? "Lead" : "Agente"}: ${m.content}`).join("\n");
+            const lastObjLead = [...lead.mensagens].reverse().find(m => m.role === "client")?.content || "";
+            const objAgentCount = lead.mensagens.filter(m => m.role === "agent").length;
+            const { text: compliantObj, wasRewritten: objRewritten } = await fullCompliancePipeline(agent.id, objResp, objCtx, lastObjLead, objAgentCount);
             if (objRewritten) objResp = compliantObj;
             // Truncate long objection responses too
             if (objResp.length > 300) {
