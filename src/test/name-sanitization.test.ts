@@ -58,13 +58,22 @@ describe("sanitizeClientNameUsage", () => {
     expect(result.length).toBeGreaterThan(5);
   });
 
-  it("strips name when used in 1+ of last 3 messages", () => {
+  it("strips name when used in 2+ of last 3 messages", () => {
+    const result = sanitizeClientNameUsage(
+      "Fernanda, vou montar!",
+      ferInfo,
+      ["Fernanda, oi!", "Fernanda, anotei!", "Show!"]
+    );
+    expect(result).not.toContain("Fernanda");
+  });
+
+  it("allows name when used in only 1 of last 3 messages", () => {
     const result = sanitizeClientNameUsage(
       "Fernanda, vou montar!",
       ferInfo,
       ["Oi!", "Fernanda, anotei!", "Show!"]
     );
-    expect(result).not.toContain("Fernanda");
+    expect(result).toContain("Fernanda");
   });
 
   it("allows name when no recent usage", () => {
