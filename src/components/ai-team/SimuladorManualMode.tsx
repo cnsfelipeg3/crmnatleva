@@ -94,7 +94,9 @@ export default function SimuladorManualMode() {
   const { config: agencyConfig } = useAgencyConfig();
   const { data: globalRules = [] } = useGlobalRules();
   const globalRulesBlock = buildGlobalRulesBlock(globalRules);
-  const [selectedAgent, setSelectedAgent] = useState(AGENTS_V4[2]);
+  // Always start with Maya (index 2 in AGENTS_V4 = maya)
+  const mayaAgent = AGENTS_V4.find(a => a.id === "maya") || AGENTS_V4[2];
+  const [selectedAgent, setSelectedAgent] = useState(mayaAgent);
   const [selectedDestino, setSelectedDestinoRaw] = useState("💬 Livre");
   const isLivreMode = selectedDestino === "💬 Livre";
   const setSelectedDestino = (d: string) => {
@@ -620,6 +622,9 @@ export default function SimuladorManualMode() {
     messagesRef.current = [];
     isProcessingRef.current = false;
     clearComplianceCache();
+    // CRITICAL: Always reset to Maya on new conversation
+    const mayaReset = AGENTS_V4.find(a => a.id === "maya") || AGENTS_V4[2];
+    setSelectedAgent(mayaReset);
     setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0); setReplyingTo(null); setManualObsSelectedMsg(null); setLoading(false);
   };
 
