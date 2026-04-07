@@ -398,7 +398,11 @@ export default function SimuladorAutoMode() {
           const convCtx = lead.mensagens.slice(-10).map(m => `${m.role === "client" ? "Lead" : "Agente"}: ${m.content}`).join("\n");
           const lastLeadMsg = [...lead.mensagens].reverse().find(m => m.role === "client")?.content || "";
           const agentMsgCount = lead.mensagens.filter(m => m.role === "agent").length;
-          const { text: compliantResp, wasRewritten } = await fullCompliancePipeline(agent.id, agentResp, convCtx, lastLeadMsg, agentMsgCount);
+          const recentAgentMsgs = lead.mensagens.filter(m => m.role === "agent").map(m => m.content).slice(-5);
+          const { text: compliantResp, wasRewritten } = await fullCompliancePipeline(
+            agent.id, agentResp, convCtx, lastLeadMsg, agentMsgCount,
+            lead.nome, recentAgentMsgs,
+          );
           if (wasRewritten) {
             agentResp = compliantResp;
             addEvent("#EF4444", `🛡️ Compliance: resposta de ${agent.name} corrigida para ${lead.nome}`, "🛡️");
