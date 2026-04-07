@@ -355,8 +355,11 @@ export default function SimuladorManualMode() {
         );
         if (wasRewritten) {
           debugLog(`🛡️ Compliance rewrite applied for ${selectedAgent.name}`);
-          updateAgent(compliantText);
         }
+        // Anti-name-repetition: strip leading name if previous agent msg also started with same name
+        const prevAgentMsg = [...currentMessages].reverse().find(m => m.role === "agent")?.content;
+        compliantText = stripRepeatedLeadingName(compliantText, prevAgentMsg);
+        updateAgent(compliantText);
       }
 
       // Use compliantText (post-compliance) for transfer check — pivot detector injects [TRANSFERIR] there
