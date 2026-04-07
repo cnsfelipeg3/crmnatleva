@@ -330,9 +330,56 @@ function truncateToWordLimit(text: string, maxWords: number): string {
 }
 
 /**
+ * Detects if the 5 mandatory fields are present in the conversation history.
+ * Fields: nome, destino, período, duração, composição do grupo.
+ */
+function detectMandatoryFields(conversationText: string): boolean {
+  const lower = conversationText.toLowerCase();
+
+  // Name: lead introduced themselves (e.g. "sou o Leo", "me chamo", "meu nome é")
+  const hasName = /\b(sou\s+[ao]?\s*\w+|me\s+chamo|meu\s+nome|pode\s+me\s+chamar)\b/i.test(lower)
+    || /\b(oi|ol[aá])\s*(nath|nat)\b/i.test(lower); // greeting implies name is in context
+
+  // Destination: any city/country/destination mention
+  const hasDestino = /\b(orlando|disney|miami|nova\s*york|new\s*york|cancun|paris|roma|italia|europa|dubai|maldivas|tailandia|bali|toquio|japao|portugal|lisboa|londres|london|hawaii|punta\s*cana|santiago|buenos\s*aires|cape\s*town|egito|grecia|turquia|caribe|africa|asia|oceania|fernando\s*de\s*noronha|gramado|bariloche|ushuaia|patagonia|peru|machu\s*picchu|colombia|cartagena|mexico|los\s*angeles|las\s*vegas|california|floripa|florianopolis|rio\s*de\s*janeiro|salvador|jericoacoara|maragogi|bonito|eua|estados\s*unidos)\b/i.test(lower);
+
+  // Period: month, season or date reference
+  const hasPeriodo = /\b(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez|f[ée]rias|natal|carnaval|ano\s*novo|reveillon|202[4-9]|203\d)\b/i.test(lower);
+
+  // Duration: number + days/nights/weeks or "X dias"
+  const hasDuracao = /\b(\d+\s*(dias?|noites?|semanas?|diaria)|\d+d\b|\d+\s*a\s*\d+\s*dias?)\b/i.test(lower);
+
+  // Group composition: number of people, couple, family etc.
+  const hasGrupo = /\b(casal|sozinho|sozinha|familia|fam[ií]lia|\d+\s*(pessoa|pax|adulto|crian[cç]a|beb[eê]|filh[oa])|\bsomos\s*\d|\beu\s+e\s+(meu|minha|o|a)\b|\d+\s*\(|\(\d+\))\b/i.test(lower);
+
+  return hasName && hasDestino && hasPeriodo && hasDuracao && hasGrupo;
+}
+
+/**
+ * Detects if the agent is stuck in a "promise loop" — repeating variations
+ * of "vou montar/preparar/organizar" without escalating.
+ */
+function detectPromiseLoop(conversationText: string): boolean {
+  const agentMessages = conversationText.match(/(?:^|\n)(?:AGENTE|NATH|ATLAS|MAYA)[:\s]([^\n]+)/gi) || [];
+  const promisePatterns = /\b(vou\s+montar|vou\s+preparar|vou\s+organizar|te\s+mand[oa]|te\s+envio|j[áa]\s+j[áa]|em\s+breve|rapidinho|te\s+retorno|volto\s+com|finalizar\s+aqui|caprichar|mont(ar|ando)\s+(as\s+)?op[çc][õo]es)\b/i;
+
+  let promiseCount = 0;
+  for (const msg of agentMessages) {
+    if (promisePatterns.test(msg)) promiseCount++;
+  }
+  return promiseCount >= 2;
+}
+
+/**
  * Code-level enforcement: rules that can be enforced deterministically without AI.
  */
-export function enforceHardRules(text: string, agentId?: string, lastLeadMessage?: string, agentMessageCount?: number): string {
+export function enforceHardRules(
+  text: string,
+  agentId?: string,
+  lastLeadMessage?: string,
+  agentMessageCount?: number,
+  conversationContext?: string,
+): string {
   // Remove em-dashes (—) and en-dashes (–)
   let cleaned = text.replace(/\s*[—–]\s*/g, ", ");
   // Collapse double commas
@@ -400,10 +447,27 @@ export function enforceHardRules(text: string, agentId?: string, lastLeadMessage
     }
   }
 
-  // Anti-name-repetition: strip leading client name if it appears too often
-  // This is handled via conversationHistory in the caller, but as a safety net
-  // we strip common "Name," or "Name!" patterns at the very start when detected
-  // (The prompt-level rule should prevent this, but this is a deterministic fallback)
+  // ── Atlas-specific: force escalation when 5 fields are collected or promise loop detected ──
+  if (agentId === "atlas" && conversationContext) {
+    const msgCount = agentMessageCount ?? 0;
+
+    // Only apply after Atlas has sent at least 3 messages (avoid instant transfer)
+    if (msgCount >= 3) {
+      const fieldsComplete = detectMandatoryFields(conversationContext);
+      const promiseLoop = detectPromiseLoop(conversationContext);
+
+      if ((fieldsComplete || promiseLoop) && !cleaned.includes("[TRANSFERIR]")) {
+        // Strip any "vou montar/preparar" promises and force escalation
+        if (promiseLoop) {
+          console.log("🔄 Atlas promise loop detected — forcing escalation");
+        }
+        if (fieldsComplete) {
+          console.log("✅ Atlas 5 mandatory fields detected — forcing escalation");
+        }
+        cleaned += " [TRANSFERIR]";
+      }
+    }
+  }
 
   // Deterministic word-count enforcement
   if (agentId) {
@@ -428,7 +492,7 @@ export async function fullCompliancePipeline(
   const { text: checkedText, wasRewritten } = await runComplianceCheck(agentId, agentResponse, conversationContext);
   
   // Step 2: Deterministic hard rules (code-level, 100% guaranteed)
-  const finalText = enforceHardRules(checkedText, agentId, lastLeadMessage, agentMessageCount);
+  const finalText = enforceHardRules(checkedText, agentId, lastLeadMessage, agentMessageCount, conversationContext);
 
   return { 
     text: finalText, 
