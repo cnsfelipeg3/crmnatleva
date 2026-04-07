@@ -351,15 +351,15 @@ export default function SimuladorManualMode() {
         const conversationCtx = currentMessages.map(m => `${m.role}: ${m.content}`).join("\n");
         const lastLeadMsg = [...currentMessages].reverse().find(m => m.role === "user")?.content || "";
         const agentMsgCount = currentMessages.filter(m => m.role === "agent").length;
+        const recentAgentMsgs = currentMessages.filter(m => m.role === "agent").map(m => m.content).slice(-5);
         var { text: compliantText, wasRewritten } = await fullCompliancePipeline(
           selectedAgent.id, agentText, conversationCtx, lastLeadMsg, agentMsgCount,
+          undefined, recentAgentMsgs,
         );
         if (wasRewritten) {
           debugLog(`🛡️ Compliance rewrite applied for ${selectedAgent.name}`);
         }
-        // Anti-name-repetition: strip leading name if previous agent msg also started with same name
-        const prevAgentMsg = [...currentMessages].reverse().find(m => m.role === "agent")?.content;
-        compliantText = stripRepeatedLeadingName(compliantText, prevAgentMsg);
+        // Name sanitization is now handled inside fullCompliancePipeline
         updateAgent(compliantText);
       }
 
