@@ -65,7 +65,8 @@ export function extractClientNames(conversationContext: string, knownName?: stri
   const fullName = allNames.reduce((a, b) => a.length >= b.length ? a : b, "");
   const allPatterns = allNames.map(n => {
     const escaped = n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`\\b${escaped}\\b`, "gi");
+    // Use lookahead/lookbehind for word boundaries that work with accented chars
+    return new RegExp(`(?<![A-Za-zÀ-ÿ])${escaped}(?![A-Za-zÀ-ÿ])`, "gi");
   });
 
   return { fullName, aliases: allNames, allPatterns };
