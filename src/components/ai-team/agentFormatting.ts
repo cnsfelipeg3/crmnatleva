@@ -34,12 +34,16 @@ export function enforceAgentFormatting(text: string): string {
 }
 
 /**
- * Strips the client name from the beginning of a message if the previous
- * agent message also started with the same name — prevents robotic repetition.
+ * Strips excessive client name usage from agent messages.
+ * 
+ * Two layers:
+ * 1. If previous agent msg started with same name → strip from beginning of current
+ * 2. If current msg uses the name 2+ times → remove all but the first occurrence
+ * 3. If previous agent msg used the name anywhere → strip ALL occurrences from current
  * 
  * @param currentMsg - The new agent message
  * @param previousAgentMsg - The last agent message (if any)
- * @returns The message with leading name removed if it was repeated
+ * @returns The message with excessive name usage removed
  */
 export function stripRepeatedLeadingName(currentMsg: string, previousAgentMsg?: string): string {
   if (!previousAgentMsg) return currentMsg;
@@ -49,9 +53,41 @@ export function stripRepeatedLeadingName(currentMsg: string, previousAgentMsg?: 
   const currentMatch = currentMsg.match(namePattern);
   const prevMatch = previousAgentMsg.match(namePattern);
 
-  if (currentMatch && prevMatch && currentMatch[1].toLowerCase() === prevMatch[1].toLowerCase()) {
-    // Both messages start with the same name — strip it from current
-    return currentMsg.replace(namePattern, "").replace(/^[a-zà-ú]/, c => c.toUpperCase());
+  // Detect the client name from either message
+  const clientName = currentMatch?.[1] || prevMatch?.[1];
+  if (!clientName) return currentMsg;
+
+  const nameRegex = new RegExp(`\\b${clientName}\\b`, "gi");
+
+  // Count how many times the name appears in previous agent message
+  const prevNameCount = (previousAgentMsg.match(nameRegex) || []).length;
+  // Count how many times the name appears in current message
+  const currentNameCount = (currentMsg.match(nameRegex) || []).length;
+
+  // If previous message already used the name → strip ALL from current
+  if (prevNameCount > 0 && currentNameCount > 0) {
+    let result = currentMsg;
+    // Strip leading "Name," or "Name!"
+    result = result.replace(namePattern, "");
+    // Strip remaining occurrences like "Name," or ", Name," in the middle
+    result = result.replace(new RegExp(`[,.]?\\s*${clientName}[,!]?\\s*`, "gi"), " ");
+    // Clean up double spaces and leading lowercase
+    result = result.replace(/\s{2,}/g, " ").trim();
+    result = result.replace(/^[a-zà-ú]/, c => c.toUpperCase());
+    // Clean artifacts: leading comma/period
+    result = result.replace(/^[,.\s]+/, "").trim();
+    return result;
   }
+
+  // If current message uses the name 2+ times → keep only first
+  if (currentNameCount >= 2) {
+    let kept = false;
+    const result = currentMsg.replace(nameRegex, (match) => {
+      if (!kept) { kept = true; return match; }
+      return "";
+    }).replace(/\s{2,}/g, " ").replace(/,\s*,/g, ",").replace(/,\s*\./g, ".").trim();
+    return result;
+  }
+
   return currentMsg;
 }
