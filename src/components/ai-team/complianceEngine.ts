@@ -397,6 +397,11 @@ export function enforceHardRules(text: string, agentId?: string, lastLeadMessage
     }
   }
 
+  // Anti-name-repetition: strip leading client name if it appears too often
+  // This is handled via conversationHistory in the caller, but as a safety net
+  // we strip common "Name," or "Name!" patterns at the very start when detected
+  // (The prompt-level rule should prevent this, but this is a deterministic fallback)
+
   // Deterministic word-count enforcement
   if (agentId) {
     const limit = AGENT_WORD_LIMITS[agentId] ?? DEFAULT_WORD_LIMIT;

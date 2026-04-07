@@ -32,3 +32,26 @@ export function enforceAgentFormatting(text: string): string {
   cleaned = cleaned.replace(/\n{3,}/g, "\n\n").trim();
   return cleaned;
 }
+
+/**
+ * Strips the client name from the beginning of a message if the previous
+ * agent message also started with the same name — prevents robotic repetition.
+ * 
+ * @param currentMsg - The new agent message
+ * @param previousAgentMsg - The last agent message (if any)
+ * @returns The message with leading name removed if it was repeated
+ */
+export function stripRepeatedLeadingName(currentMsg: string, previousAgentMsg?: string): string {
+  if (!previousAgentMsg) return currentMsg;
+
+  // Extract leading name pattern: "Name," or "Name!" at the start
+  const namePattern = /^([A-ZÀ-Ú][a-zà-ú]{1,12})\s*[,!]\s*/;
+  const currentMatch = currentMsg.match(namePattern);
+  const prevMatch = previousAgentMsg.match(namePattern);
+
+  if (currentMatch && prevMatch && currentMatch[1].toLowerCase() === prevMatch[1].toLowerCase()) {
+    // Both messages start with the same name — strip it from current
+    return currentMsg.replace(namePattern, "").replace(/^[a-zà-ú]/, c => c.toUpperCase());
+  }
+  return currentMsg;
+}
