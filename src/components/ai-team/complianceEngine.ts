@@ -469,6 +469,12 @@ export function enforceHardRules(
     }
   }
 
+  // ── Centralized name-repetition enforcement ──
+  // Extracts client name from conversation and strips excessive usage
+  if (conversationContext) {
+    cleaned = enforceNameFrequency(cleaned, conversationContext);
+  }
+
   // Deterministic word-count enforcement
   if (agentId) {
     const limit = AGENT_WORD_LIMITS[agentId] ?? DEFAULT_WORD_LIMIT;
