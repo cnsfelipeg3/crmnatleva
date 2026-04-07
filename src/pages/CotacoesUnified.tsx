@@ -1,7 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlaneTakeoff, Sparkles, Radio } from "lucide-react";
 import { lazy, Suspense } from "react";
-import NatLevaLoader from "@/components/NatLevaLoader";
+import { MinimalLoader } from "@/components/AppLoaders";
 
 const CotacoesMonitorView = lazy(() => import("@/components/cotacoes/CotacoesMonitorView"));
 const QuoteRequests = lazy(() => import("@/pages/QuoteRequests"));
@@ -24,19 +24,19 @@ export default function CotacoesUnified() {
         </TabsList>
 
         <TabsContent value="monitor" className="mt-4">
-          <Suspense fallback={<NatLevaLoader />}>
+          <Suspense fallback={<MinimalLoader inline />}>
             <CotacoesMonitorView />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="briefings" className="mt-4">
-          <Suspense fallback={<NatLevaLoader />}>
+          <Suspense fallback={<MinimalLoader inline />}>
             <QuotationBriefings />
           </Suspense>
         </TabsContent>
 
         <TabsContent value="portal" className="mt-4">
-          <Suspense fallback={<NatLevaLoader />}>
+          <Suspense fallback={<MinimalLoader inline />}>
             <QuoteRequests />
           </Suspense>
         </TabsContent>

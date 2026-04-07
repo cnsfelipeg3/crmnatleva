@@ -1,16 +1,6 @@
 import { Suspense, useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import NatLevaLoader from "./NatLevaLoader";
-
-// Global flag: once the app has loaded once, skip the full loader
-const FIRST_LOAD_KEY = "__natleva_first_load_done__";
-
-function isFirstLoad(): boolean {
-  return !sessionStorage.getItem(FIRST_LOAD_KEY);
-}
-
-function markFirstLoadDone() {
-  sessionStorage.setItem(FIRST_LOAD_KEY, "1");
-}
+import { hasCompletedInitialLoad, markInitialLoadComplete, MinimalLoader } from "./AppLoaders";
 
 /**
  * SmartSuspense renders the actual content BEHIND the loader overlay.
@@ -18,7 +8,7 @@ function markFirstLoadDone() {
  * Subsequent navigations skip the loader entirely.
  */
 export default function SmartSuspense({ children }: { children: ReactNode }) {
-  const firstLoad = useRef(isFirstLoad());
+  const firstLoad = useRef(!hasCompletedInitialLoad());
   const [phase, setPhase] = useState<"loading" | "fading" | "done">(
     firstLoad.current ? "loading" : "done"
   );
@@ -27,7 +17,7 @@ export default function SmartSuspense({ children }: { children: ReactNode }) {
   const onContentReady = useCallback(() => {
     if (chunksLoaded.current) return;
     chunksLoaded.current = true;
-    markFirstLoadDone();
+    markInitialLoadComplete();
     // Wait 2 frames so the browser has actually painted the content
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -41,7 +31,7 @@ export default function SmartSuspense({ children }: { children: ReactNode }) {
   // If not first load, render children directly
   if (!firstLoad.current) {
     return (
-      <Suspense fallback={<div className="min-h-screen" />}>
+      <Suspense fallback={<MinimalLoader />}>
         {children}
       </Suspense>
     );
