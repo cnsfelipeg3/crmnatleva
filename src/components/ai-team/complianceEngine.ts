@@ -494,6 +494,18 @@ export function enforceHardRules(
         cleaned += " [TRANSFERIR]";
       }
     }
+  } else {
+    // ── Non-Maya agents: allow up to 2 questions max ──
+    const qMarks = (cleaned.match(/\?/g) || []).length;
+    if (qMarks > 2) {
+      let idx = -1;
+      for (let q = 0; q < 2; q++) {
+        idx = cleaned.indexOf("?", idx + 1);
+      }
+      if (idx !== -1) {
+        cleaned = cleaned.slice(0, idx + 1).trim();
+      }
+    }
   }
 
   // ── Atlas-specific: force escalation when 5 fields are collected or promise loop detected ──
