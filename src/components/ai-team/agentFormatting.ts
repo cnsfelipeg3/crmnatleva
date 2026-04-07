@@ -29,7 +29,7 @@ export function extractClientNames(conversationContext: string, knownName?: stri
 
   const introPatterns = [
     /\b(?:sou|chamo|aqui\s+[ée])\s+(?:a\s+|o\s+)?([A-ZÀ-Ú][a-zà-ú]{1,15})\b/gi,
-    /\b(?:pode\s+me\s+chamar\s+de)\s+([A-ZÀ-Ú][a-zà-ú]{0,15})\b/gi,
+    /(?:pode\s+me\s+chamar\s+de)\s+([A-ZÀ-Úa-zà-ú]{2,15})/gi,
     /\bmeu\s+nome\s+[ée]\s+([A-ZÀ-Ú][a-zà-ú]{1,15})\b/gi,
   ];
 
