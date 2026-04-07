@@ -280,7 +280,11 @@ export default function SimuladorChameleonMode() {
         const conversationContext = currentMessages.map(m => `${m.role === "lead" ? "Lead" : "Agente"}: ${m.content}`).join("\n");
         const lastLead = [...currentMessages].reverse().find(m => m.role === "lead")?.content || "";
         const agentMsgCount = currentMessages.filter(m => m.role === "agent" && m.agentId === agentId).length;
-        const { text: compliantText, wasRewritten } = await fullCompliancePipeline(agentId, cleanResponse, conversationContext, lastLead, agentMsgCount);
+        const recentAgentMsgs = currentMessages.filter(m => m.role === "agent").map(m => m.content).slice(-5);
+        const { text: compliantText, wasRewritten } = await fullCompliancePipeline(
+          agentId, cleanResponse, conversationContext, lastLead, agentMsgCount,
+          p.nome, recentAgentMsgs,
+        );
         if (wasRewritten) {
           debugLog(`[CHAMELEON] Compliance rewrite applied for ${agent.name}`);
         }
@@ -298,9 +302,7 @@ export default function SimuladorChameleonMode() {
       cleanResponse = cleanResponse.replace(/\[ESCALON[^\]]*\]:?\s*/gi, "").trim();
       cleanResponse = cleanResponse.replace(/\[INTERNO[^\]]*\]:?\s*/gi, "").trim();
 
-      // ── Anti-name-repetition: strip leading name if previous agent msg started with same name ──
-      const previousAgentMsg = [...currentMessages].reverse().find(m => m.role === "agent")?.content;
-      cleanResponse = stripRepeatedLeadingName(cleanResponse, previousAgentMsg);
+      // Name sanitization is now handled inside fullCompliancePipeline
 
       // ── Final word-count enforcer (deterministic safety net) ──
       const wordLimit = agentId === "maya" ? 70 : 100;
