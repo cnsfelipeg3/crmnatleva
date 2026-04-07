@@ -17,7 +17,7 @@ import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
 import { useAgencyConfig } from "@/hooks/useAgencyConfig";
 import { buildKnowledgeBlocksByAgent } from "@/components/ai-team/knowledgeRouting";
 import { debugLog } from "@/lib/debugMode";
-import { enforceAgentFormatting } from "./agentFormatting";
+import { enforceAgentFormatting, stripRepeatedLeadingName } from "./agentFormatting";
 import { fullCompliancePipeline } from "./complianceEngine";
 import ChameleonConfig, { type SessionType } from "./ChameleonConfig";
 import {
@@ -296,6 +296,10 @@ export default function SimuladorChameleonMode() {
       cleanResponse = cleanResponse.replace(/\[BRIEFING[^\]]*\]:?\s*/gi, "").trim();
       cleanResponse = cleanResponse.replace(/\[ESCALON[^\]]*\]:?\s*/gi, "").trim();
       cleanResponse = cleanResponse.replace(/\[INTERNO[^\]]*\]:?\s*/gi, "").trim();
+
+      // ── Anti-name-repetition: strip leading name if previous agent msg started with same name ──
+      const previousAgentMsg = [...currentMessages].reverse().find(m => m.role === "agent")?.content;
+      cleanResponse = stripRepeatedLeadingName(cleanResponse, previousAgentMsg);
 
       // ── Final word-count enforcer (deterministic safety net) ──
       const wordLimit = agentId === "maya" ? 70 : 100;
