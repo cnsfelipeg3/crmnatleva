@@ -591,6 +591,8 @@ export interface DbAgentOverride {
   behavior_prompt?: string | null;
   persona?: string | null;
   skills?: string[];
+  /** Real skill instructions from agent_skills table (prompt_instruction) */
+  skillInstructions?: string[];
 }
 
 /**

@@ -229,12 +229,35 @@ export default function SimuladorAutoMode() {
     setSelectedLeadId(null); setDebrief(null); abortRef.current = false; simAtivaRef.current = true;
     chunksRef.current = new Map();
 
-    // Fetch real agent configs from DB before starting
+    // Fetch real agent configs + skills from DB before starting
     try {
-      const { data: dbAgents } = await supabase.from("ai_team_agents").select("id, behavior_prompt, persona, skills").eq("is_active", true);
+      const [dbAgentsRes, skillAssignmentsRes] = await Promise.all([
+        supabase.from("ai_team_agents").select("id, behavior_prompt, persona, skills").eq("is_active", true),
+        supabase.from("agent_skill_assignments")
+          .select("agent_id, skill_id, agent_skills(name, prompt_instruction, is_active)")
+          .eq("is_active", true),
+      ]);
+      const dbAgents = dbAgentsRes.data || [];
+      const skillAssignments = skillAssignmentsRes.data || [];
+
+      // Group real skill instructions by agent
+      const skillsByAgent: Record<string, string[]> = {};
+      for (const sa of skillAssignments) {
+        const skill = (sa as any).agent_skills;
+        if (!skill || !skill.is_active || !skill.prompt_instruction) continue;
+        const agentId = sa.agent_id;
+        if (!skillsByAgent[agentId]) skillsByAgent[agentId] = [];
+        skillsByAgent[agentId].push(`[SKILL: ${skill.name}] ${skill.prompt_instruction}`);
+      }
+
       const overrides: Record<string, DbAgentOverride> = {};
-      (dbAgents || []).forEach((a: any) => {
-        overrides[a.id] = { behavior_prompt: a.behavior_prompt, persona: a.persona, skills: a.skills };
+      dbAgents.forEach((a: any) => {
+        overrides[a.id] = {
+          behavior_prompt: a.behavior_prompt,
+          persona: a.persona,
+          skills: a.skills,
+          skillInstructions: skillsByAgent[a.id] || [],
+        };
       });
       dbAgentOverridesRef.current = overrides;
     } catch { dbAgentOverridesRef.current = {}; }
