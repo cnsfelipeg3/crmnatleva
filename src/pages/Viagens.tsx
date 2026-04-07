@@ -79,7 +79,10 @@ function getTripStatus(dep: string | null, ret: string | null): TripStatus {
 
 function getDaysSinceDeparture(dep: string | null): number | null {
   if (!dep) return null;
-  return Math.floor((Date.now() - new Date(dep.slice(0, 10)).getTime()) / 86400000);
+  const val = Math.floor((Date.now() - new Date(dep.slice(0, 10)).getTime()) / 86400000);
+  // Guard against absurd values from bad data
+  if (val > 3650 || val < -3650) return null;
+  return val;
 }
 
 const STATUS_CONFIG: Record<TripStatus, { label: string; color: string; icon: typeof Plane }> = {
@@ -210,7 +213,10 @@ export default function Viagens() {
 
   const daysUntil = (dateStr: string | null) => {
     if (!dateStr) return null;
-    return Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
+    const val = Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86400000);
+    // Guard against absurd values from bad data
+    if (val > 3650 || val < -3650) return null;
+    return val;
   };
 
   if (loading) return (

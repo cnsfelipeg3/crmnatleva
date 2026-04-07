@@ -176,7 +176,7 @@ export default function Sales() {
                 </div>
                 <div className="flex items-center justify-between mt-3">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs text-muted-foreground">{sale.origin_iata || "?"} → {sale.destination_iata || "?"}</span>
+                    <span className={`font-mono text-xs ${!sale.origin_iata && !sale.destination_iata ? "text-muted-foreground/40 italic" : "text-muted-foreground"}`}>{sale.origin_iata && sale.destination_iata ? `${sale.origin_iata} → ${sale.destination_iata}` : sale.origin_iata ? `${sale.origin_iata} → N/D` : sale.destination_iata ? `N/D → ${sale.destination_iata}` : "Rota não definida"}</span>
                     <div className="flex gap-1 items-center">
                       {sale.airline && <AirlineLogo iata={sale.airline} size={16} />}
                       {sale.products?.includes("Hotel") && <Hotel className="w-3.5 h-3.5 text-accent" />}
@@ -225,7 +225,7 @@ export default function Sales() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="font-mono text-xs">{sale.origin_iata || "?"} → {sale.destination_iata || "?"}</span>
+                        <span className={`font-mono text-xs ${!sale.origin_iata && !sale.destination_iata ? "text-muted-foreground/40 italic" : ""}`}>{sale.origin_iata && sale.destination_iata ? `${sale.origin_iata} → ${sale.destination_iata}` : sale.origin_iata ? `${sale.origin_iata} → N/D` : sale.destination_iata ? `N/D → ${sale.destination_iata}` : "Rota não definida"}</span>
                       </td>
                       <td className="px-4 py-3">{(sale.adults || 0) + (sale.children || 0)}</td>
                       <td className="px-4 py-3">

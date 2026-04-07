@@ -62,10 +62,13 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any; d
 
 function getTimeRemaining(checkin: string | null): string {
   if (!checkin) return "—";
-  const diff = new Date(checkin).getTime() - Date.now();
+  const checkinTime = new Date(checkin).getTime();
+  if (isNaN(checkinTime)) return "—";
+  const diff = checkinTime - Date.now();
   if (diff <= 0) return "Já passou";
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  if (days > 3650) return "Data inválida";
   if (days > 0) return `${days}d ${hours}h`;
   return `${hours}h`;
 }
@@ -281,7 +284,7 @@ export default function Lodging() {
         <div className="flex items-center gap-2 w-48 shrink-0 min-w-0">
           <Hotel className="w-4 h-4 text-muted-foreground shrink-0" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">{task.hotel_name || "Hotel não informado"}</p>
+            <p className="text-sm font-semibold text-foreground truncate" title={task.hotel_name || undefined}>{task.hotel_name || "Hotel não informado"}</p>
             <p className="text-[10px] text-muted-foreground truncate">{sale?.destination_city || sale?.destination_iata || ""}</p>
           </div>
         </div>
@@ -367,7 +370,7 @@ export default function Lodging() {
 
         <div className="flex items-center gap-2 mb-2">
           <Hotel className="w-4 h-4 text-muted-foreground" />
-          <span className="text-sm font-semibold text-foreground">{task.hotel_name || "Hotel não informado"}</span>
+          <span className="text-sm font-semibold text-foreground truncate" title={task.hotel_name || undefined}>{task.hotel_name || "Hotel não informado"}</span>
         </div>
 
         <div className="text-xs text-muted-foreground mb-2 space-y-0.5">

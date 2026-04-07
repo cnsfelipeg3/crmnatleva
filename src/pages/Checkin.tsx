@@ -57,10 +57,15 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any; d
 
 function getTimeRemaining(departure: string | null): string {
   if (!departure) return "—";
-  const diff = new Date(departure).getTime() - Date.now();
+  const depTime = new Date(departure).getTime();
+  // Guard against invalid dates
+  if (isNaN(depTime)) return "—";
+  const diff = depTime - Date.now();
   if (diff <= 0) return "Já partiu";
   const hours = Math.floor(diff / (1000 * 60 * 60));
   const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  // Guard against absurd values (>10 years)
+  if (hours > 87600) return "Data inválida";
   if (hours >= 24) return `${Math.floor(hours / 24)}d ${hours % 24}h`;
   return `${hours}h ${mins}m`;
 }
@@ -318,8 +323,8 @@ export default function Checkin() {
     const segment = task.segment;
     const airline = segment?.airline || sale?.airline || "";
     const flightNum = segment?.flight_number || "";
-    const origin = segment?.origin_iata || sale?.origin_iata || "?";
-    const dest = segment?.destination_iata || sale?.destination_iata || "?";
+    const origin = segment?.origin_iata || sale?.origin_iata || "N/D";
+    const dest = segment?.destination_iata || sale?.destination_iata || "N/D";
     const depDate = segment?.departure_date || sale?.departure_date || "";
     const depTime = segment?.departure_time || "";
     const locators = sale?.locators?.filter(Boolean) || [];

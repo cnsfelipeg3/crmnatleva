@@ -72,11 +72,15 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
 
   useEffect(() => {
     const fetchCount = async () => {
-      const { count } = await (supabase as any)
-        .from("quotation_briefings")
-        .select("*", { count: "exact", head: true })
-        .eq("status", "pendente");
-      setPendingBriefings(count || 0);
+      try {
+        const { count, error } = await (supabase as any)
+          .from("quotation_briefings")
+          .select("*", { count: "exact", head: true })
+          .eq("status", "pendente");
+        if (!error) setPendingBriefings(count || 0);
+      } catch {
+        // Silently handle 503 or connection errors
+      }
     };
     fetchCount();
     const channel = supabase
