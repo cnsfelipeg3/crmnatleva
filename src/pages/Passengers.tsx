@@ -435,54 +435,56 @@ export default function Passengers() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.slice(0, visibleCount).map((p) => (
-            <Card
-              key={p.id}
-              className={`p-4 glass-card cursor-pointer hover:shadow-md transition-shadow ${bulkMode && bulkSelection.has(p.id) ? "ring-2 ring-primary" : ""}`}
-              onClick={() => bulkMode ? toggleBulk(p.id) : navigate(`/passengers/${p.id}`)}
-            >
-              <div className="flex items-start gap-3">
-                {bulkMode && (
-                  <div className="pt-1">
-                    <input type="checkbox" checked={bulkSelection.has(p.id)} onChange={() => toggleBulk(p.id)} className="rounded border-input" />
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filtered.slice(0, visibleCount).map((p) => (
+              <Card
+                key={p.id}
+                className={`p-4 glass-card cursor-pointer hover:shadow-md transition-shadow ${bulkMode && bulkSelection.has(p.id) ? "ring-2 ring-primary" : ""}`}
+                onClick={() => bulkMode ? toggleBulk(p.id) : navigate(`/passengers/${p.id}`)}
+              >
+                <div className="flex items-start gap-3">
+                  {bulkMode && (
+                    <div className="pt-1">
+                      <input type="checkbox" checked={bulkSelection.has(p.id)} onChange={() => toggleBulk(p.id)} className="rounded border-input" />
+                    </div>
+                  )}
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <User className="w-5 h-5 text-primary" />
                   </div>
-                )}
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <User className="w-5 h-5 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-foreground truncate">{p.full_name}</p>
-                  {p.cpf && <p className="text-xs text-muted-foreground font-mono">{p.cpf}</p>}
-                  {p.phone && <p className="text-xs text-muted-foreground">{p.phone}</p>}
-                  {p.address_city && <p className="text-xs text-muted-foreground">{p.address_city}/{p.address_state}</p>}
-                  <div className="flex gap-1 mt-2 flex-wrap">
-                    {(saleLinks[p.id]?.length || 0) > 0 && (
-                      <Badge variant="secondary" className="text-[10px]">
-                        <Plane className="w-3 h-3 mr-0.5" /> {saleLinks[p.id].length} viagem(ns)
-                      </Badge>
-                    )}
-                    {p.passport_number && (
-                      <Badge variant="outline" className="text-[10px]">Passaporte: {p.passport_number}</Badge>
-                    )}
-                    {isPassportExpiringSoon(p.passport_expiry) && (
-                      <Badge variant="destructive" className="text-[10px] flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3" /> Vencendo
-                      </Badge>
-                    )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-foreground truncate">{p.full_name}</p>
+                    {p.cpf && <p className="text-xs text-muted-foreground font-mono">{p.cpf}</p>}
+                    {p.phone && <p className="text-xs text-muted-foreground">{p.phone}</p>}
+                    {p.address_city && <p className="text-xs text-muted-foreground">{p.address_city}/{p.address_state}</p>}
+                    <div className="flex gap-1 mt-2 flex-wrap">
+                      {(saleLinks[p.id]?.length || 0) > 0 && (
+                        <Badge variant="secondary" className="text-[10px]">
+                          <Plane className="w-3 h-3 mr-0.5" /> {saleLinks[p.id].length} viagem(ns)
+                        </Badge>
+                      )}
+                      {p.passport_number && (
+                        <Badge variant="outline" className="text-[10px]">Passaporte: {p.passport_number}</Badge>
+                      )}
+                      {isPassportExpiringSoon(p.passport_expiry) && (
+                        <Badge variant="destructive" className="text-[10px] flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" /> Vencendo
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-        {visibleCount < filtered.length && (
-          <div className="flex justify-center pt-4">
-            <Button variant="outline" onClick={() => setVisibleCount(v => v + 60)}>
-              Carregar mais ({filtered.length - visibleCount} restantes)
-            </Button>
+              </Card>
+            ))}
           </div>
-        )}
+          {visibleCount < filtered.length && (
+            <div className="flex justify-center pt-4">
+              <Button variant="outline" onClick={() => setVisibleCount(v => v + 60)}>
+                Carregar mais ({filtered.length - visibleCount} restantes)
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Detail/Edit dialog */}
