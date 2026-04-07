@@ -306,6 +306,11 @@ export async function runComplianceCheck(
 const AGENT_WORD_LIMITS: Record<string, number> = {
   maya: 60,
   atlas: 90,
+  habibi: 120,
+  nemo: 120,
+  dante: 120,
+  luna: 150,
+  nero: 120,
 };
 const DEFAULT_WORD_LIMIT = 100;
 
@@ -371,56 +376,7 @@ function detectPromiseLoop(conversationText: string): boolean {
   return promiseCount >= 2;
 }
 
-/**
- * Centralized name-frequency enforcement.
- * Extracts the client's name from conversation context (looks for "Lead:" lines),
- * counts how many "Agente:" lines already used the name, and strips it from the
- * current response if usage exceeds 40% of agent messages.
- * Also strips the name entirely if the immediately previous agent message used it.
- */
-function enforceNameFrequency(agentText: string, conversationContext: string): string {
-  // Extract client name: first capitalized word after "Lead:" that looks like a name
-  const leadLines = conversationContext.split("\n").filter(l => /^(Lead|user|lead):/i.test(l));
-  const agentLines = conversationContext.split("\n").filter(l => /^(Agente|agent|assistant):/i.test(l));
-
-  // Try to find name from lead messages — pattern: "sou X", "me chamo X", "aqui é X", or leading "Name,"
-  let clientName: string | null = null;
-  for (const line of leadLines) {
-    const nameMatch = line.match(/\b(?:sou|chamo|aqui\s+[ée])\s+(?:a\s+|o\s+)?([A-ZÀ-Ú][a-zà-ú]{2,12})\b/i);
-    if (nameMatch) { clientName = nameMatch[1]; break; }
-  }
-
-  if (!clientName) return agentText;
-
-  const nameRegex = new RegExp(`\\b${clientName}\\b`, "gi");
-  const nameInCurrent = (agentText.match(nameRegex) || []).length;
-  if (nameInCurrent === 0) return agentText;
-
-  // Count how many agent messages already used the name
-  const agentMsgsWithName = agentLines.filter(l => nameRegex.test(l)).length;
-  const totalAgentMsgs = agentLines.length;
-
-  // Rule 1: If last agent message used the name → strip ALL from current
-  const lastAgentLine = agentLines.length > 0 ? agentLines[agentLines.length - 1] : "";
-  const prevUsedName = nameRegex.test(lastAgentLine);
-
-  // Rule 2: If name used in >40% of agent messages → strip ALL from current
-  const usageRatio = totalAgentMsgs > 0 ? agentMsgsWithName / totalAgentMsgs : 0;
-
-  if (prevUsedName || usageRatio > 0.5) {
-    // Strip leading "Name," or "Name!" greeting
-    let result = agentText.replace(new RegExp(`^${clientName}\\s*[,!]\\s*`, "i"), "");
-    // Strip remaining occurrences like "Name," in the middle
-    result = result.replace(new RegExp(`[,.]?\\s*${clientName}[,!]?\\s*`, "gi"), " ");
-    // Clean artifacts
-    result = result.replace(/\s{2,}/g, " ").trim();
-    result = result.replace(/^[,.\s]+/, "").trim();
-    result = result.replace(/^[a-zà-ú]/, c => c.toUpperCase());
-    return result;
-  }
-
-  return agentText;
-}
+// enforceNameFrequency REMOVED — replaced by sanitizeClientNameUsage in fullCompliancePipeline (Step 3)
 
 
 export function enforceHardRules(
@@ -465,18 +421,8 @@ export function enforceHardRules(
     cleaned = cleaned.replace(/^[a-zà-ú]/, c => c.toUpperCase());
   }
 
-  // ── Maya-specific behavioral enforcement (deterministic) ──
-  if (agentId === "maya") {
-    // 1. Multi-question block: keep only text up to (and including) first "?"
-    const questionMarks = (cleaned.match(/\?/g) || []).length;
-    if (questionMarks >= 2) {
-      const firstQ = cleaned.indexOf("?");
-      if (firstQ !== -1) {
-        cleaned = cleaned.slice(0, firstQ + 1).trim();
-      }
-    }
-
-    // 2. Storytelling / tourism fluff detector — remove matching sentences
+  // ── Storytelling / tourism fluff detector (Maya + Atlas) ──
+  if (agentId === "maya" || agentId === "atlas") {
     const storytellingPatterns = [
       /[^.!?]*uma?\s+energia\s+[úu]nica[^.!?]*[.!?]/gi,
       /[^.!?]*imposs[ií]vel\s+de\s+resistir[^.!?]*[.!?]/gi,
@@ -487,7 +433,6 @@ export function enforceHardRules(
       /[^.!?]*experiência\s+[úu]nica[^.!?]*[.!?]/gi,
       /[^.!?]*sonho\s+de\s+consumo[^.!?]*[.!?]/gi,
       /[^.!?]*paraíso\s+(na\s+terra|terrestre)[^.!?]*[.!?]/gi,
-      // New patterns — common tourism clichés
       /[^.!?]*[áa]guas?\s+cristalinas?[^.!?]*[.!?]/gi,
       /[^.!?]*de\s+outro\s+mundo[^.!?]*[.!?]/gi,
       /[^.!?]*destinos?\s+incr[ií]ve(l|is)[^.!?]*[.!?]/gi,
@@ -500,12 +445,32 @@ export function enforceHardRules(
     for (const pattern of storytellingPatterns) {
       cleaned = cleaned.replace(pattern, "").trim();
     }
+  }
 
-    // 3. Pivot detector: if lead asks about logistics/pricing → append [TRANSFERIR]
-    //    BUT only if Maya has already exchanged at least 4 messages (to avoid premature transfer)
+  // ── Hotel names / price deterministic blocker (Maya + Atlas) ──
+  if (agentId === "maya" || agentId === "atlas") {
+    // Remove sentences that cite specific hotel names
+    const hotelNamePatterns = /[^.!?]*\b(Grand\s+Floridian|Hard\s+Rock\s+Hotel|Polynesian|Portofino\s+Bay|Atlantis|Burj\s+Al\s+Arab|Four\s+Seasons|Ritz[- ]Carlton|W\s+Hotel|Waldorf|Hilton|Marriott|Hyatt|Sheraton|Novotel|Ibis|Holiday\s+Inn)\b[^.!?]*[.!?]?/gi;
+    cleaned = cleaned.replace(hotelNamePatterns, "").trim();
+    // Remove sentences with explicit prices (R$ X, US$ X, a partir de X)
+    const pricePatterns = /[^.!?]*\b(R\$\s*[\d.,]+|US\$\s*[\d.,]+|a\s+partir\s+de\s+R?\$?\s*[\d.,]+|[\d.,]+\s*(?:reais|dólares|dollars))\b[^.!?]*[.!?]?/gi;
+    cleaned = cleaned.replace(pricePatterns, "").trim();
+  }
+
+  // ── Maya-specific: max 1 question ──
+  if (agentId === "maya") {
+    const questionMarks = (cleaned.match(/\?/g) || []).length;
+    if (questionMarks >= 2) {
+      const firstQ = cleaned.indexOf("?");
+      if (firstQ !== -1) {
+        cleaned = cleaned.slice(0, firstQ + 1).trim();
+      }
+    }
+
+    // Pivot detector: if lead asks about logistics/pricing → append [TRANSFERIR]
     if (lastLeadMessage) {
       const pivotKeywords = /\b(hotel|hot[ée]is|pre[çc]o|valor|op[çc][ãa]o|op[çc][õo]es|desconto|or[çc]amento|quanto\s+custa|pacote|tarifa|a[ée]reo|passagem|voo)\b/i;
-      const minMayaMessages = 4; // Maya must have sent at least 4 messages before auto-pivot
+      const minMayaMessages = 4;
       const hasEnoughHistory = (agentMessageCount ?? 0) >= minMayaMessages;
       if (pivotKeywords.test(lastLeadMessage) && !cleaned.includes("[TRANSFERIR]") && hasEnoughHistory) {
         cleaned += " [TRANSFERIR]";
@@ -547,11 +512,7 @@ export function enforceHardRules(
     }
   }
 
-  // ── Centralized name-repetition enforcement ──
-  // Extracts client name from conversation and strips excessive usage
-  if (conversationContext) {
-    cleaned = enforceNameFrequency(cleaned, conversationContext);
-  }
+  // Name enforcement now handled exclusively by sanitizeClientNameUsage in fullCompliancePipeline Step 3
 
   // Deterministic word-count enforcement
   if (agentId) {
