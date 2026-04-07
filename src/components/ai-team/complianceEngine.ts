@@ -405,6 +405,48 @@ export function enforceHardRules(
     });
   }
 
+  // ── TRANSFER LEAK FILTER (ALL agents — highest priority) ──
+  // Remove any sentence mentioning transfer/colleague/team keywords
+  const transferLeakPatterns = [
+    /[^.!?\n]*\b(vou te passar|vou te encaminhar|meu colega|minha colega|minha parceira|meu parceiro|nosso especialista|nossa especialista|nossa equipe vai|outro consultor|outra consultora|próximo agente|próximo atendente|te transferir|te direcionar|te conectar|vou te conectar|deixa eu te passar|passar pra?\s+\w+|conectar com\s+\w+)\b[^.!?\n]*[.!?]?\s*/gi,
+    /[^.!?\n]*\b(outras?\s+meninas?\s+do\s+time|time\s+aqui\s+da|equipe\s+da|meninas?\s+da\s+nat|colegas?\s+que|fica\s+mais\s+com\s+outr[ao]|não\s+[ée]\s+minha\s+[áa]rea|fica\s+com\s+outr[ao]\s+pessoa|sou\s+especialista\s+(?:nos?|em))\b[^.!?\n]*[.!?]?\s*/gi,
+  ];
+  for (const tp of transferLeakPatterns) {
+    cleaned = cleaned.replace(tp, "").trim();
+  }
+
+  // ── INTERNAL NAME LEAK FILTER (strip agent internal names) ──
+  const internalNames = /\b(Maya|Atlas|Habibi|Nemo|Dante|Luna|Nero|Iris|[ÓO]rion|Nath\.AI|Spark|Hunter|Aegis|Nurture|FinX|Sage|OpEx|Vigil|Sentinel|Athos|Zara)\b/g;
+  // Don't strip "Nath" — that's the identity they SHOULD use
+  const nameMatches = cleaned.match(internalNames);
+  if (nameMatches) {
+    // Replace internal names (except in "sou a Nath" context)
+    for (const nm of nameMatches) {
+      if (nm.toLowerCase() === "nath") continue; // keep Nath
+      // Remove sentences containing internal agent names
+      const nameRegex = new RegExp(`[^.!?\\n]*\\b${nm}\\b[^.!?\\n]*[.!?]?\\s*`, "gi");
+      cleaned = cleaned.replace(nameRegex, "").trim();
+    }
+  }
+
+  // ── BRIEFING BLOCK FILTER (remove internal handoff data visible in chat) ──
+  // Matches structured blocks like "Nome: X\nDestino: Y\nCompanhia: Z"
+  const briefingPatterns = [
+    /(?:^|\n)(?:Nome|Destino|Companhia|Ocasião|Período|Primeira vez|Tom da conversa|Orçamento|Duração|Composição|Perfil|Grupo)[:\s]+[^\n]+(?:\n(?:Nome|Destino|Companhia|Ocasião|Período|Primeira vez|Tom da conversa|Orçamento|Duração|Composição|Perfil|Grupo)[:\s]+[^\n]+)*/gi,
+  ];
+  for (const bp of briefingPatterns) {
+    cleaned = cleaned.replace(bp, "").trim();
+  }
+
+  // Remove [TRANSFERIR] tag from visible text
+  cleaned = cleaned.replace(/\[TRANSFERIR\]/g, "").trim();
+  // Remove [BRIEFING...], [ESCALON...], [INTERNO...]
+  cleaned = cleaned.replace(/\[BRIEFING[^\]]*\]:?\s*/gi, "");
+  cleaned = cleaned.replace(/\[ESCALON[^\]]*\]:?\s*/gi, "");
+  cleaned = cleaned.replace(/\[INTERNO[^\]]*\]:?\s*/gi, "");
+  // Remove state/phase/step labels
+  cleaned = cleaned.replace(/^.*\b(ESTADO|FASE|STEP|ETAPA|STAGE|QUALIFICA[ÇC][ÃA]O|TRANSFER[ÊE]NCIA)[_\s]*\d*[+,;]*\s*.*$/gm, "");
+
     // ── Rude/dismissive phrase filter (all agents) ──
   const rudePatterns = [
     /[^.!?]*j[áa]\s+te\s+expliquei\s+isso[^.!?]*[.!?]?/gi,

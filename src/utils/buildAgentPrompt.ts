@@ -320,12 +320,19 @@ export function buildUnifiedAgentPrompt(options: UnifiedPromptOptions): string {
 Use [TRANSFERIR] SOMENTE quando TUDO isso for verdade:
 1. Voce teve ao menos ${minTrocas} trocas reais com este lead
 2. O lead demonstrou entusiasmo genuino — nao apenas respondeu, se engajou
-3. A proxima pergunta natural do lead e algo que so o proximo agente responde melhor
+3. A proxima pergunta natural do lead e algo que voce ja nao consegue responder tao bem
 4. A transferencia beneficia o lead, nao e uma saida operacional
 
 Se qualquer condicao faltar: continue a conversa. Aprofunde. Instigue. Surpreenda.
 [TRANSFERIR] e resultado de conversa bem feita, nunca atalho.
-Ao transferir: apresente o proximo agente com entusiasmo e contexto.\n` : "";
+
+REGRA ABSOLUTA DE TRANSFERENCIA INVISIVEL:
+- Quando for hora de transferir, NAO diga NADA sobre transferencia. NAO mencione "colega", "especialista", "equipe", "time", "meninas", "passar para", "conectar com", "te encaminhar".
+- NAO diga "vou te passar pro meu colega", "vou te conectar com nosso especialista" ou qualquer variacao.
+- Simplesmente inclua [TRANSFERIR] no final da sua ultima mensagem. O sistema cuida do resto.
+- Sua ultima mensagem deve ser uma CONTINUACAO NATURAL da conversa, como se voce fosse seguir atendendo.
+- Exemplo correto: "Que maravilha! Ja estou pensando em opcoes incriveis pra voces! [TRANSFERIR]"
+- Exemplo ERRADO: "Vou te passar pro meu colega que e especialista nisso [TRANSFERIR]"\n` : "";
 
   const priceInstr = "IMPORTANTE: Quando for hora de enviar valores/orçamento, diga que vai enviar o print com os valores.\nO agente decide o tamanho certo para cada momento da conversa.";
 

@@ -230,17 +230,14 @@ export function buildTeamContextBlock(agentId: string): string {
   const agent = AGENTS_V4.find(a => a.id === agentId);
   if (!agent) return "";
 
-  const fromNames = link.receivesFrom
-    .map(id => AGENTS_V4.find(a => a.id === id))
-    .filter(Boolean)
-    .map(a => `${a!.emoji} ${a!.name} (${a!.role})`)
-    .join(", ") || "leads diretos / sem agente anterior";
+  // Hide internal agent names from prompts — only use generic role descriptions
+  const fromDesc = link.receivesFrom.length > 0
+    ? "etapa anterior do pipeline"
+    : "leads diretos";
 
-  const toNames = link.transfersTo
-    .map(id => AGENTS_V4.find(a => a.id === id))
-    .filter(Boolean)
-    .map(a => `${a!.emoji} ${a!.name} (${a!.role})`)
-    .join(", ") || "nenhum — você é o ponto final";
+  const toDesc = link.transfersTo.length > 0
+    ? "próxima etapa do pipeline"
+    : "nenhuma — você é o ponto final";
 
   const expectsBlock = link.expectsData.length > 0
     ? `Dados que você RECEBE: ${link.expectsData.join(", ")}`
@@ -255,15 +252,16 @@ export function buildTeamContextBlock(agentId: string): string {
     : "";
 
   return `
-=== SUA EQUIPE E SEU LUGAR NO PIPELINE ===
-Você recebe leads de: ${fromNames}
+=== SEU LUGAR NO FLUXO DE ATENDIMENTO ===
+Você recebe leads de: ${fromDesc}
 ${expectsBlock}
 Seu trabalho: ${link.roleConsciousness}
-Quando completar, transfira para: ${toNames}
+Quando completar, use [TRANSFERIR] para avançar para: ${toDesc}
 ${deliversBlock}${minExchanges}
 
-Se o cliente perguntar algo fora da sua etapa, responda brevemente e redirecione: "Sobre isso, minha colega vai te ajudar com todos os detalhes!"
-NUNCA faça o trabalho de outro agente. NUNCA pule etapas. Confie no time.
+Se o cliente perguntar algo fora da sua etapa atual, responda brevemente com naturalidade e continue a conversa. Você é a Nath — sabe de tudo.
+NUNCA mencione "colega", "equipe", "time", "especialista", "outro atendente", "meninas", "passar para" ou "conectar com". Você é UMA pessoa.
+NUNCA revele nomes internos (Maya, Atlas, Habibi, Nemo, Dante, Luna, Nero, Iris, Órion, etc). Você é NATH, sempre.
 
 DISCIPLINA: Siga seu fluxo de trabalho passo a passo. Não pule etapas. Não improvise fora do fluxo. Cada step existe por uma razão. Se um step é de decisão, FAÇA a decisão com base nos critérios definidos, não no feeling. Se um step é de transferência, transfira SOMENTE quando os dados estiverem completos. Precisão cirúrgica.${COMMERCIAL_AGENT_IDS.has(agentId) ? COMMERCIAL_RULES : ""}`;
 }
