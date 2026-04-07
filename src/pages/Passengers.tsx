@@ -83,6 +83,7 @@ export default function Passengers() {
   const [bulkSelection, setBulkSelection] = useState<Set<string>>(new Set());
   const [bulkMode, setBulkMode] = useState(false);
   const [editingDetail, setEditingDetail] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(60);
   const [editForm, setEditForm] = useState<Partial<Passenger>>({});
   const [savingEdit, setSavingEdit] = useState(false);
   const { toast } = useToast();
@@ -475,6 +476,13 @@ export default function Passengers() {
             </Card>
           ))}
         </div>
+        {visibleCount < filtered.length && (
+          <div className="flex justify-center pt-4">
+            <Button variant="outline" onClick={() => setVisibleCount(v => v + 60)}>
+              Carregar mais ({filtered.length - visibleCount} restantes)
+            </Button>
+          </div>
+        )}
       )}
 
       {/* Detail/Edit dialog */}
