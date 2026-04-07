@@ -565,26 +565,38 @@ export default function SimuladorChameleonMode() {
         )}
       </div>
 
-      {/* Transfer log */}
-      {messages.some(m => m.role === "agent") && (
-        <div className="rounded-xl p-3 md:p-4 bg-card border border-border">
-          <p className="text-[11px] font-bold mb-2" style={{ color: "#94A3B8" }}>Pipeline</p>
-          <div className="flex flex-wrap gap-1.5">
-            {[...new Set(messages.filter(m => m.agentId).map(m => m.agentId!))].map(aid => {
-              const a = AGENTS_V4.find(x => x.id === aid);
-              return (
-                <span key={aid} className="px-2 py-1 rounded-md text-[10px] font-medium" style={{
-                  background: aid === currentAgentId ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.04)",
-                  color: aid === currentAgentId ? "#6EE7B7" : "#64748B",
-                  border: `1px solid ${aid === currentAgentId ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.05)"}`,
+      {/* Pipeline progress */}
+      <div className="rounded-xl p-3 md:p-4 bg-card border border-border">
+        <p className="text-[11px] font-bold mb-2" style={{ color: "#94A3B8" }}>Pipeline</p>
+        <div className="flex flex-wrap gap-1.5">
+          {PIPELINE_ORDER.filter(pid => selectedAgents.includes(pid)).map((pid, idx) => {
+            const a = AGENTS_V4.find(x => x.id === pid);
+            const isActive = pid === currentAgentId;
+            const wasPassed = messages.some(m => m.agentId === pid);
+            const isPast = wasPassed && !isActive;
+            const currentPipelineIdx = PIPELINE_ORDER.indexOf(currentAgentId);
+            const thisPipelineIdx = PIPELINE_ORDER.indexOf(pid);
+            const isFuture = thisPipelineIdx > currentPipelineIdx && !wasPassed;
+            return (
+              <div key={pid} className="flex items-center gap-1">
+                {idx > 0 && (
+                  <span className="text-[9px] mx-0.5" style={{ color: isPast ? "#6EE7B7" : "#334155" }}>→</span>
+                )}
+                <span className="px-2 py-1 rounded-md text-[10px] font-medium" style={{
+                  background: isActive ? "rgba(16,185,129,0.2)" : isPast ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.03)",
+                  color: isActive ? "#6EE7B7" : isPast ? "#4ADE80" : isFuture ? "#475569" : "#64748B",
+                  border: `1px solid ${isActive ? "rgba(16,185,129,0.35)" : isPast ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.05)"}`,
+                  opacity: isFuture ? 0.5 : 1,
                 }}>
                   {a?.emoji} {a?.name}
+                  {isActive && " ●"}
+                  {isPast && " ✓"}
                 </span>
-              );
-            })}
-          </div>
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
 
       {/* Debrief score summary */}
       {phase === "debrief" && debrief && (
