@@ -166,6 +166,8 @@ export interface UnifiedPromptOptions {
     behavior_prompt?: string | null;
     persona?: string | null;
     skills?: string[];
+    /** Real skill instructions from agent_skills.prompt_instruction */
+    skillInstructions?: string[];
   };
   /** Whether transfers are enabled (auto mode may disable) */
   enableTransfers?: boolean;
@@ -236,9 +238,11 @@ export function buildUnifiedAgentPrompt(options: UnifiedPromptOptions): string {
       .replace(/\bSou a? ?IRIS\b/gi, "Sou a Nath");
   }
 
-  // DB skills block
+  // DB skills block — prefer real skillInstructions (with prompt_instruction) over plain names
   let skillsBlock = "";
-  if (dbOverride?.skills && dbOverride.skills.length > 0) {
+  if (dbOverride?.skillInstructions && dbOverride.skillInstructions.length > 0) {
+    skillsBlock = `\n=== HABILIDADES ATIVAS ===\n${dbOverride.skillInstructions.map(s => `- ${s}`).join("\n")}\n`;
+  } else if (dbOverride?.skills && dbOverride.skills.length > 0) {
     skillsBlock = `\n=== HABILIDADES ATIVAS ===\n${dbOverride.skills.map(s => `- ${s}`).join("\n")}\n`;
   }
 
