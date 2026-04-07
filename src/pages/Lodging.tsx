@@ -62,10 +62,13 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any; d
 
 function getTimeRemaining(checkin: string | null): string {
   if (!checkin) return "—";
-  const diff = new Date(checkin).getTime() - Date.now();
+  const checkinTime = new Date(checkin).getTime();
+  if (isNaN(checkinTime)) return "—";
+  const diff = checkinTime - Date.now();
   if (diff <= 0) return "Já passou";
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  if (days > 3650) return "Data inválida";
   if (days > 0) return `${days}d ${hours}h`;
   return `${hours}h`;
 }
