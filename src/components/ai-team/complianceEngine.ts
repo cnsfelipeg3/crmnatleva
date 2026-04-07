@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getAgentTraining } from "./agentTrainingStore";
 import { AGENTS_V4 } from "./agentsV4Data";
 import { buildKnowledgeBlocksByAgent } from "./knowledgeRouting";
+import { extractClientNames, sanitizeClientNameUsage } from "./agentFormatting";
 import type { GlobalRule } from "@/hooks/useGlobalRules";
 
 // ─── Cache for expensive DB queries (refreshed every 60s) ───
