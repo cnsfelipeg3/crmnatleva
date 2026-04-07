@@ -153,7 +153,11 @@ const queryClient = new QueryClient({
 });
 
 function ScreenLoader() {
-  return <NatLevaLoader />;
+   // After first load, show a minimal spinner instead of the full splash screen
+   if (sessionStorage.getItem("__natleva_first_load_done__")) {
+     return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>;
+   }
+   return <NatLevaLoader />;
 }
 
 // TODO: TEMPORÁRIO - Reativar proteção de login depois dos testes

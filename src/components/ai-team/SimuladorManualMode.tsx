@@ -615,18 +615,25 @@ export default function SimuladorManualMode() {
     }
   }, [handleSend]);
 
-  const resetChat = () => {
-    if (messages.length > 0 && !confirm("Tem certeza? Os dados atuais serão perdidos.")) return;
+  const resetChat = useCallback(() => {
+    if (messagesRef.current.length > 0 && !confirm("Tem certeza? Os dados atuais serão perdidos.")) return;
     if (debounceTimerRef.current) { clearTimeout(debounceTimerRef.current); debounceTimerRef.current = null; }
     pendingMessagesRef.current = [];
     messagesRef.current = [];
     isProcessingRef.current = false;
     clearComplianceCache();
-    // CRITICAL: Always reset to Maya on new conversation
-    const mayaReset = AGENTS_V4.find(a => a.id === "maya") || AGENTS_V4[2];
-    setSelectedAgent(mayaReset);
-    setMessages([]); setCurrentSessionId(crypto.randomUUID()); setTransferNotice(null); setCurrentStage(0); setReplyingTo(null); setManualObsSelectedMsg(null); setLoading(false);
-  };
+    // CRITICAL: Always reset to Maya on new conversation — spread to force new reference
+    const maya = AGENTS_V4.find(a => a.id === "maya");
+    setSelectedAgent(maya ? { ...maya } : { ...AGENTS_V4[2] });
+    setSelectedDestinoRaw("💬 Livre");
+    setMessages([]);
+    setCurrentSessionId(crypto.randomUUID());
+    setTransferNotice(null);
+    setCurrentStage(0);
+    setReplyingTo(null);
+    setManualObsSelectedMsg(null);
+    setLoading(false);
+  }, []);
 
   const loadSession = (session: SavedSession) => {
     messagesRef.current = session.messages;
