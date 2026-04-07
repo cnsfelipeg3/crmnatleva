@@ -130,8 +130,10 @@ function stripAllNameOccurrences(text: string, nameInfo: ClientNameInfo): string
   let result = text;
   for (const alias of nameInfo.aliases) {
     const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // Strip leading "Name," or "Name!"
     result = result.replace(new RegExp(`^${escaped}\\s*[,!]\\s*`, "i"), "");
-    result = result.replace(new RegExp(`[,.]?\\s*${escaped}[,!]?\\s*`, "gi"), " ");
+    // Strip remaining occurrences
+    result = result.replace(new RegExp(`[,.]?\\s*(?<![A-Za-zÀ-ÿ])${escaped}(?![A-Za-zÀ-ÿ])[,!]?\\s*`, "gi"), " ");
   }
   return cleanAfterNameStrip(result);
 }
