@@ -371,8 +371,57 @@ function detectPromiseLoop(conversationText: string): boolean {
 }
 
 /**
- * Code-level enforcement: rules that can be enforced deterministically without AI.
+ * Centralized name-frequency enforcement.
+ * Extracts the client's name from conversation context (looks for "Lead:" lines),
+ * counts how many "Agente:" lines already used the name, and strips it from the
+ * current response if usage exceeds 40% of agent messages.
+ * Also strips the name entirely if the immediately previous agent message used it.
  */
+function enforceNameFrequency(agentText: string, conversationContext: string): string {
+  // Extract client name: first capitalized word after "Lead:" that looks like a name
+  const leadLines = conversationContext.split("\n").filter(l => /^(Lead|user|lead):/i.test(l));
+  const agentLines = conversationContext.split("\n").filter(l => /^(Agente|agent|assistant):/i.test(l));
+
+  // Try to find name from lead messages — pattern: "sou X", "me chamo X", "aqui é X", or leading "Name,"
+  let clientName: string | null = null;
+  for (const line of leadLines) {
+    const nameMatch = line.match(/\b(?:sou|chamo|aqui\s+[ée])\s+(?:a\s+|o\s+)?([A-ZÀ-Ú][a-zà-ú]{2,12})\b/i);
+    if (nameMatch) { clientName = nameMatch[1]; break; }
+  }
+
+  if (!clientName) return agentText;
+
+  const nameRegex = new RegExp(`\\b${clientName}\\b`, "gi");
+  const nameInCurrent = (agentText.match(nameRegex) || []).length;
+  if (nameInCurrent === 0) return agentText;
+
+  // Count how many agent messages already used the name
+  const agentMsgsWithName = agentLines.filter(l => nameRegex.test(l)).length;
+  const totalAgentMsgs = agentLines.length;
+
+  // Rule 1: If last agent message used the name → strip ALL from current
+  const lastAgentLine = agentLines.length > 0 ? agentLines[agentLines.length - 1] : "";
+  const prevUsedName = nameRegex.test(lastAgentLine);
+
+  // Rule 2: If name used in >40% of agent messages → strip ALL from current
+  const usageRatio = totalAgentMsgs > 0 ? agentMsgsWithName / totalAgentMsgs : 0;
+
+  if (prevUsedName || usageRatio > 0.4) {
+    // Strip leading "Name," or "Name!" greeting
+    let result = agentText.replace(new RegExp(`^${clientName}\\s*[,!]\\s*`, "i"), "");
+    // Strip remaining occurrences like "Name," in the middle
+    result = result.replace(new RegExp(`[,.]?\\s*${clientName}[,!]?\\s*`, "gi"), " ");
+    // Clean artifacts
+    result = result.replace(/\s{2,}/g, " ").trim();
+    result = result.replace(/^[,.\s]+/, "").trim();
+    result = result.replace(/^[a-zà-ú]/, c => c.toUpperCase());
+    return result;
+  }
+
+  return agentText;
+}
+
+
 export function enforceHardRules(
   text: string,
   agentId?: string,
@@ -467,6 +516,12 @@ export function enforceHardRules(
         cleaned += " [TRANSFERIR]";
       }
     }
+  }
+
+  // ── Centralized name-repetition enforcement ──
+  // Extracts client name from conversation and strips excessive usage
+  if (conversationContext) {
+    cleaned = enforceNameFrequency(cleaned, conversationContext);
   }
 
   // Deterministic word-count enforcement
