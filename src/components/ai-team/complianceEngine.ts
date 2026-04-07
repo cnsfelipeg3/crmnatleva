@@ -567,7 +567,6 @@ export async function fullCompliancePipeline(
   const finalText = enforceHardRules(checkedText, agentId, lastLeadMessage, agentMessageCount, conversationContext);
 
   // Step 3: Unified name-frequency sanitization (deterministic, uses known name + aliases)
-  const { extractClientNames, sanitizeClientNameUsage } = await import("./agentFormatting");
   const nameInfo = extractClientNames(conversationContext, knownClientName);
   const agentMsgs = recentAgentMessages ?? conversationContext.split("\n")
     .filter(l => /^(Agente|agent|assistant):/i.test(l))
