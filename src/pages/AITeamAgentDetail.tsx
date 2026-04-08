@@ -1745,7 +1745,7 @@ function AuditMemoryProxy({ entries, agentName }: { entries: any[]; agentName: s
   );
 }
 
-
+function CommandTerminal({ agentName, agentId, agentRole }: { agentName: string; agentId: string; agentRole: string }) {
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<{ role: "user" | "agent"; text: string }[]>([]);
   const [loading, setLoading] = useState(false);
