@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Brain, Plus, Building2, LayoutDashboard, AlertTriangle, Clock,
   Activity, CheckCircle2, Loader2, Check, X, Filter, DollarSign, MessageSquare, FileText,
@@ -39,7 +41,7 @@ const PRIORITY_DOT: Record<string, string> = { high: "bg-red-500", medium: "bg-a
 const KANBAN_COLS = [
   { key: "suggested", label: "Sugeridas",   statuses: ["detected", "suggested", "pending"], accent: "border-l-amber-500/60" },
   { key: "exec",      label: "Em Execução", statuses: ["analyzing", "in_progress"],         accent: "border-l-blue-500/60" },
-  { key: "done",      label: "Concluídas",  statuses: ["done"],                             accent: "border-l-emerald-500/60" },
+  { key: "done",      label: "Concluídas",  statuses: ["done", "completed"],                accent: "border-l-emerald-500/60" },
 ];
 const MAX_KANBAN = 4;
 
@@ -49,28 +51,6 @@ const FEED_FILTERS: { key: FeedFilter; label: string }[] = [
   { key: "insight", label: "Sugestões" },
   { key: "status_change", label: "Sistema" },
 ];
-
-export default function AITeam() {
-  const { agents, tasks, events, addAgent, removeTask } = useAgentEngine(baseAgents, baseTasks);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [view, setView] = useState<ViewMode>("dashboard");
-  const [feedFilter, setFeedFilter] = useState<FeedFilter>("all");
-  const [workLogAgent, setWorkLogAgent] = useState<string>(baseAgents[0]?.id ?? "");
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const { seedAgents, fetchRealMetrics } = useAITeamPersistence();
-
-  // Real business metrics
-  const [realMetrics, setRealMetrics] = useState<{
-    totalSales: number; totalRevenue: number; totalProfit: number;
-    activeConversations: number; totalConversations: number;
-    openProposals: number; totalProposals: number; salesToday: number;
-  } | null>(null);
-
-  useEffect(() => {
-    seedAgents();
-    fetchRealMetrics().then(setRealMetrics).catch(console.error);
-  }, []);
 
   const handleApprove = useCallback((id: string) => {
     removeTask(id, "approve");
