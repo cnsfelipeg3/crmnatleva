@@ -352,12 +352,9 @@ export default function SimuladorManualMode() {
       }
 
       if (!agentText) {
-        setMessages(prev => {
-          const fallbackMessage: ChatMsg = { id: crypto.randomUUID(), role: "agent", content: "Desculpe, tive um problema técnico ao processar sua mensagem. Pode repetir?", timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name };
-          const updated = [...prev, fallbackMessage];
-          messagesRef.current = updated;
-          return updated;
-        });
+        // CORREÇÃO 4: Do NOT show technical error to client — log internally only
+        console.error("[AGENT] Empty response from AI — suppressed technical error message");
+        debugLog("[AGENT] Resposta vazia da IA — erro técnico suprimido (não exposto ao cliente)");
       } else {
         // 🛡️ Compliance Engine
         const conversationCtx = currentMessages.map(m => `${m.role}: ${m.content}`).join("\n");
@@ -371,6 +368,21 @@ export default function SimuladorManualMode() {
         if (wasRewritten) {
           debugLog(`🛡️ Compliance rewrite applied for ${selectedAgent.name}`);
         }
+
+        // CORREÇÃO 4: Guard — block duplicate messages (first 100 chars comparison)
+        const lastAgentMsg = currentMessages.filter(m => m.role === "agent").slice(-1)[0];
+        if (lastAgentMsg?.content) {
+          const newSnippet = compliantText.replace(/\s+/g, " ").trim().slice(0, 100).toLowerCase();
+          const prevSnippet = lastAgentMsg.content.replace(/\s+/g, " ").trim().slice(0, 100).toLowerCase();
+          if (newSnippet === prevSnippet) {
+            console.warn("[AGENT] Duplicate message blocked — identical to previous agent message");
+            debugLog("[AGENT] Mensagem duplicada bloqueada (100 chars idênticos)");
+            setLoading(false);
+            isProcessingRef.current = false;
+            return;
+          }
+        }
+
         // Name sanitization is now handled inside fullCompliancePipeline
         updateAgent(compliantText);
       }
