@@ -1699,7 +1699,7 @@ Retorne JSON:
                       const isAgent = msg.role === "agent";
                       const isUser = msg.role === "client";
                       const showName = isAgent && (i === 0 || selectedLead.mensagens[i - 1]?.role !== "agent" || selectedLead.mensagens[i - 1]?.agentName !== msg.agentName);
-                      const cleanContent = msg.content.replace("[TRANSFERIR]", "").trim();
+                      const cleanContent = msg.content.replace(/\[TRANSFERIR[^\]]*\]/g, "").replace(/\[BRIEFING[^\]]*\]:?\s*/gi, "").replace(/\[ESCALON[^\]]*\]:?\s*/gi, "").replace(/\[INTERNO[^\]]*\]:?\s*/gi, "").trim();
                       const ts = new Date(msg.timestamp);
                       const prevTs = i > 0 ? new Date(selectedLead.mensagens[i - 1].timestamp) : null;
                       const showDate = i === 0 || (prevTs && ts.toDateString() !== prevTs.toDateString());
