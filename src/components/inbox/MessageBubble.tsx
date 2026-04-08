@@ -74,7 +74,7 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
               <Bot className="h-3 w-3 text-primary" />
               <span className="text-[9px] font-bold text-primary uppercase tracking-wider">Sistema / Bot</span>
             </div>
-            <p className="text-sm leading-relaxed text-foreground"><Linkify text={stripQuotes(msg.text)} /></p>
+            <p className="text-sm leading-relaxed text-foreground"><Linkify text={stripQuotes(displayText)} /></p>
             <span className="text-[9px] text-muted-foreground">{formatMsgTime(msg.created_at)}</span>
           </div>
         ) : (
@@ -156,7 +156,7 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
                 </div>
               )}
               {/* Text */}
-              {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(msg.text)} /></p>}
+              {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(displayText)} /></p>}
               <div className="flex items-center justify-end gap-1 mt-1">
                 {msg.edited && <span className="text-[8px] opacity-50 italic">editada</span>}
                 {msg.status === "failed" && onRetry && (
