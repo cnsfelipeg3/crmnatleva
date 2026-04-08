@@ -159,11 +159,24 @@ function cleanAfterNameStrip(text: string): string {
  * Post-processing: enforces formatting rules that LLMs sometimes ignore.
  */
 export function enforceAgentFormatting(text: string): string {
-  let cleaned = text.replace(/\s*[—–]\s*/g, ", ");
-  cleaned = cleaned.replace(/(?<=\S)\s+-\s+/g, ", ");
+  let cleaned = text;
+
+  // ── CORREÇÃO 2: Strip dashes/hyphens used as separators or bullets ──
+  // Em-dash and en-dash → comma
+  cleaned = cleaned.replace(/\s*[—–]\s*/g, ", ");
+  // Hyphen used as separator between words: " - " → ", "
+  cleaned = cleaned.replace(/ - /g, ", ");
+  // Hyphen used as bullet point at start of line
+  cleaned = cleaned.replace(/^- /gm, "");
+  // Hyphen bullet after newline with optional whitespace
+  cleaned = cleaned.replace(/\n\s*-\s+/g, "\n");
+
+  // Clean up comma artifacts
   cleaned = cleaned.replace(/(^|[\n])，?\s*,\s*/g, "$1");
   cleaned = cleaned.replace(/,\s*,/g, ",");
   cleaned = cleaned.replace(/,\s*\./g, ".");
+
+  // Strip internal transfer/handoff language
   cleaned = cleaned.replace(/[^.!?\n]*\b(vou te passar|vou te encaminhar|meu colega|minha colega|minha parceira|meu parceiro|nosso especialista|nossa especialista|nossa equipe vai|outro consultor|outra consultora|próximo agente|próximo atendente|te transferir|te direcionar)\b[^.!?\n]*[.!?]?\s*/gi, "");
   cleaned = cleaned.replace(/\[TRANSFERIR\]/g, "");
   cleaned = cleaned.replace(/\[BRIEFING[^\]]*\]:?\s*/gi, "");
