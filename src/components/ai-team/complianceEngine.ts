@@ -489,15 +489,25 @@ export function enforceHardRules(
     }
   }
 
-  // ── Hotel names / price deterministic blocker (Maya + Atlas) ──
+  // ── Hotel names / price deterministic blocker (ALL agents before proposal) ──
+  // Remove sentences that cite specific hotel names (Maya + Atlas only)
   if (agentId === "maya" || agentId === "atlas") {
-    // Remove sentences that cite specific hotel names
     const hotelNamePatterns = /[^.!?]*\b(Grand\s+Floridian|Hard\s+Rock\s+Hotel|Polynesian|Portofino\s+Bay|Atlantis|Burj\s+Al\s+Arab|Four\s+Seasons|Ritz[- ]Carlton|W\s+Hotel|Waldorf|Hilton|Marriott|Hyatt|Sheraton|Novotel|Ibis|Holiday\s+Inn)\b[^.!?]*[.!?]?/gi;
     cleaned = cleaned.replace(hotelNamePatterns, "").trim();
-    // Remove sentences with explicit prices (R$ X, US$ X, a partir de X)
-    const pricePatterns = /[^.!?]*\b(R\$\s*[\d.,]+|US\$\s*[\d.,]+|a\s+partir\s+de\s+R?\$?\s*[\d.,]+|[\d.,]+\s*(?:reais|dólares|dollars))\b[^.!?]*[.!?]?/gi;
-    cleaned = cleaned.replace(pricePatterns, "").trim();
   }
+
+  // ── Price leak blocker (ALL agents — prices only in formal proposal) ──
+  const pricePatterns = /[^.!?]*\b(R\$\s*[\d.,]+|US\$\s*[\d.,]+|€\s*[\d.,]+|a\s+partir\s+de\s+R?\$?\s*[\d.,]+|[\d.,]+\s*(?:reais|d[óo]lares|dollars|euros)|custa\s+(?:cerca\s+de\s+)?(?:R?\$|US?\$)\s*[\d.,]+|pre[çc]o\s+(?:[ée]\s+)?(?:de\s+)?(?:R?\$|US?\$)\s*[\d.,]+)\b[^.!?]*[.!?]?/gi;
+  cleaned = cleaned.replace(pricePatterns, "").trim();
+  // Also remove [USO INTERNO] tagged content that may leak from knowledge base
+  cleaned = cleaned.replace(/\[USO\s+INTERNO\][^.!?\n]*[.!?]?\s*/gi, "").trim();
+
+  // ── Competitor / external channel blocker (ALL agents) ──
+  const competitorPatterns = /[^.!?]*\b(Booking\.?com?|Airbnb|GetYourGuide|Viator|Expedia|TripAdvisor|Trivago|Hotels\.com|Kayak|Skyscanner|Google\s+Flights|Decolar|CVC|Hurb|123\s*Milhas|MaxMilhas|Submarino\s+Viagens|Hotel\s+Urbano|Trip\.com|Agoda|Hostelworld|Priceline|Hotwire|Travelocity|Orbitz|Klook|Civitatis|Musement|Flytour|Hotelbeds|Despegar)\b[^.!?]*[.!?]?/gi;
+  cleaned = cleaned.replace(competitorPatterns, "").trim();
+  // Remove sentences suggesting external booking
+  const externalBookingPatterns = /[^.!?]*\b(reserv[ae]\s+(?:pelo|pela|no|na|via)|compr[ae]\s+(?:pelo|pela|no|na|via)|pesquis[ae]\s+(?:no|na|pelo)|consult[ae]\s+(?:o\s+site|no\s+site))\s+(?!NatLeva)\w+[^.!?]*[.!?]?/gi;
+  cleaned = cleaned.replace(externalBookingPatterns, "").trim();
 
   // ── Maya-specific: max 1 question ──
   if (agentId === "maya") {

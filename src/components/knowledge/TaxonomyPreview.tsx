@@ -1,11 +1,21 @@
 import { useState } from "react";
 import {
   Map, Compass, Star, BedDouble, Plane, DollarSign, User, Rocket,
-  ChevronDown, ChevronUp, Edit2, Plus, X, Sparkles,
+  ChevronDown, ChevronUp, Edit2, Plus, X, Sparkles, Lock,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+
+// ─── Internal-only price badge ───
+function InternalBadge() {
+  return (
+    <span className="inline-flex items-center gap-0.5 px-1.5 py-0 rounded text-[8px] font-bold uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+      <Lock className="w-2.5 h-2.5" />
+      Uso Interno
+    </span>
+  );
+}
 
 // ─── Types ───
 export interface Taxonomy {
@@ -280,7 +290,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
                     <span className="font-medium flex-1">{p.nome}</span>
                     {p.tipo && <Badge variant="outline" className="text-[9px]">{p.tipo}</Badge>}
                     {p.duracao && <span className="text-muted-foreground">{p.duracao}</span>}
-                    {p.preco_aprox && <span className="font-bold text-emerald-600 dark:text-emerald-400">{p.preco_aprox}</span>}
+                    {p.preco_aprox && <><InternalBadge /><span className="font-bold text-emerald-600 dark:text-emerald-400">{p.preco_aprox}</span></>}
                   </div>
                 ))}
               </div>
@@ -294,7 +304,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
                   <div key={i} className="flex items-center gap-2 text-xs rounded-lg bg-muted/30 px-3 py-2">
                     <span className="font-medium flex-1">{r.nome}</span>
                     {r.tipo && <Badge variant="outline" className="text-[9px]">{r.tipo}</Badge>}
-                    {r.faixa_preco && <span className="font-bold">{r.faixa_preco}</span>}
+                    {r.faixa_preco && <><InternalBadge /><span className="font-bold">{r.faixa_preco}</span></>}
                   </div>
                 ))}
               </div>
@@ -324,7 +334,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
                 <div key={i} className="flex items-center gap-2 text-xs rounded-lg bg-muted/30 px-3 py-2">
                   <span className="font-medium flex-1">{h.nome}</span>
                   {h.categoria && <Badge variant="outline" className="text-[9px]">{h.categoria}</Badge>}
-                  {h.faixa_preco && <span className="font-bold text-purple-600 dark:text-purple-400">{h.faixa_preco}</span>}
+                  {h.faixa_preco && <><InternalBadge /><span className="font-bold text-purple-600 dark:text-purple-400">{h.faixa_preco}</span></>}
                   {h.destaque && <span className="text-muted-foreground italic">{h.destaque}</span>}
                 </div>
               ))}
@@ -374,17 +384,20 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
       {/* FINANCEIRO Section */}
       {hasContent("financeiro") && (
         <TaxSection section={SECTIONS[5]}>
-          {fin?.faixa_preco_label && (
-            <Badge className={cn(
-              "text-sm px-3 py-1 font-bold uppercase",
-              fin.faixa_preco_label === "luxo" ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30" :
-              fin.faixa_preco_label === "premium" ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30" :
-              fin.faixa_preco_label === "moderado" ? "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30" :
-              "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-            )}>
-              {fin.faixa_preco_label} {fin.faixa_preco_total && `• ${fin.faixa_preco_total}`}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <InternalBadge />
+            {fin?.faixa_preco_label && (
+              <Badge className={cn(
+                "text-sm px-3 py-1 font-bold uppercase",
+                fin.faixa_preco_label === "luxo" ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30" :
+                fin.faixa_preco_label === "premium" ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30" :
+                fin.faixa_preco_label === "moderado" ? "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30" :
+                "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+              )}>
+                {fin.faixa_preco_label} {fin.faixa_preco_total && `• ${fin.faixa_preco_total}`}
+              </Badge>
+            )}
+          </div>
           {(fin?.dica_moeda || fin?.moeda_dica) && (
             <p className="text-xs text-muted-foreground">💱 {fin.dica_moeda || fin.moeda_dica}</p>
           )}
