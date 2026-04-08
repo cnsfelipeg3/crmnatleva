@@ -254,20 +254,25 @@ export default function AITeam() {
           </div>
           <div className="space-y-1 max-h-80 overflow-y-auto">
             {filteredEvents.length === 0 && <p className="text-sm text-muted-foreground/40 py-4 text-center">Nenhum evento.</p>}
-            {filteredEvents.map((evt, i) => {
-              const agent = agents.find(a => a.id === evt.agentId);
-              const v4 = AGENTS_V4.find(a => a.id === evt.agentId);
-              const time = new Date(evt.timestamp);
+            {filteredEvents.map((evt: any, i: number) => {
+              // Support both audit log entries and simulation events
+              const isAudit = !!evt.created_at && !evt.timestamp;
+              const time = new Date(isAudit ? evt.created_at : evt.timestamp);
               const hh = String(time.getHours()).padStart(2, "0");
               const mm = String(time.getMinutes()).padStart(2, "0");
+              const dd = isAudit ? `${String(time.getDate()).padStart(2, "0")}/${String(time.getMonth() + 1).padStart(2, "0")} ` : "";
+              const agentId = isAudit ? evt.agent_id : evt.agentId;
+              const agent = agents.find(a => a.id === agentId);
+              const v4 = AGENTS_V4.find(a => a.id === agentId);
+              const message = isAudit ? evt.description : evt.message;
+              const agentDisplay = isAudit ? (evt.agent_name || v4?.name || agent?.name) : (v4?.name ?? agent?.name);
               return (
                 <div key={evt.id} className={cn("flex items-start gap-2 py-1.5 px-2 rounded text-sm", i === 0 && "bg-muted/40")}>
-                  <span className="text-muted-foreground/40 text-xs font-mono shrink-0 mt-0.5">[{hh}:{mm}]</span>
+                  <span className="text-muted-foreground/40 text-xs font-mono shrink-0 mt-0.5">[{dd}{hh}:{mm}]</span>
                   <span className="shrink-0">{v4?.emoji ?? agent?.emoji}</span>
                   <span className={cn("leading-snug", i === 0 ? "text-foreground/70" : "text-muted-foreground/60")}>
-                    <span className="font-medium">{v4?.name ?? agent?.name}</span> · {evt.message}
+                    <span className="font-medium">{agentDisplay}</span> · {message}
                   </span>
-                  {evt.severity === "high" && <span className="text-red-500 text-xs shrink-0 mt-0.5">●</span>}
                 </div>
               );
             })}
