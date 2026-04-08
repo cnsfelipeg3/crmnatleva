@@ -58,18 +58,29 @@ interface AIHistoryMessage {
 function loadSessions(): SavedSession[] { try { return JSON.parse(localStorage.getItem(SESSIONS_KEY) || "[]"); } catch { return []; } }
 function saveSessions(sessions: SavedSession[]) { localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions.slice(0, 50))); }
 
+function stripInternalTagsFromHistory(text: string): string {
+  return text
+    .replace(/\[TRANSFERIR[^\]]*\]/g, "")
+    .replace(/\[BRIEFING[^\]]*\]:?\s*/gi, "")
+    .replace(/\[ESCALON[^\]]*\]:?\s*/gi, "")
+    .replace(/\[INTERNO[^\]]*\]:?\s*/gi, "")
+    .trim();
+}
+
 function buildConversationHistory(messages: ChatMsg[], destino: string, isLivreMode: boolean): AIHistoryMessage[] {
   return messages
     .filter((message): message is ChatMsg => message.role === "user" || message.role === "agent")
     .map((message, index) => {
-      const role = message.role === "user" ? "user" : "assistant";
+      const role: "user" | "assistant" = message.role === "user" ? "user" : "assistant";
       const isFirstUserMessage = role === "user" && index === 0;
+      const rawContent = stripInternalTagsFromHistory(message.content);
       const content = isFirstUserMessage && !isLivreMode
-        ? `[Simulação - Cliente interessado em ${destino}] ${message.content}`
-        : message.content;
+        ? `[Simulação - Cliente interessado em ${destino}] ${rawContent}`
+        : rawContent;
 
       return { role, content };
-    });
+    })
+    .filter(m => m.content.length > 0);
 }
 
 const SUGGESTION_CHIPS = [
@@ -192,14 +203,13 @@ export default function SimuladorManualMode() {
   const DEBOUNCE_MS = 4000;
 
   const triggerAgentResponse = useCallback(async () => {
+    // Strict guard: prevent any concurrent execution
+    if (isProcessingRef.current) {
+      return;
+    }
     const batch = [...pendingMessagesRef.current];
     pendingMessagesRef.current = [];
     if (batch.length === 0) return;
-    if (isProcessingRef.current) {
-      // Re-queue: agent is still processing, will be picked up after
-      pendingMessagesRef.current = [...batch, ...pendingMessagesRef.current];
-      return;
-    }
 
     isProcessingRef.current = true;
     setLoading(true);

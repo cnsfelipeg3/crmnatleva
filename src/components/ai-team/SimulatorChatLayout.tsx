@@ -197,7 +197,7 @@ const ChatBubble = memo(function ChatBubble({
   const isSystem = msg.role === "system";
   const isUser = msg.role === "user";
   const showName = isAgent && (index === 0 || messages[index - 1]?.role !== "agent" || messages[index - 1]?.agentId !== msg.agentId);
-  const cleanContent = msg.content.replace("[TRANSFERIR]", "").trim();
+  const cleanContent = msg.content.replace(/\[TRANSFERIR[^\]]*\]/g, "").replace(/\[BRIEFING[^\]]*\]:?\s*/gi, "").replace(/\[ESCALON[^\]]*\]:?\s*/gi, "").replace(/\[INTERNO[^\]]*\]:?\s*/gi, "").trim();
 
   return (
     <Fragment>
