@@ -203,14 +203,13 @@ export default function SimuladorManualMode() {
   const DEBOUNCE_MS = 4000;
 
   const triggerAgentResponse = useCallback(async () => {
+    // Strict guard: prevent any concurrent execution
+    if (isProcessingRef.current) {
+      return;
+    }
     const batch = [...pendingMessagesRef.current];
     pendingMessagesRef.current = [];
     if (batch.length === 0) return;
-    if (isProcessingRef.current) {
-      // Re-queue: agent is still processing, will be picked up after
-      pendingMessagesRef.current = [...batch, ...pendingMessagesRef.current];
-      return;
-    }
 
     isProcessingRef.current = true;
     setLoading(true);
