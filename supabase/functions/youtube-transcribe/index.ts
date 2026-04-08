@@ -469,6 +469,25 @@ REGRAS CRÍTICAS:
 - Se fala de transporte, diga COMO ir, QUANTO custa, TEMPO de deslocamento.
 - NÃO use frases genéricas como "o vídeo discute sobre idiomas" — diga exatamente O QUE foi dito.
 
+REGRA DE CONFIDENCIALIDADE DE PREÇOS (CRÍTICA):
+- Extraia TODOS os preços, valores e custos mencionados no vídeo — eles são dados VALIOSOS para referência interna.
+- MARQUE claramente todos os dados de preço com o prefixo "[USO INTERNO]" antes do valor.
+- Exemplo: "[USO INTERNO] Passeio de barco: R$ 150 por pessoa" ou "[USO INTERNO] Diária do hotel: US$ 300"
+- Esses valores servem EXCLUSIVAMENTE como referência interna para a equipe montar propostas.
+- NUNCA serão compartilhados diretamente com clientes pelos agentes de atendimento.
+
+REGRA DE ANONIMIZAÇÃO DE CONCORRENTES E CANAIS EXTERNOS (CRÍTICA):
+- REMOVA completamente qualquer menção a agências de viagem concorrentes, sites de reserva ou canais de venda externos.
+- Lista de termos que devem ser FILTRADOS/REMOVIDOS do conteúdo extraído:
+  Booking, Booking.com, Airbnb, GetYourGuide, Viator, Expedia, TripAdvisor, Trivago, Hotels.com,
+  Kayak, Skyscanner, Google Flights, Decolar, CVC, Hurb, 123Milhas, MaxMilhas, Submarino Viagens,
+  Hotel Urbano, Trip.com, Agoda, Hostelworld, Priceline, Hotwire, Travelocity, Orbitz,
+  Klook, Civitatis, Musement, Flytour, Hotelbeds, Despegar
+- Se o vídeo recomenda "reserve pelo Booking" ou "compre no GetYourGuide", SUBSTITUA por:
+  "Consulte a NatLeva para reservas" ou simplesmente OMITA a recomendação de canal.
+- Se o vídeo menciona um link de afiliado ou código de desconto de terceiros, OMITA completamente.
+- Mantenha apenas informações úteis sobre o SERVIÇO/EXPERIÊNCIA em si, não sobre ONDE comprar.
+
 FORMATO DE SAÍDA (em português, use markdown):
 
 # [Título descritivo baseado no conteúdo REAL]
@@ -483,7 +502,7 @@ FORMATO DE SAÍDA (em português, use markdown):
 - **Destino**: [destino REAL do vídeo]
 - **Cidades/Regiões cobertas**: [lista de todos os locais mencionados]
 - **Melhor época**: [se mencionado]
-- **Faixa de preço**: [valores EXATOS mencionados]
+- **Faixa de preço**: [USO INTERNO] [valores EXATOS mencionados]
 - **Duração sugerida**: [se mencionado]
 - **Dicas importantes**: [lista detalhada de dicas REAIS]
 - **O que evitar**: [se mencionado]
@@ -492,7 +511,7 @@ FORMATO DE SAÍDA (em português, use markdown):
 ## Categoria sugerida
 [uma de: destinos, scripts, preços, fornecedores, processos, treinamento, compliance, geral]
 
-IMPORTANTE: Seja EXTREMAMENTE fiel à transcrição.`;
+IMPORTANTE: Seja EXTREMAMENTE fiel à transcrição. Preços devem SEMPRE ser marcados como [USO INTERNO].`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });

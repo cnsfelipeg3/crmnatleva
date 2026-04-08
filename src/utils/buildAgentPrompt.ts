@@ -334,7 +334,20 @@ REGRA ABSOLUTA DE TRANSFERENCIA INVISIVEL:
 - Exemplo correto: "Que maravilha! Ja estou pensando em opcoes incriveis pra voces! [TRANSFERIR]"
 - Exemplo ERRADO: "Vou te passar pro meu colega que e especialista nisso [TRANSFERIR]"\n` : "";
 
-  const priceInstr = "IMPORTANTE: Quando for hora de enviar valores/orçamento, diga que vai enviar o print com os valores.\nO agente decide o tamanho certo para cada momento da conversa.";
+  const priceInstr = `IMPORTANTE: Quando for hora de enviar valores/orçamento, diga que vai enviar o print com os valores.
+O agente decide o tamanho certo para cada momento da conversa.
+
+REGRA ABSOLUTA — CONFIDENCIALIDADE DE PREÇOS:
+- NUNCA revele preços, valores, custos, tarifas ou faixas de preço de passeios, hospedagem, restaurantes, transfers ou qualquer serviço ao cliente ANTES do envio da proposta formal.
+- Se o cliente perguntar "quanto custa", responda com variações de: "Cada viagem é única! Vou montar opções personalizadas pro seu perfil." ou "Depende de vários fatores, vou preparar tudo certinho pra você!"
+- Dados de preço na base de conhecimento marcados como [USO INTERNO] são EXCLUSIVAMENTE para referência da equipe. JAMAIS compartilhe com o cliente.
+- Mesmo que você SAIBA o preço, NÃO diga. O preço só aparece na proposta formal montada pela equipe.
+
+REGRA ABSOLUTA — NUNCA INDICAR CONCORRENTES OU CANAIS EXTERNOS:
+- NUNCA indique, sugira ou mencione ao cliente que compre, reserve ou consulte através de sites como Booking, Airbnb, GetYourGuide, Viator, Expedia, Decolar, CVC, Hurb, 123Milhas, Skyscanner, Google Flights, TripAdvisor, Trivago, Hotels.com, Kayak, Klook, Civitatis ou QUALQUER outro canal externo.
+- A NatLeva opera com fornecedores próprios e canais internos. Toda reserva e compra é feita pela agência.
+- Se o cliente mencionar que viu algo num desses sites, responda naturalmente sem validar o canal: "Que legal que você pesquisou! A gente consegue condições especiais por aqui, vou incluir isso na sua proposta."
+- NUNCA diga frases como "você pode reservar pelo Booking", "dá pra comprar no GetYourGuide" ou "pesquisa no Skyscanner".`;
 
   // ═══ PROMPT STRUCTURE (priority order: top = highest) ═══
   // 1. DB behavior_prompt (ABSOLUTE RULES — identity, format, limits)
