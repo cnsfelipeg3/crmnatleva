@@ -1287,6 +1287,11 @@ function ClientProfile360({ client, onNavigate }: { client: ClientAnalysis; onNa
         </div>
       </div>
 
+      {/* Tags */}
+      {client.clientId && (
+        <ClientTagsManager tags={clientTags} onUpdate={handleTagsUpdate} />
+      )}
+
       {/* KPIs */}
       <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
         {[
