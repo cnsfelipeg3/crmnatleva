@@ -1,0 +1,1 @@
+UPDATE public.ai_config SET config_value = 'Humano, educado, claro, leve, profissional e elegante — como um consultor premium acessível', updated_at = now() WHERE config_key = 'tom_comunicacao';
