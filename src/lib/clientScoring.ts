@@ -22,7 +22,7 @@ export interface ClientSale {
 }
 
 export interface ClientAnalysis {
-  key: string; name: string; saleIds: string[]; sales: ClientSale[];
+  key: string; name: string; clientId: string | null; saleIds: string[]; sales: ClientSale[];
   totalRevenue: number; totalProfit: number; avgMargin: number;
   totalTrips: number; avgTicket: number; frequency: number;
   lastTrip: string | null; nextTrip: string | null; firstTrip: string | null;
@@ -269,8 +269,10 @@ export function analyzeClients(sales: ClientSale[]): ClientAnalysis[] {
     const mostExpensiveTrip = tripValues.length > 0 ? Math.max(...tripValues) : 0;
     const cheapestTrip = tripValues.length > 0 ? Math.min(...tripValues) : 0;
 
+    const clientId = cs.find(s => s.client_id)?.client_id || null;
+
     return {
-      key, name: displayNames[key], saleIds: cs.map(s => s.id), sales: cs,
+      key, name: displayNames[key], clientId, saleIds: cs.map(s => s.id), sales: cs,
       totalRevenue, totalProfit, avgMargin, totalTrips: cs.length,
       avgTicket, frequency, lastTrip, nextTrip, firstTrip,
       topDestination, topRegion, topProduct,
