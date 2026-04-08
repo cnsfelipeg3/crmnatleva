@@ -229,6 +229,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           { to: "/ai-team/memoria", icon: Database, label: "Memória & Fiscal" },
           { to: "/ai-team/academia", icon: Star, label: "Academia" },
           { to: "/ai-team/simulador", icon: MessageSquare, label: "Simulador" },
+          { to: "/ai-team/performance", icon: BarChart3, label: "Performance" },
           { to: "/ai-team/config", icon: Cog, label: "Configurações" },
           { to: "/implementacao/estrategia-ia", icon: Shield, label: "⚖️ Regras Globais" },
           { to: "/implementacao/aprendizados-ia", icon: Sparkles, label: "Aprendizados IA" },

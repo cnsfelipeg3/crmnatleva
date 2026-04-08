@@ -33,6 +33,7 @@ import {
 } from "./chameleonUtils";
 
 const ChameleonDebrief = lazy(() => import("./ChameleonDebrief"));
+import SimuladorReport from "./SimuladorReport";
 
 type Phase = "config" | "running" | "paused" | "debrief";
 
@@ -694,9 +695,19 @@ export default function SimuladorChameleonMode() {
         {/* Messages or Debrief */}
         <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3">
           {phase === "debrief" && debrief ? (
-            <Suspense fallback={<Loader2 className="w-5 h-5 animate-spin mx-auto mt-10" style={{ color: "#A78BFA" }} />}>
-              <ChameleonDebrief debrief={debrief} />
-            </Suspense>
+            <div className="space-y-6">
+              <SimuladorReport
+                messages={messages.map(m => ({ role: m.role, content: m.content, agentId: m.agentId, agentName: m.agentName, timestamp: m.timestamp }))}
+                agents={selectedAgents}
+                durationSeconds={Math.round((Date.now() - (messages[0]?.timestamp || Date.now())) / 1000)}
+                mode="chameleon"
+                leadProfile={profile ? { nome: profile.nome, destino: profile.destino, orcamento: profile.orcamentoLabel, composicao: profile.composicaoLabel, motivacao: profile.motivacao } : undefined}
+                onNewSimulation={handleReset}
+              />
+              <Suspense fallback={<Loader2 className="w-5 h-5 animate-spin mx-auto mt-10" style={{ color: "#A78BFA" }} />}>
+                <ChameleonDebrief debrief={debrief} />
+              </Suspense>
+            </div>
           ) : (
             <>
               {messages.map((msg, i) => (

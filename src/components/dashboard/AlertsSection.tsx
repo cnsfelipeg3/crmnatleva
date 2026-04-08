@@ -1,10 +1,13 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
-import { AlertTriangle, FileWarning, ShieldAlert, Lightbulb, TrendingDown, TrendingUp, Users, Globe, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
+import { AlertTriangle, FileWarning, ShieldAlert, Lightbulb, TrendingDown, TrendingUp, Users, Globe, DollarSign, Clock, MessageSquare, CheckCircle2, Plane } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { iataToLabel } from "@/lib/iataUtils";
+import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -25,11 +28,52 @@ interface Props {
   clients: Client[];
 }
 
+interface SmartAlert {
+  severity: "critical" | "warning" | "attention" | "info";
+  icon: any;
+  message: string;
+  count: number;
+  detail?: string;
+}
+
 export default function AlertsSection({ filtered, sellerNames, clients }: Props) {
   const navigate = useNavigate();
   const [expandedInsight, setExpandedInsight] = useState<number | null>(null);
   const [drillSales, setDrillSales] = useState<{ title: string; sales: Sale[] } | null>(null);
 
+  // ── Smart alert data sources ──
+  const { data: pendingConversations = 0 } = useQuery({
+    queryKey: ["smart-alert-conversations"],
+    queryFn: async () => {
+      const twoHoursAgo = new Date(Date.now() - 2 * 3600000).toISOString();
+      const { count } = await supabase
+        .from("conversations")
+        .select("*", { count: "exact", head: true })
+        .lt("last_message_at", twoHoursAgo)
+        .not("last_message_at", "is", null)
+        .in("status", ["open", "active", "novo"]);
+      return count || 0;
+    },
+    staleTime: 60_000,
+  });
+
+  const { data: upcomingCheckins = 0 } = useQuery({
+    queryKey: ["smart-alert-checkins"],
+    queryFn: async () => {
+      const now = new Date().toISOString();
+      const in48h = new Date(Date.now() + 48 * 3600000).toISOString();
+      const { count } = await supabase
+        .from("checkin_tasks")
+        .select("*", { count: "exact", head: true })
+        .neq("status", "completed")
+        .gte("checkin_open_datetime_utc", now)
+        .lte("checkin_open_datetime_utc", in48h);
+      return count || 0;
+    },
+    staleTime: 60_000,
+  });
+
+  // ── Original risk alerts ──
   const alerts = useMemo(() => {
     const a: { icon: any; msg: string; saleId: string; type: string }[] = [];
     filtered.forEach(s => {
@@ -45,7 +89,78 @@ export default function AlertsSection({ filtered, sellerNames, clients }: Props)
     return a.slice(0, 15);
   }, [filtered]);
 
-  // Enhanced insights with drill-down data
+  // ── Smart alerts ──
+  const smartAlerts = useMemo(() => {
+    const sa: SmartAlert[] = [];
+
+    // Margin < 15%
+    const lowMarginSales = filtered.filter(s => s.received_value > 0 && (s.margin || 0) < 15 && (s.margin || 0) >= 0);
+    if (lowMarginSales.length > 0) {
+      sa.push({
+        severity: "critical",
+        icon: TrendingDown,
+        message: `${lowMarginSales.length} venda${lowMarginSales.length > 1 ? "s" : ""} com margem abaixo de 15%`,
+        count: lowMarginSales.length,
+      });
+    }
+
+    // Daily sales below average
+    const today = new Date();
+    const todaySales = filtered.filter(s => {
+      const d = new Date(s.created_at);
+      return d.toDateString() === today.toDateString();
+    });
+    const todayRev = todaySales.reduce((s, v) => s + (v.received_value || 0), 0);
+    const last30 = filtered.filter(s => {
+      const d = new Date(s.created_at);
+      return d.getTime() > Date.now() - 30 * 86400000;
+    });
+    const avgDaily = last30.length > 0 ? last30.reduce((s, v) => s + (v.received_value || 0), 0) / 30 : 0;
+    if (avgDaily > 0 && todayRev < avgDaily * 0.7) {
+      const pctBelow = Math.round((1 - todayRev / avgDaily) * 100);
+      sa.push({
+        severity: "attention",
+        icon: DollarSign,
+        message: `Vendas de hoje (${fmt(todayRev)}) estão ${pctBelow}% abaixo da média diária (${fmt(avgDaily)})`,
+        count: 1,
+      });
+    }
+
+    // Conversations without response > 2h
+    if (pendingConversations > 0) {
+      sa.push({
+        severity: "critical",
+        icon: MessageSquare,
+        message: `${pendingConversations} conversa${pendingConversations > 1 ? "s" : ""} aguardando resposta há mais de 2h`,
+        count: pendingConversations,
+      });
+    }
+
+    // Upcoming check-ins
+    if (upcomingCheckins > 0) {
+      sa.push({
+        severity: "warning",
+        icon: Plane,
+        message: `${upcomingCheckins} check-in${upcomingCheckins > 1 ? "s" : ""} nas próximas 48h ainda não realizado${upcomingCheckins > 1 ? "s" : ""}`,
+        count: upcomingCheckins,
+      });
+    }
+
+    // Sort by severity
+    const order: Record<string, number> = { critical: 0, attention: 1, warning: 2, info: 3 };
+    sa.sort((a, b) => order[a.severity] - order[b.severity]);
+
+    return sa;
+  }, [filtered, pendingConversations, upcomingCheckins]);
+
+  const severityColors: Record<string, { border: string; text: string; bg: string }> = {
+    critical: { border: "border-l-red-500", text: "text-red-400", bg: "bg-red-500/5" },
+    warning: { border: "border-l-amber-500", text: "text-amber-400", bg: "bg-amber-500/5" },
+    attention: { border: "border-l-orange-500", text: "text-orange-400", bg: "bg-orange-500/5" },
+    info: { border: "border-l-blue-500", text: "text-blue-400", bg: "bg-blue-500/5" },
+  };
+
+  // ── Insights (unchanged) ──
   const insights = useMemo(() => {
     const msgs: { icon: any; msg: string; type: string; sales: Sale[] }[] = [];
     if (filtered.length === 0) return msgs;
@@ -120,6 +235,26 @@ export default function AlertsSection({ filtered, sellerNames, clients }: Props)
     <>
       <div className="space-y-4">
         <h2 className="section-title">🧠 Inteligência & Alertas</h2>
+
+        {/* Smart Alerts Row */}
+        {smartAlerts.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {smartAlerts.map((sa, i) => {
+              const sc = severityColors[sa.severity];
+              return (
+                <Card key={i} className={cn("p-3 border-l-4", sc.border, sc.bg, sa.count === 0 && "opacity-50")}>
+                  <div className="flex items-start gap-2">
+                    <sa.icon className={cn("w-4 h-4 mt-0.5 shrink-0", sc.text)} />
+                    <div>
+                      <p className={cn("text-xs font-medium", sc.text)}>{sa.message}</p>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Card className="p-5 glass-card">
             <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
