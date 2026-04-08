@@ -126,7 +126,7 @@ export default function YouTubeBatchImport({ onBack, onSaved }: YouTubeBatchImpo
         let taxonomy = null;
         let tags: string[] = [];
         let confidence: number | null = null;
-        let contentText = data.structured_knowledge || data.transcript || "";
+        const contentText = data.structured_knowledge || data.transcript || "";
         try {
           const { data: orgData } = await supabase.functions.invoke("organize-knowledge", {
             body: { content: data.structured_knowledge || "", transcript: data.transcript || "" },
@@ -135,7 +135,8 @@ export default function YouTubeBatchImport({ onBack, onSaved }: YouTubeBatchImpo
             taxonomy = orgData.taxonomy.taxonomia || orgData.taxonomy;
             tags = orgData.taxonomy.tags || [];
             confidence = orgData.taxonomy.confianca ?? taxonomy?.confianca ?? null;
-            contentText = orgData.taxonomy.resumo || contentText;
+            // NOTE: Do NOT replace contentText with resumo — resumo is a short summary,
+            // contentText must remain the full transcript for RAG/agent usage
           }
         } catch (orgErr) {
           console.error("ÓRION error in batch:", orgErr);

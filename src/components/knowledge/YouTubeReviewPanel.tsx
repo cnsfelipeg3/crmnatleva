@@ -268,8 +268,8 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
     }
     setSaving(true);
     try {
-      // Build content - resumo + markdown fallback
-      const contentText = resumo || result?.structured_knowledge || "";
+      // Full transcript/structured content for RAG — resumo is just a short summary
+      const contentText = result?.structured_knowledge || result?.transcript || resumo || "";
 
       const payload: any = {
         title: editTitle.trim(),
