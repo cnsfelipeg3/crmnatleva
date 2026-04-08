@@ -314,15 +314,19 @@ export default function SimuladorManualMode() {
       const decoder = new TextDecoder();
       let buf = "", agentText = "";
       const streamId = "stream-" + crypto.randomUUID();
+      let isPostCompliance = false; // Flag to bypass dedup for final compliance update
       const updateAgent = (t: string) => {
         setMessages(prev => {
           // Dedup: if last non-stream agent message has very similar content, skip
-          const lastNonStream = [...prev].reverse().find(m => m.role === "agent" && m.id !== streamId);
-          if (lastNonStream && lastNonStream.content) {
-            const normA = t.replace(/\s+/g, " ").trim().toLowerCase();
-            const normB = lastNonStream.content.replace(/\s+/g, " ").trim().toLowerCase();
-            if (normA === normB || (normA.length > 20 && normB.startsWith(normA.slice(0, Math.floor(normA.length * 0.8))))) {
-              return prev;
+          // BUT: never block the post-compliance final update (it must always apply)
+          if (!isPostCompliance) {
+            const lastNonStream = [...prev].reverse().find(m => m.role === "agent" && m.id !== streamId);
+            if (lastNonStream && lastNonStream.content) {
+              const normA = t.replace(/\s+/g, " ").trim().toLowerCase();
+              const normB = lastNonStream.content.replace(/\s+/g, " ").trim().toLowerCase();
+              if (normA === normB) {
+                return prev;
+              }
             }
           }
           let updated: ChatMsg[];
@@ -383,8 +387,10 @@ export default function SimuladorManualMode() {
           }
         }
 
-        // Name sanitization is now handled inside fullCompliancePipeline
+        // Set flag so the final compliance update ALWAYS applies (bypasses dedup)
+        isPostCompliance = true;
         updateAgent(compliantText);
+        isPostCompliance = false;
       }
 
       // Use compliantText (post-compliance) for transfer check — pivot detector injects [TRANSFERIR] there
@@ -475,13 +481,10 @@ export default function SimuladorManualMode() {
         setSelectedAgent(nextAgent);
         setTimeout(() => setTransferNotice(null), 4000);
       }
-    } catch {
-      setMessages(prev => {
-        const errorMessage: ChatMsg = { id: crypto.randomUUID(), role: "agent", content: "Erro na comunicação. Tente novamente.", timestamp: new Date().toISOString() };
-        const updated = [...prev, errorMessage];
-        messagesRef.current = updated;
-        return updated;
-      });
+    } catch (err) {
+      // CORREÇÃO 4: Do NOT show technical error to client — log internally only
+      console.error("[AGENT] Error in triggerAgentResponse — suppressed from client", err);
+      debugLog("[AGENT] Erro técnico suprimido (não exposto ao cliente)");
     } finally {
       setLoading(false);
       isProcessingRef.current = false;
