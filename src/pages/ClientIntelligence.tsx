@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { analyzeClients, getSegmento, type ClientAnalysis, type ClientSale } from "@/lib/clientScoring";
 import { generateRecommendations, type Recommendation } from "@/lib/clientRecommendations";
@@ -28,6 +29,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import ClientTagsManager from "@/components/clients/ClientTagsManager";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const pct = (v: number) => `${v.toFixed(1)}%`;
@@ -1221,6 +1223,20 @@ export default function ClientIntelligence() {
 
 function ClientProfile360({ client, onNavigate }: { client: ClientAnalysis; onNavigate: (saleId: string) => void }) {
   const recommendations = useMemo(() => generateRecommendations(client), [client]);
+  const [clientTags, setClientTags] = useState<string[]>([]);
+
+  // Load tags from DB
+  useEffect(() => {
+    if (!client.clientId) return;
+    supabase.from("clients").select("tags").eq("id", client.clientId).maybeSingle()
+      .then(({ data }) => { if (data?.tags) setClientTags(data.tags as string[]); });
+  }, [client.clientId]);
+
+  const handleTagsUpdate = useCallback(async (newTags: string[]) => {
+    setClientTags(newTags);
+    if (!client.clientId) return;
+    await supabase.from("clients").update({ tags: newTags } as any).eq("id", client.clientId);
+  }, [client.clientId]);
 
   const scoreBreakdown = [
     { label: "Valor", value: client.scoreValor, weight: "25%" },
@@ -1270,6 +1286,11 @@ function ClientProfile360({ client, onNavigate }: { client: ClientAnalysis; onNa
           <div className="text-[10px] text-muted-foreground">Score NatLeva</div>
         </div>
       </div>
+
+      {/* Tags */}
+      {client.clientId && (
+        <ClientTagsManager tags={clientTags} onUpdate={handleTagsUpdate} />
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
