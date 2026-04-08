@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { analyzeClients, getSegmento, type ClientAnalysis, type ClientSale } from "@/lib/clientScoring";
 import { generateRecommendations, type Recommendation } from "@/lib/clientRecommendations";
