@@ -240,26 +240,12 @@ function YouTubeUploadFlow({ onSave, onCancel }: { onSave: () => void; onCancel:
     setTranscribing(true);
     setResult(null);
     try {
-      // STEP 1: Try browser-side caption extraction first (residential IP bypasses YouTube blocks)
-      let browserTranscript: string | null = null;
-      try {
-        toast.info("Extraindo legendas pelo navegador...", { duration: 3000 });
-        browserTranscript = await extractCaptionsBrowserSide(videoId);
-        if (browserTranscript) {
-          console.log(`Browser-side extraction SUCCESS: ${browserTranscript.length} chars`);
-          toast.success(`Legendas extraídas: ${browserTranscript.split(/\s+/).length} palavras. Processando com IA...`);
-        }
-      } catch (e) {
-        console.warn('Browser-side extraction failed, trying server-side:', e);
-      }
-
-      // STEP 2: Call Edge Function — with browser transcript if available
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 180_000);
       let data: any, error: any;
       try {
         const res = await supabase.functions.invoke("youtube-transcribe", {
-          body: { url: ytUrl, ...(browserTranscript ? { manual_transcript: browserTranscript } : {}) },
+          body: { url: ytUrl },
           signal: controller.signal as any,
         });
         data = res.data;
