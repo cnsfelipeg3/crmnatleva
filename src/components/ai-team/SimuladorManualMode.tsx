@@ -314,15 +314,19 @@ export default function SimuladorManualMode() {
       const decoder = new TextDecoder();
       let buf = "", agentText = "";
       const streamId = "stream-" + crypto.randomUUID();
+      let isPostCompliance = false; // Flag to bypass dedup for final compliance update
       const updateAgent = (t: string) => {
         setMessages(prev => {
           // Dedup: if last non-stream agent message has very similar content, skip
-          const lastNonStream = [...prev].reverse().find(m => m.role === "agent" && m.id !== streamId);
-          if (lastNonStream && lastNonStream.content) {
-            const normA = t.replace(/\s+/g, " ").trim().toLowerCase();
-            const normB = lastNonStream.content.replace(/\s+/g, " ").trim().toLowerCase();
-            if (normA === normB || (normA.length > 20 && normB.startsWith(normA.slice(0, Math.floor(normA.length * 0.8))))) {
-              return prev;
+          // BUT: never block the post-compliance final update (it must always apply)
+          if (!isPostCompliance) {
+            const lastNonStream = [...prev].reverse().find(m => m.role === "agent" && m.id !== streamId);
+            if (lastNonStream && lastNonStream.content) {
+              const normA = t.replace(/\s+/g, " ").trim().toLowerCase();
+              const normB = lastNonStream.content.replace(/\s+/g, " ").trim().toLowerCase();
+              if (normA === normB) {
+                return prev;
+              }
             }
           }
           let updated: ChatMsg[];
