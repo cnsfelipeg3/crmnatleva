@@ -174,6 +174,34 @@ export default function AITeamAgentDetail() {
     enabled: !!agentId,
   });
 
+  // Fetch assigned skills count from agent_skill_assignments (same source as SkillsTab)
+  const { data: dbAssignedSkillsCount = 0 } = useQuery({
+    queryKey: ["agent_skills_count", agentId],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("agent_skill_assignments")
+        .select("id", { count: "exact", head: true })
+        .eq("agent_id", agentId!);
+      return count ?? 0;
+    },
+    enabled: !!agentId,
+  });
+
+  // Fetch recent audit log entries for this agent (for activity log + memory proxy)
+  const { data: agentAuditLog = [] } = useQuery({
+    queryKey: ["ai_team_audit_log_agent", agentId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_team_audit_log")
+        .select("*")
+        .or(`agent_id.eq.${agentId},agent_name.ilike.%${agentNameUpper}%`)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      return data || [];
+    },
+    enabled: !!agentId && !!agentNameUpper,
+  });
+
   // Fetch real rules from strategy knowledge that apply to this agent
   const { data: dbAgentRules = [] } = useQuery({
     queryKey: ["ai_strategy_knowledge_agent", agentId, agentNameUpper],
@@ -200,19 +228,32 @@ export default function AITeamAgentDetail() {
       // Fallback to mock if DB is empty
       return ALL_KB_DOCS.filter(d => d.agente === agentNameUpper || d.agente === "Todos");
     }
-    return dbKbDocs.map((d: any) => {
+    // Deduplicate by title
+    const seen = new Set<string>();
+    return dbKbDocs.filter((d: any) => {
+      const key = (d.title || "").toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).map((d: any) => {
       const contentLen = (d.content_text || "").length;
+      const hasContent = contentLen > 0;
       const sizeStr = contentLen > 1024 * 1024
         ? `${(contentLen / (1024 * 1024)).toFixed(1)} MB`
         : contentLen > 1024
         ? `${Math.round(contentLen / 1024)} KB`
         : `${contentLen} B`;
-      const hasTaxonomy = !!d.taxonomy;
+      const hasTaxonomy = !!(d.taxonomy as any)?.chunks?.length;
       const fileType = d.file_type || d.category || "texto";
       const tipo = fileType.includes("video") || fileType.includes("youtube") ? "video"
         : fileType.includes("pdf") ? "pdf"
         : fileType.includes("image") ? "imagem"
         : "texto";
+      // CORREÇÃO 1: status based on content_text OR taxonomy, not just taxonomy
+      const status: "processado" | "processando" = (hasContent || hasTaxonomy) ? "processado" : "processando";
+      const chunks = hasTaxonomy
+        ? (d.taxonomy as any).chunks.length
+        : (hasContent ? Math.ceil(contentLen / 500) : 0);
       return {
         id: d.id,
         title: d.title || "Sem título",
@@ -220,9 +261,9 @@ export default function AITeamAgentDetail() {
         tags: d.tags || [],
         agente: "Todos",
         resumo: d.description || "",
-        chunks: (d.taxonomy as any)?.chunks?.length || 0,
+        chunks,
         updatedAt: d.updated_at ? new Date(d.updated_at).toLocaleDateString("pt-BR") : "",
-        status: hasTaxonomy ? "processado" as const : "processando" as const,
+        status,
         size: sizeStr,
       };
     });
@@ -236,8 +277,9 @@ export default function AITeamAgentDetail() {
   );
 
   // Real counts from DB for tab badges
+  // CORREÇÃO 5: Use assigned skills count (same source as SkillsTab) for badge
   const realKbCount = agentDocs.length;
-  const realSkillsCount = dbAgentSkills.length || agentSkills.length;
+  const realSkillsCount = dbAssignedSkillsCount || dbAgentSkills.length || agentSkills.length;
   const realRulesCount = dbAgentRules.length || agentRules.length;
 
   // Fetch behavior_prompt from database (source of truth)
