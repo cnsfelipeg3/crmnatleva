@@ -1223,31 +1223,6 @@ export default function ClientIntelligence() {
 
 function ClientProfile360({ client, onNavigate }: { client: ClientAnalysis; onNavigate: (saleId: string) => void }) {
   const recommendations = useMemo(() => generateRecommendations(client), [client]);
-  const [clientTags, setClientTags] = useState<string[]>([]);
-  const [autoTags, setAutoTags] = useState<string[]>([]);
-
-  // Load tags from clients table + auto_tags from conversations
-  useEffect(() => {
-    if (!client.clientId) return;
-    supabase.from("clients").select("tags").eq("id", client.clientId).maybeSingle()
-      .then(({ data }) => { if (data?.tags) setClientTags(data.tags as string[]); });
-    supabase.from("conversations").select("auto_tags").eq("client_id", client.clientId)
-      .then(({ data }) => {
-        if (!data) return;
-        const merged = new Set<string>();
-        data.forEach((row: any) => {
-          const tags = row.auto_tags;
-          if (Array.isArray(tags)) tags.forEach((t: string) => merged.add(t));
-        });
-        setAutoTags(Array.from(merged));
-      });
-  }, [client.clientId]);
-
-  const handleTagsUpdate = useCallback(async (newTags: string[]) => {
-    setClientTags(newTags);
-    if (!client.clientId) return;
-    await supabase.from("clients").update({ tags: newTags } as any).eq("id", client.clientId);
-  }, [client.clientId]);
 
   const scoreBreakdown = [
     { label: "Valor", value: client.scoreValor, weight: "25%" },
@@ -1298,26 +1273,8 @@ function ClientProfile360({ client, onNavigate }: { client: ClientAnalysis; onNa
         </div>
       </div>
 
-      {/* Tags Section — manual (solid) + auto (dashed) */}
-      {(client.clientId || autoTags.length > 0) && (
-        <div className="space-y-2">
-          <ClientTagsManager tags={clientTags} onUpdate={handleTagsUpdate} readOnly={!client.clientId} />
-          {autoTags.length > 0 && (
-            <Card className="p-3 glass-card">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-primary" /> Tags Automáticas (Conversas)
-              </p>
-              <div className="flex flex-wrap gap-1.5">
-                {autoTags.map(tag => (
-                  <Badge key={tag} variant="outline" className="text-[11px] py-0.5 px-2 border-dashed border-primary/40 text-primary/80">
-                    {tag.includes(":") ? tag.split(":").slice(1).join(":") : tag}
-                  </Badge>
-                ))}
-              </div>
-            </Card>
-          )}
-        </div>
-      )}
+      {/* Tags */}
+      {client.clientId && <ClientTagsManager clientId={client.clientId} />}
 
       {/* KPIs */}
       <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 gap-2">
