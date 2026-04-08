@@ -61,57 +61,6 @@ function extractYouTubeId(url: string): string | null {
   return m ? m[1] : null;
 }
 
-async function extractCaptionsBrowserSide(videoId: string): Promise<string | null> {
-  try {
-    const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent('https://www.youtube.com/watch?v=' + videoId)}`;
-    const pageRes = await fetch(proxyUrl);
-    const html = await pageRes.text();
-
-    if (!html.includes('captionTracks')) return null;
-
-    const marker = '"captionTracks":';
-    const markerIdx = html.indexOf(marker);
-    if (markerIdx === -1) return null;
-
-    const start = markerIdx + marker.length;
-    let bracketCount = 0;
-    let end = start;
-    for (let i = start; i < html.length; i++) {
-      if (html[i] === '[') bracketCount++;
-      if (html[i] === ']') bracketCount--;
-      if (bracketCount === 0) { end = i + 1; break; }
-    }
-
-    const captionTracks = JSON.parse(html.substring(start, end));
-
-    const bestTrack =
-      captionTracks.find((t: any) => t.languageCode === 'pt' && t.kind !== 'asr') ||
-      captionTracks.find((t: any) => t.languageCode?.startsWith('pt') && t.kind !== 'asr') ||
-      captionTracks.find((t: any) => t.kind !== 'asr') ||
-      captionTracks.find((t: any) => t.languageCode === 'pt') ||
-      captionTracks[0];
-
-    if (!bestTrack?.baseUrl) return null;
-
-    const captionUrl = bestTrack.baseUrl.replace(/&fmt=[^&]*/g, '') + '&fmt=json3';
-    const captionRes = await fetch(captionUrl);
-    const captionData = await captionRes.json();
-
-    if (!captionData?.events) return null;
-
-    const texts = captionData.events
-      .filter((e: any) => e.segs)
-      .map((e: any) => e.segs.map((s: any) => s.utf8 || '').join(''))
-      .filter((t: string) => t.trim());
-
-    const fullText = texts.join(' ').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
-
-    return fullText.length > 50 ? fullText : null;
-  } catch (error) {
-    console.warn('Browser-side caption extraction failed:', error);
-    return null;
-  }
-}
 
 // ─── Knowledge Cards: parse markdown sections into blocks ───
 function parseKnowledgeSections(content: string): { title: string; body: string }[] {
