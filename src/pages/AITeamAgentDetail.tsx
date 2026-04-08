@@ -542,7 +542,8 @@ export default function AITeamAgentDetail() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <SectionCard title="Log de Atividade" icon={Clock}>
-                <ActivityLog events={agentEvents} />
+                {/* CORREÇÃO 8: Use real audit log data instead of simulation */}
+                <AuditActivityLog entries={agentAuditLog} fallbackEvents={agentEvents} />
               </SectionCard>
               <SectionCard title="Persona & Descrição" icon={Brain}>
                 <p className="text-sm text-foreground/70 leading-relaxed italic">
@@ -593,13 +594,16 @@ export default function AITeamAgentDetail() {
 
           {/* ═══ TAB: MEMORY ═══ */}
           <TabsContent value="memory" className="space-y-4 mt-0">
-            {agent.memory && (agent.memory.learnedPatterns.length > 0 || Object.keys(agent.memory.preferences).length > 0 || agent.memory.shortTerm.length > 0) ? (
+            {/* CORREÇÃO 2: Use audit log as memory proxy */}
+            {agentAuditLog.length > 0 ? (
+              <AuditMemoryProxy entries={agentAuditLog} agentName={displayName} />
+            ) : agent.memory && (agent.memory.learnedPatterns.length > 0 || Object.keys(agent.memory.preferences).length > 0 || agent.memory.shortTerm.length > 0) ? (
               <IntelligenceSection memory={agent.memory} />
             ) : (
               <div className="rounded-xl border border-border/50 bg-card p-8 text-center">
                 <Brain className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">Nenhum dado de memória registrado ainda.</p>
-                <p className="text-xs text-muted-foreground/50 mt-1">A memória será populada conforme o agente processa tarefas e decisões.</p>
+                <p className="text-xs text-muted-foreground/50 mt-1">A memória será populada automaticamente conforme o agente realizar atendimentos.</p>
               </div>
             )}
           </TabsContent>
