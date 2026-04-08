@@ -1,5 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Brain, Plus, Building2, LayoutDashboard, AlertTriangle, Clock,
   Activity, CheckCircle2, Loader2, Check, X, Filter, DollarSign, MessageSquare, FileText,
@@ -39,7 +41,7 @@ const PRIORITY_DOT: Record<string, string> = { high: "bg-red-500", medium: "bg-a
 const KANBAN_COLS = [
   { key: "suggested", label: "Sugeridas",   statuses: ["detected", "suggested", "pending"], accent: "border-l-amber-500/60" },
   { key: "exec",      label: "Em Execução", statuses: ["analyzing", "in_progress"],         accent: "border-l-blue-500/60" },
-  { key: "done",      label: "Concluídas",  statuses: ["done"],                             accent: "border-l-emerald-500/60" },
+  { key: "done",      label: "Concluídas",  statuses: ["done", "completed"],                accent: "border-l-emerald-500/60" },
 ];
 const MAX_KANBAN = 4;
 
@@ -72,6 +74,41 @@ export default function AITeam() {
     fetchRealMetrics().then(setRealMetrics).catch(console.error);
   }, []);
 
+  // CORREÇÃO 3: Stable KPIs from DB instead of simulation
+  const { data: dbAgents = [] } = useQuery({
+    queryKey: ["ai_team_agents_kpi"],
+    queryFn: async () => {
+      const { data } = await supabase.from("ai_team_agents").select("id, status, is_active").limit(50);
+      return data || [];
+    },
+  });
+
+  // CORREÇÃO 4: Real feed from audit log
+  const { data: auditFeed = [] } = useQuery({
+    queryKey: ["ai_team_audit_feed"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_team_audit_log")
+        .select("id, action_type, entity_type, entity_name, agent_id, agent_name, description, created_at")
+        .order("created_at", { ascending: false })
+        .limit(25);
+      return data || [];
+    },
+  });
+
+  // CORREÇÃO 6: Real missions from DB
+  const { data: dbMissions = [] } = useQuery({
+    queryKey: ["ai_team_missions_mc"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_team_missions")
+        .select("id, title, agent_id, priority, status, created_at, completed_at")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      return data || [];
+    },
+  });
+
   const handleApprove = useCallback((id: string) => {
     removeTask(id, "approve");
     toast({ title: "Tarefa aprovada", description: "Sugestão aceita." });
@@ -91,20 +128,46 @@ export default function AITeam() {
     navigate(`/ai-team/agent/${agent.id}`);
   }, [navigate]);
 
-  // KPIs
+  // CORREÇÃO 3: Stable KPIs from DB
   const kpis = useMemo(() => {
+    const dbCount = dbAgents.length;
+    if (dbCount > 0) {
+      const active = dbAgents.filter((a: any) => a.is_active !== false).length;
+      const missionExec = dbMissions.filter((m: any) => m.status === "in_progress" || m.status === "analyzing").length;
+      const alerts = auditFeed.filter((e: any) => e.action_type === "delete" || e.entity_type === "rule").length;
+      const pending = dbMissions.filter((m: any) => m.status === "suggested" || m.status === "pending" || m.status === "detected").length;
+      return { active, executing: missionExec, alerts, pending };
+    }
+    // Fallback to simulation
     const active = agents.filter(a => a.status !== "idle").length;
     const executing = tasks.filter(t => ["analyzing", "in_progress"].includes(t.status)).length;
     const alerts = events.filter(e => e.severity === "high").length;
     const pending = tasks.filter(t => ["suggested", "detected", "pending"].includes(t.status)).length;
     return { active, executing, alerts, pending };
-  }, [agents, tasks, events]);
+  }, [dbAgents, dbMissions, auditFeed, agents, tasks, events]);
 
-  // Filtered feed
+  // CORREÇÃO 4: Feed from real audit log, with simulation fallback
   const filteredEvents = useMemo(() => {
+    if (auditFeed.length > 0) {
+      return auditFeed.slice(0, 25);
+    }
     const evts = feedFilter === "all" ? events : events.filter(e => e.type === feedFilter);
     return evts.slice(0, 25);
-  }, [events, feedFilter]);
+  }, [auditFeed, events, feedFilter]);
+
+  // CORREÇÃO 6: Missions from DB with fallback to simulation tasks
+  const displayMissions = useMemo(() => {
+    if (dbMissions.length > 0) {
+      return dbMissions.map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        sourceAgentId: m.agent_id,
+        priority: m.priority || "medium",
+        status: m.status === "completed" ? "done" : m.status,
+      }));
+    }
+    return tasks;
+  }, [dbMissions, tasks]);
 
   // Work log
   const workLogEvents = useMemo(() => {
@@ -115,7 +178,7 @@ export default function AITeam() {
   const agentsBySquad = useMemo(() => {
     const map = new Map<string, typeof agents>();
     for (const a of agents) {
-      const squad = a.sector; // sector = squadId from bridge
+      const squad = a.sector;
       if (!map.has(squad)) map.set(squad, []);
       map.get(squad)!.push(a);
     }
@@ -191,20 +254,25 @@ export default function AITeam() {
           </div>
           <div className="space-y-1 max-h-80 overflow-y-auto">
             {filteredEvents.length === 0 && <p className="text-sm text-muted-foreground/40 py-4 text-center">Nenhum evento.</p>}
-            {filteredEvents.map((evt, i) => {
-              const agent = agents.find(a => a.id === evt.agentId);
-              const v4 = AGENTS_V4.find(a => a.id === evt.agentId);
-              const time = new Date(evt.timestamp);
+            {filteredEvents.map((evt: any, i: number) => {
+              // Support both audit log entries and simulation events
+              const isAudit = !!evt.created_at && !evt.timestamp;
+              const time = new Date(isAudit ? evt.created_at : evt.timestamp);
               const hh = String(time.getHours()).padStart(2, "0");
               const mm = String(time.getMinutes()).padStart(2, "0");
+              const dd = isAudit ? `${String(time.getDate()).padStart(2, "0")}/${String(time.getMonth() + 1).padStart(2, "0")} ` : "";
+              const agentId = isAudit ? evt.agent_id : evt.agentId;
+              const agent = agents.find(a => a.id === agentId);
+              const v4 = AGENTS_V4.find(a => a.id === agentId);
+              const message = isAudit ? evt.description : evt.message;
+              const agentDisplay = isAudit ? (evt.agent_name || v4?.name || agent?.name) : (v4?.name ?? agent?.name);
               return (
                 <div key={evt.id} className={cn("flex items-start gap-2 py-1.5 px-2 rounded text-sm", i === 0 && "bg-muted/40")}>
-                  <span className="text-muted-foreground/40 text-xs font-mono shrink-0 mt-0.5">[{hh}:{mm}]</span>
+                  <span className="text-muted-foreground/40 text-xs font-mono shrink-0 mt-0.5">[{dd}{hh}:{mm}]</span>
                   <span className="shrink-0">{v4?.emoji ?? agent?.emoji}</span>
                   <span className={cn("leading-snug", i === 0 ? "text-foreground/70" : "text-muted-foreground/60")}>
-                    <span className="font-medium">{v4?.name ?? agent?.name}</span> · {evt.message}
+                    <span className="font-medium">{agentDisplay}</span> · {message}
                   </span>
-                  {evt.severity === "high" && <span className="text-red-500 text-xs shrink-0 mt-0.5">●</span>}
                 </div>
               );
             })}
@@ -214,11 +282,11 @@ export default function AITeam() {
         {/* Kanban */}
         <div className="rounded-xl border border-border/50 bg-card p-5">
           <h3 className="text-xs font-bold tracking-[0.1em] text-muted-foreground uppercase flex items-center gap-2 mb-4">
-            <CheckCircle2 className="w-4 h-4" /> Missões · {tasks.length}
+            <CheckCircle2 className="w-4 h-4" /> Missões · {displayMissions.length}
           </h3>
           <div className="grid grid-cols-3 gap-3">
             {KANBAN_COLS.map(col => {
-              const colTasks = tasks.filter(t => col.statuses.includes(t.status));
+              const colTasks = displayMissions.filter((t: any) => col.statuses.includes(t.status));
               const visible = colTasks.slice(0, MAX_KANBAN);
               const overflow = colTasks.length - MAX_KANBAN;
               return (

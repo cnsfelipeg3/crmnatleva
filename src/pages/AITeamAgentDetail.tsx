@@ -174,6 +174,34 @@ export default function AITeamAgentDetail() {
     enabled: !!agentId,
   });
 
+  // Fetch assigned skills count from agent_skill_assignments (same source as SkillsTab)
+  const { data: dbAssignedSkillsCount = 0 } = useQuery({
+    queryKey: ["agent_skills_count", agentId],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("agent_skill_assignments")
+        .select("id", { count: "exact", head: true })
+        .eq("agent_id", agentId!);
+      return count ?? 0;
+    },
+    enabled: !!agentId,
+  });
+
+  // Fetch recent audit log entries for this agent (for activity log + memory proxy)
+  const { data: agentAuditLog = [] } = useQuery({
+    queryKey: ["ai_team_audit_log_agent", agentId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_team_audit_log")
+        .select("*")
+        .or(`agent_id.eq.${agentId},agent_name.ilike.%${agentNameUpper}%`)
+        .order("created_at", { ascending: false })
+        .limit(20);
+      return data || [];
+    },
+    enabled: !!agentId && !!agentNameUpper,
+  });
+
   // Fetch real rules from strategy knowledge that apply to this agent
   const { data: dbAgentRules = [] } = useQuery({
     queryKey: ["ai_strategy_knowledge_agent", agentId, agentNameUpper],
@@ -200,19 +228,32 @@ export default function AITeamAgentDetail() {
       // Fallback to mock if DB is empty
       return ALL_KB_DOCS.filter(d => d.agente === agentNameUpper || d.agente === "Todos");
     }
-    return dbKbDocs.map((d: any) => {
+    // Deduplicate by title
+    const seen = new Set<string>();
+    return dbKbDocs.filter((d: any) => {
+      const key = (d.title || "").toLowerCase().trim();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).map((d: any) => {
       const contentLen = (d.content_text || "").length;
+      const hasContent = contentLen > 0;
       const sizeStr = contentLen > 1024 * 1024
         ? `${(contentLen / (1024 * 1024)).toFixed(1)} MB`
         : contentLen > 1024
         ? `${Math.round(contentLen / 1024)} KB`
         : `${contentLen} B`;
-      const hasTaxonomy = !!d.taxonomy;
+      const hasTaxonomy = !!(d.taxonomy as any)?.chunks?.length;
       const fileType = d.file_type || d.category || "texto";
       const tipo = fileType.includes("video") || fileType.includes("youtube") ? "video"
         : fileType.includes("pdf") ? "pdf"
         : fileType.includes("image") ? "imagem"
         : "texto";
+      // CORREÇÃO 1: status based on content_text OR taxonomy, not just taxonomy
+      const status: "processado" | "processando" = (hasContent || hasTaxonomy) ? "processado" : "processando";
+      const chunks = hasTaxonomy
+        ? (d.taxonomy as any).chunks.length
+        : (hasContent ? Math.ceil(contentLen / 500) : 0);
       return {
         id: d.id,
         title: d.title || "Sem título",
@@ -220,9 +261,9 @@ export default function AITeamAgentDetail() {
         tags: d.tags || [],
         agente: "Todos",
         resumo: d.description || "",
-        chunks: (d.taxonomy as any)?.chunks?.length || 0,
+        chunks,
         updatedAt: d.updated_at ? new Date(d.updated_at).toLocaleDateString("pt-BR") : "",
-        status: hasTaxonomy ? "processado" as const : "processando" as const,
+        status,
         size: sizeStr,
       };
     });
@@ -236,8 +277,9 @@ export default function AITeamAgentDetail() {
   );
 
   // Real counts from DB for tab badges
+  // CORREÇÃO 5: Use assigned skills count (same source as SkillsTab) for badge
   const realKbCount = agentDocs.length;
-  const realSkillsCount = dbAgentSkills.length || agentSkills.length;
+  const realSkillsCount = dbAssignedSkillsCount || dbAgentSkills.length || agentSkills.length;
   const realRulesCount = dbAgentRules.length || agentRules.length;
 
   // Fetch behavior_prompt from database (source of truth)
@@ -500,7 +542,8 @@ export default function AITeamAgentDetail() {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <SectionCard title="Log de Atividade" icon={Clock}>
-                <ActivityLog events={agentEvents} />
+                {/* CORREÇÃO 8: Use real audit log data instead of simulation */}
+                <AuditActivityLog entries={agentAuditLog} fallbackEvents={agentEvents} />
               </SectionCard>
               <SectionCard title="Persona & Descrição" icon={Brain}>
                 <p className="text-sm text-foreground/70 leading-relaxed italic">
@@ -551,13 +594,16 @@ export default function AITeamAgentDetail() {
 
           {/* ═══ TAB: MEMORY ═══ */}
           <TabsContent value="memory" className="space-y-4 mt-0">
-            {agent.memory && (agent.memory.learnedPatterns.length > 0 || Object.keys(agent.memory.preferences).length > 0 || agent.memory.shortTerm.length > 0) ? (
+            {/* CORREÇÃO 2: Use audit log as memory proxy */}
+            {agentAuditLog.length > 0 ? (
+              <AuditMemoryProxy entries={agentAuditLog} agentName={displayName} />
+            ) : agent.memory && (agent.memory.learnedPatterns.length > 0 || Object.keys(agent.memory.preferences).length > 0 || agent.memory.shortTerm.length > 0) ? (
               <IntelligenceSection memory={agent.memory} />
             ) : (
               <div className="rounded-xl border border-border/50 bg-card p-8 text-center">
                 <Brain className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">Nenhum dado de memória registrado ainda.</p>
-                <p className="text-xs text-muted-foreground/50 mt-1">A memória será populada conforme o agente processa tarefas e decisões.</p>
+                <p className="text-xs text-muted-foreground/50 mt-1">A memória será populada automaticamente conforme o agente realizar atendimentos.</p>
               </div>
             )}
           </TabsContent>
@@ -1585,6 +1631,116 @@ function ActivityLog({ events }: { events: AgentEvent[] }) {
           {expanded ? "Mostrar menos" : `Ver todos (${events.length})`}
         </button>
       )}
+    </div>
+  );
+}
+
+/* ═══ CORREÇÃO 8: Activity log from real audit_log data ═══ */
+function AuditActivityLog({ entries, fallbackEvents }: { entries: any[]; fallbackEvents: AgentEvent[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (entries.length === 0) {
+    // Fallback to simulation events
+    return <ActivityLog events={fallbackEvents} />;
+  }
+
+  const visible = expanded ? entries : entries.slice(0, 5);
+  return (
+    <div className="space-y-1">
+      {visible.map((entry: any, i: number) => {
+        const time = new Date(entry.created_at);
+        const hh = String(time.getHours()).padStart(2, "0");
+        const mm = String(time.getMinutes()).padStart(2, "0");
+        const dd = String(time.getDate()).padStart(2, "0");
+        const mo = String(time.getMonth() + 1).padStart(2, "0");
+        return (
+          <div key={entry.id} className={cn("flex items-start gap-3 py-2 px-3 rounded-lg text-xs md:text-sm", i === 0 ? "bg-muted/50" : "hover:bg-muted/20")}>
+            <span className="text-muted-foreground/40 shrink-0 text-xs mt-0.5 font-mono">[{dd}/{mo} {hh}:{mm}]</span>
+            <span className={cn("leading-relaxed", i === 0 ? "text-foreground/70" : "text-muted-foreground/60")}>
+              <Badge variant="outline" className={cn("text-[9px] mr-1.5 py-0",
+                entry.action_type === "create" ? "text-emerald-400 border-emerald-500/20" :
+                entry.action_type === "update" ? "text-blue-400 border-blue-500/20" :
+                entry.action_type === "approve" ? "text-purple-400 border-purple-500/20" :
+                "text-muted-foreground border-border"
+              )}>{entry.action_type}</Badge>
+              {entry.description}
+            </span>
+          </div>
+        );
+      })}
+      {entries.length > 5 && (
+        <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground/60 py-2 px-3">
+          {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          {expanded ? "Mostrar menos" : `Ver todos (${entries.length})`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ═══ CORREÇÃO 2: Memory proxy from audit log ═══ */
+function AuditMemoryProxy({ entries, agentName }: { entries: any[]; agentName: string }) {
+  // Classify audit entries into memory categories
+  const patterns = entries.filter((e: any) =>
+    e.entity_type === "skill" || e.entity_type === "improvement" || e.action_type === "approve"
+  );
+  const decisions = entries.filter((e: any) =>
+    e.action_type === "create" || e.action_type === "update" || e.action_type === "activate"
+  );
+  const knowledge = entries.filter((e: any) =>
+    e.entity_type === "knowledge" || e.entity_type === "rule"
+  );
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <SectionCard title={`Padrões Detectados (${patterns.length})`} icon={Cpu}>
+        {patterns.length > 0 ? (
+          <div className="space-y-2">
+            {patterns.slice(0, 8).map((p: any) => (
+              <div key={p.id} className="flex items-start gap-2 py-1.5">
+                <Brain className="w-3.5 h-3.5 shrink-0 text-primary/50 mt-0.5" />
+                <span className="text-sm text-foreground/70">{p.description}</span>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-sm text-muted-foreground/40 py-4">Nenhum padrão detectado.</p>}
+      </SectionCard>
+
+      <SectionCard title={`Conhecimento Absorvido (${knowledge.length})`} icon={BookOpen}>
+        {knowledge.length > 0 ? (
+          <div className="space-y-2">
+            {knowledge.slice(0, 8).map((k: any) => (
+              <div key={k.id} className="flex items-start gap-2 py-1.5">
+                <BookOpen className="w-3.5 h-3.5 shrink-0 text-blue-400/50 mt-0.5" />
+                <div>
+                  <span className="text-sm text-foreground/70">{k.entity_name || k.description}</span>
+                  <span className="text-[10px] text-muted-foreground/50 block">
+                    {new Date(k.created_at).toLocaleDateString("pt-BR")}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-sm text-muted-foreground/40 py-4">Sem conhecimento registrado.</p>}
+      </SectionCard>
+
+      <SectionCard title={`Decisões Registradas (${decisions.length})`} icon={Clock}>
+        {decisions.length > 0 ? (
+          <div className="space-y-1">
+            {decisions.slice(0, 8).map((d: any) => {
+              const time = new Date(d.created_at);
+              const hh = String(time.getHours()).padStart(2, "0");
+              const mm = String(time.getMinutes()).padStart(2, "0");
+              return (
+                <div key={d.id} className="flex items-start gap-2 py-1.5 px-2 rounded text-xs">
+                  <span className="text-muted-foreground/40 shrink-0 font-mono">[{hh}:{mm}]</span>
+                  <span className="text-muted-foreground/60">{d.description}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : <p className="text-sm text-muted-foreground/40 py-4">Nenhuma decisão registrada.</p>}
+      </SectionCard>
     </div>
   );
 }
