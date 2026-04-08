@@ -52,6 +52,63 @@ const FEED_FILTERS: { key: FeedFilter; label: string }[] = [
   { key: "status_change", label: "Sistema" },
 ];
 
+export default function AITeam() {
+  const { agents, tasks, events, addAgent, removeTask } = useAgentEngine(baseAgents, baseTasks);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [view, setView] = useState<ViewMode>("dashboard");
+  const [feedFilter, setFeedFilter] = useState<FeedFilter>("all");
+  const [workLogAgent, setWorkLogAgent] = useState<string>(baseAgents[0]?.id ?? "");
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const { seedAgents, fetchRealMetrics } = useAITeamPersistence();
+
+  // Real business metrics
+  const [realMetrics, setRealMetrics] = useState<{
+    totalSales: number; totalRevenue: number; totalProfit: number;
+    activeConversations: number; totalConversations: number;
+    openProposals: number; totalProposals: number; salesToday: number;
+  } | null>(null);
+
+  useEffect(() => {
+    seedAgents();
+    fetchRealMetrics().then(setRealMetrics).catch(console.error);
+  }, []);
+
+  // CORREÇÃO 3: Stable KPIs from DB instead of simulation
+  const { data: dbAgents = [] } = useQuery({
+    queryKey: ["ai_team_agents_kpi"],
+    queryFn: async () => {
+      const { data } = await supabase.from("ai_team_agents").select("id, status, is_active").limit(50);
+      return data || [];
+    },
+  });
+
+  // CORREÇÃO 4: Real feed from audit log
+  const { data: auditFeed = [] } = useQuery({
+    queryKey: ["ai_team_audit_feed"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_team_audit_log")
+        .select("id, action_type, entity_type, entity_name, agent_id, agent_name, description, created_at")
+        .order("created_at", { ascending: false })
+        .limit(25);
+      return data || [];
+    },
+  });
+
+  // CORREÇÃO 6: Real missions from DB
+  const { data: dbMissions = [] } = useQuery({
+    queryKey: ["ai_team_missions_mc"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ai_team_missions")
+        .select("id, title, agent_id, priority, status, created_at, completed_at")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      return data || [];
+    },
+  });
+
   const handleApprove = useCallback((id: string) => {
     removeTask(id, "approve");
     toast({ title: "Tarefa aprovada", description: "Sugestão aceita." });
@@ -71,20 +128,46 @@ const FEED_FILTERS: { key: FeedFilter; label: string }[] = [
     navigate(`/ai-team/agent/${agent.id}`);
   }, [navigate]);
 
-  // KPIs
+  // CORREÇÃO 3: Stable KPIs from DB
   const kpis = useMemo(() => {
+    const dbCount = dbAgents.length;
+    if (dbCount > 0) {
+      const active = dbAgents.filter((a: any) => a.is_active !== false).length;
+      const missionExec = dbMissions.filter((m: any) => m.status === "in_progress" || m.status === "analyzing").length;
+      const alerts = auditFeed.filter((e: any) => e.action_type === "delete" || e.entity_type === "rule").length;
+      const pending = dbMissions.filter((m: any) => m.status === "suggested" || m.status === "pending" || m.status === "detected").length;
+      return { active, executing: missionExec, alerts, pending };
+    }
+    // Fallback to simulation
     const active = agents.filter(a => a.status !== "idle").length;
     const executing = tasks.filter(t => ["analyzing", "in_progress"].includes(t.status)).length;
     const alerts = events.filter(e => e.severity === "high").length;
     const pending = tasks.filter(t => ["suggested", "detected", "pending"].includes(t.status)).length;
     return { active, executing, alerts, pending };
-  }, [agents, tasks, events]);
+  }, [dbAgents, dbMissions, auditFeed, agents, tasks, events]);
 
-  // Filtered feed
+  // CORREÇÃO 4: Feed from real audit log, with simulation fallback
   const filteredEvents = useMemo(() => {
+    if (auditFeed.length > 0) {
+      return auditFeed.slice(0, 25);
+    }
     const evts = feedFilter === "all" ? events : events.filter(e => e.type === feedFilter);
     return evts.slice(0, 25);
-  }, [events, feedFilter]);
+  }, [auditFeed, events, feedFilter]);
+
+  // CORREÇÃO 6: Missions from DB with fallback to simulation tasks
+  const displayMissions = useMemo(() => {
+    if (dbMissions.length > 0) {
+      return dbMissions.map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        sourceAgentId: m.agent_id,
+        priority: m.priority || "medium",
+        status: m.status === "completed" ? "done" : m.status,
+      }));
+    }
+    return tasks;
+  }, [dbMissions, tasks]);
 
   // Work log
   const workLogEvents = useMemo(() => {
@@ -95,7 +178,7 @@ const FEED_FILTERS: { key: FeedFilter; label: string }[] = [
   const agentsBySquad = useMemo(() => {
     const map = new Map<string, typeof agents>();
     for (const a of agents) {
-      const squad = a.sector; // sector = squadId from bridge
+      const squad = a.sector;
       if (!map.has(squad)) map.set(squad, []);
       map.get(squad)!.push(a);
     }
