@@ -1221,6 +1221,20 @@ export default function ClientIntelligence() {
 
 function ClientProfile360({ client, onNavigate }: { client: ClientAnalysis; onNavigate: (saleId: string) => void }) {
   const recommendations = useMemo(() => generateRecommendations(client), [client]);
+  const [clientTags, setClientTags] = useState<string[]>([]);
+
+  // Load tags from DB
+  useEffect(() => {
+    if (!client.clientId) return;
+    supabase.from("clients").select("tags").eq("id", client.clientId).maybeSingle()
+      .then(({ data }) => { if (data?.tags) setClientTags(data.tags as string[]); });
+  }, [client.clientId]);
+
+  const handleTagsUpdate = useCallback(async (newTags: string[]) => {
+    setClientTags(newTags);
+    if (!client.clientId) return;
+    await supabase.from("clients").update({ tags: newTags } as any).eq("id", client.clientId);
+  }, [client.clientId]);
 
   const scoreBreakdown = [
     { label: "Valor", value: client.scoreValor, weight: "25%" },
