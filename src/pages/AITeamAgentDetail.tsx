@@ -1635,7 +1635,117 @@ function ActivityLog({ events }: { events: AgentEvent[] }) {
   );
 }
 
-function CommandTerminal({ agentName, agentId, agentRole }: { agentName: string; agentId: string; agentRole: string }) {
+/* ═══ CORREÇÃO 8: Activity log from real audit_log data ═══ */
+function AuditActivityLog({ entries, fallbackEvents }: { entries: any[]; fallbackEvents: AgentEvent[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (entries.length === 0) {
+    // Fallback to simulation events
+    return <ActivityLog events={fallbackEvents} />;
+  }
+
+  const visible = expanded ? entries : entries.slice(0, 5);
+  return (
+    <div className="space-y-1">
+      {visible.map((entry: any, i: number) => {
+        const time = new Date(entry.created_at);
+        const hh = String(time.getHours()).padStart(2, "0");
+        const mm = String(time.getMinutes()).padStart(2, "0");
+        const dd = String(time.getDate()).padStart(2, "0");
+        const mo = String(time.getMonth() + 1).padStart(2, "0");
+        return (
+          <div key={entry.id} className={cn("flex items-start gap-3 py-2 px-3 rounded-lg text-xs md:text-sm", i === 0 ? "bg-muted/50" : "hover:bg-muted/20")}>
+            <span className="text-muted-foreground/40 shrink-0 text-xs mt-0.5 font-mono">[{dd}/{mo} {hh}:{mm}]</span>
+            <span className={cn("leading-relaxed", i === 0 ? "text-foreground/70" : "text-muted-foreground/60")}>
+              <Badge variant="outline" className={cn("text-[9px] mr-1.5 py-0",
+                entry.action_type === "create" ? "text-emerald-400 border-emerald-500/20" :
+                entry.action_type === "update" ? "text-blue-400 border-blue-500/20" :
+                entry.action_type === "approve" ? "text-purple-400 border-purple-500/20" :
+                "text-muted-foreground border-border"
+              )}>{entry.action_type}</Badge>
+              {entry.description}
+            </span>
+          </div>
+        );
+      })}
+      {entries.length > 5 && (
+        <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground/60 py-2 px-3">
+          {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          {expanded ? "Mostrar menos" : `Ver todos (${entries.length})`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/* ═══ CORREÇÃO 2: Memory proxy from audit log ═══ */
+function AuditMemoryProxy({ entries, agentName }: { entries: any[]; agentName: string }) {
+  // Classify audit entries into memory categories
+  const patterns = entries.filter((e: any) =>
+    e.entity_type === "skill" || e.entity_type === "improvement" || e.action_type === "approve"
+  );
+  const decisions = entries.filter((e: any) =>
+    e.action_type === "create" || e.action_type === "update" || e.action_type === "activate"
+  );
+  const knowledge = entries.filter((e: any) =>
+    e.entity_type === "knowledge" || e.entity_type === "rule"
+  );
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <SectionCard title={`Padrões Detectados (${patterns.length})`} icon={Cpu}>
+        {patterns.length > 0 ? (
+          <div className="space-y-2">
+            {patterns.slice(0, 8).map((p: any) => (
+              <div key={p.id} className="flex items-start gap-2 py-1.5">
+                <Brain className="w-3.5 h-3.5 shrink-0 text-primary/50 mt-0.5" />
+                <span className="text-sm text-foreground/70">{p.description}</span>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-sm text-muted-foreground/40 py-4">Nenhum padrão detectado.</p>}
+      </SectionCard>
+
+      <SectionCard title={`Conhecimento Absorvido (${knowledge.length})`} icon={BookOpen}>
+        {knowledge.length > 0 ? (
+          <div className="space-y-2">
+            {knowledge.slice(0, 8).map((k: any) => (
+              <div key={k.id} className="flex items-start gap-2 py-1.5">
+                <BookOpen className="w-3.5 h-3.5 shrink-0 text-blue-400/50 mt-0.5" />
+                <div>
+                  <span className="text-sm text-foreground/70">{k.entity_name || k.description}</span>
+                  <span className="text-[10px] text-muted-foreground/50 block">
+                    {new Date(k.created_at).toLocaleDateString("pt-BR")}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-sm text-muted-foreground/40 py-4">Sem conhecimento registrado.</p>}
+      </SectionCard>
+
+      <SectionCard title={`Decisões Registradas (${decisions.length})`} icon={Clock}>
+        {decisions.length > 0 ? (
+          <div className="space-y-1">
+            {decisions.slice(0, 8).map((d: any) => {
+              const time = new Date(d.created_at);
+              const hh = String(time.getHours()).padStart(2, "0");
+              const mm = String(time.getMinutes()).padStart(2, "0");
+              return (
+                <div key={d.id} className="flex items-start gap-2 py-1.5 px-2 rounded text-xs">
+                  <span className="text-muted-foreground/40 shrink-0 font-mono">[{hh}:{mm}]</span>
+                  <span className="text-muted-foreground/60">{d.description}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : <p className="text-sm text-muted-foreground/40 py-4">Nenhuma decisão registrada.</p>}
+      </SectionCard>
+    </div>
+  );
+}
+
+
   const [input, setInput] = useState("");
   const [chat, setChat] = useState<{ role: "user" | "agent"; text: string }[]>([]);
   const [loading, setLoading] = useState(false);

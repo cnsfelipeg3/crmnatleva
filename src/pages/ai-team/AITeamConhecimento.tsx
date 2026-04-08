@@ -808,7 +808,11 @@ export default function AITeamConhecimento() {
     return "texto";
   };
 
-  const filtered = docs.filter(doc => {
+  // CORREÇÃO 7: Deduplicate documents by title
+  const deduped = docs.filter((doc, i, arr) =>
+    arr.findIndex(d => d.title.toLowerCase().trim() === doc.title.toLowerCase().trim()) === i
+  );
+  const filtered = deduped.filter(doc => {
     const matchSearch = !search || doc.title.toLowerCase().includes(search.toLowerCase()) || doc.category?.toLowerCase().includes(search.toLowerCase());
     const docType = getDocType(doc);
     const matchTipo = tipoFilter === "all" || docType === tipoFilter;
