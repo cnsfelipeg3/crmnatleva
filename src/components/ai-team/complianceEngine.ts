@@ -304,15 +304,15 @@ export async function runComplianceCheck(
 
 /** Word limits per agent role (deterministic, 100% guaranteed). */
 const AGENT_WORD_LIMITS: Record<string, number> = {
-  maya: 60,
-  atlas: 90,
-  habibi: 120,
-  nemo: 120,
-  dante: 120,
-  luna: 150,
-  nero: 120,
+  maya: 120,
+  atlas: 150,
+  habibi: 180,
+  nemo: 180,
+  dante: 180,
+  luna: 200,
+  nero: 180,
 };
-const DEFAULT_WORD_LIMIT = 100;
+const DEFAULT_WORD_LIMIT = 150;
 
 /**
  * Truncates text to the last complete sentence within a word limit.
@@ -464,25 +464,13 @@ export function enforceHardRules(
   }
 
   // ── Storytelling / tourism fluff detector (Maya + Atlas) ──
+  // REDUCED: only remove the most egregious clichés, not normal conversational phrases
   if (agentId === "maya" || agentId === "atlas") {
     const storytellingPatterns = [
-      /[^.!?]*uma?\s+energia\s+[úu]nica[^.!?]*[.!?]/gi,
-      /[^.!?]*imposs[ií]vel\s+de\s+resistir[^.!?]*[.!?]/gi,
-      /[^.!?]*foi\s+feit[ao]\s+pr[ao][^.!?]*[.!?]/gi,
-      /[^.!?]*cap[ií]tulo\s+[àa]\s+parte[^.!?]*[.!?]/gi,
-      /[^.!?]*mistura\s+de\s+\w+\s+com\s+\w+[^.!?]*[.!?]/gi,
-      /[^.!?]*lugar\s+m[áa]gico[^.!?]*[.!?]/gi,
-      /[^.!?]*experiência\s+[úu]nica[^.!?]*[.!?]/gi,
-      /[^.!?]*sonho\s+de\s+consumo[^.!?]*[.!?]/gi,
       /[^.!?]*paraíso\s+(na\s+terra|terrestre)[^.!?]*[.!?]/gi,
-      /[^.!?]*[áa]guas?\s+cristalinas?[^.!?]*[.!?]/gi,
       /[^.!?]*de\s+outro\s+mundo[^.!?]*[.!?]/gi,
-      /[^.!?]*destinos?\s+incr[ií]ve(l|is)[^.!?]*[.!?]/gi,
-      /[^.!?]*cen[áa]rios?\s+deslumbrantes?[^.!?]*[.!?]/gi,
-      /[^.!?]*cada\s+viagem\s+[ée]\s+[úu]nica[^.!?]*[.!?]/gi,
+      /[^.!?]*sonho\s+de\s+consumo[^.!?]*[.!?]/gi,
       /[^.!?]*paisagens?\s+de\s+tirar\s+o\s+f[ôo]lego[^.!?]*[.!?]/gi,
-      /[^.!?]*tudo\s+isso\s+influencia[^.!?]*[.!?]/gi,
-      /[^.!?]*depende\s+muito\s+d[oe][^.!?]*[.!?]/gi,
     ];
     for (const pattern of storytellingPatterns) {
       cleaned = cleaned.replace(pattern, "").trim();
@@ -589,11 +577,12 @@ export async function fullCompliancePipeline(
   knownClientName?: string,
   recentAgentMessages?: string[],
 ): Promise<{ text: string; wasRewritten: boolean }> {
-  // Step 1: AI-powered compliance check (uses Anthropic)
-  const { text: checkedText, wasRewritten } = await runComplianceCheck(agentId, agentResponse, conversationContext);
+  // SKIP Step 1 (AI-powered rewrite) — it's too destructive, rewrites and shortens messages.
+  // All compliance is now handled deterministically by enforceHardRules (Step 2).
+  // The AI compliance validator was causing messages to lose paragraphs and content.
   
   // Step 2: Deterministic hard rules (code-level, 100% guaranteed)
-  const finalText = enforceHardRules(checkedText, agentId, lastLeadMessage, agentMessageCount, conversationContext);
+  const finalText = enforceHardRules(agentResponse, agentId, lastLeadMessage, agentMessageCount, conversationContext);
 
   // Step 3: Unified name-frequency sanitization (deterministic, uses known name + aliases)
   const nameInfo = extractClientNames(conversationContext, knownClientName);
@@ -605,6 +594,6 @@ export async function fullCompliancePipeline(
 
   return { 
     text: sanitizedText, 
-    wasRewritten: wasRewritten || sanitizedText !== checkedText,
+    wasRewritten: sanitizedText !== agentResponse,
   };
 }
