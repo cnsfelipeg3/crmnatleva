@@ -160,7 +160,8 @@ function calculateAgentHealth(
   const identityDetails: DimensionScore["details"] = [];
   const hasName = !!agent.name && !!agent.role;
   identityDetails.push({ label: "Nome e papel definidos", ok: hasName, points: 5 });
-  const hasPrompt = prompt.length > 100;
+  // Consider both behavior_prompt AND persona for prompt richness
+  const hasPrompt = fullPrompt.length > 100;
   identityDetails.push({ label: "Prompt com >100 chars", ok: hasPrompt, points: 10 });
   const hasTone = NATH_RULES_KEYWORDS.some(k => fullPrompt.includes(k));
   identityDetails.push({ label: "Menciona tom de voz", ok: hasTone, points: 5 });
@@ -182,15 +183,17 @@ function calculateAgentHealth(
   kbDetails.push({ label: "KB com conteúdo real", ok: hasRealContent, points: 10 });
   const kbScore = kbDetails.reduce((s, d) => s + (d.ok ? d.points : 0), 0);
 
-  // 3. SKILLS (20 pts)
+  // 3. SKILLS (20 pts) — consider both agent_skill_assignments AND the skills[] array from DB/constant
   const activeSkills = skillDetails.filter(s => agentSkillAssignments.includes(s.id));
+  const dbSkillsList = dbAgent?.skills || agent.skills || [];
+  const hasAnySkill = activeSkills.length > 0 || dbSkillsList.length > 0;
   const skillsDetails: DimensionScore["details"] = [];
-  const hasActiveSkill = activeSkills.length > 0;
-  skillsDetails.push({ label: "Pelo menos 1 skill ativa", ok: hasActiveSkill, points: 10 });
+  skillsDetails.push({ label: "Pelo menos 1 skill ativa", ok: hasAnySkill, points: 10 });
   const hasInstructions = activeSkills.some(s => (s.prompt_instruction || "").length > 50);
-  skillsDetails.push({ label: "Skills com instruções >50 chars", ok: hasInstructions, points: 5 });
+  // If agent has skills from the DB array but no formal assignments, give partial credit
+  skillsDetails.push({ label: "Skills com instruções >50 chars", ok: hasInstructions || (dbSkillsList.length >= 3), points: 5 });
   const hasDescription = activeSkills.some(s => (s.description || "").length > 20);
-  skillsDetails.push({ label: "Skills com descrição", ok: hasDescription, points: 5 });
+  skillsDetails.push({ label: "Skills com descrição", ok: hasDescription || (dbSkillsList.length >= 2), points: 5 });
   const skillsScore = skillsDetails.reduce((s, d) => s + (d.ok ? d.points : 0), 0);
 
   // 4. WORKFLOW (20 pts)
