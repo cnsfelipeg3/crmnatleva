@@ -384,17 +384,20 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
       {/* FINANCEIRO Section */}
       {hasContent("financeiro") && (
         <TaxSection section={SECTIONS[5]}>
-          {fin?.faixa_preco_label && (
-            <Badge className={cn(
-              "text-sm px-3 py-1 font-bold uppercase",
-              fin.faixa_preco_label === "luxo" ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30" :
-              fin.faixa_preco_label === "premium" ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30" :
-              fin.faixa_preco_label === "moderado" ? "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30" :
-              "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-            )}>
-              {fin.faixa_preco_label} {fin.faixa_preco_total && `• ${fin.faixa_preco_total}`}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <InternalBadge />
+            {fin?.faixa_preco_label && (
+              <Badge className={cn(
+                "text-sm px-3 py-1 font-bold uppercase",
+                fin.faixa_preco_label === "luxo" ? "bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30" :
+                fin.faixa_preco_label === "premium" ? "bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30" :
+                fin.faixa_preco_label === "moderado" ? "bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30" :
+                "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+              )}>
+                {fin.faixa_preco_label} {fin.faixa_preco_total && `• ${fin.faixa_preco_total}`}
+              </Badge>
+            )}
+          </div>
           {(fin?.dica_moeda || fin?.moeda_dica) && (
             <p className="text-xs text-muted-foreground">💱 {fin.dica_moeda || fin.moeda_dica}</p>
           )}
