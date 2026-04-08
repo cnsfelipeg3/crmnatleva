@@ -282,11 +282,11 @@ export default function AITeam() {
         {/* Kanban */}
         <div className="rounded-xl border border-border/50 bg-card p-5">
           <h3 className="text-xs font-bold tracking-[0.1em] text-muted-foreground uppercase flex items-center gap-2 mb-4">
-            <CheckCircle2 className="w-4 h-4" /> Missões · {tasks.length}
+            <CheckCircle2 className="w-4 h-4" /> Missões · {displayMissions.length}
           </h3>
           <div className="grid grid-cols-3 gap-3">
             {KANBAN_COLS.map(col => {
-              const colTasks = tasks.filter(t => col.statuses.includes(t.status));
+              const colTasks = displayMissions.filter((t: any) => col.statuses.includes(t.status));
               const visible = colTasks.slice(0, MAX_KANBAN);
               const overflow = colTasks.length - MAX_KANBAN;
               return (
