@@ -29,6 +29,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import ClientTagsManager from "@/components/clients/ClientTagsManager";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const pct = (v: number) => `${v.toFixed(1)}%`;
