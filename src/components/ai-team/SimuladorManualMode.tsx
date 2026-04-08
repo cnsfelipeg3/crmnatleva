@@ -71,7 +71,7 @@ function buildConversationHistory(messages: ChatMsg[], destino: string, isLivreM
   return messages
     .filter((message): message is ChatMsg => message.role === "user" || message.role === "agent")
     .map((message, index) => {
-      const role = message.role === "user" ? "user" : "assistant";
+      const role: "user" | "assistant" = message.role === "user" ? "user" : "assistant";
       const isFirstUserMessage = role === "user" && index === 0;
       const rawContent = stripInternalTagsFromHistory(message.content);
       const content = isFirstUserMessage && !isLivreMode
