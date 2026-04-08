@@ -41,8 +41,24 @@ interface MessageBubbleProps {
   onRetry?: (msg: Message) => void;
 }
 
+function stripInternalTags(text: string): string {
+  if (!text) return text;
+  return text
+    .replace(/\[TRANSFERIR[^\]]*\]/g, "")
+    .replace(/\[BRIEFING[^\]]*\]:?\s*/gi, "")
+    .replace(/\[ESCALON[^\]]*\]:?\s*/gi, "")
+    .replace(/\[INTERNO[^\]]*\]:?\s*/gi, "")
+    .trim();
+}
+
 function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit, onLightbox, onRetry }: MessageBubbleProps) {
   const showDate = shouldShowDateSeparator(messages, index);
+
+  // Strip internal tags from displayed text
+  const displayText = stripInternalTags(msg.text);
+
+  // If entire message is just an internal tag, don't render
+  if (!displayText && msg.message_type === "text") return null;
 
   return (
     <Fragment>
