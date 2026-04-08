@@ -113,6 +113,7 @@ const AITeamExtrato = lazy(() => import("@/pages/ai-team/AITeamExtrato"));
 const AITeamSaude = lazy(() => import("@/pages/ai-team/AITeamSaude"));
 const AITeamConfig = lazy(() => import("@/pages/ai-team/AITeamConfig"));
 const AITeamChangelog = lazy(() => import("@/pages/ai-team/AITeamChangelog"));
+const AITeamPerformance = lazy(() => import("@/pages/AITeamPerformance"));
 
 // Portal do Cliente
 const PortalLogin = lazy(() => import("@/pages/portal/PortalLogin"));
@@ -276,6 +277,7 @@ function AppRoutes() {
             <Route path="config" element={<AITeamConfig />} />
             <Route path="changelog" element={<AITeamChangelog />} />
             <Route path="agent/:agentId" element={<AITeamAgentDetail />} />
+            <Route path="performance" element={<AITeamPerformance />} />
           </Route>
 
           {/* Operação Diária */}
