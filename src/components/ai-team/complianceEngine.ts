@@ -339,26 +339,35 @@ function truncateToWordLimit(text: string, maxWords: number): string {
  * Detects if the 5 mandatory fields are present in the conversation history.
  * Fields: nome, destino, período, duração, composição do grupo.
  */
-function detectMandatoryFields(conversationText: string): boolean {
+function detectMandatoryFields(conversationText: string): { complete: boolean; missing: string[] } {
   const lower = conversationText.toLowerCase();
 
-  // Name: lead introduced themselves (e.g. "sou o Leo", "me chamo", "meu nome é")
-  const hasName = /\b(sou\s+[ao]?\s*\w+|me\s+chamo|meu\s+nome|pode\s+me\s+chamar)\b/i.test(lower)
-    || /\b(oi|ol[aá])\s*(nath|nat)\b/i.test(lower); // greeting implies name is in context
+  // Name: lead introduced themselves
+  const hasName = /\b(sou\s+[ao]?\s*\w+|me\s+chamo|meu\s+nome|pode\s+me\s+chamar|prazer|meu\s+nome\s+[eé])\b/i.test(lower)
+    || /\b(oi|ol[aá])\s*(nath|nat)\b/i.test(lower);
 
-  // Destination: any city/country/destination mention
-  const hasDestino = /\b(orlando|disney|miami|nova\s*york|new\s*york|cancun|paris|roma|italia|europa|dubai|maldivas|tailandia|bali|toquio|japao|portugal|lisboa|londres|london|hawaii|punta\s*cana|santiago|buenos\s*aires|cape\s*town|egito|grecia|turquia|caribe|africa|asia|oceania|fernando\s*de\s*noronha|gramado|bariloche|ushuaia|patagonia|peru|machu\s*picchu|colombia|cartagena|mexico|los\s*angeles|las\s*vegas|california|floripa|florianopolis|rio\s*de\s*janeiro|salvador|jericoacoara|maragogi|bonito|eua|estados\s*unidos)\b/i.test(lower);
+  // Destination: expanded list
+  const hasDestino = /\b(orlando|disney|miami|nova\s*york|new\s*york|cancun|cancún|paris|roma|italia|itália|europa|dubai|maldivas|tailandia|tailândia|bali|toquio|tóquio|japao|japão|portugal|lisboa|londres|london|hawaii|havaí|punta\s*cana|santiago|buenos\s*aires|cape\s*town|egito|grecia|grécia|turquia|caribe|africa|áfrica|asia|ásia|oceania|fernando\s*de\s*noronha|gramado|bariloche|ushuaia|patagonia|patagônia|peru|machu\s*picchu|colombia|colômbia|cartagena|mexico|méxico|los\s*angeles|las\s*vegas|california|califórnia|floripa|florianopolis|florianópolis|rio\s*de\s*janeiro|salvador|jericoacoara|maragogi|bonito|eua|estados\s*unidos|finlandia|finlândia|islandia|islândia|noruega|suecia|suécia|dinamarca|suica|suíça|austria|áustria|croacia|croácia|montenegro|albania|albânia|eslovenia|eslovênia|hungria|polônia|polonia|republica\s*tcheca|praga|viena|berlim|amsterdam|amsterdã|bruxelas|edimburgo|dublin|madri|barcelona|sevilha|marrocos|africa\s*do\s*sul|quenia|quênia|tanzania|tanzânia|zanzibar|madagascar|namibia|namíbia|moçambique|sri\s*lanka|vietna|vietnã|camboja|laos|myanmar|nepal|india|índia|china|coreia|singapura|malasia|malásia|indonesia|indonésia|filipinas|nova\s*zelandia|nova\s*zelândia|australia|austrália|fiji|tahiti|polinesia|polinésia|bermudas|acores|açores|cabo\s*verde|reuniao|reunião|laponia|lapônia|sardenha|sicilia|sicília|santorini|mykonos|creta|chipre|malta|jordania|jordânia|oma|omã|qatar|doha|abu\s*dhabi|emirados|arabia\s*saudita|arábia|israel|costa\s*rica|panama|panamá|cuba|jamaica|aruba|curaçao|curacao|barbados|bahamas|belize|guatemala|equador|galapagos|galápagos|bolivia|bolívia|chile|uruguai|paraguai|suriname|guiana)\b/i.test(lower)
+    // Fallback: "quero ir pra/para X", "penso em X", "destino é X"
+    || /\b(quero\s+ir\s+pr[ao]|pensando\s+em\s+ir|viajar\s+pr?a|destino\s+[ée]|sonho\s+(de\s+)?ir|vou\s+pr?a|conhecer\s+[ao]?)\b/i.test(lower);
 
   // Period: month, season or date reference
-  const hasPeriodo = /\b(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez|f[ée]rias|natal|carnaval|ano\s*novo|reveillon|202[4-9]|203\d)\b/i.test(lower);
+  const hasPeriodo = /\b(janeiro|fevereiro|mar[cç]o|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez|f[ée]rias|natal|carnaval|ano\s*novo|reveillon|r[ée]veillon|202[4-9]|203\d|semana\s+que\s+vem|m[eê]s\s+que\s+vem|pr[oó]ximo\s+m[eê]s|final\s+do\s+ano|meio\s+do\s+ano|come[çc]o\s+do\s+ano|inverno|ver[ãa]o|outono|primavera)\b/i.test(lower);
 
-  // Duration: number + days/nights/weeks or "X dias"
-  const hasDuracao = /\b(\d+\s*(dias?|noites?|semanas?|diaria)|\d+d\b|\d+\s*a\s*\d+\s*dias?)\b/i.test(lower);
+  // Duration: number + days/nights/weeks
+  const hasDuracao = /\b(\d+\s*(dias?|noites?|semanas?|diaria|diárias?)|\d+d\b|\d+\s*a\s*\d+\s*dias?|uma\s+semana|duas\s+semanas|tr[eê]s\s+semanas)\b/i.test(lower);
 
-  // Group composition: number of people, couple, family etc.
-  const hasGrupo = /\b(casal|sozinho|sozinha|familia|fam[ií]lia|\d+\s*(pessoa|pax|adulto|crian[cç]a|beb[eê]|filh[oa])|\bsomos\s*\d|\beu\s+e\s+(meu|minha|o|a)\b|\d+\s*\(|\(\d+\))\b/i.test(lower);
+  // Group composition
+  const hasGrupo = /\b(casal|sozinho|sozinha|solo|familia|fam[ií]lia|\d+\s*(pessoa|pessoas|pax|adulto|adultos|crian[cç]a|crian[cç]as|beb[eê]|filh[oa]|filhos|amigos|amigas)|\bsomos\s*\d|\beu\s+e\s+(meu|minha|o|a|um|uma)\b|\d+\s*\(|\(\d+\)|n[oó]s\s+dois|n[oó]s\s+duas|n[oó]s\s+tr[eê]s|eu\s+e\s+minha\s+esposa|eu\s+e\s+meu\s+marido|eu\s+e\s+ela|eu\s+e\s+ele)\b/i.test(lower);
 
-  return hasName && hasDestino && hasPeriodo && hasDuracao && hasGrupo;
+  const missing: string[] = [];
+  if (!hasName) missing.push("nome");
+  if (!hasDestino) missing.push("destino");
+  if (!hasPeriodo) missing.push("período");
+  if (!hasDuracao) missing.push("duração");
+  if (!hasGrupo) missing.push("composição do grupo");
+
+  return { complete: missing.length === 0, missing };
 }
 
 /**
@@ -530,23 +539,44 @@ export function enforceHardRules(
     }
   }
 
-  // ── Atlas-specific: force escalation when 5 fields are collected or promise loop detected ──
+  // ── Atlas-specific: block premature transfer + force escalation when 5 fields collected ──
   if (agentId === "atlas" && conversationContext) {
     const msgCount = agentMessageCount ?? 0;
+    const fieldCheck = detectMandatoryFields(conversationContext);
 
-    // Only apply after Atlas has sent at least 3 messages (avoid instant transfer)
+    // BLOQUEIO DE TRANSFERÊNCIA PREMATURA: se Atlas tenta [TRANSFERIR] sem ter os 5 campos → REMOVE
+    if (cleaned.includes("[TRANSFERIR]") && !fieldCheck.complete) {
+      console.warn(`🚫 Atlas tentou transferir sem campos completos — faltam: ${fieldCheck.missing.join(", ")}. Bloqueando.`);
+      cleaned = cleaned.replace(/\[TRANSFERIR\]/g, "").trim();
+
+      // Inject question about the first missing field
+      const fieldQuestions: Record<string, string> = {
+        "nome": "Como posso te chamar?",
+        "destino": "Pra onde vocês estão pensando em ir?",
+        "período": "Quando vocês estão pensando em viajar? Qual época do ano?",
+        "duração": "Quantos dias vocês gostariam de ficar?",
+        "composição do grupo": "Quem vai nessa viagem? Casal, família, grupo de amigos?",
+      };
+      const firstMissing = fieldCheck.missing[0];
+      const question = fieldQuestions[firstMissing] || `Me conta mais sobre ${firstMissing}?`;
+
+      // Only inject if the response doesn't already end with a question
+      if (!cleaned.endsWith("?")) {
+        cleaned = cleaned + "\n\n" + question;
+      }
+    }
+
+    // FORÇAR TRANSFERÊNCIA: se tem os 5 campos + já mandou 3+ msgs → injeta [TRANSFERIR]
+    if (msgCount >= 3 && fieldCheck.complete && !cleaned.includes("[TRANSFERIR]")) {
+      console.log("✅ Atlas 5 mandatory fields detected — forcing escalation");
+      cleaned += " [TRANSFERIR]";
+    }
+
+    // Promise loop detection (independent)
     if (msgCount >= 3) {
-      const fieldsComplete = detectMandatoryFields(conversationContext);
       const promiseLoop = detectPromiseLoop(conversationContext);
-
-      if ((fieldsComplete || promiseLoop) && !cleaned.includes("[TRANSFERIR]")) {
-        // Strip any "vou montar/preparar" promises and force escalation
-        if (promiseLoop) {
-          console.log("🔄 Atlas promise loop detected — forcing escalation");
-        }
-        if (fieldsComplete) {
-          console.log("✅ Atlas 5 mandatory fields detected — forcing escalation");
-        }
+      if (promiseLoop && !cleaned.includes("[TRANSFERIR]")) {
+        console.log("🔄 Atlas promise loop detected — forcing escalation");
         cleaned += " [TRANSFERIR]";
       }
     }

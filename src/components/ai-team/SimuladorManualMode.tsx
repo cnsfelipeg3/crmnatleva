@@ -858,7 +858,7 @@ export default function SimuladorManualMode() {
                 </button>
                 <div className="flex-1 min-w-0" onClick={() => { if (isMobile) { setPanelTab("agente"); setShowPanel(true); } }}>
                   <div className="flex items-center gap-2">
-                    <p className={cn("font-bold truncate text-foreground", isMobile ? "text-sm" : "text-[15px]")}>{selectedAgent.name}</p>
+                    <p className={cn("font-bold truncate text-foreground", isMobile ? "text-sm" : "text-[15px]")}>{selectedAgent.name.toUpperCase()}</p>
                     {isMobile && <ChevronDown className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />}
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
