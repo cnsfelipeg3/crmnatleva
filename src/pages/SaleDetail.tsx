@@ -75,6 +75,9 @@ export default function SaleDetail() {
       const { data: costData } = await supabase.from("cost_items").select("*").eq("sale_id", id);
       setCostItems(costData || []);
 
+      const { data: attData } = await supabase.from("attachments").select("*").eq("sale_id", id).order("created_at", { ascending: false });
+      setAttachments(attData || []);
+
       setLoading(false);
     };
     if (id) fetchData();
