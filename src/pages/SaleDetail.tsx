@@ -691,7 +691,9 @@ export default function SaleDetail() {
                         </div>
                         <span className="font-bold text-sm">{fmt(ci.total_item_cost || 0)}</span>
                       </div>
-                      <div className="flex gap-4 text-[11px] text-muted-foreground">
+                      <div className="flex gap-4 text-[11px] text-muted-foreground flex-wrap">
+                        {ci.emission_source && <span className="flex items-center gap-1"><Briefcase className="w-3 h-3" /> {ci.emission_source}</span>}
+                        {ci.card_info && <span className="flex items-center gap-1"><CreditCard className="w-3 h-3" /> {ci.card_info}</span>}
                         {ci.cash_value > 0 && <span>Cash: {fmt(ci.cash_value)}</span>}
                         {ci.miles_quantity > 0 && <span>Milhas: {ci.miles_quantity?.toLocaleString()} × R${ci.miles_price_per_thousand}</span>}
                         {ci.miles_cost_brl > 0 && <span>= {fmt(ci.miles_cost_brl)}</span>}
