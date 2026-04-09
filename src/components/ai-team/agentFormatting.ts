@@ -182,6 +182,17 @@ export function enforceAgentFormatting(text: string): string {
   cleaned = cleaned.replace(/\[BRIEFING[^\]]*\]:?\s*/gi, "");
   cleaned = cleaned.replace(/\[ESCALON[^\]]*\]:?\s*/gi, "");
   cleaned = cleaned.replace(/\[INTERNO[^\]]*\]:?\s*/gi, "");
+
+  // Strip structured transfer data blocks (internal handoff data that should never reach the client)
+  // Matches blocks like "**Dados para transferência:**\nNome: ...\nDestino: ..." etc.
+  cleaned = cleaned.replace(/\*{0,2}Dados\s+para\s+transfer[eê]ncia:?\*{0,2}\s*\n(?:\s*(?:Nome|Destino|Companhia|Período|Dura[çc][aã]o|Ocasi[aã]o|Tom|Or[çc]amento|Perfil|Grupo|Datas|Aeroporto|Prefer[eê]ncia|Hospedagem|Experi[eê]ncia|Transfer|Motiva[çc][aã]o|Observa[çc][oõ]es|Resumo|Notas?|Contexto|Briefing)\s*:.+\n?)*/gi, "");
+
+  // Also catch simpler variants: "Dados de transferência:", "Dados do briefing:", "Resumo para transferência:"
+  cleaned = cleaned.replace(/\*{0,2}(?:Dados|Resumo|Info(?:rma[çc][oõ]es)?)\s+(?:para|de|do)\s+(?:transfer[eê]ncia|briefing|escalonamento|handoff):?\*{0,2}\s*\n(?:\s*[A-ZÀ-Ú][a-zà-ú]+\s*:.+\n?)*/gi, "");
+
+  // Strip "Deixa eu passar pro pessoal da consultoria..." type sentences
+  cleaned = cleaned.replace(/[^.!?\n]*\b(passar\s+pro\s+pessoal|passar\s+pra\s+consultoria|encaminhar\s+pro|encaminhar\s+pra|repassar\s+pro|repassar\s+pra)\b[^.!?\n]*[.!?]?\s*/gi, "");
+
   cleaned = cleaned.replace(/^.*\b(ESTADO|FASE|STEP|ETAPA|STAGE|QUALIFICA[ÇC][ÃA]O|TRANSFER[ÊE]NCIA)[_\s]*\d*[+,;]*\s*.*$/gm, "");
   cleaned = cleaned.replace(/^.*\b(ESTADO|FASE|STEP|ETAPA)[\s_]*\d+.*$/gm, "");
   cleaned = cleaned.replace(/\n{3,}/g, "\n\n").trim();
