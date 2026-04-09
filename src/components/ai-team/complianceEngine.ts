@@ -539,23 +539,44 @@ export function enforceHardRules(
     }
   }
 
-  // ── Atlas-specific: force escalation when 5 fields are collected or promise loop detected ──
+  // ── Atlas-specific: block premature transfer + force escalation when 5 fields collected ──
   if (agentId === "atlas" && conversationContext) {
     const msgCount = agentMessageCount ?? 0;
+    const fieldCheck = detectMandatoryFields(conversationContext);
 
-    // Only apply after Atlas has sent at least 3 messages (avoid instant transfer)
+    // BLOQUEIO DE TRANSFERÊNCIA PREMATURA: se Atlas tenta [TRANSFERIR] sem ter os 5 campos → REMOVE
+    if (cleaned.includes("[TRANSFERIR]") && !fieldCheck.complete) {
+      console.warn(`🚫 Atlas tentou transferir sem campos completos — faltam: ${fieldCheck.missing.join(", ")}. Bloqueando.`);
+      cleaned = cleaned.replace(/\[TRANSFERIR\]/g, "").trim();
+
+      // Inject question about the first missing field
+      const fieldQuestions: Record<string, string> = {
+        "nome": "Como posso te chamar?",
+        "destino": "Pra onde vocês estão pensando em ir?",
+        "período": "Quando vocês estão pensando em viajar? Qual época do ano?",
+        "duração": "Quantos dias vocês gostariam de ficar?",
+        "composição do grupo": "Quem vai nessa viagem? Casal, família, grupo de amigos?",
+      };
+      const firstMissing = fieldCheck.missing[0];
+      const question = fieldQuestions[firstMissing] || `Me conta mais sobre ${firstMissing}?`;
+
+      // Only inject if the response doesn't already end with a question
+      if (!cleaned.endsWith("?")) {
+        cleaned = cleaned + "\n\n" + question;
+      }
+    }
+
+    // FORÇAR TRANSFERÊNCIA: se tem os 5 campos + já mandou 3+ msgs → injeta [TRANSFERIR]
+    if (msgCount >= 3 && fieldCheck.complete && !cleaned.includes("[TRANSFERIR]")) {
+      console.log("✅ Atlas 5 mandatory fields detected — forcing escalation");
+      cleaned += " [TRANSFERIR]";
+    }
+
+    // Promise loop detection (independent)
     if (msgCount >= 3) {
-      const fieldsComplete = detectMandatoryFields(conversationContext);
       const promiseLoop = detectPromiseLoop(conversationContext);
-
-      if ((fieldsComplete || promiseLoop) && !cleaned.includes("[TRANSFERIR]")) {
-        // Strip any "vou montar/preparar" promises and force escalation
-        if (promiseLoop) {
-          console.log("🔄 Atlas promise loop detected — forcing escalation");
-        }
-        if (fieldsComplete) {
-          console.log("✅ Atlas 5 mandatory fields detected — forcing escalation");
-        }
+      if (promiseLoop && !cleaned.includes("[TRANSFERIR]")) {
+        console.log("🔄 Atlas promise loop detected — forcing escalation");
         cleaned += " [TRANSFERIR]";
       }
     }
