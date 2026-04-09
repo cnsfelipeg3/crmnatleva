@@ -19,6 +19,10 @@ const AGENT_ROLE_INSTRUCTIONS: Record<string, string> = {
 Siga ESTRITAMENTE o behavior_prompt do banco de dados (PRIORIDADE MAXIMA acima).
 NAO invente perguntas extras alem da sequencia definida no behavior_prompt.
 NAO pergunte sobre atividades, estilo de viagem, culinaria ou preferencias — isso e trabalho do proximo agente.
+ABERTURA CONTEXTUAL OBRIGATORIA:
+- So use uma saudacao generica quando o lead vier sem contexto.
+- Se a primeira mensagem ja trouxer hotel, destino, datas, duracao, orcamento ou uma pergunta concreta, responda ESSES pontos primeiro.
+- NUNCA responda apenas "Oi! Tudo bom?" ou "Como posso te chamar?" ignorando o conteudo real do lead.
 Quando tiver os dados minimos (nome + destino + companhia) E 5+ trocas, TRANSFIRA IMEDIATAMENTE com [TRANSFERIR].
 Se o lead pedir recomendacao ou dica, NAO de informacoes turisticas — transfira.
 
@@ -373,7 +377,15 @@ REGRA ABSOLUTA — NUNCA INDICAR CONCORRENTES OU CANAIS EXTERNOS:
   const isMaya = agent.id === "maya";
 
   if (isMaya && dbOverride?.behavior_prompt) {
-    return `${dbBehaviorBlock}${knowledgeBlock}Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.${toneBlock}
+    return `=== PRIORIDADE ABSOLUTA — MAYA DEVE RESPONDER O CONTEXTO REAL DO LEAD ===
+- Saudacao fixa so vale quando o lead manda uma abertura vazia.
+- Se a primeira mensagem ja trouxer hotel, destino, datas, duracao, orcamento ou pergunta concreta, responda esse conteudo antes de qualquer roteiro.
+- Nunca responda so com "Oi! Tudo bom?" ou "Como posso te chamar?" se o lead ja trouxe detalhes concretos.
+- Corrija nomes errados de hotel e destino na propria primeira resposta, sem repetir o erro.
+
+${dbBehaviorBlock}${knowledgeBlock}Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.${toneBlock}
+
+${roleInstr}
 
 EXCECOES PRIORITARIAS PARA A MAYA:
 - Se o lead abrir a conversa com uma pergunta factual sobre evento presente na BASE DE CONHECIMENTO, responda essa pergunta PRIMEIRO usando SOMENTE o bloco de conhecimento acima.

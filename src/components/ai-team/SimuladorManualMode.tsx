@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { debugLog } from "@/lib/debugMode";
-import { fullCompliancePipeline, clearComplianceCache } from "./complianceEngine";
-import { enforceAgentFormatting, stripRepeatedLeadingName } from "./agentFormatting";
+import { clearComplianceCache } from "./complianceEngine";
+import { enforceAgentFormatting } from "./agentFormatting";
 import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X, Mic } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
 import SimulatorChatLayout, { type SimChatMessage } from "./SimulatorChatLayout";
@@ -313,31 +313,30 @@ export default function SimuladorManualMode() {
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buf = "", agentText = "";
-      const streamId = "stream-" + crypto.randomUUID();
-      let isPostCompliance = false; // Flag to bypass dedup for final compliance update
-      const updateAgent = (t: string) => {
-        setMessages(prev => {
-          // Dedup: if last non-stream agent message has very similar content, skip
-          // BUT: never block the post-compliance final update (it must always apply)
-          if (!isPostCompliance) {
-            const lastNonStream = [...prev].reverse().find(m => m.role === "agent" && m.id !== streamId);
-            if (lastNonStream && lastNonStream.content) {
-              const normA = t.replace(/\s+/g, " ").trim().toLowerCase();
-              const normB = lastNonStream.content.replace(/\s+/g, " ").trim().toLowerCase();
-              if (normA === normB) {
-                return prev;
-              }
-            }
-          }
-          let updated: ChatMsg[];
-          if (prev[prev.length - 1]?.id === streamId) {
-            updated = prev.map((m, idx) => idx === prev.length - 1 ? { ...m, content: t } : m);
-          } else {
-            updated = [...prev, { id: streamId, role: "agent" as const, content: t, timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name }];
-          }
-          messagesRef.current = updated;
-          return updated;
-        });
+      const normalizeMessage = (value: string) => value.replace(/\s+/g, " ").trim().toLowerCase();
+      const commitAgentMessage = (text: string) => {
+        const normalizedIncoming = normalizeMessage(text);
+        if (!normalizedIncoming) return false;
+
+        const lastAgentMessage = [...messagesRef.current].reverse().find(m => m.role === "agent");
+        if (lastAgentMessage?.content && normalizeMessage(lastAgentMessage.content) === normalizedIncoming) {
+          return false;
+        }
+
+        const updated = [
+          ...messagesRef.current,
+          {
+            id: crypto.randomUUID(),
+            role: "agent" as const,
+            content: text,
+            timestamp: new Date().toISOString(),
+            agentId: selectedAgent.id,
+            agentName: selectedAgent.name,
+          },
+        ];
+        messagesRef.current = updated;
+        setMessages(updated);
+        return true;
       };
 
       while (true) {
@@ -351,50 +350,31 @@ export default function SimuladorManualMode() {
           if (!line.startsWith("data: ")) continue;
           const json = line.slice(6).trim();
           if (json === "[DONE]") break;
-          try { const p = JSON.parse(json); const c = p.choices?.[0]?.delta?.content; if (c) { agentText += c; updateAgent(enforceAgentFormatting(agentText)); } } catch {}
+          try {
+            const p = JSON.parse(json);
+            const c = p.choices?.[0]?.delta?.content;
+            if (c) {
+              agentText += c;
+            }
+          } catch {}
         }
       }
 
+      const textForTransferCheck = agentText;
       if (!agentText) {
         // CORREÇÃO 4: Do NOT show technical error to client — log internally only
         console.error("[AGENT] Empty response from AI — suppressed technical error message");
         debugLog("[AGENT] Resposta vazia da IA — erro técnico suprimido (não exposto ao cliente)");
       } else {
-        // 🛡️ Compliance Engine
-        const conversationCtx = currentMessages.map(m => `${m.role}: ${m.content}`).join("\n");
-        const lastLeadMsg = [...currentMessages].reverse().find(m => m.role === "user")?.content || "";
-        const agentMsgCount = currentMessages.filter(m => m.role === "agent").length;
-        const recentAgentMsgs = currentMessages.filter(m => m.role === "agent").map(m => m.content).slice(-5);
-        var { text: compliantText, wasRewritten } = await fullCompliancePipeline(
-          selectedAgent.id, agentText, conversationCtx, lastLeadMsg, agentMsgCount,
-          undefined, recentAgentMsgs,
-        );
-        if (wasRewritten) {
-          debugLog(`🛡️ Compliance rewrite applied for ${selectedAgent.name}`);
-        }
+        const cleanedText = enforceAgentFormatting(agentText);
+        const committed = commitAgentMessage(cleanedText);
 
-        // CORREÇÃO 4: Guard — block duplicate messages (first 100 chars comparison)
-        const lastAgentMsg = currentMessages.filter(m => m.role === "agent").slice(-1)[0];
-        if (lastAgentMsg?.content) {
-          const newSnippet = compliantText.replace(/\s+/g, " ").trim().slice(0, 100).toLowerCase();
-          const prevSnippet = lastAgentMsg.content.replace(/\s+/g, " ").trim().slice(0, 100).toLowerCase();
-          if (newSnippet === prevSnippet) {
-            console.warn("[AGENT] Duplicate message blocked — identical to previous agent message");
-            debugLog("[AGENT] Mensagem duplicada bloqueada (100 chars idênticos)");
-            setLoading(false);
-            isProcessingRef.current = false;
-            return;
-          }
+        if (!committed) {
+          debugLog("[AGENT] Mensagem duplicada bloqueada no commit final");
         }
-
-        // Set flag so the final compliance update ALWAYS applies (bypasses dedup)
-        isPostCompliance = true;
-        updateAgent(compliantText);
-        isPostCompliance = false;
       }
 
-      // Use compliantText (post-compliance) for transfer check — pivot detector injects [TRANSFERIR] there
-      const textForTransferCheck = compliantText ?? agentText;
+      // Transfer uses raw model output so internal tags still work even after visible cleanup.
       if (textForTransferCheck.includes("[TRANSFERIR]")) {
         // ── Pipeline-aware transfer using PIPELINE_MAP ──
         const pipelineTargets = getTransferTargets(selectedAgent.id);
