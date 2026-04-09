@@ -26,6 +26,7 @@ import AirlineLogo, { AirlineLogosStack } from "@/components/AirlineLogo";
 import ClientAutocomplete from "@/components/ClientAutocomplete";
 import SalePassengersManager from "@/components/SalePassengersManager";
 import { iataToLabel } from "@/lib/iataUtils";
+import { routeLabel, routeCode } from "@/lib/cityExtract";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 

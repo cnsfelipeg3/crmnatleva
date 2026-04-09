@@ -14,6 +14,7 @@ import {
 import { Search, Plus, Download, Eye, Plane, Hotel, Filter, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AirlineLogo from "@/components/AirlineLogo";
+import { routeCode } from "@/lib/cityExtract";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
