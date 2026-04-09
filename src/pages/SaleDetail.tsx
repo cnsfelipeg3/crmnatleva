@@ -26,6 +26,7 @@ import AirlineLogo, { AirlineLogosStack } from "@/components/AirlineLogo";
 import ClientAutocomplete from "@/components/ClientAutocomplete";
 import SalePassengersManager from "@/components/SalePassengersManager";
 import { iataToLabel } from "@/lib/iataUtils";
+import { routeLabel, routeCode } from "@/lib/cityExtract";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -284,9 +285,9 @@ export default function SaleDetail() {
             </div>
             {/* Quick trip badge row */}
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              {sale.destination_iata && (
+              {(sale.destination_city || sale.destination_iata) && (
                 <Badge variant="outline" className="text-xs gap-1">
-                  <MapPin className="w-3 h-3" /> {iataToLabel(sale.destination_iata)}
+                  <MapPin className="w-3 h-3" /> {routeLabel(sale.destination_city, sale.destination_iata)}
                 </Badge>
               )}
               {sale.departure_date && (
@@ -536,16 +537,16 @@ export default function SaleDetail() {
               {/* Route visual */}
               <div className="flex items-center justify-center gap-6 py-4 mb-3">
                 <div className="text-center">
-                  <p className="text-3xl font-bold font-mono text-primary">{sale.origin_iata || "?"}</p>
-                  {sale.origin_iata && <p className="text-[10px] text-muted-foreground mt-0.5">{iataToLabel(sale.origin_iata).split(" (")[0]}</p>}
+                  <p className="text-3xl font-bold font-mono text-primary">{routeCode(sale.origin_city, sale.origin_iata) || "?"}</p>
+                  {(sale.origin_city || sale.origin_iata) && <p className="text-[10px] text-muted-foreground mt-0.5">{routeLabel(sale.origin_city, sale.origin_iata)}</p>}
                 </div>
                 <div className="flex-1 max-w-[200px] relative">
                   <div className="border-t-2 border-dashed border-border" />
                   <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-primary bg-card p-0.5" />
                 </div>
                 <div className="text-center">
-                  <p className="text-3xl font-bold font-mono text-primary">{sale.destination_iata || "?"}</p>
-                  {sale.destination_iata && <p className="text-[10px] text-muted-foreground mt-0.5">{iataToLabel(sale.destination_iata).split(" (")[0]}</p>}
+                  <p className="text-3xl font-bold font-mono text-primary">{routeCode(sale.destination_city, sale.destination_iata) || "?"}</p>
+                  {(sale.destination_city || sale.destination_iata) && <p className="text-[10px] text-muted-foreground mt-0.5">{routeLabel(sale.destination_city, sale.destination_iata)}</p>}
                 </div>
               </div>
 

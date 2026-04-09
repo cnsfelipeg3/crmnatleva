@@ -14,6 +14,7 @@ import {
 import { Search, Plus, Download, Eye, Plane, Hotel, Filter, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AirlineLogo from "@/components/AirlineLogo";
+import { routeCode } from "@/lib/cityExtract";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -28,6 +29,7 @@ const statusColor: Record<string, string> = {
 interface SaleRow {
   id: string; display_id: string; name: string; close_date: string | null;
   status: string; origin_iata: string | null; destination_iata: string | null;
+  origin_city: string | null; destination_city: string | null;
   departure_date: string | null; adults: number; children: number;
   products: string[]; received_value: number; margin: number; score: number;
   airline: string | null; locators: string[]; seller_id: string | null;
@@ -46,7 +48,7 @@ export default function Sales() {
 
   useEffect(() => {
     if (authLoading) return;
-    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, departure_date, adults, children, products, received_value, margin, score, airline, locators, seller_id, created_at, client_id", { order: { column: "created_at", ascending: false } }).then((data) => {
+    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, origin_city, destination_city, departure_date, adults, children, products, received_value, margin, score, airline, locators, seller_id, created_at, client_id", { order: { column: "created_at", ascending: false } }).then((data) => {
       setSales(data as SaleRow[]);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
@@ -176,7 +178,7 @@ export default function Sales() {
                 </div>
                 <div className="flex items-center justify-between mt-3">
                   <div className="flex items-center gap-2">
-                    <span className={`font-mono text-xs ${!sale.origin_iata && !sale.destination_iata ? "text-muted-foreground/40 italic" : "text-muted-foreground"}`}>{sale.origin_iata && sale.destination_iata ? `${sale.origin_iata} → ${sale.destination_iata}` : sale.origin_iata ? `${sale.origin_iata} → N/D` : sale.destination_iata ? `N/D → ${sale.destination_iata}` : "Rota não definida"}</span>
+                    <span className={`font-mono text-xs ${!routeCode(sale.origin_city, sale.origin_iata) && !routeCode(sale.destination_city, sale.destination_iata) ? "text-muted-foreground/40 italic" : "text-muted-foreground"}`}>{(() => { const o = routeCode(sale.origin_city, sale.origin_iata); const d = routeCode(sale.destination_city, sale.destination_iata); return o && d ? `${o} → ${d}` : o ? `${o} → N/D` : d ? `N/D → ${d}` : "Rota não definida"; })()}</span>
                     <div className="flex gap-1 items-center">
                       {sale.airline && <AirlineLogo iata={sale.airline} size={16} />}
                       {sale.products?.includes("Hotel") && <Hotel className="w-3.5 h-3.5 text-accent" />}
@@ -225,7 +227,7 @@ export default function Sales() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`font-mono text-xs ${!sale.origin_iata && !sale.destination_iata ? "text-muted-foreground/40 italic" : ""}`}>{sale.origin_iata && sale.destination_iata ? `${sale.origin_iata} → ${sale.destination_iata}` : sale.origin_iata ? `${sale.origin_iata} → N/D` : sale.destination_iata ? `N/D → ${sale.destination_iata}` : "Rota não definida"}</span>
+                        <span className={`font-mono text-xs ${!routeCode(sale.origin_city, sale.origin_iata) && !routeCode(sale.destination_city, sale.destination_iata) ? "text-muted-foreground/40 italic" : ""}`}>{(() => { const o = routeCode(sale.origin_city, sale.origin_iata); const d = routeCode(sale.destination_city, sale.destination_iata); return o && d ? `${o} → ${d}` : o ? `${o} → N/D` : d ? `N/D → ${d}` : "Rota não definida"; })()}</span>
                       </td>
                       <td className="px-4 py-3">{(sale.adults || 0) + (sale.children || 0)}</td>
                       <td className="px-4 py-3">
