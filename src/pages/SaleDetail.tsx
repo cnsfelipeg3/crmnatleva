@@ -285,9 +285,9 @@ export default function SaleDetail() {
             </div>
             {/* Quick trip badge row */}
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              {sale.destination_iata && (
+              {(sale.destination_city || sale.destination_iata) && (
                 <Badge variant="outline" className="text-xs gap-1">
-                  <MapPin className="w-3 h-3" /> {iataToLabel(sale.destination_iata)}
+                  <MapPin className="w-3 h-3" /> {routeLabel(sale.destination_city, sale.destination_iata)}
                 </Badge>
               )}
               {sale.departure_date && (
