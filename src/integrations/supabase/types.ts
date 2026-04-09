@@ -2377,6 +2377,7 @@ export type Database = {
       }
       cost_items: {
         Row: {
+          card_info: string | null
           cash_value: number | null
           category: string
           created_at: string
@@ -2396,6 +2397,7 @@ export type Database = {
           total_item_cost: number | null
         }
         Insert: {
+          card_info?: string | null
           cash_value?: number | null
           category: string
           created_at?: string
@@ -2415,6 +2417,7 @@ export type Database = {
           total_item_cost?: number | null
         }
         Update: {
+          card_info?: string | null
           cash_value?: number | null
           category?: string
           created_at?: string
@@ -3946,6 +3949,7 @@ export type Database = {
           cpf: string | null
           created_at: string
           created_by: string | null
+          email: string | null
           full_name: string
           id: string
           passport_expiry: string | null
@@ -3968,6 +3972,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           created_by?: string | null
+          email?: string | null
           full_name: string
           id?: string
           passport_expiry?: string | null
@@ -3990,6 +3995,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           created_by?: string | null
+          email?: string | null
           full_name?: string
           id?: string
           passport_expiry?: string | null
