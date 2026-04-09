@@ -14,7 +14,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe, BookOpen } from "lucide-react";
+import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe, BookOpen, Paperclip, Download, ExternalLink, Image as ImageIcon, File } from "lucide-react";
 import PublishToPortalDialog from "@/components/portal/PublishToPortalDialog";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +37,7 @@ export default function SaleDetail() {
   const [sale, setSale] = useState<any>(null);
   const [segments, setSegments] = useState<FlightSegment[]>([]);
   const [costItems, setCostItems] = useState<any[]>([]);
+  const [attachments, setAttachments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summary, setSummary] = useState("");
@@ -73,6 +74,9 @@ export default function SaleDetail() {
 
       const { data: costData } = await supabase.from("cost_items").select("*").eq("sale_id", id);
       setCostItems(costData || []);
+
+      const { data: attData } = await supabase.from("attachments").select("*").eq("sale_id", id).order("created_at", { ascending: false });
+      setAttachments(attData || []);
 
       setLoading(false);
     };
@@ -749,6 +753,65 @@ export default function SaleDetail() {
                   Observações
                 </h3>
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{sale.observations}</p>
+              </Card>
+            )}
+
+            {/* Attachments */}
+            {attachments.length > 0 && (
+              <Card className="p-4 glass-card">
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Paperclip className="w-3.5 h-3.5 text-primary" />
+                  </div>
+                  Anexos ({attachments.length})
+                </h3>
+                {(() => {
+                  const catLabels: Record<string, string> = {
+                    prints_emissao: "Prints de Emissão",
+                    comprovante: "Comprovantes",
+                    nota_fiscal: "Notas Fiscais",
+                    voucher: "Vouchers",
+                    aereo: "Aéreo",
+                    hotel: "Hotel",
+                    seguro: "Seguro",
+                    outros: "Outros",
+                  };
+                  const grouped: Record<string, any[]> = {};
+                  attachments.forEach((att: any) => {
+                    const key = att.category || "outros";
+                    if (!grouped[key]) grouped[key] = [];
+                    grouped[key].push(att);
+                  });
+                  return Object.entries(grouped).map(([cat, items]) => (
+                    <div key={cat} className="mb-3 last:mb-0">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                        {catLabels[cat] || cat}
+                      </p>
+                      <div className="space-y-1.5">
+                        {items.map((att: any) => {
+                          const ext = att.file_name?.split(".").pop()?.toLowerCase();
+                          const isImage = ["jpg", "jpeg", "png", "webp", "gif"].includes(ext || "");
+                          const isPdf = ext === "pdf";
+                          const AttIcon = isPdf ? FileText : isImage ? ImageIcon : File;
+                          const iconColor = isPdf ? "text-destructive" : isImage ? "text-info" : "text-muted-foreground";
+                          return (
+                            <a
+                              key={att.id}
+                              href={att.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/40 transition-colors group"
+                            >
+                              <AttIcon className={`w-4 h-4 flex-shrink-0 ${iconColor}`} />
+                              <span className="text-xs text-foreground truncate flex-1">{att.file_name}</span>
+                              <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ));
+                })()}
               </Card>
             )}
           </div>
