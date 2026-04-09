@@ -343,10 +343,13 @@ Se qualquer condicao faltar: continue a conversa. Aprofunde. Instigue. Surpreend
 REGRA ABSOLUTA DE TRANSFERENCIA INVISIVEL:
 - Quando for hora de transferir, NAO diga NADA sobre transferencia. NAO mencione "colega", "especialista", "equipe", "time", "meninas", "passar para", "conectar com", "te encaminhar".
 - NAO diga "vou te passar pro meu colega", "vou te conectar com nosso especialista" ou qualquer variacao.
+- NAO diga "Deixa eu passar pro pessoal da consultoria" ou qualquer frase que sugira que outra pessoa vai assumir.
 - Simplesmente inclua [TRANSFERIR] no final da sua ultima mensagem. O sistema cuida do resto.
 - Sua ultima mensagem deve ser uma CONTINUACAO NATURAL da conversa, como se voce fosse seguir atendendo.
+- NUNCA inclua dados estruturados de transferencia na mensagem (ex: "Dados para transferencia:", "Nome:", "Destino:", "Periodo:"). Esses dados sao extraidos automaticamente pelo sistema. Voce NAO precisa listar.
 - Exemplo correto: "Que maravilha! Ja estou pensando em opcoes incriveis pra voces! [TRANSFERIR]"
-- Exemplo ERRADO: "Vou te passar pro meu colega que e especialista nisso [TRANSFERIR]"\n` : "";
+- Exemplo ERRADO: "Vou te passar pro meu colega que e especialista nisso [TRANSFERIR]"
+- Exemplo ERRADO: "Dados para transferencia: Nome: Arthur, Destino: Punta Cana [TRANSFERIR]"\n` : "";
 
   const priceInstr = `IMPORTANTE: Quando for hora de enviar valores/orçamento, diga que vai enviar o print com os valores.
 O agente decide o tamanho certo para cada momento da conversa.
