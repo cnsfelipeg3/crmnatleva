@@ -29,6 +29,7 @@ const statusColor: Record<string, string> = {
 interface SaleRow {
   id: string; display_id: string; name: string; close_date: string | null;
   status: string; origin_iata: string | null; destination_iata: string | null;
+  origin_city: string | null; destination_city: string | null;
   departure_date: string | null; adults: number; children: number;
   products: string[]; received_value: number; margin: number; score: number;
   airline: string | null; locators: string[]; seller_id: string | null;
@@ -47,7 +48,7 @@ export default function Sales() {
 
   useEffect(() => {
     if (authLoading) return;
-    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, departure_date, adults, children, products, received_value, margin, score, airline, locators, seller_id, created_at, client_id", { order: { column: "created_at", ascending: false } }).then((data) => {
+    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, origin_city, destination_city, departure_date, adults, children, products, received_value, margin, score, airline, locators, seller_id, created_at, client_id", { order: { column: "created_at", ascending: false } }).then((data) => {
       setSales(data as SaleRow[]);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
