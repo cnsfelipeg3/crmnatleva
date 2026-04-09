@@ -37,6 +37,7 @@ export default function SaleDetail() {
   const [sale, setSale] = useState<any>(null);
   const [segments, setSegments] = useState<FlightSegment[]>([]);
   const [costItems, setCostItems] = useState<any[]>([]);
+  const [attachments, setAttachments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summary, setSummary] = useState("");
