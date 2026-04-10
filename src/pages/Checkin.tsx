@@ -239,7 +239,7 @@ export default function Checkin() {
     else toast({ title: `${urls.size} aba(s) de check-in aberta(s)` });
   };
 
-  // Unique airlines for filter
+  // Unique airlines for dynamic options
   const airlines = useMemo(() => {
     const set = new Set<string>();
     tasks.forEach(t => {
@@ -249,44 +249,13 @@ export default function Checkin() {
     return [...set].sort();
   }, [tasks]);
 
-  const filtered = useMemo(() => {
-    let result = tasks;
-    if (mainTab === "active") {
-      result = result.filter(t => t.status !== "CONCLUIDO");
-    } else {
-      result = result.filter(t => t.status === "CONCLUIDO");
-    }
-    if (filterStatus !== "all") result = result.filter(t => t.status === filterStatus);
-    if (filterAirline !== "all") result = result.filter(t => (t.segment?.airline || t.sale?.airline) === filterAirline);
-    if (filterTime !== "all") {
-      result = result.filter(t => {
-        const dep = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
-        const days = getDaysUntil(dep);
-        if (filterTime === "today") return days === 0;
-        if (filterTime === "tomorrow") return days === 1;
-        if (filterTime === "3days") return days >= 0 && days <= 3;
-        if (filterTime === "7days") return days >= 0 && days <= 7;
-        return true;
-      });
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(t => {
-        const sale = t.sale;
-        const paxNames = t.passengers?.map((p: any) => p.full_name?.toLowerCase()).join(" ") || "";
-        return (
-          sale?.name?.toLowerCase().includes(q) ||
-          sale?.display_id?.toLowerCase().includes(q) ||
-          sale?.origin_iata?.toLowerCase().includes(q) ||
-          sale?.destination_iata?.toLowerCase().includes(q) ||
-          sale?.locators?.some((l: string) => l?.toLowerCase().includes(q)) ||
-          paxNames.includes(q) ||
-          t.segment?.flight_number?.toLowerCase().includes(q)
-        );
-      });
-    }
-    return result;
-  }, [tasks, mainTab, filterStatus, filterAirline, filterTime, search]);
+  // Pre-filter by mainTab before passing to SmartFilters
+  const tabData = useMemo(() => {
+    if (mainTab === "active") return tasks.filter(t => t.status !== "CONCLUIDO");
+    return tasks.filter(t => t.status === "CONCLUIDO");
+  }, [tasks, mainTab]);
+
+  const { filtered, state: filterState, setState: setFilterState, activeFilterCount, clearAll: clearFilters } = useSmartFilters(tabData, CHECKIN_FILTER_CONFIG);
 
   // Group by date
   const groupedByDate = useMemo(() => {
