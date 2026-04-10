@@ -4,12 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -19,12 +16,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   ClipboardCheck, Clock, AlertTriangle, CheckCircle2, Copy,
-  ExternalLink, Eye, Plane, User, Search,
+  ExternalLink, Eye, Plane, User,
   RefreshCw, Loader2, Shield, Calendar, List, LayoutGrid, Columns3,
   ArrowRight, Timer, Zap,
 } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
 import TaskCalendarView from "@/components/TaskCalendarView";
+import { SmartFilters, useSmartFilters } from "@/components/smart-filters";
+import type { SmartFilterConfig } from "@/components/smart-filters";
 
 interface CheckinTask {
   id: string;
@@ -111,14 +110,28 @@ function getDaysUntil(dateStr: string | null): number {
 type ViewMode = "agenda" | "cards" | "pipeline" | "calendar";
 type TimeFilter = "all" | "today" | "tomorrow" | "3days" | "7days";
 
+const CHECKIN_FILTER_CONFIG: SmartFilterConfig = {
+  sortOptions: [
+    { key: "departure_datetime_utc", label: "Data do voo", type: "date" },
+    { key: "priority_score", label: "Prioridade", type: "number" },
+    { key: "status", label: "Status", type: "string" },
+  ],
+  defaultSortKey: "departure_datetime_utc",
+  defaultSortDirection: "asc",
+  dateField: "departure_datetime_utc",
+  searchPlaceholder: "Buscar passageiro, PNR, destino...",
+  searchFields: ["sale.name", "sale.display_id", "sale.origin_iata", "sale.destination_iata", "sale.locators", "segment.flight_number"],
+  selectFilters: [
+    { key: "status", label: "Status", options: ["PENDENTE", "URGENTE", "CRITICO", "BLOQUEADO", "CONCLUIDO"] },
+    { key: "direction", label: "Direção", options: ["ida", "volta"] },
+  ],
+  pillPresets: ["today", "tomorrow", "next_7_days", "next_30_days", "this_month", "all"],
+};
+
 export default function Checkin() {
   const [tasks, setTasks] = useState<CheckinTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterTime, setFilterTime] = useState<TimeFilter>("all");
-  const [filterAirline, setFilterAirline] = useState("all");
   const [mainTab, setMainTab] = useState<"active" | "history">("active");
   const [viewMode, setViewMode] = useState<ViewMode>("agenda");
   const [completeDialog, setCompleteDialog] = useState<CheckinTask | null>(null);
@@ -226,7 +239,7 @@ export default function Checkin() {
     else toast({ title: `${urls.size} aba(s) de check-in aberta(s)` });
   };
 
-  // Unique airlines for filter
+  // Unique airlines for dynamic options
   const airlines = useMemo(() => {
     const set = new Set<string>();
     tasks.forEach(t => {
@@ -236,44 +249,13 @@ export default function Checkin() {
     return [...set].sort();
   }, [tasks]);
 
-  const filtered = useMemo(() => {
-    let result = tasks;
-    if (mainTab === "active") {
-      result = result.filter(t => t.status !== "CONCLUIDO");
-    } else {
-      result = result.filter(t => t.status === "CONCLUIDO");
-    }
-    if (filterStatus !== "all") result = result.filter(t => t.status === filterStatus);
-    if (filterAirline !== "all") result = result.filter(t => (t.segment?.airline || t.sale?.airline) === filterAirline);
-    if (filterTime !== "all") {
-      result = result.filter(t => {
-        const dep = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
-        const days = getDaysUntil(dep);
-        if (filterTime === "today") return days === 0;
-        if (filterTime === "tomorrow") return days === 1;
-        if (filterTime === "3days") return days >= 0 && days <= 3;
-        if (filterTime === "7days") return days >= 0 && days <= 7;
-        return true;
-      });
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(t => {
-        const sale = t.sale;
-        const paxNames = t.passengers?.map((p: any) => p.full_name?.toLowerCase()).join(" ") || "";
-        return (
-          sale?.name?.toLowerCase().includes(q) ||
-          sale?.display_id?.toLowerCase().includes(q) ||
-          sale?.origin_iata?.toLowerCase().includes(q) ||
-          sale?.destination_iata?.toLowerCase().includes(q) ||
-          sale?.locators?.some((l: string) => l?.toLowerCase().includes(q)) ||
-          paxNames.includes(q) ||
-          t.segment?.flight_number?.toLowerCase().includes(q)
-        );
-      });
-    }
-    return result;
-  }, [tasks, mainTab, filterStatus, filterAirline, filterTime, search]);
+  // Pre-filter by mainTab before passing to SmartFilters
+  const tabData = useMemo(() => {
+    if (mainTab === "active") return tasks.filter(t => t.status !== "CONCLUIDO");
+    return tasks.filter(t => t.status === "CONCLUIDO");
+  }, [tasks, mainTab]);
+
+  const { filtered, state: filterState, setState: setFilterState, activeFilterCount, clearAll: clearFilters } = useSmartFilters(tabData, CHECKIN_FILTER_CONFIG);
 
   // Group by date
   const groupedByDate = useMemo(() => {
@@ -593,8 +575,8 @@ export default function Checkin() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className={`p-4 cursor-pointer transition-all hover:scale-[1.02] border-2 ${overdueTasks.length > 0 ? "border-destructive/50 bg-destructive/5" : "border-transparent"} ${filterTime === "all" && filterStatus === "all" ? "" : ""}`}
-          onClick={() => { setFilterTime("all"); setFilterStatus("all"); setMainTab("active"); }}>
+        <Card className={`p-4 cursor-pointer transition-all hover:scale-[1.02] border-2 ${overdueTasks.length > 0 ? "border-destructive/50 bg-destructive/5" : "border-transparent"}`}
+          onClick={() => { clearFilters(); setMainTab("active"); }}>
           <div className="flex items-center gap-2 mb-1">
             <div className={`w-3 h-3 rounded-full bg-destructive ${overdueTasks.length > 0 ? "animate-pulse" : ""}`} />
             <span className="text-xs font-medium text-muted-foreground">Atrasados</span>
@@ -602,7 +584,7 @@ export default function Checkin() {
           <p className="text-2xl font-bold text-destructive">{overdueTasks.length}</p>
         </Card>
         <Card className={`p-4 cursor-pointer transition-all hover:scale-[1.02] border-2 ${todayTasks.length > 0 ? "border-primary/50 bg-primary/5" : "border-transparent"}`}
-          onClick={() => { setFilterTime("today"); setMainTab("active"); }}>
+          onClick={() => { setFilterState(prev => ({ ...prev, dateFilter: { ...prev.dateFilter, field: "departure_datetime_utc", preset: "today" } })); setMainTab("active"); }}>
           <div className="flex items-center gap-2 mb-1">
             <div className="w-3 h-3 rounded-full bg-primary" />
             <span className="text-xs font-medium text-muted-foreground">Hoje</span>
@@ -610,104 +592,67 @@ export default function Checkin() {
           <p className="text-2xl font-bold text-primary">{todayTasks.length}</p>
         </Card>
         <Card className="p-4 cursor-pointer transition-all hover:scale-[1.02]"
-          onClick={() => { setFilterTime("tomorrow"); setMainTab("active"); }}>
+          onClick={() => { setFilterState(prev => ({ ...prev, dateFilter: { ...prev.dateFilter, field: "departure_datetime_utc", preset: "tomorrow" } })); setMainTab("active"); }}>
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-3 h-3 rounded-full bg-amber-500" />
+            <div className="w-3 h-3 rounded-full bg-warning" />
             <span className="text-xs font-medium text-muted-foreground">Amanhã</span>
           </div>
-          <p className="text-2xl font-bold text-amber-600">{tomorrowTasks.length}</p>
+          <p className="text-2xl font-bold text-warning">{tomorrowTasks.length}</p>
         </Card>
         <Card className="p-4 cursor-pointer transition-all hover:scale-[1.02]"
-          onClick={() => { setMainTab("history"); setFilterTime("all"); }}>
+          onClick={() => { setMainTab("history"); clearFilters(); }}>
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-3 h-3 rounded-full bg-emerald-500" />
+            <div className="w-3 h-3 rounded-full bg-eucalyptus" />
             <span className="text-xs font-medium text-muted-foreground">Concluídos</span>
           </div>
-          <p className="text-2xl font-bold text-emerald-600">{tasks.filter(t => t.status === "CONCLUIDO").length}</p>
+          <p className="text-2xl font-bold text-eucalyptus">{tasks.filter(t => t.status === "CONCLUIDO").length}</p>
         </Card>
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="flex gap-1 bg-muted rounded-lg p-0.5">
-          <button
-            onClick={() => { setMainTab("active"); setFilterTime("all"); }}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mainTab === "active" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
-          >
-            Ativos ({activeTasks.length})
-          </button>
-          <button
-            onClick={() => { setMainTab("history"); setFilterTime("all"); }}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mainTab === "history" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
-          >
-            Histórico
-          </button>
-        </div>
-
-        <div className="flex-1" />
-
-        {/* Time filters */}
-        {mainTab === "active" && (
-          <div className="flex gap-1">
-            {([["all", "Todos"], ["today", "Hoje"], ["tomorrow", "Amanhã"], ["3days", "3 dias"], ["7days", "7 dias"]] as [TimeFilter, string][]).map(([val, label]) => (
-              <button
-                key={val}
-                onClick={() => setFilterTime(val)}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${filterTime === val ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
-              >
-                {label}
-              </button>
-            ))}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+            <button
+              onClick={() => { setMainTab("active"); clearFilters(); }}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mainTab === "active" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+            >
+              Ativos ({activeTasks.length})
+            </button>
+            <button
+              onClick={() => { setMainTab("history"); clearFilters(); }}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mainTab === "history" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+            >
+              Histórico
+            </button>
           </div>
-        )}
 
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar passageiro, PNR, destino..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-8 h-8 text-xs w-[200px]"
-          />
+          <div className="flex-1" />
+
+          <div className="flex gap-0.5 bg-muted rounded-md p-0.5">
+            <button onClick={() => setViewMode("agenda")} className={`p-1.5 rounded ${viewMode === "agenda" ? "bg-background shadow-sm" : ""}`} title="Lista">
+              <List className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded ${viewMode === "cards" ? "bg-background shadow-sm" : ""}`} title="Cards">
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => setViewMode("pipeline")} className={`p-1.5 rounded ${viewMode === "pipeline" ? "bg-background shadow-sm" : ""}`} title="Pipeline">
+              <Columns3 className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => setViewMode("calendar")} className={`p-1.5 rounded ${viewMode === "calendar" ? "bg-background shadow-sm" : ""}`} title="Calendário">
+              <Calendar className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        {mainTab === "active" && (
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos status</SelectItem>
-              <SelectItem value="CRITICO">Crítico</SelectItem>
-              <SelectItem value="URGENTE">Urgente</SelectItem>
-              <SelectItem value="PENDENTE">Pendente</SelectItem>
-              <SelectItem value="BLOQUEADO">Bloqueado</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-
-        {airlines.length > 1 && (
-          <Select value={filterAirline} onValueChange={setFilterAirline}>
-            <SelectTrigger className="w-[100px] h-8 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Cia aérea</SelectItem>
-              {airlines.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
-
-        <div className="flex gap-0.5 bg-muted rounded-md p-0.5">
-          <button onClick={() => setViewMode("agenda")} className={`p-1.5 rounded ${viewMode === "agenda" ? "bg-background shadow-sm" : ""}`} title="Lista">
-            <List className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded ${viewMode === "cards" ? "bg-background shadow-sm" : ""}`} title="Cards">
-            <LayoutGrid className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => setViewMode("pipeline")} className={`p-1.5 rounded ${viewMode === "pipeline" ? "bg-background shadow-sm" : ""}`} title="Pipeline">
-            <Columns3 className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => setViewMode("calendar")} className={`p-1.5 rounded ${viewMode === "calendar" ? "bg-background shadow-sm" : ""}`} title="Calendário">
-            <Calendar className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <SmartFilters
+          config={CHECKIN_FILTER_CONFIG}
+          state={filterState}
+          setState={setFilterState}
+          activeFilterCount={activeFilterCount}
+          clearAll={clearFilters}
+          dynamicOptions={{ "segment.airline": airlines }}
+        />
       </div>
 
       {/* Batch bar */}

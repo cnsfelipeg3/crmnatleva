@@ -5,16 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Search, Plus, Download, Eye, Plane, Hotel, Filter, X } from "lucide-react";
+import { Plus, Download, Eye, Plane, Hotel, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AirlineLogo from "@/components/AirlineLogo";
 import { routeCode } from "@/lib/cityExtract";
+import { SmartFilters, useSmartFilters } from "@/components/smart-filters";
+import type { SmartFilterConfig } from "@/components/smart-filters";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -36,13 +34,28 @@ interface SaleRow {
   created_at: string; client_id: string | null;
 }
 
+const SALES_FILTER_CONFIG: SmartFilterConfig = {
+  sortOptions: [
+    { key: "departure_date", label: "Data embarque", type: "date" },
+    { key: "created_at", label: "Mais recentes", type: "date" },
+    { key: "received_value", label: "Valor", type: "number" },
+    { key: "name", label: "Nome A-Z", type: "string" },
+  ],
+  defaultSortKey: "departure_date",
+  defaultSortDirection: "asc",
+  dateField: "departure_date",
+  searchPlaceholder: "Buscar nome, ID, destino, localizador...",
+  searchFields: ["name", "display_id", "origin_city", "destination_city", "destination_iata", "airline", "locators"],
+  selectFilters: [
+    { key: "status", label: "Status", options: [] },
+    { key: "airline", label: "Cia aérea", options: [] },
+  ],
+  pillPresets: ["today", "tomorrow", "next_7_days", "next_30_days", "this_month", "last_30_days", "all"],
+};
+
 export default function Sales() {
   const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<SaleRow[]>([]);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [destFilter, setDestFilter] = useState("");
-  const [periodFilter, setPeriodFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -54,34 +67,10 @@ export default function Sales() {
     }).catch(err => { console.error(err); setLoading(false); });
   }, [authLoading]);
 
-  const statuses = useMemo(() => [...new Set(sales.map(s => s.status))], [sales]);
-  const destinations = useMemo(() => [...new Set(sales.map(s => s.destination_iata).filter(Boolean))].sort(), [sales]);
+  const statuses = useMemo(() => [...new Set(sales.map(s => s.status))].sort(), [sales]);
+  const airlines = useMemo(() => [...new Set(sales.map(s => s.airline).filter(Boolean))].sort() as string[], [sales]);
 
-  const filtered = useMemo(() => {
-    let result = sales;
-
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter(s =>
-        s.name.toLowerCase().includes(q) ||
-        s.display_id.toLowerCase().includes(q) ||
-        s.destination_iata?.toLowerCase().includes(q) ||
-        s.locators?.some(l => l.toLowerCase().includes(q))
-      );
-    }
-    if (statusFilter !== "all") result = result.filter(s => s.status === statusFilter);
-    if (destFilter) result = result.filter(s => s.destination_iata === destFilter);
-    if (periodFilter !== "all") {
-      const now = new Date();
-      const months = periodFilter === "30d" ? 1 : periodFilter === "90d" ? 3 : 12;
-      const cutoff = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
-      result = result.filter(s => new Date(s.created_at) >= cutoff);
-    }
-
-    return result;
-  }, [sales, search, statusFilter, destFilter, periodFilter]);
-
-  const hasFilters = statusFilter !== "all" || destFilter || periodFilter !== "all";
+  const { filtered, state: filterState, setState: setFilterState, activeFilterCount, clearAll: clearFilters } = useSmartFilters(sales, SALES_FILTER_CONFIG);
 
   const totals = useMemo(() => {
     const t = (list: SaleRow[]) => ({
@@ -121,47 +110,21 @@ export default function Sales() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input placeholder="Buscar nome, ID, destino..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[140px] h-9 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos status</SelectItem>
-            {statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={destFilter || "all"} onValueChange={v => setDestFilter(v === "all" ? "" : v)}>
-          <SelectTrigger className="w-full sm:w-[120px] h-9 text-xs"><SelectValue placeholder="Destino" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos destinos</SelectItem>
-            {destinations.map(d => <SelectItem key={d!} value={d!}>{d}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={periodFilter} onValueChange={setPeriodFilter}>
-          <SelectTrigger className="w-full sm:w-[130px] h-9 text-xs"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todo período</SelectItem>
-            <SelectItem value="30d">Últimos 30 dias</SelectItem>
-            <SelectItem value="90d">Últimos 90 dias</SelectItem>
-            <SelectItem value="12m">Último ano</SelectItem>
-          </SelectContent>
-        </Select>
-        {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={() => { setStatusFilter("all"); setDestFilter(""); setPeriodFilter("all"); }}>
-            <X className="w-3.5 h-3.5 mr-1" /> Limpar
-          </Button>
-        )}
-      </div>
+      {/* Smart Filters */}
+      <SmartFilters
+        config={SALES_FILTER_CONFIG}
+        state={filterState}
+        setState={setFilterState}
+        activeFilterCount={activeFilterCount}
+        clearAll={clearFilters}
+        dynamicOptions={{ status: statuses, airline: airlines }}
+      />
 
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          {search || hasFilters ? "Nenhuma venda encontrada com os filtros aplicados." : "Nenhuma venda ainda. Crie a primeira!"}
+          {activeFilterCount > 0 ? "Nenhuma venda encontrada com os filtros aplicados." : "Nenhuma venda ainda. Crie a primeira!"}
         </div>
       ) : (
         <>
@@ -259,24 +222,24 @@ export default function Sales() {
           <Card className="glass-card p-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Vendas {hasFilters ? "(filtradas)" : ""}</p>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Vendas {activeFilterCount > 0 ? "(filtradas)" : ""}</p>
                 <p className="text-lg font-bold text-foreground">{totals.filtered.count}</p>
-                {hasFilters && <p className="text-[10px] text-muted-foreground">de {totals.all.count} total</p>}
+                {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">de {totals.all.count} total</p>}
               </div>
               <div>
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">PAX Total</p>
                 <p className="text-lg font-bold text-foreground">{totals.filtered.pax}</p>
-                {hasFilters && <p className="text-[10px] text-muted-foreground">de {totals.all.pax} total</p>}
+                {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">de {totals.all.pax} total</p>}
               </div>
               <div>
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Receita Total</p>
                 <p className="text-lg font-bold text-foreground">{fmt(totals.filtered.revenue)}</p>
-                {hasFilters && <p className="text-[10px] text-muted-foreground">de {fmt(totals.all.revenue)} total</p>}
+                {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">de {fmt(totals.all.revenue)} total</p>}
               </div>
               <div>
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Margem Média</p>
                 <p className={cn("text-lg font-bold", totals.filtered.margin > 25 ? "text-success" : "text-foreground")}>{totals.filtered.margin.toFixed(1)}%</p>
-                {hasFilters && <p className="text-[10px] text-muted-foreground">geral: {totals.all.margin.toFixed(1)}%</p>}
+                {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">geral: {totals.all.margin.toFixed(1)}%</p>}
               </div>
             </div>
           </Card>
