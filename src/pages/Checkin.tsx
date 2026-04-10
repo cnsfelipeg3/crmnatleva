@@ -289,16 +289,20 @@ export default function Checkin() {
   // KPIs
   const activeTasks = tasks.filter(t => t.status !== "CONCLUIDO");
   const todayTasks = activeTasks.filter(t => {
-    const dep = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
+    const isVolta = t.direction === "volta";
+    const dep = t.segment?.departure_date || (isVolta ? t.sale?.return_date : t.sale?.departure_date) || t.departure_datetime_utc;
     return dep && getDateLabel(dep) === "Hoje";
   });
   const tomorrowTasks = activeTasks.filter(t => {
-    const dep = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
+    const isVolta = t.direction === "volta";
+    const dep = t.segment?.departure_date || (isVolta ? t.sale?.return_date : t.sale?.departure_date) || t.departure_datetime_utc;
     return dep && getDateLabel(dep) === "Amanhã";
   });
   const overdueTasks = activeTasks.filter(t => {
-    const dep = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
+    const isVolta = t.direction === "volta";
+    const dep = t.segment?.departure_date || (isVolta ? t.sale?.return_date : t.sale?.departure_date) || t.departure_datetime_utc;
     return dep && getDateLabel(dep) === "Atrasado";
+  });
   });
 
   const getTaskDetails = (task: CheckinTask) => {
