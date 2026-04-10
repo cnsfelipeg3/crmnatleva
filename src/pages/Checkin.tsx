@@ -303,11 +303,13 @@ export default function Checkin() {
   const getTaskDetails = (task: CheckinTask) => {
     const sale = task.sale;
     const segment = task.segment;
+    const isVolta = task.direction === "volta";
     const airline = segment?.airline || sale?.airline || "";
     const flightNum = segment?.flight_number || "";
-    const origin = segment?.origin_iata || sale?.origin_iata || "N/D";
-    const dest = segment?.destination_iata || sale?.destination_iata || "N/D";
-    const depDate = segment?.departure_date || sale?.departure_date || "";
+    // For volta without segment, swap origin/destination and use return_date
+    const origin = segment?.origin_iata || (isVolta ? sale?.destination_iata : sale?.origin_iata) || "N/D";
+    const dest = segment?.destination_iata || (isVolta ? sale?.origin_iata : sale?.destination_iata) || "N/D";
+    const depDate = segment?.departure_date || (isVolta ? sale?.return_date : sale?.departure_date) || "";
     const depTime = segment?.departure_time || "";
     const locators = sale?.locators?.filter(Boolean) || [];
     const checkinUrl = task.airline_rule?.checkin_url;
