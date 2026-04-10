@@ -319,7 +319,7 @@ export default function Checkin() {
   };
 
   const renderAgendaRow = (task: CheckinTask) => {
-    const { airline, flightNum, origin, dest, depTime, locators, checkinUrl, paxNames, statusCfg, statusKey } = getTaskDetails(task);
+    const { airline, flightNum, origin, dest, depDate, depTime, locators, checkinUrl, paxNames, statusCfg, statusKey } = getTaskDetails(task);
     const StatusIcon = statusCfg.icon;
     const isSelected = selected.has(task.id);
 
@@ -334,9 +334,12 @@ export default function Checkin() {
 
         <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusCfg.dot} ${statusKey === "CRITICO" ? "animate-pulse" : ""}`} />
 
-        <div className="w-14 shrink-0 text-center">
-          {depTime ? (
-            <span className="text-sm font-mono font-bold text-foreground">{depTime.slice(0, 5)}</span>
+        <div className="w-24 shrink-0 text-center">
+          {depDate ? (
+            <div className="flex flex-col items-center">
+              <span className="text-sm font-bold text-foreground leading-tight">{formatDateBR(depDate)}</span>
+              {depTime && <span className="text-[11px] font-mono text-muted-foreground">{depTime.slice(0, 5)}</span>}
+            </div>
           ) : (
             <span className="text-xs text-muted-foreground">—</span>
           )}
