@@ -69,6 +69,14 @@ export default {
           DEFAULT: "hsl(var(--champagne))",
           foreground: "hsl(var(--champagne-foreground))",
         },
+        sand: {
+          DEFAULT: "hsl(var(--sand))",
+          foreground: "hsl(var(--sand-foreground))",
+        },
+        eucalyptus: {
+          DEFAULT: "hsl(var(--eucalyptus))",
+          foreground: "hsl(var(--eucalyptus-foreground))",
+        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",
