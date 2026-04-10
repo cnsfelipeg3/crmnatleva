@@ -124,7 +124,7 @@ export default function Sales() {
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
-          {search || hasFilters ? "Nenhuma venda encontrada com os filtros aplicados." : "Nenhuma venda ainda. Crie a primeira!"}
+          {activeFilterCount > 0 ? "Nenhuma venda encontrada com os filtros aplicados." : "Nenhuma venda ainda. Crie a primeira!"}
         </div>
       ) : (
         <>
