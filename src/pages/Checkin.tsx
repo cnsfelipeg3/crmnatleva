@@ -5,11 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -19,12 +15,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   ClipboardCheck, Clock, AlertTriangle, CheckCircle2, Copy,
-  ExternalLink, Eye, Plane, User, Search,
+  ExternalLink, Eye, Plane, User,
   RefreshCw, Loader2, Shield, Calendar, List, LayoutGrid, Columns3,
   ArrowRight, Timer, Zap,
 } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
 import TaskCalendarView from "@/components/TaskCalendarView";
+import { SmartFilters, useSmartFilters } from "@/components/smart-filters";
+import type { SmartFilterConfig } from "@/components/smart-filters";
 
 interface CheckinTask {
   id: string;
