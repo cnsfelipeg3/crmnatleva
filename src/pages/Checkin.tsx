@@ -303,7 +303,6 @@ export default function Checkin() {
     const dep = t.segment?.departure_date || (isVolta ? t.sale?.return_date : t.sale?.departure_date) || t.departure_datetime_utc;
     return dep && getDateLabel(dep) === "Atrasado";
   });
-  });
 
   const getTaskDetails = (task: CheckinTask) => {
     const sale = task.sale;
