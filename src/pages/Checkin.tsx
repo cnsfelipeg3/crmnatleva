@@ -706,7 +706,7 @@ export default function Checkin() {
         <TaskCalendarView
           tasks={filtered.map(t => {
             const d = getTaskDetails(t);
-            const depDate = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
+            const depDate = d.depDate || t.departure_datetime_utc;
             return {
               id: t.id,
               date: depDate,
