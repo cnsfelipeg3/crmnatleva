@@ -90,7 +90,7 @@ export default function AppLayout() {
       <AppSidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         {!isImmersive && (
-          <header className="flex items-center justify-between px-5 h-[3.5rem] border-b border-border/15 bg-card/40 backdrop-blur-xl saturate-[1.8] shrink-0 z-20">
+          <header className="flex items-center justify-between px-5 h-[3.25rem] border-b border-border/12 bg-card/50 backdrop-blur-lg shrink-0 z-20">
             <GlobalSearch />
             <div className="flex items-center gap-3">
               <AIPageSummaryButton />
@@ -99,7 +99,7 @@ export default function AppLayout() {
                   <TooltipTrigger asChild>
                     <button
                       onClick={toggleFullscreen}
-                      className="p-1.5 rounded-xl text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-colors"
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
                     >
                       {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
                     </button>
@@ -109,9 +109,9 @@ export default function AppLayout() {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono">
-                <span className="hidden md:inline">NatLeva Intelligence</span>
-                <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <div className="flex items-center gap-2 text-[10px] text-muted-foreground/70 font-mono tracking-wider uppercase">
+                <span className="hidden md:inline">NatLeva</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-eucalyptus/60" />
               </div>
             </div>
           </header>
