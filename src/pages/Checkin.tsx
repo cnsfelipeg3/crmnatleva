@@ -261,7 +261,8 @@ export default function Checkin() {
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, { label: string; tasks: CheckinTask[] }>();
     filtered.forEach(t => {
-      const depDate = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
+      const isVolta = t.direction === "volta";
+      const depDate = t.segment?.departure_date || (isVolta ? t.sale?.return_date : t.sale?.departure_date) || t.departure_datetime_utc;
       const key = getDateKey(depDate);
       const label = getDateLabel(depDate);
       if (!groups.has(key)) groups.set(key, { label, tasks: [] });
