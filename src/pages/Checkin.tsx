@@ -575,8 +575,8 @@ export default function Checkin() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className={`p-4 cursor-pointer transition-all hover:scale-[1.02] border-2 ${overdueTasks.length > 0 ? "border-destructive/50 bg-destructive/5" : "border-transparent"} ${filterTime === "all" && filterStatus === "all" ? "" : ""}`}
-          onClick={() => { setFilterTime("all"); setFilterStatus("all"); setMainTab("active"); }}>
+        <Card className={`p-4 cursor-pointer transition-all hover:scale-[1.02] border-2 ${overdueTasks.length > 0 ? "border-destructive/50 bg-destructive/5" : "border-transparent"}`}
+          onClick={() => { clearFilters(); setMainTab("active"); }}>
           <div className="flex items-center gap-2 mb-1">
             <div className={`w-3 h-3 rounded-full bg-destructive ${overdueTasks.length > 0 ? "animate-pulse" : ""}`} />
             <span className="text-xs font-medium text-muted-foreground">Atrasados</span>
@@ -584,7 +584,7 @@ export default function Checkin() {
           <p className="text-2xl font-bold text-destructive">{overdueTasks.length}</p>
         </Card>
         <Card className={`p-4 cursor-pointer transition-all hover:scale-[1.02] border-2 ${todayTasks.length > 0 ? "border-primary/50 bg-primary/5" : "border-transparent"}`}
-          onClick={() => { setFilterTime("today"); setMainTab("active"); }}>
+          onClick={() => { setFilterState(prev => ({ ...prev, dateFilter: { ...prev.dateFilter, field: "departure_datetime_utc", preset: "today" } })); setMainTab("active"); }}>
           <div className="flex items-center gap-2 mb-1">
             <div className="w-3 h-3 rounded-full bg-primary" />
             <span className="text-xs font-medium text-muted-foreground">Hoje</span>
@@ -592,104 +592,67 @@ export default function Checkin() {
           <p className="text-2xl font-bold text-primary">{todayTasks.length}</p>
         </Card>
         <Card className="p-4 cursor-pointer transition-all hover:scale-[1.02]"
-          onClick={() => { setFilterTime("tomorrow"); setMainTab("active"); }}>
+          onClick={() => { setFilterState(prev => ({ ...prev, dateFilter: { ...prev.dateFilter, field: "departure_datetime_utc", preset: "tomorrow" } })); setMainTab("active"); }}>
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-3 h-3 rounded-full bg-amber-500" />
+            <div className="w-3 h-3 rounded-full bg-warning" />
             <span className="text-xs font-medium text-muted-foreground">Amanhã</span>
           </div>
-          <p className="text-2xl font-bold text-amber-600">{tomorrowTasks.length}</p>
+          <p className="text-2xl font-bold text-warning">{tomorrowTasks.length}</p>
         </Card>
         <Card className="p-4 cursor-pointer transition-all hover:scale-[1.02]"
-          onClick={() => { setMainTab("history"); setFilterTime("all"); }}>
+          onClick={() => { setMainTab("history"); clearFilters(); }}>
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-3 h-3 rounded-full bg-emerald-500" />
+            <div className="w-3 h-3 rounded-full bg-eucalyptus" />
             <span className="text-xs font-medium text-muted-foreground">Concluídos</span>
           </div>
-          <p className="text-2xl font-bold text-emerald-600">{tasks.filter(t => t.status === "CONCLUIDO").length}</p>
+          <p className="text-2xl font-bold text-eucalyptus">{tasks.filter(t => t.status === "CONCLUIDO").length}</p>
         </Card>
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="flex gap-1 bg-muted rounded-lg p-0.5">
-          <button
-            onClick={() => { setMainTab("active"); setFilterTime("all"); }}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mainTab === "active" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
-          >
-            Ativos ({activeTasks.length})
-          </button>
-          <button
-            onClick={() => { setMainTab("history"); setFilterTime("all"); }}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mainTab === "history" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
-          >
-            Histórico
-          </button>
-        </div>
-
-        <div className="flex-1" />
-
-        {/* Time filters */}
-        {mainTab === "active" && (
-          <div className="flex gap-1">
-            {([["all", "Todos"], ["today", "Hoje"], ["tomorrow", "Amanhã"], ["3days", "3 dias"], ["7days", "7 dias"]] as [TimeFilter, string][]).map(([val, label]) => (
-              <button
-                key={val}
-                onClick={() => setFilterTime(val)}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-medium transition-colors ${filterTime === val ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
-              >
-                {label}
-              </button>
-            ))}
+      <div className="space-y-3">
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex gap-1 bg-muted rounded-lg p-0.5">
+            <button
+              onClick={() => { setMainTab("active"); clearFilters(); }}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mainTab === "active" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+            >
+              Ativos ({activeTasks.length})
+            </button>
+            <button
+              onClick={() => { setMainTab("history"); clearFilters(); }}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mainTab === "history" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+            >
+              Histórico
+            </button>
           </div>
-        )}
 
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Buscar passageiro, PNR, destino..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-8 h-8 text-xs w-[200px]"
-          />
+          <div className="flex-1" />
+
+          <div className="flex gap-0.5 bg-muted rounded-md p-0.5">
+            <button onClick={() => setViewMode("agenda")} className={`p-1.5 rounded ${viewMode === "agenda" ? "bg-background shadow-sm" : ""}`} title="Lista">
+              <List className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded ${viewMode === "cards" ? "bg-background shadow-sm" : ""}`} title="Cards">
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => setViewMode("pipeline")} className={`p-1.5 rounded ${viewMode === "pipeline" ? "bg-background shadow-sm" : ""}`} title="Pipeline">
+              <Columns3 className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={() => setViewMode("calendar")} className={`p-1.5 rounded ${viewMode === "calendar" ? "bg-background shadow-sm" : ""}`} title="Calendário">
+              <Calendar className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        {mainTab === "active" && (
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos status</SelectItem>
-              <SelectItem value="CRITICO">Crítico</SelectItem>
-              <SelectItem value="URGENTE">Urgente</SelectItem>
-              <SelectItem value="PENDENTE">Pendente</SelectItem>
-              <SelectItem value="BLOQUEADO">Bloqueado</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-
-        {airlines.length > 1 && (
-          <Select value={filterAirline} onValueChange={setFilterAirline}>
-            <SelectTrigger className="w-[100px] h-8 text-xs"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Cia aérea</SelectItem>
-              {airlines.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
-
-        <div className="flex gap-0.5 bg-muted rounded-md p-0.5">
-          <button onClick={() => setViewMode("agenda")} className={`p-1.5 rounded ${viewMode === "agenda" ? "bg-background shadow-sm" : ""}`} title="Lista">
-            <List className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded ${viewMode === "cards" ? "bg-background shadow-sm" : ""}`} title="Cards">
-            <LayoutGrid className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => setViewMode("pipeline")} className={`p-1.5 rounded ${viewMode === "pipeline" ? "bg-background shadow-sm" : ""}`} title="Pipeline">
-            <Columns3 className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={() => setViewMode("calendar")} className={`p-1.5 rounded ${viewMode === "calendar" ? "bg-background shadow-sm" : ""}`} title="Calendário">
-            <Calendar className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <SmartFilters
+          config={CHECKIN_FILTER_CONFIG}
+          state={filterState}
+          setState={setFilterState}
+          activeFilterCount={activeFilterCount}
+          clearAll={clearFilters}
+          dynamicOptions={{ "segment.airline": airlines }}
+        />
       </div>
 
       {/* Batch bar */}
