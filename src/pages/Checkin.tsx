@@ -110,14 +110,28 @@ function getDaysUntil(dateStr: string | null): number {
 type ViewMode = "agenda" | "cards" | "pipeline" | "calendar";
 type TimeFilter = "all" | "today" | "tomorrow" | "3days" | "7days";
 
+const CHECKIN_FILTER_CONFIG: SmartFilterConfig = {
+  sortOptions: [
+    { key: "departure_datetime_utc", label: "Data do voo", type: "date" },
+    { key: "priority_score", label: "Prioridade", type: "number" },
+    { key: "status", label: "Status", type: "string" },
+  ],
+  defaultSortKey: "departure_datetime_utc",
+  defaultSortDirection: "asc",
+  dateField: "departure_datetime_utc",
+  searchPlaceholder: "Buscar passageiro, PNR, destino...",
+  searchFields: ["sale.name", "sale.display_id", "sale.origin_iata", "sale.destination_iata", "sale.locators", "segment.flight_number"],
+  selectFilters: [
+    { key: "status", label: "Status", options: ["PENDENTE", "URGENTE", "CRITICO", "BLOQUEADO", "CONCLUIDO"] },
+    { key: "direction", label: "Direção", options: ["ida", "volta"] },
+  ],
+  pillPresets: ["today", "tomorrow", "next_7_days", "next_30_days", "this_month", "all"],
+};
+
 export default function Checkin() {
   const [tasks, setTasks] = useState<CheckinTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterTime, setFilterTime] = useState<TimeFilter>("all");
-  const [filterAirline, setFilterAirline] = useState("all");
   const [mainTab, setMainTab] = useState<"active" | "history">("active");
   const [viewMode, setViewMode] = useState<ViewMode>("agenda");
   const [completeDialog, setCompleteDialog] = useState<CheckinTask | null>(null);
