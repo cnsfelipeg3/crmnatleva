@@ -118,23 +118,23 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
       onClick={onNavigate}
       className={({ isActive }) =>
         cn(
-          "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 relative group",
+          "flex items-center gap-3 px-3 py-[7px] rounded-lg text-[13px] font-medium transition-colors duration-200 relative",
           indent && "pl-8",
           isActive
-            ? "bg-primary/8 text-champagne font-bold"
-            : "text-sidebar-foreground hover:bg-primary/5 hover:text-foreground hover:translate-x-[2px]"
+            ? "bg-sidebar-accent/60 text-champagne"
+            : "text-sidebar-foreground hover:bg-sidebar-accent/30 hover:text-foreground"
         )
       }
     >
       {({ isActive }) => (
         <>
           {isActive && (
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r bg-champagne" />
+            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 rounded-r bg-champagne" />
           )}
-          <item.icon className={cn("w-[18px] h-[18px] shrink-0 transition-colors", isActive ? "text-champagne" : "text-sidebar-foreground")} />
-          {!isCollapsed && <span className={indent ? "text-xs" : ""}>{item.label}</span>}
+          <item.icon className={cn("w-4 h-4 shrink-0 transition-colors", isActive ? "text-champagne" : "text-sidebar-foreground")} />
+          {!isCollapsed && <span className={cn("tracking-tight", indent ? "text-xs" : "")}>{item.label}</span>}
           {item.to === "/cotacoes" && pendingBriefings > 0 && (
-            <span className="ml-auto shrink-0 min-w-5 h-5 flex items-center justify-center rounded-full bg-champagne text-champagne-foreground text-[10px] font-bold px-1.5 animate-pulse">
+            <span className="ml-auto shrink-0 min-w-5 h-5 flex items-center justify-center rounded-full bg-champagne text-champagne-foreground text-[10px] font-bold px-1.5">
               {pendingBriefings}
             </span>
           )}
@@ -147,17 +147,17 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     <button
       onClick={toggle}
       className={cn(
-        "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 w-full",
+        "flex items-center gap-3 px-3 py-[7px] rounded-lg text-[13px] font-medium transition-colors duration-200 w-full",
         isOpen
-          ? "bg-primary/8 text-foreground"
-          : "text-sidebar-foreground hover:bg-primary/5 hover:text-foreground"
+          ? "bg-sidebar-accent/40 text-foreground"
+          : "text-sidebar-foreground hover:bg-sidebar-accent/30 hover:text-foreground"
       )}
     >
-      {React.createElement(icon, { className: cn("w-[18px] h-[18px] shrink-0", isOpen && "text-champagne") })}
+      {React.createElement(icon, { className: cn("w-4 h-4 shrink-0", isOpen && "text-champagne") })}
       {!isCollapsed && (
         <>
-          <span className="flex-1 text-left">{label}</span>
-          <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", isOpen && "rotate-180")} />
+          <span className="flex-1 text-left tracking-tight">{label}</span>
+          <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", isOpen && "rotate-180")} />
         </>
       )}
     </button>
