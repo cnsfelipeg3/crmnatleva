@@ -14,7 +14,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe, BookOpen, Paperclip, Download, ExternalLink, Image as ImageIcon, File } from "lucide-react";
+import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe, BookOpen, Paperclip, Download, ExternalLink, Image as ImageIcon, File, Hash, KeyRound } from "lucide-react";
 import PublishToPortalDialog from "@/components/portal/PublishToPortalDialog";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import { useToast } from "@/hooks/use-toast";
@@ -654,6 +654,73 @@ export default function SaleDetail() {
                 </div>
               </Card>
             )}
+
+            {/* Códigos e Reservas */}
+            {(() => {
+              const locators = Array.isArray(sale.locators) ? sale.locators.filter(Boolean) : [];
+              const otherCodes = Array.isArray(sale.other_codes) ? sale.other_codes.filter(Boolean) : [];
+              const hotelCode = sale.hotel_reservation_code || "";
+              if (locators.length === 0 && otherCodes.length === 0 && !hotelCode) return null;
+
+              const copyToClipboard = (text: string) => {
+                navigator.clipboard.writeText(text);
+                toast({ title: "Copiado!", description: text });
+              };
+
+              return (
+                <Card className="p-5 glass-card">
+                  <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <KeyRound className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    Códigos e Reservas
+                  </h3>
+                  <div className="space-y-4">
+                    {locators.length > 0 && (
+                      <div>
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-2">
+                          <Plane className="w-3 h-3" /> Localizadores
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {locators.map((loc: string, i: number) => (
+                            <button key={i} onClick={() => copyToClipboard(loc)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/8 border border-primary/15 text-xs font-mono font-bold text-primary hover:bg-primary/15 transition-colors">
+                              {loc}
+                              <Copy className="w-3 h-3 opacity-50" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {otherCodes.length > 0 && (
+                      <div>
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-2">
+                          <Hash className="w-3 h-3" /> Outros Códigos
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {otherCodes.map((code: string, i: number) => (
+                            <button key={i} onClick={() => copyToClipboard(code)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted/40 border border-border/30 text-xs font-mono font-semibold text-foreground hover:bg-muted/60 transition-colors">
+                              {code}
+                              <Copy className="w-3 h-3 opacity-50" />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {hotelCode && (
+                      <div>
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wider flex items-center gap-1 mb-2">
+                          <Hotel className="w-3 h-3" /> Código de Reserva Hotel
+                        </span>
+                        <button onClick={() => copyToClipboard(hotelCode)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/8 border border-accent/15 text-xs font-mono font-bold text-accent hover:bg-accent/15 transition-colors">
+                          {hotelCode}
+                          <Copy className="w-3 h-3 opacity-50" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              );
+            })()}
 
             {/* Financial Breakdown */}
             <Card className="p-5 glass-card">
