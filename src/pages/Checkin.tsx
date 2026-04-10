@@ -261,7 +261,8 @@ export default function Checkin() {
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, { label: string; tasks: CheckinTask[] }>();
     filtered.forEach(t => {
-      const depDate = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
+      const isVolta = t.direction === "volta";
+      const depDate = t.segment?.departure_date || (isVolta ? t.sale?.return_date : t.sale?.departure_date) || t.departure_datetime_utc;
       const key = getDateKey(depDate);
       const label = getDateLabel(depDate);
       if (!groups.has(key)) groups.set(key, { label, tasks: [] });
@@ -288,26 +289,31 @@ export default function Checkin() {
   // KPIs
   const activeTasks = tasks.filter(t => t.status !== "CONCLUIDO");
   const todayTasks = activeTasks.filter(t => {
-    const dep = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
+    const isVolta = t.direction === "volta";
+    const dep = t.segment?.departure_date || (isVolta ? t.sale?.return_date : t.sale?.departure_date) || t.departure_datetime_utc;
     return dep && getDateLabel(dep) === "Hoje";
   });
   const tomorrowTasks = activeTasks.filter(t => {
-    const dep = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
+    const isVolta = t.direction === "volta";
+    const dep = t.segment?.departure_date || (isVolta ? t.sale?.return_date : t.sale?.departure_date) || t.departure_datetime_utc;
     return dep && getDateLabel(dep) === "Amanhã";
   });
   const overdueTasks = activeTasks.filter(t => {
-    const dep = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
+    const isVolta = t.direction === "volta";
+    const dep = t.segment?.departure_date || (isVolta ? t.sale?.return_date : t.sale?.departure_date) || t.departure_datetime_utc;
     return dep && getDateLabel(dep) === "Atrasado";
   });
 
   const getTaskDetails = (task: CheckinTask) => {
     const sale = task.sale;
     const segment = task.segment;
+    const isVolta = task.direction === "volta";
     const airline = segment?.airline || sale?.airline || "";
     const flightNum = segment?.flight_number || "";
-    const origin = segment?.origin_iata || sale?.origin_iata || "N/D";
-    const dest = segment?.destination_iata || sale?.destination_iata || "N/D";
-    const depDate = segment?.departure_date || sale?.departure_date || "";
+    // For volta without segment, swap origin/destination and use return_date
+    const origin = segment?.origin_iata || (isVolta ? sale?.destination_iata : sale?.origin_iata) || "N/D";
+    const dest = segment?.destination_iata || (isVolta ? sale?.origin_iata : sale?.destination_iata) || "N/D";
+    const depDate = segment?.departure_date || (isVolta ? sale?.return_date : sale?.departure_date) || "";
     const depTime = segment?.departure_time || "";
     const locators = sale?.locators?.filter(Boolean) || [];
     const checkinUrl = task.airline_rule?.checkin_url;
@@ -700,7 +706,7 @@ export default function Checkin() {
         <TaskCalendarView
           tasks={filtered.map(t => {
             const d = getTaskDetails(t);
-            const depDate = t.segment?.departure_date || t.sale?.departure_date || t.departure_datetime_utc;
+            const depDate = d.depDate || t.departure_datetime_utc;
             return {
               id: t.id,
               date: depDate,
