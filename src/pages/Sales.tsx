@@ -5,16 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import { Search, Plus, Download, Eye, Plane, Hotel, Filter, X } from "lucide-react";
+import { Plus, Download, Eye, Plane, Hotel, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AirlineLogo from "@/components/AirlineLogo";
 import { routeCode } from "@/lib/cityExtract";
+import { SmartFilters, useSmartFilters } from "@/components/smart-filters";
+import type { SmartFilterConfig } from "@/components/smart-filters";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
