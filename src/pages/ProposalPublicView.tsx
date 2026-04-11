@@ -62,6 +62,13 @@ export default function ProposalPublicView() {
       const deviceType = /Mobi/i.test(navigator.userAgent) ? "mobile" : "desktop";
       const ua = navigator.userAgent.slice(0, 200);
 
+      // Fetch IP geolocation (free API, no key needed)
+      let geo: any = {};
+      try {
+        const geoRes = await fetch("https://ipapi.co/json/");
+        if (geoRes.ok) geo = await geoRes.json();
+      } catch {}
+
       // Upsert viewer record
       const { data: existing } = await supabase
         .from("proposal_viewers" as any)
@@ -79,6 +86,12 @@ export default function ProposalPublicView() {
           name: name || undefined,
           device_type: deviceType,
           user_agent: ua,
+          ip_address: geo.ip || null,
+          city: geo.city || null,
+          region: geo.region || null,
+          country: geo.country_name || null,
+          latitude: geo.latitude || null,
+          longitude: geo.longitude || null,
         }).eq("id", vid);
       } else {
         const { data: newViewer } = await supabase
@@ -89,6 +102,12 @@ export default function ProposalPublicView() {
             name: name || null,
             device_type: deviceType,
             user_agent: ua,
+            ip_address: geo.ip || null,
+            city: geo.city || null,
+            region: geo.region || null,
+            country: geo.country_name || null,
+            latitude: geo.latitude || null,
+            longitude: geo.longitude || null,
           })
           .select("id")
           .single();

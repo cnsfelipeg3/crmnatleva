@@ -11,13 +11,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check } from "lucide-react";
+import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3 } from "lucide-react";
 import { emitLearningEvent, emitProposalOutcome } from "@/lib/learningEvents";
 import ProposalPreviewRenderer from "@/components/proposal/ProposalPreviewRenderer";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import HotelMediaBrowser from "@/components/hotel-media/HotelMediaBrowser";
 import ProposalFlightSearch, { type FlightSegmentData } from "@/components/proposal/ProposalFlightSearch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
 
 const itemTypeIcons: Record<string, any> = {
   destination: MapPin,
@@ -494,8 +495,13 @@ export default function ProposalEditor() {
           <TabsTrigger value="items">Itens da Viagem</TabsTrigger>
           <TabsTrigger value="finance">Valores & Pagamento</TabsTrigger>
           <TabsTrigger value="preview" className="gap-1.5">
-            <Eye className="w-3.5 h-3.5" /> Preview da Apresentação
+            <Eye className="w-3.5 h-3.5" /> Preview
           </TabsTrigger>
+          {!isNew && (
+            <TabsTrigger value="analytics" className="gap-1.5">
+              <BarChart3 className="w-3.5 h-3.5" /> Analytics
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="info" className="space-y-4">
@@ -846,6 +852,12 @@ export default function ProposalEditor() {
             embedded
           />
         </TabsContent>
+
+        {!isNew && id && (
+          <TabsContent value="analytics">
+            <ProposalAnalyticsPanel proposalId={id} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
