@@ -88,7 +88,25 @@ export default function QuoteRequests() {
 
   useEffect(() => { fetchQuotes(); }, []);
 
-  const updateStatus = async (id: string, status: string) => {
+  const handleGenerateProposal = async (q: QuoteRequest) => {
+    setGenerating(q.id);
+    try {
+      const result = await createProposalFromQuote(q as any);
+      if (result) {
+        toast({ title: "Proposta criada!", description: "Redirecionando ao editor..." });
+        fetchQuotes();
+        setTimeout(() => navigate(`/propostas/${result.proposalId}`), 800);
+      } else {
+        toast({ title: "Erro ao criar proposta", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro inesperado", variant: "destructive" });
+    } finally {
+      setGenerating(null);
+    }
+  };
+
+
     const { error } = await (supabase as any)
       .from("portal_quote_requests")
       .update({ status, updated_at: new Date().toISOString() })
