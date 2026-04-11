@@ -14,12 +14,12 @@ const GROUP_ICONS: Record<string, typeof Clock> = {
 };
 
 const GROUP_COLORS: Record<string, string> = {
-  now: "text-red-500",
-  today: "text-foreground",
-  yesterday: "text-muted-foreground",
-  this_week: "text-muted-foreground",
-  older: "text-muted-foreground/60",
-  closed: "text-muted-foreground/60",
+  now: "text-red-600",
+  today: "text-gray-900",
+  yesterday: "text-gray-600",
+  this_week: "text-gray-600",
+  older: "text-gray-400",
+  closed: "text-gray-400",
 };
 
 interface Props {
@@ -33,7 +33,7 @@ export function NegotiationTimeline({ groups, generating, onGenerate, onSelect }
   if (groups.length === 0) {
     return (
       <div className="text-center py-16">
-        <p className="text-muted-foreground">Nenhuma negociação encontrada.</p>
+        <p className="text-gray-500 font-medium">Nenhuma negociação encontrada.</p>
       </div>
     );
   }
@@ -47,16 +47,16 @@ export function NegotiationTimeline({ groups, generating, onGenerate, onSelect }
             {/* Group header */}
             <div className="flex items-center gap-2 mb-3">
               <div className={cn(
-                "w-2 h-2 rounded-full",
-                group.key === "now" ? "bg-red-500 animate-pulse" :
-                group.key === "today" ? "bg-accent" :
-                "bg-muted-foreground/30"
+                "w-2.5 h-2.5 rounded-full",
+                group.key === "now" ? "bg-red-600 animate-pulse" :
+                group.key === "today" ? "bg-emerald-500" :
+                "bg-gray-300"
               )} />
               <Icon className={cn("w-4 h-4", GROUP_COLORS[group.key])} />
               <span className={cn("text-xs font-bold uppercase tracking-wider", GROUP_COLORS[group.key])}>
                 {group.label}
               </span>
-              <span className="text-[10px] text-muted-foreground ml-1">
+              <span className="text-[11px] text-gray-500 ml-1 font-medium">
                 — {group.items.length} negociaç{group.items.length === 1 ? "ão" : "ões"}
               </span>
             </div>
@@ -64,7 +64,7 @@ export function NegotiationTimeline({ groups, generating, onGenerate, onSelect }
             {/* Cards */}
             <div className={cn(
               "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pl-4 border-l-2 ml-1",
-              group.key === "now" ? "border-l-red-500/40" : "border-border/30"
+              group.key === "now" ? "border-l-red-500" : "border-l-gray-200"
             )}>
               {group.items.map((item) => (
                 <NegotiationCard
