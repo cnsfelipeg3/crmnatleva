@@ -69,6 +69,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [financeOpen, setFinanceOpen] = useState(false);
   const [rhOpen, setRhOpen] = useState(false);
   const [viagensOpen, setViagensOpen] = useState(false);
+  const [clientesOpen, setClientesOpen] = useState(false);
   const [operacaoOpen, setOperacaoOpen] = useState(false);
   const [aiTeamOpen, setAiTeamOpen] = useState(false);
   const [implOpen, setImplOpen] = useState(false);
