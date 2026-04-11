@@ -126,7 +126,7 @@ const PortalNewQuote = lazy(() => import("@/pages/portal/PortalNewQuote"));
 const PortalProfile = lazy(() => import("@/pages/portal/PortalProfile"));
 
 // CRM
-const CotacoesUnified = lazy(() => import("@/pages/CotacoesUnified"));
+const CotacoesPropostasPipeline = lazy(() => import("@/pages/CotacoesPropostasPipeline"));
 const Proposals = lazy(() => import("@/pages/Proposals"));
 const ProposalEditor = lazy(() => import("@/pages/ProposalEditor"));
 const ProposalTemplates = lazy(() => import("@/pages/ProposalTemplates"));
@@ -196,7 +196,7 @@ function AppRoutes() {
           <Route path="/birthdays" element={<Birthdays />} />
           <Route path="/import" element={<ImportData />} />
           <Route path="/pendencias" element={<Pendencias />} />
-          <Route path="/cotacoes" element={<CotacoesUnified />} />
+          <Route path="/cotacoes" element={<CotacoesPropostasPipeline />} />
           <Route path="/propostas" element={<Proposals />} />
           <Route path="/propostas/modelos" element={<ProposalTemplates />} />
           <Route path="/propostas/modelos/novo" element={<ProposalTemplateEditor />} />
