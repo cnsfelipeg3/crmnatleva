@@ -193,6 +193,7 @@ function parseOrionResponse(rawText: string) {
       titulo_sugerido: parsed.titulo_sugerido || "",
       resumo: parsed.resumo || "Conteudo processado pelo ORION.",
       tags: Array.isArray(parsed.tags) ? parsed.tags.filter((t: any) => typeof t === "string") : [],
+      fatos_chave: Array.isArray(parsed.fatos_chave) ? parsed.fatos_chave.filter((f: any) => typeof f === "string") : [],
       chunks: Array.isArray(parsed.chunks)
         ? parsed.chunks.map((c: any) => ({
             titulo: c.titulo || "Sem titulo",
@@ -205,6 +206,10 @@ function parseOrionResponse(rawText: string) {
       cerebroVersao: "orion-v1",
       status: "processado",
     };
+    // Merge top-level fatos_chave into taxonomia if taxonomia doesn't have them
+    if (result.fatos_chave.length > 0 && (!result.taxonomia.fatos_chave || result.taxonomia.fatos_chave.length === 0)) {
+      result.taxonomia.fatos_chave = result.fatos_chave;
+    }
     return result;
   } catch (e: any) {
     console.error("ORION parse error:", e.message);
