@@ -131,7 +131,7 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
                   {type === "mobile" ? <Smartphone className="w-3 h-3" /> : <Monitor className="w-3 h-3" />}
                   {type === "mobile" ? "Mobile" : "Desktop"}
                 </span>
-                <Badge variant="neutral" className="text-[10px]">{count}</Badge>
+                <Badge variant="neutral" className="text-[10px]">{String(count)}</Badge>
               </div>
             ))}
           </div>
