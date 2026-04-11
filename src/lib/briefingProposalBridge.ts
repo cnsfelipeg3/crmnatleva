@@ -45,6 +45,8 @@ const TEMPLATE_RULES: Array<{
   { keywords: /japão|tóquio|kyoto|osaka|tailândia|bangkok|bali|vietnam|singapura|china|coreia|ásia/i, templatePatterns: /ásia|asia|futurista/i },
   // Praia / Tropical
   { keywords: /maldivas|caribe|cancún|punta cana|aruba|curaçao|bahamas|praia|resort|tropical|orlando|miami|fernando de noronha|porto de galinhas/i, templatePatterns: /tropical|paradise/i },
+  // Europa / Clássico
+  { keywords: /grécia|grecia|santorini|atenas|mykonos|itália|italia|roma|florença|veneza|paris|londres|amsterdam|barcelona|madrid|europa|portugal|lisboa|porto|croácia|dubrovnik|suíça|viena|praga|budapeste/i, templatePatterns: /elegância|clássica|premium/i },
   // Aventura / Patagônia
   { keywords: /patagônia|patagonia|torres del paine|ushuaia|aventura|trekking|hiking|atacama/i, templatePatterns: /safari|premium/i },
 ];
