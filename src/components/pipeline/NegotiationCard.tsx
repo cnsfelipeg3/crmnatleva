@@ -20,6 +20,7 @@ import { format, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { countFilledFields, MONITOR_TOTAL_FIELDS } from "@/lib/quotationMonitor";
 
 function safeParse(d: string | null | undefined): Date | null {
   if (!d) return null;
