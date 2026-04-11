@@ -3,6 +3,7 @@
  * NatLeva v4.3
  */
 import { supabase } from "@/integrations/supabase/client";
+import { syncBriefingToProposal } from "@/lib/briefingProposalBridge";
 
 // Field groups revealed progressively by exchange count
 export const FIELD_GROUPS = [
@@ -116,6 +117,9 @@ export async function revealMonitorFields(
       .from("quotation_briefings")
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq("id", briefingId);
+
+    // Sync updated fields to draft proposal
+    syncBriefingToProposal(briefingId).catch(() => {});
   } catch (err) {
     console.error("[Monitor] Reveal error:", err);
   }

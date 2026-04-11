@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Copy, ExternalLink, MoreHorizontal, FileText, LayoutTemplate } from "lucide-react";
+import { Plus, Search, Eye, Copy, ExternalLink, MoreHorizontal, FileText, LayoutTemplate, Bot } from "lucide-react";
+import { countProposalCompleteness, PROPOSAL_TOTAL_FIELDS } from "@/lib/briefingProposalBridge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -72,6 +73,7 @@ function getCoverImage(proposal: any): string {
 }
 
 const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  rascunho_ia: { label: "🤖 Rascunho IA", variant: "outline" },
   draft: { label: "Em elaboração", variant: "secondary" },
   sent: { label: "Enviada", variant: "default" },
   negotiation: { label: "Em negociação", variant: "outline" },
@@ -183,12 +185,20 @@ export default function Proposals() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                 </div>
                 <div className="p-5 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-semibold text-foreground truncate">{p.title}</p>
                       {p.client_name && <p className="text-sm text-muted-foreground truncate">{p.client_name}</p>}
                     </div>
-                    <Badge variant={st.variant} className="shrink-0 text-[10px]">{st.label}</Badge>
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <Badge variant={st.variant} className="text-[10px]">{st.label}</Badge>
+                      {p.status === "rascunho_ia" && (
+                        <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+                          <Bot className="w-2.5 h-2.5" />
+                          {countProposalCompleteness(p)}/{PROPOSAL_TOTAL_FIELDS} campos
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">

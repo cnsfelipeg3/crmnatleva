@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { syncBriefingToProposal } from "@/lib/briefingProposalBridge";
 
 export interface QuoteData {
   origin?: string | null;
@@ -141,6 +142,12 @@ export function QuoteSummaryCard({ conversationDbId }: QuoteSummaryCardProps) {
         };
         setQuote(mappedQuote);
         setManualOverrides(prev => ({ ...prev }));
+
+        // Auto-sync to draft proposal if briefing has an ID
+        if (briefing.briefing_id) {
+          syncBriefingToProposal(briefing.briefing_id).catch(() => {});
+        }
+
         if (forceRebuild) {
           toast({ title: "Contexto reanalisado", description: `Demanda ativa recalculada: ${mappedQuote.destination || "não identificada"}` });
         }
