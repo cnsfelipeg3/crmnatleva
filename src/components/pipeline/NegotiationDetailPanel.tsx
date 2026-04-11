@@ -238,7 +238,7 @@ interface TimelineEvent { time: string; label: string; icon: typeof Clock; }
 function buildMicroTimeline(item: NegotiationItem): TimelineEvent[] {
   const events: TimelineEvent[] = [];
   events.push({
-    time: format(new Date(item.createdAt), "dd/MM HH:mm"),
+    time: isNaN(new Date(item.createdAt).getTime()) ? "" : format(new Date(item.createdAt), "dd/MM HH:mm"),
     label: item.source === "quote" ? "Cotação recebida via portal" : item.source === "briefing" ? "Briefing recebido via IA" : "Proposta criada manualmente",
     icon: Clock,
   });
@@ -253,14 +253,14 @@ function buildMicroTimeline(item: NegotiationItem): TimelineEvent[] {
   }
   if (item.stage === "enviada" || item.stage === "aceita") {
     events.push({
-      time: item.sentAt ? format(new Date(item.sentAt), "dd/MM HH:mm") : "",
+      time: item.sentAt && !isNaN(new Date(item.sentAt).getTime()) ? format(new Date(item.sentAt), "dd/MM HH:mm") : "",
       label: "Proposta enviada ao cliente",
       icon: Send,
     });
   }
   if ((item.viewCount || 0) > 0) {
     events.push({
-      time: item.lastViewedAt ? format(new Date(item.lastViewedAt), "dd/MM HH:mm") : "",
+      time: item.lastViewedAt && !isNaN(new Date(item.lastViewedAt).getTime()) ? format(new Date(item.lastViewedAt), "dd/MM HH:mm") : "",
       label: `Cliente visualizou (${item.viewCount}x)`,
       icon: Eye,
     });
