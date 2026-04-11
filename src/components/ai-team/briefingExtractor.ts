@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { callSimulatorAI } from "./simuladorAutoUtils";
+import { syncBriefingToProposal } from "@/lib/briefingProposalBridge";
 import type { LeadInteligente, MensagemLead } from "./intelligentLeads";
 
 /**
@@ -169,6 +170,11 @@ export async function extractAndSaveBriefing(
       console.error("Erro ao salvar briefing:", error);
       return { success: false, error: error.message };
     }
+
+    // Auto-create draft proposal from briefing
+    syncBriefingToProposal(data.id).catch(err =>
+      console.error("[Bridge] Auto-sync failed:", err)
+    );
 
     return { success: true, briefingId: data.id };
   } catch (err: any) {

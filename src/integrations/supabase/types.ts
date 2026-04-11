@@ -5312,6 +5312,7 @@ export type Database = {
           proposal_strategy: string | null
           sale_id: string | null
           slug: string
+          source_briefing_id: string | null
           status: string
           title: string
           total_value: number | null
@@ -5339,6 +5340,7 @@ export type Database = {
           proposal_strategy?: string | null
           sale_id?: string | null
           slug: string
+          source_briefing_id?: string | null
           status?: string
           title: string
           total_value?: number | null
@@ -5366,6 +5368,7 @@ export type Database = {
           proposal_strategy?: string | null
           sale_id?: string | null
           slug?: string
+          source_briefing_id?: string | null
           status?: string
           title?: string
           total_value?: number | null
@@ -5388,6 +5391,13 @@ export type Database = {
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_source_briefing_id_fkey"
+            columns: ["source_briefing_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_briefings"
             referencedColumns: ["id"]
           },
         ]

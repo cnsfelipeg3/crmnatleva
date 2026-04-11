@@ -1,0 +1,1 @@
+ALTER TABLE public.proposals ADD COLUMN source_briefing_id UUID REFERENCES public.quotation_briefings(id) ON DELETE SET NULL;
