@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,11 +14,12 @@ import {
 import {
   MapPin, CalendarDays, Users, Sparkles, FileText,
   Loader2, MessageSquare, Eye, ChevronRight,
-  Heart, Brain, DollarSign,
+  Heart, Brain, DollarSign, Crown,
 } from "lucide-react";
 import { format, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 function safeParse(d: string | null | undefined): Date | null {
   if (!d) return null;
@@ -61,6 +62,209 @@ interface Props {
   onSelect: (item: NegotiationItem) => void;
 }
 
+function buildNathPrompt(item: NegotiationItem): string {
+  const b = item.briefing;
+  const parts: string[] = [];
+  parts.push(`Destino: ${item.destination || "não informado"}`);
+  parts.push(`Origem: ${item.origin || "não informado"}`);
+  if (item.departureDate) parts.push(`Data ida: ${item.departureDate}`);
+  if (item.returnDate) parts.push(`Data volta: ${item.returnDate}`);
+  if (item.pax > 0) parts.push(`Passageiros: ${item.pax}`);
+  if (item.clientName) parts.push(`Cliente: ${item.clientName}`);
+  if (b) {
+    if (b.conversationSummary) parts.push(`Resumo da conversa: ${b.conversationSummary}`);
+    if (b.tripMotivation) parts.push(`Motivação: ${b.tripMotivation}`);
+    if (b.leadSentiment) parts.push(`Sentimento: ${b.leadSentiment}`);
+    if (b.leadScore) parts.push(`Score: ${b.leadScore}`);
+    if (b.leadUrgency) parts.push(`Urgência: ${b.leadUrgency}`);
+    if (b.priceSensitivity) parts.push(`Sensibilidade a preço: ${b.priceSensitivity}`);
+    if (b.budgetBehavioralReading) parts.push(`Budget: ${b.budgetBehavioralReading}`);
+    if (b.hotelPreference) parts.push(`Hotel: ${b.hotelPreference} ${b.hotelStars || ""}`);
+    if (b.mustHaveExperiences?.length) parts.push(`Experiências obrigatórias: ${b.mustHaveExperiences.join(", ")}`);
+    if (b.aiRecommendation) parts.push(`Recomendação IA anterior: ${b.aiRecommendation}`);
+    if (b.nextSteps) parts.push(`Próximos passos sugeridos: ${b.nextSteps}`);
+  }
+  return parts.join("\n");
+}
+
+function NathInsight({ item }: { item: NegotiationItem }) {
+  const b = item.briefing;
+  const hasExisting = b && (b.aiRecommendation || b.nextSteps);
+  const [opinion, setOpinion] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [expandedNath, setExpandedNath] = useState(false);
+
+  const requestOpinion = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (loading) return;
+    setLoading(true);
+    setOpinion("");
+    try {
+      const context = buildNathPrompt(item);
+      const { data, error } = await supabase.functions.invoke("agent-chat", {
+        body: {
+          question: `Analise esta cotação e me dê sua opinião estratégica. Foque em: 1) O que cotar especificamente, 2) Riscos da negociação, 3) Próximo passo concreto.\n\nDados:\n${context}`,
+          agentName: "Nath",
+          agentRole: "Consultora estratégica de viagens premium",
+          provider: "anthropic",
+          model: "claude-sonnet-4-20250514",
+          history: [],
+        },
+      });
+
+      if (error) throw error;
+
+      if (data instanceof ReadableStream) {
+        const reader = data.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let full = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let idx;
+          while ((idx = buffer.indexOf("\n")) !== -1) {
+            const line = buffer.slice(0, idx).trim();
+            buffer = buffer.slice(idx + 1);
+            if (!line.startsWith("data: ") || line === "data: [DONE]") continue;
+            try {
+              const parsed = JSON.parse(line.slice(6));
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) {
+                full += delta;
+                setOpinion(full);
+              }
+            } catch {}
+          }
+        }
+        if (!full) setOpinion("Não foi possível gerar opinião.");
+      } else if (typeof data === "string") {
+        const lines = data.split("\n");
+        let full = "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ") || line === "data: [DONE]") continue;
+          try {
+            const parsed = JSON.parse(line.slice(6));
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) full += delta;
+          } catch {}
+        }
+        setOpinion(full || "Não foi possível gerar opinião.");
+      } else {
+        setOpinion("Não foi possível gerar opinião.");
+      }
+    } catch (err) {
+      console.error("Nath opinion error:", err);
+      setOpinion("Erro ao consultar a Nath. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
+  }, [item, loading]);
+
+  if (hasExisting && !opinion) {
+    return (
+      <div
+        className="rounded-lg bg-purple-50 border border-purple-200 p-2.5 space-y-1.5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1 text-[11px] font-bold text-purple-800">
+            <Crown className="w-3.5 h-3.5 text-purple-600" /> Visão da Nath
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-5 px-1.5 text-[9px] text-purple-600 hover:bg-purple-100"
+            onClick={requestOpinion}
+            disabled={loading}
+          >
+            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Atualizar"}
+          </Button>
+        </div>
+        {b?.aiRecommendation && (
+          <p className={cn(
+            "text-xs text-purple-900 leading-relaxed",
+            !expandedNath && "line-clamp-3"
+          )}>
+            {b.aiRecommendation}
+          </p>
+        )}
+        {b?.nextSteps && (
+          <p className="text-[11px] text-purple-700 font-medium">
+            📋 {b.nextSteps}
+          </p>
+        )}
+        {(b?.aiRecommendation?.length || 0) > 120 && (
+          <button
+            className="text-[10px] text-purple-600 hover:underline font-semibold"
+            onClick={(e) => { e.stopPropagation(); setExpandedNath(!expandedNath); }}
+          >
+            {expandedNath ? "ver menos" : "ver mais"}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (opinion) {
+    return (
+      <div
+        className="rounded-lg bg-purple-50 border border-purple-200 p-2.5 space-y-1.5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1 text-[11px] font-bold text-purple-800">
+            <Crown className="w-3.5 h-3.5 text-purple-600" /> Visão da Nath
+          </span>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-5 px-1.5 text-[9px] text-purple-600 hover:bg-purple-100"
+            onClick={requestOpinion}
+            disabled={loading}
+          >
+            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Refazer"}
+          </Button>
+        </div>
+        <p className={cn(
+          "text-xs text-purple-900 leading-relaxed whitespace-pre-wrap",
+          !expandedNath && "line-clamp-4"
+        )}>
+          {opinion}
+        </p>
+        {opinion.length > 150 && (
+          <button
+            className="text-[10px] text-purple-600 hover:underline font-semibold"
+            onClick={(e) => { e.stopPropagation(); setExpandedNath(!expandedNath); }}
+          >
+            {expandedNath ? "ver menos" : "ver mais"}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div onClick={(e) => e.stopPropagation()}>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-7 text-[11px] gap-1 text-purple-700 hover:bg-purple-50 hover:text-purple-900 font-semibold w-full justify-start"
+        onClick={requestOpinion}
+        disabled={loading}
+      >
+        {loading ? (
+          <Loader2 className="w-3 h-3 animate-spin" />
+        ) : (
+          <Crown className="w-3 h-3" />
+        )}
+        {loading ? "Consultando Nath..." : "Pedir Opinião da Nath"}
+      </Button>
+    </div>
+  );
+}
+
 export function NegotiationCard({ item, generating, onGenerate, onSelect }: Props) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
@@ -89,7 +293,7 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
       )}
       onClick={() => onSelect(item)}
     >
-      {/* Top row: badges + temperature */}
+      {/* Top row */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           <Badge className={cn("text-[9px] border", src.className)}>{src.label}</Badge>
@@ -113,7 +317,7 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
         <p className="text-xs text-gray-700 truncate font-medium">{item.clientName}</p>
       )}
 
-      {/* Briefing insights row */}
+      {/* Briefing insights */}
       {b && (b.tripMotivation || b.leadScore || b.leadSentiment) && (
         <div className="flex items-center gap-2.5 text-[11px] flex-wrap">
           {b.tripMotivation && (
@@ -137,7 +341,7 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
         </div>
       )}
 
-      {/* Narrative — expandable */}
+      {/* Narrative */}
       <div>
         <p className={cn(
           "text-xs text-gray-600 italic leading-relaxed",
@@ -154,6 +358,9 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
           </button>
         )}
       </div>
+
+      {/* Visão da Nath */}
+      <NathInsight item={item} />
 
       {/* Meta */}
       <div className="flex items-center gap-2 text-[11px] text-gray-600 flex-wrap font-medium">
