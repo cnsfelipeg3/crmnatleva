@@ -34,7 +34,7 @@ export default function TorreDeControle() {
     const fetchData = async () => {
       try {
         // Active trips (sales with travel dates)
-        const { count: activeTrips } = await supabase
+        const { count: activeTrips } = await (supabase as any)
           .from("sales")
           .select("*", { count: "exact", head: true })
           .in("status", ["confirmed", "in_progress", "pending"]);
