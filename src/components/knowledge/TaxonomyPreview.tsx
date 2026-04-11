@@ -627,6 +627,59 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
           )}
         </TaxSection>
       )}
+
+      {/* CONHECIMENTO OPERACIONAL Section */}
+      {hasContent("conhecimento_operacional") && (
+        <TaxSection section={SECTIONS.find(s => s.key === "conhecimento_operacional")!}>
+          {taxonomy.conhecimento_operacional?.tema && (
+            <p className="text-sm font-bold">{taxonomy.conhecimento_operacional.tema}</p>
+          )}
+          {taxonomy.conhecimento_operacional?.passo_a_passo && taxonomy.conhecimento_operacional.passo_a_passo.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">Passo a passo</p>
+              <ol className="space-y-1.5">
+                {taxonomy.conhecimento_operacional.passo_a_passo.map((p, i) => (
+                  <li key={i} className="text-xs flex gap-2">
+                    <span className="text-teal-500 font-bold shrink-0">{i + 1}.</span> {p}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          {taxonomy.conhecimento_operacional?.ferramentas && taxonomy.conhecimento_operacional.ferramentas.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Ferramentas</p>
+              <div className="flex flex-wrap gap-1.5">
+                {taxonomy.conhecimento_operacional.ferramentas.map((f, i) => <Pill key={i} color="cyan">{f}</Pill>)}
+              </div>
+            </div>
+          )}
+          {taxonomy.conhecimento_operacional?.pontos_atencao && taxonomy.conhecimento_operacional.pontos_atencao.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Pontos de atenção</p>
+              <ul className="space-y-1">
+                {taxonomy.conhecimento_operacional.pontos_atencao.map((p, i) => (
+                  <li key={i} className="text-xs text-muted-foreground flex gap-2">
+                    <span className="text-amber-500">⚠️</span> {p}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {taxonomy.conhecimento_operacional?.erros_comuns && taxonomy.conhecimento_operacional.erros_comuns.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Erros comuns</p>
+              <ul className="space-y-1">
+                {taxonomy.conhecimento_operacional.erros_comuns.map((e, i) => (
+                  <li key={i} className="text-xs text-muted-foreground flex gap-2">
+                    <span className="text-red-500">❌</span> {e}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </TaxSection>
+      )}
     </div>
   );
 }
