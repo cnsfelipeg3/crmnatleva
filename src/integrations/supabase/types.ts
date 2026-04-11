@@ -4856,6 +4856,7 @@ export type Database = {
           origin_city: string | null
           origin_iata: string | null
           portal_user_id: string
+          proposal_id: string | null
           return_date: string | null
           special_requests: string | null
           status: string
@@ -4883,6 +4884,7 @@ export type Database = {
           origin_city?: string | null
           origin_iata?: string | null
           portal_user_id: string
+          proposal_id?: string | null
           return_date?: string | null
           special_requests?: string | null
           status?: string
@@ -4910,6 +4912,7 @@ export type Database = {
           origin_city?: string | null
           origin_iata?: string | null
           portal_user_id?: string
+          proposal_id?: string | null
           return_date?: string | null
           special_requests?: string | null
           status?: string
@@ -4924,6 +4927,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portal_quote_requests_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
         ]
@@ -5310,6 +5320,7 @@ export type Database = {
           payment_conditions: Json | null
           proposal_outcome: string | null
           proposal_strategy: string | null
+          quote_request_id: string | null
           sale_id: string | null
           slug: string
           source_briefing_id: string | null
@@ -5339,6 +5350,7 @@ export type Database = {
           payment_conditions?: Json | null
           proposal_outcome?: string | null
           proposal_strategy?: string | null
+          quote_request_id?: string | null
           sale_id?: string | null
           slug: string
           source_briefing_id?: string | null
@@ -5368,6 +5380,7 @@ export type Database = {
           payment_conditions?: Json | null
           proposal_outcome?: string | null
           proposal_strategy?: string | null
+          quote_request_id?: string | null
           sale_id?: string | null
           slug?: string
           source_briefing_id?: string | null
@@ -5387,6 +5400,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_quote_request_id_fkey"
+            columns: ["quote_request_id"]
+            isOneToOne: false
+            referencedRelation: "portal_quote_requests"
             referencedColumns: ["id"]
           },
           {
