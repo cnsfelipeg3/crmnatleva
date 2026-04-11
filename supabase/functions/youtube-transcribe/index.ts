@@ -517,7 +517,78 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { url, manual_transcript } = await req.json();
+    const body = await req.json();
+    const { url, manual_transcript, diagnose } = (body ?? {}) as {
+      url?: string;
+      manual_transcript?: string;
+      diagnose?: boolean | string | number;
+    };
+
+    const diagnosticMode = diagnose === true || diagnose === "true" || diagnose === 1 || diagnose === "1";
+
+    if (diagnosticMode) {
+      const runtimeSupadataKey = Deno.env.get("SUPADATA_API_KEY");
+      const requestUrlProvided = typeof url === "string" && url.trim().length > 0;
+      const diagnostic: Record<string, unknown> = {
+        diagnostic: true,
+        secret: {
+          name: "SUPADATA_API_KEY",
+          configuredAtStartup: !!SUPADATA_API_KEY,
+          configuredAtRuntime: !!runtimeSupadataKey,
+        },
+        requestUrlProvided,
+      };
+
+      if (requestUrlProvided && runtimeSupadataKey) {
+        try {
+          const probeResponse = await fetch(
+            `https://api.supadata.ai/v1/transcript?url=${encodeURIComponent(url.trim())}`,
+            {
+              method: "GET",
+              headers: { "x-api-key": runtimeSupadataKey },
+            },
+          );
+          await probeResponse.text().catch(() => {});
+
+          diagnostic.probe = {
+            attempted: true,
+            ok: probeResponse.ok,
+            status: probeResponse.status,
+            hint: probeResponse.ok
+              ? "Credencial aceita pela Supadata"
+              : probeResponse.status === 401 || probeResponse.status === 403
+                ? "Chave inválida, sem permissão ou nome incorreto"
+                : probeResponse.status === 402 || probeResponse.status === 429
+                  ? "Possível falta de créditos ou limite atingido"
+                  : `Resposta inesperada da Supadata (${probeResponse.status})`,
+          };
+        } catch (probeError) {
+          diagnostic.probe = {
+            attempted: true,
+            ok: false,
+            error: probeError instanceof Error ? probeError.message : String(probeError),
+          };
+        }
+      } else {
+        diagnostic.probe = {
+          attempted: false,
+          reason: !runtimeSupadataKey
+            ? "SUPADATA_API_KEY não configurada em runtime"
+            : "Envie uma URL junto com diagnose=true para testar a chamada na Supadata",
+        };
+      }
+
+      console.log("[youtube-transcribe] Diagnostic mode", {
+        configuredAtStartup: !!SUPADATA_API_KEY,
+        configuredAtRuntime: !!runtimeSupadataKey,
+        requestUrlProvided,
+      });
+
+      return new Response(JSON.stringify(diagnostic), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (!url) {
       return new Response(JSON.stringify({ error: "URL não fornecida" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
