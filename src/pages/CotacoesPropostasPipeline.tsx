@@ -384,23 +384,31 @@ export default function CotacoesPropostasPipeline() {
             className="pl-9"
           />
         </div>
-        <div className="flex gap-1.5">
+        <div className="flex gap-2 flex-wrap">
           {TEMP_FILTERS.map((f) => {
             const Icon = f.icon;
+            const active = tempFilter === f.key;
             return (
               <button
                 key={f.key}
                 onClick={() => setTempFilter(f.key)}
                 className={cn(
-                  "px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors",
-                  tempFilter === f.key
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-muted/50 border border-border/50"
+                  "h-9 px-4 rounded-full text-sm font-medium flex items-center gap-2 transition-all duration-200",
+                  active
+                    ? "bg-primary text-primary-foreground shadow-md"
+                    : "bg-card text-muted-foreground border border-border/40 hover:border-border hover:bg-muted/30"
                 )}
               >
-                <Icon className="w-3 h-3" />
+                <Icon className={cn("w-3.5 h-3.5", active && "text-primary-foreground")} />
                 {f.label}
-                <Badge variant="neutral" className="text-[9px] ml-0.5">{f.count}</Badge>
+                <span className={cn(
+                  "text-[11px] font-bold min-w-[22px] h-[22px] flex items-center justify-center rounded-full",
+                  active
+                    ? "bg-primary-foreground/20 text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
+                )}>
+                  {f.count}
+                </span>
               </button>
             );
           })}
