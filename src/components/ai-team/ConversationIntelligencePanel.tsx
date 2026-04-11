@@ -33,7 +33,7 @@ const MONTH_MAP: Record<string, number> = {
 function extractDates(text: string): string[] {
   const dates: string[] = [];
   // "março 2027", "setembro/27", "julho de 2026"
-  const ptMonthYear = text.matchAll(/\b([a-záàâãéèêíïóôõúüçñ]+)\s*(?:de\s+|\/)?(\d{2,4})\b/gi);
+  const ptMonthYear = Array.from(text.matchAll(/\b([a-záàâãéèêíïóôõúüçñ]+)\s*(?:de\s+|\/)?(\d{2,4})\b/gi));
   for (const m of ptMonthYear) {
     const month = MONTH_MAP[m[1].toLowerCase()];
     if (month) {
@@ -42,7 +42,7 @@ function extractDates(text: string): string[] {
     }
   }
   // DD/MM/YYYY or DD/MM/YY
-  const ddmm = text.matchAll(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/g);
+  const ddmm = Array.from(text.matchAll(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/g));
   for (const m of ddmm) {
     const year = m[3].length === 2 ? `20${m[3]}` : m[3];
     dates.push(`${m[1].padStart(2, "0")}/${m[2].padStart(2, "0")}/${year}`);
@@ -146,6 +146,94 @@ function extractBudget(text: string): string | null {
   return null;
 }
 
+// ── Airline extraction ──
+function extractAirline(text: string): string | null {
+  const airlines: Record<string, RegExp> = {
+    "LATAM": /latam/i,
+    "GOL": /\bgol\b/i,
+    "Azul": /\bazul\b/i,
+    "Emirates": /emirates/i,
+    "Qatar Airways": /qatar/i,
+    "Turkish Airlines": /turkish/i,
+    "Air France": /air\s*france/i,
+    "KLM": /\bklm\b/i,
+    "Lufthansa": /lufthansa/i,
+    "British Airways": /british\s*air/i,
+    "TAP": /\btap\b/i,
+    "American Airlines": /american\s*air/i,
+    "Delta": /\bdelta\b/i,
+    "United": /\bunited\b(?!\s*states)/i,
+    "Iberia": /iberia/i,
+    "Copa Airlines": /\bcopa\b/i,
+    "Avianca": /avianca/i,
+    "Swiss": /\bswiss\b/i,
+    "Singapore Airlines": /singapore/i,
+    "Etihad": /etihad/i,
+  };
+  for (const [name, regex] of Object.entries(airlines)) {
+    if (regex.test(text)) return `✈️ ${name}`;
+  }
+  return null;
+}
+
+// ── Flight class extraction ──
+function extractFlightClass(text: string): string | null {
+  if (/primeira\s*classe|first\s*class/i.test(text)) return "👑 Primeira Classe";
+  if (/executiva|business/i.test(text)) return "💼 Executiva";
+  if (/premium\s*econom/i.test(text)) return "⭐ Premium Economy";
+  if (/econômica|economy/i.test(text)) return "💺 Econômica";
+  return null;
+}
+
+// ── Airport extraction ──
+function extractAirport(text: string): string | null {
+  const airports: Record<string, RegExp> = {
+    "GRU - Guarulhos": /guarulhos|gru\b/i,
+    "CGH - Congonhas": /congonhas|cgh\b/i,
+    "GIG - Galeão": /galeão|galeao|gig\b/i,
+    "SDU - Santos Dumont": /santos\s*dumont|sdu\b/i,
+    "BSB - Brasília": /\bbsb\b/i,
+    "CWB - Curitiba": /\bcwb\b|afonso\s*pena/i,
+    "CNF - Confins": /confins|cnf\b/i,
+    "POA - Porto Alegre": /\bpoa\b|salgado\s*filho/i,
+    "SSA - Salvador": /\bssa\b/i,
+    "REC - Recife": /\brec\b/i,
+    "VCP - Campinas": /viracopos|vcp\b/i,
+  };
+  for (const [name, regex] of Object.entries(airports)) {
+    if (regex.test(text)) return name;
+  }
+  return null;
+}
+
+// ── Flight time preference ──
+function extractFlightTimePreference(text: string): string | null {
+  if (/voo\s*(?:que\s*)?(?:sai|saindo|partindo)?\s*(?:de|à)?\s*noite|noturno/i.test(text)) return "🌙 Voo noturno";
+  if (/voo\s*(?:que\s*)?(?:sai|saindo)?\s*(?:de|pela)?\s*manhã|matutino|cedo/i.test(text)) return "🌅 Voo matutino";
+  if (/voo\s*(?:que\s*)?(?:sai|saindo)?\s*(?:à|de)?\s*tarde/i.test(text)) return "🌇 Voo à tarde";
+  if (/(?:sem\s*escala|direto|non.?stop)/i.test(text)) return "⚡ Voo direto";
+  if (/escala|conexão/i.test(text)) return "🔄 Aceita conexão";
+  return null;
+}
+
+// ── Baggage ──
+function extractBaggage(text: string): string | null {
+  const m = text.match(/(\d+)\s*(?:malas?|despacho|bagagem)/i);
+  if (m) return `🧳 ${m[1]} mala${parseInt(m[1]) > 1 ? "s" : ""} despachada${parseInt(m[1]) > 1 ? "s" : ""}`;
+  if (/bastante\s*mala|muita\s*bagagem/i.test(text)) return "🧳 Bagagem extra";
+  return null;
+}
+
+// ── Visa/Documents ──
+function extractDocumentation(text: string): string[] {
+  const docs: string[] = [];
+  if (/passaporte\s*(?:em\s*dia|válido|ok|vence)/i.test(text)) docs.push("🛂 Passaporte OK");
+  if (/visto/i.test(text)) docs.push("📄 Visto necessário");
+  if (/seguro\s*viagem/i.test(text)) docs.push("🛡️ Seguro viagem");
+  if (/vacina|febre\s*amarela/i.test(text)) docs.push("💉 Vacinação");
+  return docs;
+}
+
 // ── Trip type ──
 function extractTripType(text: string): string | null {
   if (/lua\s*de\s*mel|honeymoon|recém\s*casad/i.test(text)) return "💑 Lua de Mel";
@@ -203,8 +291,9 @@ function extractSentimentSignals(text: string): { signal: string; emoji: string 
 // ── Scoring ──
 function calcCompleteness(fields: Record<string, any>): number {
   const weights: Record<string, number> = {
-    name: 10, destinations: 20, dates: 15, passengers: 10, budget: 15,
-    tripType: 10, origin: 5, duration: 5, preferences: 5, signals: 5,
+    name: 7, destinations: 12, dates: 10, passengers: 7, budget: 10,
+    tripType: 7, origin: 5, duration: 5, preferences: 5, signals: 3,
+    airline: 7, flightClass: 5, airport: 5, flightTime: 4, baggage: 4, documentation: 4,
   };
   let score = 0;
   if (fields.name) score += weights.name;
@@ -217,6 +306,12 @@ function calcCompleteness(fields: Record<string, any>): number {
   if (fields.duration) score += weights.duration;
   if (fields.preferences.length > 0) score += weights.preferences;
   if (fields.signals.length > 0) score += weights.signals;
+  if (fields.airline) score += weights.airline;
+  if (fields.flightClass) score += weights.flightClass;
+  if (fields.airport) score += weights.airport;
+  if (fields.flightTime) score += weights.flightTime;
+  if (fields.baggage) score += weights.baggage;
+  if (fields.documentation.length > 0) score += weights.documentation;
   return score;
 }
 
@@ -263,16 +358,23 @@ export default function ConversationIntelligencePanel({ messages, className }: P
     const tripType = extractTripType(allText);
     const preferences = extractPreferences(allTextFull);
     const signals = extractSentimentSignals(allText);
+    const airline = extractAirline(allText);
+    const flightClass = extractFlightClass(allText);
+    const airport = extractAirport(allText);
+    const flightTime = extractFlightTimePreference(allText);
+    const baggage = extractBaggage(allText);
+    const documentation = extractDocumentation(allTextFull);
 
-    const completeness = calcCompleteness({ name, destinations, dates, passengers, budget, tripType, origin, duration, preferences, signals });
+    const completeness = calcCompleteness({ name, destinations, dates, passengers, budget, tripType, origin, duration, preferences, signals, airline, flightClass, airport, flightTime, baggage, documentation });
 
-    return { destinations, dates, duration, passengers, origin, name, budget, tripType, preferences, signals, completeness };
+    return { destinations, dates, duration, passengers, origin, name, budget, tripType, preferences, signals, completeness, airline, flightClass, airport, flightTime, baggage, documentation };
   }, [messages]);
 
-  const { destinations, dates, duration, passengers, origin, name, budget, tripType, preferences, signals, completeness } = intelligence;
+  const { destinations, dates, duration, passengers, origin, name, budget, tripType, preferences, signals, completeness, airline, flightClass, airport, flightTime, baggage, documentation } = intelligence;
 
   const hasAnyData = name || destinations.length > 0 || dates.length > 0 || passengers.count ||
-    budget || tripType || origin || duration || preferences.length > 0 || signals.length > 0;
+    budget || tripType || origin || duration || preferences.length > 0 || signals.length > 0 ||
+    airline || flightClass || airport || flightTime || baggage || documentation.length > 0;
 
   return (
     <div className={cn("rounded-2xl overflow-hidden bg-card border border-border", className)}>
@@ -312,6 +414,7 @@ export default function ConversationIntelligencePanel({ messages, className }: P
           </div>
         ) : (
           <>
+            {/* Core info */}
             <FieldRow icon={Users} label="Cliente" value={name || ""} />
             <FieldRow icon={MapPin} label="Origem" value={origin || ""} />
             <FieldRow icon={Globe} label="Destino" value={destinations} />
@@ -324,6 +427,41 @@ export default function ConversationIntelligencePanel({ messages, className }: P
             } />
             <FieldRow icon={Wallet} label="Orçamento" value={budget || ""} />
             <FieldRow icon={Heart} label="Tipo de Viagem" value={tripType || ""} />
+
+            {/* Flight details section */}
+            {(airline || flightClass || airport || flightTime || baggage) && (
+              <div className="px-3 pt-2 pb-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <Plane className="w-3.5 h-3.5" style={{ color: "#3B82F6" }} />
+                  <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#3B82F6" }}>Voo</p>
+                </div>
+                <div className="space-y-0.5 pl-1">
+                  {airline && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>{airline}</p>}
+                  {flightClass && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>{flightClass}</p>}
+                  {airport && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>🛫 {airport}</p>}
+                  {flightTime && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>{flightTime}</p>}
+                  {baggage && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>{baggage}</p>}
+                </div>
+              </div>
+            )}
+
+            {/* Documentation */}
+            {documentation.length > 0 && (
+              <div className="px-3 py-2">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Shield className="w-3.5 h-3.5" style={{ color: "#64748B" }} />
+                  <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#64748B" }}>Documentação</p>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {documentation.map(d => (
+                    <span key={d} className="text-[10px] px-2 py-0.5 rounded-md font-medium"
+                      style={{ background: "rgba(16,185,129,0.1)", color: "#6EE7B7", border: "1px solid rgba(16,185,129,0.15)" }}>
+                      {d}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Preferences */}
             {preferences.length > 0 && (
