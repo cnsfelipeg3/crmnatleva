@@ -206,7 +206,10 @@ export default function Proposals() {
                       <span>{p.destinations.slice(0, 2).join(", ")}{p.destinations.length > 2 ? ` +${p.destinations.length - 2}` : ""}</span>
                     )}
                     {p.travel_start_date && (
-                      <span>{format(new Date(p.travel_start_date + "T00:00:00"), "dd MMM yyyy", { locale: ptBR })}</span>
+                      <span>
+                        {format(new Date(p.travel_start_date + "T00:00:00"), "dd MMM yyyy", { locale: ptBR })}
+                        {p.travel_end_date && ` — ${format(new Date(p.travel_end_date + "T00:00:00"), "dd MMM yyyy", { locale: ptBR })}`}
+                      </span>
                     )}
                   </div>
 

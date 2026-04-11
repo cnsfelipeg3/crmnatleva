@@ -5314,6 +5314,7 @@ export type Database = {
           slug: string
           source_briefing_id: string | null
           status: string
+          template_id: string | null
           title: string
           total_value: number | null
           travel_end_date: string | null
@@ -5342,6 +5343,7 @@ export type Database = {
           slug: string
           source_briefing_id?: string | null
           status?: string
+          template_id?: string | null
           title: string
           total_value?: number | null
           travel_end_date?: string | null
@@ -5370,6 +5372,7 @@ export type Database = {
           slug?: string
           source_briefing_id?: string | null
           status?: string
+          template_id?: string | null
           title?: string
           total_value?: number | null
           travel_end_date?: string | null
@@ -5398,6 +5401,13 @@ export type Database = {
             columns: ["source_briefing_id"]
             isOneToOne: false
             referencedRelation: "quotation_briefings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_templates"
             referencedColumns: ["id"]
           },
         ]
