@@ -285,7 +285,7 @@ export function buildUnifiedAgentPrompt(options: UnifiedPromptOptions): string {
   const minTrocas = MIN_TROCAS[agent.id] || 4;
   const roleInstr = AGENT_ROLE_INSTRUCTIONS[agent.id] || "";
   const teamContext = buildTeamContextBlock(agent.id);
-  const knowledgeBlock = rawKnowledgeBlock?.trim() ? `\n${rawKnowledgeBlock.trim()}\n` : "";
+  const knowledgeBlock = rawKnowledgeBlock?.trim() ? `\n## REGRA ABSOLUTA — USO DA BASE DE CONHECIMENTO\nPara qualquer pergunta factual sobre eventos, destinos, datas, locais, regras, horários, valores ou fatos cobertos pela BASE DE CONHECIMENTO abaixo, use APENAS essas informações e NUNCA invente nada que esteja coberto pela base. Se a base não tiver a informação específica, diga que vai confirmar.\n\n${rawKnowledgeBlock.trim()}\n` : "";
 
   // Commercial funnel agents all present as "Nath" to the client
   const COMMERCIAL_AGENT_IDS = ["maya", "atlas", "habibi", "nemo", "dante", "luna", "nero", "iris"];
@@ -380,7 +380,7 @@ REGRA ABSOLUTA — NUNCA INDICAR CONCORRENTES OU CANAIS EXTERNOS:
   // otherwise she falls back to the generic greeting/name flow and ignores the lead's real intent.
   const isMaya = agent.id === "maya";
 
-  if (isMaya && dbOverride?.behavior_prompt) {
+  if (isMaya) {
     return `=== PRIORIDADE ABSOLUTA — MAYA DEVE RESPONDER O CONTEXTO REAL DO LEAD ===
 - Saudacao fixa so vale quando o lead manda uma abertura vazia.
 - Se a primeira mensagem ja trouxer hotel, destino, datas, duracao, orcamento ou pergunta concreta, responda esse conteudo antes de qualquer roteiro.
