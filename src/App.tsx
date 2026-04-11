@@ -34,6 +34,7 @@ const ClientDetail = lazy(() => import("@/pages/ClientDetail"));
 const ImportData = lazy(() => import("@/pages/ImportData"));
 const Pendencias = lazy(() => import("@/pages/Pendencias"));
 const Viagens = lazy(() => import("@/pages/Viagens"));
+const TorreDeControle = lazy(() => import("@/pages/TorreDeControle"));
 const ClientIntelligence = lazy(() => import("@/pages/ClientIntelligence"));
 const NatLevaIntelligence = lazy(() => import("@/pages/NatLevaIntelligence"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -183,7 +184,8 @@ function AppRoutes() {
           <Route path="/sales/new" element={<NewSale />} />
           <Route path="/sales/:id" element={<SaleDetail />} />
           <Route path="/itinerario" element={<Itinerary />} />
-          <Route path="/viagens" element={<Viagens />} />
+          <Route path="/viagens" element={<TorreDeControle />} />
+          <Route path="/viagens/monitor" element={<Viagens />} />
           <Route path="/viagens/:id" element={<TripDetail />} />
           <Route path="/checkin" element={<Checkin />} />
           <Route path="/hospedagem" element={<Lodging />} />
