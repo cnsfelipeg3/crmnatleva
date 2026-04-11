@@ -259,9 +259,108 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
         </TaxSection>
       )}
 
+      {/* FATOS-CHAVE Section */}
+      {taxonomy.fatos_chave && taxonomy.fatos_chave.length > 0 && (
+        <TaxSection section={SECTIONS.find(s => s.key === "fatos_chave")!}>
+          <ul className="space-y-1.5">
+            {taxonomy.fatos_chave.map((f, i) => (
+              <li key={i} className="text-xs flex gap-2">
+                <span className="text-indigo-500 font-bold shrink-0">•</span>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+        </TaxSection>
+      )}
+
+      {/* EVENTO Section */}
+      {hasContent("evento") && (
+        <TaxSection section={SECTIONS.find(s => s.key === "evento")!}>
+          {taxonomy.evento?.nome && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-bold">{taxonomy.evento.nome}</span>
+              {taxonomy.evento.edicao_ano && <Pill color="amber">{taxonomy.evento.edicao_ano}</Pill>}
+              {taxonomy.evento.periodo && <Pill color="blue">{taxonomy.evento.periodo}</Pill>}
+            </div>
+          )}
+          {taxonomy.evento?.cidades_sede && taxonomy.evento.cidades_sede.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Cidades-sede</p>
+              <div className="flex flex-wrap gap-1.5">
+                {taxonomy.evento.cidades_sede.map((c, i) => <Pill key={i} color="blue">{c}</Pill>)}
+              </div>
+            </div>
+          )}
+          {taxonomy.evento?.locais_arenas && taxonomy.evento.locais_arenas.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Estádios / Arenas</p>
+              <div className="space-y-1">
+                {taxonomy.evento.locais_arenas.map((l, i) => (
+                  <div key={i} className="text-xs flex items-center gap-2 rounded-lg bg-muted/30 px-3 py-1.5">
+                    <span className="font-medium">{l.nome}</span>
+                    {l.cidade && <span className="text-muted-foreground">— {l.cidade}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {taxonomy.evento?.participantes && taxonomy.evento.participantes.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Participantes / Times</p>
+              <div className="flex flex-wrap gap-1.5">
+                {taxonomy.evento.participantes.map((p, i) => <Pill key={i} color="green">{p}</Pill>)}
+              </div>
+            </div>
+          )}
+          {taxonomy.evento?.formato_regras && (
+            <p className="text-xs text-muted-foreground">📋 {taxonomy.evento.formato_regras}</p>
+          )}
+          {taxonomy.evento?.programacao && taxonomy.evento.programacao.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">
+                📅 Programação ({taxonomy.evento.programacao.length} {taxonomy.evento.programacao.length === 1 ? "evento" : "eventos"})
+              </p>
+              <div className="space-y-1 max-h-[400px] overflow-y-auto">
+                {taxonomy.evento.programacao.map((p, i) => (
+                  <div key={i} className="text-xs flex items-center gap-2 rounded-lg bg-muted/30 px-3 py-2">
+                    <span className="font-mono text-[10px] text-muted-foreground shrink-0 w-16">{p.data || ""}</span>
+                    {p.dia_semana && <span className="text-[10px] text-muted-foreground shrink-0">({p.dia_semana})</span>}
+                    {p.horario && <span className="font-bold shrink-0">{p.horario}</span>}
+                    <span className="font-medium">
+                      {p.participante_a}{p.participante_b ? ` × ${p.participante_b}` : ""}
+                    </span>
+                    {p.local && <span className="text-muted-foreground ml-auto shrink-0">📍 {p.local}{p.cidade ? `, ${p.cidade}` : ""}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {taxonomy.evento?.ingressos_info && (
+            <p className="text-xs"><span className="font-bold">🎫 Ingressos:</span> {taxonomy.evento.ingressos_info}</p>
+          )}
+          {taxonomy.evento?.pacotes_natleva && (
+            <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2">
+              <p className="text-xs font-bold text-primary">🎯 Pacotes NatLeva: {taxonomy.evento.pacotes_natleva}</p>
+            </div>
+          )}
+          {taxonomy.evento?.curiosidades && taxonomy.evento.curiosidades.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Curiosidades</p>
+              <ul className="space-y-1">
+                {taxonomy.evento.curiosidades.map((c, i) => (
+                  <li key={i} className="text-xs text-muted-foreground flex gap-2">
+                    <span className="text-yellow-500">✦</span> {c}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </TaxSection>
+      )}
+
       {/* DESTINO Section */}
       {hasContent("destino") && (
-        <TaxSection section={SECTIONS[1]}>
+        <TaxSection section={SECTIONS.find(s => s.key === "destino")!}>
           <div className="flex flex-wrap gap-2">
             {destino?.tipo && <Pill color="amber">{destino.tipo}</Pill>}
             {destino?.popularidade && <Pill color="amber">{destino.popularidade}</Pill>}
