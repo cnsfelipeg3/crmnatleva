@@ -40,6 +40,7 @@ Analise o conteudo e retorne SOMENTE JSON valido (sem markdown, sem backticks, s
 {
   "titulo_sugerido": "titulo claro e descritivo",
   "resumo": "resumo executivo de 3-5 frases focado em VENDER viagens",
+  "entendimento_completo": "Um texto longo e detalhado (minimo 10 paragrafos) explicando TUDO que voce entendeu do video de forma didatica e completa. Escreva como se estivesse explicando para um colega de trabalho que nao assistiu o video. Inclua: (1) o que o video aborda em detalhe, (2) todos os dados importantes mencionados, (3) como a equipe NatLeva pode usar essas informacoes no atendimento do dia a dia, (4) dicas praticas para os agentes de vendas, (5) possiveis perguntas de clientes que esse conteudo responde, (6) oportunidades de venda que surgem a partir desse conhecimento. Seja DENSO e COMPLETO — esse texto sera a referencia principal da equipe.",
   "tags": ["8-15 tags em portugues lowercase, sem acentos quando possivel"],
   "fatos_chave": ["lista de TODOS os fatos concretos: datas, horarios, locais, nomes, numeros, regras — 1 fato por item, sem resumir, se ha 20 fatos liste 20"],
   "chunks": [
@@ -174,6 +175,7 @@ function parseOrionResponse(rawText: string) {
     const result = {
       titulo_sugerido: parsed.titulo_sugerido || "",
       resumo: parsed.resumo || "Conteudo processado pelo ORION.",
+      entendimento_completo: parsed.entendimento_completo || "",
       tags: Array.isArray(parsed.tags) ? parsed.tags.filter((t: any) => typeof t === "string") : [],
       fatos_chave: Array.isArray(parsed.fatos_chave) ? parsed.fatos_chave.filter((f: any) => typeof f === "string") : [],
       chunks: Array.isArray(parsed.chunks)
