@@ -430,7 +430,7 @@ async function cleanTranscript(rawText: string): Promise<string> {
     return rawText;
   }
 
-  const MAX_PUNCT_CHUNK = 30000;
+  const MAX_PUNCT_CHUNK = 12000;
   if (rawText.length <= MAX_PUNCT_CHUNK) {
     return await callCleanAI(ANTHROPIC_API_KEY, rawText);
   }
@@ -483,7 +483,7 @@ async function callCleanAI(apiKey: string, text: string): Promise<string> {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 4000,
+        max_tokens: 8000,
         system: CLEAN_SYSTEM_PROMPT,
         messages: [{ role: "user", content: text }],
       }),
