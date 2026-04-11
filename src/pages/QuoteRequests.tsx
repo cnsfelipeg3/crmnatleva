@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,10 +11,11 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Plane, MapPin, CalendarDays, Users, Search, Eye, CheckCircle2,
-  Clock, XCircle, MessageCircle, ChevronDown,
+  Clock, XCircle, MessageCircle, ChevronDown, FileText, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { createProposalFromQuote } from "@/lib/quoteToProposalBridge";
 
 interface QuoteRequest {
   id: string;
@@ -37,6 +39,7 @@ interface QuoteRequest {
   special_requests: string | null;
   traveler_names: string[] | null;
   hotel_preferences: string | null;
+  proposal_id: string | null;
   created_at: string;
 }
 
