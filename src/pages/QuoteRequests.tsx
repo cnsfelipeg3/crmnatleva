@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,10 +11,11 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Plane, MapPin, CalendarDays, Users, Search, Eye, CheckCircle2,
-  Clock, XCircle, MessageCircle, ChevronDown,
+  Clock, XCircle, MessageCircle, ChevronDown, FileText, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import { createProposalFromQuote } from "@/lib/quoteToProposalBridge";
 
 interface QuoteRequest {
   id: string;
@@ -37,6 +39,7 @@ interface QuoteRequest {
   special_requests: string | null;
   traveler_names: string[] | null;
   hotel_preferences: string | null;
+  proposal_id: string | null;
   created_at: string;
 }
 
@@ -70,6 +73,8 @@ export default function QuoteRequests() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [generating, setGenerating] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const fetchQuotes = async () => {
     setLoading(true);
@@ -83,7 +88,25 @@ export default function QuoteRequests() {
 
   useEffect(() => { fetchQuotes(); }, []);
 
-  const updateStatus = async (id: string, status: string) => {
+  const handleGenerateProposal = async (q: QuoteRequest) => {
+    setGenerating(q.id);
+    try {
+      const result = await createProposalFromQuote(q as any);
+      if (result) {
+        toast({ title: "Proposta criada!", description: "Redirecionando ao editor..." });
+        fetchQuotes();
+        setTimeout(() => navigate(`/propostas/${result.proposalId}`), 800);
+      } else {
+        toast({ title: "Erro ao criar proposta", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro inesperado", variant: "destructive" });
+    } finally {
+      setGenerating(null);
+    }
+  };
+
+
     const { error } = await (supabase as any)
       .from("portal_quote_requests")
       .update({ status, updated_at: new Date().toISOString() })
@@ -245,14 +268,29 @@ export default function QuoteRequests() {
                               <Eye className="w-3 h-3" /> Iniciar análise
                             </Button>
                           )}
-                          {(q.status === "pending" || q.status === "reviewing") && (
-                            <Button size="sm" onClick={() => updateStatus(q.id, "quoted")} className="gap-1 text-xs bg-accent hover:bg-accent/90 text-accent-foreground">
-                              <CheckCircle2 className="w-3 h-3" /> Marcar como cotado
+
+                          {/* Generate or view proposal */}
+                          {q.proposal_id ? (
+                            <Button size="sm" variant="outline" onClick={() => navigate(`/propostas/${q.proposal_id}`)} className="gap-1 text-xs">
+                              <FileText className="w-3 h-3" /> Ver Proposta
                             </Button>
+                          ) : (
+                            (q.status === "pending" || q.status === "reviewing" || q.status === "quoted") && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleGenerateProposal(q)}
+                                disabled={generating === q.id}
+                                className="gap-1 text-xs bg-accent hover:bg-accent/90 text-accent-foreground"
+                              >
+                                {generating === q.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
+                                Gerar Proposta
+                              </Button>
+                            )
                           )}
+
                           {q.status === "quoted" && (
                             <>
-                              <Button size="sm" onClick={() => updateStatus(q.id, "accepted")} className="gap-1 text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
+                              <Button size="sm" onClick={() => updateStatus(q.id, "accepted")} className="gap-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground">
                                 <CheckCircle2 className="w-3 h-3" /> Aceito
                               </Button>
                               <Button size="sm" variant="outline" onClick={() => updateStatus(q.id, "rejected")} className="gap-1 text-xs text-destructive">

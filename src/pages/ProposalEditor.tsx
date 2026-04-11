@@ -459,7 +459,14 @@ export default function ProposalEditor() {
           </Button>
           <div>
             <h1 className="text-xl font-serif text-foreground">{isNew ? "Nova Proposta" : "Editar Proposta"}</h1>
-            <p className="text-sm text-muted-foreground">Monte uma proposta visual premium</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">Monte uma proposta visual premium</p>
+              {!isNew && (existing as any)?.quote_request_id && (
+                <Button variant="link" size="sm" className="h-auto p-0 text-xs text-accent" onClick={() => navigate("/cotacoes?tab=portal")}>
+                  📬 Ver cotação original
+                </Button>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
