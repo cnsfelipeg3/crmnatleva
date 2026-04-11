@@ -17,7 +17,7 @@ import { MinimalLoader } from "@/components/AppLoaders";
 import { NegotiationTimeline } from "@/components/pipeline/NegotiationTimeline";
 import { NegotiationDetailPanel } from "@/components/pipeline/NegotiationDetailPanel";
 import { useNegotiationPriority, type TempFilter } from "@/hooks/useNegotiationPriority";
-import { NegotiationItem, calculateTemperature } from "@/lib/negotiationNarrative";
+import { NegotiationItem, BriefingData } from "@/lib/negotiationNarrative";
 
 const CotacoesMonitorView = lazy(() => import("@/components/cotacoes/CotacoesMonitorView"));
 
@@ -45,6 +45,51 @@ function mapProposalToStage(p: any): string {
     case "lost": return "perdida";
     default: return "proposta_criada";
   }
+}
+
+function mapBriefingToStage(b: any): string {
+  if (b.status === "convertido") return "proposta_criada";
+  if (b.status === "devolvido_ia") return "analise";
+  return "nova";
+}
+
+function mapBriefingData(b: any): BriefingData {
+  return {
+    briefingId: b.id,
+    conversationSummary: b.conversation_summary,
+    aiRecommendation: b.ai_recommendation,
+    nextSteps: b.next_steps,
+    budgetBehavioralReading: b.budget_behavioral_reading,
+    tripMotivation: b.trip_motivation,
+    leadScore: b.lead_score,
+    leadSentiment: b.lead_sentiment,
+    leadType: b.lead_type,
+    leadUrgency: b.lead_urgency || b.urgency,
+    priceSensitivity: b.price_sensitivity,
+    behavioralNotes: b.behavioral_notes,
+    travelExperience: b.travel_experience,
+    travelPace: b.travel_pace,
+    flexibleDates: b.flexible_dates,
+    durationDays: b.duration_days,
+    adults: b.adults,
+    children: b.children,
+    childrenAges: b.children_ages,
+    groupDetails: b.group_details,
+    hotelPreference: b.hotel_preference,
+    hotelStars: b.hotel_stars,
+    hotelLocation: b.hotel_location,
+    hotelNeeds: b.hotel_needs,
+    hotelNotes: b.hotel_notes,
+    departureAirport: b.departure_airport,
+    preferredAirline: b.preferred_airline,
+    flightPreference: b.flight_preference,
+    mustHaveExperiences: b.must_have_experiences,
+    desiredExperiences: b.desired_experiences,
+    experienceNotes: b.experience_notes,
+    transferNeeded: b.transfer_needed,
+    rentalCar: b.rental_car,
+    transportNotes: b.transport_notes,
+  };
 }
 
 // ─── Main Component ───
@@ -81,6 +126,18 @@ export default function CotacoesPropostasPipeline() {
     },
   });
 
+  // Fetch briefings
+  const { data: briefings } = useQuery({
+    queryKey: ["pipeline-briefings"],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("quotation_briefings")
+        .select("*")
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+  });
+
   // Fetch viewer stats per proposal
   const { data: viewerStats } = useQuery({
     queryKey: ["pipeline-viewer-stats"],
@@ -89,7 +146,6 @@ export default function CotacoesPropostasPipeline() {
         .from("proposal_viewers" as any)
         .select("proposal_id, total_views, last_active_at, engagement_score")
         .order("last_active_at", { ascending: false });
-      // Aggregate per proposal
       const map: Record<string, { viewCount: number; lastViewedAt: string | null; maxEngagement: number }> = {};
       for (const v of data || []) {
         const pid = (v as any).proposal_id;
@@ -108,7 +164,23 @@ export default function CotacoesPropostasPipeline() {
   const items = useMemo(() => {
     const result: NegotiationItem[] = [];
     const linkedProposalIds = new Set<string>();
+    const linkedBriefingIds = new Set<string>();
 
+    // Index briefings by ID for enrichment
+    const briefingMap = new Map<string, any>();
+    for (const b of briefings || []) {
+      briefingMap.set(b.id, b);
+    }
+
+    // Index proposals by source_briefing_id
+    const proposalByBriefing = new Map<string, any>();
+    for (const p of proposals || []) {
+      if ((p as any).source_briefing_id) {
+        proposalByBriefing.set((p as any).source_briefing_id, p);
+      }
+    }
+
+    // 1. Portal quotes
     for (const q of quotes || []) {
       if (q.proposal_id) linkedProposalIds.add(q.proposal_id);
       result.push({
@@ -130,9 +202,43 @@ export default function CotacoesPropostasPipeline() {
       });
     }
 
+    // 2. Briefings IA
+    for (const b of briefings || []) {
+      const linkedProposal = proposalByBriefing.get(b.id);
+      if (linkedProposal) {
+        linkedProposalIds.add(linkedProposal.id);
+        linkedBriefingIds.add(b.id);
+      }
+
+      result.push({
+        id: `b-${b.id}`,
+        stage: linkedProposal ? mapProposalToStage(linkedProposal) : mapBriefingToStage(b),
+        origin: b.departure_airport || "",
+        destination: b.destination || "",
+        clientName: b.lead_name || "",
+        pax: b.total_people || ((b.adults || 0) + (b.children || 0)),
+        departureDate: b.departure_date,
+        returnDate: b.return_date,
+        createdAt: b.created_at,
+        source: "briefing",
+        proposalId: linkedProposal?.id,
+        proposalSlug: linkedProposal?.slug,
+        proposalStatus: linkedProposal?.status,
+        cabinClass: b.cabin_class,
+        budgetRange: b.budget_range,
+        briefing: mapBriefingData(b),
+      });
+    }
+
+    // 3. Standalone proposals (not linked to quote or briefing)
     for (const p of proposals || []) {
       if (linkedProposalIds.has(p.id)) continue;
       if ((p as any).quote_request_id) continue;
+      if ((p as any).source_briefing_id && linkedBriefingIds.has((p as any).source_briefing_id)) continue;
+
+      // Try to find briefing data for this proposal
+      const briefingData = (p as any).source_briefing_id ? briefingMap.get((p as any).source_briefing_id) : null;
+
       result.push({
         id: `p-${p.id}`,
         stage: mapProposalToStage(p),
@@ -147,6 +253,7 @@ export default function CotacoesPropostasPipeline() {
         proposalId: p.id,
         proposalSlug: p.slug,
         proposalStatus: p.status,
+        briefing: briefingData ? mapBriefingData(briefingData) : undefined,
       });
     }
 
@@ -159,6 +266,12 @@ export default function CotacoesPropostasPipeline() {
           item.proposalStatus = p.status;
           item.stage = mapProposalToStage(p);
           if (!item.clientName && p.client_name) item.clientName = p.client_name;
+
+          // Check if this proposal has briefing data
+          if ((p as any).source_briefing_id && !item.briefing) {
+            const bd = briefingMap.get((p as any).source_briefing_id);
+            if (bd) item.briefing = mapBriefingData(bd);
+          }
         }
       }
       // Enrich with real viewer data
@@ -172,7 +285,7 @@ export default function CotacoesPropostasPipeline() {
     }
 
     return result;
-  }, [quotes, proposals, viewerStats]);
+  }, [quotes, proposals, briefings, viewerStats]);
 
   const { grouped, stats } = useNegotiationPriority(items, tempFilter, search);
 
