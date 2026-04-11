@@ -80,7 +80,7 @@ const CABIN_LABELS: Record<string, string> = {
 
 export function generateNarrative(item: NegotiationItem): string {
   const dest = item.destination || "destino não informado";
-  const timeAgo = formatDistanceToNow(new Date(item.createdAt), { locale: ptBR, addSuffix: true });
+  const timeAgo = safeDistanceToNow(item.createdAt);
   const paxLabel = item.pax > 1 ? `${item.pax} pessoas` : "1 pessoa";
   const cabin = item.cabinClass ? `, ${CABIN_LABELS[item.cabinClass] || item.cabinClass}` : "";
   const b = item.briefing;
@@ -99,18 +99,14 @@ export function generateNarrative(item: NegotiationItem): string {
 
   // Sent but not viewed
   if (item.stage === "enviada" && !item.viewCount) {
-    const sentAgo = item.sentAt
-      ? formatDistanceToNow(new Date(item.sentAt), { locale: ptBR, addSuffix: true })
-      : timeAgo;
+    const sentAgo = item.sentAt ? safeDistanceToNow(item.sentAt) : timeAgo;
     return `Proposta enviada ${sentAgo}, ainda sem visualização. ${dest}${motivation} para ${paxLabel}${cabin}${hotel}.${scoreTag}`;
   }
 
   // Sent and viewed
   if (item.stage === "enviada" && (item.viewCount || 0) > 0) {
     const views = item.viewCount || 0;
-    const lastView = item.lastViewedAt
-      ? formatDistanceToNow(new Date(item.lastViewedAt), { locale: ptBR, addSuffix: true })
-      : "";
+    const lastView = item.lastViewedAt ? safeDistanceToNow(item.lastViewedAt) : "";
     return `Proposta visualizada ${views}x${lastView ? ` (último acesso ${lastView})` : ""}. ${dest}${motivation} para ${paxLabel}${cabin}.${scoreTag}`;
   }
 
