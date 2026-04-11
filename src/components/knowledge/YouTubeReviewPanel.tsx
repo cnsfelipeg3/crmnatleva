@@ -253,7 +253,11 @@ export default function YouTubeReviewPanel({ onBack, onSaved }: YouTubeReviewPan
       });
       if (orgErr) throw orgErr;
       if (orgData?.taxonomy) {
-        setTaxonomy(orgData.taxonomy.taxonomia || orgData.taxonomy);
+        const taxData = orgData.taxonomy.taxonomia || orgData.taxonomy;
+        if (orgData.taxonomy.entendimento_completo && taxData) {
+          taxData.entendimento_completo = orgData.taxonomy.entendimento_completo;
+        }
+        setTaxonomy(taxData);
         setTags(orgData.taxonomy.tags || []);
         setResumo(orgData.taxonomy.resumo || "");
         if (orgData.taxonomy.titulo_sugerido) setEditTitle(orgData.taxonomy.titulo_sugerido);
