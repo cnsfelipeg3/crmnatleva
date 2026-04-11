@@ -21,13 +21,16 @@ const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/sales/new", icon: Plus, label: "Nova Venda" },
   { to: "/sales", icon: List, label: "Vendas" },
+  { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
+  { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações & Propostas" },
+  { to: "/midias", icon: ImageIcon, label: "Mídias" },
+];
+
+const clientesItems = [
   { to: "/passengers", icon: Users, label: "Passageiros" },
   { to: "/inteligencia-clientes", icon: Brain, label: "Inteligência Clientes" },
   { to: "/natleva-intelligence", icon: Sparkles, label: "NatLeva Intelligence" },
   { to: "/birthdays", icon: Cake, label: "Aniversariantes" },
-  { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
-  { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações & Propostas" },
-  { to: "/midias", icon: ImageIcon, label: "Mídias" },
 ];
 
 const viagensItems = [
