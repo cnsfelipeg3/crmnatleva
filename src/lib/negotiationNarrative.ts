@@ -67,6 +67,7 @@ export interface NegotiationItem {
   sentAt?: string | null;
   // Briefing-enriched fields
   briefing?: BriefingData;
+  rawBriefing?: any;
 }
 
 export type Temperature = "hot" | "warm" | "cold" | "won" | "lost";

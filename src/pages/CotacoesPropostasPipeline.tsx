@@ -1,4 +1,4 @@
-import { useState, useMemo, lazy, Suspense } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,18 +8,17 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
-  PlaneTakeoff, Search, Plus, Radio, LayoutGrid, Flame,
+  PlaneTakeoff, Search, Plus, Flame,
   Thermometer, Snowflake, AlertTriangle, ArrowRight,
+  Zap, BarChart3, Target, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createProposalFromQuote } from "@/lib/quoteToProposalBridge";
-import { MinimalLoader } from "@/components/AppLoaders";
 import { NegotiationTimeline } from "@/components/pipeline/NegotiationTimeline";
 import { NegotiationDetailPanel } from "@/components/pipeline/NegotiationDetailPanel";
 import { useNegotiationPriority, type TempFilter } from "@/hooks/useNegotiationPriority";
 import { NegotiationItem, BriefingData } from "@/lib/negotiationNarrative";
-
-const CotacoesMonitorView = lazy(() => import("@/components/cotacoes/CotacoesMonitorView"));
+import { countFilledFields, MONITOR_TOTAL_FIELDS } from "@/lib/quotationMonitor";
 
 // ─── Mapping helpers ───
 
@@ -92,13 +91,32 @@ function mapBriefingData(b: any): BriefingData {
   };
 }
 
+// ─── KPI helpers ───
+
+function computeMonitorKpis(briefings: any[]) {
+  let extracting = 0;
+  let totalFields = 0;
+  let filledFields = 0;
+  let complete = 0;
+
+  for (const b of briefings) {
+    const filled = countFilledFields(b);
+    totalFields += MONITOR_TOTAL_FIELDS;
+    filledFields += filled;
+    if (b.status === "extraindo") extracting++;
+    if (filled >= MONITOR_TOTAL_FIELDS * 0.9) complete++;
+  }
+
+  const completeness = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
+  return { extracting, totalFields: filledFields, completeness, complete };
+}
+
 // ─── Main Component ───
 
 export default function CotacoesPropostasPipeline() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [generating, setGenerating] = useState<string | null>(null);
-  const [view, setView] = useState<"timeline" | "monitor">("timeline");
   const [tempFilter, setTempFilter] = useState<TempFilter>("all");
   const [selectedItem, setSelectedItem] = useState<NegotiationItem | null>(null);
 
@@ -160,19 +178,20 @@ export default function CotacoesPropostasPipeline() {
     },
   });
 
+  // Monitor KPIs from briefings
+  const monitorKpis = useMemo(() => computeMonitorKpis(briefings || []), [briefings]);
+
   // Build unified items
   const items = useMemo(() => {
     const result: NegotiationItem[] = [];
     const linkedProposalIds = new Set<string>();
     const linkedBriefingIds = new Set<string>();
 
-    // Index briefings by ID for enrichment
     const briefingMap = new Map<string, any>();
     for (const b of briefings || []) {
       briefingMap.set(b.id, b);
     }
 
-    // Index proposals by source_briefing_id
     const proposalByBriefing = new Map<string, any>();
     for (const p of proposals || []) {
       if ((p as any).source_briefing_id) {
@@ -227,16 +246,16 @@ export default function CotacoesPropostasPipeline() {
         cabinClass: b.cabin_class,
         budgetRange: b.budget_range,
         briefing: mapBriefingData(b),
+        rawBriefing: b,
       });
     }
 
-    // 3. Standalone proposals (not linked to quote or briefing)
+    // 3. Standalone proposals
     for (const p of proposals || []) {
       if (linkedProposalIds.has(p.id)) continue;
       if ((p as any).quote_request_id) continue;
       if ((p as any).source_briefing_id && linkedBriefingIds.has((p as any).source_briefing_id)) continue;
 
-      // Try to find briefing data for this proposal
       const briefingData = (p as any).source_briefing_id ? briefingMap.get((p as any).source_briefing_id) : null;
 
       result.push({
@@ -254,10 +273,11 @@ export default function CotacoesPropostasPipeline() {
         proposalSlug: p.slug,
         proposalStatus: p.status,
         briefing: briefingData ? mapBriefingData(briefingData) : undefined,
+        rawBriefing: briefingData || undefined,
       });
     }
 
-    // Enrich all items with proposal info + viewer data
+    // Enrich all items
     for (const item of result) {
       if (item.proposalId && item.source === "quote") {
         const p = (proposals || []).find((pr: any) => pr.id === item.proposalId);
@@ -266,15 +286,15 @@ export default function CotacoesPropostasPipeline() {
           item.proposalStatus = p.status;
           item.stage = mapProposalToStage(p);
           if (!item.clientName && p.client_name) item.clientName = p.client_name;
-
-          // Check if this proposal has briefing data
           if ((p as any).source_briefing_id && !item.briefing) {
             const bd = briefingMap.get((p as any).source_briefing_id);
-            if (bd) item.briefing = mapBriefingData(bd);
+            if (bd) {
+              item.briefing = mapBriefingData(bd);
+              item.rawBriefing = bd;
+            }
           }
         }
       }
-      // Enrich with real viewer data
       if (item.proposalId && viewerStats) {
         const vs = viewerStats[item.proposalId];
         if (vs) {
@@ -316,6 +336,13 @@ export default function CotacoesPropostasPipeline() {
     { key: "cold", label: "Frias", icon: Snowflake, count: stats.cold },
   ];
 
+  const KPI_CARDS = [
+    { icon: Zap, label: "Extraindo", value: monitorKpis.extracting, color: "text-amber-600", bg: "bg-amber-50" },
+    { icon: BarChart3, label: "Campos", value: monitorKpis.totalFields, color: "text-blue-600", bg: "bg-blue-50" },
+    { icon: Target, label: "Completude", value: `${monitorKpis.completeness}%`, color: "text-accent", bg: "bg-accent/5" },
+    { icon: CheckCircle2, label: "Completos", value: monitorKpis.complete, color: "text-emerald-600", bg: "bg-emerald-50" },
+  ];
+
   return (
     <div className="p-4 md:p-6 space-y-4 animate-fade-in">
       {/* Header */}
@@ -325,99 +352,95 @@ export default function CotacoesPropostasPipeline() {
             <PlaneTakeoff className="w-6 h-6 text-accent" />
             Central de Cotações & Propostas
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Timeline inteligente de negociações</p>
+          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
+            Timeline unificada
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              LIVE
+            </span>
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-lg border border-border overflow-hidden">
-            <button
-              onClick={() => setView("timeline")}
-              className={cn("px-3 py-1.5 text-xs font-medium flex items-center gap-1 transition-colors",
-                view === "timeline" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted/50")}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" /> Timeline
-            </button>
-            <button
-              onClick={() => setView("monitor")}
-              className={cn("px-3 py-1.5 text-xs font-medium flex items-center gap-1 transition-colors",
-                view === "monitor" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted/50")}
-            >
-              <Radio className="w-3.5 h-3.5" /> Monitor
-            </button>
-          </div>
-          <Button size="sm" onClick={() => navigate("/propostas/nova")} className="gap-1.5">
-            <Plus className="w-3.5 h-3.5" /> Nova Proposta
-          </Button>
+        <Button size="sm" onClick={() => navigate("/propostas/nova")} className="gap-1.5">
+          <Plus className="w-3.5 h-3.5" /> Nova Proposta
+        </Button>
+      </div>
+
+      {/* KPI Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {KPI_CARDS.map((kpi) => {
+          const Icon = kpi.icon;
+          return (
+            <Card key={kpi.label} className={cn("p-3 flex items-center gap-3 border-0", kpi.bg)}>
+              <div className={cn("rounded-lg p-1.5", kpi.bg)}>
+                <Icon className={cn("w-4 h-4", kpi.color)} />
+              </div>
+              <div>
+                <p className={cn("text-lg font-bold leading-none", kpi.color)}>{kpi.value}</p>
+                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{kpi.label}</p>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Attention alert */}
+      {stats.needAttention > 0 && (
+        <Card className="p-3 flex items-center gap-3 border-red-500/20 bg-red-500/[0.03]">
+          <AlertTriangle className="w-5 h-5 text-red-500" />
+          <p className="text-sm font-semibold text-foreground">
+            {stats.needAttention} negociaç{stats.needAttention === 1 ? "ão precisa" : "ões precisam"} de atenção agora
+          </p>
+        </Card>
+      )}
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar destino, origem ou cliente..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex gap-1.5">
+          {TEMP_FILTERS.map((f) => {
+            const Icon = f.icon;
+            return (
+              <button
+                key={f.key}
+                onClick={() => setTempFilter(f.key)}
+                className={cn(
+                  "px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors",
+                  tempFilter === f.key
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-muted/50 border border-border/50"
+                )}
+              >
+                <Icon className="w-3 h-3" />
+                {f.label}
+                <Badge variant="neutral" className="text-[9px] ml-0.5">{f.count}</Badge>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {view === "monitor" ? (
-        <Suspense fallback={<MinimalLoader inline />}>
-          <CotacoesMonitorView />
-        </Suspense>
-      ) : (
-        <>
-          {/* Stats bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {stats.needAttention > 0 && (
-              <Card className="p-3 flex items-center gap-3 border-red-500/20 bg-red-500/[0.03] col-span-2 sm:col-span-4">
-                <AlertTriangle className="w-5 h-5 text-red-500" />
-                <p className="text-sm font-semibold text-foreground">
-                  {stats.needAttention} negociaç{stats.needAttention === 1 ? "ão precisa" : "ões precisam"} de atenção agora
-                </p>
-              </Card>
-            )}
-          </div>
+      {/* Timeline */}
+      <NegotiationTimeline
+        groups={grouped}
+        generating={generating}
+        onGenerate={handleGenerate}
+        onSelect={setSelectedItem}
+      />
 
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar destino, origem ou cliente..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <div className="flex gap-1.5">
-              {TEMP_FILTERS.map((f) => {
-                const Icon = f.icon;
-                return (
-                  <button
-                    key={f.key}
-                    onClick={() => setTempFilter(f.key)}
-                    className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors",
-                      tempFilter === f.key
-                        ? "bg-accent text-accent-foreground"
-                        : "text-muted-foreground hover:bg-muted/50 border border-border/50"
-                    )}
-                  >
-                    <Icon className="w-3 h-3" />
-                    {f.label}
-                    <Badge variant="neutral" className="text-[9px] ml-0.5">{f.count}</Badge>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Timeline */}
-          <NegotiationTimeline
-            groups={grouped}
-            generating={generating}
-            onGenerate={handleGenerate}
-            onSelect={setSelectedItem}
-          />
-
-          {/* Detail Panel */}
-          <NegotiationDetailPanel
-            item={selectedItem}
-            open={!!selectedItem}
-            onClose={() => setSelectedItem(null)}
-          />
-        </>
-      )}
+      {/* Detail Panel */}
+      <NegotiationDetailPanel
+        item={selectedItem}
+        open={!!selectedItem}
+        onClose={() => setSelectedItem(null)}
+      />
     </div>
   );
 }

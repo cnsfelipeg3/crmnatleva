@@ -58,6 +58,12 @@ export function NegotiationTimeline({ groups, generating, onGenerate, onSelect }
               </span>
               <span className="text-[11px] text-gray-500 ml-1 font-medium">
                 — {group.items.length} negociaç{group.items.length === 1 ? "ão" : "ões"}
+                {(() => {
+                  const extracting = group.items.filter(i => i.rawBriefing?.status === "extraindo").length;
+                  return extracting > 0 ? (
+                    <span className="ml-1.5 text-amber-600 font-semibold">· {extracting} extraindo</span>
+                  ) : null;
+                })()}
               </span>
             </div>
 
