@@ -33,7 +33,7 @@ const MONTH_MAP: Record<string, number> = {
 function extractDates(text: string): string[] {
   const dates: string[] = [];
   // "março 2027", "setembro/27", "julho de 2026"
-  const ptMonthYear = text.matchAll(/\b([a-záàâãéèêíïóôõúüçñ]+)\s*(?:de\s+|\/)?(\d{2,4})\b/gi);
+  const ptMonthYear = Array.from(text.matchAll(/\b([a-záàâãéèêíïóôõúüçñ]+)\s*(?:de\s+|\/)?(\d{2,4})\b/gi));
   for (const m of ptMonthYear) {
     const month = MONTH_MAP[m[1].toLowerCase()];
     if (month) {
@@ -42,7 +42,7 @@ function extractDates(text: string): string[] {
     }
   }
   // DD/MM/YYYY or DD/MM/YY
-  const ddmm = text.matchAll(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/g);
+  const ddmm = Array.from(text.matchAll(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})\b/g));
   for (const m of ddmm) {
     const year = m[3].length === 2 ? `20${m[3]}` : m[3];
     dates.push(`${m[1].padStart(2, "0")}/${m[2].padStart(2, "0")}/${year}`);
