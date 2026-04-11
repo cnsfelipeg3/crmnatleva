@@ -105,24 +105,6 @@ INSTRUCOES EXTRAS DE PROFUNDIDADE (OBRIGATORIAS):
 
 LEMBRETE FINAL: A pior falha possivel e OMITIR dados concretos da transcricao. Datas, horarios, adversarios, estadios, cidades, participantes — devem ser listados TODOS, sem excecao.`;
 
-INSTRUCOES EXTRAS DE PROFUNDIDADE (OBRIGATORIAS):
-- EXTRACAO MAXIMA - Extraia TODOS os nomes proprios mencionados no conteudo:
-  - Nomes de HOTEIS (ex: Marriott, Hilton, hostel XYZ): coloque em hospedagem.hoteis com nome exato, categoria estimada e faixa de preco se mencionada
-  - Nomes de RESTAURANTES e PRATOS (ex: hot pot, dim sum, pato laqueado, restaurante XYZ): coloque em experiencias.restaurantes com nome e tipo
-  - Nomes de PASSEIOS e ATRACOES com detalhes (preco se citado, duracao se citada, dicas praticas como 'ir cedo pra evitar fila'): coloque em experiencias.passeios
-  - Nomes de COMPANHIAS AEREAS e AEROPORTOS: coloque em logistica
-  - PRECOS mencionados: converta TUDO pra Reais (R$). Se o video diz '$50 USD', converta pra ~R$280. Se diz '200 yuan', converta pra ~R$150. SEMPRE estime em Reais mesmo que o video use outra moeda.
-  - DICAS PRATICAS do video (chip de internet, app de traducao, melhor bairro pra ficar, quanto levar de dinheiro, como pegar taxi, etc): coloque como experiencias_unicas
-- FINANCEIRO - NUNCA deixe faixa_preco_total vazio. Estime SEMPRE:
-  - Se o video NAO menciona preco total, ESTIME baseado nos precos individuais citados
-  - Se nenhum preco e citado, estime baseado no destino e nivel do roteiro
-  - Formato: 'R$X.000 - R$Y.000 por pessoa (estimativa)'
-  - Se economico: R$3.000-8.000 | Se moderado: R$8.000-15.000 | Se premium: R$15.000-35.000 | Se luxo: R$35.000+
-- VENDAS - Argumentos NUNCA devem ser genericos como 'experiencia unica' ou 'custo beneficio excelente'. USE dados especificos do video pra construir argumentos concretos com numeros, nomes e fatos.
-- GATILHO EMOCIONAL - Use DETALHES do video, nao frases genericas. Pinte uma cena vivida com elementos reais do destino.
-- OBJECOES - Sempre gere pelo menos 3 objecoes com contornos ESPECIFICOS usando dados reais do video. Nunca contorne com frases genericas.
-- CHUNKS - Gere pelo menos 5 chunks acionaveis: logistica pratica, gastronomia, experiencias imperdiveis, dicas praticas, argumento de venda. Se houver conteudo, gere ate 10.
-- REGRA FINAL: Se voce extraiu menos de 6 passeios, 0 restaurantes, 0 hoteis e 0 precos de um video de 30+ minutos sobre um destino, sua extracao esta FALHANDO. Releia o conteudo e extraia mais.`;
 
 // ─── Truncation Strategy (60% head + 35% tail) ───
 function truncateForOrion(text: string, maxChars = 40000): string {
