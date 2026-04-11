@@ -125,7 +125,7 @@ function smartParseDate(dateStr: string | null | undefined): string | null {
   }
 
   // "15 de março de 2027" or "março de 2027" or "março 2027"
-  const ptMatch = s.match(/(?:(\d{1,2})\s+de\s+)?(\w+)\s+(?:de\s+)?(\d{4})/);
+  const ptMatch = s.match(/(?:(\d{1,2})\s+de\s+)?([a-záàâãéèêíïóôõúüçñ]+)\s+(?:de\s+)?(\d{4})/);
   if (ptMatch) {
     const month = MONTH_MAP[ptMatch[2]];
     if (month) {
@@ -135,7 +135,7 @@ function smartParseDate(dateStr: string | null | undefined): string | null {
   }
 
   // "month year" without "de" (e.g. "março 2027")
-  const simpleMatch = s.match(/^(\w+)\s+(\d{4})$/);
+  const simpleMatch = s.match(/^([a-záàâãéèêíïóôõúüçñ]+)\s+(\d{4})$/);
   if (simpleMatch) {
     const month = MONTH_MAP[simpleMatch[1]];
     if (month) return `${simpleMatch[2]}-${month}-01`;
