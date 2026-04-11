@@ -16,7 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import TaxonomyPreview, { Taxonomy } from "./TaxonomyPreview";
 
 const CATEGORIES = [
-  "geral", "destinos", "scripts", "preços", "fornecedores", "processos", "treinamento", "compliance",
+  "geral", "destinos", "eventos", "scripts", "preços", "fornecedores", "processos", "treinamento", "compliance", "cultura", "atendimento", "regras",
 ];
 
 function extractYouTubeId(url: string): string | null {
