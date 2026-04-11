@@ -328,160 +328,167 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
   const isWarm = temperature === "warm";
   const needsAction = !item.proposalId && item.source === "quote" && item.rawQuote;
 
+  const extractionPct = item.rawBriefing
+    ? Math.round((countFilledFields(item.rawBriefing) / MONITOR_TOTAL_FIELDS) * 100)
+    : undefined;
+  const displayStage =
+    item.rawBriefing?.status === "extraindo" ? "extraindo" :
+    item.rawBriefing && countFilledFields(item.rawBriefing) / MONITOR_TOTAL_FIELDS >= 0.7 && !item.proposalId ? "aguardando_cotacao" :
+    item.stage === "nova" || item.stage === "analise" ? (item.rawBriefing ? "extraindo" : "em_atendimento") :
+    item.stage;
+
   return (
     <Card
       className={cn(
-        "p-4 space-y-2.5 cursor-pointer group transition-all duration-200 border-l-4 bg-white hover:shadow-lg hover:scale-[1.01]",
-        isHot && "border-l-red-600 bg-red-50 shadow-md shadow-red-500/10",
-        isWarm && "border-l-amber-500 bg-amber-50/50",
-        isCold && "border-l-blue-500 bg-blue-50/50 opacity-80",
-        !isHot && !isCold && !isWarm && !isFinished && "border-l-gray-300",
-        isFinished && item.stage === "aceita" && "border-l-emerald-500 bg-emerald-50/50",
-        isFinished && item.stage === "perdida" && "border-l-gray-400 opacity-60"
+        "p-0 cursor-pointer group transition-all duration-200 overflow-hidden",
+        "bg-card hover:shadow-lg hover:scale-[1.005]",
+        isHot && "ring-1 ring-red-400/40 shadow-md shadow-red-500/10",
+        isWarm && "ring-1 ring-amber-300/30",
+        isCold && "opacity-80",
+        isFinished && item.stage === "aceita" && "ring-1 ring-emerald-400/30",
+        isFinished && item.stage === "perdida" && "opacity-60"
       )}
       onClick={() => onSelect(item)}
     >
-      {/* Top row */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <Badge className={cn("text-[9px] border", src.className)}>{src.label}</Badge>
-          <Badge className={cn("text-[9px] border", stageInfo.className)}>{stageInfo.label}</Badge>
-          <TemperatureScore temperature={temperature} showLabel />
-          {b?.leadUrgency === "alta" && (
-            <Badge className="text-[9px] bg-red-600 text-white border-red-600 font-bold">Urgente</Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <ExtractionRing item={item} />
-          <span className="text-[10px] text-gray-500 shrink-0 font-medium">
+      {/* Color stripe top */}
+      <div className={cn(
+        "h-1 w-full",
+        isHot && "bg-red-500",
+        isWarm && "bg-amber-400",
+        isCold && "bg-blue-400",
+        !isHot && !isCold && !isWarm && !isFinished && "bg-muted-foreground/20",
+        isFinished && item.stage === "aceita" && "bg-emerald-500",
+        isFinished && item.stage === "perdida" && "bg-muted-foreground/30"
+      )} />
+
+      <div className="p-3.5 space-y-2.5">
+        {/* Row 1: Route + Date */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-accent shrink-0" />
+              <p className="text-sm font-bold text-foreground truncate">{route}</p>
+            </div>
+            {item.clientName && (
+              <p className="text-xs text-muted-foreground truncate mt-0.5 pl-5">{item.clientName}</p>
+            )}
+          </div>
+          <span className="text-[10px] text-muted-foreground shrink-0 font-medium tabular-nums">
             {safeFormat(item.createdAt, "dd/MM HH:mm")}
           </span>
         </div>
-      </div>
 
-      {/* Route + client */}
-      <div className="flex items-center gap-1.5">
-        <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-        <p className="text-sm font-bold text-gray-900 truncate">{route}</p>
-      </div>
-      {item.clientName && (
-        <p className="text-xs text-gray-700 truncate font-medium">{item.clientName}</p>
-      )}
-
-      {/* Briefing insights */}
-      {b && (b.tripMotivation || b.leadScore || b.leadSentiment) && (
-        <div className="flex items-center gap-2.5 text-[11px] flex-wrap">
-          {b.tripMotivation && (
-            <span className="flex items-center gap-0.5 text-rose-600 font-medium">
-              <Heart className="w-3 h-3" /> {b.tripMotivation}
+        {/* Row 2: Badges line — compact, single row */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Badge className={cn("text-[9px] border h-5 px-1.5", src.className)}>{src.label}</Badge>
+          <TemperatureScore temperature={temperature} showLabel />
+          {b?.leadUrgency === "alta" && (
+            <Badge className="text-[9px] bg-red-600 text-white border-red-600 font-bold h-5 px-1.5">Urgente</Badge>
+          )}
+          {item.pax > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground font-medium">
+              <Users className="w-3 h-3" /> {item.pax}
             </span>
           )}
-          {b.leadScore != null && b.leadScore > 0 && (
-            <LeadScoreBar score={b.leadScore} />
-          )}
-          {b.leadSentiment && SENTIMENT_CONFIG[b.leadSentiment] && (
-            <span className={cn("flex items-center gap-0.5", SENTIMENT_CONFIG[b.leadSentiment].color)}>
-              <Brain className="w-3 h-3" /> {SENTIMENT_CONFIG[b.leadSentiment].label}
+          {item.departureDate && safeParse(item.departureDate + "T12:00:00") && (
+            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground font-medium">
+              <CalendarDays className="w-3 h-3" />
+              {safeFormat(item.departureDate + "T12:00:00", "dd MMM", { locale: ptBR })}
             </span>
           )}
-          {b.priceSensitivity && (
-            <span className="flex items-center gap-0.5 text-gray-700 font-medium">
-              <DollarSign className="w-3 h-3" /> {b.priceSensitivity}
+          {(item.viewCount || 0) > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] text-accent font-medium">
+              <Eye className="w-3 h-3" /> {item.viewCount}x
             </span>
           )}
         </div>
-      )}
 
-      {/* Narrative */}
-      <div>
+        {/* Row 3: Briefing insights — compact row */}
+        {b && (b.tripMotivation || b.leadScore || b.priceSensitivity) && (
+          <div className="flex items-center gap-2 text-[10px] flex-wrap">
+            {b.tripMotivation && (
+              <span className="flex items-center gap-0.5 text-rose-600 font-medium">
+                <Heart className="w-3 h-3" /> {b.tripMotivation}
+              </span>
+            )}
+            {b.leadScore != null && b.leadScore > 0 && (
+              <LeadScoreBar score={b.leadScore} />
+            )}
+            {b.priceSensitivity && (
+              <span className="flex items-center gap-0.5 text-muted-foreground font-medium">
+                <DollarSign className="w-3 h-3" /> {b.priceSensitivity}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Row 4: Narrative */}
         <p className={cn(
-          "text-xs text-gray-600 italic leading-relaxed",
-          !expanded && "line-clamp-3"
+          "text-[11px] text-muted-foreground italic leading-relaxed",
+          !expanded && "line-clamp-2"
         )}>
           "{narrative}"
         </p>
-        {narrative.length > 120 && (
+        {narrative.length > 100 && (
           <button
-            className="text-[10px] text-emerald-700 hover:underline mt-0.5 font-semibold"
+            className="text-[10px] text-accent hover:underline font-semibold"
             onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
           >
             {expanded ? "ver menos" : "ver mais"}
           </button>
         )}
-      </div>
 
-      {/* Visão da Nath */}
-      <NathInsight item={item} />
+        {/* Row 5: Nath */}
+        <NathInsight item={item} />
 
-      {/* Meta */}
-      <div className="flex items-center gap-2 text-[11px] text-gray-600 flex-wrap font-medium">
-        {item.departureDate && safeParse(item.departureDate + "T12:00:00") && (
-          <span className="flex items-center gap-0.5">
-            <CalendarDays className="w-3 h-3 text-blue-500" />
-            {safeFormat(item.departureDate + "T12:00:00", "dd MMM", { locale: ptBR })}
-            {item.returnDate && safeParse(item.returnDate + "T12:00:00") ? ` — ${safeFormat(item.returnDate + "T12:00:00", "dd MMM", { locale: ptBR })}` : ""}
-          </span>
-        )}
-        {item.pax > 0 && (
-          <span className="flex items-center gap-0.5"><Users className="w-3 h-3 text-indigo-500" /> {item.pax}</span>
-        )}
-        {(item.viewCount || 0) > 0 && (
-          <span className="flex items-center gap-0.5"><Eye className="w-3 h-3 text-emerald-500" /> {item.viewCount}x</span>
-        )}
-      </div>
+        {/* Row 6: Stepper + Extraction */}
+        <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/30">
+          <PipelineStepper stage={displayStage} extractionPct={extractionPct} />
+          <ExtractionRing item={item} />
+        </div>
 
-      {/* Pipeline stepper */}
-      <PipelineStepper
-        stage={
-          item.rawBriefing?.status === "extraindo" ? "extraindo" :
-          item.rawBriefing && countFilledFields(item.rawBriefing) / MONITOR_TOTAL_FIELDS >= 0.7 && !item.proposalId ? "aguardando_cotacao" :
-          item.stage === "nova" || item.stage === "analise" ? (item.rawBriefing ? "extraindo" : "em_atendimento") :
-          item.stage
-        }
-        extractionPct={item.rawBriefing ? Math.round((countFilledFields(item.rawBriefing) / MONITOR_TOTAL_FIELDS) * 100) : undefined}
-      />
-
-      {/* Actions */}
-      <div className="flex gap-1.5 pt-0.5" onClick={(e) => e.stopPropagation()}>
-        {item.proposalId ? (
-          <>
-            <Button
-              size="sm" variant="outline"
-              className="h-8 text-xs gap-1 flex-1 border-emerald-600 text-emerald-700 hover:bg-emerald-50 font-semibold"
-              onClick={() => navigate(`/propostas/${item.proposalId}`)}
-            >
-              <FileText className="w-3 h-3" />
-              {item.stage === "proposta_criada" ? "Revisar & Enviar" : "Ver Proposta"}
-            </Button>
-            {item.stage === "enviada" && (
-              <Button size="sm" variant="ghost" className="h-8 text-xs gap-1 text-blue-600 hover:bg-blue-50 font-semibold">
-                <MessageSquare className="w-3 h-3" /> Follow-up
+        {/* Row 7: Actions */}
+        <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+          {item.proposalId ? (
+            <>
+              <Button
+                size="sm" variant="outline"
+                className="h-7 text-[11px] gap-1 flex-1 border-accent/50 text-accent hover:bg-accent/5 font-semibold"
+                onClick={() => navigate(`/propostas/${item.proposalId}`)}
+              >
+                <FileText className="w-3 h-3" />
+                {item.stage === "proposta_criada" ? "Revisar & Enviar" : "Ver Proposta"}
               </Button>
-            )}
-          </>
-        ) : needsAction ? (
-          <Button
-            size="sm"
-            className={cn(
-              "h-8 text-xs gap-1 flex-1 font-bold shadow-sm",
-              isHot
-                ? "bg-red-600 hover:bg-red-700 text-white shadow-red-500/20"
-                : "bg-emerald-700 hover:bg-emerald-800 text-white"
-            )}
-            onClick={() => onGenerate(item)}
-            disabled={generating === item.id}
-          >
-            {generating === item.id ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <Sparkles className="w-3 h-3" />
-            )}
-            Gerar Proposta IA
+              {item.stage === "enviada" && (
+                <Button size="sm" variant="ghost" className="h-7 text-[11px] gap-1 text-blue-600 hover:bg-blue-50 font-semibold">
+                  <MessageSquare className="w-3 h-3" /> Follow-up
+                </Button>
+              )}
+            </>
+          ) : needsAction ? (
+            <Button
+              size="sm"
+              className={cn(
+                "h-7 text-[11px] gap-1 flex-1 font-bold shadow-sm",
+                isHot
+                  ? "bg-red-600 hover:bg-red-700 text-white shadow-red-500/20"
+                  : "bg-primary hover:bg-primary/90 text-primary-foreground"
+              )}
+              onClick={() => onGenerate(item)}
+              disabled={generating === item.id}
+            >
+              {generating === item.id ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <Sparkles className="w-3 h-3" />
+              )}
+              Gerar Proposta IA
+            </Button>
+          ) : null}
+          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 ml-auto text-muted-foreground hover:text-foreground">
+            <ChevronRight className="w-4 h-4" />
           </Button>
-        ) : null}
-        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 ml-auto text-gray-500 hover:text-gray-900">
-          <ChevronRight className="w-4 h-4" />
-        </Button>
+        </div>
       </div>
     </Card>
   );
