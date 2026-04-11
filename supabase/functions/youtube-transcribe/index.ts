@@ -518,73 +518,66 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { url, manual_transcript, diagnose } = (body ?? {}) as {
+    const { url, manual_transcript } = (body ?? {}) as {
       url?: string;
       manual_transcript?: string;
-      diagnose?: boolean | string | number;
     };
+    const debugMode = (body as any)?.debug === true;
 
-    const diagnosticMode = diagnose === true || diagnose === "true" || diagnose === 1 || diagnose === "1";
-
-    if (diagnosticMode) {
-      const runtimeSupadataKey = Deno.env.get("SUPADATA_API_KEY");
-      const requestUrlProvided = typeof url === "string" && url.trim().length > 0;
-      const diagnostic: Record<string, unknown> = {
-        diagnostic: true,
-        secret: {
-          name: "SUPADATA_API_KEY",
-          configuredAtStartup: !!SUPADATA_API_KEY,
-          configuredAtRuntime: !!runtimeSupadataKey,
-        },
-        requestUrlProvided,
-      };
-
-      if (requestUrlProvided && runtimeSupadataKey) {
-        try {
-          const probeResponse = await fetch(
-            `https://api.supadata.ai/v1/transcript?url=${encodeURIComponent(url.trim())}`,
-            {
-              method: "GET",
-              headers: { "x-api-key": runtimeSupadataKey },
-            },
-          );
-          await probeResponse.text().catch(() => {});
-
-          diagnostic.probe = {
-            attempted: true,
-            ok: probeResponse.ok,
-            status: probeResponse.status,
-            hint: probeResponse.ok
-              ? "Credencial aceita pela Supadata"
-              : probeResponse.status === 401 || probeResponse.status === 403
-                ? "Chave inválida, sem permissão ou nome incorreto"
-                : probeResponse.status === 402 || probeResponse.status === 429
-                  ? "Possível falta de créditos ou limite atingido"
-                  : `Resposta inesperada da Supadata (${probeResponse.status})`,
-          };
-        } catch (probeError) {
-          diagnostic.probe = {
-            attempted: true,
-            ok: false,
-            error: probeError instanceof Error ? probeError.message : String(probeError),
-          };
-        }
-      } else {
-        diagnostic.probe = {
-          attempted: false,
-          reason: !runtimeSupadataKey
-            ? "SUPADATA_API_KEY não configurada em runtime"
-            : "Envie uma URL junto com diagnose=true para testar a chamada na Supadata",
-        };
+    if (debugMode) {
+      const envCheck: Record<string, boolean> = {};
+      for (const k of ["SUPADATA_API_KEY", "LOVABLE_API_KEY", "ANTHROPIC_API_KEY", "FIRECRAWL_API_KEY"]) {
+        envCheck[k] = !!Deno.env.get(k);
       }
 
-      console.log("[youtube-transcribe] Diagnostic mode", {
-        configuredAtStartup: !!SUPADATA_API_KEY,
-        configuredAtRuntime: !!runtimeSupadataKey,
-        requestUrlProvided,
-      });
+      const probes: Record<string, { status: number | null; ok: boolean; error?: string }> = {};
 
-      return new Response(JSON.stringify(diagnostic), {
+      // 1) Supadata
+      const supadataKey = Deno.env.get("SUPADATA_API_KEY");
+      try {
+        const r = await fetch(
+          "https://api.supadata.ai/v1/transcript?url=https://youtu.be/dQw4w9WgXcQ",
+          { method: "GET", headers: supadataKey ? { "x-api-key": supadataKey } : {} },
+        );
+        const txt = await r.text().catch(() => "");
+        probes["supadata"] = { status: r.status, ok: r.ok };
+      } catch (e: any) {
+        probes["supadata"] = { status: null, ok: false, error: e.message };
+      }
+
+      // 2) TimedText
+      try {
+        const r = await fetch(
+          "https://www.youtube.com/api/timedtext?v=dQw4w9WgXcQ&lang=pt&fmt=json3",
+        );
+        const txt = await r.text().catch(() => "");
+        probes["timedtext"] = { status: r.status, ok: r.ok };
+      } catch (e: any) {
+        probes["timedtext"] = { status: null, ok: false, error: e.message };
+      }
+
+      // 3) InnerTube (iOS client)
+      try {
+        const r = await fetch(
+          "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              context: {
+                client: { clientName: "IOS", clientVersion: "19.29.1", hl: "pt" },
+              },
+              videoId: "dQw4w9WgXcQ",
+            }),
+          },
+        );
+        const txt = await r.text().catch(() => "");
+        probes["innertube_ios"] = { status: r.status, ok: r.ok };
+      } catch (e: any) {
+        probes["innertube_ios"] = { status: null, ok: false, error: e.message };
+      }
+
+      return new Response(JSON.stringify({ debug: true, env: envCheck, probes }, null, 2), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
