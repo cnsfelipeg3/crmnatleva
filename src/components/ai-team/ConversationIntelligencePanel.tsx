@@ -291,8 +291,9 @@ function extractSentimentSignals(text: string): { signal: string; emoji: string 
 // ── Scoring ──
 function calcCompleteness(fields: Record<string, any>): number {
   const weights: Record<string, number> = {
-    name: 10, destinations: 20, dates: 15, passengers: 10, budget: 15,
-    tripType: 10, origin: 5, duration: 5, preferences: 5, signals: 5,
+    name: 7, destinations: 12, dates: 10, passengers: 7, budget: 10,
+    tripType: 7, origin: 5, duration: 5, preferences: 5, signals: 3,
+    airline: 7, flightClass: 5, airport: 5, flightTime: 4, baggage: 4, documentation: 4,
   };
   let score = 0;
   if (fields.name) score += weights.name;
@@ -305,6 +306,12 @@ function calcCompleteness(fields: Record<string, any>): number {
   if (fields.duration) score += weights.duration;
   if (fields.preferences.length > 0) score += weights.preferences;
   if (fields.signals.length > 0) score += weights.signals;
+  if (fields.airline) score += weights.airline;
+  if (fields.flightClass) score += weights.flightClass;
+  if (fields.airport) score += weights.airport;
+  if (fields.flightTime) score += weights.flightTime;
+  if (fields.baggage) score += weights.baggage;
+  if (fields.documentation.length > 0) score += weights.documentation;
   return score;
 }
 
