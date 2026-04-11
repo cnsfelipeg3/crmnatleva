@@ -40,9 +40,9 @@ const SOURCE_BADGE: Record<string, { label: string; className: string }> = {
 };
 
 const STAGE_LABELS: Record<string, { label: string; className: string }> = {
-  nova: { label: "Aguardando proposta", className: "bg-gray-800 text-white border-gray-800" },
-  analise: { label: "Em análise", className: "bg-blue-500 text-white border-blue-500" },
-  proposta_criada: { label: "Proposta criada", className: "bg-amber-500 text-white border-amber-500" },
+  nova: { label: "Em atendimento", className: "bg-blue-500 text-white border-blue-500" },
+  analise: { label: "Extraindo dados", className: "bg-amber-500 text-white border-amber-500" },
+  proposta_criada: { label: "Proposta criada", className: "bg-accent text-accent-foreground border-accent" },
   enviada: { label: "Enviada", className: "bg-indigo-500 text-white border-indigo-500" },
   aceita: { label: "Fechada ✓", className: "bg-emerald-600 text-white border-emerald-600" },
   perdida: { label: "Perdida", className: "bg-red-600 text-white border-red-600" },
@@ -431,7 +431,15 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
       </div>
 
       {/* Pipeline stepper */}
-      <PipelineStepper stage={item.stage} />
+      <PipelineStepper
+        stage={
+          item.rawBriefing?.status === "extraindo" ? "extraindo" :
+          item.rawBriefing && countFilledFields(item.rawBriefing) / MONITOR_TOTAL_FIELDS >= 0.7 && !item.proposalId ? "aguardando_cotacao" :
+          item.stage === "nova" || item.stage === "analise" ? (item.rawBriefing ? "extraindo" : "em_atendimento") :
+          item.stage
+        }
+        extractionPct={item.rawBriefing ? Math.round((countFilledFields(item.rawBriefing) / MONITOR_TOTAL_FIELDS) * 100) : undefined}
+      />
 
       {/* Actions */}
       <div className="flex gap-1.5 pt-0.5" onClick={(e) => e.stopPropagation()}>
