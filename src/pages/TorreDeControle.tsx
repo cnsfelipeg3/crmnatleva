@@ -33,32 +33,46 @@ export default function TorreDeControle() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Active trips (sales with travel dates)
-        const { count: activeTrips } = await (supabase as any)
-          .from("sales")
-          .select("*", { count: "exact", head: true })
-          .in("status", ["confirmed", "in_progress", "pending"]);
+        const today = new Date().toISOString().slice(0, 10);
 
-        // Pending checkins
-        const { count: pendingCheckins } = await (supabase as any)
+        // Active trips: currently traveling (departure <= today <= return)
+        // or departed within 30 days with no return date
+        const { data: activeSales } = await supabase
+          .from("sales")
+          .select("id, name, departure_date, return_date, destination_iata, origin_iata")
+          .not("departure_date", "is", null)
+          .neq("status", "Cancelado")
+          .lte("departure_date", today);
+
+        const activeTrips = (activeSales || []).filter(s => {
+          if (s.return_date && s.return_date >= today) return true;
+          if (!s.return_date) {
+            const depDays = Math.floor((Date.now() - new Date(s.departure_date!).getTime()) / 86400000);
+            return depDays <= 30;
+          }
+          return false;
+        });
+
+        // Pending checkins (status = PENDENTE)
+        const { count: pendingCheckins } = await supabase
           .from("checkin_tasks")
           .select("*", { count: "exact", head: true })
-          .eq("status", "pending");
+          .eq("status", "PENDENTE");
 
-        // Pending lodgings (sales needing hotel confirmation)
+        // Pending lodging confirmations
         const { count: pendingLodgings } = await (supabase as any)
-          .from("sales")
+          .from("lodging_confirmation_tasks")
           .select("*", { count: "exact", head: true })
-          .eq("hotel_status", "pending");
+          .eq("status", "PENDENTE");
 
-        // Pending alterations
+        // Pending trip alterations
         const { count: pendingAlterations } = await (supabase as any)
           .from("trip_alterations")
           .select("*", { count: "exact", head: true })
-          .in("status", ["pending", "in_progress"]);
+          .in("status", ["PENDENTE", "EM_ANDAMENTO"]);
 
         setKpis({
-          activeTrips: activeTrips || 0,
+          activeTrips: activeTrips.length,
           pendingCheckins: pendingCheckins || 0,
           pendingLodgings: pendingLodgings || 0,
           pendingAlterations: pendingAlterations || 0,
@@ -71,7 +85,7 @@ export default function TorreDeControle() {
         const { data: checkins } = await supabase
           .from("checkin_tasks")
           .select("id, sale_id, direction, departure_datetime_utc, status, priority_score")
-          .eq("status", "pending")
+          .eq("status", "PENDENTE")
           .order("departure_datetime_utc", { ascending: true })
           .limit(5);
 
@@ -93,25 +107,49 @@ export default function TorreDeControle() {
           }
         }
 
-        // Pending alterations
-        const { data: alterations } = await (supabase as any)
-          .from("trip_alterations")
-          .select("id, type, description, status, created_at")
-          .in("status", ["pending", "in_progress"])
-          .order("created_at", { ascending: false })
+        // Pending lodging confirmations
+        const { data: lodgings } = await (supabase as any)
+          .from("lodging_confirmation_tasks")
+          .select("id, milestone, status, scheduled_at_utc")
+          .eq("status", "PENDENTE")
+          .order("scheduled_at_utc", { ascending: true })
           .limit(3);
 
-        if (alterations) {
-          for (const a of alterations) {
+        if (lodgings) {
+          for (const l of lodgings) {
+            const scheduled = l.scheduled_at_utc ? parseISO(l.scheduled_at_utc) : null;
+            const daysLeft = scheduled && isValid(scheduled) ? differenceInDays(scheduled, new Date()) : null;
             items.push({
-              id: a.id,
-              type: "alteracao",
-              title: `Alteração: ${a.type || "Geral"}`,
-              subtitle: a.description?.slice(0, 60) || "Sem descrição",
-              urgency: a.status === "pending" ? "alta" : "media",
-              route: "/alteracoes",
+              id: l.id,
+              type: "hospedagem",
+              title: `Confirmação Hotel (${l.milestone || "—"})`,
+              subtitle: scheduled && isValid(scheduled)
+                ? `Prazo ${format(scheduled, "dd/MM", { locale: ptBR })}`
+                : "Sem prazo definido",
+              urgency: l.milestone === "H24" ? "alta" : l.milestone === "D7" ? "media" : "baixa",
+              daysLeft: daysLeft ?? undefined,
+              route: "/hospedagem",
             });
           }
+        }
+
+        // Active trips needing attention (departing tomorrow or today)
+        const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+        const tripsUrgent = activeTrips.filter(s => {
+          const dep = s.departure_date?.slice(0, 10);
+          return dep === today || dep === tomorrow;
+        });
+        for (const t of tripsUrgent.slice(0, 3)) {
+          const dep = t.departure_date ? t.departure_date.slice(0, 10) : null;
+          items.push({
+            id: t.id,
+            type: "viagem",
+            title: t.name || "Viagem sem nome",
+            subtitle: `${t.origin_iata || "?"} → ${t.destination_iata || "?"} • ${dep === today ? "Embarca HOJE" : "Embarca amanhã"}`,
+            urgency: dep === today ? "alta" : "media",
+            daysLeft: dep === today ? 0 : 1,
+            route: `/sales/${t.id}`,
+          });
         }
 
         // Sort by urgency
