@@ -1,98 +1,78 @@
 
 
-# Ideia: "Timeline Inteligente" — Substituir o Kanban por uma Linha do Tempo Viva
+# Plano: Central de Cotações & Propostas — Redesign Inteligente
 
-## O Problema Atual
+## Diagnóstico dos problemas atuais
 
-O pipeline Kanban atual é estático e genérico — é o mesmo modelo que qualquer CRM usa. Ele mostra "caixinhas" organizadas por status, mas não conta a **história** de cada negociação. Você precisa clicar em cada card para entender o que está acontecendo.
+1. **Briefings IA não aparecem no Pipeline** — A timeline só puxa `portal_quote_requests` e `proposals`. Os `quotation_briefings` (vindos das conversas com agentes IA) estão completamente ausentes.
+2. **Cards são rasos** — Mostram apenas rota, data e uma frase genérica. Dados ricos do briefing (motivação, preferências de hotel, sensibilidade a preço, sentimento do lead, recomendação da IA) não são exibidos.
+3. **Painel de detalhes é básico** — O sheet lateral mostra dados mínimos sem nenhuma interpretação inteligente da IA sobre o caso.
+4. **Geração de proposta "cega"** — Quando o consultor clica "Gerar Proposta IA", não tem um resumo estratégico antes para contextualizar a decisão.
+5. **Redundância de páginas** — `CotacoesUnified.tsx` (3 abas separadas) ainda existe mas não é mais a rota principal. Há fragmentação.
 
-## A Proposta: Uma Abordagem Completamente Diferente
+## O que será feito
 
-Em vez de um Kanban com colunas fixas, criar uma **Timeline de Negociações** — uma interface que trata cada cotação/proposta como uma **linha narrativa viva**, inspirada em feeds de atividade (como GitHub ou Notion).
+### Etapa 1 — Integrar Briefings IA ao Pipeline unificado
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│  🔍 Filtro inteligente    [Todas] [Quentes] [Frias]     │
-│                           [Hoje] [Semana] [Aguardando]  │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  ● AGORA — 2 negociações precisam de atenção            │
-│  ├─ 🔴 Ana Silva · Orlando · 14 abr                    │
-│  │   "Pediu orçamento há 3h, ainda sem proposta"        │
-│  │   [Gerar Proposta IA] [Ver detalhes]                 │
-│  │                                                      │
-│  ├─ 🟡 Carlos Souza · Europa · 20 mai                  │
-│  │   "Proposta enviada há 2 dias, sem visualização"     │
-│  │   [Reenviar] [Ligar] [Ajustar proposta]              │
-│  │                                                      │
-│  ● HOJE — 3 atualizações                                │
-│  ├─ 🟢 Maria Lima · Maldivas                           │
-│  │   "Proposta visualizada 2x · Último acesso: 10min"   │
-│  │   Progresso: ████████░░ 80% · Score: 🔥 Alto        │
-│  │   [Ver proposta] [Enviar mensagem]                   │
-│  │                                                      │
-│  ● ONTEM                                                │
-│  ├─ ✅ Pedro Ramos · Miami · ACEITA                     │
-│  │   "Conversão em 4 dias · Valor: R$ 28.500"           │
-│  │                                                      │
-│  ● ESTA SEMANA                                          │
-│  └─ ...                                                 │
-│                                                         │
-│ ─── Painel lateral (ao clicar) ──────────────────────── │
-│  Timeline detalhada da negociação:                      │
-│  09:00 — Cotação recebida via portal                    │
-│  09:15 — IA extraiu: 2 adultos, executiva, hotel 5★     │
-│  10:30 — Proposta gerada automaticamente                │
-│  11:00 — Consultor ajustou hotel                        │
-│  14:00 — Proposta enviada ao cliente                    │
-│  15:22 — Cliente visualizou (3min de leitura)           │
-│  16:45 — Cliente abriu novamente (seção "voos")         │
-└─────────────────────────────────────────────────────────┘
-```
+Buscar `quotation_briefings` no `CotacoesPropostasPipeline` e mapeá-los como `NegotiationItem` com `source: "briefing"`. Usar os campos ricos (lead_name, destination, urgency, lead_score, budget_range, trip_motivation, etc.) para popular os cards. Evitar duplicatas quando briefing já tem `proposal_id`.
 
-## O que muda fundamentalmente
+### Etapa 2 — Card enriquecido com insights da conversa
 
-### 1. Priorização automática por urgência
-Em vez de você procurar o que precisa de atenção, o sistema **empurra para cima** o que é urgente:
-- Cotações sem proposta há mais de 2h
-- Propostas enviadas sem visualização há 24h+
-- Clientes que visualizaram mas não responderam
-- Viagens com data próxima sem fechamento
+Expandir o `NegotiationCard` para exibir:
+- **Lead Score** visual (barra ou badge colorido)
+- **Urgência** detectada pela IA (badge)
+- **Motivação da viagem** (ex: "Lua de mel", "Família com crianças")
+- **Sentimento do lead** (positivo/neutro/hesitante)
+- **Orçamento + sensibilidade** a preço
+- Layout mais informativo, com seções colapsáveis para não poluir
 
-### 2. Frases narrativas geradas pela IA
-Cada card tem uma **frase contextual** que resume a situação em linguagem natural, como:
-- "Pediu Orlando para 4 pessoas, classe executiva. Aguardando proposta há 3h"
-- "Visualizou a proposta 4 vezes na última hora — momento quente para contato"
-- "Proposta perdida após 12 dias sem resposta"
+### Etapa 3 — Painel de detalhes inteligente (Sheet lateral redesenhado)
 
-### 3. Score de temperatura + barra de progresso
-Cada negociação ganha um indicador visual de "temperatura" (frio/morno/quente) calculado por:
-- Tempo desde último contato
-- Quantidade de visualizações da proposta
-- Proximidade da data de viagem
-- Valor do orçamento
+Redesenhar o `NegotiationDetailPanel` com 3 seções:
 
-### 4. Ações contextuais inteligentes
-Os botões mudam conforme o momento:
-- Sem proposta → "Gerar Proposta IA"
-- Proposta criada → "Revisar e Enviar"
-- Enviada sem visualizar → "Reenviar" / "Ligar"
-- Visualizada → "Enviar mensagem de follow-up"
+1. **Resumo Estratégico IA** — Card de destaque no topo com: resumo da conversa, recomendação da IA (campo `ai_recommendation`), próximos passos sugeridos (`next_steps`), leitura comportamental do orçamento (`budget_behavioral_reading`).
 
-### 5. Painel lateral com micro-timeline
-Ao clicar em qualquer negociação, abre um painel com toda a história: cada evento (cotação recebida, IA extraiu dados, proposta gerada, enviada, visualizada, aceita...) em formato de timeline vertical.
+2. **Perfil completo do pedido** — Todos os dados organizados por categoria:
+   - Viagem (destino, datas, duração, flexibilidade)
+   - Grupo (adultos, crianças, idades, detalhes)
+   - Hospedagem (preferência, estrelas, localização, notas)
+   - Voos (aeroporto, classe, companhia preferida)
+   - Experiências (obrigatórias vs. desejadas, ritmo)
+   - Logística (transfer, carro, seguro)
 
-## Implementação técnica
+3. **Timeline de eventos** — Micro-timeline já existente, enriquecida com dados reais de timestamps.
 
-| Arquivo | O que faz |
+### Etapa 4 — Score de temperatura melhorado
+
+Atualizar `calculateTemperature` e `getUrgencyScore` para considerar:
+- `lead_score` do briefing (0-100)
+- `urgency` do briefing ("alta", "média", "baixa")
+- `lead_sentiment` (positivo pesa mais)
+- `lead_type` (comprador recorrente vs. primeiro contato)
+
+### Etapa 5 — Narrativas mais inteligentes
+
+Atualizar `generateNarrative` para usar campos do briefing:
+- "Ana pediu Maldivas para lua de mel, 2 adultos, hotel 5★ beira-mar. Lead score 85 — urgência alta."
+- Em vez de: "Pediu destino não informado para 2 pessoas."
+
+### Etapa 6 — Eliminar redundância de menu
+
+Remover a rota/página `CotacoesUnified.tsx` (que tinha 3 abas separadas). O Pipeline unificado já engloba tudo. Ajustar sidebar se necessário.
+
+## Arquivos impactados
+
+| Arquivo | Ação |
 |---|---|
-| `src/pages/CotacoesPropostasPipeline.tsx` | Reescrever completamente com a nova UI de Timeline |
-| `src/components/pipeline/NegotiationTimeline.tsx` | Componente principal da timeline |
-| `src/components/pipeline/NegotiationCard.tsx` | Card expandível com narrativa IA |
-| `src/components/pipeline/NegotiationDetailPanel.tsx` | Painel lateral com micro-timeline |
-| `src/components/pipeline/TemperatureScore.tsx` | Score visual de temperatura |
-| `src/hooks/useNegotiationPriority.ts` | Hook que calcula urgência e ordena |
-| `src/lib/negotiationNarrative.ts` | Gera frases contextuais para cada situação |
+| `src/pages/CotacoesPropostasPipeline.tsx` | Adicionar fetch de briefings, merge no items |
+| `src/lib/negotiationNarrative.ts` | Expandir `NegotiationItem` com campos do briefing, melhorar narrativas e scores |
+| `src/components/pipeline/NegotiationCard.tsx` | Exibir lead score, urgência, motivação, sentimento |
+| `src/components/pipeline/NegotiationDetailPanel.tsx` | Redesign completo com resumo IA + perfil completo |
+| `src/hooks/useNegotiationPriority.ts` | Usar lead_score e urgency no cálculo |
+| `src/pages/CotacoesUnified.tsx` | Remover (redundante) |
+| `src/App.tsx` | Limpar rota antiga se existir |
 
-O Monitor de Cotações em tempo real continua acessível via toggle, como está hoje.
+## Resultado esperado
+
+Uma central única onde o consultor vê **todas** as negociações (Portal + Briefing IA + Manuais), com interpretações estratégicas da IA visíveis diretamente nos cards e no painel lateral, permitindo decidir com mais contexto antes de agir.
 
