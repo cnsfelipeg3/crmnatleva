@@ -387,7 +387,7 @@ REGRA ABSOLUTA — NUNCA INDICAR CONCORRENTES OU CANAIS EXTERNOS:
 - Nunca responda so com "Oi! Tudo bom?" ou "Como posso te chamar?" se o lead ja trouxe detalhes concretos.
 - Corrija nomes errados de hotel e destino na propria primeira resposta, sem repetir o erro.
 
-${dbBehaviorBlock}${knowledgeBlock}Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.${toneBlock}
+${knowledgeBlock}${dbBehaviorBlock}Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.${toneBlock}
 
 ${roleInstr}
 

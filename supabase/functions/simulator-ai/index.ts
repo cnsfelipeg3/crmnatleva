@@ -99,8 +99,10 @@ async function callAnthropic(
 
   const compactMessages = sanitized;
 
+  // 60k limit: Maya's system prompt includes the full knowledge base (KB) which can be 20-40k chars.
+  // Truncating at 10k was cutting off the KB entirely, causing hallucinations.
   const compactSystem = systemMsg?.content
-    ? (systemMsg.content.length > 10000 ? `${systemMsg.content.slice(0, 10000)}...` : systemMsg.content)
+    ? (systemMsg.content.length > 60000 ? `${systemMsg.content.slice(0, 60000)}...` : systemMsg.content)
     : "";
 
   const response = await fetch("https://api.anthropic.com/v1/messages", {
