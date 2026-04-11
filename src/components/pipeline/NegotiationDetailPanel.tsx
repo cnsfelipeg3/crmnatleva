@@ -1,5 +1,6 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { formatDateBR } from "@/lib/dateFormat";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
@@ -151,8 +152,8 @@ function CompleteProfile({ item }: { item: NegotiationItem }) {
         <div className="grid grid-cols-2 gap-2">
           <InfoRow label="Destino" value={item.destination} />
           <InfoRow label="Origem" value={item.origin || b?.departureAirport} />
-          <InfoRow label="Ida" value={item.departureDate ? format(new Date(item.departureDate + "T12:00:00"), "dd MMM yyyy", { locale: ptBR }) : null} />
-          <InfoRow label="Volta" value={item.returnDate ? format(new Date(item.returnDate + "T12:00:00"), "dd MMM yyyy", { locale: ptBR }) : null} />
+          <InfoRow label="Ida" value={formatDateBR(item.departureDate)} />
+          <InfoRow label="Volta" value={formatDateBR(item.returnDate)} />
           <InfoRow label="Duração" value={b?.durationDays ? `${b.durationDays} dias` : null} />
           <InfoRow label="Datas flexíveis" value={b?.flexibleDates ? "Sim" : b?.flexibleDates === false ? "Não" : null} />
           <InfoRow label="Motivação" value={b?.tripMotivation} />
@@ -237,7 +238,7 @@ interface TimelineEvent { time: string; label: string; icon: typeof Clock; }
 function buildMicroTimeline(item: NegotiationItem): TimelineEvent[] {
   const events: TimelineEvent[] = [];
   events.push({
-    time: format(new Date(item.createdAt), "dd/MM HH:mm"),
+    time: isNaN(new Date(item.createdAt).getTime()) ? "" : format(new Date(item.createdAt), "dd/MM HH:mm"),
     label: item.source === "quote" ? "Cotação recebida via portal" : item.source === "briefing" ? "Briefing recebido via IA" : "Proposta criada manualmente",
     icon: Clock,
   });
@@ -252,14 +253,14 @@ function buildMicroTimeline(item: NegotiationItem): TimelineEvent[] {
   }
   if (item.stage === "enviada" || item.stage === "aceita") {
     events.push({
-      time: item.sentAt ? format(new Date(item.sentAt), "dd/MM HH:mm") : "",
+      time: item.sentAt && !isNaN(new Date(item.sentAt).getTime()) ? format(new Date(item.sentAt), "dd/MM HH:mm") : "",
       label: "Proposta enviada ao cliente",
       icon: Send,
     });
   }
   if ((item.viewCount || 0) > 0) {
     events.push({
-      time: item.lastViewedAt ? format(new Date(item.lastViewedAt), "dd/MM HH:mm") : "",
+      time: item.lastViewedAt && !isNaN(new Date(item.lastViewedAt).getTime()) ? format(new Date(item.lastViewedAt), "dd/MM HH:mm") : "",
       label: `Cliente visualizou (${item.viewCount}x)`,
       icon: Eye,
     });
