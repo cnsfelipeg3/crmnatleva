@@ -351,16 +351,23 @@ export default function ConversationIntelligencePanel({ messages, className }: P
     const tripType = extractTripType(allText);
     const preferences = extractPreferences(allTextFull);
     const signals = extractSentimentSignals(allText);
+    const airline = extractAirline(allText);
+    const flightClass = extractFlightClass(allText);
+    const airport = extractAirport(allText);
+    const flightTime = extractFlightTimePreference(allText);
+    const baggage = extractBaggage(allText);
+    const documentation = extractDocumentation(allTextFull);
 
-    const completeness = calcCompleteness({ name, destinations, dates, passengers, budget, tripType, origin, duration, preferences, signals });
+    const completeness = calcCompleteness({ name, destinations, dates, passengers, budget, tripType, origin, duration, preferences, signals, airline, flightClass, airport, flightTime, baggage, documentation });
 
-    return { destinations, dates, duration, passengers, origin, name, budget, tripType, preferences, signals, completeness };
+    return { destinations, dates, duration, passengers, origin, name, budget, tripType, preferences, signals, completeness, airline, flightClass, airport, flightTime, baggage, documentation };
   }, [messages]);
 
-  const { destinations, dates, duration, passengers, origin, name, budget, tripType, preferences, signals, completeness } = intelligence;
+  const { destinations, dates, duration, passengers, origin, name, budget, tripType, preferences, signals, completeness, airline, flightClass, airport, flightTime, baggage, documentation } = intelligence;
 
   const hasAnyData = name || destinations.length > 0 || dates.length > 0 || passengers.count ||
-    budget || tripType || origin || duration || preferences.length > 0 || signals.length > 0;
+    budget || tripType || origin || duration || preferences.length > 0 || signals.length > 0 ||
+    airline || flightClass || airport || flightTime || baggage || documentation.length > 0;
 
   return (
     <div className={cn("rounded-2xl overflow-hidden bg-card border border-border", className)}>
@@ -400,6 +407,7 @@ export default function ConversationIntelligencePanel({ messages, className }: P
           </div>
         ) : (
           <>
+            {/* Core info */}
             <FieldRow icon={Users} label="Cliente" value={name || ""} />
             <FieldRow icon={MapPin} label="Origem" value={origin || ""} />
             <FieldRow icon={Globe} label="Destino" value={destinations} />
@@ -412,6 +420,41 @@ export default function ConversationIntelligencePanel({ messages, className }: P
             } />
             <FieldRow icon={Wallet} label="Orçamento" value={budget || ""} />
             <FieldRow icon={Heart} label="Tipo de Viagem" value={tripType || ""} />
+
+            {/* Flight details section */}
+            {(airline || flightClass || airport || flightTime || baggage) && (
+              <div className="px-3 pt-2 pb-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <Plane className="w-3.5 h-3.5" style={{ color: "#3B82F6" }} />
+                  <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#3B82F6" }}>Voo</p>
+                </div>
+                <div className="space-y-0.5 pl-1">
+                  {airline && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>{airline}</p>}
+                  {flightClass && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>{flightClass}</p>}
+                  {airport && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>🛫 {airport}</p>}
+                  {flightTime && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>{flightTime}</p>}
+                  {baggage && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>{baggage}</p>}
+                </div>
+              </div>
+            )}
+
+            {/* Documentation */}
+            {documentation.length > 0 && (
+              <div className="px-3 py-2">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <Shield className="w-3.5 h-3.5" style={{ color: "#64748B" }} />
+                  <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#64748B" }}>Documentação</p>
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {documentation.map(d => (
+                    <span key={d} className="text-[10px] px-2 py-0.5 rounded-md font-medium"
+                      style={{ background: "rgba(16,185,129,0.1)", color: "#6EE7B7", border: "1px solid rgba(16,185,129,0.15)" }}>
+                      {d}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Preferences */}
             {preferences.length > 0 && (
