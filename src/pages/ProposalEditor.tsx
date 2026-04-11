@@ -722,7 +722,7 @@ export default function ProposalEditor() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <Label className="text-xs">{itemTypeLabels[item.item_type]} — Título</Label>
-                            <Input value={item.title || ""} onChange={(e) => updateItem(idx, "title", e.target.value)} placeholder={`Nome do ${itemTypeLabels[item.item_type].toLowerCase()}`} />
+                            <Input value={item.title || ""} onChange={(e) => updateItem(idx, "title", e.target.value)} placeholder={`Nome do ${(itemTypeLabels[item.item_type] || "item").toLowerCase()}`} />
                           </div>
                           <div className="space-y-1">
                             <Label className="text-xs">URL da imagem</Label>
