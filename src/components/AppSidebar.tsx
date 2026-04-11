@@ -21,13 +21,16 @@ const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/sales/new", icon: Plus, label: "Nova Venda" },
   { to: "/sales", icon: List, label: "Vendas" },
+  { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
+  { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações & Propostas" },
+  { to: "/midias", icon: ImageIcon, label: "Mídias" },
+];
+
+const clientesItems = [
   { to: "/passengers", icon: Users, label: "Passageiros" },
   { to: "/inteligencia-clientes", icon: Brain, label: "Inteligência Clientes" },
   { to: "/natleva-intelligence", icon: Sparkles, label: "NatLeva Intelligence" },
   { to: "/birthdays", icon: Cake, label: "Aniversariantes" },
-  { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
-  { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações & Propostas" },
-  { to: "/midias", icon: ImageIcon, label: "Mídias" },
 ];
 
 const viagensItems = [
@@ -66,6 +69,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [financeOpen, setFinanceOpen] = useState(false);
   const [rhOpen, setRhOpen] = useState(false);
   const [viagensOpen, setViagensOpen] = useState(false);
+  const [clientesOpen, setClientesOpen] = useState(false);
   const [operacaoOpen, setOperacaoOpen] = useState(false);
   const [aiTeamOpen, setAiTeamOpen] = useState(false);
   const [implOpen, setImplOpen] = useState(false);
@@ -107,6 +111,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   useEffect(() => {
     const p = window.location.pathname;
     if (p.startsWith("/viagens") || p.startsWith("/checkin") || p.startsWith("/hospedagem") || p.startsWith("/alteracoes")) setViagensOpen(true);
+    if (p.startsWith("/passengers") || p.startsWith("/inteligencia-clientes") || p.startsWith("/natleva-intelligence") || p.startsWith("/birthdays")) setClientesOpen(true);
     if (p.startsWith("/financeiro")) setFinanceOpen(true);
     if (p.startsWith("/rh")) setRhOpen(true);
     if (p.startsWith("/operacao")) setOperacaoOpen(true);
@@ -222,6 +227,10 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
 
       <nav className="relative flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => renderNavItem(item))}
+
+        {/* Clientes */}
+        {renderGroupButton("Clientes", Users, clientesOpen, () => setClientesOpen(!clientesOpen))}
+        {clientesOpen && !isCollapsed && renderSubGroup(clientesItems)}
 
         {/* Viagens */}
         {renderGroupButton("Viagens", Plane, viagensOpen, () => setViagensOpen(!viagensOpen))}
