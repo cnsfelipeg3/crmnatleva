@@ -230,6 +230,23 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
         </div>
       )}
 
+      {/* ENTENDIMENTO COMPLETO Section */}
+      {taxonomy.entendimento_completo && taxonomy.entendimento_completo.length > 10 && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 overflow-hidden">
+          <div className="flex items-center gap-3 px-4 py-3 bg-primary/10">
+            <div className="p-1.5 rounded-lg bg-primary/10 border border-primary/20">
+              <BookOpen className="w-4 h-4 text-primary" />
+            </div>
+            <span className="text-sm font-bold flex-1">O que eu entendi do vídeo</span>
+          </div>
+          <div className="p-4">
+            <div className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
+              {taxonomy.entendimento_completo}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* GEO Section */}
       {hasContent("geo") && (
         <TaxSection section={SECTIONS[0]}>
