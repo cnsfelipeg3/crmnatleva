@@ -15,9 +15,20 @@ import {
   Loader2, MessageSquare, Eye, ChevronRight,
   Heart, TrendingUp, Brain, DollarSign,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+
+function safeParse(d: string | null | undefined): Date | null {
+  if (!d) return null;
+  const date = new Date(d);
+  return isValid(date) ? date : null;
+}
+
+function safeFormat(d: string | null | undefined, fmt: string, opts?: any): string {
+  const parsed = safeParse(d);
+  return parsed ? format(parsed, fmt, opts) : "—";
+}
 
 const SOURCE_BADGE: Record<string, { label: string; variant: "info" | "warning" | "default" }> = {
   quote: { label: "Portal", variant: "info" },
