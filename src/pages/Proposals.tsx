@@ -191,7 +191,12 @@ export default function Proposals() {
                       {p.client_name && <p className="text-sm text-muted-foreground truncate">{p.client_name}</p>}
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      <Badge variant={st.variant} className="text-[10px]">{st.label}</Badge>
+                      <div className="flex items-center gap-1">
+                        {(p as any).quote_request_id && (
+                          <Badge variant="info" className="text-[10px]">Portal</Badge>
+                        )}
+                        <Badge variant={st.variant} className="text-[10px]">{st.label}</Badge>
+                      </div>
                       {p.status === "rascunho_ia" && (
                         <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
                           <Bot className="w-2.5 h-2.5" />
