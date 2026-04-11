@@ -34,6 +34,7 @@ import {
 
 const ChameleonDebrief = lazy(() => import("./ChameleonDebrief"));
 import SimuladorReport from "./SimuladorReport";
+import ConversationIntelligencePanel from "./ConversationIntelligencePanel";
 
 type Phase = "config" | "running" | "paused" | "debrief";
 
@@ -598,6 +599,11 @@ export default function SimuladorChameleonMode() {
           })}
         </div>
       </div>
+
+      {/* Intelligence Panel */}
+      <ConversationIntelligencePanel
+        messages={messages.map(m => ({ content: m.content, role: m.role, agentName: m.agentName, timestamp: m.timestamp }))}
+      />
 
       {/* Debrief score summary */}
       {phase === "debrief" && debrief && (

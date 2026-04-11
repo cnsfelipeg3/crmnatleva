@@ -39,6 +39,7 @@ import {
 } from "./simuladorAutoUtils";
 import { extractAndSaveBriefing } from "./briefingExtractor";
 import { createMonitorBriefing, revealMonitorFields, completeMonitorBriefing, fillAnalysisFields } from "@/lib/quotationMonitor";
+import ConversationIntelligencePanel from "./ConversationIntelligencePanel";
 
 function useCountUp(target: number, duration = 500) {
   const [val, setVal] = useState(0);
@@ -1843,6 +1844,12 @@ Retorne JSON:
                   ))}
                 </div>
               </div>
+              {/* Intelligence Panel — selected lead */}
+              {selectedLead && (
+                <ConversationIntelligencePanel
+                  messages={selectedLead.mensagens.map(m => ({ content: m.content, role: m.role, agentName: m.agentName, timestamp: m.timestamp }))}
+                />
+              )}
               {/* Observations Panel */}
               <SimulatorObservationsPanel
                 selectedMessage={observationSelectedMsg}
