@@ -150,7 +150,7 @@ export default function CotacoesPropostasPipeline() {
       });
     }
 
-    // Enrich quote items with proposal info
+    // Enrich all items with proposal info + viewer data
     for (const item of result) {
       if (item.proposalId && item.source === "quote") {
         const p = (proposals || []).find((pr: any) => pr.id === item.proposalId);
@@ -161,10 +161,18 @@ export default function CotacoesPropostasPipeline() {
           if (!item.clientName && p.client_name) item.clientName = p.client_name;
         }
       }
+      // Enrich with real viewer data
+      if (item.proposalId && viewerStats) {
+        const vs = viewerStats[item.proposalId];
+        if (vs) {
+          item.viewCount = vs.viewCount;
+          item.lastViewedAt = vs.lastViewedAt;
+        }
+      }
     }
 
     return result;
-  }, [quotes, proposals]);
+  }, [quotes, proposals, viewerStats]);
 
   const { grouped, stats } = useNegotiationPriority(items, tempFilter, search);
 
