@@ -40,13 +40,13 @@ export default function TorreDeControle() {
           .in("status", ["confirmed", "in_progress", "pending"]);
 
         // Pending checkins
-        const { count: pendingCheckins } = await supabase
+        const { count: pendingCheckins } = await (supabase as any)
           .from("checkin_tasks")
           .select("*", { count: "exact", head: true })
           .eq("status", "pending");
 
         // Pending lodgings (sales needing hotel confirmation)
-        const { count: pendingLodgings } = await supabase
+        const { count: pendingLodgings } = await (supabase as any)
           .from("sales")
           .select("*", { count: "exact", head: true })
           .eq("hotel_status", "pending");
