@@ -1,5 +1,6 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { formatDateBR } from "@/lib/dateFormat";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
@@ -151,8 +152,8 @@ function CompleteProfile({ item }: { item: NegotiationItem }) {
         <div className="grid grid-cols-2 gap-2">
           <InfoRow label="Destino" value={item.destination} />
           <InfoRow label="Origem" value={item.origin || b?.departureAirport} />
-          <InfoRow label="Ida" value={item.departureDate ? format(new Date(item.departureDate + "T12:00:00"), "dd MMM yyyy", { locale: ptBR }) : null} />
-          <InfoRow label="Volta" value={item.returnDate ? format(new Date(item.returnDate + "T12:00:00"), "dd MMM yyyy", { locale: ptBR }) : null} />
+          <InfoRow label="Ida" value={formatDateBR(item.departureDate)} />
+          <InfoRow label="Volta" value={formatDateBR(item.returnDate)} />
           <InfoRow label="Duração" value={b?.durationDays ? `${b.durationDays} dias` : null} />
           <InfoRow label="Datas flexíveis" value={b?.flexibleDates ? "Sim" : b?.flexibleDates === false ? "Não" : null} />
           <InfoRow label="Motivação" value={b?.tripMotivation} />
