@@ -34,20 +34,20 @@ export function PipelineStepper({ stage, className }: Props) {
         return (
           <div key={step.key} className="flex items-center gap-0.5">
             <div className={cn(
-              "w-1.5 h-1.5 rounded-full transition-all",
-              done ? "bg-primary" : "bg-muted-foreground/20",
-              isActive && "w-2 h-2 ring-2 ring-primary/20"
+              "w-2 h-2 rounded-full transition-all",
+              done ? "bg-emerald-500" : "bg-gray-300",
+              isActive && "w-2.5 h-2.5 ring-2 ring-emerald-500/30 animate-pulse"
             )} />
             {i < STEPS.length - 1 && (
               <div className={cn(
-                "w-3 h-px",
-                i < current ? "bg-primary" : "bg-muted-foreground/15"
+                "w-4 h-0.5 rounded-full",
+                i < current ? "bg-emerald-500" : "bg-gray-200"
               )} />
             )}
           </div>
         );
       })}
-      <span className="text-[9px] text-muted-foreground ml-1.5">
+      <span className="text-[10px] font-semibold text-gray-700 ml-1.5">
         {STEPS[Math.min(current, STEPS.length - 1)]?.label}
       </span>
     </div>
