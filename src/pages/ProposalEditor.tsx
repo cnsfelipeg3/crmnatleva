@@ -24,6 +24,7 @@ const itemTypeIcons: Record<string, any> = {
   flight: Plane,
   hotel: Hotel,
   experience: Sparkles,
+  transfer: MapPin,
 };
 
 const itemTypeLabels: Record<string, string> = {
@@ -31,6 +32,7 @@ const itemTypeLabels: Record<string, string> = {
   flight: "Voo",
   hotel: "Hotel",
   experience: "Experiência",
+  transfer: "Transfer",
 };
 
 function generateSlug() {
