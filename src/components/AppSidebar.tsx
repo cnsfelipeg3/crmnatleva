@@ -111,6 +111,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   useEffect(() => {
     const p = window.location.pathname;
     if (p.startsWith("/viagens") || p.startsWith("/checkin") || p.startsWith("/hospedagem") || p.startsWith("/alteracoes")) setViagensOpen(true);
+    if (p.startsWith("/passengers") || p.startsWith("/inteligencia-clientes") || p.startsWith("/natleva-intelligence") || p.startsWith("/birthdays")) setClientesOpen(true);
     if (p.startsWith("/financeiro")) setFinanceOpen(true);
     if (p.startsWith("/rh")) setRhOpen(true);
     if (p.startsWith("/operacao")) setOperacaoOpen(true);
