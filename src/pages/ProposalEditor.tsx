@@ -852,6 +852,12 @@ export default function ProposalEditor() {
             embedded
           />
         </TabsContent>
+
+        {!isNew && id && (
+          <TabsContent value="analytics">
+            <ProposalAnalyticsPanel proposalId={id} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
