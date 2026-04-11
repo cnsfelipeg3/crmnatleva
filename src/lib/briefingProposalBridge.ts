@@ -45,6 +45,8 @@ const TEMPLATE_RULES: Array<{
   { keywords: /japão|tóquio|kyoto|osaka|tailândia|bangkok|bali|vietnam|singapura|china|coreia|ásia/i, templatePatterns: /ásia|asia|futurista/i },
   // Praia / Tropical
   { keywords: /maldivas|caribe|cancún|punta cana|aruba|curaçao|bahamas|praia|resort|tropical|orlando|miami|fernando de noronha|porto de galinhas/i, templatePatterns: /tropical|paradise/i },
+  // Europa / Clássico
+  { keywords: /grécia|grecia|santorini|atenas|mykonos|itália|italia|roma|florença|veneza|paris|londres|amsterdam|barcelona|madrid|europa|portugal|lisboa|porto|croácia|dubrovnik|suíça|viena|praga|budapeste/i, templatePatterns: /elegância|clássica|premium/i },
   // Aventura / Patagônia
   { keywords: /patagônia|patagonia|torres del paine|ushuaia|aventura|trekking|hiking|atacama/i, templatePatterns: /safari|premium/i },
 ];
@@ -125,7 +127,7 @@ function smartParseDate(dateStr: string | null | undefined): string | null {
   }
 
   // "15 de março de 2027" or "março de 2027" or "março 2027"
-  const ptMatch = s.match(/(?:(\d{1,2})\s+de\s+)?(\w+)\s+(?:de\s+)?(\d{4})/);
+  const ptMatch = s.match(/(?:(\d{1,2})\s+de\s+)?([a-záàâãéèêíïóôõúüçñ]+)\s+(?:de\s+)?(\d{4})/);
   if (ptMatch) {
     const month = MONTH_MAP[ptMatch[2]];
     if (month) {
@@ -135,7 +137,7 @@ function smartParseDate(dateStr: string | null | undefined): string | null {
   }
 
   // "month year" without "de" (e.g. "março 2027")
-  const simpleMatch = s.match(/^(\w+)\s+(\d{4})$/);
+  const simpleMatch = s.match(/^([a-záàâãéèêíïóôõúüçñ]+)\s+(\d{4})$/);
   if (simpleMatch) {
     const month = MONTH_MAP[simpleMatch[1]];
     if (month) return `${simpleMatch[2]}-${month}-01`;
