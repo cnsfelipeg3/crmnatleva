@@ -81,6 +81,29 @@ export default function CotacoesPropostasPipeline() {
     },
   });
 
+  // Fetch viewer stats per proposal
+  const { data: viewerStats } = useQuery({
+    queryKey: ["pipeline-viewer-stats"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("proposal_viewers" as any)
+        .select("proposal_id, total_views, last_active_at, engagement_score")
+        .order("last_active_at", { ascending: false });
+      // Aggregate per proposal
+      const map: Record<string, { viewCount: number; lastViewedAt: string | null; maxEngagement: number }> = {};
+      for (const v of data || []) {
+        const pid = (v as any).proposal_id;
+        if (!map[pid]) map[pid] = { viewCount: 0, lastViewedAt: null, maxEngagement: 0 };
+        map[pid].viewCount += (v as any).total_views || 1;
+        if (!(map[pid].lastViewedAt) || (v as any).last_active_at > map[pid].lastViewedAt!) {
+          map[pid].lastViewedAt = (v as any).last_active_at;
+        }
+        map[pid].maxEngagement = Math.max(map[pid].maxEngagement, (v as any).engagement_score || 0);
+      }
+      return map;
+    },
+  });
+
   // Build unified items
   const items = useMemo(() => {
     const result: NegotiationItem[] = [];
