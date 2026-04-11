@@ -5199,6 +5199,9 @@ export type Database = {
       }
       proposal_viewers: {
         Row: {
+          browser: string | null
+          city: string | null
+          country: string | null
           cta_clicked: boolean
           device_type: string | null
           email: string
@@ -5207,10 +5210,14 @@ export type Database = {
           id: string
           ip_address: string | null
           last_active_at: string
+          latitude: number | null
+          longitude: number | null
           metadata: Json | null
           name: string | null
+          os: string | null
           phone: string | null
           proposal_id: string
+          region: string | null
           scroll_depth_max: number
           sections_viewed: string[] | null
           total_time_seconds: number
@@ -5219,6 +5226,9 @@ export type Database = {
           whatsapp_clicked: boolean
         }
         Insert: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
           cta_clicked?: boolean
           device_type?: string | null
           email: string
@@ -5227,10 +5237,14 @@ export type Database = {
           id?: string
           ip_address?: string | null
           last_active_at?: string
+          latitude?: number | null
+          longitude?: number | null
           metadata?: Json | null
           name?: string | null
+          os?: string | null
           phone?: string | null
           proposal_id: string
+          region?: string | null
           scroll_depth_max?: number
           sections_viewed?: string[] | null
           total_time_seconds?: number
@@ -5239,6 +5253,9 @@ export type Database = {
           whatsapp_clicked?: boolean
         }
         Update: {
+          browser?: string | null
+          city?: string | null
+          country?: string | null
           cta_clicked?: boolean
           device_type?: string | null
           email?: string
@@ -5247,10 +5264,14 @@ export type Database = {
           id?: string
           ip_address?: string | null
           last_active_at?: string
+          latitude?: number | null
+          longitude?: number | null
           metadata?: Json | null
           name?: string | null
+          os?: string | null
           phone?: string | null
           proposal_id?: string
+          region?: string | null
           scroll_depth_max?: number
           sections_viewed?: string[] | null
           total_time_seconds?: number
