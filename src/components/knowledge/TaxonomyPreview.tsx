@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Map, Compass, Star, BedDouble, Plane, DollarSign, User, Rocket,
-  ChevronDown, ChevronUp, Edit2, Plus, X, Sparkles, Lock,
+  ChevronDown, ChevronUp, Edit2, Plus, X, Sparkles, Lock, BookOpen,
   Trophy, Lightbulb, ListChecks, Calendar,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
