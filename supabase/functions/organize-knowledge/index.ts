@@ -175,6 +175,7 @@ function parseOrionResponse(rawText: string) {
     const result = {
       titulo_sugerido: parsed.titulo_sugerido || "",
       resumo: parsed.resumo || "Conteudo processado pelo ORION.",
+      entendimento_completo: parsed.entendimento_completo || "",
       tags: Array.isArray(parsed.tags) ? parsed.tags.filter((t: any) => typeof t === "string") : [],
       fatos_chave: Array.isArray(parsed.fatos_chave) ? parsed.fatos_chave.filter((f: any) => typeof f === "string") : [],
       chunks: Array.isArray(parsed.chunks)

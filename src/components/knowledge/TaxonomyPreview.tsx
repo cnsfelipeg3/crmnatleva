@@ -98,6 +98,7 @@ export interface Taxonomy {
   };
   fatos_chave?: string[];
   tipo_conteudo?: string;
+  entendimento_completo?: string;
   dominio?: string;
   confianca?: number;
 }
