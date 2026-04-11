@@ -12,7 +12,8 @@ import {
 } from "@/lib/negotiationNarrative";
 import {
   MapPin, CalendarDays, Users, Sparkles, FileText,
-  Loader2, Send, MessageSquare, Eye, ChevronRight,
+  Loader2, MessageSquare, Eye, ChevronRight,
+  Heart, TrendingUp, Brain, DollarSign,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -22,6 +23,14 @@ const SOURCE_BADGE: Record<string, { label: string; variant: "info" | "warning" 
   quote: { label: "Portal", variant: "info" },
   briefing: { label: "Briefing IA", variant: "warning" },
   proposal: { label: "Manual", variant: "default" },
+};
+
+const SENTIMENT_CONFIG: Record<string, { label: string; color: string }> = {
+  positivo: { label: "Positivo", color: "text-emerald-500" },
+  entusiasmado: { label: "Entusiasmado", color: "text-emerald-600" },
+  neutro: { label: "Neutro", color: "text-muted-foreground" },
+  hesitante: { label: "Hesitante", color: "text-amber-500" },
+  negativo: { label: "Negativo", color: "text-red-500" },
 };
 
 interface Props {
@@ -38,7 +47,7 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
   const progress = calculateProgress(item);
   const route = [item.origin, item.destination].filter(Boolean).join(" → ") || "Sem rota";
   const src = SOURCE_BADGE[item.source] || SOURCE_BADGE.proposal;
-
+  const b = item.briefing;
   const isFinished = item.stage === "aceita" || item.stage === "perdida";
 
   return (
@@ -52,11 +61,14 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
     >
       {/* Top row: badges + temperature */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <Badge variant={src.variant} className="text-[9px]">{src.label}</Badge>
           <TemperatureScore temperature={temperature} showLabel />
+          {b?.leadUrgency === "alta" && (
+            <Badge variant="destructive" className="text-[9px]">Urgente</Badge>
+          )}
         </div>
-        <span className="text-[10px] text-muted-foreground">
+        <span className="text-[10px] text-muted-foreground shrink-0">
           {format(new Date(item.createdAt), "dd/MM HH:mm")}
         </span>
       </div>
@@ -70,8 +82,34 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
         <p className="text-xs text-muted-foreground truncate">{item.clientName}</p>
       )}
 
+      {/* Briefing insights row */}
+      {b && (b.tripMotivation || b.leadScore || b.leadSentiment || b.priceSensitivity) && (
+        <div className="flex items-center gap-2 text-[10px] flex-wrap">
+          {b.tripMotivation && (
+            <span className="flex items-center gap-0.5 text-accent">
+              <Heart className="w-2.5 h-2.5" /> {b.tripMotivation}
+            </span>
+          )}
+          {b.leadScore != null && b.leadScore > 0 && (
+            <span className="flex items-center gap-0.5 text-foreground">
+              <TrendingUp className="w-2.5 h-2.5" /> Score {b.leadScore}
+            </span>
+          )}
+          {b.leadSentiment && SENTIMENT_CONFIG[b.leadSentiment] && (
+            <span className={cn("flex items-center gap-0.5", SENTIMENT_CONFIG[b.leadSentiment].color)}>
+              <Brain className="w-2.5 h-2.5" /> {SENTIMENT_CONFIG[b.leadSentiment].label}
+            </span>
+          )}
+          {b.priceSensitivity && (
+            <span className="flex items-center gap-0.5 text-muted-foreground">
+              <DollarSign className="w-2.5 h-2.5" /> {b.priceSensitivity}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Narrative */}
-      <p className="text-xs text-muted-foreground/80 italic leading-relaxed">
+      <p className="text-xs text-muted-foreground/80 italic leading-relaxed line-clamp-2">
         "{narrative}"
       </p>
 
@@ -89,6 +127,9 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
         )}
         {(item.viewCount || 0) > 0 && (
           <span className="flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" /> {item.viewCount}x</span>
+        )}
+        {item.budgetRange && (
+          <span className="flex items-center gap-0.5"><DollarSign className="w-2.5 h-2.5" /> {item.budgetRange}</span>
         )}
       </div>
 

@@ -1,6 +1,43 @@
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+export interface BriefingData {
+  briefingId?: string;
+  conversationSummary?: string | null;
+  aiRecommendation?: string | null;
+  nextSteps?: string | null;
+  budgetBehavioralReading?: string | null;
+  tripMotivation?: string | null;
+  leadScore?: number | null;
+  leadSentiment?: string | null;
+  leadType?: string | null;
+  leadUrgency?: string | null;
+  priceSensitivity?: string | null;
+  behavioralNotes?: string | null;
+  travelExperience?: string | null;
+  travelPace?: string | null;
+  flexibleDates?: boolean | null;
+  durationDays?: number | null;
+  adults?: number | null;
+  children?: number | null;
+  childrenAges?: string[] | null;
+  groupDetails?: string | null;
+  hotelPreference?: string | null;
+  hotelStars?: string | null;
+  hotelLocation?: string | null;
+  hotelNeeds?: string[] | null;
+  hotelNotes?: string | null;
+  departureAirport?: string | null;
+  preferredAirline?: string | null;
+  flightPreference?: string | null;
+  mustHaveExperiences?: string[] | null;
+  desiredExperiences?: string[] | null;
+  experienceNotes?: string | null;
+  transferNeeded?: boolean | null;
+  rentalCar?: boolean | null;
+  transportNotes?: string | null;
+}
+
 export interface NegotiationItem {
   id: string;
   stage: string;
@@ -22,6 +59,8 @@ export interface NegotiationItem {
   viewCount?: number;
   lastViewedAt?: string | null;
   sentAt?: string | null;
+  // Briefing-enriched fields
+  briefing?: BriefingData;
 }
 
 export type Temperature = "hot" | "warm" | "cold" | "won" | "lost";
@@ -38,9 +77,15 @@ export function generateNarrative(item: NegotiationItem): string {
   const timeAgo = formatDistanceToNow(new Date(item.createdAt), { locale: ptBR, addSuffix: true });
   const paxLabel = item.pax > 1 ? `${item.pax} pessoas` : "1 pessoa";
   const cabin = item.cabinClass ? `, ${CABIN_LABELS[item.cabinClass] || item.cabinClass}` : "";
+  const b = item.briefing;
+
+  // Build enriched motivation/context string
+  const motivation = b?.tripMotivation ? ` para ${b.tripMotivation.toLowerCase()}` : "";
+  const hotel = b?.hotelStars ? `, hotel ${b.hotelStars}★` : (b?.hotelPreference ? `, ${b.hotelPreference}` : "");
+  const scoreTag = b?.leadScore && b.leadScore >= 70 ? ` Lead score ${b.leadScore} — urgência ${b.leadUrgency || "média"}.` : "";
 
   if (item.stage === "aceita") {
-    return `Negociação fechada! Destino ${dest} para ${paxLabel}.`;
+    return `Negociação fechada! ${dest}${motivation} para ${paxLabel}.${scoreTag}`;
   }
   if (item.stage === "perdida") {
     return `Proposta perdida para ${dest}. Solicitação recebida ${timeAgo}.`;
@@ -51,7 +96,7 @@ export function generateNarrative(item: NegotiationItem): string {
     const sentAgo = item.sentAt
       ? formatDistanceToNow(new Date(item.sentAt), { locale: ptBR, addSuffix: true })
       : timeAgo;
-    return `Proposta enviada ${sentAgo}, ainda sem visualização. ${dest} para ${paxLabel}${cabin}.`;
+    return `Proposta enviada ${sentAgo}, ainda sem visualização. ${dest}${motivation} para ${paxLabel}${cabin}${hotel}.${scoreTag}`;
   }
 
   // Sent and viewed
@@ -60,20 +105,24 @@ export function generateNarrative(item: NegotiationItem): string {
     const lastView = item.lastViewedAt
       ? formatDistanceToNow(new Date(item.lastViewedAt), { locale: ptBR, addSuffix: true })
       : "";
-    return `Proposta visualizada ${views}x${lastView ? ` (último acesso ${lastView})` : ""}. ${dest} para ${paxLabel}${cabin}.`;
+    return `Proposta visualizada ${views}x${lastView ? ` (último acesso ${lastView})` : ""}. ${dest}${motivation} para ${paxLabel}${cabin}.${scoreTag}`;
   }
 
   // Proposal created, not sent
   if (item.stage === "proposta_criada") {
-    return `Proposta criada para ${dest}${cabin}. Aguardando revisão e envio.`;
+    return `Proposta criada para ${dest}${motivation}${cabin}${hotel}. Aguardando revisão e envio.${scoreTag}`;
   }
 
   // In analysis
   if (item.stage === "analise") {
-    return `Em análise — ${dest} para ${paxLabel}${cabin}. Solicitação recebida ${timeAgo}.`;
+    return `Em análise — ${dest}${motivation} para ${paxLabel}${cabin}${hotel}. Solicitação recebida ${timeAgo}.${scoreTag}`;
   }
 
-  // New request
+  // New request — enriched with briefing data
+  if (b?.tripMotivation || b?.hotelStars || b?.leadScore) {
+    return `${item.clientName || "Lead"} pediu ${dest}${motivation} para ${paxLabel}${cabin}${hotel}. Aguardando proposta ${timeAgo}.${scoreTag}`;
+  }
+
   return `Pediu ${dest} para ${paxLabel}${cabin}. Aguardando proposta ${timeAgo}.`;
 }
 
@@ -82,6 +131,25 @@ export function calculateTemperature(item: NegotiationItem): Temperature {
   if (item.stage === "perdida") return "lost";
 
   let score = 50; // base
+  const b = item.briefing;
+
+  // Briefing lead_score boost
+  if (b?.leadScore) {
+    if (b.leadScore >= 80) score += 25;
+    else if (b.leadScore >= 60) score += 15;
+    else if (b.leadScore >= 40) score += 5;
+  }
+
+  // Briefing urgency boost
+  if (b?.leadUrgency === "alta") score += 20;
+  else if (b?.leadUrgency === "média") score += 5;
+
+  // Positive sentiment boost
+  if (b?.leadSentiment === "positivo" || b?.leadSentiment === "entusiasmado") score += 10;
+  else if (b?.leadSentiment === "hesitante" || b?.leadSentiment === "negativo") score -= 10;
+
+  // Recurring client boost
+  if (b?.leadType === "recorrente" || b?.leadType === "vip") score += 10;
 
   // Time pressure: closer departure = hotter
   if (item.departureDate) {
@@ -129,6 +197,13 @@ export function calculateProgress(item: NegotiationItem): number {
 export function getUrgencyScore(item: NegotiationItem): number {
   let urgency = 0;
   const hoursElapsed = (Date.now() - new Date(item.createdAt).getTime()) / (1000 * 60 * 60);
+  const b = item.briefing;
+
+  // Briefing-based urgency
+  if (b?.leadScore) urgency += Math.min(b.leadScore * 0.3, 30);
+  if (b?.leadUrgency === "alta") urgency += 25;
+  else if (b?.leadUrgency === "média") urgency += 10;
+  if (b?.leadSentiment === "positivo" || b?.leadSentiment === "entusiasmado") urgency += 10;
 
   // New quotes without proposal
   if (item.stage === "nova") {
