@@ -15,9 +15,20 @@ import {
   Loader2, MessageSquare, Eye, ChevronRight,
   Heart, TrendingUp, Brain, DollarSign,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+
+function safeParse(d: string | null | undefined): Date | null {
+  if (!d) return null;
+  const date = new Date(d);
+  return isValid(date) ? date : null;
+}
+
+function safeFormat(d: string | null | undefined, fmt: string, opts?: any): string {
+  const parsed = safeParse(d);
+  return parsed ? format(parsed, fmt, opts) : "—";
+}
 
 const SOURCE_BADGE: Record<string, { label: string; variant: "info" | "warning" | "default" }> = {
   quote: { label: "Portal", variant: "info" },
@@ -69,7 +80,7 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
           )}
         </div>
         <span className="text-[10px] text-muted-foreground shrink-0">
-          {format(new Date(item.createdAt), "dd/MM HH:mm")}
+          {safeFormat(item.createdAt, "dd/MM HH:mm")}
         </span>
       </div>
 
@@ -115,11 +126,11 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
 
       {/* Meta */}
       <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
-        {item.departureDate && (
+        {item.departureDate && safeParse(item.departureDate + "T12:00:00") && (
           <span className="flex items-center gap-0.5">
             <CalendarDays className="w-2.5 h-2.5" />
-            {format(new Date(item.departureDate + "T12:00:00"), "dd MMM", { locale: ptBR })}
-            {item.returnDate && ` — ${format(new Date(item.returnDate + "T12:00:00"), "dd MMM", { locale: ptBR })}`}
+            {safeFormat(item.departureDate + "T12:00:00", "dd MMM", { locale: ptBR })}
+            {item.returnDate && safeParse(item.returnDate + "T12:00:00") ? ` — ${safeFormat(item.returnDate + "T12:00:00", "dd MMM", { locale: ptBR })}` : ""}
           </span>
         )}
         {item.pax > 0 && (
