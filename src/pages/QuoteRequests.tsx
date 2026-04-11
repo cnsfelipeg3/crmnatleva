@@ -73,6 +73,8 @@ export default function QuoteRequests() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [generating, setGenerating] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const fetchQuotes = async () => {
     setLoading(true);
