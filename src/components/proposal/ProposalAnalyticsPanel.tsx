@@ -149,7 +149,7 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
               <div key={section} className="space-y-1">
                 <div className="flex justify-between text-[10px] text-muted-foreground">
                   <span className="capitalize">{section}</span>
-                  <span>{hits as number}x</span>
+                  <span>{String(hits)}x</span>
                 </div>
                 <Progress
                   value={Math.round(((hits as number) / maxSectionHits) * 100)}
