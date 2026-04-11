@@ -21,10 +21,6 @@ const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/sales/new", icon: Plus, label: "Nova Venda" },
   { to: "/sales", icon: List, label: "Vendas" },
-  { to: "/viagens", icon: Plane, label: "Viagens" },
-  { to: "/checkin", icon: ClipboardCheck, label: "Fazer Check-in" },
-  { to: "/hospedagem", icon: Hotel, label: "Confirmar Hospedagens" },
-  { to: "/alteracoes", icon: RotateCcw, label: "Alterações de Viagem" },
   { to: "/passengers", icon: Users, label: "Passageiros" },
   { to: "/inteligencia-clientes", icon: Brain, label: "Inteligência Clientes" },
   { to: "/natleva-intelligence", icon: Sparkles, label: "NatLeva Intelligence" },
@@ -32,6 +28,14 @@ const navItems = [
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
   { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações & Propostas" },
   { to: "/midias", icon: ImageIcon, label: "Mídias" },
+];
+
+const viagensItems = [
+  { to: "/viagens", icon: LayoutDashboard, label: "Torre de Controle" },
+  { to: "/viagens/monitor", icon: Plane, label: "Monitor de Voos" },
+  { to: "/checkin", icon: ClipboardCheck, label: "Fazer Check-in" },
+  { to: "/hospedagem", icon: Hotel, label: "Confirmar Hospedagens" },
+  { to: "/alteracoes", icon: RotateCcw, label: "Alterações de Viagem" },
 ];
 
 const financeItems = [
@@ -61,6 +65,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const [financeOpen, setFinanceOpen] = useState(false);
   const [rhOpen, setRhOpen] = useState(false);
+  const [viagensOpen, setViagensOpen] = useState(false);
   const [operacaoOpen, setOperacaoOpen] = useState(false);
   const [aiTeamOpen, setAiTeamOpen] = useState(false);
   const [implOpen, setImplOpen] = useState(false);
@@ -100,13 +105,15 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   }, [dark]);
 
   useEffect(() => {
-    if (window.location.pathname.startsWith("/financeiro")) setFinanceOpen(true);
-    if (window.location.pathname.startsWith("/rh")) setRhOpen(true);
-    if (window.location.pathname.startsWith("/operacao")) setOperacaoOpen(true);
-    if (window.location.pathname.startsWith("/ai-team") || window.location.pathname.startsWith("/implementacao/estrategia") || window.location.pathname.startsWith("/implementacao/aprendizados") || window.location.pathname.startsWith("/implementacao/cerebro")) setAiTeamOpen(true);
-    if (window.location.pathname.startsWith("/implementacao") || window.location.pathname.startsWith("/import") || window.location.pathname.startsWith("/livechat/import")) setImplOpen(true);
-    if (window.location.pathname.startsWith("/admin")) setAdminOpen(true);
-    if (window.location.pathname.startsWith("/portal-admin")) setPortalAdminOpen(true);
+    const p = window.location.pathname;
+    if (p.startsWith("/viagens") || p.startsWith("/checkin") || p.startsWith("/hospedagem") || p.startsWith("/alteracoes")) setViagensOpen(true);
+    if (p.startsWith("/financeiro")) setFinanceOpen(true);
+    if (p.startsWith("/rh")) setRhOpen(true);
+    if (p.startsWith("/operacao")) setOperacaoOpen(true);
+    if (p.startsWith("/ai-team") || p.startsWith("/implementacao/estrategia") || p.startsWith("/implementacao/aprendizados") || p.startsWith("/implementacao/cerebro")) setAiTeamOpen(true);
+    if (p.startsWith("/implementacao") || p.startsWith("/import") || p.startsWith("/livechat/import")) setImplOpen(true);
+    if (p.startsWith("/admin")) setAdminOpen(true);
+    if (p.startsWith("/portal-admin")) setPortalAdminOpen(true);
   }, []);
 
   const renderNavItem = (item: typeof navItems[0], indent = false) => (
@@ -215,6 +222,10 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
 
       <nav className="relative flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => renderNavItem(item))}
+
+        {/* Viagens */}
+        {renderGroupButton("Viagens", Plane, viagensOpen, () => setViagensOpen(!viagensOpen))}
+        {viagensOpen && !isCollapsed && renderSubGroup(viagensItems)}
 
         {/* AI Team section */}
         {renderGroupButton("Batalhão NatLeva", Brain, aiTeamOpen, () => setAiTeamOpen(!aiTeamOpen))}
