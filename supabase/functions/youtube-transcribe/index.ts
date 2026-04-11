@@ -683,6 +683,7 @@ serve(async (req) => {
             captionTracks: tracks,
             videoTitle: result.videoTitle,
             videoId,
+            lastError: result.lastError || null,
             message: "O servidor não conseguiu baixar as legendas. O navegador vai tentar automaticamente.",
           }), {
             status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
