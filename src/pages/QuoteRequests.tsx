@@ -268,14 +268,29 @@ export default function QuoteRequests() {
                               <Eye className="w-3 h-3" /> Iniciar análise
                             </Button>
                           )}
-                          {(q.status === "pending" || q.status === "reviewing") && (
-                            <Button size="sm" onClick={() => updateStatus(q.id, "quoted")} className="gap-1 text-xs bg-accent hover:bg-accent/90 text-accent-foreground">
-                              <CheckCircle2 className="w-3 h-3" /> Marcar como cotado
+
+                          {/* Generate or view proposal */}
+                          {q.proposal_id ? (
+                            <Button size="sm" variant="outline" onClick={() => navigate(`/propostas/${q.proposal_id}`)} className="gap-1 text-xs">
+                              <FileText className="w-3 h-3" /> Ver Proposta
                             </Button>
+                          ) : (
+                            (q.status === "pending" || q.status === "reviewing" || q.status === "quoted") && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleGenerateProposal(q)}
+                                disabled={generating === q.id}
+                                className="gap-1 text-xs bg-accent hover:bg-accent/90 text-accent-foreground"
+                              >
+                                {generating === q.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
+                                Gerar Proposta
+                              </Button>
+                            )
                           )}
+
                           {q.status === "quoted" && (
                             <>
-                              <Button size="sm" onClick={() => updateStatus(q.id, "accepted")} className="gap-1 text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
+                              <Button size="sm" onClick={() => updateStatus(q.id, "accepted")} className="gap-1 text-xs bg-primary hover:bg-primary/90 text-primary-foreground">
                                 <CheckCircle2 className="w-3 h-3" /> Aceito
                               </Button>
                               <Button size="sm" variant="outline" onClick={() => updateStatus(q.id, "rejected")} className="gap-1 text-xs text-destructive">
