@@ -408,7 +408,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
 
       {/* EXPERIENCIAS Section */}
       {hasContent("experiencias") && (
-        <TaxSection section={SECTIONS[2]}>
+        <TaxSection section={SECTIONS.find(s => s.key === "experiencias")!}>
           {exp?.passeios && exp.passeios.length > 0 && (
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">Passeios</p>
@@ -455,7 +455,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
 
       {/* HOSPEDAGEM Section */}
       {hasContent("hospedagem") && (
-        <TaxSection section={SECTIONS[3]}>
+        <TaxSection section={SECTIONS.find(s => s.key === "hospedagem")!}>
           {hosp?.hoteis && hosp.hoteis.length > 0 && (
             <div className="space-y-1.5">
               {hosp.hoteis.map((h, i) => (
@@ -481,7 +481,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
 
       {/* LOGISTICA Section */}
       {hasContent("logistica") && (
-        <TaxSection section={SECTIONS[4]}>
+        <TaxSection section={SECTIONS.find(s => s.key === "logistica")!}>
           {log?.companhias_aereas && log.companhias_aereas.length > 0 && (
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Companhias</p>
@@ -511,7 +511,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
 
       {/* FINANCEIRO Section */}
       {hasContent("financeiro") && (
-        <TaxSection section={SECTIONS[5]}>
+        <TaxSection section={SECTIONS.find(s => s.key === "financeiro")!}>
           <div className="flex items-center gap-2 flex-wrap">
             <InternalBadge />
             {fin?.faixa_preco_label && (
@@ -534,7 +534,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
 
       {/* PERFIL Section */}
       {hasContent("perfil_viajante") && (
-        <TaxSection section={SECTIONS[6]}>
+        <TaxSection section={SECTIONS.find(s => s.key === "perfil_viajante")!}>
           {perfil?.ideal && perfil.ideal.length > 0 && (
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Ideal para</p>
@@ -586,7 +586,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
 
       {/* VENDAS Section - highlighted */}
       {hasContent("vendas") && (
-        <TaxSection section={SECTIONS[7]} defaultOpen={true}>
+        <TaxSection section={SECTIONS.find(s => s.key === "vendas")!} defaultOpen={true}>
           {vendas?.gatilho_emocional && (
             <div className="rounded-xl bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/20 p-4">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">Gatilho Emocional</p>
