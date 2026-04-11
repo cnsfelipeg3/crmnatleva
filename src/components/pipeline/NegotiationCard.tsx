@@ -351,9 +351,12 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
             <Badge className="text-[9px] bg-red-600 text-white border-red-600 font-bold">Urgente</Badge>
           )}
         </div>
-        <span className="text-[10px] text-gray-500 shrink-0 font-medium">
-          {safeFormat(item.createdAt, "dd/MM HH:mm")}
-        </span>
+        <div className="flex items-center gap-2">
+          <ExtractionRing item={item} />
+          <span className="text-[10px] text-gray-500 shrink-0 font-medium">
+            {safeFormat(item.createdAt, "dd/MM HH:mm")}
+          </span>
+        </div>
       </div>
 
       {/* Route + client */}
