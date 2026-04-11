@@ -228,6 +228,10 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
       <nav className="relative flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => renderNavItem(item))}
 
+        {/* Clientes */}
+        {renderGroupButton("Clientes", Users, clientesOpen, () => setClientesOpen(!clientesOpen))}
+        {clientesOpen && !isCollapsed && renderSubGroup(clientesItems)}
+
         {/* Viagens */}
         {renderGroupButton("Viagens", Plane, viagensOpen, () => setViagensOpen(!viagensOpen))}
         {viagensOpen && !isCollapsed && renderSubGroup(viagensItems)}
