@@ -1,56 +1,98 @@
 
 
-# Plano: Ponte Cotações ↔ Propostas
+# Ideia: "Timeline Inteligente" — Substituir o Kanban por uma Linha do Tempo Viva
 
-## Contexto
+## O Problema Atual
 
-Hoje os módulos **Cotações** (`portal_quote_requests`) e **Propostas** (`proposals`) vivem isolados. O objetivo é que toda cotação gere automaticamente um rascunho de proposta vinculada, e que o consultor consiga navegar entre os dois de forma fluida.
+O pipeline Kanban atual é estático e genérico — é o mesmo modelo que qualquer CRM usa. Ele mostra "caixinhas" organizadas por status, mas não conta a **história** de cada negociação. Você precisa clicar em cada card para entender o que está acontecendo.
 
-## O que será feito
+## A Proposta: Uma Abordagem Completamente Diferente
 
-### 1. Schema — Vincular cotação à proposta
+Em vez de um Kanban com colunas fixas, criar uma **Timeline de Negociações** — uma interface que trata cada cotação/proposta como uma **linha narrativa viva**, inspirada em feeds de atividade (como GitHub ou Notion).
 
-- Adicionar coluna `quote_request_id` (uuid, FK → `portal_quote_requests.id`) na tabela `proposals`
-- Adicionar coluna `proposal_id` (uuid, FK → `proposals.id`) na tabela `portal_quote_requests` para referência bidirecional rápida
+```text
+┌─────────────────────────────────────────────────────────┐
+│  🔍 Filtro inteligente    [Todas] [Quentes] [Frias]     │
+│                           [Hoje] [Semana] [Aguardando]  │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  ● AGORA — 2 negociações precisam de atenção            │
+│  ├─ 🔴 Ana Silva · Orlando · 14 abr                    │
+│  │   "Pediu orçamento há 3h, ainda sem proposta"        │
+│  │   [Gerar Proposta IA] [Ver detalhes]                 │
+│  │                                                      │
+│  ├─ 🟡 Carlos Souza · Europa · 20 mai                  │
+│  │   "Proposta enviada há 2 dias, sem visualização"     │
+│  │   [Reenviar] [Ligar] [Ajustar proposta]              │
+│  │                                                      │
+│  ● HOJE — 3 atualizações                                │
+│  ├─ 🟢 Maria Lima · Maldivas                           │
+│  │   "Proposta visualizada 2x · Último acesso: 10min"   │
+│  │   Progresso: ████████░░ 80% · Score: 🔥 Alto        │
+│  │   [Ver proposta] [Enviar mensagem]                   │
+│  │                                                      │
+│  ● ONTEM                                                │
+│  ├─ ✅ Pedro Ramos · Miami · ACEITA                     │
+│  │   "Conversão em 4 dias · Valor: R$ 28.500"           │
+│  │                                                      │
+│  ● ESTA SEMANA                                          │
+│  └─ ...                                                 │
+│                                                         │
+│ ─── Painel lateral (ao clicar) ──────────────────────── │
+│  Timeline detalhada da negociação:                      │
+│  09:00 — Cotação recebida via portal                    │
+│  09:15 — IA extraiu: 2 adultos, executiva, hotel 5★     │
+│  10:30 — Proposta gerada automaticamente                │
+│  11:00 — Consultor ajustou hotel                        │
+│  14:00 — Proposta enviada ao cliente                    │
+│  15:22 — Cliente visualizou (3min de leitura)           │
+│  16:45 — Cliente abriu novamente (seção "voos")         │
+└─────────────────────────────────────────────────────────┘
+```
 
-### 2. Bridge — `quoteToProposalBridge.ts`
+## O que muda fundamentalmente
 
-Nova lib que converte uma cotação em proposta rascunho:
+### 1. Priorização automática por urgência
+Em vez de você procurar o que precisa de atenção, o sistema **empurra para cima** o que é urgente:
+- Cotações sem proposta há mais de 2h
+- Propostas enviadas sem visualização há 24h+
+- Clientes que visualizaram mas não responderam
+- Viagens com data próxima sem fechamento
 
-- Mapeia campos da cotação → proposta: `origin_city` → `origin`, `destination_city` → `destinations`, `departure_date` → `travel_start_date`, `return_date` → `travel_end_date`, passageiros → `passenger_count`, `cabin_class`, `budget_range`
-- Reutiliza `pickBestTemplate` existente para selecionar o template visual automaticamente
-- Reutiliza `buildSuggestedItems` para popular `proposal_items` com voos, hotel e experiências sugeridas
-- Gera slug único e título automático (ex: "Proposta Orlando — Ana Silva")
-- Salva `quote_request_id` na proposta e `proposal_id` na cotação
+### 2. Frases narrativas geradas pela IA
+Cada card tem uma **frase contextual** que resume a situação em linguagem natural, como:
+- "Pediu Orlando para 4 pessoas, classe executiva. Aguardando proposta há 3h"
+- "Visualizou a proposta 4 vezes na última hora — momento quente para contato"
+- "Proposta perdida após 12 dias sem resposta"
 
-### 3. UI — Botão "Gerar Proposta" na tela de Cotações
+### 3. Score de temperatura + barra de progresso
+Cada negociação ganha um indicador visual de "temperatura" (frio/morno/quente) calculado por:
+- Tempo desde último contato
+- Quantidade de visualizações da proposta
+- Proximidade da data de viagem
+- Valor do orçamento
 
-Na área expandida de cada cotação (`QuoteRequests.tsx`):
+### 4. Ações contextuais inteligentes
+Os botões mudam conforme o momento:
+- Sem proposta → "Gerar Proposta IA"
+- Proposta criada → "Revisar e Enviar"
+- Enviada sem visualizar → "Reenviar" / "Ligar"
+- Visualizada → "Enviar mensagem de follow-up"
 
-- Novo botão **"Gerar Proposta"** (aparece nos status `pending`, `reviewing`, `quoted`)
-- Ao clicar: chama a bridge, cria a proposta, atualiza status da cotação para `quoted`, e exibe toast com link direto para o editor da proposta
-- Se a cotação já possui `proposal_id`, mostra botão **"Ver Proposta"** que navega direto ao editor
+### 5. Painel lateral com micro-timeline
+Ao clicar em qualquer negociação, abre um painel com toda a história: cada evento (cotação recebida, IA extraiu dados, proposta gerada, enviada, visualizada, aceita...) em formato de timeline vertical.
 
-### 4. UI — Badge de origem na tela de Propostas
+## Implementação técnica
 
-Em `Proposals.tsx`:
-
-- Se a proposta tem `quote_request_id`, exibir badge "Portal" ao lado do status para identificar visualmente que veio de uma cotação do portal
-
-### 5. Navegação cruzada
-
-- Na proposta (editor), se houver `quote_request_id`, mostrar link "Ver cotação original" que leva à aba de cotações
-- Na cotação expandida, se houver `proposal_id`, mostrar link "Ver proposta" que navega ao editor
-
----
-
-## Arquivos impactados
-
-| Arquivo | Ação |
+| Arquivo | O que faz |
 |---|---|
-| `supabase/migrations/...` | Colunas `quote_request_id` e `proposal_id` |
-| `src/lib/quoteToProposalBridge.ts` | Nova lib (reutiliza lógica do briefingProposalBridge) |
-| `src/pages/QuoteRequests.tsx` | Botões "Gerar Proposta" / "Ver Proposta" |
-| `src/pages/Proposals.tsx` | Badge "Portal" |
-| `src/pages/ProposalEditor.tsx` | Link "Ver cotação original" |
+| `src/pages/CotacoesPropostasPipeline.tsx` | Reescrever completamente com a nova UI de Timeline |
+| `src/components/pipeline/NegotiationTimeline.tsx` | Componente principal da timeline |
+| `src/components/pipeline/NegotiationCard.tsx` | Card expandível com narrativa IA |
+| `src/components/pipeline/NegotiationDetailPanel.tsx` | Painel lateral com micro-timeline |
+| `src/components/pipeline/TemperatureScore.tsx` | Score visual de temperatura |
+| `src/hooks/useNegotiationPriority.ts` | Hook que calcula urgência e ordena |
+| `src/lib/negotiationNarrative.ts` | Gera frases contextuais para cada situação |
+
+O Monitor de Cotações em tempo real continua acessível via toggle, como está hoje.
 
