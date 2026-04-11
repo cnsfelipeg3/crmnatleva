@@ -1,5 +1,11 @@
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+function safeDistanceToNow(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (!isValid(d)) return "data desconhecida";
+  return formatDistanceToNow(d, { locale: ptBR, addSuffix: true });
+}
 
 export interface BriefingData {
   briefingId?: string;
