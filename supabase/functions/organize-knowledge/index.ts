@@ -40,6 +40,7 @@ Analise o conteudo e retorne SOMENTE JSON valido (sem markdown, sem backticks, s
 {
   "titulo_sugerido": "titulo claro e descritivo",
   "resumo": "resumo executivo de 3-5 frases focado em VENDER viagens",
+  "entendimento_completo": "Um texto longo e detalhado (minimo 10 paragrafos) explicando TUDO que voce entendeu do video de forma didatica e completa. Escreva como se estivesse explicando para um colega de trabalho que nao assistiu o video. Inclua: (1) o que o video aborda em detalhe, (2) todos os dados importantes mencionados, (3) como a equipe NatLeva pode usar essas informacoes no atendimento do dia a dia, (4) dicas praticas para os agentes de vendas, (5) possiveis perguntas de clientes que esse conteudo responde, (6) oportunidades de venda que surgem a partir desse conhecimento. Seja DENSO e COMPLETO — esse texto sera a referencia principal da equipe.",
   "tags": ["8-15 tags em portugues lowercase, sem acentos quando possivel"],
   "fatos_chave": ["lista de TODOS os fatos concretos: datas, horarios, locais, nomes, numeros, regras — 1 fato por item, sem resumir, se ha 20 fatos liste 20"],
   "chunks": [
