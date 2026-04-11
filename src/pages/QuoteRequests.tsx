@@ -105,8 +105,7 @@ export default function QuoteRequests() {
       setGenerating(null);
     }
   };
-
-
+  const updateStatus = async (id: string, status: string) => {
     const { error } = await (supabase as any)
       .from("portal_quote_requests")
       .update({ status, updated_at: new Date().toISOString() })
