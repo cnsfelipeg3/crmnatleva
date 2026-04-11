@@ -146,6 +146,94 @@ function extractBudget(text: string): string | null {
   return null;
 }
 
+// ── Airline extraction ──
+function extractAirline(text: string): string | null {
+  const airlines: Record<string, RegExp> = {
+    "LATAM": /latam/i,
+    "GOL": /\bgol\b/i,
+    "Azul": /\bazul\b/i,
+    "Emirates": /emirates/i,
+    "Qatar Airways": /qatar/i,
+    "Turkish Airlines": /turkish/i,
+    "Air France": /air\s*france/i,
+    "KLM": /\bklm\b/i,
+    "Lufthansa": /lufthansa/i,
+    "British Airways": /british\s*air/i,
+    "TAP": /\btap\b/i,
+    "American Airlines": /american\s*air/i,
+    "Delta": /\bdelta\b/i,
+    "United": /\bunited\b(?!\s*states)/i,
+    "Iberia": /iberia/i,
+    "Copa Airlines": /\bcopa\b/i,
+    "Avianca": /avianca/i,
+    "Swiss": /\bswiss\b/i,
+    "Singapore Airlines": /singapore/i,
+    "Etihad": /etihad/i,
+  };
+  for (const [name, regex] of Object.entries(airlines)) {
+    if (regex.test(text)) return `✈️ ${name}`;
+  }
+  return null;
+}
+
+// ── Flight class extraction ──
+function extractFlightClass(text: string): string | null {
+  if (/primeira\s*classe|first\s*class/i.test(text)) return "👑 Primeira Classe";
+  if (/executiva|business/i.test(text)) return "💼 Executiva";
+  if (/premium\s*econom/i.test(text)) return "⭐ Premium Economy";
+  if (/econômica|economy/i.test(text)) return "💺 Econômica";
+  return null;
+}
+
+// ── Airport extraction ──
+function extractAirport(text: string): string | null {
+  const airports: Record<string, RegExp> = {
+    "GRU - Guarulhos": /guarulhos|gru\b/i,
+    "CGH - Congonhas": /congonhas|cgh\b/i,
+    "GIG - Galeão": /galeão|galeao|gig\b/i,
+    "SDU - Santos Dumont": /santos\s*dumont|sdu\b/i,
+    "BSB - Brasília": /\bbsb\b/i,
+    "CWB - Curitiba": /\bcwb\b|afonso\s*pena/i,
+    "CNF - Confins": /confins|cnf\b/i,
+    "POA - Porto Alegre": /\bpoa\b|salgado\s*filho/i,
+    "SSA - Salvador": /\bssa\b/i,
+    "REC - Recife": /\brec\b/i,
+    "VCP - Campinas": /viracopos|vcp\b/i,
+  };
+  for (const [name, regex] of Object.entries(airports)) {
+    if (regex.test(text)) return name;
+  }
+  return null;
+}
+
+// ── Flight time preference ──
+function extractFlightTimePreference(text: string): string | null {
+  if (/voo\s*(?:que\s*)?(?:sai|saindo|partindo)?\s*(?:de|à)?\s*noite|noturno/i.test(text)) return "🌙 Voo noturno";
+  if (/voo\s*(?:que\s*)?(?:sai|saindo)?\s*(?:de|pela)?\s*manhã|matutino|cedo/i.test(text)) return "🌅 Voo matutino";
+  if (/voo\s*(?:que\s*)?(?:sai|saindo)?\s*(?:à|de)?\s*tarde/i.test(text)) return "🌇 Voo à tarde";
+  if (/(?:sem\s*escala|direto|non.?stop)/i.test(text)) return "⚡ Voo direto";
+  if (/escala|conexão/i.test(text)) return "🔄 Aceita conexão";
+  return null;
+}
+
+// ── Baggage ──
+function extractBaggage(text: string): string | null {
+  const m = text.match(/(\d+)\s*(?:malas?|despacho|bagagem)/i);
+  if (m) return `🧳 ${m[1]} mala${parseInt(m[1]) > 1 ? "s" : ""} despachada${parseInt(m[1]) > 1 ? "s" : ""}`;
+  if (/bastante\s*mala|muita\s*bagagem/i.test(text)) return "🧳 Bagagem extra";
+  return null;
+}
+
+// ── Visa/Documents ──
+function extractDocumentation(text: string): string[] {
+  const docs: string[] = [];
+  if (/passaporte\s*(?:em\s*dia|válido|ok|vence)/i.test(text)) docs.push("🛂 Passaporte OK");
+  if (/visto/i.test(text)) docs.push("📄 Visto necessário");
+  if (/seguro\s*viagem/i.test(text)) docs.push("🛡️ Seguro viagem");
+  if (/vacina|febre\s*amarela/i.test(text)) docs.push("💉 Vacinação");
+  return docs;
+}
+
 // ── Trip type ──
 function extractTripType(text: string): string | null {
   if (/lua\s*de\s*mel|honeymoon|recém\s*casad/i.test(text)) return "💑 Lua de Mel";
