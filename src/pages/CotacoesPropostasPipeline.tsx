@@ -10,7 +10,8 @@ import { toast } from "sonner";
 import {
   PlaneTakeoff, Search, Plus, Flame,
   Thermometer, Snowflake, AlertTriangle, ArrowRight,
-  Zap, BarChart3, Target, CheckCircle2,
+  MessageSquare, ClipboardList, FileText, Send,
+  CheckCircle2, Target,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createProposalFromQuote } from "@/lib/quoteToProposalBridge";
@@ -91,26 +92,6 @@ function mapBriefingData(b: any): BriefingData {
   };
 }
 
-// ─── KPI helpers ───
-
-function computeMonitorKpis(briefings: any[]) {
-  let extracting = 0;
-  let totalFields = 0;
-  let filledFields = 0;
-  let complete = 0;
-
-  for (const b of briefings) {
-    const filled = countFilledFields(b);
-    totalFields += MONITOR_TOTAL_FIELDS;
-    filledFields += filled;
-    if (b.status === "extraindo") extracting++;
-    if (filled >= MONITOR_TOTAL_FIELDS * 0.9) complete++;
-  }
-
-  const completeness = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
-  return { extracting, totalFields: filledFields, completeness, complete };
-}
-
 // ─── Main Component ───
 
 export default function CotacoesPropostasPipeline() {
@@ -177,9 +158,6 @@ export default function CotacoesPropostasPipeline() {
       return map;
     },
   });
-
-  // Monitor KPIs from briefings
-  const monitorKpis = useMemo(() => computeMonitorKpis(briefings || []), [briefings]);
 
   // Build unified items
   const items = useMemo(() => {
@@ -336,11 +314,13 @@ export default function CotacoesPropostasPipeline() {
     { key: "cold", label: "Frias", icon: Snowflake, count: stats.cold },
   ];
 
-  const KPI_CARDS = [
-    { icon: Zap, label: "Extraindo", value: monitorKpis.extracting, color: "text-amber-600", bg: "bg-amber-50" },
-    { icon: BarChart3, label: "Campos", value: monitorKpis.totalFields, color: "text-blue-600", bg: "bg-blue-50" },
-    { icon: Target, label: "Completude", value: `${monitorKpis.completeness}%`, color: "text-accent", bg: "bg-accent/5" },
-    { icon: CheckCircle2, label: "Completos", value: monitorKpis.complete, color: "text-emerald-600", bg: "bg-emerald-50" },
+  const STAGE_KPIS = [
+    { icon: MessageSquare, label: "Em Atendimento", value: stats.stageCounts.em_atendimento, color: "text-blue-600", bg: "bg-blue-50", dotColor: "bg-blue-500" },
+    { icon: Search, label: "Extraindo Dados", value: stats.stageCounts.extraindo, color: "text-amber-600", bg: "bg-amber-50", dotColor: "bg-amber-500" },
+    { icon: ClipboardList, label: "Aguard. Cotação", value: stats.stageCounts.aguardando_cotacao, color: "text-orange-600", bg: "bg-orange-50", dotColor: "bg-orange-500" },
+    { icon: FileText, label: "Proposta Criada", value: stats.stageCounts.proposta_criada, color: "text-accent", bg: "bg-accent/5", dotColor: "bg-accent" },
+    { icon: Send, label: "Enviada", value: stats.stageCounts.enviada, color: "text-indigo-600", bg: "bg-indigo-50", dotColor: "bg-indigo-500" },
+    { icon: CheckCircle2, label: "Finalizadas", value: stats.stageCounts.fechadas, color: "text-emerald-600", bg: "bg-emerald-50", dotColor: "bg-emerald-500" },
   ];
 
   return (
@@ -353,7 +333,7 @@ export default function CotacoesPropostasPipeline() {
             Central de Cotações & Propostas
           </h1>
           <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
-            Timeline unificada
+            Pipeline por etapa
             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               LIVE
@@ -365,18 +345,18 @@ export default function CotacoesPropostasPipeline() {
         </Button>
       </div>
 
-      {/* KPI Bar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {KPI_CARDS.map((kpi) => {
+      {/* Stage KPI Bar — Pipeline visual */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        {STAGE_KPIS.map((kpi, idx) => {
           const Icon = kpi.icon;
           return (
-            <Card key={kpi.label} className={cn("p-3 flex items-center gap-3 border-0", kpi.bg)}>
+            <Card key={kpi.label} className={cn("p-2.5 flex items-center gap-2 border-0", kpi.bg)}>
               <div className={cn("rounded-lg p-1.5", kpi.bg)}>
                 <Icon className={cn("w-4 h-4", kpi.color)} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className={cn("text-lg font-bold leading-none", kpi.color)}>{kpi.value}</p>
-                <p className="text-[10px] text-muted-foreground font-medium mt-0.5">{kpi.label}</p>
+                <p className="text-[9px] text-muted-foreground font-medium mt-0.5 truncate">{kpi.label}</p>
               </div>
             </Card>
           );
@@ -388,7 +368,7 @@ export default function CotacoesPropostasPipeline() {
         <Card className="p-3 flex items-center gap-3 border-red-500/20 bg-red-500/[0.03]">
           <AlertTriangle className="w-5 h-5 text-red-500" />
           <p className="text-sm font-semibold text-foreground">
-            {stats.needAttention} negociaç{stats.needAttention === 1 ? "ão precisa" : "ões precisam"} de atenção agora
+            {stats.needAttention} pessoa{stats.needAttention === 1 ? "" : "s"} em atendimento agora
           </p>
         </Card>
       )}
