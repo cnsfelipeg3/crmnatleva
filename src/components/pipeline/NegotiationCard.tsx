@@ -1,19 +1,20 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { TemperatureScore } from "./TemperatureScore";
+import { LeadScoreBar } from "./LeadScoreBar";
+import { PipelineStepper } from "./PipelineStepper";
 import {
   NegotiationItem,
   generateNarrative,
   calculateTemperature,
-  calculateProgress,
 } from "@/lib/negotiationNarrative";
 import {
   MapPin, CalendarDays, Users, Sparkles, FileText,
   Loader2, MessageSquare, Eye, ChevronRight,
-  Heart, TrendingUp, Brain, DollarSign,
+  Heart, Brain, DollarSign,
 } from "lucide-react";
 import { format, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -36,6 +37,15 @@ const SOURCE_BADGE: Record<string, { label: string; variant: "info" | "warning" 
   proposal: { label: "Manual", variant: "default" },
 };
 
+const STAGE_LABELS: Record<string, { label: string; variant: "info" | "warning" | "default" | "success" | "destructive" }> = {
+  nova: { label: "Aguardando proposta", variant: "default" },
+  analise: { label: "Em análise", variant: "info" },
+  proposta_criada: { label: "Proposta criada", variant: "warning" },
+  enviada: { label: "Enviada", variant: "info" },
+  aceita: { label: "Fechada ✓", variant: "success" },
+  perdida: { label: "Perdida", variant: "destructive" },
+};
+
 const SENTIMENT_CONFIG: Record<string, { label: string; color: string }> = {
   positivo: { label: "Positivo", color: "text-emerald-500" },
   entusiasmado: { label: "Entusiasmado", color: "text-emerald-600" },
@@ -53,20 +63,26 @@ interface Props {
 
 export function NegotiationCard({ item, generating, onGenerate, onSelect }: Props) {
   const navigate = useNavigate();
+  const [expanded, setExpanded] = useState(false);
   const narrative = generateNarrative(item);
   const temperature = calculateTemperature(item);
-  const progress = calculateProgress(item);
   const route = [item.origin, item.destination].filter(Boolean).join(" → ") || "Sem rota";
   const src = SOURCE_BADGE[item.source] || SOURCE_BADGE.proposal;
+  const stageInfo = STAGE_LABELS[item.stage] || STAGE_LABELS.nova;
   const b = item.briefing;
   const isFinished = item.stage === "aceita" || item.stage === "perdida";
+  const isHot = temperature === "hot";
+  const isCold = temperature === "cold";
+  const needsAction = !item.proposalId && item.source === "quote" && item.rawQuote;
 
   return (
     <Card
       className={cn(
-        "p-4 space-y-2.5 cursor-pointer group transition-all",
-        temperature === "hot" && "border-red-500/20 bg-red-500/[0.02]",
-        isFinished && "opacity-70"
+        "p-4 space-y-2.5 cursor-pointer group transition-all border-l-[3px]",
+        isHot && "border-l-red-500 bg-red-500/[0.03] shadow-sm shadow-red-500/5",
+        isCold && "border-l-blue-400/30 opacity-75",
+        !isHot && !isCold && !isFinished && "border-l-amber-400/50",
+        isFinished && "border-l-muted-foreground/20 opacity-60"
       )}
       onClick={() => onSelect(item)}
     >
@@ -74,6 +90,7 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           <Badge variant={src.variant} className="text-[9px]">{src.label}</Badge>
+          <Badge variant={stageInfo.variant} className="text-[9px]">{stageInfo.label}</Badge>
           <TemperatureScore temperature={temperature} showLabel />
           {b?.leadUrgency === "alta" && (
             <Badge variant="destructive" className="text-[9px]">Urgente</Badge>
@@ -93,18 +110,16 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
         <p className="text-xs text-muted-foreground truncate">{item.clientName}</p>
       )}
 
-      {/* Briefing insights row */}
-      {b && (b.tripMotivation || b.leadScore || b.leadSentiment || b.priceSensitivity) && (
-        <div className="flex items-center gap-2 text-[10px] flex-wrap">
+      {/* Briefing insights row — no budget duplication */}
+      {b && (b.tripMotivation || b.leadScore || b.leadSentiment) && (
+        <div className="flex items-center gap-2.5 text-[10px] flex-wrap">
           {b.tripMotivation && (
             <span className="flex items-center gap-0.5 text-accent">
               <Heart className="w-2.5 h-2.5" /> {b.tripMotivation}
             </span>
           )}
           {b.leadScore != null && b.leadScore > 0 && (
-            <span className="flex items-center gap-0.5 text-foreground">
-              <TrendingUp className="w-2.5 h-2.5" /> Score {b.leadScore}
-            </span>
+            <LeadScoreBar score={b.leadScore} />
           )}
           {b.leadSentiment && SENTIMENT_CONFIG[b.leadSentiment] && (
             <span className={cn("flex items-center gap-0.5", SENTIMENT_CONFIG[b.leadSentiment].color)}>
@@ -119,10 +134,23 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
         </div>
       )}
 
-      {/* Narrative */}
-      <p className="text-xs text-muted-foreground/80 italic leading-relaxed line-clamp-2">
-        "{narrative}"
-      </p>
+      {/* Narrative — expandable */}
+      <div>
+        <p className={cn(
+          "text-xs text-muted-foreground/80 italic leading-relaxed",
+          !expanded && "line-clamp-3"
+        )}>
+          "{narrative}"
+        </p>
+        {narrative.length > 120 && (
+          <button
+            className="text-[10px] text-accent hover:underline mt-0.5"
+            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+          >
+            {expanded ? "ver menos" : "ver mais"}
+          </button>
+        )}
+      </div>
 
       {/* Meta */}
       <div className="flex items-center gap-2 text-[10px] text-muted-foreground flex-wrap">
@@ -139,38 +167,38 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
         {(item.viewCount || 0) > 0 && (
           <span className="flex items-center gap-0.5"><Eye className="w-2.5 h-2.5" /> {item.viewCount}x</span>
         )}
-        {item.budgetRange && (
-          <span className="flex items-center gap-0.5"><DollarSign className="w-2.5 h-2.5" /> {item.budgetRange}</span>
-        )}
       </div>
 
-      {/* Progress */}
-      {!isFinished && (
-        <Progress value={progress} className="h-1.5" />
-      )}
+      {/* Pipeline stepper */}
+      <PipelineStepper stage={item.stage} />
 
-      {/* Actions */}
+      {/* Actions — more visible for urgent items */}
       <div className="flex gap-1.5 pt-0.5" onClick={(e) => e.stopPropagation()}>
         {item.proposalId ? (
           <>
             <Button
               size="sm" variant="outline"
-              className="h-6 text-[10px] gap-1 flex-1"
+              className="h-7 text-[10px] gap-1 flex-1"
               onClick={() => navigate(`/propostas/${item.proposalId}`)}
             >
               <FileText className="w-2.5 h-2.5" />
               {item.stage === "proposta_criada" ? "Revisar & Enviar" : "Ver Proposta"}
             </Button>
             {item.stage === "enviada" && (
-              <Button size="sm" variant="ghost" className="h-6 text-[10px] gap-1">
+              <Button size="sm" variant="ghost" className="h-7 text-[10px] gap-1">
                 <MessageSquare className="w-2.5 h-2.5" /> Follow-up
               </Button>
             )}
           </>
-        ) : item.source === "quote" && item.rawQuote ? (
+        ) : needsAction ? (
           <Button
             size="sm"
-            className="h-6 text-[10px] gap-1 flex-1 bg-accent hover:bg-accent/90 text-accent-foreground"
+            className={cn(
+              "h-7 text-[10px] gap-1 flex-1",
+              isHot
+                ? "bg-red-500 hover:bg-red-600 text-white shadow-sm shadow-red-500/20"
+                : "bg-accent hover:bg-accent/90 text-accent-foreground"
+            )}
             onClick={() => onGenerate(item)}
             disabled={generating === item.id}
           >
@@ -182,7 +210,7 @@ export function NegotiationCard({ item, generating, onGenerate, onSelect }: Prop
             Gerar Proposta IA
           </Button>
         ) : null}
-        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 ml-auto opacity-0 group-hover:opacity-100">
+        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 ml-auto opacity-0 group-hover:opacity-100">
           <ChevronRight className="w-3.5 h-3.5" />
         </Button>
       </div>

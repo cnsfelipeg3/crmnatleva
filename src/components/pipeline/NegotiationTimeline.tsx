@@ -62,7 +62,10 @@ export function NegotiationTimeline({ groups, generating, onGenerate, onSelect }
             </div>
 
             {/* Cards */}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pl-4 border-l-2 border-border/30 ml-1">
+            <div className={cn(
+              "grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pl-4 border-l-2 ml-1",
+              group.key === "now" ? "border-l-red-500/40" : "border-border/30"
+            )}>
               {group.items.map((item) => (
                 <NegotiationCard
                   key={item.id}
