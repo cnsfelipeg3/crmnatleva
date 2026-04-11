@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Map, Compass, Star, BedDouble, Plane, DollarSign, User, Rocket,
   ChevronDown, ChevronUp, Edit2, Plus, X, Sparkles, Lock,
+  Trophy, Lightbulb, ListChecks, Calendar,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -72,6 +73,31 @@ export interface Taxonomy {
     gatilho_emocional?: string;
     urgencia?: string;
   };
+  evento?: {
+    nome?: string;
+    edicao_ano?: string;
+    periodo?: string;
+    sedes_paises?: string[];
+    cidades_sede?: string[];
+    locais_arenas?: { nome: string; cidade?: string }[];
+    participantes?: string[];
+    formato_regras?: string;
+    programacao?: { data?: string; dia_semana?: string; horario?: string; participante_a?: string; participante_b?: string; local?: string; cidade?: string }[];
+    ingressos_info?: string;
+    hospedagem_evento?: string;
+    logistica_evento?: string;
+    pacotes_natleva?: string;
+    curiosidades?: string[];
+  };
+  conhecimento_operacional?: {
+    tema?: string;
+    passo_a_passo?: string[];
+    ferramentas?: string[];
+    pontos_atencao?: string[];
+    erros_comuns?: string[];
+  };
+  fatos_chave?: string[];
+  tipo_conteudo?: string;
   dominio?: string;
   confianca?: number;
 }
@@ -86,6 +112,8 @@ const SECTIONS: {
   borderColor: string;
 }[] = [
   { key: "geo", label: "Localização", icon: Map, color: "text-blue-500", bgColor: "bg-blue-500/10", borderColor: "border-blue-500/20" },
+  { key: "fatos_chave", label: "Fatos-Chave", icon: ListChecks, color: "text-indigo-500", bgColor: "bg-indigo-500/10", borderColor: "border-indigo-500/20" },
+  { key: "evento", label: "Evento", icon: Trophy, color: "text-yellow-600", bgColor: "bg-yellow-500/10", borderColor: "border-yellow-500/20" },
   { key: "destino", label: "Destino", icon: Compass, color: "text-amber-500", bgColor: "bg-amber-500/10", borderColor: "border-amber-500/20" },
   { key: "experiencias", label: "Experiências", icon: Star, color: "text-orange-500", bgColor: "bg-orange-500/10", borderColor: "border-orange-500/20" },
   { key: "hospedagem", label: "Hospedagem", icon: BedDouble, color: "text-purple-500", bgColor: "bg-purple-500/10", borderColor: "border-purple-500/20" },
@@ -93,6 +121,7 @@ const SECTIONS: {
   { key: "financeiro", label: "Financeiro", icon: DollarSign, color: "text-emerald-500", bgColor: "bg-emerald-500/10", borderColor: "border-emerald-500/20" },
   { key: "perfil_viajante", label: "Perfil do Viajante", icon: User, color: "text-pink-500", bgColor: "bg-pink-500/10", borderColor: "border-pink-500/20" },
   { key: "vendas", label: "Vendas", icon: Rocket, color: "text-red-500", bgColor: "bg-red-500/10", borderColor: "border-red-500/20" },
+  { key: "conhecimento_operacional", label: "Conhecimento Operacional", icon: Lightbulb, color: "text-teal-500", bgColor: "bg-teal-500/10", borderColor: "border-teal-500/20" },
 ];
 
 // ─── Pill component ───
