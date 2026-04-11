@@ -1,68 +1,73 @@
 
 
-# Plano: Contraste Total + Cores Vivas nos Cards de Negociação
+# Plano: "Opinião da Nath" em Cada Card de Cotação
 
-## Problema atual
+## Conceito
 
-Olhando a screenshot: todos os cards são visualmente idênticos — mesma cor bege, textos com baixo contraste (muted-foreground em fundo claro), badges pálidas, sem diferenciação visual real entre quente/morno/frio. Tudo parece "lavado".
+Cada card de cotação no pipeline terá uma seção dedicada mostrando a análise da Nath sobre a conversa e o que precisa ser feito. Duas camadas:
 
-## Mudanças propostas
+1. **Dados já existentes** — Os briefings já têm `conversationSummary`, `aiRecommendation` e `nextSteps` que nunca são exibidos nos cards. Mostrar imediatamente.
+2. **Opinião sob demanda** — Botão "Opinião da Nath" no card que chama a IA (via `agent-chat`, mesmo padrão do `NathOpinionButton`) para gerar uma análise personalizada. O resultado fica salvo no state local e exibido inline.
 
-### 1. Cards com fundo branco puro + texto preto forte
-- Card background: branco (`bg-white`) ao invés de `bg-card` bege
-- Texto principal da rota: `text-gray-900 font-bold` (contraste máximo)
-- Nome do cliente: `text-gray-700` ao invés de `text-muted-foreground`
-- Narrativa: `text-gray-600` ao invés de `text-muted-foreground/80`
-- Meta (datas, pax): `text-gray-600`
+## Mudanças
 
-### 2. Temperatura com cores VIVAS nos cards
-- **Quente**: borda esquerda `border-l-red-600` grossa (4px), fundo sutil `bg-red-50`, sombra vermelha
-- **Morno**: borda `border-l-amber-500`, fundo `bg-amber-50`
-- **Frio**: borda `border-l-blue-500`, fundo `bg-blue-50`
-- **Fechada**: borda `border-l-emerald-500`, fundo `bg-emerald-50`
+### 1. `NegotiationCard.tsx` — Seção "Visão da Nath"
 
-### 3. Badges com cores sólidas e contrastantes
-- "Briefing IA": fundo amarelo forte (`bg-amber-400 text-black`)
-- "Aguardando proposta": fundo cinza escuro (`bg-gray-800 text-white`)
-- "Em análise": fundo azul (`bg-blue-500 text-white`)
-- "Urgente": fundo vermelho (`bg-red-600 text-white`)
-- "Fechada": fundo verde (`bg-emerald-600 text-white`)
+Logo após a narrativa, adicionar:
 
-### 4. TemperatureScore mais vivo
-- Hot: `bg-red-600 text-white` (sólido, não transparente)
-- Warm: `bg-amber-500 text-white`
-- Cold: `bg-blue-500 text-white`
-- Won: `bg-emerald-600 text-white`
+- **Se o briefing tem `aiRecommendation` ou `nextSteps`**: exibir card roxo com ícone Crown mostrando a recomendação IA + próximos passos (dados que já existem no banco, zero custo de IA)
+- **Se não tem**: mostrar botão compacto "Pedir Opinião da Nath" (roxo, ícone Crown)
+- Ao clicar: chama a edge function `agent-chat` com o system prompt da Nath + dados do briefing como contexto
+- Streaming inline — a opinião aparece token por token direto no card
+- Resultado fica salvo em state local enquanto o pipeline está aberto
 
-### 5. LeadScoreBar maior e mais visível
-- Barra mais larga (w-14 ao invés de w-10), mais alta (h-2 ao invés de h-1.5)
-- Score em `font-extrabold text-[11px]`
+### 2. `NegotiationCard.tsx` — Prompt contextualizado
 
-### 6. PipelineStepper com pontos maiores e cores fortes
-- Pontos feitos: `bg-emerald-500` (verde vivo) ao invés de `bg-primary`
-- Ponto ativo: anel verde com pulso
-- Conectores feitos: `bg-emerald-500`
-- Label em `font-semibold text-gray-700`
+O prompt enviado à Nath será enriquecido com todos os dados do briefing:
+- Resumo da conversa (`conversationSummary`)
+- Motivação da viagem, sentimento do lead, score, urgência
+- Budget, destino, datas, PAX
+- Recomendação IA existente
 
-### 7. Botão "Gerar Proposta IA" sempre destacado
-- Verde escuro (`bg-emerald-700 hover:bg-emerald-800 text-white`) para cards normais
-- Vermelho (`bg-red-600 text-white`) para cards quentes
-- Tamanho maior: `h-8 text-xs` ao invés de `h-7 text-[10px]`
+A Nath responderá com foco em: **o que cotar, riscos da negociação, e próximo passo concreto**.
 
-### 8. Hover interativo nos cards
-- `hover:shadow-lg hover:scale-[1.01]` com transição suave
-- Botão ChevronRight sempre visível (não só no hover)
+### 3. Sem componente novo pesado
+
+Reutilizar a lógica de streaming já existente no `NathOpinionButton` (mesmo endpoint, mesmo system prompt), mas renderizado inline no card ao invés de em um Dialog separado.
+
+## Resultado visual
+
+```text
+┌──────────────────────────────────────┐
+│ [Briefing IA] [Aguardando] 🔥 Hot   │
+│ 📍 GRU → Lisboa                      │
+│ Maria Silva                          │
+│ ❤️ Lua de mel · Score 89 · Positivo   │
+│ "Casal jovem buscando..."            │
+│                                      │
+│ ┌──────────────────────────────────┐ │
+│ │ 👑 Visão da Nath                 │ │
+│ │ "Esse lead tá pronto! Casal     │ │
+│ │ empolgado, budget ok. Precisa   │ │
+│ │ cotar hotel boutique 4★ em      │ │
+│ │ Alfama + transfer + passeio     │ │
+│ │ de barco pelo Tejo. Prioridade  │ │
+│ │ máxima — fechar antes que       │ │
+│ │ esfriem."                       │ │
+│ │ 📋 Próximos: Enviar proposta    │ │
+│ │ em 24h com 2 opções de hotel    │ │
+│ └──────────────────────────────────┘ │
+│                                      │
+│ [═══ Pipeline ═══]                   │
+│ [Gerar Proposta IA]            [>]   │
+└──────────────────────────────────────┘
+```
 
 ## Arquivos impactados
 
 | Arquivo | Ação |
 |---|---|
-| `src/components/pipeline/NegotiationCard.tsx` | Redesign cores, contraste, hover |
-| `src/components/pipeline/TemperatureScore.tsx` | Cores sólidas |
-| `src/components/pipeline/LeadScoreBar.tsx` | Barra maior e mais viva |
-| `src/components/pipeline/PipelineStepper.tsx` | Pontos verdes, maiores |
-| `src/components/ui/badge.tsx` | Variantes com cores sólidas |
-| `src/components/pipeline/NegotiationTimeline.tsx` | Headers de grupo mais contrastantes |
+| `src/components/pipeline/NegotiationCard.tsx` | Editar — adicionar seção "Visão da Nath" com dados do briefing + botão de opinião sob demanda |
 
-**Zero alterações no banco de dados.** Apenas mudanças visuais de CSS/classes.
+**Zero alterações no banco de dados.** Usa dados já existentes no briefing + chamada à edge function existente (`agent-chat`).
 
