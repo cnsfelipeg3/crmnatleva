@@ -22,6 +22,7 @@ import { extractAndSaveBriefing } from "./briefingExtractor";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import ConversationIntelligencePanel from "./ConversationIntelligencePanel";
 
 const DESTINOS = ["💬 Livre", "🎲 Aleatório", "Dubai", "Orlando", "Europa", "Maldivas", "Caribe", "Japão", "Egito", "Tailândia", "Nova York", "Paris", "Grécia", "Bali", "Cancún", "Lisboa", "Seychelles"];
 
@@ -1081,6 +1082,11 @@ export default function SimuladorManualMode() {
                 ))}
               </div>
             </div>
+
+            {/* Intelligence Panel */}
+            <ConversationIntelligencePanel
+              messages={messages.map(m => ({ content: m.content, role: m.role, agentName: m.agentName, timestamp: m.timestamp }))}
+            />
 
             {/* Observations Panel */}
             <SimulatorObservationsPanel

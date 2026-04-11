@@ -600,6 +600,11 @@ export default function SimuladorChameleonMode() {
         </div>
       </div>
 
+      {/* Intelligence Panel */}
+      <ConversationIntelligencePanel
+        messages={messages.map(m => ({ content: m.content, role: m.role, agentName: m.agentName, timestamp: m.timestamp }))}
+      />
+
       {/* Debrief score summary */}
       {phase === "debrief" && debrief && (
         <div className="rounded-xl p-3 md:p-4 text-center" style={{
