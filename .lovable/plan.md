@@ -1,73 +1,56 @@
 
-Diagnóstico
 
-- O problema é real. No print, a agente usa “Fê” em várias respostas seguidas; isso ainda soa mecânico.
-- Pelo código atual, a proteção existe, mas está falhando por alguns motivos objetivos:
-  1. `complianceEngine.ts` não reconhece bem formatos como “Pode me chamar de Fernanda (ou Fê)”;
-  2. apelidos curtos e com acento (`Lu`, `Ju`, `Fê`) têm alta chance de escapar;
-  3. o filtro depende demais do texto recente da conversa, então no automático/camaleão ele pode “esquecer” o nome;
-  4. o modo automático não aplica o mesmo fallback final de limpeza que manual/camaleão;
-  5. a contagem atual de uso do nome está frágil e pode subcontar repetições.
+# Plano: Ponte Cotações ↔ Propostas
 
-Plano de correção
+## Contexto
 
-1. Fortalecer a leitura de nome e apelido
-- Criar um extrator único para nome do cliente + apelidos.
-- Cobrir padrões como:
-  - “sou a Fernanda”
-  - “me chamo Fernanda”
-  - “pode me chamar de Fernanda”
-  - “pode me chamar de Fernanda (ou Fê)”
-  - apelidos curtos como `Lu`, `Ju`, `Fê`.
+Hoje os módulos **Cotações** (`portal_quote_requests`) e **Propostas** (`proposals`) vivem isolados. O objetivo é que toda cotação gere automaticamente um rascunho de proposta vinculada, e que o consultor consiga navegar entre os dois de forma fluida.
 
-2. Passar o nome conhecido para o motor
-- `SimuladorAutoMode.tsx`: usar `lead.nome` explicitamente.
-- `SimuladorChameleonMode.tsx`: usar `profile.nome`.
-- `SimuladorManualMode.tsx`: continuar derivando do chat, mas com detector melhor.
-- Vou levar isso para o pipeline de compliance de forma clara, sem mexer no workflow dos agentes.
+## O que será feito
 
-3. Unificar a trava nos 3 modos
-- Aplicar a mesma sanitização final em manual, automático e camaleão.
-- Regra segura e humana:
-  - nunca usar o nome em mensagens consecutivas;
-  - no máximo 1 uso nas últimas 3 respostas do agente;
-  - se o modelo insistir, o nome/apelido é removido automaticamente antes de aparecer na UI.
+### 1. Schema — Vincular cotação à proposta
 
-4. Reforço leve de prompt, sem revirar o sistema
-- Em `buildAgentPrompt.ts`, reforçar para agentes comerciais que nome é ocasional, não abertura padrão.
-- A garantia principal continuará sendo determinística no pós-processamento.
+- Adicionar coluna `quote_request_id` (uuid, FK → `portal_quote_requests.id`) na tabela `proposals`
+- Adicionar coluna `proposal_id` (uuid, FK → `proposals.id`) na tabela `portal_quote_requests` para referência bidirecional rápida
 
-5. Blindagem contra regressão
-- Não vou mexer em:
-  - transferência
-  - funil
-  - scoring
-  - handoff
-  - lógica central dos agentes
-  - simulador de leads
-- A mudança fica focada em anti-repetição de nome e unificação entre modos.
+### 2. Bridge — `quoteToProposalBridge.ts`
 
-6. Testes antes de considerar “resolvido”
-- Adicionar testes para:
-  - `Fernanda / Fê`
-  - `Lu / Ju`
-  - nome conhecido no automático/camaleão mesmo sem reapresentação no chat
-  - remoção em repetição consecutiva
-  - preservação de uso ocasional e natural quando fizer sentido
+Nova lib que converte uma cotação em proposta rascunho:
 
-Arquivos que pretendo tocar
+- Mapeia campos da cotação → proposta: `origin_city` → `origin`, `destination_city` → `destinations`, `departure_date` → `travel_start_date`, `return_date` → `travel_end_date`, passageiros → `passenger_count`, `cabin_class`, `budget_range`
+- Reutiliza `pickBestTemplate` existente para selecionar o template visual automaticamente
+- Reutiliza `buildSuggestedItems` para popular `proposal_items` com voos, hotel e experiências sugeridas
+- Gera slug único e título automático (ex: "Proposta Orlando — Ana Silva")
+- Salva `quote_request_id` na proposta e `proposal_id` na cotação
 
-- `src/components/ai-team/complianceEngine.ts`
-- `src/components/ai-team/agentFormatting.ts`
-- `src/components/ai-team/SimuladorAutoMode.tsx`
-- `src/components/ai-team/SimuladorManualMode.tsx`
-- `src/components/ai-team/SimuladorChameleonMode.tsx`
-- `src/utils/buildAgentPrompt.ts`
-- testes em `src/test/...`
+### 3. UI — Botão "Gerar Proposta" na tela de Cotações
 
-Detalhes técnicos
+Na área expandida de cada cotação (`QuoteRequests.tsx`):
 
-- Vou trocar a lógica atual por uma detecção com suporte a alias/apelido.
-- Vou usar matching seguro para nomes com acento.
-- Vou eliminar a dependência excessiva de “só o trecho recente da conversa”.
-- A correção será aditiva e contida: primeiro fortalecer identidade do cliente, depois unificar a sanitização final nos 3 modos.
+- Novo botão **"Gerar Proposta"** (aparece nos status `pending`, `reviewing`, `quoted`)
+- Ao clicar: chama a bridge, cria a proposta, atualiza status da cotação para `quoted`, e exibe toast com link direto para o editor da proposta
+- Se a cotação já possui `proposal_id`, mostra botão **"Ver Proposta"** que navega direto ao editor
+
+### 4. UI — Badge de origem na tela de Propostas
+
+Em `Proposals.tsx`:
+
+- Se a proposta tem `quote_request_id`, exibir badge "Portal" ao lado do status para identificar visualmente que veio de uma cotação do portal
+
+### 5. Navegação cruzada
+
+- Na proposta (editor), se houver `quote_request_id`, mostrar link "Ver cotação original" que leva à aba de cotações
+- Na cotação expandida, se houver `proposal_id`, mostrar link "Ver proposta" que navega ao editor
+
+---
+
+## Arquivos impactados
+
+| Arquivo | Ação |
+|---|---|
+| `supabase/migrations/...` | Colunas `quote_request_id` e `proposal_id` |
+| `src/lib/quoteToProposalBridge.ts` | Nova lib (reutiliza lógica do briefingProposalBridge) |
+| `src/pages/QuoteRequests.tsx` | Botões "Gerar Proposta" / "Ver Proposta" |
+| `src/pages/Proposals.tsx` | Badge "Portal" |
+| `src/pages/ProposalEditor.tsx` | Link "Ver cotação original" |
+
