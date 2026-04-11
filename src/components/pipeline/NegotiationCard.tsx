@@ -266,6 +266,53 @@ function NathInsight({ item }: { item: NegotiationItem }) {
   );
 }
 
+// ─── Progress Ring ───
+
+function ExtractionRing({ item }: { item: NegotiationItem }) {
+  const raw = item.rawBriefing;
+  if (!raw) return null;
+
+  const filled = countFilledFields(raw);
+  const pct = Math.round((filled / MONITOR_TOTAL_FIELDS) * 100);
+  const isExtracting = raw.status === "extraindo";
+  const isComplete = pct >= 90;
+  const radius = 12;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (pct / 100) * circumference;
+
+  const strokeColor = isExtracting
+    ? "hsl(var(--accent))"
+    : isComplete
+      ? "#10b981"
+      : "#f59e0b";
+
+  return (
+    <div className="relative flex items-center gap-1" title={`${pct}% extraído (${filled}/${MONITOR_TOTAL_FIELDS} campos)`}>
+      <svg width="28" height="28" className={cn(isExtracting && "animate-pulse")}>
+        <circle cx="14" cy="14" r={radius} fill="none" stroke="hsl(var(--border))" strokeWidth="2.5" />
+        <circle
+          cx="14" cy="14" r={radius} fill="none"
+          stroke={strokeColor} strokeWidth="2.5"
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          strokeLinecap="round"
+          transform="rotate(-90 14 14)"
+          className="transition-all duration-500"
+        />
+        <text x="14" y="14" textAnchor="middle" dominantBaseline="central"
+          className="text-[7px] font-bold fill-foreground"
+        >
+          {pct}
+        </text>
+      </svg>
+      {isExtracting && (
+        <Badge className="text-[8px] bg-amber-100 text-amber-700 border-amber-300 animate-pulse px-1 py-0">
+          EXTRAINDO
+        </Badge>
+      )}
+    </div>
+  );
+}
+
 export function NegotiationCard({ item, generating, onGenerate, onSelect }: Props) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
