@@ -34,6 +34,7 @@ import {
 
 const ChameleonDebrief = lazy(() => import("./ChameleonDebrief"));
 import SimuladorReport from "./SimuladorReport";
+import ConversationIntelligencePanel from "./ConversationIntelligencePanel";
 
 type Phase = "config" | "running" | "paused" | "debrief";
 
