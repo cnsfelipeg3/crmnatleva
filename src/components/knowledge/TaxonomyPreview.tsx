@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   Map, Compass, Star, BedDouble, Plane, DollarSign, User, Rocket,
   ChevronDown, ChevronUp, Edit2, Plus, X, Sparkles, Lock,
+  Trophy, Lightbulb, ListChecks, Calendar,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -72,6 +73,31 @@ export interface Taxonomy {
     gatilho_emocional?: string;
     urgencia?: string;
   };
+  evento?: {
+    nome?: string;
+    edicao_ano?: string;
+    periodo?: string;
+    sedes_paises?: string[];
+    cidades_sede?: string[];
+    locais_arenas?: { nome: string; cidade?: string }[];
+    participantes?: string[];
+    formato_regras?: string;
+    programacao?: { data?: string; dia_semana?: string; horario?: string; participante_a?: string; participante_b?: string; local?: string; cidade?: string }[];
+    ingressos_info?: string;
+    hospedagem_evento?: string;
+    logistica_evento?: string;
+    pacotes_natleva?: string;
+    curiosidades?: string[];
+  };
+  conhecimento_operacional?: {
+    tema?: string;
+    passo_a_passo?: string[];
+    ferramentas?: string[];
+    pontos_atencao?: string[];
+    erros_comuns?: string[];
+  };
+  fatos_chave?: string[];
+  tipo_conteudo?: string;
   dominio?: string;
   confianca?: number;
 }
@@ -86,6 +112,8 @@ const SECTIONS: {
   borderColor: string;
 }[] = [
   { key: "geo", label: "Localização", icon: Map, color: "text-blue-500", bgColor: "bg-blue-500/10", borderColor: "border-blue-500/20" },
+  { key: "fatos_chave", label: "Fatos-Chave", icon: ListChecks, color: "text-indigo-500", bgColor: "bg-indigo-500/10", borderColor: "border-indigo-500/20" },
+  { key: "evento", label: "Evento", icon: Trophy, color: "text-yellow-600", bgColor: "bg-yellow-500/10", borderColor: "border-yellow-500/20" },
   { key: "destino", label: "Destino", icon: Compass, color: "text-amber-500", bgColor: "bg-amber-500/10", borderColor: "border-amber-500/20" },
   { key: "experiencias", label: "Experiências", icon: Star, color: "text-orange-500", bgColor: "bg-orange-500/10", borderColor: "border-orange-500/20" },
   { key: "hospedagem", label: "Hospedagem", icon: BedDouble, color: "text-purple-500", bgColor: "bg-purple-500/10", borderColor: "border-purple-500/20" },
@@ -93,6 +121,7 @@ const SECTIONS: {
   { key: "financeiro", label: "Financeiro", icon: DollarSign, color: "text-emerald-500", bgColor: "bg-emerald-500/10", borderColor: "border-emerald-500/20" },
   { key: "perfil_viajante", label: "Perfil do Viajante", icon: User, color: "text-pink-500", bgColor: "bg-pink-500/10", borderColor: "border-pink-500/20" },
   { key: "vendas", label: "Vendas", icon: Rocket, color: "text-red-500", bgColor: "bg-red-500/10", borderColor: "border-red-500/20" },
+  { key: "conhecimento_operacional", label: "Conhecimento Operacional", icon: Lightbulb, color: "text-teal-500", bgColor: "bg-teal-500/10", borderColor: "border-teal-500/20" },
 ];
 
 // ─── Pill component ───
@@ -230,9 +259,108 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
         </TaxSection>
       )}
 
+      {/* FATOS-CHAVE Section */}
+      {taxonomy.fatos_chave && taxonomy.fatos_chave.length > 0 && (
+        <TaxSection section={SECTIONS.find(s => s.key === "fatos_chave")!}>
+          <ul className="space-y-1.5">
+            {taxonomy.fatos_chave.map((f, i) => (
+              <li key={i} className="text-xs flex gap-2">
+                <span className="text-indigo-500 font-bold shrink-0">•</span>
+                <span>{f}</span>
+              </li>
+            ))}
+          </ul>
+        </TaxSection>
+      )}
+
+      {/* EVENTO Section */}
+      {hasContent("evento") && (
+        <TaxSection section={SECTIONS.find(s => s.key === "evento")!}>
+          {taxonomy.evento?.nome && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-bold">{taxonomy.evento.nome}</span>
+              {taxonomy.evento.edicao_ano && <Pill color="amber">{taxonomy.evento.edicao_ano}</Pill>}
+              {taxonomy.evento.periodo && <Pill color="blue">{taxonomy.evento.periodo}</Pill>}
+            </div>
+          )}
+          {taxonomy.evento?.cidades_sede && taxonomy.evento.cidades_sede.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Cidades-sede</p>
+              <div className="flex flex-wrap gap-1.5">
+                {taxonomy.evento.cidades_sede.map((c, i) => <Pill key={i} color="blue">{c}</Pill>)}
+              </div>
+            </div>
+          )}
+          {taxonomy.evento?.locais_arenas && taxonomy.evento.locais_arenas.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Estádios / Arenas</p>
+              <div className="space-y-1">
+                {taxonomy.evento.locais_arenas.map((l, i) => (
+                  <div key={i} className="text-xs flex items-center gap-2 rounded-lg bg-muted/30 px-3 py-1.5">
+                    <span className="font-medium">{l.nome}</span>
+                    {l.cidade && <span className="text-muted-foreground">— {l.cidade}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {taxonomy.evento?.participantes && taxonomy.evento.participantes.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Participantes / Times</p>
+              <div className="flex flex-wrap gap-1.5">
+                {taxonomy.evento.participantes.map((p, i) => <Pill key={i} color="green">{p}</Pill>)}
+              </div>
+            </div>
+          )}
+          {taxonomy.evento?.formato_regras && (
+            <p className="text-xs text-muted-foreground">📋 {taxonomy.evento.formato_regras}</p>
+          )}
+          {taxonomy.evento?.programacao && taxonomy.evento.programacao.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">
+                📅 Programação ({taxonomy.evento.programacao.length} {taxonomy.evento.programacao.length === 1 ? "evento" : "eventos"})
+              </p>
+              <div className="space-y-1 max-h-[400px] overflow-y-auto">
+                {taxonomy.evento.programacao.map((p, i) => (
+                  <div key={i} className="text-xs flex items-center gap-2 rounded-lg bg-muted/30 px-3 py-2">
+                    <span className="font-mono text-[10px] text-muted-foreground shrink-0 w-16">{p.data || ""}</span>
+                    {p.dia_semana && <span className="text-[10px] text-muted-foreground shrink-0">({p.dia_semana})</span>}
+                    {p.horario && <span className="font-bold shrink-0">{p.horario}</span>}
+                    <span className="font-medium">
+                      {p.participante_a}{p.participante_b ? ` × ${p.participante_b}` : ""}
+                    </span>
+                    {p.local && <span className="text-muted-foreground ml-auto shrink-0">📍 {p.local}{p.cidade ? `, ${p.cidade}` : ""}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {taxonomy.evento?.ingressos_info && (
+            <p className="text-xs"><span className="font-bold">🎫 Ingressos:</span> {taxonomy.evento.ingressos_info}</p>
+          )}
+          {taxonomy.evento?.pacotes_natleva && (
+            <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2">
+              <p className="text-xs font-bold text-primary">🎯 Pacotes NatLeva: {taxonomy.evento.pacotes_natleva}</p>
+            </div>
+          )}
+          {taxonomy.evento?.curiosidades && taxonomy.evento.curiosidades.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Curiosidades</p>
+              <ul className="space-y-1">
+                {taxonomy.evento.curiosidades.map((c, i) => (
+                  <li key={i} className="text-xs text-muted-foreground flex gap-2">
+                    <span className="text-yellow-500">✦</span> {c}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </TaxSection>
+      )}
+
       {/* DESTINO Section */}
       {hasContent("destino") && (
-        <TaxSection section={SECTIONS[1]}>
+        <TaxSection section={SECTIONS.find(s => s.key === "destino")!}>
           <div className="flex flex-wrap gap-2">
             {destino?.tipo && <Pill color="amber">{destino.tipo}</Pill>}
             {destino?.popularidade && <Pill color="amber">{destino.popularidade}</Pill>}
@@ -280,7 +408,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
 
       {/* EXPERIENCIAS Section */}
       {hasContent("experiencias") && (
-        <TaxSection section={SECTIONS[2]}>
+        <TaxSection section={SECTIONS.find(s => s.key === "experiencias")!}>
           {exp?.passeios && exp.passeios.length > 0 && (
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">Passeios</p>
@@ -327,7 +455,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
 
       {/* HOSPEDAGEM Section */}
       {hasContent("hospedagem") && (
-        <TaxSection section={SECTIONS[3]}>
+        <TaxSection section={SECTIONS.find(s => s.key === "hospedagem")!}>
           {hosp?.hoteis && hosp.hoteis.length > 0 && (
             <div className="space-y-1.5">
               {hosp.hoteis.map((h, i) => (
@@ -353,7 +481,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
 
       {/* LOGISTICA Section */}
       {hasContent("logistica") && (
-        <TaxSection section={SECTIONS[4]}>
+        <TaxSection section={SECTIONS.find(s => s.key === "logistica")!}>
           {log?.companhias_aereas && log.companhias_aereas.length > 0 && (
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Companhias</p>
@@ -383,7 +511,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
 
       {/* FINANCEIRO Section */}
       {hasContent("financeiro") && (
-        <TaxSection section={SECTIONS[5]}>
+        <TaxSection section={SECTIONS.find(s => s.key === "financeiro")!}>
           <div className="flex items-center gap-2 flex-wrap">
             <InternalBadge />
             {fin?.faixa_preco_label && (
@@ -406,7 +534,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
 
       {/* PERFIL Section */}
       {hasContent("perfil_viajante") && (
-        <TaxSection section={SECTIONS[6]}>
+        <TaxSection section={SECTIONS.find(s => s.key === "perfil_viajante")!}>
           {perfil?.ideal && perfil.ideal.length > 0 && (
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Ideal para</p>
@@ -458,7 +586,7 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
 
       {/* VENDAS Section - highlighted */}
       {hasContent("vendas") && (
-        <TaxSection section={SECTIONS[7]} defaultOpen={true}>
+        <TaxSection section={SECTIONS.find(s => s.key === "vendas")!} defaultOpen={true}>
           {vendas?.gatilho_emocional && (
             <div className="rounded-xl bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/20 p-4">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1">Gatilho Emocional</p>
@@ -495,6 +623,59 @@ export default function TaxonomyPreview({ taxonomy, onChange, readOnly = false }
           {vendas?.urgencia && (
             <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 px-3 py-2">
               <p className="text-xs font-bold text-amber-700 dark:text-amber-400">⚡ {vendas.urgencia}</p>
+            </div>
+          )}
+        </TaxSection>
+      )}
+
+      {/* CONHECIMENTO OPERACIONAL Section */}
+      {hasContent("conhecimento_operacional") && (
+        <TaxSection section={SECTIONS.find(s => s.key === "conhecimento_operacional")!}>
+          {taxonomy.conhecimento_operacional?.tema && (
+            <p className="text-sm font-bold">{taxonomy.conhecimento_operacional.tema}</p>
+          )}
+          {taxonomy.conhecimento_operacional?.passo_a_passo && taxonomy.conhecimento_operacional.passo_a_passo.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">Passo a passo</p>
+              <ol className="space-y-1.5">
+                {taxonomy.conhecimento_operacional.passo_a_passo.map((p, i) => (
+                  <li key={i} className="text-xs flex gap-2">
+                    <span className="text-teal-500 font-bold shrink-0">{i + 1}.</span> {p}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          {taxonomy.conhecimento_operacional?.ferramentas && taxonomy.conhecimento_operacional.ferramentas.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Ferramentas</p>
+              <div className="flex flex-wrap gap-1.5">
+                {taxonomy.conhecimento_operacional.ferramentas.map((f, i) => <Pill key={i} color="cyan">{f}</Pill>)}
+              </div>
+            </div>
+          )}
+          {taxonomy.conhecimento_operacional?.pontos_atencao && taxonomy.conhecimento_operacional.pontos_atencao.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Pontos de atenção</p>
+              <ul className="space-y-1">
+                {taxonomy.conhecimento_operacional.pontos_atencao.map((p, i) => (
+                  <li key={i} className="text-xs text-muted-foreground flex gap-2">
+                    <span className="text-amber-500">⚠️</span> {p}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {taxonomy.conhecimento_operacional?.erros_comuns && taxonomy.conhecimento_operacional.erros_comuns.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Erros comuns</p>
+              <ul className="space-y-1">
+                {taxonomy.conhecimento_operacional.erros_comuns.map((e, i) => (
+                  <li key={i} className="text-xs text-muted-foreground flex gap-2">
+                    <span className="text-red-500">❌</span> {e}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </TaxSection>
