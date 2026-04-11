@@ -1,73 +1,61 @@
 
 
-# Plano: "Opinião da Nath" em Cada Card de Cotação
+# Plano: Unificação Timeline + Monitor
 
-## Conceito
+## Problema
 
-Cada card de cotação no pipeline terá uma seção dedicada mostrando a análise da Nath sobre a conversa e o que precisa ser feito. Duas camadas:
+Duas views separadas com toggle manual. O Monitor tem KPIs e progress rings úteis que ficam escondidos. O usuário precisa alternar constantemente.
 
-1. **Dados já existentes** — Os briefings já têm `conversationSummary`, `aiRecommendation` e `nextSteps` que nunca são exibidos nos cards. Mostrar imediatamente.
-2. **Opinião sob demanda** — Botão "Opinião da Nath" no card que chama a IA (via `agent-chat`, mesmo padrão do `NathOpinionButton`) para gerar uma análise personalizada. O resultado fica salvo no state local e exibido inline.
+## Solução
+
+Fundir tudo numa view única: KPIs do Monitor ficam sempre visíveis no topo, cada card da Timeline ganha um mini progress ring de extração, e o toggle desaparece.
 
 ## Mudanças
 
-### 1. `NegotiationCard.tsx` — Seção "Visão da Nath"
+### 1. `src/pages/CotacoesPropostasPipeline.tsx`
 
-Logo após a narrativa, adicionar:
+- **Remover** o estado `view`, o toggle Timeline/Monitor, o import lazy do `CotacoesMonitorView`
+- **Adicionar** KPIs inline no topo (Extraindo, Campos, Completude, Completos) calculados a partir dos briefings já carregados via `useQuery`
+- **Adicionar** badge "LIVE" no header indicando realtime ativo
+- Manter filtros de temperatura, busca, timeline e detail panel intactos
 
-- **Se o briefing tem `aiRecommendation` ou `nextSteps`**: exibir card roxo com ícone Crown mostrando a recomendação IA + próximos passos (dados que já existem no banco, zero custo de IA)
-- **Se não tem**: mostrar botão compacto "Pedir Opinião da Nath" (roxo, ícone Crown)
-- Ao clicar: chama a edge function `agent-chat` com o system prompt da Nath + dados do briefing como contexto
-- Streaming inline — a opinião aparece token por token direto no card
-- Resultado fica salvo em state local enquanto o pipeline está aberto
+### 2. `src/components/pipeline/NegotiationCard.tsx`
 
-### 2. `NegotiationCard.tsx` — Prompt contextualizado
+- **Adicionar mini progress ring** (SVG 32x32) no canto superior direito do card quando o item tem briefing — mostra % de campos preenchidos
+- **Adicionar badge "EXTRAINDO"** animado (pulse) quando o briefing está em status de extração
+- Importar `countFilledFields` e `MONITOR_TOTAL_FIELDS` de `@/lib/quotationMonitor`
+- O ring usa as mesmas cores do Monitor: accent (extraindo), emerald (completo), amber (pendente)
 
-O prompt enviado à Nath será enriquecido com todos os dados do briefing:
-- Resumo da conversa (`conversationSummary`)
-- Motivação da viagem, sentimento do lead, score, urgência
-- Budget, destino, datas, PAX
-- Recomendação IA existente
+### 3. `src/components/pipeline/NegotiationTimeline.tsx`
 
-A Nath responderá com foco em: **o que cotar, riscos da negociação, e próximo passo concreto**.
-
-### 3. Sem componente novo pesado
-
-Reutilizar a lógica de streaming já existente no `NathOpinionButton` (mesmo endpoint, mesmo system prompt), mas renderizado inline no card ao invés de em um Dialog separado.
+- Ajuste menor: adicionar contagem de briefings com extração ativa no header de cada grupo
 
 ## Resultado visual
 
 ```text
-┌──────────────────────────────────────┐
-│ [Briefing IA] [Aguardando] 🔥 Hot   │
-│ 📍 GRU → Lisboa                      │
-│ Maria Silva                          │
-│ ❤️ Lua de mel · Score 89 · Positivo   │
-│ "Casal jovem buscando..."            │
-│                                      │
-│ ┌──────────────────────────────────┐ │
-│ │ 👑 Visão da Nath                 │ │
-│ │ "Esse lead tá pronto! Casal     │ │
-│ │ empolgado, budget ok. Precisa   │ │
-│ │ cotar hotel boutique 4★ em      │ │
-│ │ Alfama + transfer + passeio     │ │
-│ │ de barco pelo Tejo. Prioridade  │ │
-│ │ máxima — fechar antes que       │ │
-│ │ esfriem."                       │ │
-│ │ 📋 Próximos: Enviar proposta    │ │
-│ │ em 24h com 2 opções de hotel    │ │
-│ └──────────────────────────────────┘ │
-│                                      │
-│ [═══ Pipeline ═══]                   │
-│ [Gerar Proposta IA]            [>]   │
-└──────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│ Central de Cotações & Propostas  [+ Nova]   │
+│ Timeline unificada · 🟢 LIVE                │
+├────────┬────────┬──────────┬────────────────┤
+│ ⚡ 3    │ 📊 142 │ 🎯 68%   │ ✅ 5 completos │
+├─────────┴────────┴──────────┴───────────────┤
+│ 🔍 Buscar...    [Todas][Quentes][Mornas]... │
+├─────────────────────────────────────────────┤
+│ 🔴 AGORA — 2 negociações                   │
+│ ┌──────────────────┐ ┌──────────────────┐   │
+│ │ GRU→LIS  [72%◎]  │ │ GRU→CDG [EXTR.] │   │
+│ │ 👑 Visão da Nath  │ │ 👑 Visão da Nath  │   │
+│ └──────────────────┘ └──────────────────┘   │
+└─────────────────────────────────────────────┘
 ```
 
 ## Arquivos impactados
 
 | Arquivo | Ação |
 |---|---|
-| `src/components/pipeline/NegotiationCard.tsx` | Editar — adicionar seção "Visão da Nath" com dados do briefing + botão de opinião sob demanda |
+| `src/pages/CotacoesPropostasPipeline.tsx` | Remover toggle, adicionar KPIs + LIVE badge |
+| `src/components/pipeline/NegotiationCard.tsx` | Adicionar mini progress ring + badge EXTRAINDO |
+| `src/components/pipeline/NegotiationTimeline.tsx` | Ajuste menor no header |
 
-**Zero alterações no banco de dados.** Usa dados já existentes no briefing + chamada à edge function existente (`agent-chat`).
+**Zero alterações no banco de dados.** O `CotacoesMonitorView.tsx` permanece no projeto mas não será mais importado pela página principal.
 
