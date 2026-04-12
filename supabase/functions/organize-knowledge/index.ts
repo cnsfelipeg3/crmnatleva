@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ─── ÓRION v1 — System Prompt ───
+// ─── ÓRION v2 — System Prompt (Strategic Analysis) ───
 const ORION_SYSTEM_PROMPT = `Voce e o ORION, analista de inteligencia da NatLeva, uma agencia de viagens premium brasileira. Sua missao: extrair o MAXIMO de conhecimento acionavel para vendas.
 
 Os conteudos podem ser sobre: destinos turisticos e roteiros de viagem, MAS TAMBEM sobre eventos (Copa do Mundo, Olimpiadas, shows, festivais, congressos), guias praticos, treinamentos internos, processos operacionais, etc.
@@ -106,9 +106,42 @@ INSTRUCOES EXTRAS DE PROFUNDIDADE (OBRIGATORIAS):
 
 LEMBRETE FINAL: A pior falha possivel e OMITIR dados concretos da transcricao. Datas, horarios, adversarios, estadios, cidades, participantes — devem ser listados TODOS, sem excecao.`;
 
+// ─── Passada 1: Extração Factual Pura ───
+const FACTUAL_EXTRACTION_PROMPT = `Voce e um extrator de dados factuais. Sua UNICA missao e extrair TODOS os dados concretos de um conteudo sobre viagens/eventos/treinamento.
+
+REGRA ABSOLUTA: Nao resuma, nao omita, nao generalize. Se ha 20 itens, liste os 20.
+
+Retorne SOMENTE JSON valido (sem markdown, sem backticks) com esta estrutura:
+
+{
+  "fatos_chave": ["TODOS os fatos concretos: datas, horarios, locais, nomes, numeros, regras — 1 fato por item"],
+  "programacao": [{"data":"DD/MM","dia_semana":"","horario":"HHhMM","participante_a":"","participante_b":"","local":"","cidade":""}],
+  "locais_arenas": [{"nome":"","cidade":""}],
+  "participantes": [],
+  "hoteis": [{"nome":"","categoria":"","faixa_preco":"","destaque":""}],
+  "restaurantes": [{"nome":"","tipo":"","faixa_preco":""}],
+  "passeios": [{"nome":"","tipo":"","duracao":"","preco_aprox":""}],
+  "experiencias_unicas": [],
+  "companhias_aereas": [],
+  "aeroportos": [],
+  "cidades": [],
+  "precos_mencionados": [],
+  "datas_importantes": [],
+  "regras_e_formatos": "",
+  "passo_a_passo": [],
+  "curiosidades": []
+}
+
+INSTRUCOES:
+- Extraia ABSOLUTAMENTE TUDO que for dado concreto (nomes, datas, horarios, valores, locais, estadios, adversarios).
+- Se o conteudo menciona 15 jogos, liste os 15 na programacao.
+- Se menciona 8 hoteis, liste os 8.
+- Precos em Reais (R$) quando possivel.
+- Campos sem dados: arrays vazios ou strings vazias.
+- NUNCA invente dados. Apenas extraia o que esta no texto.`;
 
 // ─── Truncation Strategy (60% head + 35% tail) ───
-function truncateForOrion(text: string, maxChars = 40000): string {
+function truncateForOrion(text: string, maxChars = 60000): string {
   if (text.length <= maxChars) return text;
   const headSize = Math.floor(maxChars * 0.6);
   const tailSize = Math.floor(maxChars * 0.35);
@@ -156,22 +189,17 @@ function validateTaxonomia(tax: any) {
 // ─── Robust Parse (4 layers) ───
 function parseOrionResponse(rawText: string) {
   try {
-    // Layer 1: clean markdown
     let clean = (rawText || "").trim();
     clean = clean.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
 
-    // Layer 2: find JSON boundaries
     const firstBrace = clean.indexOf("{");
     const lastBrace = clean.lastIndexOf("}");
     if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
       throw new Error("JSON nao encontrado na resposta");
     }
     const jsonStr = clean.slice(firstBrace, lastBrace + 1);
-
-    // Layer 3: parse
     const parsed = JSON.parse(jsonStr);
 
-    // Layer 4: validate required fields
     const result = {
       titulo_sugerido: parsed.titulo_sugerido || "",
       resumo: parsed.resumo || "Conteudo processado pelo ORION.",
@@ -187,10 +215,9 @@ function parseOrionResponse(rawText: string) {
         : [],
       taxonomia: validateTaxonomia(parsed.taxonomia),
       processadoEm: new Date().toISOString(),
-      cerebroVersao: "orion-v1",
+      cerebroVersao: "orion-v2",
       status: "processado",
     };
-    // Merge top-level fatos_chave into taxonomia if taxonomia doesn't have them
     if (result.fatos_chave.length > 0 && (!result.taxonomia.fatos_chave || result.taxonomia.fatos_chave.length === 0)) {
       result.taxonomia.fatos_chave = result.fatos_chave;
     }
@@ -204,64 +231,166 @@ function parseOrionResponse(rawText: string) {
       chunks: [],
       taxonomia: getEmptyTaxonomia(),
       processadoEm: new Date().toISOString(),
-      cerebroVersao: "orion-v1",
+      cerebroVersao: "orion-v2",
       status: "pendente_reprocessamento",
       erro: e.message,
     };
   }
 }
 
-// ─── Call Claude with retry ───
-async function callOrion(systemPrompt: string, content: string, retries = 1): Promise<string> {
-  const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
-
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 12000,
-          system: systemPrompt,
-          messages: [{ role: "user", content }],
-        }),
-      });
-
-      if (!r.ok) {
-        if (r.status === 429) {
-          if (attempt < retries) { await new Promise(w => setTimeout(w, 2000)); continue; }
-          throw new Error("Rate limit atingido. Tente novamente em alguns segundos.");
-        }
-        if (r.status === 402) {
-          throw new Error("Créditos insuficientes na Anthropic.");
-        }
-        const errText = await r.text();
-        console.error("Anthropic error:", r.status, errText);
-        if (attempt < retries) { await new Promise(w => setTimeout(w, 2000)); continue; }
-        throw new Error(`API retornou ${r.status}`);
-      }
-
-      const d = await r.json();
-      if (d.error) throw new Error(d.error.message);
-      return d?.content?.[0]?.text?.trim() || "";
-    } catch (e) {
-      if (attempt < retries) { await new Promise(w => setTimeout(w, 2000)); continue; }
-      throw e;
-    }
+// ─── Parse factual extraction response ───
+function parseFactualResponse(rawText: string) {
+  try {
+    let clean = (rawText || "").trim();
+    clean = clean.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+    const firstBrace = clean.indexOf("{");
+    const lastBrace = clean.lastIndexOf("}");
+    if (firstBrace === -1 || lastBrace === -1) return null;
+    return JSON.parse(clean.slice(firstBrace, lastBrace + 1));
+  } catch {
+    console.error("Failed to parse factual response");
+    return null;
   }
-  throw new Error("callOrion: todas as tentativas falharam");
 }
 
+// ─── Merge factual data into ÓRION result ───
+function mergeFactualData(orionResult: any, factualData: any) {
+  if (!factualData) return orionResult;
+
+  const tax = orionResult.taxonomia;
+
+  // Merge fatos_chave (deduplicate)
+  if (Array.isArray(factualData.fatos_chave) && factualData.fatos_chave.length > 0) {
+    const existing = new Set((orionResult.fatos_chave || []).map((f: string) => f.toLowerCase()));
+    for (const fato of factualData.fatos_chave) {
+      if (typeof fato === "string" && !existing.has(fato.toLowerCase())) {
+        orionResult.fatos_chave.push(fato);
+        existing.add(fato.toLowerCase());
+      }
+    }
+    tax.fatos_chave = orionResult.fatos_chave;
+  }
+
+  // Merge programacao (if factual has more entries)
+  if (Array.isArray(factualData.programacao) && factualData.programacao.length > (tax.evento?.programacao?.length || 0)) {
+    tax.evento.programacao = factualData.programacao;
+  }
+
+  // Merge locais_arenas
+  if (Array.isArray(factualData.locais_arenas) && factualData.locais_arenas.length > (tax.evento?.locais_arenas?.length || 0)) {
+    tax.evento.locais_arenas = factualData.locais_arenas;
+  }
+
+  // Merge participantes
+  if (Array.isArray(factualData.participantes) && factualData.participantes.length > (tax.evento?.participantes?.length || 0)) {
+    tax.evento.participantes = factualData.participantes;
+  }
+
+  // Merge hoteis
+  if (Array.isArray(factualData.hoteis) && factualData.hoteis.length > (tax.hospedagem?.hoteis?.length || 0)) {
+    tax.hospedagem.hoteis = factualData.hoteis;
+  }
+
+  // Merge restaurantes
+  if (Array.isArray(factualData.restaurantes) && factualData.restaurantes.length > (tax.experiencias?.restaurantes?.length || 0)) {
+    tax.experiencias.restaurantes = factualData.restaurantes;
+  }
+
+  // Merge passeios
+  if (Array.isArray(factualData.passeios) && factualData.passeios.length > (tax.experiencias?.passeios?.length || 0)) {
+    tax.experiencias.passeios = factualData.passeios;
+  }
+
+  // Merge experiencias_unicas
+  if (Array.isArray(factualData.experiencias_unicas) && factualData.experiencias_unicas.length > 0) {
+    const existing = new Set(tax.experiencias?.experiencias_unicas || []);
+    for (const exp of factualData.experiencias_unicas) {
+      if (!existing.has(exp)) {
+        tax.experiencias.experiencias_unicas.push(exp);
+      }
+    }
+  }
+
+  // Merge companhias_aereas / aeroportos
+  if (Array.isArray(factualData.companhias_aereas) && factualData.companhias_aereas.length > (tax.logistica?.companhias_aereas?.length || 0)) {
+    tax.logistica.companhias_aereas = factualData.companhias_aereas;
+  }
+  if (Array.isArray(factualData.aeroportos) && factualData.aeroportos.length > (tax.logistica?.aeroportos?.length || 0)) {
+    tax.logistica.aeroportos = factualData.aeroportos;
+  }
+
+  // Merge cidades
+  if (Array.isArray(factualData.cidades) && factualData.cidades.length > (tax.geo?.cidades?.length || 0)) {
+    tax.geo.cidades = factualData.cidades;
+  }
+  if (Array.isArray(factualData.cidades) && factualData.cidades.length > (tax.evento?.cidades_sede?.length || 0)) {
+    tax.evento.cidades_sede = factualData.cidades;
+  }
+
+  // Merge curiosidades
+  if (Array.isArray(factualData.curiosidades) && factualData.curiosidades.length > (tax.evento?.curiosidades?.length || 0)) {
+    tax.evento.curiosidades = factualData.curiosidades;
+  }
+
+  // Merge passo_a_passo
+  if (Array.isArray(factualData.passo_a_passo) && factualData.passo_a_passo.length > (tax.conhecimento_operacional?.passo_a_passo?.length || 0)) {
+    tax.conhecimento_operacional.passo_a_passo = factualData.passo_a_passo;
+  }
+
+  // Merge regras_e_formatos
+  if (factualData.regras_e_formatos && !tax.evento?.formato_regras) {
+    tax.evento.formato_regras = factualData.regras_e_formatos;
+  }
+
+  orionResult.taxonomia = tax;
+  return orionResult;
+}
+
+// ─── Call Lovable AI Gateway ───
+async function callLovableAI(systemPrompt: string, content: string, maxTokens = 16000): Promise<string> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-pro",
+      max_tokens: maxTokens,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content },
+      ],
+    }),
+  });
+
+  if (!r.ok) {
+    const status = r.status;
+    if (status === 429) throw new Error("Rate limit atingido. Tente novamente em alguns segundos.");
+    if (status === 402) throw new Error("Créditos de IA insuficientes.");
+    const errText = await r.text();
+    console.error("Lovable AI error:", status, errText);
+    throw new Error(`AI Gateway retornou ${status}`);
+  }
+
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message || JSON.stringify(d.error));
+  return d?.choices?.[0]?.message?.content?.trim() || "";
+}
+
+// ─── Main Handler ───
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const startTime = Date.now();
+  const processingLog: Record<string, any> = {
+    modelo: "google/gemini-2.5-pro",
+    gateway: "lovable-ai",
+    versao: "orion-v2",
+  };
 
   try {
     const { content, transcript, title, tipo } = await req.json();
@@ -271,36 +400,80 @@ serve(async (req) => {
       });
     }
 
-    // Build user message with intelligent truncation
     const rawContent = content || transcript || "";
-    const truncated = truncateForOrion(rawContent, 40000);
+    const truncated = truncateForOrion(rawContent, 60000);
+    processingLog.input_chars = rawContent.length;
+    processingLog.truncated_chars = truncated.length;
 
     let userMessage: string;
     if (transcript && transcript.length > 200 && content) {
-      const truncatedTranscript = truncateForOrion(transcript, 20000);
+      const truncatedTranscript = truncateForOrion(transcript, 30000);
       userMessage = `Documento: ${title || "Conteudo"}\nTipo: ${tipo || "youtube"}\nConteudo:\n${truncated}\n\n---\n\nTranscricao original para referencia:\n${truncatedTranscript}`;
     } else {
       userMessage = `Documento: ${title || "Conteudo"}\nTipo: ${tipo || "texto"}\nConteudo:\n${truncated}`;
     }
 
-    // Call ÓRION with retry
-    const rawResponse = await callOrion(ORION_SYSTEM_PROMPT, userMessage);
-    const result = parseOrionResponse(rawResponse);
+    const useTwoPass = rawContent.length > 15000;
+    processingLog.two_pass = useTwoPass;
+
+    let factualData: any = null;
+
+    if (useTwoPass) {
+      // ─── Pass 1: Factual Extraction ───
+      console.log("ORION v2: Starting Pass 1 (factual extraction)...");
+      const pass1Start = Date.now();
+      try {
+        const factualRaw = await callLovableAI(FACTUAL_EXTRACTION_PROMPT, userMessage, 16000);
+        factualData = parseFactualResponse(factualRaw);
+        processingLog.pass1_time_ms = Date.now() - pass1Start;
+        processingLog.pass1_status = factualData ? "ok" : "parse_error";
+        if (factualData) {
+          processingLog.pass1_fatos = factualData.fatos_chave?.length || 0;
+          processingLog.pass1_programacao = factualData.programacao?.length || 0;
+        }
+        console.log(`ORION v2: Pass 1 done in ${processingLog.pass1_time_ms}ms — ${processingLog.pass1_fatos || 0} fatos, ${processingLog.pass1_programacao || 0} programacao`);
+      } catch (e: any) {
+        console.error("ORION v2: Pass 1 failed:", e.message);
+        processingLog.pass1_time_ms = Date.now() - pass1Start;
+        processingLog.pass1_status = "error";
+        processingLog.pass1_error = e.message;
+      }
+    }
+
+    // ─── Pass 2 (or single pass): Strategic Analysis ───
+    console.log(`ORION v2: Starting ${useTwoPass ? "Pass 2" : "single pass"} (strategic analysis)...`);
+    const pass2Start = Date.now();
+    const rawResponse = await callLovableAI(ORION_SYSTEM_PROMPT, userMessage, 16000);
+    processingLog.pass2_time_ms = Date.now() - pass2Start;
+
+    let result = parseOrionResponse(rawResponse);
+
+    // Merge factual data if two-pass was used
+    if (useTwoPass && factualData) {
+      result = mergeFactualData(result, factualData);
+      processingLog.merge = "applied";
+    }
 
     const elapsed = Date.now() - startTime;
+    processingLog.total_time_ms = elapsed;
+
+    // Attach processing log to result
+    (result as any).processing_log = processingLog;
 
     return new Response(JSON.stringify({
       organized_content: result.resumo,
       taxonomy: result,
       processing_time_ms: elapsed,
+      processing_log: processingLog,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
     console.error("organize-knowledge error:", e);
     const elapsed = Date.now() - startTime;
+    processingLog.total_time_ms = elapsed;
+    processingLog.error = e.message;
 
-    // Return fallback instead of crashing
     return new Response(JSON.stringify({
       organized_content: "Erro no processamento. Reprocesse manualmente.",
       taxonomy: {
@@ -310,14 +483,15 @@ serve(async (req) => {
         chunks: [],
         taxonomia: getEmptyTaxonomia(),
         processadoEm: new Date().toISOString(),
-        cerebroVersao: "orion-v1",
+        cerebroVersao: "orion-v2",
         status: "pendente_reprocessamento",
         erro: e.message,
       },
       processing_time_ms: elapsed,
+      processing_log: processingLog,
       error: e.message,
     }), {
-      status: 200, // Return 200 with error info so frontend doesn't crash
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
