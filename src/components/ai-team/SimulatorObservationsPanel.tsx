@@ -700,37 +700,17 @@ REGRAS:
 
                       {/* Expanded detail */}
                       {isExpanded && (
-                        <div
-                          className="px-3 pb-3 space-y-2.5 animate-in slide-in-from-top-1 duration-200"
-                          style={{
-                            borderTop: "1px solid rgba(255,255,255,0.04)",
-                          }}
-                        >
-                          <p
-                            className="text-[11px] leading-relaxed pt-2.5"
-                            style={{ color: "#CBD5E1" }}
-                          >
+                        <div className="px-3 pb-3 space-y-2.5 animate-in slide-in-from-top-1 duration-200 border-t border-border">
+                          <p className="text-[11px] leading-relaxed pt-2.5 text-foreground/80">
                             {imp.description}
                           </p>
 
                           {/* Action text preview */}
-                          <div
-                            className="rounded-lg p-2.5"
-                            style={{
-                              background: "rgba(139,92,246,0.05)",
-                              border: "1px solid rgba(139,92,246,0.1)",
-                            }}
-                          >
-                            <p
-                              className="text-[9px] uppercase tracking-wider font-bold mb-1"
-                              style={{ color: "#8B5CF6" }}
-                            >
+                          <div className="rounded-lg p-2.5 bg-violet-500/5 border border-violet-500/10">
+                            <p className="text-[9px] uppercase tracking-wider font-bold mb-1 text-violet-600">
                               📝 Instrução que será adicionada
                             </p>
-                            <p
-                              className="text-[11px] leading-relaxed italic"
-                              style={{ color: "#E2E8F0" }}
-                            >
+                            <p className="text-[11px] leading-relaxed italic text-foreground">
                               "{imp.actionText}"
                             </p>
                           </div>
@@ -739,37 +719,16 @@ REGRAS:
                           {imp.status === "pending" && (
                             <div className="flex items-center gap-2 pt-1">
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  approveImprovement(imp);
-                                }}
+                                onClick={(e) => { e.stopPropagation(); approveImprovement(imp); }}
                                 disabled={isApplying}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all hover:brightness-110 disabled:opacity-60"
-                                style={{
-                                  background:
-                                    "linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.08))",
-                                  border: "1px solid rgba(16,185,129,0.2)",
-                                  color: "#10B981",
-                                }}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all disabled:opacity-60 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/15"
                               >
-                                {isApplying ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                  <Check className="w-3.5 h-3.5" />
-                                )}
+                                {isApplying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                                 {isApplying ? "Aplicando..." : "Aprovar e Aplicar"}
                               </button>
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  rejectImprovement(imp.id);
-                                }}
-                                className="px-3 py-2 rounded-lg text-[11px] font-bold transition-all hover:brightness-110"
-                                style={{
-                                  background: "rgba(239,68,68,0.08)",
-                                  border: "1px solid rgba(239,68,68,0.1)",
-                                  color: "#EF4444",
-                                }}
+                                onClick={(e) => { e.stopPropagation(); rejectImprovement(imp.id); }}
+                                className="px-3 py-2 rounded-lg text-[11px] font-bold transition-all bg-destructive/5 border border-destructive/10 text-destructive hover:bg-destructive/10"
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>
@@ -777,37 +736,39 @@ REGRAS:
                           )}
 
                           {imp.status === "approved" && (
-                            <div
-                              className="py-2 px-2.5 rounded-lg space-y-1.5"
-                              style={{
-                                background: "rgba(16,185,129,0.06)",
-                                border: "1px solid rgba(16,185,129,0.1)",
-                              }}
-                            >
+                            <div className="py-2 px-2.5 rounded-lg space-y-1.5 bg-emerald-500/5 border border-emerald-500/10">
                               <div className="flex items-center gap-1.5">
-                                <Check
-                                  className="w-3.5 h-3.5 shrink-0"
-                                  style={{ color: "#10B981" }}
-                                />
-                                <span
-                                  className="text-[11px] font-bold"
-                                  style={{ color: "#10B981" }}
-                                >
+                                <Check className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
+                                <span className="text-[11px] font-bold text-emerald-600">
                                   Aplicado em {imp.agentName}
                                 </span>
                               </div>
-                              <p
-                                className="text-[10px] leading-relaxed"
-                                style={{ color: "#94A3B8" }}
-                              >
-                                "{imp.title}" adicionado ao <strong style={{ color: "#CBD5E1" }}>prompt ({CATEGORY_META[imp.category]?.label || "Comportamento"})</strong> do agente
+                              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                                "{imp.title}" adicionado ao <strong className="text-foreground">prompt ({CATEGORY_META[imp.category]?.label || "Comportamento"})</strong> do agente
                               </p>
                               <a
                                 href={`/ai-team/equipe?agent=${imp.agentId}&tab=melhorias`}
-                                className="inline-flex items-center gap-1 text-[10px] font-semibold mt-0.5 hover:underline transition-colors"
-                                style={{ color: "#8B5CF6" }}
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold mt-0.5 hover:underline transition-colors text-violet-600"
                                 onClick={(e) => e.stopPropagation()}
                               >
+                                Ver melhoria no painel do agente
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
                                 <ExternalLink className="w-3 h-3" />
                                 Ver melhoria no painel do agente
                               </a>
