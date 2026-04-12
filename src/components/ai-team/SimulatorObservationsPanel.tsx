@@ -586,20 +586,11 @@ REGRAS:
 
           {/* Synthesize CTA */}
           {observations.length >= 1 && (
-            <div
-              className="px-3 pb-3 pt-1"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
-            >
+            <div className="px-3 pb-3 pt-1 border-t border-border">
               <button
                 onClick={synthesizeWithAI}
                 disabled={synthesizing}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all hover:brightness-110 disabled:opacity-60"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(139,92,246,0.15))",
-                  border: "1px solid rgba(245,158,11,0.2)",
-                  color: "#F59E0B",
-                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-primary/15 disabled:opacity-60 bg-primary/10 border border-primary/20 text-primary"
               >
                 {synthesizing ? (
                   <>
@@ -623,30 +614,20 @@ REGRAS:
         <div className="flex-1 flex flex-col overflow-hidden">
           {synthesizing ? (
             <div className="flex-1 flex flex-col items-center justify-center py-8 gap-3">
-              <Loader2
-                className="w-10 h-10 animate-spin"
-                style={{ color: "#F59E0B" }}
-              />
-              <p className="text-xs" style={{ color: "#94A3B8" }}>
+              <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              <p className="text-xs text-muted-foreground">
                 Convertendo observações em melhorias...
               </p>
             </div>
           ) : improvements.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center py-8 gap-2">
-              <Wand2
-                className="w-8 h-8 opacity-20"
-                style={{ color: "#94A3B8" }}
-              />
-              <p className="text-[11px]" style={{ color: "#64748B" }}>
+              <Wand2 className="w-8 h-8 text-muted-foreground/20" />
+              <p className="text-[11px] text-muted-foreground">
                 Registre observações e clique "Organizar com IA"
               </p>
               <button
                 onClick={() => setView("observations")}
-                className="text-[11px] mt-1 px-3 py-1 rounded-lg"
-                style={{
-                  background: "rgba(245,158,11,0.1)",
-                  color: "#F59E0B",
-                }}
+                className="text-[11px] mt-1 px-3 py-1 rounded-lg bg-primary/10 text-primary"
               >
                 ← Voltar às observações
               </button>
