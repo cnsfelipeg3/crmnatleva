@@ -689,65 +689,62 @@ export default function SimuladorManualMode() {
       "fixed inset-0 z-50 transition-all duration-300",
       showPanel ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
     )}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowPanel(false)} />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowPanel(false)} />
       <div className={cn(
-        "absolute bottom-0 left-0 right-0 rounded-t-3xl transition-transform duration-300 max-h-[85vh] overflow-hidden flex flex-col",
+        "absolute bottom-0 left-0 right-0 rounded-t-3xl transition-transform duration-300 max-h-[85vh] overflow-hidden flex flex-col bg-card border-t border-border",
         showPanel ? "translate-y-0" : "translate-y-full"
-      )} style={{ background: "#0D1220", border: "1px solid rgba(255,255,255,0.06)" }}>
+      )}>
         {/* Handle */}
         <div className="flex items-center justify-center pt-3 pb-2 shrink-0">
-          <div className="w-12 h-1.5 rounded-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+          <div className="w-12 h-1.5 rounded-full bg-muted" />
         </div>
         {/* Tabs */}
-        <div className="px-5 pb-4 flex gap-2.5 shrink-0">
+        <div className="px-4 pb-3 flex gap-2 shrink-0">
           {["agente", "destino", "sessoes"].map(t => (
             <button key={t} onClick={() => setPanelTab(t as any)}
-              className="flex-1 text-[12px] font-bold py-2.5 rounded-xl transition-all"
-              style={{
-                background: panelTab === t ? `${agentColor}15` : "rgba(255,255,255,0.04)",
-                border: `1px solid ${panelTab === t ? `${agentColor}30` : "rgba(255,255,255,0.08)"}`,
-                color: panelTab === t ? agentColor : "#64748B",
-              }}>
+              className={cn(
+                "flex-1 text-xs font-bold py-2.5 rounded-xl transition-all border",
+                panelTab === t
+                  ? "bg-primary/10 border-primary/30 text-primary"
+                  : "bg-muted/30 border-border text-muted-foreground"
+              )}>
               {t === "agente" ? "🤖 Agente" : t === "destino" ? "✈️ Destino" : "📋 Sessões"}
             </button>
           ))}
         </div>
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-5 pb-8">
+        <div className="flex-1 overflow-y-auto px-4 pb-8">
           {panelTab === "agente" && (
-            <div className="space-y-4">
-              {/* Squad filter */}
+            <div className="space-y-3">
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                <button onClick={() => setActiveSquad("all")} className="text-[11px] px-3 py-2 rounded-xl font-semibold shrink-0 transition-all"
-                  style={{ background: activeSquad === "all" ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.04)", border: `1px solid ${activeSquad === "all" ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.08)"}`, color: activeSquad === "all" ? "#34D399" : "#CBD5E1" }}>
-                  Todos
-                </button>
+                <button onClick={() => setActiveSquad("all")} className={cn(
+                  "text-[11px] px-3 py-2 rounded-xl font-semibold shrink-0 transition-all border",
+                  activeSquad === "all" ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted/30 border-border text-muted-foreground"
+                )}>Todos</button>
                 {SQUADS.map(s => (
-                  <button key={s.id} onClick={() => setActiveSquad(s.id)} className="text-[11px] px-3 py-2 rounded-xl font-semibold shrink-0 transition-all"
-                    style={{ background: activeSquad === s.id ? "rgba(16,185,129,0.12)" : "rgba(255,255,255,0.04)", border: `1px solid ${activeSquad === s.id ? "rgba(16,185,129,0.3)" : "rgba(255,255,255,0.08)"}`, color: activeSquad === s.id ? "#34D399" : "#CBD5E1" }}>
-                    {s.name}
-                  </button>
+                  <button key={s.id} onClick={() => setActiveSquad(s.id)} className={cn(
+                    "text-[11px] px-3 py-2 rounded-xl font-semibold shrink-0 transition-all border",
+                    activeSquad === s.id ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted/30 border-border text-muted-foreground"
+                  )}>{s.emoji} {s.name.replace("Squad ", "")}</button>
                 ))}
               </div>
-              {/* Agent list */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {filteredAgents.map(a => {
                   const c = getAgentColor(a);
                   const active = selectedAgent.id === a.id;
                   return (
                     <button key={a.id} onClick={() => { setSelectedAgent(a); setShowPanel(false); }}
-                      className="w-full flex items-center gap-3.5 px-3.5 py-3 rounded-xl text-left transition-all duration-200"
-                      style={{
-                        background: active ? `${c}0A` : "rgba(255,255,255,0.02)",
-                        border: `1px solid ${active ? `${c}25` : "rgba(255,255,255,0.06)"}`,
-                      }}>
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center text-base shrink-0"
-                        style={{ background: `${c}12`, color: c }}>{a.emoji}</div>
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all border",
+                        active ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-muted/10 border-border/40"
+                      )}>
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center text-base shrink-0"
+                        style={{ background: `${c}12` }}>{a.emoji}</div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-bold" style={{ color: active ? c : "#E2E8F0" }}>{a.name}</p>
-                        <p className="text-[11px] mt-0.5" style={{ color: "#94A3B8" }}>{a.role} · Lv.{a.level}</p>
+                        <p className={cn("text-xs font-bold truncate", active ? "text-primary" : "text-foreground")}>{a.name}</p>
+                        <p className="text-[11px] mt-0.5 text-muted-foreground">{a.role} · Lv.{a.level}</p>
                       </div>
-                      <span className="text-[11px] font-bold tabular-nums" style={{ color: "#34D399" }}>{a.successRate}%</span>
+                      <span className="text-[11px] font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{a.successRate}%</span>
                     </button>
                   );
                 })}
@@ -755,44 +752,45 @@ export default function SimuladorManualMode() {
             </div>
           )}
           {panelTab === "destino" && (
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-3 gap-2">
               {DESTINOS.map(d => {
                 const isRandom = d === "🎲 Aleatório";
                 const isLivre = d === "💬 Livre";
                 const isActive = isLivre ? selectedDestino === "💬 Livre" : isRandom ? (!DESTINOS.slice(2).includes(selectedDestino) && selectedDestino !== "💬 Livre") : selectedDestino === d;
                 return (
                   <button key={d} onClick={() => { setSelectedDestino(d); setShowPanel(false); }}
-                    className="text-[12px] px-3 py-3.5 rounded-xl font-medium transition-all text-center"
-                    style={{
-                      background: isActive ? (isLivre ? "rgba(16,185,129,0.12)" : isRandom ? "rgba(139,92,246,0.12)" : "rgba(245,158,11,0.1)") : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${isActive ? (isLivre ? "rgba(16,185,129,0.4)" : isRandom ? "rgba(139,92,246,0.4)" : "rgba(245,158,11,0.35)") : "rgba(255,255,255,0.08)"}`,
-                      color: isActive ? (isLivre ? "#6EE7B7" : isRandom ? "#C4B5FD" : "#FCD34D") : "#CBD5E1",
-                    }}>{isRandom && isActive ? `🎲 ${selectedDestino}` : d}</button>
+                    className={cn(
+                      "text-xs px-3 py-3 rounded-xl font-medium transition-all text-center border",
+                      isActive
+                        ? isLivre ? "bg-primary/10 border-primary/30 text-primary font-bold"
+                          : isRandom ? "bg-violet-500/10 border-violet-500/30 text-violet-600 dark:text-violet-400 font-bold"
+                          : "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400 font-bold"
+                        : "bg-muted/20 border-border text-muted-foreground"
+                    )}>{isRandom && isActive ? `🎲 ${selectedDestino}` : d}</button>
                 );
               })}
             </div>
           )}
           {panelTab === "sessoes" && (
-            <div className="space-y-2.5">
-              {sessions.length === 0 && <p className="text-[13px] text-center py-10" style={{ color: "#475569" }}>Nenhuma sessão salva</p>}
+            <div className="space-y-2">
+              {sessions.length === 0 && <p className="text-xs text-center py-10 text-muted-foreground">Nenhuma sessão salva</p>}
               {sessions.slice(0, 15).map(session => (
                 <div key={session.id} onClick={() => loadSession(session)}
-                  className="rounded-xl p-3.5 cursor-pointer transition-all"
-                  style={{
-                    background: session.id === currentSessionId ? "rgba(16,185,129,0.06)" : "rgba(255,255,255,0.02)",
-                    border: `1px solid ${session.id === currentSessionId ? "rgba(16,185,129,0.2)" : "rgba(255,255,255,0.06)"}`,
-                  }}>
+                  className={cn(
+                    "rounded-xl p-3 cursor-pointer transition-all border",
+                    session.id === currentSessionId ? "bg-primary/5 border-primary/20" : "bg-muted/10 border-border/40"
+                  )}>
                   <div className="flex items-center gap-2.5">
                     <span className="text-base">{session.agentEmoji}</span>
-                    <span className="text-[13px] font-bold flex-1 truncate" style={{ color: "#E2E8F0" }}>{session.agentName}</span>
-                    <span className="text-[11px] font-medium" style={{ color: "#FCD34D" }}>{session.destino}</span>
+                    <span className="text-xs font-bold flex-1 truncate text-foreground">{session.agentName}</span>
+                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">{session.destino}</span>
                   </div>
                   <div className="flex items-center justify-between mt-1.5 pl-8">
-                    <span className="text-[11px]" style={{ color: "#64748B" }}>
+                    <span className="text-[11px] text-muted-foreground">
                       {new Date(session.updatedAt).toLocaleDateString("pt-BR")} · {session.messages.length} msgs
                     </span>
                     <button onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
-                      className="text-[11px] w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-500/10 transition-colors" style={{ color: "#EF4444" }}>×</button>
+                      className="text-[11px] w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-colors text-destructive">×</button>
                   </div>
                 </div>
               ))}
