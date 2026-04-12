@@ -347,7 +347,7 @@ function mergeFactualData(orionResult: any, factualData: any) {
 }
 
 // ─── Call Lovable AI Gateway ───
-async function callLovableAI(systemPrompt: string, content: string, maxTokens = 16000): Promise<string> {
+async function callLovableAI(systemPrompt: string, content: string, maxTokens = 16000, model = "google/gemini-2.5-pro"): Promise<string> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -358,7 +358,7 @@ async function callLovableAI(systemPrompt: string, content: string, maxTokens = 
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
+      model,
       max_tokens: maxTokens,
       messages: [
         { role: "system", content: systemPrompt },
