@@ -932,7 +932,7 @@ export default function SimuladorManualMode() {
 
         {/* ═══════════ RIGHT PANEL — Desktop only ═══════════ */}
         {!isMobile && (
-          <div className="w-[320px] shrink-0 flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-1">
+          <div className="w-[280px] xl:w-[320px] 2xl:w-[340px] shrink-0 flex flex-col gap-2.5 overflow-y-auto custom-scrollbar pr-1">
             {/* Quick actions */}
             <div className="space-y-2.5">
               <NathOpinionButton
