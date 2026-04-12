@@ -115,8 +115,14 @@ function NathInsight({ item }: { item: NegotiationItem }) {
 
       if (error) throw error;
 
-      if (data instanceof ReadableStream) {
-        const reader = data.getReader();
+        const stream = data instanceof Response
+          ? data.body
+          : data instanceof ReadableStream
+            ? data
+            : null;
+
+        if (stream) {
+          const reader = stream.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
         let full = "";
@@ -126,7 +132,7 @@ function NathInsight({ item }: { item: NegotiationItem }) {
           buffer += decoder.decode(value, { stream: true });
           let idx;
           while ((idx = buffer.indexOf("\n")) !== -1) {
-            const line = buffer.slice(0, idx).trim();
+              const line = buffer.slice(0, idx).trim();
             buffer = buffer.slice(idx + 1);
             if (!line.startsWith("data: ") || line === "data: [DONE]") continue;
             try {
@@ -136,9 +142,24 @@ function NathInsight({ item }: { item: NegotiationItem }) {
                 full += delta;
                 setOpinion(full);
               }
-            } catch {}
+              } catch {
+                buffer = `${line}\n${buffer}`;
+                break;
+              }
           }
         }
+          if (buffer.trim()) {
+            for (const rawLine of buffer.split("\n")) {
+              const line = rawLine.trim();
+              if (!line.startsWith("data: ") || line === "data: [DONE]") continue;
+              try {
+                const parsed = JSON.parse(line.slice(6));
+                const delta = parsed.choices?.[0]?.delta?.content;
+                if (delta) full += delta;
+              } catch {}
+            }
+            if (full) setOpinion(full);
+          }
         if (!full) setOpinion("Não foi possível gerar opinião.");
       } else if (typeof data === "string") {
         const lines = data.split("\n");
