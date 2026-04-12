@@ -329,14 +329,13 @@ function FieldRow({ icon: Icon, label, value, isNew }: {
       "flex items-start gap-2.5 px-3 py-2 rounded-lg transition-all duration-500",
       isNew ? "bg-primary/10 border border-primary/20" : "bg-transparent"
     )}>
-      <Icon className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: isNew ? "#10B981" : "#64748B" }} />
+      <Icon className={cn("w-3.5 h-3.5 mt-0.5 shrink-0", isNew ? "text-emerald-500" : "text-muted-foreground")} />
       <div className="min-w-0 flex-1">
-        <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#64748B" }}>{label}</p>
-        <p className="text-[12px] font-medium mt-0.5" style={{ color: "#E2E8F0" }}>{display}</p>
+        <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">{label}</p>
+        <p className="text-[12px] font-medium mt-0.5 text-foreground">{display}</p>
       </div>
       {isNew && (
-        <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-md animate-pulse"
-          style={{ background: "rgba(16,185,129,0.15)", color: "#6EE7B7" }}>NEW</span>
+        <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-md animate-pulse bg-emerald-500/15 text-emerald-500">NEW</span>
       )}
     </div>
   );
