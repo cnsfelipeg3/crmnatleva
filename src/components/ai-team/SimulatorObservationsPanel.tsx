@@ -399,17 +399,10 @@ REGRAS:
   // ===== RENDER =====
   return (
     <div
-      className={cn("flex flex-col rounded-2xl overflow-hidden", className)}
-      style={{
-        background: "rgba(13,18,32,0.95)",
-        border: "1px solid rgba(255,255,255,0.06)",
-      }}
+      className={cn("flex flex-col rounded-2xl overflow-hidden bg-card border border-border", className)}
     >
       {/* Header with tabs */}
-      <div
-        className="px-3 py-2.5 flex items-center gap-1"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-      >
+      <div className="px-3 py-2.5 flex items-center gap-1 border-b border-border">
         <button
           onClick={() => setView("observations")}
           className={cn(
