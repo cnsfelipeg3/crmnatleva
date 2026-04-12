@@ -635,27 +635,16 @@ REGRAS:
           ) : (
             <>
               {/* Stats bar */}
-              <div
-                className="px-3 py-2 flex items-center gap-3"
-                style={{
-                  borderBottom: "1px solid rgba(255,255,255,0.04)",
-                  background: "rgba(255,255,255,0.01)",
-                }}
-              >
-                <span className="text-[10px]" style={{ color: "#94A3B8" }}>
-                  {improvements.length} melhoria
-                  {improvements.length > 1 ? "s" : ""}
+              <div className="px-3 py-2 flex items-center gap-3 border-b border-border bg-muted/20">
+                <span className="text-[10px] text-muted-foreground">
+                  {improvements.length} melhoria{improvements.length > 1 ? "s" : ""}
                 </span>
                 <div className="flex-1" />
                 {pendingCount > 0 && (
                   <button
                     onClick={approveAll}
                     disabled={!!applyingId}
-                    className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all hover:brightness-110 disabled:opacity-50"
-                    style={{
-                      background: "rgba(16,185,129,0.12)",
-                      color: "#10B981",
-                    }}
+                    className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all disabled:opacity-50 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15"
                   >
                     <Check className="w-3 h-3" />
                     Aprovar todas ({pendingCount})
@@ -676,79 +665,36 @@ REGRAS:
                     <div
                       key={imp.id}
                       className={cn(
-                        "rounded-xl overflow-hidden transition-all",
-                        imp.status === "approved" && "opacity-70",
-                        imp.status === "rejected" && "opacity-40",
+                        "rounded-xl overflow-hidden transition-all border",
+                        imp.status === "approved" ? "opacity-70 border-emerald-500/20 bg-emerald-500/5" :
+                        imp.status === "rejected" ? "opacity-40 border-destructive/10 bg-destructive/5" :
+                        "border-border bg-muted/10"
                       )}
-                      style={{
-                        background: "rgba(255,255,255,0.02)",
-                        border: `1px solid ${imp.status === "approved" ? "rgba(16,185,129,0.2)" : imp.status === "rejected" ? "rgba(239,68,68,0.1)" : "rgba(255,255,255,0.06)"}`,
-                      }}
                     >
                       {/* Header */}
                       <div
                         className="flex items-start gap-2.5 p-3 cursor-pointer"
-                        onClick={() =>
-                          setExpandedImpId(isExpanded ? null : imp.id)
-                        }
+                        onClick={() => setExpandedImpId(isExpanded ? null : imp.id)}
                       >
                         <span className="text-base mt-0.5">{imp.agentEmoji}</span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 mb-1">
-                            <CatIcon
-                              className="w-3 h-3 shrink-0"
-                              style={{ color: catMeta.color }}
-                            />
-                            <span
-                              className="text-[9px] uppercase tracking-wider font-bold"
-                              style={{ color: catMeta.color }}
-                            >
+                            <CatIcon className="w-3 h-3 shrink-0" style={{ color: catMeta.color }} />
+                            <span className="text-[9px] uppercase tracking-wider font-bold" style={{ color: catMeta.color }}>
                               {catMeta.label}
                             </span>
-                            <span
-                              className="text-[8px] px-1.5 py-0.5 rounded-full font-bold ml-auto"
-                              style={{
-                                background: sevMeta.bg,
-                                color: sevMeta.color,
-                              }}
-                            >
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold ml-auto" style={{ background: sevMeta.bg, color: sevMeta.color }}>
                               {sevMeta.label}
                             </span>
                           </div>
-                          <p
-                            className="text-xs font-semibold leading-tight"
-                            style={{ color: "#E2E8F0" }}
-                          >
-                            {imp.title}
-                          </p>
-                          <p
-                            className="text-[10px] mt-0.5"
-                            style={{ color: "#94A3B8" }}
-                          >
-                            {imp.agentName}
-                          </p>
+                          <p className="text-xs font-semibold leading-tight text-foreground">{imp.title}</p>
+                          <p className="text-[10px] mt-0.5 text-muted-foreground">{imp.agentName}</p>
                         </div>
 
-                        {imp.status === "approved" && (
-                          <Check
-                            className="w-4 h-4 shrink-0"
-                            style={{ color: "#10B981" }}
-                          />
-                        )}
-                        {imp.status === "rejected" && (
-                          <XCircle
-                            className="w-4 h-4 shrink-0"
-                            style={{ color: "#EF4444" }}
-                          />
-                        )}
+                        {imp.status === "approved" && <Check className="w-4 h-4 shrink-0 text-emerald-500" />}
+                        {imp.status === "rejected" && <XCircle className="w-4 h-4 shrink-0 text-destructive" />}
                         {imp.status === "pending" && (
-                          <ChevronDown
-                            className={cn(
-                              "w-4 h-4 shrink-0 transition-transform",
-                              isExpanded && "rotate-180",
-                            )}
-                            style={{ color: "#64748B" }}
-                          />
+                          <ChevronDown className={cn("w-4 h-4 shrink-0 transition-transform text-muted-foreground", isExpanded && "rotate-180")} />
                         )}
                       </div>
 
