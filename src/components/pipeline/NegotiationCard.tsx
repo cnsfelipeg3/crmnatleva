@@ -107,8 +107,8 @@ function NathInsight({ item }: { item: NegotiationItem }) {
           question: `Analise esta cotação e me dê sua opinião estratégica. Foque em: 1) O que cotar especificamente, 2) Riscos da negociação, 3) Próximo passo concreto.\n\nDados:\n${context}`,
           agentName: "Nath",
           agentRole: "Consultora estratégica de viagens premium",
-          provider: "anthropic",
-          model: "claude-sonnet-4-20250514",
+          provider: "lovable",
+          model: "google/gemini-2.5-flash",
           history: [],
         },
       });
