@@ -769,23 +769,6 @@ REGRAS:
     </div>
   );
 });
-                                <ExternalLink className="w-3 h-3" />
-                                Ver melhoria no painel do agente
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-});
+
 
 export default SimulatorObservationsPanel;
