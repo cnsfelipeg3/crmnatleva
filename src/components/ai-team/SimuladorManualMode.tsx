@@ -689,70 +689,89 @@ export default function SimuladorManualMode() {
       "fixed inset-0 z-50 transition-all duration-300",
       showPanel ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
     )}>
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowPanel(false)} />
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowPanel(false)} />
       <div className={cn(
-        "absolute bottom-0 left-0 right-0 rounded-t-3xl transition-transform duration-300 max-h-[85vh] overflow-hidden flex flex-col bg-card border-t border-border",
+        "absolute bottom-0 left-0 right-0 rounded-t-2xl transition-transform duration-300 max-h-[75vh] overflow-hidden flex flex-col bg-card border-t border-border shadow-2xl",
         showPanel ? "translate-y-0" : "translate-y-full"
       )}>
-        {/* Handle */}
-        <div className="flex items-center justify-center pt-3 pb-2 shrink-0">
-          <div className="w-12 h-1.5 rounded-full bg-muted" />
+        {/* Handle + Close */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
+          <div className="w-10 h-1 rounded-full bg-muted" />
+          <button onClick={() => setShowPanel(false)} className="w-7 h-7 rounded-full flex items-center justify-center bg-muted/50">
+            <X className="w-3.5 h-3.5 text-muted-foreground" />
+          </button>
         </div>
+
+        {/* Agent mini-profile */}
+        <div className="px-4 pb-2 flex items-center gap-3 shrink-0">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+            style={{ background: `${agentColor}15`, border: `1.5px solid ${agentColor}30` }}>
+            {selectedAgent.emoji}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold truncate text-foreground">{selectedAgent.name}</p>
+            <p className="text-[11px] text-muted-foreground truncate">{selectedAgent.role} · Lv.{selectedAgent.level}</p>
+          </div>
+          <span className="text-sm font-extrabold tabular-nums text-emerald-600">{selectedAgent.successRate}%</span>
+        </div>
+
         {/* Tabs */}
-        <div className="px-4 pb-3 flex gap-2 shrink-0">
-          {["agente", "destino", "sessoes"].map(t => (
-            <button key={t} onClick={() => setPanelTab(t as any)}
+        <div className="px-4 pb-2 flex gap-1.5 shrink-0">
+          {(["agente", "destino", "sessoes"] as const).map(t => (
+            <button key={t} onClick={() => setPanelTab(t)}
               className={cn(
-                "flex-1 text-xs font-bold py-2.5 rounded-xl transition-all border",
+                "flex-1 text-[11px] font-bold py-2 rounded-lg transition-all",
                 panelTab === t
-                  ? "bg-primary/10 border-primary/30 text-primary"
-                  : "bg-muted/30 border-border text-muted-foreground"
+                  ? "bg-primary/10 text-primary"
+                  : "bg-muted/30 text-muted-foreground"
               )}>
-              {t === "agente" ? "🤖 Agente" : t === "destino" ? "✈️ Destino" : "📋 Sessões"}
+              {t === "agente" ? "Agentes" : t === "destino" ? "Destinos" : "Sessões"}
             </button>
           ))}
         </div>
+
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 pb-8">
+        <div className="flex-1 overflow-y-auto px-4 pb-6">
           {panelTab === "agente" && (
-            <div className="space-y-3">
-              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <div className="space-y-2">
+              <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-hide">
                 <button onClick={() => setActiveSquad("all")} className={cn(
-                  "text-[11px] px-3 py-2 rounded-xl font-semibold shrink-0 transition-all border",
-                  activeSquad === "all" ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted/30 border-border text-muted-foreground"
+                  "text-[10px] px-2.5 py-1.5 rounded-lg font-bold shrink-0 transition-all",
+                  activeSquad === "all" ? "bg-primary/10 text-primary" : "bg-muted/30 text-muted-foreground"
                 )}>Todos</button>
                 {SQUADS.map(s => (
                   <button key={s.id} onClick={() => setActiveSquad(s.id)} className={cn(
-                    "text-[11px] px-3 py-2 rounded-xl font-semibold shrink-0 transition-all border",
-                    activeSquad === s.id ? "bg-primary/10 border-primary/30 text-primary" : "bg-muted/30 border-border text-muted-foreground"
+                    "text-[10px] px-2.5 py-1.5 rounded-lg font-bold shrink-0 transition-all",
+                    activeSquad === s.id ? "bg-primary/10 text-primary" : "bg-muted/30 text-muted-foreground"
                   )}>{s.emoji} {s.name.replace("Squad ", "")}</button>
                 ))}
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {filteredAgents.map(a => {
                   const c = getAgentColor(a);
                   const active = selectedAgent.id === a.id;
                   return (
                     <button key={a.id} onClick={() => { setSelectedAgent(a); setShowPanel(false); }}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all border",
-                        active ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-muted/10 border-border/40"
+                        "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-all",
+                        active ? "bg-primary/5 border border-primary/20" : "border border-transparent hover:bg-muted/30"
                       )}>
-                      <div className="w-9 h-9 rounded-lg flex items-center justify-center text-base shrink-0"
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm shrink-0"
                         style={{ background: `${c}12` }}>{a.emoji}</div>
                       <div className="flex-1 min-w-0">
-                        <p className={cn("text-xs font-bold truncate", active ? "text-primary" : "text-foreground")}>{a.name}</p>
-                        <p className="text-[11px] mt-0.5 text-muted-foreground">{a.role} · Lv.{a.level}</p>
+                        <p className={cn("text-xs font-semibold truncate", active ? "text-primary" : "text-foreground")}>{a.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{a.role}</p>
                       </div>
-                      <span className="text-[11px] font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{a.successRate}%</span>
+                      <span className="text-[10px] font-bold tabular-nums text-emerald-600">{a.successRate}%</span>
                     </button>
                   );
                 })}
               </div>
             </div>
           )}
+
           {panelTab === "destino" && (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1.5">
               {DESTINOS.map(d => {
                 const isRandom = d === "🎲 Aleatório";
                 const isLivre = d === "💬 Livre";
@@ -760,37 +779,34 @@ export default function SimuladorManualMode() {
                 return (
                   <button key={d} onClick={() => { setSelectedDestino(d); setShowPanel(false); }}
                     className={cn(
-                      "text-xs px-3 py-3 rounded-xl font-medium transition-all text-center border",
-                      isActive
-                        ? isLivre ? "bg-primary/10 border-primary/30 text-primary font-bold"
-                          : isRandom ? "bg-violet-500/10 border-violet-500/30 text-violet-600 dark:text-violet-400 font-bold"
-                          : "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400 font-bold"
-                        : "bg-muted/20 border-border text-muted-foreground"
+                      "text-[11px] px-2 py-2.5 rounded-xl font-medium text-center transition-all",
+                      isActive ? "bg-primary/10 text-primary font-bold" : "bg-muted/20 text-muted-foreground"
                     )}>{isRandom && isActive ? `🎲 ${selectedDestino}` : d}</button>
                 );
               })}
             </div>
           )}
+
           {panelTab === "sessoes" && (
-            <div className="space-y-2">
-              {sessions.length === 0 && <p className="text-xs text-center py-10 text-muted-foreground">Nenhuma sessão salva</p>}
+            <div className="space-y-1.5">
+              {sessions.length === 0 && <p className="text-xs text-center py-8 text-muted-foreground">Nenhuma sessão salva</p>}
               {sessions.slice(0, 15).map(session => (
-                <div key={session.id} onClick={() => loadSession(session)}
+                <div key={session.id} onClick={() => { loadSession(session); setShowPanel(false); }}
                   className={cn(
-                    "rounded-xl p-3 cursor-pointer transition-all border",
-                    session.id === currentSessionId ? "bg-primary/5 border-primary/20" : "bg-muted/10 border-border/40"
+                    "rounded-xl p-2.5 cursor-pointer transition-all",
+                    session.id === currentSessionId ? "bg-primary/5 border border-primary/20" : "bg-muted/10 border border-transparent hover:bg-muted/20"
                   )}>
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-base">{session.agentEmoji}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm">{session.agentEmoji}</span>
                     <span className="text-xs font-bold flex-1 truncate text-foreground">{session.agentName}</span>
-                    <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">{session.destino}</span>
+                    <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700">{session.destino}</span>
                   </div>
-                  <div className="flex items-center justify-between mt-1.5 pl-8">
-                    <span className="text-[11px] text-muted-foreground">
+                  <div className="flex items-center justify-between mt-1 pl-6">
+                    <span className="text-[10px] text-muted-foreground">
                       {new Date(session.updatedAt).toLocaleDateString("pt-BR")} · {session.messages.length} msgs
                     </span>
                     <button onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
-                      className="text-[11px] w-7 h-7 rounded-lg flex items-center justify-center hover:bg-destructive/10 transition-colors text-destructive">×</button>
+                      className="text-[10px] w-6 h-6 rounded flex items-center justify-center text-destructive hover:bg-destructive/10">×</button>
                   </div>
                 </div>
               ))}
