@@ -408,25 +408,14 @@ REGRAS:
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all",
             view === "observations"
-              ? "text-amber-400"
-              : "text-muted-foreground/60 hover:text-muted-foreground",
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:text-foreground",
           )}
-          style={
-            view === "observations"
-              ? { background: "rgba(245,158,11,0.1)" }
-              : {}
-          }
         >
           <Eye className="w-3.5 h-3.5" />
           Observações
           {observations.length > 0 && (
-            <span
-              className="ml-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-              style={{
-                background: "rgba(245,158,11,0.15)",
-                color: "#F59E0B",
-              }}
-            >
+            <span className="ml-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-primary/10 text-primary">
               {observations.length}
             </span>
           )}
@@ -437,28 +426,17 @@ REGRAS:
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all",
             view === "review"
-              ? "text-emerald-400"
-              : "text-muted-foreground/60 hover:text-muted-foreground",
+              ? "bg-emerald-500/10 text-emerald-600"
+              : "text-muted-foreground hover:text-foreground",
           )}
-          style={
-            view === "review"
-              ? { background: "rgba(16,185,129,0.1)" }
-              : {}
-          }
         >
           <Wand2 className="w-3.5 h-3.5" />
           Melhorias
           {improvements.length > 0 && (
-            <span
-              className="ml-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-              style={{
-                background:
-                  pendingCount > 0
-                    ? "rgba(245,158,11,0.15)"
-                    : "rgba(16,185,129,0.15)",
-                color: pendingCount > 0 ? "#F59E0B" : "#10B981",
-              }}
-            >
+            <span className={cn(
+              "ml-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold",
+              pendingCount > 0 ? "bg-amber-500/10 text-amber-600" : "bg-emerald-500/10 text-emerald-600"
+            )}>
               {pendingCount > 0
                 ? `${pendingCount} pendente${pendingCount > 1 ? "s" : ""}`
                 : `${approvedCount} ✓`}
