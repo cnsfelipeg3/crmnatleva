@@ -451,11 +451,7 @@ REGRAS:
           {/* Selected message context */}
           {selectedMessage && (
             <div
-              className="mx-3 mt-3 rounded-xl p-3 relative animate-in slide-in-from-top-2 duration-200"
-              style={{
-                background: "rgba(245,158,11,0.06)",
-                border: "1px solid rgba(245,158,11,0.15)",
-              }}
+              className="mx-3 mt-3 rounded-xl p-3 relative animate-in slide-in-from-top-2 duration-200 bg-amber-500/5 border border-amber-500/15"
             >
               <button
                 onClick={onClearSelectedMessage}
@@ -463,34 +459,17 @@ REGRAS:
               >
                 <X className="w-3.5 h-3.5" />
               </button>
-              <p
-                className="text-[9px] uppercase tracking-widest font-bold mb-1.5"
-                style={{ color: "#F59E0B" }}
-              >
+              <p className="text-[9px] uppercase tracking-widest font-bold mb-1.5 text-amber-600">
                 📌 Mensagem selecionada
               </p>
-              <p
-                className="text-[11px] leading-relaxed line-clamp-3"
-                style={{ color: "#E2E8F0" }}
-              >
-                "
-                {selectedMessage.content.slice(0, 120)}
-                {selectedMessage.content.length > 120 ? "..." : ""}"
+              <p className="text-[11px] leading-relaxed line-clamp-3 text-foreground">
+                "{selectedMessage.content.slice(0, 120)}{selectedMessage.content.length > 120 ? "..." : ""}"
               </p>
               <div className="flex items-center gap-2 mt-1.5">
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded"
-                  style={{
-                    background:
-                      selectedMessage.role === "agent"
-                        ? "rgba(16,185,129,0.1)"
-                        : "rgba(59,130,246,0.1)",
-                    color:
-                      selectedMessage.role === "agent"
-                        ? "#10B981"
-                        : "#3B82F6",
-                  }}
-                >
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.5 rounded",
+                  selectedMessage.role === "agent" ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"
+                )}>
                   {selectedMessage.role === "agent"
                     ? selectedMessage.agentName || "Agente"
                     : selectedMessage.leadName || "Lead"}
