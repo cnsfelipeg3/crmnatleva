@@ -1,61 +1,53 @@
 
 
-# Plano: Unificação Timeline + Monitor
+# Plano: Turbinar a Inteligência do ÓRION
 
-## Problema
+## Diagnóstico Atual
 
-Duas views separadas com toggle manual. O Monitor tem KPIs e progress rings úteis que ficam escondidos. O usuário precisa alternar constantemente.
+O ÓRION hoje tem 3 gargalos principais que causam perda de dados:
 
-## Solução
+1. **Modelo limitado**: Usa Claude Sonnet 4 via API Anthropic direta (custo extra, sem necessidade — já existe Lovable AI com modelos superiores)
+2. **Limite de saída baixo**: 12.000 tokens de output — para vídeos longos com muitos dados (ex: programação de jogos da Copa), o JSON é truncado e dados são perdidos
+3. **Processamento single-pass**: Uma única chamada tenta extrair TUDO — se o conteúdo é muito denso, a IA prioriza algumas seções e ignora outras
+4. **Truncamento de entrada agressivo**: 40K chars com corte no meio do texto — dados importantes no meio do vídeo podem ser perdidos
 
-Fundir tudo numa view única: KPIs do Monitor ficam sempre visíveis no topo, cada card da Timeline ganha um mini progress ring de extração, e o toggle desaparece.
+## O Que Vai Mudar
 
-## Mudanças
+### 1. Migrar para Lovable AI com modelo mais potente
+- Trocar de Claude Sonnet (Anthropic API direta) para **Gemini 2.5 Pro** via Lovable AI Gateway
+- Vantagens: contexto maior (1M tokens), melhor extração de dados estruturados, sem custo extra de API key Anthropic
+- Elimina dependência da `ANTHROPIC_API_KEY` para essa função
 
-### 1. `src/pages/CotacoesPropostasPipeline.tsx`
+### 2. Aumentar limite de saída para 16.000 tokens
+- De 12K para 16K tokens — evita truncamento de JSONs grandes (programações de eventos, listas de hotéis)
 
-- **Remover** o estado `view`, o toggle Timeline/Monitor, o import lazy do `CotacoesMonitorView`
-- **Adicionar** KPIs inline no topo (Extraindo, Campos, Completude, Completos) calculados a partir dos briefings já carregados via `useQuery`
-- **Adicionar** badge "LIVE" no header indicando realtime ativo
-- Manter filtros de temperatura, busca, timeline e detail panel intactos
+### 3. Processamento em 2 passadas para conteúdos longos
+- **Passada 1**: Extração completa de dados factuais (fatos, programação, nomes, datas, locais)
+- **Passada 2**: Análise estratégica e vendas (resumo, entendimento completo, argumentos, gatilhos)
+- Merge automático dos resultados
+- Ativado apenas para conteúdos > 15.000 caracteres (vídeos curtos continuam single-pass)
 
-### 2. `src/components/pipeline/NegotiationCard.tsx`
+### 4. Aumentar limite de entrada para 60.000 caracteres
+- Com Gemini 2.5 Pro, podemos processar muito mais texto sem truncar
 
-- **Adicionar mini progress ring** (SVG 32x32) no canto superior direito do card quando o item tem briefing — mostra % de campos preenchidos
-- **Adicionar badge "EXTRAINDO"** animado (pulse) quando o briefing está em status de extração
-- Importar `countFilledFields` e `MONITOR_TOTAL_FIELDS` de `@/lib/quotationMonitor`
-- O ring usa as mesmas cores do Monitor: accent (extraindo), emerald (completo), amber (pendente)
+### 5. Log de processamento visível
+- Salvar no resultado: modelo usado, tokens consumidos, tempo, se usou 1 ou 2 passadas
+- Visível na UI para diagnóstico
 
-### 3. `src/components/pipeline/NegotiationTimeline.tsx`
+## Detalhes Técnicos
 
-- Ajuste menor: adicionar contagem de briefings com extração ativa no header de cada grupo
+- **Arquivo editado**: `supabase/functions/organize-knowledge/index.ts`
+- Substituir `callOrion` (Anthropic) por chamada ao Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`)
+- Usar `LOVABLE_API_KEY` (já disponível) em vez de `ANTHROPIC_API_KEY`
+- Modelo: `google/gemini-2.5-pro`
+- Para a passada 1, usar um system prompt focado em extração factual pura
+- Para a passada 2, usar o prompt atual focado em análise estratégica
+- Merge inteligente: dados factuais da passada 1 preenchem campos que a passada 2 não cobriu
 
-## Resultado visual
+## Resultado Esperado
 
-```text
-┌─────────────────────────────────────────────┐
-│ Central de Cotações & Propostas  [+ Nova]   │
-│ Timeline unificada · 🟢 LIVE                │
-├────────┬────────┬──────────┬────────────────┤
-│ ⚡ 3    │ 📊 142 │ 🎯 68%   │ ✅ 5 completos │
-├─────────┴────────┴──────────┴───────────────┤
-│ 🔍 Buscar...    [Todas][Quentes][Mornas]... │
-├─────────────────────────────────────────────┤
-│ 🔴 AGORA — 2 negociações                   │
-│ ┌──────────────────┐ ┌──────────────────┐   │
-│ │ GRU→LIS  [72%◎]  │ │ GRU→CDG [EXTR.] │   │
-│ │ 👑 Visão da Nath  │ │ 👑 Visão da Nath  │   │
-│ └──────────────────┘ └──────────────────┘   │
-└─────────────────────────────────────────────┘
-```
-
-## Arquivos impactados
-
-| Arquivo | Ação |
-|---|---|
-| `src/pages/CotacoesPropostasPipeline.tsx` | Remover toggle, adicionar KPIs + LIVE badge |
-| `src/components/pipeline/NegotiationCard.tsx` | Adicionar mini progress ring + badge EXTRAINDO |
-| `src/components/pipeline/NegotiationTimeline.tsx` | Ajuste menor no header |
-
-**Zero alterações no banco de dados.** O `CotacoesMonitorView.tsx` permanece no projeto mas não será mais importado pela página principal.
+- Estádios, datas, horários e programações completas não serão mais perdidos
+- Vídeos longos terão extração muito mais completa
+- Custo menor (sem API Anthropic separada)
+- Diagnóstico fácil quando algo não sair como esperado
 
