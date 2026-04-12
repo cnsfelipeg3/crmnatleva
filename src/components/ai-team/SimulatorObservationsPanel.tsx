@@ -399,41 +399,23 @@ REGRAS:
   // ===== RENDER =====
   return (
     <div
-      className={cn("flex flex-col rounded-2xl overflow-hidden", className)}
-      style={{
-        background: "rgba(13,18,32,0.95)",
-        border: "1px solid rgba(255,255,255,0.06)",
-      }}
+      className={cn("flex flex-col rounded-2xl overflow-hidden bg-card border border-border", className)}
     >
       {/* Header with tabs */}
-      <div
-        className="px-3 py-2.5 flex items-center gap-1"
-        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}
-      >
+      <div className="px-3 py-2.5 flex items-center gap-1 border-b border-border">
         <button
           onClick={() => setView("observations")}
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all",
             view === "observations"
-              ? "text-amber-400"
-              : "text-muted-foreground/60 hover:text-muted-foreground",
+              ? "bg-primary/10 text-primary"
+              : "text-muted-foreground hover:text-foreground",
           )}
-          style={
-            view === "observations"
-              ? { background: "rgba(245,158,11,0.1)" }
-              : {}
-          }
         >
           <Eye className="w-3.5 h-3.5" />
           Observações
           {observations.length > 0 && (
-            <span
-              className="ml-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-              style={{
-                background: "rgba(245,158,11,0.15)",
-                color: "#F59E0B",
-              }}
-            >
+            <span className="ml-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-primary/10 text-primary">
               {observations.length}
             </span>
           )}
@@ -444,28 +426,17 @@ REGRAS:
           className={cn(
             "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all",
             view === "review"
-              ? "text-emerald-400"
-              : "text-muted-foreground/60 hover:text-muted-foreground",
+              ? "bg-emerald-500/10 text-emerald-600"
+              : "text-muted-foreground hover:text-foreground",
           )}
-          style={
-            view === "review"
-              ? { background: "rgba(16,185,129,0.1)" }
-              : {}
-          }
         >
           <Wand2 className="w-3.5 h-3.5" />
           Melhorias
           {improvements.length > 0 && (
-            <span
-              className="ml-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold"
-              style={{
-                background:
-                  pendingCount > 0
-                    ? "rgba(245,158,11,0.15)"
-                    : "rgba(16,185,129,0.15)",
-                color: pendingCount > 0 ? "#F59E0B" : "#10B981",
-              }}
-            >
+            <span className={cn(
+              "ml-0.5 text-[9px] px-1.5 py-0.5 rounded-full font-bold",
+              pendingCount > 0 ? "bg-amber-500/10 text-amber-600" : "bg-emerald-500/10 text-emerald-600"
+            )}>
               {pendingCount > 0
                 ? `${pendingCount} pendente${pendingCount > 1 ? "s" : ""}`
                 : `${approvedCount} ✓`}
@@ -480,11 +451,7 @@ REGRAS:
           {/* Selected message context */}
           {selectedMessage && (
             <div
-              className="mx-3 mt-3 rounded-xl p-3 relative animate-in slide-in-from-top-2 duration-200"
-              style={{
-                background: "rgba(245,158,11,0.06)",
-                border: "1px solid rgba(245,158,11,0.15)",
-              }}
+              className="mx-3 mt-3 rounded-xl p-3 relative animate-in slide-in-from-top-2 duration-200 bg-amber-500/5 border border-amber-500/15"
             >
               <button
                 onClick={onClearSelectedMessage}
@@ -492,34 +459,17 @@ REGRAS:
               >
                 <X className="w-3.5 h-3.5" />
               </button>
-              <p
-                className="text-[9px] uppercase tracking-widest font-bold mb-1.5"
-                style={{ color: "#F59E0B" }}
-              >
+              <p className="text-[9px] uppercase tracking-widest font-bold mb-1.5 text-amber-600">
                 📌 Mensagem selecionada
               </p>
-              <p
-                className="text-[11px] leading-relaxed line-clamp-3"
-                style={{ color: "#E2E8F0" }}
-              >
-                "
-                {selectedMessage.content.slice(0, 120)}
-                {selectedMessage.content.length > 120 ? "..." : ""}"
+              <p className="text-[11px] leading-relaxed line-clamp-3 text-foreground">
+                "{selectedMessage.content.slice(0, 120)}{selectedMessage.content.length > 120 ? "..." : ""}"
               </p>
               <div className="flex items-center gap-2 mt-1.5">
-                <span
-                  className="text-[10px] px-1.5 py-0.5 rounded"
-                  style={{
-                    background:
-                      selectedMessage.role === "agent"
-                        ? "rgba(16,185,129,0.1)"
-                        : "rgba(59,130,246,0.1)",
-                    color:
-                      selectedMessage.role === "agent"
-                        ? "#10B981"
-                        : "#3B82F6",
-                  }}
-                >
+                <span className={cn(
+                  "text-[10px] px-1.5 py-0.5 rounded",
+                  selectedMessage.role === "agent" ? "bg-emerald-500/10 text-emerald-600" : "bg-blue-500/10 text-blue-600"
+                )}>
                   {selectedMessage.role === "agent"
                     ? selectedMessage.agentName || "Agente"
                     : selectedMessage.leadName || "Lead"}
@@ -546,29 +496,22 @@ REGRAS:
                     ? "O que você observou nesta mensagem?"
                     : "Observação geral sobre a sessão..."
                 }
-                className="w-full bg-secondary/30 text-sm text-foreground rounded-xl px-4 py-3 pr-12 resize-none placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-amber-500/30 transition-all"
+                className="w-full bg-muted/30 text-sm text-foreground rounded-xl px-4 py-3 pr-12 resize-none placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all border border-border"
                 rows={2}
-                style={{ border: "1px solid rgba(255,255,255,0.06)" }}
               />
               <button
                 onClick={saveObservation}
                 disabled={!inputText.trim() || saving}
-                className="absolute bottom-3 right-3 p-1.5 rounded-lg transition-all disabled:opacity-30"
-                style={{
-                  background: inputText.trim()
-                    ? "rgba(245,158,11,0.2)"
-                    : "transparent",
-                  color: "#F59E0B",
-                }}
+                className={cn(
+                  "absolute bottom-3 right-3 p-1.5 rounded-lg transition-all disabled:opacity-30 text-primary",
+                  inputText.trim() ? "bg-primary/15" : ""
+                )}
               >
                 <Send className="w-4 h-4" />
               </button>
             </div>
             {!selectedMessage && (
-              <p
-                className="text-[10px] mt-1.5 px-1"
-                style={{ color: "#64748B" }}
-              >
+              <p className="text-[10px] mt-1.5 px-1 text-muted-foreground">
                 💡 Clique em uma mensagem no chat para vincular a observação
               </p>
             )}
@@ -578,11 +521,8 @@ REGRAS:
           <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-2 space-y-2">
             {observations.length === 0 ? (
               <div className="text-center py-6">
-                <MessageSquarePlus
-                  className="w-8 h-8 mx-auto mb-2 opacity-20"
-                  style={{ color: "#94A3B8" }}
-                />
-                <p className="text-[11px]" style={{ color: "#64748B" }}>
+                <MessageSquarePlus className="w-8 h-8 mx-auto mb-2 text-muted-foreground/20" />
+                <p className="text-[11px] text-muted-foreground">
                   Registre observações enquanto assiste
                 </p>
               </div>
@@ -590,32 +530,19 @@ REGRAS:
               observations.map((obs) => (
                 <div
                   key={obs.id}
-                  className="group rounded-xl p-3 transition-all hover:brightness-110"
-                  style={{
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.04)",
-                  }}
+                  className="group rounded-xl p-3 transition-all bg-muted/20 border border-border/50 hover:bg-muted/40"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-1.5">
                       {obs.scope === "message" ? (
-                        <Lightbulb
-                          className="w-3 h-3 shrink-0"
-                          style={{ color: "#F59E0B" }}
-                        />
+                        <Lightbulb className="w-3 h-3 shrink-0 text-amber-500" />
                       ) : (
-                        <Sparkles
-                          className="w-3 h-3 shrink-0"
-                          style={{ color: "#8B5CF6" }}
-                        />
+                        <Sparkles className="w-3 h-3 shrink-0 text-violet-500" />
                       )}
-                      <span
-                        className="text-[9px] uppercase tracking-wider font-bold"
-                        style={{
-                          color:
-                            obs.scope === "message" ? "#F59E0B" : "#8B5CF6",
-                        }}
-                      >
+                      <span className={cn(
+                        "text-[9px] uppercase tracking-wider font-bold",
+                        obs.scope === "message" ? "text-amber-600" : "text-violet-600"
+                      )}>
                         {obs.scope === "message" ? "Mensagem" : "Sessão"}
                       </span>
                     </div>
@@ -627,51 +554,25 @@ REGRAS:
                     </button>
                   </div>
                   {obs.messageContent && (
-                    <p
-                      className="text-[10px] italic mt-1.5 line-clamp-2 px-2 py-1 rounded"
-                      style={{
-                        color: "#94A3B8",
-                        background: "rgba(255,255,255,0.02)",
-                      }}
-                    >
-                      "
-                      {obs.messageContent.slice(0, 80)}
-                      {obs.messageContent.length > 80 ? "..." : ""}"
+                    <p className="text-[10px] italic mt-1.5 line-clamp-2 px-2 py-1 rounded bg-muted/30 text-muted-foreground">
+                      "{obs.messageContent.slice(0, 80)}{obs.messageContent.length > 80 ? "..." : ""}"
                     </p>
                   )}
-                  <p
-                    className="text-xs mt-1.5 leading-relaxed"
-                    style={{ color: "#E2E8F0" }}
-                  >
+                  <p className="text-xs mt-1.5 leading-relaxed text-foreground">
                     {obs.observationText}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
                     {obs.agentName && (
-                      <span
-                        className="text-[9px] px-1.5 py-0.5 rounded"
-                        style={{
-                          background: "rgba(16,185,129,0.08)",
-                          color: "#10B981",
-                        }}
-                      >
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">
                         {obs.agentName}
                       </span>
                     )}
                     {obs.leadName && (
-                      <span
-                        className="text-[9px] px-1.5 py-0.5 rounded"
-                        style={{
-                          background: "rgba(59,130,246,0.08)",
-                          color: "#3B82F6",
-                        }}
-                      >
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600">
                         {obs.leadName}
                       </span>
                     )}
-                    <span
-                      className="text-[9px] ml-auto"
-                      style={{ color: "#64748B" }}
-                    >
+                    <span className="text-[9px] ml-auto text-muted-foreground">
                       {new Date(obs.createdAt).toLocaleTimeString("pt-BR", {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -685,20 +586,11 @@ REGRAS:
 
           {/* Synthesize CTA */}
           {observations.length >= 1 && (
-            <div
-              className="px-3 pb-3 pt-1"
-              style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}
-            >
+            <div className="px-3 pb-3 pt-1 border-t border-border">
               <button
                 onClick={synthesizeWithAI}
                 disabled={synthesizing}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all hover:brightness-110 disabled:opacity-60"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(245,158,11,0.15), rgba(139,92,246,0.15))",
-                  border: "1px solid rgba(245,158,11,0.2)",
-                  color: "#F59E0B",
-                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all hover:bg-primary/15 disabled:opacity-60 bg-primary/10 border border-primary/20 text-primary"
               >
                 {synthesizing ? (
                   <>
@@ -722,30 +614,20 @@ REGRAS:
         <div className="flex-1 flex flex-col overflow-hidden">
           {synthesizing ? (
             <div className="flex-1 flex flex-col items-center justify-center py-8 gap-3">
-              <Loader2
-                className="w-10 h-10 animate-spin"
-                style={{ color: "#F59E0B" }}
-              />
-              <p className="text-xs" style={{ color: "#94A3B8" }}>
+              <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              <p className="text-xs text-muted-foreground">
                 Convertendo observações em melhorias...
               </p>
             </div>
           ) : improvements.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center py-8 gap-2">
-              <Wand2
-                className="w-8 h-8 opacity-20"
-                style={{ color: "#94A3B8" }}
-              />
-              <p className="text-[11px]" style={{ color: "#64748B" }}>
+              <Wand2 className="w-8 h-8 text-muted-foreground/20" />
+              <p className="text-[11px] text-muted-foreground">
                 Registre observações e clique "Organizar com IA"
               </p>
               <button
                 onClick={() => setView("observations")}
-                className="text-[11px] mt-1 px-3 py-1 rounded-lg"
-                style={{
-                  background: "rgba(245,158,11,0.1)",
-                  color: "#F59E0B",
-                }}
+                className="text-[11px] mt-1 px-3 py-1 rounded-lg bg-primary/10 text-primary"
               >
                 ← Voltar às observações
               </button>
@@ -753,27 +635,16 @@ REGRAS:
           ) : (
             <>
               {/* Stats bar */}
-              <div
-                className="px-3 py-2 flex items-center gap-3"
-                style={{
-                  borderBottom: "1px solid rgba(255,255,255,0.04)",
-                  background: "rgba(255,255,255,0.01)",
-                }}
-              >
-                <span className="text-[10px]" style={{ color: "#94A3B8" }}>
-                  {improvements.length} melhoria
-                  {improvements.length > 1 ? "s" : ""}
+              <div className="px-3 py-2 flex items-center gap-3 border-b border-border bg-muted/20">
+                <span className="text-[10px] text-muted-foreground">
+                  {improvements.length} melhoria{improvements.length > 1 ? "s" : ""}
                 </span>
                 <div className="flex-1" />
                 {pendingCount > 0 && (
                   <button
                     onClick={approveAll}
                     disabled={!!applyingId}
-                    className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all hover:brightness-110 disabled:opacity-50"
-                    style={{
-                      background: "rgba(16,185,129,0.12)",
-                      color: "#10B981",
-                    }}
+                    className="flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-lg transition-all disabled:opacity-50 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/15"
                   >
                     <Check className="w-3 h-3" />
                     Aprovar todas ({pendingCount})
@@ -794,115 +665,52 @@ REGRAS:
                     <div
                       key={imp.id}
                       className={cn(
-                        "rounded-xl overflow-hidden transition-all",
-                        imp.status === "approved" && "opacity-70",
-                        imp.status === "rejected" && "opacity-40",
+                        "rounded-xl overflow-hidden transition-all border",
+                        imp.status === "approved" ? "opacity-70 border-emerald-500/20 bg-emerald-500/5" :
+                        imp.status === "rejected" ? "opacity-40 border-destructive/10 bg-destructive/5" :
+                        "border-border bg-muted/10"
                       )}
-                      style={{
-                        background: "rgba(255,255,255,0.02)",
-                        border: `1px solid ${imp.status === "approved" ? "rgba(16,185,129,0.2)" : imp.status === "rejected" ? "rgba(239,68,68,0.1)" : "rgba(255,255,255,0.06)"}`,
-                      }}
                     >
                       {/* Header */}
                       <div
                         className="flex items-start gap-2.5 p-3 cursor-pointer"
-                        onClick={() =>
-                          setExpandedImpId(isExpanded ? null : imp.id)
-                        }
+                        onClick={() => setExpandedImpId(isExpanded ? null : imp.id)}
                       >
                         <span className="text-base mt-0.5">{imp.agentEmoji}</span>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 mb-1">
-                            <CatIcon
-                              className="w-3 h-3 shrink-0"
-                              style={{ color: catMeta.color }}
-                            />
-                            <span
-                              className="text-[9px] uppercase tracking-wider font-bold"
-                              style={{ color: catMeta.color }}
-                            >
+                            <CatIcon className="w-3 h-3 shrink-0" style={{ color: catMeta.color }} />
+                            <span className="text-[9px] uppercase tracking-wider font-bold" style={{ color: catMeta.color }}>
                               {catMeta.label}
                             </span>
-                            <span
-                              className="text-[8px] px-1.5 py-0.5 rounded-full font-bold ml-auto"
-                              style={{
-                                background: sevMeta.bg,
-                                color: sevMeta.color,
-                              }}
-                            >
+                            <span className="text-[8px] px-1.5 py-0.5 rounded-full font-bold ml-auto" style={{ background: sevMeta.bg, color: sevMeta.color }}>
                               {sevMeta.label}
                             </span>
                           </div>
-                          <p
-                            className="text-xs font-semibold leading-tight"
-                            style={{ color: "#E2E8F0" }}
-                          >
-                            {imp.title}
-                          </p>
-                          <p
-                            className="text-[10px] mt-0.5"
-                            style={{ color: "#94A3B8" }}
-                          >
-                            {imp.agentName}
-                          </p>
+                          <p className="text-xs font-semibold leading-tight text-foreground">{imp.title}</p>
+                          <p className="text-[10px] mt-0.5 text-muted-foreground">{imp.agentName}</p>
                         </div>
 
-                        {imp.status === "approved" && (
-                          <Check
-                            className="w-4 h-4 shrink-0"
-                            style={{ color: "#10B981" }}
-                          />
-                        )}
-                        {imp.status === "rejected" && (
-                          <XCircle
-                            className="w-4 h-4 shrink-0"
-                            style={{ color: "#EF4444" }}
-                          />
-                        )}
+                        {imp.status === "approved" && <Check className="w-4 h-4 shrink-0 text-emerald-500" />}
+                        {imp.status === "rejected" && <XCircle className="w-4 h-4 shrink-0 text-destructive" />}
                         {imp.status === "pending" && (
-                          <ChevronDown
-                            className={cn(
-                              "w-4 h-4 shrink-0 transition-transform",
-                              isExpanded && "rotate-180",
-                            )}
-                            style={{ color: "#64748B" }}
-                          />
+                          <ChevronDown className={cn("w-4 h-4 shrink-0 transition-transform text-muted-foreground", isExpanded && "rotate-180")} />
                         )}
                       </div>
 
                       {/* Expanded detail */}
                       {isExpanded && (
-                        <div
-                          className="px-3 pb-3 space-y-2.5 animate-in slide-in-from-top-1 duration-200"
-                          style={{
-                            borderTop: "1px solid rgba(255,255,255,0.04)",
-                          }}
-                        >
-                          <p
-                            className="text-[11px] leading-relaxed pt-2.5"
-                            style={{ color: "#CBD5E1" }}
-                          >
+                        <div className="px-3 pb-3 space-y-2.5 animate-in slide-in-from-top-1 duration-200 border-t border-border">
+                          <p className="text-[11px] leading-relaxed pt-2.5 text-foreground/80">
                             {imp.description}
                           </p>
 
                           {/* Action text preview */}
-                          <div
-                            className="rounded-lg p-2.5"
-                            style={{
-                              background: "rgba(139,92,246,0.05)",
-                              border: "1px solid rgba(139,92,246,0.1)",
-                            }}
-                          >
-                            <p
-                              className="text-[9px] uppercase tracking-wider font-bold mb-1"
-                              style={{ color: "#8B5CF6" }}
-                            >
+                          <div className="rounded-lg p-2.5 bg-violet-500/5 border border-violet-500/10">
+                            <p className="text-[9px] uppercase tracking-wider font-bold mb-1 text-violet-600">
                               📝 Instrução que será adicionada
                             </p>
-                            <p
-                              className="text-[11px] leading-relaxed italic"
-                              style={{ color: "#E2E8F0" }}
-                            >
+                            <p className="text-[11px] leading-relaxed italic text-foreground">
                               "{imp.actionText}"
                             </p>
                           </div>
@@ -911,37 +719,16 @@ REGRAS:
                           {imp.status === "pending" && (
                             <div className="flex items-center gap-2 pt-1">
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  approveImprovement(imp);
-                                }}
+                                onClick={(e) => { e.stopPropagation(); approveImprovement(imp); }}
                                 disabled={isApplying}
-                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all hover:brightness-110 disabled:opacity-60"
-                                style={{
-                                  background:
-                                    "linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.08))",
-                                  border: "1px solid rgba(16,185,129,0.2)",
-                                  color: "#10B981",
-                                }}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all disabled:opacity-60 bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 hover:bg-emerald-500/15"
                               >
-                                {isApplying ? (
-                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                ) : (
-                                  <Check className="w-3.5 h-3.5" />
-                                )}
+                                {isApplying ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                                 {isApplying ? "Aplicando..." : "Aprovar e Aplicar"}
                               </button>
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  rejectImprovement(imp.id);
-                                }}
-                                className="px-3 py-2 rounded-lg text-[11px] font-bold transition-all hover:brightness-110"
-                                style={{
-                                  background: "rgba(239,68,68,0.08)",
-                                  border: "1px solid rgba(239,68,68,0.1)",
-                                  color: "#EF4444",
-                                }}
+                                onClick={(e) => { e.stopPropagation(); rejectImprovement(imp.id); }}
+                                className="px-3 py-2 rounded-lg text-[11px] font-bold transition-all bg-destructive/5 border border-destructive/10 text-destructive hover:bg-destructive/10"
                               >
                                 <X className="w-3.5 h-3.5" />
                               </button>
@@ -949,39 +736,23 @@ REGRAS:
                           )}
 
                           {imp.status === "approved" && (
-                            <div
-                              className="py-2 px-2.5 rounded-lg space-y-1.5"
-                              style={{
-                                background: "rgba(16,185,129,0.06)",
-                                border: "1px solid rgba(16,185,129,0.1)",
-                              }}
-                            >
+                            <div className="py-2 px-2.5 rounded-lg space-y-1.5 bg-emerald-500/5 border border-emerald-500/10">
                               <div className="flex items-center gap-1.5">
-                                <Check
-                                  className="w-3.5 h-3.5 shrink-0"
-                                  style={{ color: "#10B981" }}
-                                />
-                                <span
-                                  className="text-[11px] font-bold"
-                                  style={{ color: "#10B981" }}
-                                >
+                                <Check className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
+                                <span className="text-[11px] font-bold text-emerald-600">
                                   Aplicado em {imp.agentName}
                                 </span>
                               </div>
-                              <p
-                                className="text-[10px] leading-relaxed"
-                                style={{ color: "#94A3B8" }}
-                              >
-                                "{imp.title}" adicionado ao <strong style={{ color: "#CBD5E1" }}>prompt ({CATEGORY_META[imp.category]?.label || "Comportamento"})</strong> do agente
+                              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                                "{imp.title}" adicionado ao <strong className="text-foreground">prompt ({CATEGORY_META[imp.category]?.label || "Comportamento"})</strong> do agente
                               </p>
                               <a
                                 href={`/ai-team/equipe?agent=${imp.agentId}&tab=melhorias`}
-                                className="inline-flex items-center gap-1 text-[10px] font-semibold mt-0.5 hover:underline transition-colors"
-                                style={{ color: "#8B5CF6" }}
+                                className="inline-flex items-center gap-1 text-[10px] font-semibold mt-0.5 hover:underline transition-colors text-violet-600"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <ExternalLink className="w-3 h-3" />
                                 Ver melhoria no painel do agente
+                                <ExternalLink className="w-3 h-3" />
                               </a>
                             </div>
                           )}
@@ -998,5 +769,6 @@ REGRAS:
     </div>
   );
 });
+
 
 export default SimulatorObservationsPanel;

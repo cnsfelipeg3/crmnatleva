@@ -1007,7 +1007,7 @@ export default function SimuladorManualMode() {
             {/* Agents section */}
             <div className="px-4 py-3">
               <div className="flex items-center justify-between mb-2.5">
-                <p className="text-[10px] uppercase tracking-[0.12em] font-bold text-muted-foreground">Agentes</p>
+                <p className="text-[10px] uppercase tracking-[0.12em] font-bold text-foreground">Agentes</p>
                 <span className="text-[10px] font-bold tabular-nums text-muted-foreground">{filteredAgents.length}</span>
               </div>
               <div className="flex gap-1 flex-wrap mb-2.5">
@@ -1048,8 +1048,8 @@ export default function SimuladorManualMode() {
 
             {/* Destinations section */}
             <div className="px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.12em] font-bold text-muted-foreground mb-2.5">Destino</p>
-              <div className="flex flex-wrap gap-1">
+              <p className="text-[10px] uppercase tracking-[0.12em] font-bold text-foreground mb-2.5">Destino</p>
+              <div className="flex flex-wrap gap-1.5">
                 {DESTINOS.map(d => {
                   const isRandom = d === "🎲 Aleatório";
                   const isLivre = d === "💬 Livre";
@@ -1057,8 +1057,10 @@ export default function SimuladorManualMode() {
                   return (
                     <button key={d} onClick={() => setSelectedDestino(d)}
                       className={cn(
-                        "text-[10px] px-2.5 py-1.5 rounded-md font-medium transition-all",
-                        isActive ? "bg-primary/10 text-primary font-bold" : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                        "text-[10px] px-3 py-1.5 rounded-full font-medium transition-all border",
+                        isActive
+                          ? "bg-primary/10 border-primary/30 text-primary font-bold shadow-sm"
+                          : "bg-muted/20 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/40 hover:border-border"
                       )}>{isRandom && isActive ? `🎲 ${selectedDestino}` : d}</button>
                   );
                 })}
@@ -1070,7 +1072,7 @@ export default function SimuladorManualMode() {
             {/* Sessions section */}
             <div className="px-4 py-3">
               <div className="flex items-center justify-between mb-2.5">
-                <p className="text-[10px] uppercase tracking-[0.12em] font-bold text-muted-foreground">Sessões</p>
+                <p className="text-[10px] uppercase tracking-[0.12em] font-bold text-foreground">Sessões</p>
                 <span className="text-[10px] font-bold tabular-nums text-muted-foreground">{sessions.length}</span>
               </div>
               <div className="space-y-1 max-h-[180px] overflow-y-auto custom-scrollbar">

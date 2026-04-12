@@ -329,14 +329,13 @@ function FieldRow({ icon: Icon, label, value, isNew }: {
       "flex items-start gap-2.5 px-3 py-2 rounded-lg transition-all duration-500",
       isNew ? "bg-primary/10 border border-primary/20" : "bg-transparent"
     )}>
-      <Icon className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: isNew ? "#10B981" : "#64748B" }} />
+      <Icon className={cn("w-3.5 h-3.5 mt-0.5 shrink-0", isNew ? "text-emerald-500" : "text-muted-foreground")} />
       <div className="min-w-0 flex-1">
-        <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#64748B" }}>{label}</p>
-        <p className="text-[12px] font-medium mt-0.5" style={{ color: "#E2E8F0" }}>{display}</p>
+        <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">{label}</p>
+        <p className="text-[12px] font-medium mt-0.5 text-foreground">{display}</p>
       </div>
       {isNew && (
-        <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-md animate-pulse"
-          style={{ background: "rgba(16,185,129,0.15)", color: "#6EE7B7" }}>NEW</span>
+        <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-md animate-pulse bg-emerald-500/15 text-emerald-500">NEW</span>
       )}
     </div>
   );
@@ -379,17 +378,18 @@ export default function ConversationIntelligencePanel({ messages, className }: P
   return (
     <div className={cn("rounded-2xl overflow-hidden bg-card border border-border", className)}>
       {/* Header with completeness bar */}
-      <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div className="px-4 py-3 border-b border-border">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4" style={{ color: "#F59E0B" }} />
-            <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: "#E2E8F0" }}>Inteligência</p>
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Inteligência</p>
           </div>
-          <span className="text-[11px] font-extrabold tabular-nums" style={{
-            color: completeness >= 70 ? "#10B981" : completeness >= 40 ? "#F59E0B" : "#64748B",
-          }}>{completeness}%</span>
+          <span className={cn(
+            "text-[11px] font-extrabold tabular-nums",
+            completeness >= 70 ? "text-emerald-600" : completeness >= 40 ? "text-amber-600" : "text-muted-foreground"
+          )}>{completeness}%</span>
         </div>
-        <div className="w-full h-1.5 rounded-full overflow-hidden mt-2" style={{ background: "rgba(255,255,255,0.05)" }}>
+        <div className="w-full h-1.5 rounded-full overflow-hidden mt-2 bg-muted/50">
           <div
             className="h-full rounded-full transition-all duration-700 ease-out"
             style={{
@@ -398,7 +398,7 @@ export default function ConversationIntelligencePanel({ messages, className }: P
                 ? "linear-gradient(90deg, #10B981, #34D399)"
                 : completeness >= 40
                 ? "linear-gradient(90deg, #F59E0B, #FBBF24)"
-                : "linear-gradient(90deg, #475569, #64748B)",
+                : "linear-gradient(90deg, hsl(var(--muted-foreground)), hsl(var(--muted-foreground)))",
             }}
           />
         </div>
@@ -408,9 +408,9 @@ export default function ConversationIntelligencePanel({ messages, className }: P
       <div className="p-2 space-y-0.5 max-h-[500px] overflow-y-auto custom-scrollbar">
         {!hasAnyData ? (
           <div className="text-center py-8 space-y-2">
-            <Compass className="w-8 h-8 mx-auto" style={{ color: "rgba(255,255,255,0.08)" }} />
-            <p className="text-[11px]" style={{ color: "#475569" }}>Aguardando conversa...</p>
-            <p className="text-[9px]" style={{ color: "#334155" }}>Os campos serão preenchidos automaticamente</p>
+            <Compass className="w-8 h-8 mx-auto text-muted-foreground/20" />
+            <p className="text-[11px] text-muted-foreground">Aguardando conversa...</p>
+            <p className="text-[9px] text-muted-foreground/70">Os campos serão preenchidos automaticamente</p>
           </div>
         ) : (
           <>
