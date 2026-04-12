@@ -954,7 +954,7 @@ export default function SimuladorManualMode() {
 
             {/* Agent profile card — Institutional */}
             <div className="rounded-2xl relative bg-card border border-border overflow-hidden shadow-sm">
-              <div className="h-1" style={{ background: `linear-gradient(90deg, hsl(var(--champagne)), ${agentColor}, hsl(var(--champagne)))` }} />
+              <div className="h-[3px]" style={{ background: `linear-gradient(90deg, transparent 5%, hsl(var(--champagne) / 0.5) 30%, ${agentColor}90 50%, hsl(var(--champagne) / 0.5) 70%, transparent 95%)` }} />
               <div className="p-4 pb-3">
                 <div className="flex items-center gap-3.5">
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shrink-0 shadow-sm"
