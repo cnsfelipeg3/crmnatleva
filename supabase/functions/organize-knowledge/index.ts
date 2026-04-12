@@ -417,7 +417,7 @@ serve(async (req) => {
     processingLog.two_pass = useTwoPass;
 
     let factualData: any = null;
-
+    let result: any;
     if (useTwoPass) {
       // ─── PARALLEL: Pass 1 (Flash, factual) + Pass 2 (Pro, strategic) ───
       console.log("ORION v2: Starting parallel passes (Flash factual + Pro strategic)...");
