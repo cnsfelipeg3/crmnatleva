@@ -347,7 +347,7 @@ function mergeFactualData(orionResult: any, factualData: any) {
 }
 
 // ─── Call Lovable AI Gateway ───
-async function callLovableAI(systemPrompt: string, content: string, maxTokens = 16000): Promise<string> {
+async function callLovableAI(systemPrompt: string, content: string, maxTokens = 16000, model = "google/gemini-2.5-pro"): Promise<string> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -358,7 +358,7 @@ async function callLovableAI(systemPrompt: string, content: string, maxTokens = 
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
+      model,
       max_tokens: maxTokens,
       messages: [
         { role: "system", content: systemPrompt },
@@ -417,41 +417,53 @@ serve(async (req) => {
     processingLog.two_pass = useTwoPass;
 
     let factualData: any = null;
-
+    let result: any;
     if (useTwoPass) {
-      // ─── Pass 1: Factual Extraction ───
-      console.log("ORION v2: Starting Pass 1 (factual extraction)...");
+      // ─── PARALLEL: Pass 1 (Flash, factual) + Pass 2 (Pro, strategic) ───
+      console.log("ORION v2: Starting parallel passes (Flash factual + Pro strategic)...");
       const pass1Start = Date.now();
-      try {
-        const factualRaw = await callLovableAI(FACTUAL_EXTRACTION_PROMPT, userMessage, 16000);
-        factualData = parseFactualResponse(factualRaw);
+
+      const [pass1Result, pass2Result] = await Promise.allSettled([
+        callLovableAI(FACTUAL_EXTRACTION_PROMPT, userMessage, 12000, "google/gemini-2.5-flash"),
+        callLovableAI(ORION_SYSTEM_PROMPT, userMessage, 16000, "google/gemini-2.5-pro"),
+      ]);
+
+      // Process Pass 1
+      if (pass1Result.status === "fulfilled") {
+        factualData = parseFactualResponse(pass1Result.value);
         processingLog.pass1_time_ms = Date.now() - pass1Start;
         processingLog.pass1_status = factualData ? "ok" : "parse_error";
         if (factualData) {
           processingLog.pass1_fatos = factualData.fatos_chave?.length || 0;
           processingLog.pass1_programacao = factualData.programacao?.length || 0;
         }
-        console.log(`ORION v2: Pass 1 done in ${processingLog.pass1_time_ms}ms — ${processingLog.pass1_fatos || 0} fatos, ${processingLog.pass1_programacao || 0} programacao`);
-      } catch (e: any) {
-        console.error("ORION v2: Pass 1 failed:", e.message);
-        processingLog.pass1_time_ms = Date.now() - pass1Start;
+        console.log(`ORION v2: Pass 1 done — ${processingLog.pass1_fatos || 0} fatos, ${processingLog.pass1_programacao || 0} programacao`);
+      } else {
+        console.error("ORION v2: Pass 1 failed:", pass1Result.reason?.message);
         processingLog.pass1_status = "error";
-        processingLog.pass1_error = e.message;
+        processingLog.pass1_error = pass1Result.reason?.message;
       }
-    }
 
-    // ─── Pass 2 (or single pass): Strategic Analysis ───
-    console.log(`ORION v2: Starting ${useTwoPass ? "Pass 2" : "single pass"} (strategic analysis)...`);
-    const pass2Start = Date.now();
-    const rawResponse = await callLovableAI(ORION_SYSTEM_PROMPT, userMessage, 16000);
-    processingLog.pass2_time_ms = Date.now() - pass2Start;
+      // Process Pass 2
+      if (pass2Result.status === "fulfilled") {
+        result = parseOrionResponse(pass2Result.value);
+        processingLog.pass2_time_ms = Date.now() - pass1Start;
+      } else {
+        throw pass2Result.reason;
+      }
 
-    let result = parseOrionResponse(rawResponse);
-
-    // Merge factual data if two-pass was used
-    if (useTwoPass && factualData) {
-      result = mergeFactualData(result, factualData);
-      processingLog.merge = "applied";
+      // Merge factual data
+      if (factualData) {
+        result = mergeFactualData(result, factualData);
+        processingLog.merge = "applied";
+      }
+    } else {
+      // ─── Single pass: Strategic Analysis only ───
+      console.log("ORION v2: Starting single pass (strategic analysis)...");
+      const pass2Start = Date.now();
+      const rawResponse = await callLovableAI(ORION_SYSTEM_PROMPT, userMessage, 16000);
+      processingLog.pass2_time_ms = Date.now() - pass2Start;
+      result = parseOrionResponse(rawResponse);
     }
 
     const elapsed = Date.now() - startTime;
