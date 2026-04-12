@@ -521,11 +521,8 @@ REGRAS:
           <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-2 space-y-2">
             {observations.length === 0 ? (
               <div className="text-center py-6">
-                <MessageSquarePlus
-                  className="w-8 h-8 mx-auto mb-2 opacity-20"
-                  style={{ color: "#94A3B8" }}
-                />
-                <p className="text-[11px]" style={{ color: "#64748B" }}>
+                <MessageSquarePlus className="w-8 h-8 mx-auto mb-2 text-muted-foreground/20" />
+                <p className="text-[11px] text-muted-foreground">
                   Registre observações enquanto assiste
                 </p>
               </div>
@@ -533,32 +530,19 @@ REGRAS:
               observations.map((obs) => (
                 <div
                   key={obs.id}
-                  className="group rounded-xl p-3 transition-all hover:brightness-110"
-                  style={{
-                    background: "rgba(255,255,255,0.02)",
-                    border: "1px solid rgba(255,255,255,0.04)",
-                  }}
+                  className="group rounded-xl p-3 transition-all bg-muted/20 border border-border/50 hover:bg-muted/40"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-1.5">
                       {obs.scope === "message" ? (
-                        <Lightbulb
-                          className="w-3 h-3 shrink-0"
-                          style={{ color: "#F59E0B" }}
-                        />
+                        <Lightbulb className="w-3 h-3 shrink-0 text-amber-500" />
                       ) : (
-                        <Sparkles
-                          className="w-3 h-3 shrink-0"
-                          style={{ color: "#8B5CF6" }}
-                        />
+                        <Sparkles className="w-3 h-3 shrink-0 text-violet-500" />
                       )}
-                      <span
-                        className="text-[9px] uppercase tracking-wider font-bold"
-                        style={{
-                          color:
-                            obs.scope === "message" ? "#F59E0B" : "#8B5CF6",
-                        }}
-                      >
+                      <span className={cn(
+                        "text-[9px] uppercase tracking-wider font-bold",
+                        obs.scope === "message" ? "text-amber-600" : "text-violet-600"
+                      )}>
                         {obs.scope === "message" ? "Mensagem" : "Sessão"}
                       </span>
                     </div>
@@ -570,51 +554,25 @@ REGRAS:
                     </button>
                   </div>
                   {obs.messageContent && (
-                    <p
-                      className="text-[10px] italic mt-1.5 line-clamp-2 px-2 py-1 rounded"
-                      style={{
-                        color: "#94A3B8",
-                        background: "rgba(255,255,255,0.02)",
-                      }}
-                    >
-                      "
-                      {obs.messageContent.slice(0, 80)}
-                      {obs.messageContent.length > 80 ? "..." : ""}"
+                    <p className="text-[10px] italic mt-1.5 line-clamp-2 px-2 py-1 rounded bg-muted/30 text-muted-foreground">
+                      "{obs.messageContent.slice(0, 80)}{obs.messageContent.length > 80 ? "..." : ""}"
                     </p>
                   )}
-                  <p
-                    className="text-xs mt-1.5 leading-relaxed"
-                    style={{ color: "#E2E8F0" }}
-                  >
+                  <p className="text-xs mt-1.5 leading-relaxed text-foreground">
                     {obs.observationText}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
                     {obs.agentName && (
-                      <span
-                        className="text-[9px] px-1.5 py-0.5 rounded"
-                        style={{
-                          background: "rgba(16,185,129,0.08)",
-                          color: "#10B981",
-                        }}
-                      >
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">
                         {obs.agentName}
                       </span>
                     )}
                     {obs.leadName && (
-                      <span
-                        className="text-[9px] px-1.5 py-0.5 rounded"
-                        style={{
-                          background: "rgba(59,130,246,0.08)",
-                          color: "#3B82F6",
-                        }}
-                      >
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600">
                         {obs.leadName}
                       </span>
                     )}
-                    <span
-                      className="text-[9px] ml-auto"
-                      style={{ color: "#64748B" }}
-                    >
+                    <span className="text-[9px] ml-auto text-muted-foreground">
                       {new Date(obs.createdAt).toLocaleTimeString("pt-BR", {
                         hour: "2-digit",
                         minute: "2-digit",
