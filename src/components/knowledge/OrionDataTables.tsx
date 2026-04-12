@@ -462,9 +462,9 @@ export default function OrionDataTables({ taxonomy }: { taxonomy: any }) {
     { id: "operacional", label: "Operacional", icon: Wrench, show: !!hasOperacional },
   ].filter(t => t.show);
 
-  if (tabs.length === 0) return null;
+  const [activeTab, setActiveTab] = useState(tabs[0]?.id || "evento");
 
-  const [activeTab, setActiveTab] = useState(tabs[0].id);
+  if (tabs.length === 0) return null;
 
   return (
     <div className="space-y-3">

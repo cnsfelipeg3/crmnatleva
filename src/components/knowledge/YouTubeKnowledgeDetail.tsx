@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import TaxonomyPreview, { type Taxonomy } from "@/components/knowledge/TaxonomyPreview";
+import OrionDataTables from "@/components/knowledge/OrionDataTables";
 
 interface KBDoc {
   id: string;
