@@ -496,29 +496,22 @@ REGRAS:
                     ? "O que você observou nesta mensagem?"
                     : "Observação geral sobre a sessão..."
                 }
-                className="w-full bg-secondary/30 text-sm text-foreground rounded-xl px-4 py-3 pr-12 resize-none placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-amber-500/30 transition-all"
+                className="w-full bg-muted/30 text-sm text-foreground rounded-xl px-4 py-3 pr-12 resize-none placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all border border-border"
                 rows={2}
-                style={{ border: "1px solid rgba(255,255,255,0.06)" }}
               />
               <button
                 onClick={saveObservation}
                 disabled={!inputText.trim() || saving}
-                className="absolute bottom-3 right-3 p-1.5 rounded-lg transition-all disabled:opacity-30"
-                style={{
-                  background: inputText.trim()
-                    ? "rgba(245,158,11,0.2)"
-                    : "transparent",
-                  color: "#F59E0B",
-                }}
+                className={cn(
+                  "absolute bottom-3 right-3 p-1.5 rounded-lg transition-all disabled:opacity-30 text-primary",
+                  inputText.trim() ? "bg-primary/15" : ""
+                )}
               >
                 <Send className="w-4 h-4" />
               </button>
             </div>
             {!selectedMessage && (
-              <p
-                className="text-[10px] mt-1.5 px-1"
-                style={{ color: "#64748B" }}
-              >
+              <p className="text-[10px] mt-1.5 px-1 text-muted-foreground">
                 💡 Clique em uma mensagem no chat para vincular a observação
               </p>
             )}
