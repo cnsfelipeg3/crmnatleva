@@ -76,6 +76,12 @@ REGRAS INEGOCIAVEIS:
 - Seja AGRESSIVO na extracao. Hotel citado de passagem? Extraia. Prato mencionado? Extraia.
 - Lembre: NUNCA cite fornecedores. Substitua por "a NatLeva providencia/organiza/cuida"
 
+REGRA CRITICA — A NATLEVA NAO VENDE PACOTES:
+- A NatLeva e uma agencia de viagens personalizadas. NUNCA use termos como "incluso no pacote", "pacote completo", "pacote turistico", "combo", "all-inclusive" como forma de precificacao.
+- Se o conteudo original menciona algo como "incluso no pacote" ou "incluido na diaria", TRANSFORME para informacao neutra de conhecimento: descreva o que a experiencia oferece, duracao, tipo, mas NAO associe a um pacote comercial de terceiros.
+- No campo preco_aprox de passeios/restaurantes: use o valor em R$ se mencionado, ou deixe vazio. NUNCA escreva "Incluso no pacote".
+- O objetivo e que o conhecimento seja PURO sobre o destino — a NatLeva monta a experiencia sob medida para cada cliente.
+
 REGRAS ESPECIFICAS POR TIPO DE CONTEUDO:
 
 SE EVENTO (tipo B ou D):
