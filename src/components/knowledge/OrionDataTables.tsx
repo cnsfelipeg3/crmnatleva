@@ -14,14 +14,14 @@ interface Tab {
 
 // ─── Generic Table ───
 function DataTable({ headers, rows }: { headers: string[]; rows: (string | React.ReactNode)[][] }) {
-  if (rows.length === 0) return <p className="text-xs text-muted-foreground italic py-4 text-center">Sem dados extraídos</p>;
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground italic py-6 text-center">Sem dados extraídos</p>;
   return (
-    <div className="overflow-x-auto rounded-lg border border-border/40">
-      <table className="w-full text-xs">
+    <div className="overflow-x-auto rounded-xl border border-border shadow-sm">
+      <table className="w-full text-sm">
         <thead>
-          <tr className="bg-muted/50">
+          <tr className="bg-muted/60">
             {headers.map((h, i) => (
-              <th key={i} className="text-left px-3 py-2.5 font-bold text-muted-foreground uppercase tracking-wider text-[10px] whitespace-nowrap">
+              <th key={i} className="text-left px-4 py-3 font-bold text-foreground uppercase tracking-wider text-[11px] whitespace-nowrap border-b border-border">
                 {h}
               </th>
             ))}
@@ -29,9 +29,12 @@ function DataTable({ headers, rows }: { headers: string[]; rows: (string | React
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={i} className={cn("border-t border-border/30", i % 2 === 0 ? "bg-card" : "bg-muted/20")}>
+            <tr key={i} className={cn(
+              "border-t border-border/50 transition-colors hover:bg-muted/30",
+              i % 2 === 0 ? "bg-card" : "bg-muted/10"
+            )}>
               {row.map((cell, j) => (
-                <td key={j} className="px-3 py-2.5 text-foreground">
+                <td key={j} className="px-4 py-3 text-foreground">
                   {cell || <span className="text-muted-foreground/50">—</span>}
                 </td>
               ))}
@@ -43,50 +46,40 @@ function DataTable({ headers, rows }: { headers: string[]; rows: (string | React
   );
 }
 
+// ─── Info card helper ───
+function InfoCard({ label, value, emoji }: { label: string; value: string; emoji?: string }) {
+  return (
+    <div className="rounded-xl border border-border bg-muted/40 p-4 shadow-sm">
+      <p className="text-[11px] text-muted-foreground font-bold uppercase tracking-wider">{emoji ? `${emoji} ` : ""}{label}</p>
+      <p className="text-sm font-bold mt-1 text-foreground">{value}</p>
+    </div>
+  );
+}
+
 // ─── Tab: Evento / Programação ───
 function EventoTab({ evento, fatos }: { evento: any; fatos: string[] }) {
   const prog = evento?.programacao || [];
   const arenas = evento?.locais_arenas || [];
 
   return (
-    <div className="space-y-5">
-      {/* Info geral */}
+    <div className="space-y-6">
       {(evento?.nome || evento?.periodo) && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {evento.nome && (
-            <div className="rounded-lg border border-border/40 bg-card p-3">
-              <p className="text-[10px] text-muted-foreground font-bold uppercase">Evento</p>
-              <p className="text-sm font-bold mt-0.5">{evento.nome}</p>
-            </div>
-          )}
-          {evento.edicao_ano && (
-            <div className="rounded-lg border border-border/40 bg-card p-3">
-              <p className="text-[10px] text-muted-foreground font-bold uppercase">Edição</p>
-              <p className="text-sm font-bold mt-0.5">{evento.edicao_ano}</p>
-            </div>
-          )}
-          {evento.periodo && (
-            <div className="rounded-lg border border-border/40 bg-card p-3">
-              <p className="text-[10px] text-muted-foreground font-bold uppercase">Período</p>
-              <p className="text-sm font-bold mt-0.5">{evento.periodo}</p>
-            </div>
-          )}
-          {evento.formato_regras && (
-            <div className="rounded-lg border border-border/40 bg-card p-3">
-              <p className="text-[10px] text-muted-foreground font-bold uppercase">Formato</p>
-              <p className="text-sm font-bold mt-0.5">{evento.formato_regras}</p>
-            </div>
-          )}
+          {evento.nome && <InfoCard label="Evento" value={evento.nome} emoji="🏆" />}
+          {evento.edicao_ano && <InfoCard label="Edição" value={evento.edicao_ano} emoji="📅" />}
+          {evento.periodo && <InfoCard label="Período" value={evento.periodo} emoji="⏰" />}
+          {evento.formato_regras && <InfoCard label="Formato" value={evento.formato_regras} emoji="📋" />}
         </div>
       )}
 
-      {/* Sedes */}
       {evento?.cidades_sede?.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">🏙️ Cidades-Sede</p>
-          <div className="flex flex-wrap gap-1.5">
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3 flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-blue-500" /> Cidades-Sede
+          </p>
+          <div className="flex flex-wrap gap-2">
             {evento.cidades_sede.map((c: string, i: number) => (
-              <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-blue-500/10 text-blue-600 border border-blue-500/20">
+              <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
                 <MapPin className="w-3 h-3" /> {c}
               </span>
             ))}
@@ -94,31 +87,29 @@ function EventoTab({ evento, fatos }: { evento: any; fatos: string[] }) {
         </div>
       )}
 
-      {/* Arenas/Estádios */}
       {arenas.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">🏟️ Estádios / Arenas</p>
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">🏟️ Estádios / Arenas</p>
           <DataTable
             headers={["Estádio", "Cidade"]}
             rows={arenas.map((a: any) => [
-              <span className="font-semibold">{a.nome}</span>,
+              <span className="font-bold">{a.nome}</span>,
               a.cidade,
             ])}
           />
         </div>
       )}
 
-      {/* Programação de jogos */}
       {prog.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">📅 Programação Completa ({prog.length} jogos/sessões)</p>
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">📅 Programação Completa ({prog.length} jogos/sessões)</p>
           <DataTable
             headers={["Data", "Dia", "Horário", "Jogo / Sessão", "Local", "Cidade"]}
             rows={prog.map((p: any) => [
-              <span className="font-semibold whitespace-nowrap">{p.data}</span>,
+              <span className="font-bold whitespace-nowrap">{p.data}</span>,
               p.dia_semana,
               p.horario,
-              <span className="font-semibold">
+              <span className="font-bold">
                 {p.participante_a && p.participante_b
                   ? `${p.participante_a} × ${p.participante_b}`
                   : p.participante_a || "—"}
@@ -130,60 +121,37 @@ function EventoTab({ evento, fatos }: { evento: any; fatos: string[] }) {
         </div>
       )}
 
-      {/* Ingressos, hospedagem, logística do evento */}
       {(evento?.ingressos_info || evento?.hospedagem_evento || evento?.logistica_evento || evento?.pacotes_natleva) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {evento.ingressos_info && (
-            <div className="rounded-lg border border-border/40 bg-card p-3">
-              <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">🎫 Ingressos</p>
-              <p className="text-xs">{evento.ingressos_info}</p>
-            </div>
-          )}
-          {evento.hospedagem_evento && (
-            <div className="rounded-lg border border-border/40 bg-card p-3">
-              <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">🏨 Hospedagem</p>
-              <p className="text-xs">{evento.hospedagem_evento}</p>
-            </div>
-          )}
-          {evento.logistica_evento && (
-            <div className="rounded-lg border border-border/40 bg-card p-3">
-              <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">✈️ Logística</p>
-              <p className="text-xs">{evento.logistica_evento}</p>
-            </div>
-          )}
-          {evento.pacotes_natleva && (
-            <div className="rounded-lg border border-border/40 bg-card p-3">
-              <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">📦 Pacotes NatLeva</p>
-              <p className="text-xs">{evento.pacotes_natleva}</p>
-            </div>
-          )}
+          {evento.ingressos_info && <InfoCard label="Ingressos" value={evento.ingressos_info} emoji="🎫" />}
+          {evento.hospedagem_evento && <InfoCard label="Hospedagem" value={evento.hospedagem_evento} emoji="🏨" />}
+          {evento.logistica_evento && <InfoCard label="Logística" value={evento.logistica_evento} emoji="✈️" />}
+          {evento.pacotes_natleva && <InfoCard label="Pacotes NatLeva" value={evento.pacotes_natleva} emoji="📦" />}
         </div>
       )}
 
-      {/* Curiosidades */}
       {evento?.curiosidades?.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">💡 Curiosidades</p>
-          <ul className="space-y-1">
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">💡 Curiosidades</p>
+          <ul className="space-y-2">
             {evento.curiosidades.map((c: string, i: number) => (
-              <li key={i} className="flex gap-2 text-xs">
-                <span className="text-amber-500 shrink-0">•</span>
-                <span>{c}</span>
+              <li key={i} className="flex gap-3 text-sm items-start">
+                <span className="text-amber-500 shrink-0 mt-0.5">•</span>
+                <span className="text-foreground">{c}</span>
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      {/* Fatos-chave */}
       {fatos?.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">📋 Fatos-Chave ({fatos.length})</p>
-          <div className="rounded-lg border border-border/40 bg-card p-3 space-y-1">
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">📋 Fatos-Chave ({fatos.length})</p>
+          <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-2">
             {fatos.map((f: string, i: number) => (
-              <div key={i} className="flex gap-2 text-xs">
+              <div key={i} className="flex gap-3 text-sm items-start">
                 <span className="text-primary font-bold shrink-0">{i + 1}.</span>
-                <span>{f}</span>
+                <span className="text-foreground">{f}</span>
               </div>
             ))}
           </div>
@@ -197,13 +165,13 @@ function EventoTab({ evento, fatos }: { evento: any; fatos: string[] }) {
 function HoteisTab({ hospedagem }: { hospedagem: any }) {
   const hoteis = hospedagem?.hoteis || [];
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {hoteis.length > 0 && (
         <DataTable
           headers={["Hotel", "Categoria", "Faixa de Preço", "Destaque"]}
           rows={hoteis.map((h: any) => [
-            <span className="font-semibold">{h.nome}</span>,
-            h.categoria ? <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] bg-purple-500/10 text-purple-600 font-medium">{h.categoria}</span> : null,
+            <span className="font-bold">{h.nome}</span>,
+            h.categoria ? <span className="inline-flex px-2.5 py-1 rounded-lg text-[11px] bg-purple-500/10 text-purple-700 dark:text-purple-300 font-semibold border border-purple-500/20">{h.categoria}</span> : null,
             h.faixa_preco,
             h.destaque,
           ])}
@@ -211,20 +179,22 @@ function HoteisTab({ hospedagem }: { hospedagem: any }) {
       )}
       {hospedagem?.regioes_recomendadas?.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">📍 Regiões Recomendadas</p>
-          <div className="flex flex-wrap gap-1.5">
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3 flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-purple-500" /> Regiões Recomendadas
+          </p>
+          <div className="flex flex-wrap gap-2">
             {hospedagem.regioes_recomendadas.map((r: string, i: number) => (
-              <span key={i} className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-purple-500/10 text-purple-600 border border-purple-500/20">{r}</span>
+              <span key={i} className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">{r}</span>
             ))}
           </div>
         </div>
       )}
       {hospedagem?.tipo_hospedagem?.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">🏠 Tipos</p>
-          <div className="flex flex-wrap gap-1.5">
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">🏠 Tipos</p>
+          <div className="flex flex-wrap gap-2">
             {hospedagem.tipo_hospedagem.map((t: string, i: number) => (
-              <span key={i} className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-muted text-muted-foreground">{t}</span>
+              <span key={i} className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-muted text-foreground border border-border">{t}</span>
             ))}
           </div>
         </div>
@@ -240,15 +210,15 @@ function PasseiosTab({ experiencias }: { experiencias: any }) {
   const unicas = experiencias?.experiencias_unicas || [];
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {passeios.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">🎯 Passeios ({passeios.length})</p>
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">🎯 Passeios ({passeios.length})</p>
           <DataTable
             headers={["Passeio", "Tipo", "Duração", "Preço Aprox."]}
             rows={passeios.map((p: any) => [
-              <span className="font-semibold">{p.nome}</span>,
-              p.tipo ? <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] bg-orange-500/10 text-orange-600 font-medium">{p.tipo}</span> : null,
+              <span className="font-bold">{p.nome}</span>,
+              p.tipo ? <span className="inline-flex px-2.5 py-1 rounded-lg text-[11px] bg-orange-500/10 text-orange-700 dark:text-orange-300 font-semibold border border-orange-500/20">{p.tipo}</span> : null,
               p.duracao,
               p.preco_aprox,
             ])}
@@ -257,11 +227,11 @@ function PasseiosTab({ experiencias }: { experiencias: any }) {
       )}
       {restaurantes.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">🍽️ Restaurantes ({restaurantes.length})</p>
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">🍽️ Restaurantes ({restaurantes.length})</p>
           <DataTable
             headers={["Restaurante", "Tipo", "Faixa de Preço"]}
             rows={restaurantes.map((r: any) => [
-              <span className="font-semibold">{r.nome}</span>,
+              <span className="font-bold">{r.nome}</span>,
               r.tipo,
               r.faixa_preco,
             ])}
@@ -270,12 +240,12 @@ function PasseiosTab({ experiencias }: { experiencias: any }) {
       )}
       {unicas.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">✨ Experiências Únicas</p>
-          <ul className="space-y-1">
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">✨ Experiências Únicas</p>
+          <ul className="space-y-2">
             {unicas.map((u: string, i: number) => (
-              <li key={i} className="flex gap-2 text-xs">
+              <li key={i} className="flex gap-3 text-sm items-start">
                 <span className="text-orange-500 shrink-0">★</span>
-                <span>{u}</span>
+                <span className="text-foreground">{u}</span>
               </li>
             ))}
           </ul>
@@ -288,94 +258,60 @@ function PasseiosTab({ experiencias }: { experiencias: any }) {
 // ─── Tab: Logística ───
 function LogisticaTab({ logistica, financeiro, destino }: { logistica: any; financeiro: any; destino: any }) {
   return (
-    <div className="space-y-5">
-      {/* Grid de info rápida */}
+    <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {logistica?.tempo_voo_brasil && (
-          <div className="rounded-lg border border-border/40 bg-card p-3">
-            <p className="text-[10px] text-muted-foreground font-bold uppercase">Tempo de Voo</p>
-            <p className="text-sm font-bold mt-0.5">{logistica.tempo_voo_brasil}</p>
-          </div>
-        )}
-        {logistica?.melhor_conexao && (
-          <div className="rounded-lg border border-border/40 bg-card p-3">
-            <p className="text-[10px] text-muted-foreground font-bold uppercase">Melhor Conexão</p>
-            <p className="text-sm font-bold mt-0.5">{logistica.melhor_conexao}</p>
-          </div>
-        )}
-        {financeiro?.moeda_dica && (
-          <div className="rounded-lg border border-border/40 bg-card p-3">
-            <p className="text-[10px] text-muted-foreground font-bold uppercase">Moeda</p>
-            <p className="text-sm font-bold mt-0.5">{financeiro.moeda_dica}</p>
-          </div>
-        )}
-        {financeiro?.faixa_preco_total && (
-          <div className="rounded-lg border border-border/40 bg-card p-3">
-            <p className="text-[10px] text-muted-foreground font-bold uppercase">Faixa Total</p>
-            <p className="text-sm font-bold mt-0.5">{financeiro.faixa_preco_total}</p>
-          </div>
-        )}
+        {logistica?.tempo_voo_brasil && <InfoCard label="Tempo de Voo" value={logistica.tempo_voo_brasil} emoji="✈️" />}
+        {logistica?.melhor_conexao && <InfoCard label="Melhor Conexão" value={logistica.melhor_conexao} emoji="🔄" />}
+        {financeiro?.moeda_dica && <InfoCard label="Moeda" value={financeiro.moeda_dica} emoji="💰" />}
+        {financeiro?.faixa_preco_total && <InfoCard label="Faixa Total" value={financeiro.faixa_preco_total} emoji="💵" />}
       </div>
 
-      {/* Cias aéreas */}
       {logistica?.companhias_aereas?.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">✈️ Companhias Aéreas</p>
-          <div className="flex flex-wrap gap-1.5">
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3 flex items-center gap-2">
+            <Plane className="w-4 h-4 text-cyan-500" /> Companhias Aéreas
+          </p>
+          <div className="flex flex-wrap gap-2">
             {logistica.companhias_aereas.map((c: string, i: number) => (
-              <span key={i} className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-cyan-500/10 text-cyan-600 border border-cyan-500/20">{c}</span>
+              <span key={i} className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/20">{c}</span>
             ))}
           </div>
         </div>
       )}
 
-      {/* Aeroportos */}
       {logistica?.aeroportos?.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">🛬 Aeroportos</p>
-          <div className="flex flex-wrap gap-1.5">
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">🛬 Aeroportos</p>
+          <div className="flex flex-wrap gap-2">
             {logistica.aeroportos.map((a: string, i: number) => (
-              <span key={i} className="px-2.5 py-1 rounded-full text-[11px] font-medium bg-blue-500/10 text-blue-600 border border-blue-500/20">{a}</span>
+              <span key={i} className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">{a}</span>
             ))}
           </div>
         </div>
       )}
 
-      {/* Transfer */}
       {logistica?.transfer_interno?.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">🚗 Transporte Interno</p>
-          <ul className="space-y-1">
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">🚗 Transporte Interno</p>
+          <ul className="space-y-2">
             {logistica.transfer_interno.map((t: string, i: number) => (
-              <li key={i} className="flex gap-2 text-xs">
+              <li key={i} className="flex gap-3 text-sm items-start">
                 <span className="text-cyan-500 shrink-0">→</span>
-                <span>{t}</span>
+                <span className="text-foreground">{t}</span>
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      {/* Destino info */}
       {(destino?.clima || destino?.visto_necessario != null || destino?.vacinas?.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {destino.clima && (
-            <div className="rounded-lg border border-border/40 bg-card p-3">
-              <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">🌡️ Clima</p>
-              <p className="text-xs">{destino.clima}</p>
-            </div>
-          )}
+          {destino.clima && <InfoCard label="Clima" value={destino.clima} emoji="🌡️" />}
           {destino.visto_necessario != null && (
-            <div className="rounded-lg border border-border/40 bg-card p-3">
-              <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">📋 Visto</p>
-              <p className="text-xs font-semibold">{destino.visto_necessario ? "Necessário" : "Dispensado"}</p>
-            </div>
+            <InfoCard label="Visto" value={destino.visto_necessario ? "Necessário" : "Dispensado"} emoji="📋" />
           )}
           {destino.vacinas?.length > 0 && (
-            <div className="rounded-lg border border-border/40 bg-card p-3">
-              <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">💉 Vacinas</p>
-              <p className="text-xs">{destino.vacinas.join(", ")}</p>
-            </div>
+            <InfoCard label="Vacinas" value={destino.vacinas.join(", ")} emoji="💉" />
           )}
         </div>
       )}
@@ -385,24 +321,19 @@ function LogisticaTab({ logistica, financeiro, destino }: { logistica: any; fina
 
 // ─── Tab: Operacional ───
 function OperacionalTab({ operacional }: { operacional: any }) {
-  if (!operacional?.tema && !operacional?.passo_a_passo?.length) return <p className="text-xs text-muted-foreground italic py-4 text-center">Sem dados operacionais</p>;
+  if (!operacional?.tema && !operacional?.passo_a_passo?.length) return <p className="text-sm text-muted-foreground italic py-6 text-center">Sem dados operacionais</p>;
 
   return (
-    <div className="space-y-4">
-      {operacional.tema && (
-        <div className="rounded-lg border border-border/40 bg-card p-3">
-          <p className="text-[10px] text-muted-foreground font-bold uppercase">Tema</p>
-          <p className="text-sm font-bold mt-0.5">{operacional.tema}</p>
-        </div>
-      )}
+    <div className="space-y-5">
+      {operacional.tema && <InfoCard label="Tema" value={operacional.tema} emoji="📌" />}
       {operacional.passo_a_passo?.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">📝 Passo a Passo</p>
-          <div className="space-y-1.5">
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">📝 Passo a Passo</p>
+          <div className="space-y-2">
             {operacional.passo_a_passo.map((p: string, i: number) => (
-              <div key={i} className="flex gap-2 text-xs items-start">
-                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-bold shrink-0">{i + 1}</span>
-                <span>{p}</span>
+              <div key={i} className="flex gap-3 text-sm items-start">
+                <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-primary/10 text-primary text-xs font-bold shrink-0">{i + 1}</span>
+                <span className="text-foreground">{p}</span>
               </div>
             ))}
           </div>
@@ -410,20 +341,30 @@ function OperacionalTab({ operacional }: { operacional: any }) {
       )}
       {operacional.pontos_atencao?.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">⚠️ Pontos de Atenção</p>
-          <ul className="space-y-1">
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">⚠️ Pontos de Atenção</p>
+          <ul className="space-y-2">
             {operacional.pontos_atencao.map((p: string, i: number) => (
-              <li key={i} className="flex gap-2 text-xs"><span className="text-amber-500 shrink-0">!</span><span>{p}</span></li>
+              <li key={i} className="flex gap-3 text-sm items-start"><span className="text-amber-500 shrink-0">!</span><span className="text-foreground">{p}</span></li>
             ))}
           </ul>
         </div>
       )}
       {operacional.erros_comuns?.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-2">❌ Erros Comuns</p>
-          <ul className="space-y-1">
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">❌ Erros Comuns</p>
+          <ul className="space-y-2">
             {operacional.erros_comuns.map((e: string, i: number) => (
-              <li key={i} className="flex gap-2 text-xs"><span className="text-red-500 shrink-0">✗</span><span>{e}</span></li>
+              <li key={i} className="flex gap-3 text-sm items-start"><span className="text-red-500 shrink-0">✗</span><span className="text-foreground">{e}</span></li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {operacional.dicas_avancadas?.length > 0 && (
+        <div>
+          <p className="text-xs uppercase tracking-wider text-foreground font-bold mb-3">💡 Dicas Avançadas</p>
+          <ul className="space-y-2">
+            {operacional.dicas_avancadas.map((d: string, i: number) => (
+              <li key={i} className="flex gap-3 text-sm items-start"><span className="text-primary shrink-0">→</span><span className="text-foreground">{d}</span></li>
             ))}
           </ul>
         </div>
@@ -431,6 +372,7 @@ function OperacionalTab({ operacional }: { operacional: any }) {
     </div>
   );
 }
+
 
 // ═══════════════════════════════════════════
 // ─── MAIN EXPORT ───
@@ -466,34 +408,60 @@ export default function OrionDataTables({ taxonomy }: { taxonomy: any }) {
 
   if (tabs.length === 0) return null;
 
-  return (
-    <div className="space-y-3">
-      <h2 className="text-sm font-bold flex items-center gap-2">
-        <Table2 className="w-4 h-4 text-primary" /> Dados Estruturados
-      </h2>
+  const tabColors: Record<string, string> = {
+    evento: "text-amber-600 dark:text-amber-400",
+    hoteis: "text-purple-600 dark:text-purple-400",
+    passeios: "text-orange-600 dark:text-orange-400",
+    logistica: "text-cyan-600 dark:text-cyan-400",
+    operacional: "text-primary",
+  };
 
-      <div className="rounded-xl border border-border/40 bg-card overflow-hidden">
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-xl bg-primary/10">
+          <Table2 className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <h2 className="text-base font-bold text-foreground">Dados Estruturados</h2>
+          <p className="text-xs text-muted-foreground">Informações extraídas e organizadas pelo ÓRION</p>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card overflow-hidden shadow-sm">
+        {/* Gold-line top */}
+        <div className="h-0.5" style={{ background: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--champagne)), hsl(var(--primary)))" }} />
+
         {/* Tab headers */}
-        <div className="flex border-b border-border/40 bg-muted/30 overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "flex items-center gap-1.5 px-4 py-3 text-xs font-semibold transition-all whitespace-nowrap border-b-2",
-                activeTab === tab.id
-                  ? "border-primary text-primary bg-background/50"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:bg-background/30"
-              )}
-            >
-              <tab.icon className="w-3.5 h-3.5" />
-              {tab.label}
-            </button>
-          ))}
+        <div className="flex border-b border-border bg-muted/30 overflow-x-auto">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            const color = tabColors[tab.id] || "text-primary";
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex items-center gap-2 px-5 py-4 text-sm font-semibold transition-all whitespace-nowrap border-b-[3px]",
+                  isActive
+                    ? cn("border-primary bg-background/60", color)
+                    : "border-transparent text-muted-foreground hover:text-foreground hover:bg-background/30"
+                )}
+              >
+                <div className={cn(
+                  "p-1.5 rounded-lg transition-colors",
+                  isActive ? "bg-primary/10" : "bg-transparent"
+                )}>
+                  <tab.icon className="w-4 h-4" />
+                </div>
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Tab content */}
-        <div className="p-5">
+        <div className="p-6">
           {activeTab === "evento" && <EventoTab evento={evento} fatos={fatos} />}
           {activeTab === "hoteis" && <HoteisTab hospedagem={hospedagem} />}
           {activeTab === "passeios" && <PasseiosTab experiencias={experiencias} />}
