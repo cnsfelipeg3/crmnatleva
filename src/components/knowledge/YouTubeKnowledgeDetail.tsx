@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import TaxonomyPreview, { type Taxonomy } from "@/components/knowledge/TaxonomyPreview";
+import OrionDataTables from "@/components/knowledge/OrionDataTables";
 
 interface KBDoc {
   id: string;
@@ -350,7 +351,8 @@ export default function YouTubeKnowledgeDetail({ doc, onBack, onDelete }: Props)
         {/* ═══ SALES INSIGHTS (top priority) ═══ */}
         {hasTaxonomy && <SalesInsightsCard vendas={tax.vendas} />}
 
-        {/* ═══ FULL TAXONOMY ═══ */}
+        {/* ═══ DATA TABLES (tabbed professional view) ═══ */}
+        {hasTaxonomy && <OrionDataTables taxonomy={doc.taxonomy} />}
         {hasTaxonomy && (
           <div className="space-y-3">
             <h2 className="text-sm font-bold flex items-center gap-2">
