@@ -12,7 +12,7 @@ interface Sale {
   id: string; display_id: string; name: string;
   destination_iata: string | null;
   received_value: number; margin: number;
-  created_at: string; status: string;
+  created_at: string; close_date: string | null; status: string;
 }
 interface Props { filtered: Sale[]; }
 
@@ -38,7 +38,7 @@ export default function HeatmapSection({ filtered }: Props) {
       Array.from({ length: 12 }, () => ({ count: 0, sales: [] }))
     );
     filtered.forEach(s => {
-      const d = new Date(s.created_at);
+      const d = new Date(s.close_date || s.created_at);
       grid[d.getDay()][d.getMonth()].count++;
       grid[d.getDay()][d.getMonth()].sales.push(s);
     });
