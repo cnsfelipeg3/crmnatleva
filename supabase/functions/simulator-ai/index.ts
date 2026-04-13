@@ -166,7 +166,9 @@ async function callAnthropic(
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          buffer += decoder.decode(value, { stream: true });
+          const rawChunk = decoder.decode(value, { stream: true });
+          if (chunksEmitted === 0) console.log("First raw chunk sample:", rawChunk.slice(0, 500));
+          buffer += rawChunk;
 
           let newlineIdx;
           while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
