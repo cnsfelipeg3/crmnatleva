@@ -8,7 +8,7 @@ import { Target, TrendingUp } from "lucide-react";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-interface Sale { id: string; display_id: string; name: string; received_value: number; total_cost: number; margin: number; created_at: string; status: string; }
+interface Sale { id: string; display_id: string; name: string; received_value: number; total_cost: number; margin: number; created_at: string; close_date: string | null; status: string; }
 interface Props { filtered: Sale[]; allSales: Sale[]; }
 
 export default function GoalProjectionSection({ filtered, allSales }: Props) {
@@ -25,7 +25,7 @@ export default function GoalProjectionSection({ filtered, allSales }: Props) {
     const dailyMap: Record<number, { rev: number; sales: Sale[] }> = {};
     const thisMonthSales: Sale[] = [];
     filtered.forEach(s => {
-      const d = new Date(s.created_at);
+      const d = new Date(s.close_date || s.created_at);
       if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
         const day = d.getDate();
         if (!dailyMap[day]) dailyMap[day] = { rev: 0, sales: [] };
@@ -62,7 +62,7 @@ export default function GoalProjectionSection({ filtered, allSales }: Props) {
     // Calculate MONTHLY average from all historical sales
     const monthlyMap: Record<string, number> = {};
     allSales.forEach(s => {
-      const d = new Date(s.created_at);
+      const d = new Date(s.close_date || s.created_at);
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) return;
       monthlyMap[key] = (monthlyMap[key] || 0) + (s.received_value || 0);
