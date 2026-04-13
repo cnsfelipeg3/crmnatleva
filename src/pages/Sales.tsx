@@ -226,7 +226,7 @@ export default function Sales() {
           </Card>
           {/* Summary footer */}
           <Card className="glass-card p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               <div>
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Vendas {activeFilterCount > 0 ? "(filtradas)" : ""}</p>
                 <p className="text-lg font-bold text-foreground">{totals.filtered.count}</p>
@@ -238,9 +238,19 @@ export default function Sales() {
                 {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">de {totals.all.pax} total</p>}
               </div>
               <div>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Receita Total</p>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Faturamento</p>
                 <p className="text-lg font-bold text-foreground">{fmt(totals.filtered.revenue)}</p>
                 {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">de {fmt(totals.all.revenue)} total</p>}
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Custo Total</p>
+                <p className="text-lg font-bold text-foreground">{fmt(totals.filtered.cost)}</p>
+                {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">de {fmt(totals.all.cost)} total</p>}
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Lucro</p>
+                <p className={cn("text-lg font-bold", totals.filtered.profit > 0 ? "text-success" : "text-destructive")}>{fmt(totals.filtered.profit)}</p>
+                {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">de {fmt(totals.all.profit)} total</p>}
               </div>
               <div>
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Margem Média</p>
