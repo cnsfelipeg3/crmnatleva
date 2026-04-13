@@ -263,18 +263,40 @@ export default function Sales() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/50">
-                      <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs">Venda</th>
-                      <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs">Ida</th>
-                      <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs">Volta</th>
-                      <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs">Rota</th>
-                      <th className="text-center px-2 py-3 font-semibold text-muted-foreground text-xs">PAX</th>
-                      <th className="text-left px-2 py-3 font-semibold text-muted-foreground text-xs">Produtos</th>
-                      <th className="text-right px-3 py-3 font-semibold text-muted-foreground text-xs">Valor</th>
-                      <th className="text-right px-3 py-3 font-semibold text-muted-foreground text-xs">Custo</th>
-                      <th className="text-right px-3 py-3 font-semibold text-muted-foreground text-xs">Lucro</th>
-                      <th className="text-right px-2 py-3 font-semibold text-muted-foreground text-xs">Margem</th>
-                      <th className="text-center px-2 py-3 font-semibold text-muted-foreground text-xs">Lead</th>
-                      <th className="text-left px-2 py-3 font-semibold text-muted-foreground text-xs">Status</th>
+                      {([
+                        { key: "name", label: "Venda", align: "text-left", px: "px-3" },
+                        { key: "departure_date", label: "Ida", align: "text-left", px: "px-3" },
+                        { key: "return_date", label: "Volta", align: "text-left", px: "px-3" },
+                        { key: null, label: "Rota", align: "text-left", px: "px-3" },
+                        { key: null, label: "PAX", align: "text-center", px: "px-2" },
+                        { key: null, label: "Produtos", align: "text-left", px: "px-2" },
+                        { key: "received_value", label: "Valor", align: "text-right", px: "px-3" },
+                        { key: "total_cost", label: "Custo", align: "text-right", px: "px-3" },
+                        { key: "profit", label: "Lucro", align: "text-right", px: "px-3" },
+                        { key: "margin", label: "Margem", align: "text-right", px: "px-2" },
+                        { key: null, label: "Lead", align: "text-center", px: "px-2" },
+                        { key: "status", label: "Status", align: "text-left", px: "px-2" },
+                      ] as { key: ColSortKey | null; label: string; align: string; px: string }[]).map((col) => (
+                        <th
+                          key={col.label}
+                          className={cn(
+                            col.align, col.px, "py-3 font-semibold text-muted-foreground text-xs",
+                            col.key && "cursor-pointer select-none hover:text-foreground transition-colors"
+                          )}
+                          onClick={col.key ? () => toggleColSort(col.key!) : undefined}
+                        >
+                          <span className="inline-flex items-center gap-1">
+                            {col.label}
+                            {col.key && (
+                              colSort?.key === col.key
+                                ? colSort.dir === "asc"
+                                  ? <ArrowUp className="w-3 h-3" />
+                                  : <ArrowDown className="w-3 h-3" />
+                                : <ArrowUpDown className="w-3 h-3 opacity-30" />
+                            )}
+                          </span>
+                        </th>
+                      ))}
                       <th className="px-2 py-3"></th>
                     </tr>
                   </thead>
