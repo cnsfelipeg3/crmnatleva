@@ -154,44 +154,68 @@ async function callAnthropic(
   }
 
   // Transform Anthropic SSE to OpenAI-compatible SSE
-  const reader = response.body!.getReader();
+  // First, peek at the stream to detect errors (Anthropic sends 200 with error in body)
+  const peekReader = response.body!.getReader();
+  const peekDecoder = new TextDecoder();
+  const { done: peekDone, value: peekValue } = await peekReader.read();
+  
+  if (peekDone || !peekValue) {
+    throw new Error("Anthropic returned empty stream");
+  }
+  
+  const firstChunk = peekDecoder.decode(peekValue, { stream: true });
+  
+  // Detect error events in the stream (e.g. overloaded_error)
+  if (firstChunk.includes('"type":"error"') || firstChunk.includes("overloaded_error")) {
+    console.error("Anthropic stream error detected in first chunk:", firstChunk.slice(0, 300));
+    peekReader.releaseLock();
+    throw new Error("Anthropic overloaded");
+  }
+
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
   const transformedStream = new ReadableStream({
     async start(controller) {
-      let buffer = "";
+      let buffer = firstChunk; // Start with the peeked chunk
+      let chunksEmitted = 0;
+      
+      const processBuffer = () => {
+        let newlineIdx;
+        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+          const line = buffer.slice(0, newlineIdx).trim();
+          buffer = buffer.slice(newlineIdx + 1);
+
+          if (!line || line.startsWith("event:")) continue;
+          if (!line.startsWith("data: ") && !line.startsWith("data:")) continue;
+          const jsonStr = line.startsWith("data: ") ? line.slice(6) : line.slice(5);
+          const trimmedJson = jsonStr.trim();
+          if (trimmedJson === "[DONE]") {
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            continue;
+          }
+
+          try {
+            const evt = JSON.parse(trimmedJson);
+            if (evt.type === "content_block_delta" && evt.delta?.text) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: evt.delta.text }, index: 0 }] })}\n\n`));
+              chunksEmitted++;
+            } else if (evt.type === "message_stop") {
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            }
+          } catch { /* ignore */ }
+        }
+      };
+
       try {
+        processBuffer(); // Process the first chunk
         while (true) {
-          const { done, value } = await reader.read();
+          const { done, value } = await peekReader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
-
-          let newlineIdx;
-          while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
-            const line = buffer.slice(0, newlineIdx).trim();
-            buffer = buffer.slice(newlineIdx + 1);
-
-            if (!line.startsWith("data: ")) continue;
-            const jsonStr = line.slice(6);
-            if (jsonStr === "[DONE]") {
-              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-              continue;
-            }
-
-            try {
-              const evt = JSON.parse(jsonStr);
-              if (evt.type === "content_block_delta" && evt.delta?.text) {
-                const chunk = {
-                  choices: [{ delta: { content: evt.delta.text }, index: 0 }],
-                };
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
-              } else if (evt.type === "message_stop") {
-                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-              }
-            } catch { /* ignore */ }
-          }
+          processBuffer();
         }
+        console.log(`Anthropic stream complete: ${chunksEmitted} chunks`);
       } catch (e) {
         console.error("Anthropic stream error:", e);
       } finally {
@@ -308,33 +332,49 @@ serve(async (req) => {
       });
     }
 
-    // Route to Anthropic
+    // Helper: call Lovable AI Gateway (used as primary or fallback)
+    const callLovableGateway = async (msgs: typeof messages, callType: CallType, shouldStream: boolean) => {
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+      const fallbackConfig = getModelConfig(callType, "lovable");
+      const requestBody: any = {
+        model: fallbackConfig.model,
+        messages: msgs,
+        stream: shouldStream,
+      };
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+      return { response, config: fallbackConfig };
+    };
+
+    // Route to Anthropic (with auto-fallback to Lovable Gateway)
     if (provider === "anthropic") {
       const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-      if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
-      return await callAnthropic(ANTHROPIC_API_KEY, messages, config.model, config.stream, config.maxTokens);
+      if (ANTHROPIC_API_KEY) {
+        try {
+          const result = await callAnthropic(ANTHROPIC_API_KEY, messages, config.model, config.stream, config.maxTokens);
+          // Check if the response is an error (non-stream responses with error status)
+          if (result.status >= 400) {
+            console.log(`Anthropic returned ${result.status}, falling back to Lovable AI Gateway`);
+          } else {
+            return result;
+          }
+        } catch (e) {
+          console.error("Anthropic exception, falling back to Lovable:", e);
+        }
+      }
+      // Fallback to Lovable AI Gateway
+      console.log("Using Lovable AI Gateway as fallback");
     }
 
     // Default / Fallback: Lovable AI Gateway
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-    // Use Lovable-compatible model (override Anthropic model names on fallback)
-    const fallbackConfig = getModelConfig(type as CallType, "lovable");
-    const requestBody: any = {
-      model: fallbackConfig.model,
-      messages,
-      stream: fallbackConfig.stream,
-    };
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    });
+    const { response, config: gwConfig } = await callLovableGateway(messages, type as CallType, true);
 
     if (!response.ok) {
       const status = response.status;
@@ -355,7 +395,7 @@ serve(async (req) => {
       });
     }
 
-    if (fallbackConfig.stream) {
+    if (gwConfig.stream) {
       return new Response(response.body, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
       });
@@ -364,7 +404,7 @@ serve(async (req) => {
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "";
 
-    return new Response(JSON.stringify({ content, model: config.model, type }), {
+    return new Response(JSON.stringify({ content, model: gwConfig.model, type }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
