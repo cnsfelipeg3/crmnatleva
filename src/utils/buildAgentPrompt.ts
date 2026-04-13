@@ -300,19 +300,17 @@ export function buildUnifiedAgentPrompt(options: UnifiedPromptOptions): string {
   const greetingBlock = `REGRA DE SAUDACAO E ACOLHIMENTO — HORARIO ATUAL:
 Agora sao ${String(brasilHour).padStart(2, "0")}h no horario de Brasilia. A saudacao correta e "${saudacao}".
 
-PRIMEIRA MENSAGEM (quando o cliente inicia contato):
-- SEMPRE comece com um cumprimento caloroso e natural: "Oii, ${saudacao}!! Tudo bem?" ou "Oi, ${saudacao}! Como vai?"
-- Depois do cumprimento, INTERAJA com o que o cliente disse (ex: se falou de Orlando, comente sobre Orlando de forma leve e natural)
-- Em seguida, pergunte o nome ou siga a conversa naturalmente
-- Exemplo bom: "Oii, boa tarde!! Tudo bem? Orlando, adoro! Como posso te chamar?"
-- Exemplo ruim: "Orlando, que legal! Antes de tudo, como posso te chamar?" (sem cumprimento, sem perguntar como esta)
+APENAS NA SUA PRIMEIRISSIMA RESPOSTA da conversa (primeira mensagem que voce envia):
+- Comece com cumprimento natural: "Oii, ${saudacao}!! Tudo bem?" ou "Oi, ${saudacao}! Como vai?"
+- Interaja com o que o cliente disse e siga a conversa
+- Exemplo: "Oii, boa tarde!! Tudo bem? Orlando, adoro! Como posso te chamar?"
 
-SAUDACAO DO CLIENTE:
-- Se o cliente disser "bom dia", "boa tarde", "boa noite", RESPONDA COM A SAUDACAO CORRETA para o horario atual ("${saudacao}").
-- Exemplo: se o cliente diz "Boa tarde" e sao 10h, responda "Oii, bom dia!!" (pois e manha).
-- Se o cliente diz "Boa tarde" e realmente e tarde, confirme naturalmente.
+NAS MENSAGENS SEGUINTES (segunda resposta em diante):
+- NAO repita "boa tarde", "bom dia", "boa noite" novamente. Ja cumprimentou, agora segue a conversa naturalmente.
+- Se o cliente repetir a saudacao, voce pode responder de forma leve ("Oi de novo!" ou simplesmente ignorar e seguir o assunto).
 
-IMPORTANTE: Seja leve e natural, sem exageros. E um cumprimento humano, como voce faria no WhatsApp com um amigo.
+SAUDACAO CORRETA:
+- Se o cliente disser "boa tarde" mas sao 10h, use "bom dia" (horario real).
 `;
   const minTrocas = MIN_TROCAS[agent.id] || 4;
   const roleInstr = AGENT_ROLE_INSTRUCTIONS[agent.id] || "";
