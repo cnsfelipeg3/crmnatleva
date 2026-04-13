@@ -36,9 +36,8 @@ function fmtShortDate(dateStr: string | null): string | null {
   if (!dateStr) return null;
   const parts = dateStr.split("T")[0].split("-");
   if (parts.length !== 3) return null;
-  const d = parseInt(parts[2], 10);
-  const m = parseInt(parts[1], 10) - 1;
-  return `${String(d).padStart(2, "0")}/${MONTH_SHORT[m]}`;
+  const [y, m, d] = parts;
+  return `${d.padStart(2, "0")}/${m.padStart(2, "0")}/${y.slice(2)}`;
 }
 
 interface SaleRow {
