@@ -1,53 +1,41 @@
 
 
-# Plano: Turbinar a Inteligência do ÓRION
+# Plano: Corrigir Simulador — Migrar para Lovable AI + Identidade "Nath"
 
-## Diagnóstico Atual
+## Problemas Identificados
 
-O ÓRION hoje tem 3 gargalos principais que causam perda de dados:
+1. **NATLEVA_BEHAVIOR_CORE nunca é injetado**: A edge function `simulator-ai` define as diretivas comportamentais mas a linha 275 simplesmente faz `enrichedSystemPrompt = systemPrompt || ""` sem adicionar o bloco. O comentário diz "prompt arrives fully built from frontend" mas o frontend **não inclui** essas diretivas.
 
-1. **Modelo limitado**: Usa Claude Sonnet 4 via API Anthropic direta (custo extra, sem necessidade — já existe Lovable AI com modelos superiores)
-2. **Limite de saída baixo**: 12.000 tokens de output — para vídeos longos com muitos dados (ex: programação de jogos da Copa), o JSON é truncado e dados são perdidos
-3. **Processamento single-pass**: Uma única chamada tenta extrair TUDO — se o conteúdo é muito denso, a IA prioriza algumas seções e ignora outras
-4. **Truncamento de entrada agressivo**: 40K chars com corte no meio do texto — dados importantes no meio do vídeo podem ser perdidos
+2. **Provider padrão é Anthropic**: O frontend envia `provider: "anthropic"` (linha 286 do SimuladorManualMode), causando overloads frequentes e fallback silencioso.
 
-## O Que Vai Mudar
+3. **Nome do agente exposto na UI**: O `SimulatorChatLayout` exibe `msg.agentName` (ex: "MAYA", "ATLAS") em vez de "Nath".
 
-### 1. Migrar para Lovable AI com modelo mais potente
-- Trocar de Claude Sonnet (Anthropic API direta) para **Gemini 2.5 Pro** via Lovable AI Gateway
-- Vantagens: contexto maior (1M tokens), melhor extração de dados estruturados, sem custo extra de API key Anthropic
-- Elimina dependência da `ANTHROPIC_API_KEY` para essa função
+4. **Compliance pipeline ignorado**: O modo manual faz `enforceAgentFormatting` mas não passa pelo `fullCompliancePipeline`, permitindo info-dumps e comportamento mecânico.
 
-### 2. Aumentar limite de saída para 16.000 tokens
-- De 12K para 16K tokens — evita truncamento de JSONs grandes (programações de eventos, listas de hotéis)
+## Mudanças Planejadas
 
-### 3. Processamento em 2 passadas para conteúdos longos
-- **Passada 1**: Extração completa de dados factuais (fatos, programação, nomes, datas, locais)
-- **Passada 2**: Análise estratégica e vendas (resumo, entendimento completo, argumentos, gatilhos)
-- Merge automático dos resultados
-- Ativado apenas para conteúdos > 15.000 caracteres (vídeos curtos continuam single-pass)
+### 1. Edge Function `simulator-ai/index.ts`
+- **Injetar NATLEVA_BEHAVIOR_CORE** no `enrichedSystemPrompt` para todos os tipos de agente (exceto `price_image`)
+- **Mudar provider padrão** de `"anthropic"` para `"lovable"` no default do destructuring
+- Manter Anthropic como opção caso o frontend envie explicitamente, mas o padrão será Lovable AI (GPT-5/GPT-5-mini)
 
-### 4. Aumentar limite de entrada para 60.000 caracteres
-- Com Gemini 2.5 Pro, podemos processar muito mais texto sem truncar
+### 2. Frontend `SimuladorManualMode.tsx`
+- Mudar `configuredProvider` fallback de `"anthropic"` para `"lovable"` (linha 286)
+- No `commitAgentMessage`, forçar `agentName: "Nath"` em vez de `selectedAgent.name`
 
-### 5. Log de processamento visível
-- Salvar no resultado: modelo usado, tokens consumidos, tempo, se usou 1 ou 2 passadas
-- Visível na UI para diagnóstico
+### 3. UI `SimulatorChatLayout.tsx`
+- Substituir a exibição de `msg.agentName` por `"Nath"` para mensagens do agente (mantendo o `agentId` interno para lógica de transferência)
 
-## Detalhes Técnicos
+### 4. Mensagens de erro
+- Trocar texto "Anthropic está temporariamente no limite" por mensagem genérica
 
-- **Arquivo editado**: `supabase/functions/organize-knowledge/index.ts`
-- Substituir `callOrion` (Anthropic) por chamada ao Lovable AI Gateway (`https://ai.gateway.lovable.dev/v1/chat/completions`)
-- Usar `LOVABLE_API_KEY` (já disponível) em vez de `ANTHROPIC_API_KEY`
-- Modelo: `google/gemini-2.5-pro`
-- Para a passada 1, usar um system prompt focado em extração factual pura
-- Para a passada 2, usar o prompt atual focado em análise estratégica
-- Merge inteligente: dados factuais da passada 1 preenchem campos que a passada 2 não cobriu
+## O Que NÃO Muda
+- Maya continua sendo "maya" internamente (ID, lógica de transferência, pipeline)
+- A estrutura de prompts em `buildAgentPrompt.ts` permanece igual
+- O compliance engine determinístico continua ativo
 
-## Resultado Esperado
-
-- Estádios, datas, horários e programações completas não serão mais perdidos
-- Vídeos longos terão extração muito mais completa
-- Custo menor (sem API Anthropic separada)
-- Diagnóstico fácil quando algo não sair como esperado
+## Resultado
+- Respostas com rapport e storytelling (behavior core injetado)
+- Sem overloads da Anthropic (GPT-5 via Lovable AI)
+- Cliente sempre vê "Nath", nunca "MAYA" ou "ATLAS"
 
