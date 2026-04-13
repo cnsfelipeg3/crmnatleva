@@ -16,7 +16,7 @@ interface Sale {
   margin: number; received_value: number; total_cost: number;
   locators: string[]; is_international: boolean | null;
   hotel_name: string | null; products: string[];
-  destination_iata: string | null; created_at: string;
+  destination_iata: string | null; created_at: string; close_date: string | null;
   seller_id: string | null; client_id: string | null;
 }
 
@@ -107,12 +107,12 @@ export default function AlertsSection({ filtered, sellerNames, clients }: Props)
     // Daily sales below average
     const today = new Date();
     const todaySales = filtered.filter(s => {
-      const d = new Date(s.created_at);
+      const d = new Date(s.close_date || s.created_at);
       return d.toDateString() === today.toDateString();
     });
     const todayRev = todaySales.reduce((s, v) => s + (v.received_value || 0), 0);
     const last30 = filtered.filter(s => {
-      const d = new Date(s.created_at);
+      const d = new Date(s.close_date || s.created_at);
       return d.getTime() > Date.now() - 30 * 86400000;
     });
     const avgDaily = last30.length > 0 ? last30.reduce((s, v) => s + (v.received_value || 0), 0) / 30 : 0;
@@ -216,7 +216,7 @@ export default function AlertsSection({ filtered, sellerNames, clients }: Props)
     const clientLastSale: Record<string, { date: number; sales: Sale[] }> = {};
     filtered.forEach(s => {
       if (s.client_id) {
-        const d = new Date(s.created_at).getTime();
+        const d = new Date(s.close_date || s.created_at).getTime();
         if (!clientLastSale[s.client_id]) clientLastSale[s.client_id] = { date: 0, sales: [] };
         if (d > clientLastSale[s.client_id].date) clientLastSale[s.client_id].date = d;
         clientLastSale[s.client_id].sales.push(s);
