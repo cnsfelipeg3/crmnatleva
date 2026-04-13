@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { formatDateBR } from "@/lib/dateFormat";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,7 +15,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe, BookOpen, Paperclip, Download, ExternalLink, Image as ImageIcon, File, Hash, KeyRound } from "lucide-react";
+import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe, BookOpen, Paperclip, Download, ExternalLink, Image as ImageIcon, File, Hash, KeyRound, Building2, UserCheck } from "lucide-react";
 import PublishToPortalDialog from "@/components/portal/PublishToPortalDialog";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import { useToast } from "@/hooks/use-toast";
@@ -134,6 +135,7 @@ export default function SaleDetail() {
         total_cost: totalCost,
         profit,
         margin: parseFloat(margin.toFixed(2)),
+        lead_type: editForm.lead_type || "agencia",
         observations: editForm.observations || null,
       }).eq("id", id);
 
@@ -316,7 +318,11 @@ export default function SaleDetail() {
                 <Badge variant="outline" className="text-xs gap-1 bg-accent/10">
                   <Tag className="w-3 h-3" /> {sale.miles_program}
                 </Badge>
-              )}
+               )}
+              <Badge variant="outline" className={cn("text-xs gap-1", sale.lead_type === "organico" ? "bg-success/10 text-success border-success/20" : "bg-accent/10 text-accent border-accent/20")}>
+                {sale.lead_type === "organico" ? <UserCheck className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
+                {sale.lead_type === "organico" ? "Orgânico" : "Agência"}
+              </Badge>
             </div>
           </div>
         </div>
@@ -405,6 +411,20 @@ export default function SaleDetail() {
               </div>
               <div className="space-y-1"><Label className="text-xs">Data Fechamento</Label><Input type="date" value={editForm.close_date || ""} onChange={e => updateEdit("close_date", e.target.value)} /></div>
               <div className="space-y-1"><Label className="text-xs">Pagamento</Label><Input value={editForm.payment_method || ""} onChange={e => updateEdit("payment_method", e.target.value)} /></div>
+              <div className="col-span-2 space-y-1">
+                <Label className="text-xs">Origem do Lead</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["agencia", "organico"] as const).map(lt => (
+                    <button key={lt} type="button" onClick={() => updateEdit("lead_type", lt)}
+                      className={cn("flex items-center gap-2 p-2.5 rounded-lg border-2 transition-all text-left text-xs",
+                        editForm.lead_type === lt ? "border-primary bg-primary/5" : "border-border/30 hover:border-border/60"
+                      )}>
+                      {lt === "agencia" ? <Building2 className="w-4 h-4 text-primary" /> : <UserCheck className="w-4 h-4 text-primary" />}
+                      <span className="font-medium">{lt === "agencia" ? "Lead Agência" : "Lead Orgânico"}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </Card>
           <Card className="p-5 glass-card space-y-4">
