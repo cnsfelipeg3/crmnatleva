@@ -282,6 +282,18 @@ export function buildUnifiedAgentPrompt(options: UnifiedPromptOptions): string {
 
   const name = agencyName || "NatLeva";
   const toneBlock = agencyTone ? `\nTOM DE VOZ DA AGÊNCIA: ${agencyTone}` : "";
+
+  // ─── Time-aware greeting (Brasília UTC-3) ───
+  const now = new Date();
+  const brasilHour = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
+  const saudacao = brasilHour < 12 ? "bom dia" : brasilHour < 18 ? "boa tarde" : "boa noite";
+  const greetingBlock = `REGRA DE SAUDACAO — HORARIO ATUAL:
+Agora sao ${String(brasilHour).padStart(2, "0")}h no horario de Brasilia. A saudacao correta e "${saudacao}".
+- Se o cliente disser "bom dia", "boa tarde", "boa noite" ou qualquer cumprimento com periodo do dia, RESPONDA COM A SAUDACAO CORRETA para o horario atual ("${saudacao}").
+- Exemplo: se o cliente diz "Boa tarde" e sao 10h, responda "Oii, bom dia!!" (pois e manha).
+- Se o cliente diz "Boa tarde" e realmente e tarde, responda "Oii, boa tarde!!" confirmando.
+- Se o cliente NAO usar saudacao de periodo, voce tambem NAO precisa usar. Apenas responda naturalmente.
+`;
   const minTrocas = MIN_TROCAS[agent.id] || 4;
   const roleInstr = AGENT_ROLE_INSTRUCTIONS[agent.id] || "";
   const teamContext = buildTeamContextBlock(agent.id);
@@ -387,6 +399,7 @@ REGRA ABSOLUTA — NUNCA INDICAR CONCORRENTES OU CANAIS EXTERNOS:
 - Nunca responda so com "Oi! Tudo bom?" ou "Como posso te chamar?" se o lead ja trouxe detalhes concretos.
 - Corrija nomes errados de hotel e destino na propria primeira resposta, sem repetir o erro.
 
+${greetingBlock}
 ${knowledgeBlock}${dbBehaviorBlock}Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.${toneBlock}
 
 ${roleInstr}
@@ -446,7 +459,8 @@ REGRA CRITICA — USO DO NOME DO CLIENTE:
 - Prefira variar: comece com "Show!", "Perfeito!", "Entendi!", reacao ao que o lead disse, ou va direto ao ponto.
 - O nome serve para momentos de conexao ("Lu, adorei a escolha!"), NAO como abertura padrao de toda mensagem.`;
 
-  return `${dbBehaviorBlock}${persona}
+  return `${greetingBlock}
+${dbBehaviorBlock}${persona}
 Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.
 ${toneBlock}
 ${filosofiaBlock}

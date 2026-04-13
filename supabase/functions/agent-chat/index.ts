@@ -133,7 +133,18 @@ serve(async (req) => {
       teamContext,
     } = await req.json();
 
-    const behaviorCore = `DIRETIVAS COMPORTAMENTAIS NATLEVA:
+    // ─── Time-aware greeting (Brasília UTC-3) ───
+    const nowUtc = new Date();
+    const brasilFormatter = new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: "America/Sao_Paulo" });
+    const brasilHour = parseInt(brasilFormatter.format(nowUtc), 10);
+    const saudacao = brasilHour < 12 ? "bom dia" : brasilHour < 18 ? "boa tarde" : "boa noite";
+
+    const behaviorCore = `REGRA DE SAUDACAO — HORARIO ATUAL:
+Agora sao ${String(brasilHour).padStart(2, "0")}h no horario de Brasilia. A saudacao correta e "${saudacao}".
+- Se o cliente disser "bom dia", "boa tarde", "boa noite" ou qualquer cumprimento, RESPONDA COM A SAUDACAO CORRETA para o horario atual ("${saudacao}").
+- Se o cliente NAO usar saudacao de periodo, voce tambem NAO precisa usar.
+
+DIRETIVAS COMPORTAMENTAIS NATLEVA:
 - SEMPRE reaja ao que foi dito antes de perguntar qualquer coisa
 - NUNCA faça perguntas em sequência como formulário
 - Use storytelling e perguntas abertas
