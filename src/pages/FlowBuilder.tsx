@@ -78,10 +78,9 @@ const NODE_LIBRARY = [
 ] as const;
 
 const PROVIDER_BADGES: Record<string, { label: string; icon: string; color: string }> = {
-  natleva: { label: "NatLeva", icon: "🧠", color: "hsl(280 80% 60%)" },
+  natleva: { label: "NatLeva (Lovable AI)", icon: "🧠", color: "hsl(280 80% 60%)" },
   openai: { label: "OpenAI", icon: "🤖", color: "hsl(160 60% 45%)" },
   gemini: { label: "Gemini", icon: "💎", color: "hsl(210 80% 55%)" },
-  anthropic: { label: "Claude", icon: "🔮", color: "hsl(25 80% 55%)" },
   groq: { label: "Groq", icon: "⚡", color: "hsl(45 80% 50%)" },
   openrouter: { label: "OpenRouter", icon: "🌐", color: "hsl(190 70% 50%)" },
   n8n: { label: "n8n", icon: "🔗", color: "hsl(340 70% 55%)" },
@@ -1360,7 +1359,7 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
     }
   }, [agents, config.natleva_agent, config.agent_id]);
 
-  const provider = config.provider || "anthropic";
+  const provider = config.provider || "natleva";
   const contextFields = config.context_fields || AI_CONTEXT_FIELDS.map((f) => f.key);
 
   return (
@@ -1377,7 +1376,7 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
         </Select>
       </div>
 
-      {(provider === "natleva" || provider === "anthropic") && (
+      {(provider === "natleva") && (
         <div>
           <Label className="text-xs font-semibold">Agente da Equipe</Label>
           <Select value={config.agent_id || ""} onValueChange={(v) => {
@@ -1424,24 +1423,26 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
         </div>
       )}
 
-      {provider === "anthropic" && (
+      {provider === "natleva" && (
         <div>
-          <Label className="text-xs font-semibold">Modelo Anthropic</Label>
-          <Select value={config.model || "claude-opus-4-5"} onValueChange={(v) => updateConfig("model", v)}>
+          <Label className="text-xs font-semibold">Modelo IA</Label>
+          <Select value={config.model || "google/gemini-3-flash-preview"} onValueChange={(v) => updateConfig("model", v)}>
             <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="claude-opus-4-5">Claude Opus 4.5 (Recomendado)</SelectItem>
-              <SelectItem value="claude-sonnet-4-20250514">Claude Sonnet 4</SelectItem>
-              <SelectItem value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (Rápido)</SelectItem>
+              <SelectItem value="google/gemini-3-flash-preview">Gemini 3 Flash (Recomendado)</SelectItem>
+              <SelectItem value="google/gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
+              <SelectItem value="google/gemini-2.5-pro">Gemini 2.5 Pro</SelectItem>
+              <SelectItem value="openai/gpt-5-mini">GPT-5 Mini</SelectItem>
+              <SelectItem value="openai/gpt-5">GPT-5</SelectItem>
             </SelectContent>
           </Select>
           <p className="text-[9px] text-muted-foreground mt-1">
-            Opus 4.5: conversas complexas · Sonnet: análises · Haiku: tarefas simples
+            Flash: rápido e eficiente · Pro/GPT-5: tarefas complexas
           </p>
         </div>
       )}
 
-      {provider !== "natleva" && provider !== "anthropic" && provider !== "n8n" && (
+      {provider !== "natleva" && provider !== "n8n" && (
         <div>
           <Label className="text-xs">Credencial / Integração</Label>
           <Select value={config.integration_id || ""} onValueChange={(v) => updateConfig("integration_id", v)}>
