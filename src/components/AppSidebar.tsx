@@ -23,6 +23,7 @@ const navItems = [
   { to: "/sales", icon: List, label: "Vendas" },
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
   { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações & Propostas" },
+  { to: "/propostas", icon: FileText, label: "Propostas" },
   { to: "/midias", icon: ImageIcon, label: "Mídias" },
 ];
 
