@@ -1,69 +1,42 @@
 
 
-## Plano: Sistema de Comissões com Tipo de Lead (Orgânico vs Agência)
+## Plano: Enriquecer a tabela de vendas com mais informações visíveis
 
-### Resumo
+### Problema atual
 
-Adicionar campo "Origem do Lead" nas vendas (agência = 15% do lucro, orgânico = 40% do lucro) e reformular a página de Comissões para calcular automaticamente com base nessa lógica.
+A tabela de vendas mostra poucos dados. Faltam datas de ida/volta, tipo de lead, detalhes de hotel, e colunas financeiras importantes como valor da venda, valor recebido e lucro separados.
 
----
+### Alterações no arquivo `src/pages/Sales.tsx`
 
-### 1. Banco de dados — nova coluna na tabela `sales`
+**1. Dados**: Adicionar `return_date` e `hotel_name` ao fetch e à interface `SaleRow`.
 
-Adicionar coluna `lead_type` (TEXT, default `'agencia'`) na tabela `sales` com valores possíveis: `agencia` ou `organico`.
+**2. Colunas da tabela desktop** (nova estrutura):
 
-```sql
-ALTER TABLE public.sales ADD COLUMN lead_type text NOT NULL DEFAULT 'agencia';
-```
+| Coluna | Conteúdo |
+|--------|----------|
+| **Venda** | Nome + ID + data fechamento |
+| **Datas** | Ida e volta formatadas (ex: "01/mar → 08/mar"), ou só ida |
+| **Rota** | IATA origem → destino |
+| **PAX** | Quantidade |
+| **Produtos** | Ícones: logo cia aérea, avião, hotel (tooltip com nome do hotel) |
+| **Valor Venda** | `received_value` formatado (o que o cliente pagou) |
+| **Custo** | `total_cost` formatado |
+| **Lucro** | `profit` formatado, com cor verde/vermelho |
+| **Margem** | Percentual com cor |
+| **Lead** | Badge "Org" ou "Agência" |
+| **Status** | Badge colorido |
 
----
+**3. Cards mobile**: Adicionar datas ida/volta, badge de lead, e exibir valor da venda + lucro separados.
 
-### 2. Formulário de cadastro de venda (`src/pages/NewSale.tsx`)
-
-Na seção de dados gerais (perto do campo vendedor/status), adicionar um seletor visual com duas opções:
-- **Lead da Agência** (default) — ícone de prédio
-- **Lead Orgânico** (do vendedor) — ícone de usuário
-
-O campo será salvo como `lead_type` no insert da venda.
-
----
-
-### 3. Tela de detalhes/edição da venda
-
-Exibir e permitir editar o tipo de lead na tela de detalhes da venda, para correções posteriores.
+**4. Busca**: Adicionar `return_date` e `hotel_name` nos campos de busca do SmartFilter.
 
 ---
 
-### 4. Reformular a página de Comissões (`src/pages/financeiro/Comissoes.tsx`)
-
-A página já existe e já está no menu. Vou reformulá-la para usar a lógica fixa:
-
-- **Lead Agência**: 15% sobre o lucro (received_value - total_cost)
-- **Lead Orgânico**: 40% sobre o lucro
-
-A página mostrará:
-- **KPIs no topo**: Total de comissões do período, comissões agência vs orgânico
-- **Tabela por vendedor**: nome, qtd vendas agência, qtd vendas orgânico, lucro total, comissão agência, comissão orgânico, comissão total
-- **Filtro por período** para analisar meses específicos
-- Possibilidade de expandir e ver as vendas individuais de cada vendedor com o valor da comissão
-
-As regras genéricas da tabela `commission_rules` serão mantidas como backup, mas a lógica principal usará os percentuais fixos (15% e 40%).
-
----
-
-### 5. Resumo financeiro no rodapé de vendas
-
-O rodapé de vendas (que já mostra faturamento/lucro) ganhará uma coluna adicional "Comissões estimadas" baseada no lead_type de cada venda.
-
----
-
-### Arquivos que serão modificados
+### Arquivos modificados
 
 | Arquivo | Mudança |
 |---------|---------|
-| Migration SQL | Adicionar coluna `lead_type` em `sales` |
-| `src/pages/NewSale.tsx` | Adicionar seletor de tipo de lead |
-| `src/pages/SaleDetails.tsx` (ou similar) | Exibir/editar tipo de lead |
-| `src/pages/financeiro/Comissoes.tsx` | Reformular com lógica 15%/40% |
-| `src/pages/Sales.tsx` | Adicionar comissão estimada no rodapé |
+| `src/pages/Sales.tsx` | Adicionar campos ao fetch, novas colunas financeiras (valor, custo, lucro), coluna "Datas", coluna "Lead", tooltip de hotel, layout mobile enriquecido |
+
+Nenhuma migração de banco necessária — os campos já existem.
 
