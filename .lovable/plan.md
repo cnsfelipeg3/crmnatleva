@@ -1,41 +1,28 @@
 
 
-# Plano: Corrigir Simulador — Migrar para Lovable AI + Identidade "Nath"
+# Plano: Equalizar os 3 Modos do Simulador
 
-## Problemas Identificados
+## Problemas
 
-1. **NATLEVA_BEHAVIOR_CORE nunca é injetado**: A edge function `simulator-ai` define as diretivas comportamentais mas a linha 275 simplesmente faz `enrichedSystemPrompt = systemPrompt || ""` sem adicionar o bloco. O comentário diz "prompt arrives fully built from frontend" mas o frontend **não inclui** essas diretivas.
+1. **Camaleão usa Anthropic como provider** — linha 273 de `SimuladorChameleonMode.tsx` faz fallback para `agencyConfig.default_provider || "anthropic"`, e o banco tem `default_provider = "anthropic"`
+2. **Auto Mode expõe nomes internos** — linha 452 usa `agent.name` diretamente nas mensagens
+3. **Chameleon expõe nomes internos** — linha 323 usa `agent.name` e linha 737 exibe na UI
 
-2. **Provider padrão é Anthropic**: O frontend envia `provider: "anthropic"` (linha 286 do SimuladorManualMode), causando overloads frequentes e fallback silencioso.
+## Mudanças
 
-3. **Nome do agente exposto na UI**: O `SimulatorChatLayout` exibe `msg.agentName` (ex: "MAYA", "ATLAS") em vez de "Nath".
+### 1. `SimuladorChameleonMode.tsx`
+- Linha 273: trocar fallback para `"lovable"` em vez de `agencyConfig.default_provider || "anthropic"`
+- Linha 323: forçar `agentName: "Nath"` em vez de `agent.name`
+- Linha 737: exibir "Nath" em vez de `msg.agentName` (manter emoji do agente interno para referência visual interna)
 
-4. **Compliance pipeline ignorado**: O modo manual faz `enforceAgentFormatting` mas não passa pelo `fullCompliancePipeline`, permitindo info-dumps e comportamento mecânico.
+### 2. `SimuladorAutoMode.tsx`
+- Linhas 452, 464, 582: trocar `agent.name` por `"Nath"` no `agentName` das mensagens enviadas
+- Manter `agent.id` interno para lógica de transferência
 
-## Mudanças Planejadas
+### 3. Banco de dados `ai_config`
+- Atualizar `default_provider` de `"anthropic"` para `"lovable"` via migration (previne que qualquer outro componente que leia essa config também use o provider correto)
 
-### 1. Edge Function `simulator-ai/index.ts`
-- **Injetar NATLEVA_BEHAVIOR_CORE** no `enrichedSystemPrompt` para todos os tipos de agente (exceto `price_image`)
-- **Mudar provider padrão** de `"anthropic"` para `"lovable"` no default do destructuring
-- Manter Anthropic como opção caso o frontend envie explicitamente, mas o padrão será Lovable AI (GPT-5/GPT-5-mini)
-
-### 2. Frontend `SimuladorManualMode.tsx`
-- Mudar `configuredProvider` fallback de `"anthropic"` para `"lovable"` (linha 286)
-- No `commitAgentMessage`, forçar `agentName: "Nath"` em vez de `selectedAgent.name`
-
-### 3. UI `SimulatorChatLayout.tsx`
-- Substituir a exibição de `msg.agentName` por `"Nath"` para mensagens do agente (mantendo o `agentId` interno para lógica de transferência)
-
-### 4. Mensagens de erro
-- Trocar texto "Anthropic está temporariamente no limite" por mensagem genérica
-
-## O Que NÃO Muda
-- Maya continua sendo "maya" internamente (ID, lógica de transferência, pipeline)
-- A estrutura de prompts em `buildAgentPrompt.ts` permanece igual
-- O compliance engine determinístico continua ativo
-
-## Resultado
-- Respostas com rapport e storytelling (behavior core injetado)
-- Sem overloads da Anthropic (GPT-5 via Lovable AI)
-- Cliente sempre vê "Nath", nunca "MAYA" ou "ATLAS"
+## O que NÃO muda
+- IDs internos (maya, atlas, etc.) continuam para lógica de pipeline
+- O Auto Mode e Camaleão podem mostrar o emoji do agente interno como indicador visual (ex: 🌙 Nath) para diferenciar qual agente está respondendo internamente, mas o nome é sempre "Nath"
 
