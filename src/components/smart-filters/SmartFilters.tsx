@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { SmartFilterConfig, SmartFilterState, DatePreset, SelectFilterConfig } from "./types";
 import { DATE_PRESET_LABELS } from "./types";
+import type { DateRange } from "react-day-picker";
 
 interface SmartFiltersProps {
   config: SmartFilterConfig;
