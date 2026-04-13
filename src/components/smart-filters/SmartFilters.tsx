@@ -76,6 +76,31 @@ export default function SmartFilters({
     }));
   }, [setState]);
 
+  const renderDateFieldSelector = () => {
+    if (!config.dateFieldOptions || config.dateFieldOptions.length <= 1) return null;
+    const currentField = state.dateFilter.field || config.dateField || "";
+    return (
+      <Select
+        value={currentField}
+        onValueChange={v =>
+          setState(prev => ({
+            ...prev,
+            dateFilter: { ...prev.dateFilter, field: v },
+          }))
+        }
+      >
+        <SelectTrigger className="w-[150px] h-8 text-xs" aria-label="Campo de data">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {config.dateFieldOptions.map(o => (
+            <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  };
+
   const renderDatePickers = () => (
     <div className="flex gap-1.5 items-center flex-wrap">
       {/* Specific date */}
@@ -370,8 +395,12 @@ export default function SmartFilters({
         )}
       </div>
 
-      {/* Row 2: Date presets pills + date pickers */}
+      {/* Row 2: Date field selector + presets pills + date pickers */}
       <div className="flex flex-wrap gap-2 items-center">
+        {renderDateFieldSelector()}
+        {config.dateFieldOptions && config.dateFieldOptions.length > 1 && (
+          <div className="w-px h-5 bg-border/40 mx-0.5 hidden sm:block" />
+        )}
         {renderPills()}
         <div className="w-px h-5 bg-border/40 mx-1 hidden sm:block" />
         {renderDatePickers()}

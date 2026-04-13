@@ -54,6 +54,8 @@ export interface SmartFilterConfig<T = any> {
   defaultSortDirection?: "asc" | "desc";
   dateField?: string;
   dateFilterLabel?: string;
+  /** Multiple date field options for the user to choose which date to filter on */
+  dateFieldOptions?: { key: string; label: string }[];
   selectFilters: Omit<SelectFilterConfig, "value">[];
   searchPlaceholder?: string;
   searchFields: string[];

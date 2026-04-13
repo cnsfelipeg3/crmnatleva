@@ -44,6 +44,10 @@ const SALES_FILTER_CONFIG: SmartFilterConfig = {
   defaultSortKey: "departure_date",
   defaultSortDirection: "asc",
   dateField: "departure_date",
+  dateFieldOptions: [
+    { key: "departure_date", label: "Data embarque" },
+    { key: "close_date", label: "Data fechamento" },
+  ],
   searchPlaceholder: "Buscar nome, ID, destino, localizador...",
   searchFields: ["name", "display_id", "origin_city", "destination_city", "destination_iata", "airline", "locators"],
   selectFilters: [
