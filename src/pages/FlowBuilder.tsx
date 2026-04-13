@@ -43,6 +43,30 @@ import { cn } from "@/lib/utils";
 const GREEN = "hsl(142 71% 45%)";
 const RED = "hsl(0 72% 51%)";
 
+const NATLEVA_AGENT_LABELS: Record<string, string> = {
+  orion: "🔮 ÓRION",
+  maya: "🌸 MAYA",
+  atlas: "🗺️ ATLAS",
+  habibi: "🏜️ HABIBI",
+  nemo: "🎢 NEMO",
+  dante: "🏛️ DANTE",
+  luna: "🌙 LUNA",
+  nero: "🎯 NERO",
+  iris: "🌈 IRIS",
+  aegis: "🛡️ AEGIS",
+  nurture: "🌱 NURTURE",
+  athos: "🛎️ ATHOS",
+  zara: "✨ ZARA",
+  finx: "📊 FINX",
+  sage: "🧮 SAGE",
+  opex: "🔧 OPEX",
+  vigil: "👁️ VIGIL",
+  sentinel: "🛰️ SENTINEL",
+  spark: "⚡ SPARK",
+  hunter: "🏹 HUNTER",
+  "nath-ai": "👩‍💼 NATH.AI",
+};
+
 const NODE_LIBRARY = [
   { type: "trigger", label: "Gatilho", icon: Radio, color: "hsl(45 93% 58%)", emoji: "⚡", description: "Inicia o fluxo quando um evento ocorre" },
   { type: "message", label: "Mensagem", icon: Send, color: "hsl(210 100% 56%)", emoji: "💬", description: "Envia uma mensagem de texto" },
@@ -1207,7 +1231,13 @@ function FlowNode({ data, selected }: { data: any; selected: boolean }) {
         {/* AI status */}
         {data.nodeType === "ai_agent" && (
           <div className="mt-1.5 space-y-1">
-            {data.config?.agent_name && (
+            {data.config?.natleva_agent && (
+              <div className="text-[9px] font-bold text-purple-400 truncate flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
+                {NATLEVA_AGENT_LABELS[data.config.natleva_agent] || data.config.natleva_agent}
+              </div>
+            )}
+            {!data.config?.natleva_agent && data.config?.agent_name && (
               <div className="text-[9px] font-semibold text-primary truncate">
                 🤖 {data.config.agent_name}
               </div>
@@ -1518,6 +1548,68 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
           <Label className="text-[10px]">Apenas metadados (privacidade)</Label>
         </div>
       </div>
+
+      {/* NatLeva agent metadata */}
+      {config.natleva_agent && (
+        <>
+          <Separator />
+          <div className="p-2.5 rounded-lg bg-purple-500/10 border border-purple-500/20 space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-purple-500/20 flex items-center justify-center text-sm">
+                {NATLEVA_AGENT_LABELS[config.natleva_agent]?.split(" ")[0] || "🤖"}
+              </div>
+              <div>
+                <span className="text-xs font-bold text-purple-300">
+                  {NATLEVA_AGENT_LABELS[config.natleva_agent] || config.natleva_agent}
+                </span>
+                <p className="text-[9px] text-muted-foreground">Agente NatLeva vinculado</p>
+              </div>
+            </div>
+
+            {/* Extract metadata from system_prompt */}
+            {config.system_prompt && (
+              <div className="space-y-1.5">
+                {/[Mm]ínimo (\d+) trocas/.test(config.system_prompt) && (
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-purple-500/30 text-purple-300">
+                      🔄 Mín. {config.system_prompt.match(/[Mm]ínimo (\d+) trocas/)?.[1]} trocas
+                    </Badge>
+                  </div>
+                )}
+                {/BEHAVIOR_CORE versão (LITE|COMPLETA|COMPLETO)/.test(config.system_prompt) && (
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-purple-500/30 text-purple-300">
+                      🎭 Behavior: {config.system_prompt.match(/BEHAVIOR_CORE versão (LITE|COMPLETA|COMPLETO)/)?.[1]}
+                    </Badge>
+                  </div>
+                )}
+                {/Máx (\d+) palavras/.test(config.system_prompt) && (
+                  <div className="flex items-center gap-1.5">
+                    <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-purple-500/30 text-purple-300">
+                      📝 Máx {config.system_prompt.match(/Máx (\d+) palavras/)?.[1]} palavras
+                    </Badge>
+                  </div>
+                )}
+                {/5 CAMPOS OBRIGATÓRIOS/.test(config.system_prompt) && (
+                  <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-amber-500/30 text-amber-300">
+                    📋 5 campos obrigatórios
+                  </Badge>
+                )}
+                {/KB COMPLETA/.test(config.system_prompt) && (
+                  <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-blue-500/30 text-blue-300">
+                    📚 KB Completa
+                  </Badge>
+                )}
+                {/KB FILTRADA/.test(config.system_prompt) && (
+                  <Badge variant="outline" className="text-[8px] h-4 px-1.5 border-blue-500/30 text-blue-300">
+                    📚 KB Filtrada
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => toast.info("Teste de bloco disponível em breve!")}>
         <FlaskConical className="w-3 h-3 mr-1" /> Testar este bloco
@@ -2342,6 +2434,11 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
             <SelectItem value="paused">⏸ Pausado</SelectItem>
           </SelectContent>
         </Select>
+        {flowName.toLowerCase().includes("natleva") && (
+          <Badge variant="outline" className="text-[9px] h-6 px-2 border-amber-500/40 bg-amber-500/10 text-amber-400 gap-1 shrink-0">
+            <Eye className="w-3 h-3" /> Blueprint Visual — não controla atendimento
+          </Badge>
+        )}
         <div className="flex-1" />
         <Button variant={testMode ? "default" : "outline"} size="sm" onClick={() => { setTestMode(!testMode); if (testMode) { setTestRunning(false); setTestStep(0); } }} className="text-xs h-8">
           <FlaskConical className="w-3 h-3 mr-1" /> {testMode ? "Sair Simulação" : "🧪 Simular fluxo"}
