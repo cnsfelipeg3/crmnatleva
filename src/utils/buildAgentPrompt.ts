@@ -282,6 +282,18 @@ export function buildUnifiedAgentPrompt(options: UnifiedPromptOptions): string {
 
   const name = agencyName || "NatLeva";
   const toneBlock = agencyTone ? `\nTOM DE VOZ DA AGÊNCIA: ${agencyTone}` : "";
+
+  // ─── Time-aware greeting (Brasília UTC-3) ───
+  const now = new Date();
+  const brasilHour = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
+  const saudacao = brasilHour < 12 ? "bom dia" : brasilHour < 18 ? "boa tarde" : "boa noite";
+  const greetingBlock = `REGRA DE SAUDACAO — HORARIO ATUAL:
+Agora sao ${String(brasilHour).padStart(2, "0")}h no horario de Brasilia. A saudacao correta e "${saudacao}".
+- Se o cliente disser "bom dia", "boa tarde", "boa noite" ou qualquer cumprimento com periodo do dia, RESPONDA COM A SAUDACAO CORRETA para o horario atual ("${saudacao}").
+- Exemplo: se o cliente diz "Boa tarde" e sao 10h, responda "Oii, bom dia!!" (pois e manha).
+- Se o cliente diz "Boa tarde" e realmente e tarde, responda "Oii, boa tarde!!" confirmando.
+- Se o cliente NAO usar saudacao de periodo, voce tambem NAO precisa usar. Apenas responda naturalmente.
+`;
   const minTrocas = MIN_TROCAS[agent.id] || 4;
   const roleInstr = AGENT_ROLE_INSTRUCTIONS[agent.id] || "";
   const teamContext = buildTeamContextBlock(agent.id);
