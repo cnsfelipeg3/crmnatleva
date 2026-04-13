@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Download, Eye, Plane, Hotel, X } from "lucide-react";
+import { Plus, Download, Eye, Plane, Hotel, X, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AirlineLogo from "@/components/AirlineLogo";
 import { routeCode } from "@/lib/cityExtract";
