@@ -343,30 +343,25 @@ serve(async (req) => {
     // Route to Anthropic (with auto-fallback to Lovable Gateway)
     if (provider === "anthropic") {
       const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-      if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
-      return await callAnthropic(ANTHROPIC_API_KEY, messages, config.model, config.stream, config.maxTokens);
+      if (ANTHROPIC_API_KEY) {
+        try {
+          const result = await callAnthropic(ANTHROPIC_API_KEY, messages, config.model, config.stream, config.maxTokens);
+          // Check if the response is an error (non-stream responses with error status)
+          if (result.status >= 400) {
+            console.log(`Anthropic returned ${result.status}, falling back to Lovable AI Gateway`);
+          } else {
+            return result;
+          }
+        } catch (e) {
+          console.error("Anthropic exception, falling back to Lovable:", e);
+        }
+      }
+      // Fallback to Lovable AI Gateway
+      console.log("Using Lovable AI Gateway as fallback");
     }
 
     // Default / Fallback: Lovable AI Gateway
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
-    // Use Lovable-compatible model (override Anthropic model names on fallback)
-    const fallbackConfig = getModelConfig(type as CallType, "lovable");
-    const requestBody: any = {
-      model: fallbackConfig.model,
-      messages,
-      stream: fallbackConfig.stream,
-    };
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestBody),
-    });
+    const { response, config: gwConfig } = await callLovableGateway(messages, type as CallType, true);
 
     if (!response.ok) {
       const status = response.status;
@@ -387,7 +382,7 @@ serve(async (req) => {
       });
     }
 
-    if (fallbackConfig.stream) {
+    if (gwConfig.stream) {
       return new Response(response.body, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
       });
@@ -396,7 +391,7 @@ serve(async (req) => {
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || "";
 
-    return new Response(JSON.stringify({ content, model: config.model, type }), {
+    return new Response(JSON.stringify({ content, model: gwConfig.model, type }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
