@@ -297,12 +297,22 @@ export function buildUnifiedAgentPrompt(options: UnifiedPromptOptions): string {
   const now = new Date();
   const brasilHour = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
   const saudacao = brasilHour < 12 ? "bom dia" : brasilHour < 18 ? "boa tarde" : "boa noite";
-  const greetingBlock = `REGRA DE SAUDACAO — HORARIO ATUAL:
+  const greetingBlock = `REGRA DE SAUDACAO E ACOLHIMENTO — HORARIO ATUAL:
 Agora sao ${String(brasilHour).padStart(2, "0")}h no horario de Brasilia. A saudacao correta e "${saudacao}".
-- Se o cliente disser "bom dia", "boa tarde", "boa noite" ou qualquer cumprimento com periodo do dia, RESPONDA COM A SAUDACAO CORRETA para o horario atual ("${saudacao}").
+
+PRIMEIRA MENSAGEM (quando o cliente inicia contato):
+- SEMPRE comece com um cumprimento caloroso e natural: "Oii, ${saudacao}!! Tudo bem?" ou "Oi, ${saudacao}! Como vai?"
+- Depois do cumprimento, INTERAJA com o que o cliente disse (ex: se falou de Orlando, comente sobre Orlando de forma leve e natural)
+- Em seguida, pergunte o nome ou siga a conversa naturalmente
+- Exemplo bom: "Oii, boa tarde!! Tudo bem? Orlando, adoro! Como posso te chamar?"
+- Exemplo ruim: "Orlando, que legal! Antes de tudo, como posso te chamar?" (sem cumprimento, sem perguntar como esta)
+
+SAUDACAO DO CLIENTE:
+- Se o cliente disser "bom dia", "boa tarde", "boa noite", RESPONDA COM A SAUDACAO CORRETA para o horario atual ("${saudacao}").
 - Exemplo: se o cliente diz "Boa tarde" e sao 10h, responda "Oii, bom dia!!" (pois e manha).
-- Se o cliente diz "Boa tarde" e realmente e tarde, responda "Oii, boa tarde!!" confirmando.
-- Se o cliente NAO usar saudacao de periodo, voce tambem NAO precisa usar. Apenas responda naturalmente.
+- Se o cliente diz "Boa tarde" e realmente e tarde, confirme naturalmente.
+
+IMPORTANTE: Seja leve e natural, sem exageros. E um cumprimento humano, como voce faria no WhatsApp com um amigo.
 `;
   const minTrocas = MIN_TROCAS[agent.id] || 4;
   const roleInstr = AGENT_ROLE_INSTRUCTIONS[agent.id] || "";
