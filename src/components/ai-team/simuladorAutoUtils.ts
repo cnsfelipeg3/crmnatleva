@@ -267,8 +267,11 @@ export async function callSimulatorAI(sysPrompt: string, history: { role: string
  * Guarantees 100% compliance for rules like "no em-dash" regardless of model behavior.
  */
 function enforceAgentFormattingRules(text: string): string {
+  // Strip forced validation openers
+  let cleaned = text.replace(/^(Que linda ideia|Adorei isso|Adorei saber disso|Que demais saber que|Que incrível|Adorei essa cena|Adorei essa ideia|Adorei![,!\s]*|Que demais![,!\s]*)[.!,\s]*/i, "");
+  cleaned = cleaned.replace(/^([a-zà-ú])/, (_, c) => c.toUpperCase());
   // Remove em-dashes (—) and en-dashes (–) → replace with comma
-  let cleaned = text.replace(/\s*[—–]\s*/g, ", ");
+  cleaned = cleaned.replace(/\s*[—–]\s*/g, ", ");
   // Collapse double commas
   cleaned = cleaned.replace(/,\s*,/g, ",");
   // Remove comma before period

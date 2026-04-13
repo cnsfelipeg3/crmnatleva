@@ -161,6 +161,11 @@ function cleanAfterNameStrip(text: string): string {
 export function enforceAgentFormatting(text: string): string {
   let cleaned = text;
 
+  // ── Strip forced validation openers ──
+  cleaned = cleaned.replace(/^(Que linda ideia|Adorei isso|Adorei saber disso|Que demais saber que|Que incrível|Adorei essa cena|Adorei essa ideia|Adorei![,!\s]*|Que demais![,!\s]*)[.!,\s]*/i, "");
+  // Capitalize first letter after stripping
+  cleaned = cleaned.replace(/^([a-zà-ú])/, (_, c) => c.toUpperCase());
+
   // ── CORREÇÃO 2: Strip dashes/hyphens used as separators or bullets ──
   // Em-dash and en-dash → comma
   cleaned = cleaned.replace(/\s*[—–]\s*/g, ", ");
