@@ -236,7 +236,8 @@ export default function Sales() {
                   <thead>
                     <tr className="border-b border-border bg-muted/50">
                       <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs">Venda</th>
-                      <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs">Datas</th>
+                      <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs">Ida</th>
+                      <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs">Volta</th>
                       <th className="text-left px-3 py-3 font-semibold text-muted-foreground text-xs">Rota</th>
                       <th className="text-center px-2 py-3 font-semibold text-muted-foreground text-xs">PAX</th>
                       <th className="text-left px-2 py-3 font-semibold text-muted-foreground text-xs">Produtos</th>
@@ -266,7 +267,8 @@ export default function Sales() {
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-3">{renderDates(sale)}</td>
+                        <td className="px-3 py-3"><span className="text-xs font-mono">{fmtShortDate(sale.departure_date) || <span className="text-muted-foreground/40">—</span>}</span></td>
+                        <td className="px-3 py-3"><span className="text-xs font-mono">{fmtShortDate(sale.return_date) || <span className="text-muted-foreground/40 italic text-[11px]">Somente ida</span>}</span></td>
                         <td className="px-3 py-3">{renderRoute(sale)}</td>
                         <td className="px-2 py-3 text-center">{(sale.adults || 0) + (sale.children || 0)}</td>
                         <td className="px-2 py-3">
