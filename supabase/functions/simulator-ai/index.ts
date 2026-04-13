@@ -319,7 +319,28 @@ serve(async (req) => {
       });
     }
 
-    // Route to Anthropic
+    // Helper: call Lovable AI Gateway (used as primary or fallback)
+    const callLovableGateway = async (msgs: typeof messages, callType: CallType, shouldStream: boolean) => {
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+      const fallbackConfig = getModelConfig(callType, "lovable");
+      const requestBody: any = {
+        model: fallbackConfig.model,
+        messages: msgs,
+        stream: shouldStream,
+      };
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+      return { response, config: fallbackConfig };
+    };
+
+    // Route to Anthropic (with auto-fallback to Lovable Gateway)
     if (provider === "anthropic") {
       const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
       if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured");
