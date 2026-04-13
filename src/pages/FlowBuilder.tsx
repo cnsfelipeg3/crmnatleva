@@ -1288,24 +1288,77 @@ const nodeTypes: NodeTypes = {
   action_tag: FlowNode, action_funnel: FlowNode, ai_agent: FlowNode, handoff: FlowNode,
 };
 
+// ─── NATLEVA AGENT NAME MAP (internal id → DB name pattern) ───
+const NATLEVA_ID_TO_DB_NAME: Record<string, string> = {
+  orion: "órion", maya: "maya", atlas: "atlas", habibi: "habibi",
+  nemo: "nemo", dante: "dante", luna: "luna", nero: "nero",
+  iris: "iris", athos: "athos", zara: "zara", finx: "finx",
+  sage: "sage", opex: "opex", vigil: "vigil", sentinel: "sentinel",
+  spark: "spark", hunter: "hunter", aegis: "aegis", nurture: "nurture",
+  "nath-ai": "nath", 
+};
+
+const ROLE_TO_PERSONA: Record<string, string> = {
+  "Recepção": "sdr", "SDR": "sdr", "Qualificação": "sdr",
+  "Especialista": "concierge", "Consultor": "concierge", "Concierge": "concierge",
+  "Vendas": "vendas", "Fechamento": "vendas", "Negociação": "vendas",
+  "Pós-venda": "pos_venda", "Suporte": "pos_venda", "Fidelização": "pos_venda",
+  "Reativação": "reativacao", "Nutrição": "reativacao", "Prospecção": "reativacao",
+};
+
+const ROLE_TO_OBJECTIVE: Record<string, string> = {
+  "Recepção": "qualificar", "SDR": "qualificar", "Qualificação": "qualificar",
+  "Especialista": "responder", "Consultor": "responder", "Concierge": "responder",
+  "Vendas": "vender", "Fechamento": "vender", "Negociação": "vender",
+  "Proposta": "vender", "Montagem": "vender",
+  "Pós-venda": "pos_venda", "Suporte": "pos_venda", "Fidelização": "pos_venda",
+  "Orquestrador": "qualificar", "Pipeline": "qualificar",
+};
+
 // ─── AI AGENT CONFIG ───
 function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateConfig: (key: string, value: any) => void }) {
   const [integrations, setIntegrations] = useState<any[]>([]);
   const [agents, setAgents] = useState<any[]>([]);
+  const hasAutoLinked = useRef(false);
+
   useEffect(() => {
     supabase.from("ai_integrations").select("id, name, provider, model, status")
       .eq("status", "ativo").then(({ data }) => {
         if (!data || data.length === 0) {
-          // Fallback: also try "active" status
           supabase.from("ai_integrations").select("id, name, provider, model, status")
             .eq("status", "active").then(({ data: d2 }) => setIntegrations(d2 || []));
         } else {
           setIntegrations(data);
         }
       });
-    supabase.from("ai_team_agents").select("id, name, emoji, role, squad_id, is_active")
+    supabase.from("ai_team_agents").select("id, name, emoji, role, squad_id, is_active, behavior_prompt, persona")
       .eq("is_active", true).order("name").then(({ data }) => setAgents(data || []));
   }, []);
+
+  // Auto-link: when agents load and natleva_agent is set but agent_id is missing, find the match
+  useEffect(() => {
+    if (hasAutoLinked.current || agents.length === 0) return;
+    if (config.natleva_agent && !config.agent_id) {
+      const dbNamePattern = NATLEVA_ID_TO_DB_NAME[config.natleva_agent]?.toLowerCase();
+      if (dbNamePattern) {
+        const match = agents.find(a => a.name?.toLowerCase().includes(dbNamePattern));
+        if (match) {
+          hasAutoLinked.current = true;
+          updateConfig("agent_id", match.id);
+          updateConfig("agent_name", match.name);
+          if (match.behavior_prompt && !config.system_prompt) {
+            updateConfig("system_prompt", match.behavior_prompt);
+          }
+          // Auto-set persona/objective from role
+          const role = match.role || "";
+          const persona = Object.entries(ROLE_TO_PERSONA).find(([k]) => role.includes(k))?.[1];
+          const objective = Object.entries(ROLE_TO_OBJECTIVE).find(([k]) => role.includes(k))?.[1];
+          if (persona && !config.persona) updateConfig("persona", persona);
+          if (objective && !config.objective) updateConfig("objective", objective);
+        }
+      }
+    }
+  }, [agents, config.natleva_agent, config.agent_id]);
 
   const provider = config.provider || "anthropic";
   const contextFields = config.context_fields || AI_CONTEXT_FIELDS.map((f) => f.key);
@@ -1330,7 +1383,24 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
           <Select value={config.agent_id || ""} onValueChange={(v) => {
             updateConfig("agent_id", v);
             const agent = agents.find(a => a.id === v);
-            if (agent) updateConfig("agent_name", agent.name);
+            if (agent) {
+              updateConfig("agent_name", agent.name);
+              // Auto-populate system_prompt from behavior_prompt
+              if (agent.behavior_prompt) {
+                updateConfig("system_prompt", agent.behavior_prompt);
+              }
+              // Auto-set natleva_agent key
+              const natlevaKey = Object.entries(NATLEVA_ID_TO_DB_NAME).find(
+                ([, dbName]) => agent.name?.toLowerCase().includes(dbName.toLowerCase())
+              )?.[0];
+              if (natlevaKey) updateConfig("natleva_agent", natlevaKey);
+              // Auto-set persona/objective
+              const role = agent.role || "";
+              const persona = Object.entries(ROLE_TO_PERSONA).find(([k]) => role.includes(k))?.[1];
+              const objective = Object.entries(ROLE_TO_OBJECTIVE).find(([k]) => role.includes(k))?.[1];
+              if (persona) updateConfig("persona", persona);
+              if (objective) updateConfig("objective", objective);
+            }
           }}>
             <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione o agente..." /></SelectTrigger>
             <SelectContent>
