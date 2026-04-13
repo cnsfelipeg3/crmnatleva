@@ -154,55 +154,68 @@ async function callAnthropic(
   }
 
   // Transform Anthropic SSE to OpenAI-compatible SSE
-  const reader = response.body!.getReader();
+  // First, peek at the stream to detect errors (Anthropic sends 200 with error in body)
+  const peekReader = response.body!.getReader();
+  const peekDecoder = new TextDecoder();
+  const { done: peekDone, value: peekValue } = await peekReader.read();
+  
+  if (peekDone || !peekValue) {
+    throw new Error("Anthropic returned empty stream");
+  }
+  
+  const firstChunk = peekDecoder.decode(peekValue, { stream: true });
+  
+  // Detect error events in the stream (e.g. overloaded_error)
+  if (firstChunk.includes('"type":"error"') || firstChunk.includes("overloaded_error")) {
+    console.error("Anthropic stream error detected in first chunk:", firstChunk.slice(0, 300));
+    peekReader.releaseLock();
+    throw new Error("Anthropic overloaded");
+  }
+
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
   const transformedStream = new ReadableStream({
     async start(controller) {
-      let buffer = "";
+      let buffer = firstChunk; // Start with the peeked chunk
       let chunksEmitted = 0;
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const rawChunk = decoder.decode(value, { stream: true });
-          if (chunksEmitted === 0) console.log("First raw chunk sample:", rawChunk.slice(0, 500));
-          buffer += rawChunk;
+      
+      const processBuffer = () => {
+        let newlineIdx;
+        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+          const line = buffer.slice(0, newlineIdx).trim();
+          buffer = buffer.slice(newlineIdx + 1);
 
-          let newlineIdx;
-          while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
-            const line = buffer.slice(0, newlineIdx).trim();
-            buffer = buffer.slice(newlineIdx + 1);
-
-            if (!line || line === "") continue;
-            
-            // Handle event: lines (Anthropic sends these)
-            if (line.startsWith("event:")) continue;
-            
-            if (!line.startsWith("data: ") && !line.startsWith("data:")) continue;
-            const jsonStr = line.startsWith("data: ") ? line.slice(6) : line.slice(5);
-            const trimmedJson = jsonStr.trim();
-            if (trimmedJson === "[DONE]") {
-              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-              continue;
-            }
-
-            try {
-              const evt = JSON.parse(trimmedJson);
-              if (evt.type === "content_block_delta" && evt.delta?.text) {
-                const chunk = {
-                  choices: [{ delta: { content: evt.delta.text }, index: 0 }],
-                };
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
-                chunksEmitted++;
-              } else if (evt.type === "message_stop") {
-                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-              }
-            } catch { /* ignore unparseable */ }
+          if (!line || line.startsWith("event:")) continue;
+          if (!line.startsWith("data: ") && !line.startsWith("data:")) continue;
+          const jsonStr = line.startsWith("data: ") ? line.slice(6) : line.slice(5);
+          const trimmedJson = jsonStr.trim();
+          if (trimmedJson === "[DONE]") {
+            controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            continue;
           }
+
+          try {
+            const evt = JSON.parse(trimmedJson);
+            if (evt.type === "content_block_delta" && evt.delta?.text) {
+              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: evt.delta.text }, index: 0 }] })}\n\n`));
+              chunksEmitted++;
+            } else if (evt.type === "message_stop") {
+              controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+            }
+          } catch { /* ignore */ }
         }
-        console.log(`Stream complete: ${chunksEmitted} chunks emitted`);
+      };
+
+      try {
+        processBuffer(); // Process the first chunk
+        while (true) {
+          const { done, value } = await peekReader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          processBuffer();
+        }
+        console.log(`Anthropic stream complete: ${chunksEmitted} chunks`);
       } catch (e) {
         console.error("Anthropic stream error:", e);
       } finally {
