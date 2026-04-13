@@ -32,15 +32,16 @@ function serializeState(state: SmartFilterState): Record<string, string> {
   const params: Record<string, string> = {};
   if (state.search) params.q = state.search;
   if (state.sortKey) params.sort = `${state.sortKey}:${state.sortDirection}`;
-  if (state.dateFilter.preset !== "all") {
+  // Always serialize the date field if it's set (even when preset is "all")
+  if (state.dateFilter.field) {
     params.date = `${state.dateFilter.field}:${state.dateFilter.preset}`;
-    if (state.dateFilter.preset === "custom" && state.dateFilter.from && state.dateFilter.to) {
-      params.from = state.dateFilter.from.toISOString().slice(0, 10);
-      params.to = state.dateFilter.to.toISOString().slice(0, 10);
-    }
-    if (state.dateFilter.preset === "specific" && state.dateFilter.specificDate) {
-      params.specific = state.dateFilter.specificDate.toISOString().slice(0, 10);
-    }
+  }
+  if (state.dateFilter.preset === "custom" && state.dateFilter.from && state.dateFilter.to) {
+    params.from = state.dateFilter.from.toISOString().slice(0, 10);
+    params.to = state.dateFilter.to.toISOString().slice(0, 10);
+  }
+  if (state.dateFilter.preset === "specific" && state.dateFilter.specificDate) {
+    params.specific = state.dateFilter.specificDate.toISOString().slice(0, 10);
   }
   Object.entries(state.selectFilters).forEach(([k, v]) => {
     if (v && v !== "all") params[k] = v;
