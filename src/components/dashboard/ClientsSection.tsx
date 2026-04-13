@@ -69,10 +69,8 @@ export default function ClientsSection({ clients, filtered, periodStart }: Props
     return Object.values(map).sort((a, b) => b.receita - a.receita).slice(0, 10);
   }, [filtered, clients]);
 
-  const activeSales = useMemo(() => filtered.filter(s => s.client_id && activeClientIds.has(s.client_id)), [filtered, activeClientIds]);
-
   const stats = [
-    { label: "Clientes Ativos", value: activeClients, icon: Users, color: "text-primary", sales: activeSales },
+    { label: "Clientes", value: totalClients, icon: Users, color: "text-primary", sales: filtered },
     { label: "Novos no Período", value: newClients, icon: UserPlus, color: "text-success", sales: filtered },
     { label: "Recorrentes", value: `${recurrentData.pct.toFixed(0)}%`, icon: Repeat, color: "text-info", sales: recurrentData.recurrentSales },
   ];
