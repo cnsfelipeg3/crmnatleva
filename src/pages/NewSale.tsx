@@ -14,7 +14,7 @@ import {
   Check, Upload, Sparkles, Loader2, Plus, Trash2, Plane, Hotel, CreditCard,
   ShoppingBag, Paperclip, Eye, ChevronDown, Camera, Car, Shield, Ticket,
   UtensilsCrossed, MapPin, CalendarDays, Users, FileText, DollarSign, Train,
-  ArrowLeft, ArrowRight, AlertCircle, CheckCircle2,
+  ArrowLeft, ArrowRight, AlertCircle, CheckCircle2, Building2, UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -92,7 +92,7 @@ export default function NewSale() {
     link_chat: "", adults: 1, children: 0, children_ages: "",
     origin_iata: "", destination_iata: "", departure_date: "", return_date: "",
     airline: "", flight_class: "", locator: "", connections: "", miles_program: "",
-    emission_source: "",
+    emission_source: "", lead_type: "agencia" as "agencia" | "organico",
     // Payment
     received_value: "", paid_value: "", payment_gateway: "", payment_installments: "1",
   });
@@ -381,6 +381,7 @@ export default function NewSale() {
         children_ages: form.children_ages ? form.children_ages.split(",").map(a => parseInt(a.trim())).filter(Boolean) : [],
         received_value: receivedValue, total_cost: totalCost,
         profit, margin: parseFloat(margin.toFixed(2)),
+        lead_type: form.lead_type,
         status: "Rascunho", created_by: user?.id,
       }).select("id").single();
 
@@ -670,6 +671,47 @@ export default function NewSale() {
               <div className="space-y-2">
                 <Label>Vendedor Responsável</Label>
                 <Input value={user?.email || ""} disabled className="bg-muted/50" />
+              </div>
+              <div className="sm:col-span-2 space-y-2">
+                <Label>Origem do Lead</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => updateForm("lead_type", "agencia")}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left",
+                      form.lead_type === "agencia"
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border/30 hover:border-border/60"
+                    )}
+                  >
+                    <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", form.lead_type === "agencia" ? "bg-primary/15" : "bg-muted")}>
+                      <Building2 className={cn("w-4.5 h-4.5", form.lead_type === "agencia" ? "text-primary" : "text-muted-foreground")} />
+                    </div>
+                    <div>
+                      <p className={cn("text-sm font-medium", form.lead_type === "agencia" ? "text-foreground" : "text-muted-foreground")}>Lead da Agência</p>
+                      <p className="text-[11px] text-muted-foreground">Comissão 15% sobre lucro</p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateForm("lead_type", "organico")}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left",
+                      form.lead_type === "organico"
+                        ? "border-primary bg-primary/5 shadow-sm"
+                        : "border-border/30 hover:border-border/60"
+                    )}
+                  >
+                    <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", form.lead_type === "organico" ? "bg-primary/15" : "bg-muted")}>
+                      <UserCheck className={cn("w-4.5 h-4.5", form.lead_type === "organico" ? "text-primary" : "text-muted-foreground")} />
+                    </div>
+                    <div>
+                      <p className={cn("text-sm font-medium", form.lead_type === "organico" ? "text-foreground" : "text-muted-foreground")}>Lead Orgânico</p>
+                      <p className="text-[11px] text-muted-foreground">Comissão 40% sobre lucro</p>
+                    </div>
+                  </button>
+                </div>
               </div>
               <div className="sm:col-span-2 space-y-2">
                 <Label>Link do Chat (WhatsApp / atendimento)</Label>
