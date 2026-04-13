@@ -1383,7 +1383,24 @@ function AIAgentConfig({ config, updateConfig }: { config: NodeConfig; updateCon
           <Select value={config.agent_id || ""} onValueChange={(v) => {
             updateConfig("agent_id", v);
             const agent = agents.find(a => a.id === v);
-            if (agent) updateConfig("agent_name", agent.name);
+            if (agent) {
+              updateConfig("agent_name", agent.name);
+              // Auto-populate system_prompt from behavior_prompt
+              if (agent.behavior_prompt) {
+                updateConfig("system_prompt", agent.behavior_prompt);
+              }
+              // Auto-set natleva_agent key
+              const natlevaKey = Object.entries(NATLEVA_ID_TO_DB_NAME).find(
+                ([, dbName]) => agent.name?.toLowerCase().includes(dbName.toLowerCase())
+              )?.[0];
+              if (natlevaKey) updateConfig("natleva_agent", natlevaKey);
+              // Auto-set persona/objective
+              const role = agent.role || "";
+              const persona = Object.entries(ROLE_TO_PERSONA).find(([k]) => role.includes(k))?.[1];
+              const objective = Object.entries(ROLE_TO_OBJECTIVE).find(([k]) => role.includes(k))?.[1];
+              if (persona) updateConfig("persona", persona);
+              if (objective) updateConfig("objective", objective);
+            }
           }}>
             <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione o agente..." /></SelectTrigger>
             <SelectContent>
