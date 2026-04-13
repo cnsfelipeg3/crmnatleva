@@ -249,7 +249,7 @@ const ChatBubble = memo(function ChatBubble({
                 : "bg-secondary text-secondary-foreground rounded-bl-sm"
             )}>
               {showName && msg.agentName && (
-                <p className="text-[10px] font-bold text-champagne mb-1.5 tracking-[0.05em] uppercase">{msg.agentName}</p>
+                <p className="text-[10px] font-bold text-champagne mb-1.5 tracking-[0.05em] uppercase">Nath</p>
               )}
 
               {/* Reply quote */}

@@ -259,7 +259,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { type = "agent", systemPrompt, userPrompt, history, provider = "anthropic", agentBehaviorPrompt } = body as {
+    const { type = "agent", systemPrompt, userPrompt, history, provider = "lovable", agentBehaviorPrompt } = body as {
       type?: CallType;
       systemPrompt?: string;
       userPrompt?: string;
@@ -270,9 +270,11 @@ serve(async (req) => {
 
     const config = getModelConfig(type as CallType, provider);
 
-    // v4.2: System prompt arrives FULLY BUILT from frontend (unified builder).
-    // No additional behavioral injection needed — the prompt is identical for manual + auto.
+    // Inject NATLEVA_BEHAVIOR_CORE into system prompt for agent-type calls
     let enrichedSystemPrompt = systemPrompt || "";
+    if (type !== "price_image" && enrichedSystemPrompt) {
+      enrichedSystemPrompt = NATLEVA_BEHAVIOR_CORE + "\n\n" + enrichedSystemPrompt;
+    }
 
     // Build messages array
     const messages: Array<{ role: string; content: string }> = [];

@@ -283,7 +283,7 @@ export default function SimuladorManualMode() {
         + (isMayaAgent ? "" : enrichmentExtras ? "\n" + enrichmentExtras : "");
 
       // Use configured provider from ai_config
-      const configuredProvider = agencyConfig.default_provider || "anthropic";
+      const configuredProvider = agencyConfig.default_provider || "lovable";
 
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/simulator-ai`;
       const resp = await fetch(url, {
@@ -299,7 +299,7 @@ export default function SimuladorManualMode() {
 
       if (!resp.ok || !resp.body) {
         const errorData = resp.status === 429
-          ? "Anthropic está temporariamente no limite. Aguarde alguns segundos e tente novamente."
+          ? "IA temporariamente indisponível. Aguarde alguns segundos e tente novamente."
           : resp.status === 402 ? "Créditos insuficientes." : "Erro na comunicação.";
         setMessages(prev => {
           const updated = [...prev, { id: crypto.randomUUID(), role: "agent" as const, content: errorData, timestamp: new Date().toISOString(), agentId: selectedAgent.id, agentName: selectedAgent.name }];
@@ -332,7 +332,7 @@ export default function SimuladorManualMode() {
             content: text,
             timestamp: new Date().toISOString(),
             agentId: selectedAgent.id,
-            agentName: selectedAgent.name,
+            agentName: "Nath",
           },
         ];
         messagesRef.current = updated;
