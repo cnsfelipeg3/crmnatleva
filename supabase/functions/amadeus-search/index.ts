@@ -42,7 +42,9 @@ async function amadeusGet(path: string, params: Record<string, string>) {
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Amadeus API [${res.status}]: ${text}`);
+    const err = new Error(`Amadeus API [${res.status}]: ${text}`);
+    (err as any).statusCode = res.status;
+    throw err;
   }
   return res.json();
 }
@@ -503,6 +505,14 @@ serve(async (req) => {
   } catch (err: unknown) {
     console.error("Amadeus search error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
+    const statusCode = (err as any)?.statusCode || 0;
+    // If Amadeus itself returned a 5xx, return 200 with fallback so the client doesn't break
+    if (statusCode >= 500) {
+      return new Response(JSON.stringify({ error: "SERVICE_UNAVAILABLE", fallback: true, data: [] }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
