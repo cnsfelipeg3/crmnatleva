@@ -318,7 +318,11 @@ export default function SaleDetail() {
                 <Badge variant="outline" className="text-xs gap-1 bg-accent/10">
                   <Tag className="w-3 h-3" /> {sale.miles_program}
                 </Badge>
-              )}
+               )}
+              <Badge variant="outline" className={cn("text-xs gap-1", sale.lead_type === "organico" ? "bg-success/10 text-success border-success/20" : "bg-accent/10 text-accent border-accent/20")}>
+                {sale.lead_type === "organico" ? <UserCheck className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
+                {sale.lead_type === "organico" ? "Orgânico" : "Agência"}
+              </Badge>
             </div>
           </div>
         </div>
