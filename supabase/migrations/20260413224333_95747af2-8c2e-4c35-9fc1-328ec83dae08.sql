@@ -1,0 +1,1 @@
+ALTER TABLE public.sales ADD COLUMN lead_type text NOT NULL DEFAULT 'agencia';

@@ -5825,6 +5825,7 @@ export type Database = {
           hotel_room: string | null
           id: string
           is_international: boolean | null
+          lead_type: string
           link_chat: string | null
           locators: string[] | null
           margin: number | null
@@ -5879,6 +5880,7 @@ export type Database = {
           hotel_room?: string | null
           id?: string
           is_international?: boolean | null
+          lead_type?: string
           link_chat?: string | null
           locators?: string[] | null
           margin?: number | null
@@ -5933,6 +5935,7 @@ export type Database = {
           hotel_room?: string | null
           id?: string
           is_international?: boolean | null
+          lead_type?: string
           link_chat?: string | null
           locators?: string[] | null
           margin?: number | null
