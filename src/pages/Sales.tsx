@@ -29,7 +29,7 @@ interface SaleRow {
   status: string; origin_iata: string | null; destination_iata: string | null;
   origin_city: string | null; destination_city: string | null;
   departure_date: string | null; adults: number; children: number;
-  products: string[]; received_value: number; margin: number; score: number;
+  products: string[]; received_value: number; total_cost: number; profit: number; margin: number; score: number;
   airline: string | null; locators: string[]; seller_id: string | null;
   created_at: string; client_id: string | null;
 }
@@ -65,7 +65,7 @@ export default function Sales() {
 
   useEffect(() => {
     if (authLoading) return;
-    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, origin_city, destination_city, departure_date, adults, children, products, received_value, margin, score, airline, locators, seller_id, created_at, client_id", { order: { column: "created_at", ascending: false } }).then((data) => {
+    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, origin_city, destination_city, departure_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, created_at, client_id", { order: { column: "created_at", ascending: false } }).then((data) => {
       setSales(data as SaleRow[]);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
@@ -81,6 +81,8 @@ export default function Sales() {
       count: list.length,
       pax: list.reduce((s, r) => s + (r.adults || 0) + (r.children || 0), 0),
       revenue: list.reduce((s, r) => s + (r.received_value || 0), 0),
+      cost: list.reduce((s, r) => s + (r.total_cost || 0), 0),
+      profit: list.reduce((s, r) => s + (r.profit || 0), 0),
       margin: list.length ? list.reduce((s, r) => s + (r.margin || 0), 0) / list.length : 0,
     });
     return { all: t(sales), filtered: t(filtered) };
@@ -224,7 +226,7 @@ export default function Sales() {
           </Card>
           {/* Summary footer */}
           <Card className="glass-card p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               <div>
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Vendas {activeFilterCount > 0 ? "(filtradas)" : ""}</p>
                 <p className="text-lg font-bold text-foreground">{totals.filtered.count}</p>
@@ -236,9 +238,19 @@ export default function Sales() {
                 {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">de {totals.all.pax} total</p>}
               </div>
               <div>
-                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Receita Total</p>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Faturamento</p>
                 <p className="text-lg font-bold text-foreground">{fmt(totals.filtered.revenue)}</p>
                 {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">de {fmt(totals.all.revenue)} total</p>}
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Custo Total</p>
+                <p className="text-lg font-bold text-foreground">{fmt(totals.filtered.cost)}</p>
+                {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">de {fmt(totals.all.cost)} total</p>}
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Lucro</p>
+                <p className={cn("text-lg font-bold", totals.filtered.profit > 0 ? "text-success" : "text-destructive")}>{fmt(totals.filtered.profit)}</p>
+                {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">de {fmt(totals.all.profit)} total</p>}
               </div>
               <div>
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Margem Média</p>
