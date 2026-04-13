@@ -31,7 +31,7 @@ interface SaleRow {
   departure_date: string | null; adults: number; children: number;
   products: string[]; received_value: number; total_cost: number; profit: number; margin: number; score: number;
   airline: string | null; locators: string[]; seller_id: string | null;
-  created_at: string; client_id: string | null;
+  created_at: string; client_id: string | null; lead_type: string;
 }
 
 const SALES_FILTER_CONFIG: SmartFilterConfig = {
@@ -65,7 +65,7 @@ export default function Sales() {
 
   useEffect(() => {
     if (authLoading) return;
-    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, origin_city, destination_city, departure_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, created_at, client_id", { order: { column: "created_at", ascending: false } }).then((data) => {
+    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, origin_city, destination_city, departure_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, created_at, client_id, lead_type", { order: { column: "created_at", ascending: false } }).then((data) => {
       setSales(data as SaleRow[]);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
@@ -77,14 +77,22 @@ export default function Sales() {
   const { filtered, state: filterState, setState: setFilterState, activeFilterCount, clearAll: clearFilters } = useSmartFilters(sales, SALES_FILTER_CONFIG);
 
   const totals = useMemo(() => {
-    const t = (list: SaleRow[]) => ({
-      count: list.length,
-      pax: list.reduce((s, r) => s + (r.adults || 0) + (r.children || 0), 0),
-      revenue: list.reduce((s, r) => s + (r.received_value || 0), 0),
-      cost: list.reduce((s, r) => s + (r.total_cost || 0), 0),
-      profit: list.reduce((s, r) => s + (r.profit || 0), 0),
-      margin: list.length ? list.reduce((s, r) => s + (r.margin || 0), 0) / list.length : 0,
-    });
+    const t = (list: SaleRow[]) => {
+      const commission = list.reduce((s, r) => {
+        const lucro = (r.profit || 0);
+        const pct = r.lead_type === "organico" ? 0.40 : 0.15;
+        return s + (lucro > 0 ? lucro * pct : 0);
+      }, 0);
+      return {
+        count: list.length,
+        pax: list.reduce((s, r) => s + (r.adults || 0) + (r.children || 0), 0),
+        revenue: list.reduce((s, r) => s + (r.received_value || 0), 0),
+        cost: list.reduce((s, r) => s + (r.total_cost || 0), 0),
+        profit: list.reduce((s, r) => s + (r.profit || 0), 0),
+        margin: list.length ? list.reduce((s, r) => s + (r.margin || 0), 0) / list.length : 0,
+        commission,
+      };
+    };
     return { all: t(sales), filtered: t(filtered) };
   }, [sales, filtered]);
 
@@ -226,7 +234,7 @@ export default function Sales() {
           </Card>
           {/* Summary footer */}
           <Card className="glass-card p-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
               <div>
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Vendas {activeFilterCount > 0 ? "(filtradas)" : ""}</p>
                 <p className="text-lg font-bold text-foreground">{totals.filtered.count}</p>
@@ -256,6 +264,11 @@ export default function Sales() {
                 <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Margem Média</p>
                 <p className={cn("text-lg font-bold", totals.filtered.margin > 25 ? "text-success" : "text-foreground")}>{totals.filtered.margin.toFixed(1)}%</p>
                 {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">geral: {totals.all.margin.toFixed(1)}%</p>}
+              </div>
+              <div>
+                <p className="text-[11px] text-muted-foreground uppercase tracking-wider">Comissões Est.</p>
+                <p className="text-lg font-bold text-accent">{fmt(totals.filtered.commission)}</p>
+                {activeFilterCount > 0 && <p className="text-[10px] text-muted-foreground">de {fmt(totals.all.commission)} total</p>}
               </div>
             </div>
           </Card>
