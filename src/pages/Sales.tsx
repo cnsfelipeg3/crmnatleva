@@ -81,6 +81,8 @@ export default function Sales() {
       count: list.length,
       pax: list.reduce((s, r) => s + (r.adults || 0) + (r.children || 0), 0),
       revenue: list.reduce((s, r) => s + (r.received_value || 0), 0),
+      cost: list.reduce((s, r) => s + (r.total_cost || 0), 0),
+      profit: list.reduce((s, r) => s + (r.profit || 0), 0),
       margin: list.length ? list.reduce((s, r) => s + (r.margin || 0), 0) / list.length : 0,
     });
     return { all: t(sales), filtered: t(filtered) };
