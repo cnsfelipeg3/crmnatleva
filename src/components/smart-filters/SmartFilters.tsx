@@ -76,6 +76,31 @@ export default function SmartFilters({
     }));
   }, [setState]);
 
+  const renderDateFieldSelector = () => {
+    if (!config.dateFieldOptions || config.dateFieldOptions.length <= 1) return null;
+    const currentField = state.dateFilter.field || config.dateField || "";
+    return (
+      <Select
+        value={currentField}
+        onValueChange={v =>
+          setState(prev => ({
+            ...prev,
+            dateFilter: { ...prev.dateFilter, field: v },
+          }))
+        }
+      >
+        <SelectTrigger className="w-[150px] h-8 text-xs" aria-label="Campo de data">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {config.dateFieldOptions.map(o => (
+            <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    );
+  };
+
   const renderDatePickers = () => (
     <div className="flex gap-1.5 items-center flex-wrap">
       {/* Specific date */}
