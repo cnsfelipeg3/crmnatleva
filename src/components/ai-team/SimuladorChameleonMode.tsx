@@ -270,7 +270,7 @@ export default function SimuladorChameleonMode() {
         content: m.content,
       }));
 
-      const agentResponse = await callSimulatorAI(agentPrompt, history, "agent", undefined, 0, agencyConfig.default_provider || "anthropic");
+      const agentResponse = await callSimulatorAI(agentPrompt, history, "agent", undefined, 0, "lovable");
 
       if (abortRef.current) return;
 
@@ -320,7 +320,7 @@ export default function SimuladorChameleonMode() {
         role: "agent",
         content: cleanResponse,
         agentId,
-        agentName: agent.name,
+        agentName: "Nath",
         timestamp: Date.now(),
       };
 
@@ -734,7 +734,7 @@ export default function SimuladorChameleonMode() {
                   }}>
                     {msg.role === "agent" && msg.agentName && (
                       <p className="text-[10px] font-bold mb-1" style={{ color: "#6EE7B7" }}>
-                        {AGENTS_V4.find(a => a.id === msg.agentId)?.emoji} {msg.agentName}
+                        {AGENTS_V4.find(a => a.id === msg.agentId)?.emoji} Nath
                       </p>
                     )}
                     <p className="text-xs leading-relaxed" style={{ color: "#E2E8F0" }}>{msg.content}</p>

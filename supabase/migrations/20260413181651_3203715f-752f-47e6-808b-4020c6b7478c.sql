@@ -1,0 +1,1 @@
+UPDATE public.ai_config SET config_value = 'lovable', updated_at = now() WHERE config_key = 'default_provider' AND config_value = 'anthropic';
