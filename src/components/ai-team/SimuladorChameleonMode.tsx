@@ -519,11 +519,11 @@ export default function SimuladorChameleonMode() {
           <div className="flex items-center gap-2 mb-2 md:mb-3">
             <span className="text-lg md:text-xl">🦎</span>
             <div>
-              <p className="text-xs md:text-sm font-bold" style={{ color: "#E2E8F0" }}>{profile.nome}</p>
-              <p className="text-[10px]" style={{ color: "#64748B" }}>{profile.idade} anos • {profile.profissao}</p>
+              <p className="text-xs md:text-sm font-bold text-foreground">{profile.nome}</p>
+              <p className="text-[10px] text-muted-foreground">{profile.idade} anos • {profile.profissao}</p>
             </div>
           </div>
-          <div className={cn("text-[11px] space-y-1", isMobile ? "grid grid-cols-2 gap-x-3 gap-y-1 space-y-0" : "space-y-1.5")} style={{ color: "#94A3B8" }}>
+          <div className={cn("text-[11px] space-y-1 text-muted-foreground", isMobile ? "grid grid-cols-2 gap-x-3 gap-y-1 space-y-0" : "space-y-1.5")}>
             <p>📍 {profile.cidade}</p>
             <p>✈️ {profile.destino}</p>
             <p>💰 {profile.orcamentoLabel}</p>
@@ -539,23 +539,23 @@ export default function SimuladorChameleonMode() {
       <div className="rounded-xl p-3 md:p-4 bg-card border border-border">
         <div className={cn("gap-3", isMobile ? "flex items-center justify-between" : "space-y-3")}>
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-medium" style={{ color: "#94A3B8" }}>Sentimento</span>
+            <span className="text-[11px] font-medium text-muted-foreground">Sentimento</span>
             <span className={isMobile ? "text-lg" : "text-2xl"}>{sentiment}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] font-medium" style={{ color: "#94A3B8" }}>Agente</span>
-            <span className="text-xs font-bold" style={{ color: "#6EE7B7" }}>
+            <span className="text-[11px] font-medium text-muted-foreground">Agente</span>
+            <span className="text-xs font-bold text-primary">
               {currentAgent?.emoji} {currentAgent?.name}
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs font-mono font-bold" style={{ color: "#C4B5FD" }}>
+            <span className="text-xs font-mono font-bold text-accent-foreground">
               {exchangeCount}/{maxExchanges}
             </span>
           </div>
         </div>
         {!isMobile && (
-          <div className="w-full h-1.5 rounded-full overflow-hidden mt-3" style={{ background: "rgba(255,255,255,0.05)" }}>
+          <div className="w-full h-1.5 rounded-full overflow-hidden mt-3 bg-muted">
             <div
               className="h-full rounded-full transition-all duration-500"
               style={{
@@ -569,7 +569,7 @@ export default function SimuladorChameleonMode() {
 
       {/* Pipeline progress */}
       <div className="rounded-xl p-3 md:p-4 bg-card border border-border">
-        <p className="text-[11px] font-bold mb-2" style={{ color: "#94A3B8" }}>Pipeline</p>
+        <p className="text-[11px] font-bold mb-2 text-muted-foreground">Pipeline</p>
         <div className="flex flex-wrap gap-1.5">
           {PIPELINE_ORDER.filter(pid => selectedAgents.includes(pid)).map((pid, idx) => {
             const a = AGENTS_V4.find(x => x.id === pid);
@@ -582,14 +582,13 @@ export default function SimuladorChameleonMode() {
             return (
               <div key={pid} className="flex items-center gap-1">
                 {idx > 0 && (
-                  <span className="text-[9px] mx-0.5" style={{ color: isPast ? "#6EE7B7" : "#334155" }}>→</span>
+                  <span className="text-[9px] mx-0.5 text-muted-foreground">→</span>
                 )}
-                <span className="px-2 py-1 rounded-md text-[10px] font-medium" style={{
-                  background: isActive ? "rgba(16,185,129,0.2)" : isPast ? "rgba(16,185,129,0.08)" : "rgba(255,255,255,0.03)",
-                  color: isActive ? "#6EE7B7" : isPast ? "#4ADE80" : isFuture ? "#475569" : "#64748B",
-                  border: `1px solid ${isActive ? "rgba(16,185,129,0.35)" : isPast ? "rgba(16,185,129,0.15)" : "rgba(255,255,255,0.05)"}`,
-                  opacity: isFuture ? 0.5 : 1,
-                }}>
+                <span className={cn("px-2 py-1 rounded-md text-[10px] font-medium border", 
+                  isActive ? "bg-primary/20 text-primary border-primary/35" :
+                  isPast ? "bg-primary/10 text-primary border-primary/15" :
+                  "bg-muted text-muted-foreground border-border"
+                )} style={{ opacity: isFuture ? 0.5 : 1 }}>
                   {a?.emoji} {a?.name}
                   {isActive && " ●"}
                   {isPast && " ✓"}
@@ -611,7 +610,7 @@ export default function SimuladorChameleonMode() {
           background: "linear-gradient(135deg, rgba(139,92,246,0.1), rgba(139,92,246,0.05))",
           border: "1px solid rgba(139,92,246,0.2)",
         }}>
-          <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: "#A78BFA" }}>Score Final</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider mb-1 text-accent-foreground">Score Final</p>
           <p className={cn("text-3xl md:text-4xl font-black",
             debrief.scoreGeral >= 7 ? "text-emerald-400" :
             debrief.scoreGeral >= 5 ? "text-amber-400" : "text-red-400"
@@ -631,20 +630,16 @@ export default function SimuladorChameleonMode() {
         <div className="shrink-0">
           <button
             onClick={() => setShowMobilePanel(!showMobilePanel)}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl mb-2"
-            style={{
-              background: "rgba(15,23,42,0.7)",
-              border: "1px solid rgba(139,92,246,0.15)",
-            }}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl mb-2 bg-muted/50 border border-border"
           >
             <div className="flex items-center gap-2 min-w-0">
               <span>🦎</span>
-              <span className="text-xs font-bold truncate" style={{ color: "#E2E8F0" }}>{profile?.nome}</span>
-              <span className="text-xs" style={{ color: "#6EE7B7" }}>{currentAgent?.emoji} {currentAgent?.name}</span>
-              <span className="text-[10px] font-mono" style={{ color: "#C4B5FD" }}>{exchangeCount}/{maxExchanges}</span>
+              <span className="text-xs font-bold truncate text-foreground">{profile?.nome}</span>
+              <span className="text-xs text-primary">{currentAgent?.emoji} {currentAgent?.name}</span>
+              <span className="text-[10px] font-mono text-accent-foreground">{exchangeCount}/{maxExchanges}</span>
               <span className="text-lg">{sentiment}</span>
             </div>
-            {showMobilePanel ? <ChevronUp className="w-4 h-4 shrink-0" style={{ color: "#94A3B8" }} /> : <ChevronDown className="w-4 h-4 shrink-0" style={{ color: "#94A3B8" }} />}
+            {showMobilePanel ? <ChevronUp className="w-4 h-4 shrink-0 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />}
           </button>
           {showMobilePanel && (
             <div className="space-y-2 mb-2 max-h-[40vh] overflow-y-auto">
@@ -657,17 +652,14 @@ export default function SimuladorChameleonMode() {
       {/* Chat area */}
       <div className="flex-1 flex flex-col rounded-2xl overflow-hidden min-h-0 bg-card border border-border">
         {/* Chat header */}
-        <div className="flex items-center justify-between px-3 md:px-4 py-2 md:py-3 shrink-0" style={{
-          background: "rgba(0,0,0,0.3)",
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
-        }}>
+        <div className="flex items-center justify-between px-3 md:px-4 py-2 md:py-3 shrink-0 bg-muted/50 border-b border-border">
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-base md:text-lg">🦎</span>
             <div className="min-w-0">
-              <p className="text-xs md:text-sm font-bold truncate" style={{ color: "#E2E8F0" }}>
+              <p className="text-xs md:text-sm font-bold truncate text-foreground">
                 {profile?.nome || "Camaleão"}
               </p>
-              <p className="text-[10px] truncate" style={{ color: "#64748B" }}>
+              <p className="text-[10px] truncate text-muted-foreground">
                 {phase === "debrief" ? "Análise completa" : statusText || "Conversa em andamento..."}
               </p>
             </div>
@@ -675,25 +667,21 @@ export default function SimuladorChameleonMode() {
           <div className="flex items-center gap-1 md:gap-2 shrink-0">
             {phase === "running" && (
               <>
-                <button onClick={handlePause} className="p-1.5 md:p-2 rounded-lg hover:bg-white/5 transition-colors">
-                  <Pause className="w-4 h-4" style={{ color: "#94A3B8" }} />
+                <button onClick={handlePause} className="p-1.5 md:p-2 rounded-lg hover:bg-muted transition-colors">
+                  <Pause className="w-4 h-4 text-muted-foreground" />
                 </button>
-                <button onClick={handleSkipToDebrief} className="p-1.5 md:p-2 rounded-lg hover:bg-white/5 transition-colors">
-                  <SkipForward className="w-4 h-4" style={{ color: "#94A3B8" }} />
+                <button onClick={handleSkipToDebrief} className="p-1.5 md:p-2 rounded-lg hover:bg-muted transition-colors">
+                  <SkipForward className="w-4 h-4 text-muted-foreground" />
                 </button>
               </>
             )}
             {phase === "paused" && (
-              <button onClick={handleResume} className="px-2.5 py-1.5 rounded-lg text-[11px] md:text-xs font-bold" style={{
-                background: "rgba(139,92,246,0.2)",
-                color: "#C4B5FD",
-                border: "1px solid rgba(139,92,246,0.3)",
-              }}>
+              <button onClick={handleResume} className="px-2.5 py-1.5 rounded-lg text-[11px] md:text-xs font-bold bg-accent text-accent-foreground border border-border">
                 ▶ Retomar
               </button>
             )}
-            <button onClick={handleReset} className="p-1.5 md:p-2 rounded-lg hover:bg-white/5 transition-colors">
-              <RotateCcw className="w-4 h-4" style={{ color: "#94A3B8" }} />
+            <button onClick={handleReset} className="p-1.5 md:p-2 rounded-lg hover:bg-muted transition-colors">
+              <RotateCcw className="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
         </div>
@@ -718,26 +706,22 @@ export default function SimuladorChameleonMode() {
             <>
               {messages.map((msg, i) => (
                 <div key={i} className={cn("flex gap-2", isMobile ? "max-w-[92%]" : "max-w-[85%]", msg.role === "lead" ? "ml-auto flex-row-reverse" : "")}>
-                  <div className="w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center shrink-0 text-xs"
-                    style={{
-                      background: msg.role === "lead" ? "rgba(139,92,246,0.2)" : "rgba(16,185,129,0.2)",
-                      color: msg.role === "lead" ? "#C4B5FD" : "#6EE7B7",
-                    }}
-                  >
+                  <div className={cn("w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center shrink-0 text-xs",
+                    msg.role === "lead" ? "bg-accent/20 text-accent-foreground" : "bg-primary/20 text-primary"
+                  )}>
                     {msg.role === "lead" ? <User className="w-3 h-3" /> : <Bot className="w-3 h-3" />}
                   </div>
-                  <div className="rounded-xl px-3 py-2 md:px-3.5 md:py-2.5" style={{
-                    background: msg.role === "lead"
-                      ? "rgba(139,92,246,0.1)"
-                      : "rgba(16,185,129,0.08)",
-                    border: `1px solid ${msg.role === "lead" ? "rgba(139,92,246,0.15)" : "rgba(16,185,129,0.1)"}`,
-                  }}>
+                  <div className={cn("rounded-xl px-3 py-2 md:px-3.5 md:py-2.5 border",
+                    msg.role === "lead"
+                      ? "bg-accent/10 border-accent/15"
+                      : "bg-primary/10 border-primary/10"
+                  )}>
                     {msg.role === "agent" && msg.agentName && (
-                      <p className="text-[10px] font-bold mb-1" style={{ color: "#6EE7B7" }}>
+                      <p className="text-[10px] font-bold mb-1 text-primary">
                         {AGENTS_V4.find(a => a.id === msg.agentId)?.emoji} Nath
                       </p>
                     )}
-                    <p className="text-xs leading-relaxed" style={{ color: "#E2E8F0" }}>{msg.content}</p>
+                    <p className="text-xs leading-relaxed text-foreground">{msg.content}</p>
                   </div>
                 </div>
               ))}
@@ -745,11 +729,11 @@ export default function SimuladorChameleonMode() {
               {isProcessing && (
                 <div className="flex items-center gap-2 px-3 py-2">
                   <div className="flex gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "#A78BFA", animationDelay: "0ms" }} />
-                    <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "#A78BFA", animationDelay: "150ms" }} />
-                    <div className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "#A78BFA", animationDelay: "300ms" }} />
+                    <div className="w-1.5 h-1.5 rounded-full animate-bounce bg-accent-foreground" style={{ animationDelay: "0ms" }} />
+                    <div className="w-1.5 h-1.5 rounded-full animate-bounce bg-accent-foreground" style={{ animationDelay: "150ms" }} />
+                    <div className="w-1.5 h-1.5 rounded-full animate-bounce bg-accent-foreground" style={{ animationDelay: "300ms" }} />
                   </div>
-                  <span className="text-[11px]" style={{ color: "#64748B" }}>{statusText}</span>
+                  <span className="text-[11px] text-muted-foreground">{statusText}</span>
                 </div>
               )}
               <div ref={chatEndRef} />
