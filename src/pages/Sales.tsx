@@ -26,7 +26,7 @@ const statusColor: Record<string, string> = {
 };
 
 const leadColor: Record<string, string> = {
-  organico: "bg-accent/15 text-accent-foreground border-accent/20",
+  organico: "bg-emerald-500/15 text-emerald-700 border-emerald-500/25",
   agencia: "bg-muted text-muted-foreground border-border",
 };
 
@@ -167,7 +167,7 @@ export default function Sales() {
   };
 
   const renderLeadBadge = (leadType: string) => {
-    if (leadType === "organico") return <Badge variant="outline" className={cn("text-[10px]", leadColor.organico)}>Org</Badge>;
+    if (leadType === "organico") return <Badge variant="outline" className={cn("text-[10px]", leadColor.organico)}>Orgânico</Badge>;
     return <Badge variant="outline" className={cn("text-[10px]", leadColor.agencia)}>Agência</Badge>;
   };
 
