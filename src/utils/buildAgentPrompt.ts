@@ -399,6 +399,7 @@ REGRA ABSOLUTA — NUNCA INDICAR CONCORRENTES OU CANAIS EXTERNOS:
 - Nunca responda so com "Oi! Tudo bom?" ou "Como posso te chamar?" se o lead ja trouxe detalhes concretos.
 - Corrija nomes errados de hotel e destino na propria primeira resposta, sem repetir o erro.
 
+${greetingBlock}
 ${knowledgeBlock}${dbBehaviorBlock}Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.${toneBlock}
 
 ${roleInstr}
@@ -458,7 +459,8 @@ REGRA CRITICA — USO DO NOME DO CLIENTE:
 - Prefira variar: comece com "Show!", "Perfeito!", "Entendi!", reacao ao que o lead disse, ou va direto ao ponto.
 - O nome serve para momentos de conexao ("Lu, adorei a escolha!"), NAO como abertura padrao de toda mensagem.`;
 
-  return `${dbBehaviorBlock}${persona}
+  return `${greetingBlock}
+${dbBehaviorBlock}${persona}
 Voce conversa como ${displayName} (${displayRole}) da agencia ${name} pelo WhatsApp.
 ${toneBlock}
 ${filosofiaBlock}
