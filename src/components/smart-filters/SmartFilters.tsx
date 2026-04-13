@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { SmartFilterConfig, SmartFilterState, DatePreset, SelectFilterConfig } from "./types";
 import { DATE_PRESET_LABELS } from "./types";
+import type { DateRange } from "react-day-picker";
 
 interface SmartFiltersProps {
   config: SmartFilterConfig;
@@ -101,10 +102,25 @@ export default function SmartFilters({
     );
   };
 
+  const [specificOpen, setSpecificOpen] = useState(false);
+  const [rangeOpen, setRangeOpen] = useState(false);
+  const [pendingRange, setPendingRange] = useState<DateRange | undefined>(undefined);
+
+  // Sync pending range when popover opens
+  useEffect(() => {
+    if (rangeOpen) {
+      setPendingRange(
+        state.dateFilter.from && state.dateFilter.to
+          ? { from: state.dateFilter.from, to: state.dateFilter.to }
+          : undefined
+      );
+    }
+  }, [rangeOpen]);
+
   const renderDatePickers = () => (
     <div className="flex gap-1.5 items-center flex-wrap">
       {/* Specific date */}
-      <Popover>
+      <Popover open={specificOpen} onOpenChange={setSpecificOpen}>
         <PopoverTrigger asChild>
           <Button
             variant={state.dateFilter.preset === "specific" ? "default" : "outline"}
@@ -117,6 +133,16 @@ export default function SmartFilters({
               ? format(state.dateFilter.specificDate, "dd/MM/yy", { locale: ptBR })
               : "Data"
             }
+            {state.dateFilter.preset === "specific" && (
+              <X
+                className="w-3 h-3 ml-0.5 opacity-60 hover:opacity-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDatePreset("all");
+                  setSpecificOpen(false);
+                }}
+              />
+            )}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
@@ -136,6 +162,7 @@ export default function SmartFilters({
                     to: undefined,
                   },
                 }));
+                setSpecificOpen(false);
               }
             }}
             locale={ptBR}
@@ -145,7 +172,7 @@ export default function SmartFilters({
       </Popover>
 
       {/* Range */}
-      <Popover>
+      <Popover open={rangeOpen} onOpenChange={setRangeOpen}>
         <PopoverTrigger asChild>
           <Button
             variant={state.dateFilter.preset === "custom" ? "default" : "outline"}
@@ -158,35 +185,93 @@ export default function SmartFilters({
               ? `${format(state.dateFilter.from, "dd/MM", { locale: ptBR })} — ${format(state.dateFilter.to, "dd/MM", { locale: ptBR })}`
               : "Intervalo"
             }
+            {state.dateFilter.preset === "custom" && (
+              <X
+                className="w-3 h-3 ml-0.5 opacity-60 hover:opacity-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDatePreset("all");
+                  setRangeOpen(false);
+                }}
+              />
+            )}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="range"
-            selected={
-              state.dateFilter.from && state.dateFilter.to
-                ? { from: state.dateFilter.from, to: state.dateFilter.to }
-                : undefined
-            }
-            onSelect={(range) => {
-              if (range?.from) {
-                setState(prev => ({
-                  ...prev,
-                  dateFilter: {
-                    ...prev.dateFilter,
-                    field: prev.dateFilter.field || config.dateField || "",
-                    preset: "custom",
-                    from: range.from,
-                    to: range.to || range.from,
-                    specificDate: undefined,
-                  },
-                }));
-              }
-            }}
-            locale={ptBR}
-            numberOfMonths={2}
-            className="p-3 pointer-events-auto"
-          />
+          <div className="flex flex-col">
+            <Calendar
+              mode="range"
+              selected={pendingRange}
+              onSelect={(range) => {
+                setPendingRange(range);
+                // Auto-apply when both dates are selected
+                if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) {
+                  setState(prev => ({
+                    ...prev,
+                    dateFilter: {
+                      ...prev.dateFilter,
+                      field: prev.dateFilter.field || config.dateField || "",
+                      preset: "custom",
+                      from: range.from,
+                      to: range.to,
+                      specificDate: undefined,
+                    },
+                  }));
+                  // Close after a brief delay so user sees the selection
+                  setTimeout(() => setRangeOpen(false), 300);
+                }
+              }}
+              locale={ptBR}
+              numberOfMonths={2}
+              className="p-3 pointer-events-auto"
+            />
+            <div className="flex items-center justify-between px-3 pb-3 pt-1 border-t border-border">
+              <span className="text-[11px] text-muted-foreground">
+                {pendingRange?.from && !pendingRange?.to
+                  ? "Selecione a data final"
+                  : pendingRange?.from && pendingRange?.to
+                    ? `${format(pendingRange.from, "dd/MM/yyyy", { locale: ptBR })} — ${format(pendingRange.to, "dd/MM/yyyy", { locale: ptBR })}`
+                    : "Selecione a data inicial"
+                }
+              </span>
+              <div className="flex gap-1.5">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-[11px]"
+                  onClick={() => {
+                    setPendingRange(undefined);
+                    setDatePreset("all");
+                    setRangeOpen(false);
+                  }}
+                >
+                  Limpar
+                </Button>
+                {pendingRange?.from && pendingRange?.to && (
+                  <Button
+                    size="sm"
+                    className="h-7 text-[11px]"
+                    onClick={() => {
+                      setState(prev => ({
+                        ...prev,
+                        dateFilter: {
+                          ...prev.dateFilter,
+                          field: prev.dateFilter.field || config.dateField || "",
+                          preset: "custom",
+                          from: pendingRange.from,
+                          to: pendingRange.to,
+                          specificDate: undefined,
+                        },
+                      }));
+                      setRangeOpen(false);
+                    }}
+                  >
+                    Aplicar
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
         </PopoverContent>
       </Popover>
     </div>
