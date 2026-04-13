@@ -161,6 +161,7 @@ async function callAnthropic(
   const transformedStream = new ReadableStream({
     async start(controller) {
       let buffer = "";
+      let chunksEmitted = 0;
       try {
         while (true) {
           const { done, value } = await reader.read();
@@ -172,26 +173,34 @@ async function callAnthropic(
             const line = buffer.slice(0, newlineIdx).trim();
             buffer = buffer.slice(newlineIdx + 1);
 
-            if (!line.startsWith("data: ")) continue;
-            const jsonStr = line.slice(6);
-            if (jsonStr === "[DONE]") {
+            if (!line || line === "") continue;
+            
+            // Handle event: lines (Anthropic sends these)
+            if (line.startsWith("event:")) continue;
+            
+            if (!line.startsWith("data: ") && !line.startsWith("data:")) continue;
+            const jsonStr = line.startsWith("data: ") ? line.slice(6) : line.slice(5);
+            const trimmedJson = jsonStr.trim();
+            if (trimmedJson === "[DONE]") {
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
               continue;
             }
 
             try {
-              const evt = JSON.parse(jsonStr);
+              const evt = JSON.parse(trimmedJson);
               if (evt.type === "content_block_delta" && evt.delta?.text) {
                 const chunk = {
                   choices: [{ delta: { content: evt.delta.text }, index: 0 }],
                 };
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+                chunksEmitted++;
               } else if (evt.type === "message_stop") {
                 controller.enqueue(encoder.encode("data: [DONE]\n\n"));
               }
-            } catch { /* ignore */ }
+            } catch { /* ignore unparseable */ }
           }
         }
+        console.log(`Stream complete: ${chunksEmitted} chunks emitted`);
       } catch (e) {
         console.error("Anthropic stream error:", e);
       } finally {
