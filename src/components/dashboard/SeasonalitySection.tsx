@@ -8,7 +8,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-interface Sale { id: string; display_id: string; name: string; received_value: number; total_cost: number; margin: number; created_at: string; status: string; }
+interface Sale { id: string; display_id: string; name: string; received_value: number; total_cost: number; margin: number; created_at: string; close_date: string | null; status: string; }
 interface Props { filtered: Sale[]; allSales: Sale[]; }
 
 export default function SeasonalitySection({ filtered, allSales }: Props) {
@@ -19,7 +19,7 @@ export default function SeasonalitySection({ filtered, allSales }: Props) {
   const monthlyData = useMemo(() => {
     const map: Record<string, { month: string; receita: number; lucro: number; vendas: number; sales: Sale[] }> = {};
     filtered.forEach(s => {
-      const d = new Date(s.created_at);
+      const d = new Date(s.close_date || s.created_at);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (!map[key]) map[key] = { month: key, receita: 0, lucro: 0, vendas: 0, sales: [] };
       map[key].receita += s.received_value || 0;
@@ -33,7 +33,7 @@ export default function SeasonalitySection({ filtered, allSales }: Props) {
   const weeklyData = useMemo(() => {
     const map: Record<string, { week: string; receita: number; vendas: number; sales: Sale[] }> = {};
     filtered.forEach(s => {
-      const d = new Date(s.created_at);
+      const d = new Date(s.close_date || s.created_at);
       const weekStart = new Date(d);
       weekStart.setDate(d.getDate() - d.getDay());
       const key = weekStart.toISOString().slice(0, 10);
@@ -49,7 +49,7 @@ export default function SeasonalitySection({ filtered, allSales }: Props) {
     const currentYear = new Date().getFullYear();
     const years: Record<number, Record<number, number>> = {};
     allSales.forEach(s => {
-      const d = new Date(s.created_at);
+      const d = new Date(s.close_date || s.created_at);
       const y = d.getFullYear();
       const m = d.getMonth();
       if (!years[y]) years[y] = {};
@@ -65,7 +65,7 @@ export default function SeasonalitySection({ filtered, allSales }: Props) {
 
   const availableYears = useMemo(() => {
     const ys = new Set<number>();
-    allSales.forEach(s => ys.add(new Date(s.created_at).getFullYear()));
+    allSales.forEach(s => ys.add(new Date(s.close_date || s.created_at).getFullYear()));
     return Array.from(ys).sort();
   }, [allSales]);
 

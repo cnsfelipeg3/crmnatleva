@@ -14,7 +14,7 @@ const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
 interface Sale {
   id: string; display_id: string; name: string; status: string;
   received_value: number; total_cost: number; profit: number; margin: number;
-  created_at: string; destination_iata: string | null; seller_id: string | null;
+  created_at: string; close_date: string | null; destination_iata: string | null; seller_id: string | null;
 }
 
 interface Props { filtered: Sale[]; sellerNames: Record<string, string>; }
@@ -26,7 +26,8 @@ export default function FinancialSection({ filtered, sellerNames }: Props) {
   const monthlyData = useMemo(() => {
     const map: Record<string, { month: string; receita: number; custo: number; lucro: number; count: number; sales: Sale[] }> = {};
     filtered.forEach(s => {
-      const d = new Date(s.created_at);
+      const dateStr = s.close_date || s.created_at;
+      const d = new Date(dateStr);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (!map[key]) map[key] = { month: key, receita: 0, custo: 0, lucro: 0, count: 0, sales: [] };
       map[key].receita += s.received_value || 0;

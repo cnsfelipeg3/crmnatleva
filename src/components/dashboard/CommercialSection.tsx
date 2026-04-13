@@ -22,7 +22,7 @@ interface Sale {
   seller_id: string | null;
   received_value: number;
   total_cost: number; margin: number;
-  created_at: string;
+  created_at: string; close_date: string | null;
 }
 
 interface Segment { sale_id: string; origin_iata: string; destination_iata: string; }
