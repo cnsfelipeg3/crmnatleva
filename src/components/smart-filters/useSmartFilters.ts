@@ -11,6 +11,12 @@ function getNestedValue(obj: any, path: string): any {
   return path.split(".").reduce((acc, key) => acc?.[key], obj);
 }
 
+/** Parse YYYY-MM-DD as local date (not UTC) to avoid timezone shifts */
+function parseLocalDate(str: string): Date {
+  const [y, m, d] = str.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 function parseDatePresetRange(preset: DatePreset): { from: Date; to: Date } | null {
   const now = new Date();
   const today = startOfDay(now);
@@ -71,9 +77,9 @@ function deserializeState(
     dateFilter: {
       field: dateField,
       preset: datePreset,
-      from: params.get("from") ? new Date(params.get("from")!) : undefined,
-      to: params.get("to") ? new Date(params.get("to")!) : undefined,
-      specificDate: params.get("specific") ? new Date(params.get("specific")!) : undefined,
+      from: params.get("from") ? parseLocalDate(params.get("from")!) : undefined,
+      to: params.get("to") ? parseLocalDate(params.get("to")!) : undefined,
+      specificDate: params.get("specific") ? parseLocalDate(params.get("specific")!) : undefined,
     },
     selectFilters,
   };
