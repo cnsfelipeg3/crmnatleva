@@ -139,7 +139,8 @@ export function useSmartFilters<T>(data: T[], config: SmartFilterConfig<T>) {
         result = result.filter(item => {
           const val = getNestedValue(item, state.dateFilter.field);
           if (!val) return false;
-          return isSameDay(new Date(val), state.dateFilter.specificDate!);
+          const d = typeof val === "string" && /^\d{4}-\d{2}-\d{2}$/.test(val) ? parseLocalDate(val) : new Date(val);
+          return isSameDay(d, state.dateFilter.specificDate!);
         });
       } else if (state.dateFilter.preset === "custom" && state.dateFilter.from && state.dateFilter.to) {
         const from = startOfDay(state.dateFilter.from);
@@ -147,7 +148,8 @@ export function useSmartFilters<T>(data: T[], config: SmartFilterConfig<T>) {
         result = result.filter(item => {
           const val = getNestedValue(item, state.dateFilter.field);
           if (!val) return false;
-          return isWithinInterval(new Date(val), { start: from, end: to });
+          const d = typeof val === "string" && /^\d{4}-\d{2}-\d{2}$/.test(val) ? parseLocalDate(val) : new Date(val);
+          return isWithinInterval(d, { start: from, end: to });
         });
       } else {
         const range = parseDatePresetRange(state.dateFilter.preset);
@@ -155,7 +157,8 @@ export function useSmartFilters<T>(data: T[], config: SmartFilterConfig<T>) {
           result = result.filter(item => {
             const val = getNestedValue(item, state.dateFilter.field);
             if (!val) return false;
-            return isWithinInterval(new Date(val), { start: range.from, end: range.to });
+            const d = typeof val === "string" && /^\d{4}-\d{2}-\d{2}$/.test(val) ? parseLocalDate(val) : new Date(val);
+            return isWithinInterval(d, { start: range.from, end: range.to });
           });
         }
       }
