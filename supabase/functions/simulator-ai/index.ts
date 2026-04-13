@@ -286,10 +286,17 @@ serve(async (req) => {
 
     const config = getModelConfig(type as CallType, provider);
 
-    // Inject NATLEVA_BEHAVIOR_CORE into system prompt for agent-type calls
+    // ─── Time-aware greeting (Brasília UTC-3) ───
+    const nowUtc = new Date();
+    const brasilFormatter = new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: "America/Sao_Paulo" });
+    const brasilHour = parseInt(brasilFormatter.format(nowUtc), 10);
+    const saudacaoAtual = brasilHour < 12 ? "bom dia" : brasilHour < 18 ? "boa tarde" : "boa noite";
+    const greetingRule = `\nREGRA DE SAUDACAO — HORARIO ATUAL:\nAgora sao ${String(brasilHour).padStart(2, "0")}h no horario de Brasilia. A saudacao correta e "${saudacaoAtual}".\n- Se o cliente disser "bom dia", "boa tarde" ou "boa noite", RESPONDA COM "${saudacaoAtual}" (a saudacao correta para o horario atual).\n- Se o cliente NAO usar saudacao de periodo, voce tambem NAO precisa usar.\n`;
+
+    // Inject NATLEVA_BEHAVIOR_CORE + greeting into system prompt for agent-type calls
     let enrichedSystemPrompt = systemPrompt || "";
     if (type !== "price_image" && enrichedSystemPrompt) {
-      enrichedSystemPrompt = NATLEVA_BEHAVIOR_CORE + "\n\n" + enrichedSystemPrompt;
+      enrichedSystemPrompt = greetingRule + NATLEVA_BEHAVIOR_CORE + "\n\n" + enrichedSystemPrompt;
     }
 
     // Build messages array
