@@ -176,7 +176,7 @@ function ReplyQuoteBlock({ replyTo, isUserBubble }: { replyTo: SimChatMessage["r
         "font-bold text-[10px] mb-0.5",
         isUserBubble ? "text-white/80" : "text-primary"
       )}>
-        {isReplyFromAgent ? (replyTo.agentName || "Agente") : "Você"}
+        {isReplyFromAgent ? "Nath" : "Você"}
       </p>
       <p className={cn(
         "line-clamp-2",
@@ -249,7 +249,7 @@ const ChatBubble = memo(function ChatBubble({
                 : "bg-secondary text-secondary-foreground rounded-bl-sm"
             )}>
               {showName && msg.agentName && (
-                <p className="text-[10px] font-bold text-champagne mb-1.5 tracking-[0.05em] uppercase">{msg.agentName}</p>
+                <p className="text-[10px] font-bold text-champagne mb-1.5 tracking-[0.05em] uppercase">Nath</p>
               )}
 
               {/* Reply quote */}
@@ -480,7 +480,7 @@ export default function SimulatorChatLayout({
         <div className="border-t border-border px-3 py-2 bg-card/80 flex items-center gap-2 shrink-0">
           <div className="flex-1 min-w-0 rounded-lg bg-muted/50 border-l-[3px] border-primary px-3 py-1.5">
             <p className="text-[10px] font-bold text-primary">
-              {replyingTo.role === "agent" ? (replyingTo.agentName || "Agente") : "Você"}
+              {replyingTo.role === "agent" ? "Nath" : "Você"}
             </p>
             <p className="text-[11px] text-muted-foreground truncate">
               {replyingTo.content.slice(0, 100)}
