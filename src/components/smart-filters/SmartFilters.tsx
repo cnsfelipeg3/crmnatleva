@@ -395,8 +395,12 @@ export default function SmartFilters({
         )}
       </div>
 
-      {/* Row 2: Date presets pills + date pickers */}
+      {/* Row 2: Date field selector + presets pills + date pickers */}
       <div className="flex flex-wrap gap-2 items-center">
+        {renderDateFieldSelector()}
+        {config.dateFieldOptions && config.dateFieldOptions.length > 1 && (
+          <div className="w-px h-5 bg-border/40 mx-0.5 hidden sm:block" />
+        )}
         {renderPills()}
         <div className="w-px h-5 bg-border/40 mx-1 hidden sm:block" />
         {renderDatePickers()}
