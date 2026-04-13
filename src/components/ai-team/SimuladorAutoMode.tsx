@@ -449,7 +449,7 @@ export default function SimuladorAutoMode() {
             (lead as any)._lengthWarning = true;
           }
 
-          const addedAgentResp = pushUniqueSimMessage(lead, { role: "agent", content: agentResp, agentName: agent.name, timestamp: Date.now() });
+          const addedAgentResp = pushUniqueSimMessage(lead, { role: "agent", content: agentResp, agentName: "Nath", timestamp: Date.now() });
           if (addedAgentResp) setLeads(prev => [...prev]);
 
           // Progressive monitor field reveal
@@ -461,7 +461,7 @@ export default function SimuladorAutoMode() {
             addEvent("#8B5CF6", `📸 ${agent.name} gerando print de preço para ${lead.nome}...`, "🖼️");
             const priceImg = await generatePriceImage(lead);
             if (priceImg && simAtivaRef.current) {
-              lead.mensagens.push({ role: "agent", content: "📋 Orçamento", agentName: agent.name, timestamp: Date.now(), imageUrl: priceImg });
+              lead.mensagens.push({ role: "agent", content: "📋 Orçamento", agentName: "Nath", timestamp: Date.now(), imageUrl: priceImg });
               setLeads(prev => [...prev]);
               addEvent("#10B981", `✅ Print de preço enviado para ${lead.nome}`, "🖼️");
             }
@@ -579,7 +579,7 @@ export default function SimuladorAutoMode() {
             if (objValidation.needsWarning) {
               for (const v of objValidation.violations) console.warn(`[VIOLATION] ${agent.name} objection → ${lead.nome}: ${v}`);
             }
-            const addedObjectionResp = pushUniqueSimMessage(lead, { role: "agent", content: objResp, agentName: agent.name, timestamp: Date.now() });
+            const addedObjectionResp = pushUniqueSimMessage(lead, { role: "agent", content: objResp, agentName: "Nath", timestamp: Date.now() });
             if (addedObjectionResp) setLeads(prev => [...prev]);
             continue;
           }
