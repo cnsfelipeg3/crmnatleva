@@ -93,7 +93,35 @@ export default function Sales() {
   const statuses = useMemo(() => [...new Set(sales.map(s => s.status))].sort(), [sales]);
   const airlines = useMemo(() => [...new Set(sales.map(s => s.airline).filter(Boolean))].sort() as string[], [sales]);
 
-  const { filtered, state: filterState, setState: setFilterState, activeFilterCount, clearAll: clearFilters } = useSmartFilters(sales, SALES_FILTER_CONFIG);
+  const { filtered: smartFiltered, state: filterState, setState: setFilterState, activeFilterCount, clearAll: clearFilters } = useSmartFilters(sales, SALES_FILTER_CONFIG);
+
+  // Local table column sorting
+  type ColSortKey = "name" | "departure_date" | "return_date" | "received_value" | "total_cost" | "profit" | "margin" | "status";
+  const [colSort, setColSort] = useState<{ key: ColSortKey; dir: "asc" | "desc" } | null>(null);
+
+  const toggleColSort = (key: ColSortKey) => {
+    setColSort(prev => {
+      if (prev?.key === key) {
+        if (prev.dir === "asc") return { key, dir: "desc" };
+        return null; // third click clears
+      }
+      return { key, dir: "asc" };
+    });
+  };
+
+  const filtered = useMemo(() => {
+    if (!colSort) return smartFiltered;
+    const { key, dir } = colSort;
+    return [...smartFiltered].sort((a, b) => {
+      const av = (a as any)[key];
+      const bv = (b as any)[key];
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      const cmp = typeof av === "number" ? av - bv : String(av).localeCompare(String(bv));
+      return dir === "asc" ? cmp : -cmp;
+    });
+  }, [smartFiltered, colSort]);
 
   const totals = useMemo(() => {
     const t = (list: SaleRow[]) => {
