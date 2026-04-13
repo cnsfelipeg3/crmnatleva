@@ -1,168 +1,59 @@
 
 
-# Plano: Template "New Flow - NatLeva" no Flow Builder
+# Plano: Visualizar e Editar o Fluxo NatLeva no Flow Builder (SEM tocar no atendimento)
 
-## Resumo
+## Princípio Zero: NENHUM risco ao atendimento
 
-Adicionar um novo template no array `TEMPLATES` do `FlowBuilder.tsx` chamado **"New Flow - NatLeva"** que mapeia a jornada operacional completa com os agentes NatLeva, incluindo hierarquia de prompt, regras operacionais, campos obrigatórios, cuidados anti-bug e lógica de transferência documentados no `system_prompt` de cada nó.
+O atendimento atual via WhatsApp funciona assim:
+- `zapi-webhook` recebe mensagem → chama `execute-flow` → lê tabelas `flows` / `flow_nodes` / `flow_edges`
+- O Flow Builder principal (que tem o template NatLeva) salva em tabelas **DIFERENTES**: `automation_flows` / `automation_nodes` / `automation_edges`
 
-## Diferença vs. template existente ("Main Flow Comercial")
+Essas tabelas são completamente separadas. **Nenhuma mudança no Flow Builder afeta o atendimento.** Vamos manter essa separação.
 
-O template existente usa nós genéricos de IA ("IA Recepção Premium", "IA Qualificação NatLeva") sem vincular aos agentes reais. O **New Flow** usa nós `ai_agent` com os agentes NatLeva nomeados (Maya, Atlas, Habibi, Nemo, Dante, Luna, Nero, Iris, Aegis, Nurture) e documenta as regras operacionais reais de cada um.
+## O que será feito
 
-## Estrutura do Template (~38 nós, ~42 edges)
+Carregar o template "New Flow - NatLeva" no Flow Builder como um fluxo visual editável, salvo nas tabelas `automation_*`. O atendimento real continua 100% intacto.
 
-```text
-📋 REGRAS TRANSVERSAIS (nó de documentação no topo)
-│
-⚡ TRIGGER: Nova Conversa
-│
-🔮 ÓRION — Classificar & Rotear
-│   CRM: Criar Lead → Etapa "Novo Lead" → Tag "lead_novo"
-│
-🌸 MAYA — Acolhimento (mín. 5 trocas)
-│   system_prompt documenta:
-│   · Hierarquia especial (KB primeiro, behavior_prompt segundo)
-│   · Coleta: nome, destino, tom, ocasião
-│   · Proibições: não interrogar, não info-dump, não pedir WhatsApp
-│   · Correção natural (Red Rock → Hard Rock)
-│   · BEHAVIOR_CORE versão LITE
-│   · Escala quando: nome + destino + 5 trocas
-│
-🏷️ CRM: Tag "em_acolhimento" + Etapa → "Contato Inicial"
-│
-🗺️ ATLAS — Qualificação SDR (mín. 6 trocas)
-│   system_prompt documenta:
-│   · Hierarquia padrão (12 camadas)
-│   · 5 OBRIGATÓRIOS: Nome, Destino, Período, Duração, Composição
-│   · 2+ DESEJÁVEIS (de 6): Orçamento, Perfil, Hospedagem, Experiências, Viajou antes?, Flexibilidade
-│   · Máx 2 perguntas/msg, máx 90 palavras
-│   · Anti-repetição: relê conversa antes de perguntar
-│   · Anti-recap de dados (regra #10 BEHAVIOR_CORE)
-│   · Detecção de urgência (lead apressado → agrupar perguntas)
-│   · Resposta direta: responde pergunta do lead PRIMEIRO
-│   · PROIBIDO: citar hotéis, voos, preços
-│   · BEHAVIOR_CORE versão LITE
-│   · Gera briefing JSON estruturado ao escalar
-│
-🏷️ CRM: Etapa → "Qualificação"
-│
-═══ CONDIÇÃO: Qual destino? ═══
-│   Keywords regex case-insensitive:
-│   · HABIBI: dubai, emirados, abu dhabi, maldivas, turquia, oriente
-│   · NEMO: orlando, disney, miami, nova york, eua, cancun, caribe
-│   · DANTE: europa, paris, itália, espanha, portugal, londres, grécia
-│   · Fallback: LUNA
-├── Dubai/Oriente ──→ 🏜️ HABIBI (mín. 7 trocas)
-├── Orlando/Américas ──→ 🎢 NEMO (mín. 7 trocas)
-├── Europa ──→ 🏛️ DANTE (mín. 7 trocas)
-└── Outro ──→ direto LUNA
-│
-[ESPECIALISTAS] system_prompt documenta:
-│   · Hierarquia padrão (12 camadas)
-│   · KB filtrada por destino (SPECIALIST_KEYWORDS)
-│   · BEHAVIOR_CORE versão COMPLETA (storytelling, venda invisível)
-│   · Recebe briefing JSON do Atlas
-│   · NÃO repete perguntas já feitas
-│   · Detalhes sensoriais + 1 experiência exclusiva
-│
-🏷️ CRM: Etapa → "Diagnóstico" + Tag "destino_confirmado"
-│
-═══ CONDIÇÃO: Dados completos para cotar? ═══
-├── NÃO → Loop: voltar ao especialista
-└── SIM ↓
-│
-⏸️ HANDOFF HUMANO — Consultor cota
-│   · Tag "aguardando_cotacao"
-│   · Etapa → "Estruturação/Orçamento"
-│   · Notificação: "Lead [nome] pronto para cotação"
-│   · Briefing INTERNO (filtrado pelo Compliance Engine, nunca no chat)
-│   · Retoma quando cotação pronta
-│
-🌙 LUNA — Proposta (mín. 5 trocas)
-│   system_prompt documenta:
-│   · KB: recebe docs de TODOS os destinos
-│   · Recebe: briefing especialista + cotação humana
-│   · Cada item conecta com algo que o lead disse
-│   · Transparência: incluído/não incluído/valores/condições
-│   · NUNCA inventar preço — usa só cotação humana
-│
-🏷️ CRM: Etapa → "Proposta Enviada" + Tag "proposta_enviada"
-│
-═══ CONDIÇÃO: Objeções? ═══
-├── SIM → 🎯 NERO
-└── NÃO → Fechamento direto
-│
-🎯 NERO — Negociação (mín. 5 trocas)
-│   · Perguntar POR TRÁS da objeção antes de responder
-│   · Argumento de VALOR antes de desconto
-│   · Urgência com elegância
-│   · Só transfere após SIM claro e sem ressalvas
-│
-🏷️ CRM: Etapa → "Negociação" → "Fechamento"
-│
-═══ CONDIÇÃO: Fechou? ═══
-├── SIM → 🌈 IRIS (pós-venda, NPS, indicações)
-│   · Etapa → "Pós-venda"
-│   · Se insatisfação grave → escalar para Nath.AI
-└── NÃO → 🛡️ AEGIS (anti-churn)
-         · Etapa → "Perdido"
-         · Detecta motivo, oferta win-back
-         └── 🌱 NURTURE (reengajamento)
-              · Conteúdo relevante
-              · Quando pronto → Loop MAYA
-```
+### Passo 1: Criar o fluxo a partir do template
 
-## Nó especial: "📋 Regras Transversais"
+Quando o usuário selecionar o template "New Flow - NatLeva", o sistema já insere os 38 nós e 42 edges nas tabelas `automation_flows`, `automation_nodes`, `automation_edges`. Isso já funciona hoje — é só selecionar o template na UI.
 
-Um nó `message` no topo do canvas (posição y: -150) com `config.text` documentando:
+### Passo 2: Verificar e corrigir o carregamento dos nós
 
-- **Identidade:** Todos se apresentam como "Nath" — NUNCA revelam nome interno
-- **Transferência invisível:** Tag `[TRANSFERIR]` — sem mencionar "colega", "equipe"
-- **Preço confidencial:** Nunca revelar antes da proposta formal
-- **Concorrentes proibidos:** Booking, Airbnb, Decolar — nunca indicar
-- **Full Service:** Nunca sugerir que cliente faça por conta própria
-- **Formatação:** Sem travessão, sem hífen como bullet, máx 1 emoji/3-4 msgs
-- **Compliance Engine:** Filtra tags internas, preços vazados, recap de dados
-- **BEHAVIOR_CORE:** LITE para Maya/Atlas, COMPLETO para especialistas+
-- **Hierarquia de Prompt (12 camadas):**
-  1. behavior_prompt do banco (PRIORIDADE MÁXIMA)
-  2. Identidade + Persona
-  3. Filosofia de atendimento
-  4. Anti-repetição
-  5. Instruções de cargo
-  6. Contexto de equipe (PIPELINE_MAP)
-  7. NATH_UNIVERSAL_RULES
-  8. Base de Conhecimento
-  9. Skills ativas
-  10. Regras Globais (ai_strategy_knowledge)
-  11. Regras de transferência
-  12. Instrução de preço
+Garantir que o `FlowBuilder.tsx` carrega corretamente os nós do tipo `ai_agent` com os dados de `system_prompt` e `natleva_agent` no painel de configuração, para que o usuário possa visualizar e editar as regras operacionais de cada agente diretamente no canvas.
 
-## Implementação Técnica
+### Passo 3: Melhorar o painel de configuração do nó `ai_agent`
 
-### Arquivo editado: `src/pages/FlowBuilder.tsx`
+No `FlowBlockConfig` (painel lateral que abre ao clicar num nó), adicionar:
+- Campo "Agente NatLeva" mostrando qual agente está vinculado (maya, atlas, habibi, etc.)
+- Área de texto para visualizar/editar o `system_prompt` com as regras operacionais
+- Indicadores visuais: mín. de trocas, campos obrigatórios, versão do Behavior Core (LITE/COMPLETO)
 
-Adicionar o template como segundo item no array `TEMPLATES` (após "Main Flow Comercial", antes dos templates menores). Estrutura:
+### Passo 4: Adicionar badge "Apenas Visualização"
 
-```typescript
-{
-  name: "New Flow - NatLeva",
-  category: "comercial",
-  description: "Jornada completa com agentes NatLeva: Órion → Maya → Atlas → Especialistas → Humano → Luna → Nero → Iris/Aegis/Nurture. Inclui regras operacionais, hierarquia de prompt e campos obrigatórios.",
-  nodes: [
-    // ~38 nós com system_prompt operacional detalhado em cada ai_agent
-    // Posicionamento: grid vertical central (x: 500), ramificações horizontais para especialistas
-  ],
-  edges: [
-    // ~42 edges com labels semânticos ("Dubai/Oriente", "SIM", "NÃO", "Dados OK", etc.)
-  ],
-}
-```
+Adicionar um indicador claro na UI de que este fluxo é um **blueprint visual** — ele NÃO controla o atendimento automaticamente. Isso evita confusão.
 
-Cada nó `ai_agent` terá o campo `config.natleva_agent` vinculado ao agente correto (maya, atlas, habibi, etc.) e `config.system_prompt` com as regras operacionais completas extraídas do `PIPELINE_MAP`, `AGENT_ROLE_INSTRUCTIONS`, e `buildAgentPrompt.ts`.
+## O que NÃO será feito (para proteger o atendimento)
 
-### Nenhum arquivo novo necessário
+- NÃO alterar o `execute-flow` edge function
+- NÃO alterar o `zapi-webhook`
+- NÃO mexer nas tabelas `flows`, `flow_nodes`, `flow_edges`
+- NÃO conectar o Flow Builder ao motor de execução real
+- NÃO alterar o `simulator-ai` ou `agent-chat`
 
-Tudo fica inline no array `TEMPLATES` existente, seguindo o mesmo padrão do "Main Flow Comercial".
+## Arquivos editados
+
+1. **`src/pages/FlowBuilder.tsx`** — Ajustar o template para garantir que os nós carreguem corretamente com todas as configurações
+2. **`src/components/flowbuilder/FlowBlockConfig.tsx`** — Melhorar painel para exibir config de agentes NatLeva (system_prompt, min_exchanges, campos obrigatórios)
+
+## Resultado
+
+O usuário poderá:
+- Abrir o template "New Flow - NatLeva" no canvas visual
+- Ver toda a jornada mapeada (Maya → Atlas → Especialistas → Luna → Nero → Iris/Aegis/Nurture)
+- Clicar em cada nó para ver/editar as regras operacionais
+- Reorganizar visualmente o fluxo
+- Salvar alterações (nas tabelas `automation_*`, sem afetar nada no WhatsApp)
+
+O atendimento real continua **exatamente como está**, sem nenhum risco.
 
