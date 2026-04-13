@@ -122,7 +122,7 @@ export default function Dashboard() {
 
     // Phase 2: sales + auxiliary tables (deferred, non-blocking for KPIs)
     Promise.all([
-      fetchAllRows("sales", "id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, airline, locators, created_at, close_date, emission_status, hotel_name, is_international, miles_program, seller_id, client_id", { order: { column: "created_at", ascending: false }, maxRows: 5000 }),
+      fetchAllRows("sales", "id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, airline, locators, created_at, close_date, emission_status, hotel_name, is_international, miles_program, seller_id, client_id", { order: { column: "close_date", ascending: false }, maxRows: 5000 }),
       fetchAllRows("flight_segments", "sale_id, origin_iata, destination_iata", { maxRows: 10000, cacheMs: 30000 }),
       fetchAllRows("cost_items", "sale_id, category, miles_quantity, miles_price_per_thousand, miles_program, cash_value, total_item_cost", { maxRows: 10000, cacheMs: 30000 }),
       fetchAllRows("checkin_tasks", "status, checkin_open_datetime_utc, completed_at, created_at", { maxRows: 5000, cacheMs: 30000 }),
@@ -206,8 +206,8 @@ export default function Dashboard() {
 
   const filtered = useMemo(() => {
     let result = sales;
-    if (periodCutoff) result = result.filter(s => new Date(s.created_at) >= periodCutoff);
-    if (periodEnd) result = result.filter(s => new Date(s.created_at) <= periodEnd);
+    if (periodCutoff) result = result.filter(s => s.close_date && new Date(s.close_date) >= periodCutoff);
+    if (periodEnd) result = result.filter(s => s.close_date && new Date(s.close_date) <= periodEnd);
     if (seller !== "all") {
       const sid = profiles.find(p => p.full_name === seller)?.id;
       if (sid) result = result.filter(s => s.seller_id === sid);
@@ -239,7 +239,8 @@ export default function Dashboard() {
     const diff = Date.now() - periodCutoff.getTime();
     const prevCutoff = new Date(periodCutoff.getTime() - diff);
     return sales.filter(s => {
-      const d = new Date(s.created_at);
+      if (!s.close_date) return false;
+      const d = new Date(s.close_date);
       return d >= prevCutoff && d < periodCutoff;
     });
   }, [sales, periodCutoff]);
