@@ -34,11 +34,7 @@ export default function ClientsSection({ clients, filtered, periodStart }: Props
   const navigate = useNavigate();
   const [drilldown, setDrilldown] = useState<{ label: string; sales: Sale[] } | null>(null);
 
-  const activeClientIds = useMemo(() => {
-    return new Set(filtered.filter(s => s.client_id).map(s => s.client_id!));
-  }, [filtered]);
-
-  const activeClients = activeClientIds.size;
+  const totalClients = clients.length;
 
   const newClients = useMemo(() => {
     if (!periodStart) return clients.length;
