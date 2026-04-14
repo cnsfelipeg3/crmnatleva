@@ -937,7 +937,7 @@ export default function Checkin() {
 
       {/* Complete Dialog */}
       <Dialog open={!!completeDialog} onOpenChange={() => setCompleteDialog(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-500" /> Confirmar Check-in
