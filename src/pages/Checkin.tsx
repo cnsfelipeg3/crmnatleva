@@ -19,7 +19,7 @@ import {
   ClipboardCheck, Clock, AlertTriangle, CheckCircle2, Copy,
   ExternalLink, Eye, Plane, User, Upload, X, FileText,
   RefreshCw, Loader2, Shield, Calendar, List, LayoutGrid, Columns3,
-  ArrowRight, Timer, Zap, Bell, AlertCircle, Lock,
+  ArrowRight, Timer, Zap, Bell, AlertCircle, Lock, ChevronRight,
 } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
 import TaskCalendarView from "@/components/TaskCalendarView";
@@ -215,6 +215,7 @@ export default function Checkin() {
   const [passengerSeats, setPassengerSeats] = useState<Record<string, string>>({});
   const [passengerFiles, setPassengerFiles] = useState<Record<string, File | null>>({});
   const [passengerExisting, setPassengerExisting] = useState<Record<string, { boarding_pass_url?: string; boarding_pass_file_name?: string }>>({});
+  const [expandedPassengers, setExpandedPassengers] = useState<Set<string>>(new Set());
   const [savingCheckin, setSavingCheckin] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -977,12 +978,28 @@ export default function Checkin() {
                           </tr>
                         </thead>
                         <tbody>
-                        {passengers.map((pax: any, idx: number) => (
-                          <tr key={pax.id} className={idx < passengers.length - 1 ? "border-b border-border/20" : ""}>
+                        {passengers.map((pax: any, idx: number) => {
+                          const isExpanded = expandedPassengers.has(pax.id);
+                          const hasDetails = pax.birth_date || pax.cpf || pax.rg || pax.passport_number || pax.passport_expiry;
+                          return (
+                          <React.Fragment key={pax.id}>
+                          <tr className={idx < passengers.length - 1 && !isExpanded ? "border-b border-border/20" : ""}>
                             <td className="px-4 py-3 align-middle">
-                              <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                                <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> {pax.full_name}
-                              </p>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => setExpandedPassengers(prev => {
+                                    const next = new Set(prev);
+                                    next.has(pax.id) ? next.delete(pax.id) : next.add(pax.id);
+                                    return next;
+                                  })}
+                                  className="p-0.5 hover:bg-muted rounded transition-colors shrink-0"
+                                  title="Ver dados do passageiro"
+                                >
+                                  <ChevronRight className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                                </button>
+                                <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                <span className="text-sm font-medium text-foreground break-words">{pax.full_name}</span>
+                              </div>
                             </td>
                             <td className="px-3 py-3 align-middle w-[100px]">
                               <Input
@@ -1044,7 +1061,53 @@ export default function Checkin() {
                               />
                             </td>
                           </tr>
-                        ))}
+                          {isExpanded && (
+                            <tr className={idx < passengers.length - 1 ? "border-b border-border/20" : ""}>
+                              <td colSpan={3} className="px-4 pb-3 pt-0">
+                                <div className="ml-6 py-2.5 px-4 bg-muted/30 rounded-md border border-border/30">
+                                  {hasDetails ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                                      {pax.birth_date && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-muted-foreground text-xs">📅 Data de Nascimento:</span>
+                                          <span className="font-medium text-xs">{formatDateBR(pax.birth_date)}</span>
+                                        </div>
+                                      )}
+                                      {pax.cpf && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-muted-foreground text-xs">🪪 CPF:</span>
+                                          <span className="font-medium text-xs">{pax.cpf}</span>
+                                        </div>
+                                      )}
+                                      {pax.rg && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-muted-foreground text-xs">🪪 RG:</span>
+                                          <span className="font-medium text-xs">{pax.rg}</span>
+                                        </div>
+                                      )}
+                                      {pax.passport_number && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-muted-foreground text-xs">🛂 Passaporte:</span>
+                                          <span className="font-medium text-xs">{pax.passport_number}</span>
+                                        </div>
+                                      )}
+                                      {pax.passport_expiry && (
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-muted-foreground text-xs">📅 Venc. Passaporte:</span>
+                                          <span className="font-medium text-xs">{formatDateBR(pax.passport_expiry)}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <p className="text-xs text-muted-foreground italic">Nenhum dado cadastrado para este passageiro.</p>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          </React.Fragment>
+                          );
+                        })}
                         </tbody>
                       </table>
                     )}
