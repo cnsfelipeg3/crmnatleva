@@ -39,7 +39,11 @@ export default function FinancialSection({ filtered, sellerNames }: Props) {
     return Object.values(map).sort((a, b) => a.month.localeCompare(b.month)).map(m => ({
       ...m,
       margem: m.receita > 0 ? (m.lucro / m.receita) * 100 : 0,
-      monthLabel: m.month.split('-').reverse().join('/'),
+      monthLabel: (() => {
+        const [y, m] = m.month.split('-');
+        const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        return `${monthNames[parseInt(m, 10) - 1]} ${y}`;
+      })(),
     }));
   }, [filtered]);
 
