@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const COMMISSION_AGENCIA = 0.15;
-const COMMISSION_ORGANICO = 0.40;
+const COMMISSION_ORGANICO = 0.30;
 
 export default function Comissoes() {
   const [periodFrom, setPeriodFrom] = useState(() => {
@@ -103,7 +103,7 @@ export default function Comissoes() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight font-display">Comissões</h1>
-          <p className="text-sm text-muted-foreground">Cálculo automático: Agência 15% · Orgânico 40% sobre o lucro</p>
+          <p className="text-sm text-muted-foreground">Cálculo automático: Agência 15% · Orgânico 30% sobre o lucro</p>
         </div>
         <div className="flex items-center gap-2">
           <Input type="date" value={periodFrom} onChange={e => setPeriodFrom(e.target.value)} className="w-36 text-xs" />
@@ -142,7 +142,7 @@ export default function Comissoes() {
             <span className="text-[10px] text-muted-foreground uppercase tracking-wide">Comissão Orgânico</span>
           </div>
           <p className="text-lg font-bold text-foreground">{fmt(totals.comissaoOrganico)}</p>
-          <p className="text-[10px] text-muted-foreground">40% sobre o lucro</p>
+          <p className="text-[10px] text-muted-foreground">30% sobre o lucro</p>
         </Card>
         <Card className="p-4 glass-card">
           <div className="flex items-center gap-2 mb-1">
