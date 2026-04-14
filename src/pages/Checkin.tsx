@@ -200,23 +200,93 @@ export default function Checkin() {
     } finally { setGenerating(false); }
   };
 
+  const openCompleteDialog = async (task: CheckinTask) => {
+    setCompleteDialog(task);
+    setCompleteNotes(task.notes || "");
+    const seats: Record<string, string> = {};
+    const existing: Record<string, { boarding_pass_url?: string; boarding_pass_file_name?: string }> = {};
+    const files: Record<string, File | null> = {};
+    (task.passengers || []).forEach((p: any) => {
+      seats[p.id] = "";
+      files[p.id] = null;
+    });
+    // Load existing details
+    const { data: details } = await supabase
+      .from("checkin_passenger_details")
+      .select("*")
+      .eq("checkin_task_id", task.id);
+    if (details) {
+      details.forEach((d: any) => {
+        if (d.seat) seats[d.passenger_id] = d.seat;
+        if (d.boarding_pass_url) existing[d.passenger_id] = { boarding_pass_url: d.boarding_pass_url, boarding_pass_file_name: d.boarding_pass_file_name };
+      });
+    }
+    setPassengerSeats(seats);
+    setPassengerFiles(files);
+    setPassengerExisting(existing);
+  };
+
   const handleComplete = async () => {
     if (!completeDialog) return;
+    setSavingCheckin(true);
     try {
+      const task = completeDialog;
+      const passengers = task.passengers || [];
+
+      // Upload boarding passes and save per-passenger details
+      for (const pax of passengers) {
+        const file = passengerFiles[pax.id];
+        let boardingPassUrl: string | null = passengerExisting[pax.id]?.boarding_pass_url || null;
+        let boardingPassFileName: string | null = passengerExisting[pax.id]?.boarding_pass_file_name || null;
+
+        if (file) {
+          const ext = file.name.split(".").pop() || "pdf";
+          const filePath = `${task.sale_id}/boarding_passes/${task.id}_${pax.id}_${Date.now()}.${ext}`;
+          const { error: uploadError } = await supabase.storage
+            .from("sale-attachments")
+            .upload(filePath, file);
+          if (uploadError) throw uploadError;
+          const { data: urlData } = supabase.storage
+            .from("sale-attachments")
+            .getPublicUrl(filePath);
+          boardingPassUrl = urlData.publicUrl;
+          boardingPassFileName = file.name;
+        }
+
+        await supabase.from("checkin_passenger_details").upsert({
+          checkin_task_id: task.id,
+          passenger_id: pax.id,
+          seat: passengerSeats[pax.id] || null,
+          boarding_pass_url: boardingPassUrl,
+          boarding_pass_file_name: boardingPassFileName,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "checkin_task_id,passenger_id" });
+      }
+
+      // Build seat summary
+      const allSeats = passengers
+        .map((p: any) => passengerSeats[p.id])
+        .filter(Boolean);
+
       await supabase.from("checkin_tasks").update({
         status: "CONCLUIDO",
         completed_at: new Date().toISOString(),
         completed_by_user_id: user?.id,
-        seat_info: seatInfo || null,
+        seat_info: allSeats.join(", ") || null,
         notes: completeNotes || null,
-      }).eq("id", completeDialog.id);
+      }).eq("id", task.id);
+
       toast({ title: "Check-in marcado como concluído!" });
       setCompleteDialog(null);
-      setSeatInfo("");
       setCompleteNotes("");
+      setPassengerSeats({});
+      setPassengerFiles({});
+      setPassengerExisting({});
       await fetchTasks();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingCheckin(false);
     }
   };
 
