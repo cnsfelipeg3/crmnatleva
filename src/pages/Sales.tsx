@@ -345,31 +345,30 @@ export default function Sales() {
                     {filtered.map((sale) => (
                       <tr key={sale.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => navigate(`/sales/${sale.id}`)}>
                         <td className="px-3 py-3">
-                          <p className="font-medium text-foreground truncate max-w-[180px]">{sale.name}</p>
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <span>{sale.display_id} · {formatDateBR(sale.close_date)}</span>
+                          <p className="font-medium text-foreground truncate">{sale.name}</p>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
+                            <span className="truncate">{sale.display_id} · {formatDateBR(sale.close_date)}</span>
                             {sale.client_id && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); navigate(`/clients/${sale.client_id}`); }}
-                                className="text-primary hover:underline font-medium"
+                                className="text-primary hover:underline font-medium flex-shrink-0"
                               >
                                 👤
                               </button>
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-3 text-left"><span className="text-xs text-muted-foreground whitespace-nowrap">{formatDateBR(sale.close_date)}</span></td>
-                        <td className="px-3 py-3"><span className="text-xs font-mono">{fmtShortDate(sale.departure_date) || <span className="text-muted-foreground/40">—</span>}</span></td>
-                        <td className="px-3 py-3"><span className="text-xs font-mono">{fmtShortDate(sale.return_date) || <span className="text-muted-foreground/40 italic text-[11px]">Somente ida</span>}</span></td>
-                        <td className="px-3 py-3">{renderRoute(sale)}</td>
-                        <td className="px-2 py-3 text-center">{(sale.adults || 0) + (sale.children || 0)}</td>
-                        <td className="px-2 py-3">
+                        <td className="px-2 py-3 text-left"><span className="text-xs text-muted-foreground whitespace-nowrap">{formatDateBR(sale.close_date)}</span></td>
+                        <td className="px-2 py-3"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.departure_date) || <span className="text-muted-foreground/40">—</span>}</span></td>
+                        <td className="px-2 py-3"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.return_date) || <span className="text-muted-foreground/40 italic text-[11px]">Somente ida</span>}</span></td>
+                        <td className="px-2 py-3">{renderRoute(sale)}</td>
+                        <td className="px-1 py-3 text-center">{(sale.adults || 0) + (sale.children || 0)}</td>
+                        <td className="px-1 py-3">
                           <div className="flex gap-1 items-center flex-wrap">
                             {sale.airline && <AirlineLogo iata={sale.airline} size={18} />}
                             {(sale.products || []).map((p) => {
                               const cfg = PRODUCT_ICON_MAP[p];
                               if (!cfg) return null;
-                              // Skip showing Plane icon if we already have AirlineLogo
                               if ((p === "Passagem Aérea" || p === "Passagem Aérea e Hospedagem" || p === "Remarcação Passagem Aérea") && sale.airline) return null;
                               const Icon = cfg.icon;
                               const tooltipLabel = p === "Hospedagem" && sale.hotel_name ? sale.hotel_name : cfg.label;
@@ -382,20 +381,20 @@ export default function Sales() {
                             })}
                           </div>
                         </td>
-                        <td className="px-3 py-3 text-right font-medium">{fmt(sale.received_value || 0)}</td>
-                        <td className="px-3 py-3 text-right text-muted-foreground">{fmt(sale.total_cost || 0)}</td>
-                        <td className="px-3 py-3 text-right">
-                          <span className={cn("font-medium", (sale.profit || 0) > 0 ? "text-success" : (sale.profit || 0) < 0 ? "text-destructive" : "text-foreground")}>
+                        <td className="px-2 py-3 text-right font-medium whitespace-nowrap">{fmt(sale.received_value || 0)}</td>
+                        <td className="px-2 py-3 text-right text-muted-foreground whitespace-nowrap">{fmt(sale.total_cost || 0)}</td>
+                        <td className="px-2 py-3 text-right">
+                          <span className={cn("font-medium whitespace-nowrap", (sale.profit || 0) > 0 ? "text-success" : (sale.profit || 0) < 0 ? "text-destructive" : "text-foreground")}>
                             {fmt(sale.profit || 0)}
                           </span>
                         </td>
-                        <td className="px-2 py-3 text-right">
-                          <span className={(sale.margin || 0) > 25 ? "text-success font-semibold" : "text-foreground"}>
+                        <td className="px-1 py-3 text-right">
+                          <span className={cn("whitespace-nowrap", (sale.margin || 0) > 25 ? "text-success font-semibold" : "text-foreground")}>
                             {(sale.margin || 0).toFixed(1)}%
                           </span>
                         </td>
-                        <td className="px-2 py-3 text-center">{renderLeadBadge(sale.lead_type)}</td>
-                        <td className="px-2 py-3">
+                        <td className="px-1 py-3 text-center">{renderLeadBadge(sale.lead_type)}</td>
+                        <td className="px-1 py-3">
                           <Badge variant="outline" className={cn("text-[10px]", statusColor[sale.status] || "")}>{sale.status}</Badge>
                         </td>
                         <td className="px-2 py-3">
