@@ -814,7 +814,7 @@ export default function Checkin() {
 
       {/* Complete Dialog */}
       <Dialog open={!!completeDialog} onOpenChange={() => setCompleteDialog(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-500" /> Confirmar Check-in
@@ -839,7 +839,7 @@ export default function Checkin() {
                     </div>
                   </div>
 
-                  {/* Per-passenger section */}
+                  {/* Per-passenger table layout */}
                   <div className="space-y-2">
                     <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Passageiros</Label>
                     {passengers.length === 0 ? (
@@ -847,28 +847,34 @@ export default function Checkin() {
                         Nenhum passageiro cadastrado para esta venda. Cadastre os passageiros primeiro.
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        {passengers.map((pax: any) => (
-                          <div key={pax.id} className="border border-border/30 rounded-lg p-3 space-y-2.5 bg-card/50">
-                            <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                              <User className="w-3.5 h-3.5 text-muted-foreground" /> {pax.full_name}
+                      <div className="border border-border/30 rounded-lg overflow-hidden">
+                        {/* Table header */}
+                        <div className="grid grid-cols-[1fr_120px_1fr] gap-3 px-4 py-2 bg-muted/40 border-b border-border/30">
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Passageiro</span>
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Assento</span>
+                          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Cartão de Embarque</span>
+                        </div>
+                        {/* Rows */}
+                        {passengers.map((pax: any, idx: number) => (
+                          <div key={pax.id} className={`grid grid-cols-[1fr_120px_1fr] gap-3 px-4 py-3 items-center ${idx < passengers.length - 1 ? "border-b border-border/20" : ""}`}>
+                            {/* Name */}
+                            <p className="text-sm font-medium text-foreground flex items-center gap-1.5 truncate">
+                              <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> {pax.full_name}
                             </p>
-                            <div className="space-y-1">
-                              <Label className="text-[11px] text-muted-foreground">Assento</Label>
-                              <Input
-                                placeholder="Ex: 12A"
-                                className="h-8 text-xs"
-                                value={passengerSeats[pax.id] || ""}
-                                onChange={e => setPassengerSeats(prev => ({ ...prev, [pax.id]: e.target.value }))}
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[11px] text-muted-foreground">Cartão de Embarque</Label>
+                            {/* Seat */}
+                            <Input
+                              placeholder="Ex: 12A"
+                              className="h-8 text-xs"
+                              value={passengerSeats[pax.id] || ""}
+                              onChange={e => setPassengerSeats(prev => ({ ...prev, [pax.id]: e.target.value }))}
+                            />
+                            {/* Boarding pass */}
+                            <div className="min-w-0">
                               {passengerFiles[pax.id] ? (
                                 <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
                                   <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
                                   <span className="truncate flex-1 text-foreground">{passengerFiles[pax.id]!.name}</span>
-                                  <button onClick={() => setPassengerFiles(prev => ({ ...prev, [pax.id]: null }))} className="text-muted-foreground hover:text-destructive">
+                                  <button onClick={() => setPassengerFiles(prev => ({ ...prev, [pax.id]: null }))} className="text-muted-foreground hover:text-destructive shrink-0">
                                     <X className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
@@ -876,7 +882,7 @@ export default function Checkin() {
                                 <div className="flex items-center gap-2 text-xs bg-emerald-500/10 rounded-md px-2 py-1.5">
                                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                                   <a href={passengerExisting[pax.id].boarding_pass_url} target="_blank" rel="noreferrer" className="truncate flex-1 text-foreground hover:underline">
-                                    {passengerExisting[pax.id].boarding_pass_file_name || "Cartão de embarque"}
+                                    {passengerExisting[pax.id].boarding_pass_file_name || "Cartão"}
                                   </a>
                                   <button onClick={() => {
                                     setPassengerExisting(prev => {
@@ -884,16 +890,16 @@ export default function Checkin() {
                                       delete next[pax.id];
                                       return next;
                                     });
-                                  }} className="text-muted-foreground hover:text-destructive">
+                                  }} className="text-muted-foreground hover:text-destructive shrink-0">
                                     <X className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
                               ) : (
                                 <button
                                   onClick={() => fileInputRefs.current[pax.id]?.click()}
-                                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border/50 rounded-md px-3 py-2 w-full transition-colors hover:border-primary/40 hover:bg-primary/5"
+                                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border/50 rounded-md px-3 py-1.5 w-full transition-colors hover:border-primary/40 hover:bg-primary/5"
                                 >
-                                  <Upload className="w-3.5 h-3.5" /> Fazer upload (PDF, PNG, JPG)
+                                  <Upload className="w-3.5 h-3.5" /> Upload
                                 </button>
                               )}
                               <input
