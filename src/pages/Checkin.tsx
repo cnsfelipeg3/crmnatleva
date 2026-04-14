@@ -941,7 +941,3 @@ export default function Checkin() {
     </div>
   );
 }
-      </Dialog>
-    </div>
-  );
-}
