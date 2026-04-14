@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Download, Eye, Plane, Hotel, X, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Plus, Download, Eye, Plane, Hotel, X, ArrowUp, ArrowDown, ArrowUpDown, Car, Train, Bus, Shield, Ticket, Ship, Luggage, MapPin, Armchair, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AirlineLogo from "@/components/AirlineLogo";
 import { routeCode } from "@/lib/cityExtract";
@@ -16,6 +16,24 @@ import type { SmartFilterConfig } from "@/components/smart-filters";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const PRODUCT_ICON_MAP: Record<string, { icon: React.ElementType; label: string; className: string }> = {
+  "Passagem Aérea": { icon: Plane, label: "Passagem Aérea", className: "text-primary" },
+  "Passagem Aérea e Hospedagem": { icon: Package, label: "Pacote Aéreo + Hotel", className: "text-primary" },
+  "Remarcação Passagem Aérea": { icon: Plane, label: "Remarcação Aérea", className: "text-warning-foreground" },
+  "Hospedagem": { icon: Hotel, label: "Hospedagem", className: "text-accent" },
+  "Aluguel de Carro": { icon: Car, label: "Aluguel de Carro", className: "text-chart-3" },
+  "Passagem de Trem": { icon: Train, label: "Passagem de Trem", className: "text-chart-4" },
+  "Passagem de Ônibus": { icon: Bus, label: "Passagem de Ônibus", className: "text-chart-5" },
+  "Seguro Viagem": { icon: Shield, label: "Seguro Viagem", className: "text-info" },
+  "Ingressos": { icon: Ticket, label: "Ingressos", className: "text-chart-2" },
+  "Cruzeiro": { icon: Ship, label: "Cruzeiro", className: "text-chart-1" },
+  "Bagagem": { icon: Luggage, label: "Bagagem", className: "text-muted-foreground" },
+  "Transfer": { icon: MapPin, label: "Transfer", className: "text-chart-3" },
+  "Passeios e Tours": { icon: MapPin, label: "Passeios e Tours", className: "text-chart-4" },
+  "Assento Conforto": { icon: Armchair, label: "Assento Conforto", className: "text-chart-5" },
+  "Serviços Extras": { icon: Package, label: "Serviços Extras", className: "text-muted-foreground" },
+};
 
 const statusColor: Record<string, string> = {
   Fechado: "bg-success/15 text-success border-success/20",
@@ -235,14 +253,21 @@ export default function Sales() {
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">{(sale.adults || 0) + (sale.children || 0)} pax</span>
-                      <div className="flex gap-1 items-center">
+                      <div className="flex gap-1 items-center flex-wrap">
                         {sale.airline && <AirlineLogo iata={sale.airline} size={16} />}
-                        {sale.products?.includes("Hotel") && (
-                          <Tooltip>
-                            <TooltipTrigger asChild><span><Hotel className="w-3.5 h-3.5 text-accent" /></span></TooltipTrigger>
-                            <TooltipContent>{sale.hotel_name || "Hotel"}</TooltipContent>
-                          </Tooltip>
-                        )}
+                        {(sale.products || []).map((p) => {
+                          const cfg = PRODUCT_ICON_MAP[p];
+                          if (!cfg) return null;
+                          if ((p === "Passagem Aérea" || p === "Passagem Aérea e Hospedagem" || p === "Remarcação Passagem Aérea") && sale.airline) return null;
+                          const Icon = cfg.icon;
+                          const tooltipLabel = p === "Hospedagem" && sale.hotel_name ? sale.hotel_name : cfg.label;
+                          return (
+                            <Tooltip key={p}>
+                              <TooltipTrigger asChild><span><Icon className={cn("w-3.5 h-3.5", cfg.className)} /></span></TooltipTrigger>
+                              <TooltipContent>{tooltipLabel}</TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
                       </div>
                     </div>
                     <div className="text-right">
@@ -321,15 +346,22 @@ export default function Sales() {
                         <td className="px-3 py-3">{renderRoute(sale)}</td>
                         <td className="px-2 py-3 text-center">{(sale.adults || 0) + (sale.children || 0)}</td>
                         <td className="px-2 py-3">
-                          <div className="flex gap-1 items-center">
+                          <div className="flex gap-1 items-center flex-wrap">
                             {sale.airline && <AirlineLogo iata={sale.airline} size={18} />}
-                            {sale.products?.includes("Aéreo") && !sale.airline && <Plane className="w-3.5 h-3.5 text-primary" />}
-                            {sale.products?.includes("Hotel") && (
-                              <Tooltip>
-                                <TooltipTrigger asChild><span><Hotel className="w-3.5 h-3.5 text-accent" /></span></TooltipTrigger>
-                                <TooltipContent>{sale.hotel_name || "Hotel"}</TooltipContent>
-                              </Tooltip>
-                            )}
+                            {(sale.products || []).map((p) => {
+                              const cfg = PRODUCT_ICON_MAP[p];
+                              if (!cfg) return null;
+                              // Skip showing Plane icon if we already have AirlineLogo
+                              if ((p === "Passagem Aérea" || p === "Passagem Aérea e Hospedagem" || p === "Remarcação Passagem Aérea") && sale.airline) return null;
+                              const Icon = cfg.icon;
+                              const tooltipLabel = p === "Hospedagem" && sale.hotel_name ? sale.hotel_name : cfg.label;
+                              return (
+                                <Tooltip key={p}>
+                                  <TooltipTrigger asChild><span><Icon className={cn("w-3.5 h-3.5", cfg.className)} /></span></TooltipTrigger>
+                                  <TooltipContent>{tooltipLabel}</TooltipContent>
+                                </Tooltip>
+                              );
+                            })}
                           </div>
                         </td>
                         <td className="px-3 py-3 text-right font-medium">{fmt(sale.received_value || 0)}</td>
