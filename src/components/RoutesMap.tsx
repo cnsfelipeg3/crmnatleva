@@ -68,6 +68,7 @@ interface RoutesMapProps {
   height?: string;
   sales?: RouteSale[];
   onSaleClick?: (saleId: string) => void;
+  onDestinationClick?: (iata: string) => void;
 }
 
 const DARK_STYLE: google.maps.MapTypeStyle[] = [
