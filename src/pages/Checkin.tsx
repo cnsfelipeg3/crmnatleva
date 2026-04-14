@@ -463,11 +463,7 @@ export default function Checkin() {
 
         <div className="flex gap-1 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
           {task.status !== "CONCLUIDO" && (
-            <Button size="sm" variant="default" className="text-[10px] h-6 px-2" onClick={() => {
-              setCompleteDialog(task);
-              setSeatInfo(task.seat_info || "");
-              setCompleteNotes(task.notes || "");
-            }}>
+            <Button size="sm" variant="default" className="text-[10px] h-6 px-2" onClick={() => openCompleteDialog(task)}>
               <CheckCircle2 className="w-3 h-3" />
             </Button>
           )}
@@ -583,11 +579,7 @@ export default function Checkin() {
               </Button>
             )}
             {task.status !== "CONCLUIDO" && (
-              <Button size="sm" variant="outline" className="text-[10px] h-7 gap-1" onClick={() => {
-                setCompleteDialog(task);
-                setSeatInfo(task.seat_info || "");
-                setCompleteNotes(task.notes || "");
-              }}>
+              <Button size="sm" variant="outline" className="text-[10px] h-7 gap-1" onClick={() => openCompleteDialog(task)}>
                 <CheckCircle2 className="w-3 h-3" /> Concluir
               </Button>
             )}
@@ -822,52 +814,133 @@ export default function Checkin() {
 
       {/* Complete Dialog */}
       <Dialog open={!!completeDialog} onOpenChange={() => setCompleteDialog(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-500" /> Confirmar Check-in
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             {completeDialog && (() => {
               const d = getTaskDetails(completeDialog);
+              const passengers = completeDialog.passengers || [];
               return (
-                <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                  <div className="flex items-center gap-3">
-                    {d.airline && <AirlineLogo iata={d.airline} size={28} />}
-                    <div>
-                      <p className="font-bold text-foreground flex items-center gap-1">
-                        {d.origin} <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" /> {d.dest}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{d.airline} {d.flightNum} {d.depDate ? `• ${formatDateBR(d.depDate)}` : ""} {d.depTime ? `às ${d.depTime.slice(0, 5)}` : ""}</p>
+                <>
+                  {/* Flight header */}
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-1">
+                    <div className="flex items-center gap-3">
+                      {d.airline && <AirlineLogo iata={d.airline} size={28} />}
+                      <div>
+                        <p className="font-bold text-foreground flex items-center gap-1">
+                          {d.origin} <ArrowRight className="w-3.5 h-3.5 text-muted-foreground" /> {d.dest}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{d.airline} {d.flightNum} {d.depDate ? `• ${formatDateBR(d.depDate)}` : ""} {d.depTime ? `às ${d.depTime.slice(0, 5)}` : ""}</p>
+                      </div>
                     </div>
                   </div>
-                  {d.paxNames.length > 0 && (
-                    <div className="pt-2 border-t border-border/40">
-                      {d.paxNames.map((name: string, i: number) => (
-                        <p key={i} className="text-xs flex items-center gap-1.5"><User className="w-3 h-3" />{name}</p>
-                      ))}
-                    </div>
-                  )}
-                </div>
+
+                  {/* Per-passenger section */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Passageiros</Label>
+                    {passengers.length === 0 ? (
+                      <div className="text-xs text-muted-foreground bg-muted/30 rounded-lg p-4 text-center">
+                        Nenhum passageiro cadastrado para esta venda. Cadastre os passageiros primeiro.
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {passengers.map((pax: any) => (
+                          <div key={pax.id} className="border border-border/30 rounded-lg p-3 space-y-2.5 bg-card/50">
+                            <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                              <User className="w-3.5 h-3.5 text-muted-foreground" /> {pax.full_name}
+                            </p>
+                            <div className="space-y-1">
+                              <Label className="text-[11px] text-muted-foreground">Assento</Label>
+                              <Input
+                                placeholder="Ex: 12A"
+                                className="h-8 text-xs"
+                                value={passengerSeats[pax.id] || ""}
+                                onChange={e => setPassengerSeats(prev => ({ ...prev, [pax.id]: e.target.value }))}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[11px] text-muted-foreground">Cartão de Embarque</Label>
+                              {passengerFiles[pax.id] ? (
+                                <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
+                                  <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+                                  <span className="truncate flex-1 text-foreground">{passengerFiles[pax.id]!.name}</span>
+                                  <button onClick={() => setPassengerFiles(prev => ({ ...prev, [pax.id]: null }))} className="text-muted-foreground hover:text-destructive">
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : passengerExisting[pax.id]?.boarding_pass_url ? (
+                                <div className="flex items-center gap-2 text-xs bg-emerald-500/10 rounded-md px-2 py-1.5">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                  <a href={passengerExisting[pax.id].boarding_pass_url} target="_blank" rel="noreferrer" className="truncate flex-1 text-foreground hover:underline">
+                                    {passengerExisting[pax.id].boarding_pass_file_name || "Cartão de embarque"}
+                                  </a>
+                                  <button onClick={() => {
+                                    setPassengerExisting(prev => {
+                                      const next = { ...prev };
+                                      delete next[pax.id];
+                                      return next;
+                                    });
+                                  }} className="text-muted-foreground hover:text-destructive">
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => fileInputRefs.current[pax.id]?.click()}
+                                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border/50 rounded-md px-3 py-2 w-full transition-colors hover:border-primary/40 hover:bg-primary/5"
+                                >
+                                  <Upload className="w-3.5 h-3.5" /> Fazer upload (PDF, PNG, JPG)
+                                </button>
+                              )}
+                              <input
+                                ref={el => { fileInputRefs.current[pax.id] = el; }}
+                                type="file"
+                                accept=".pdf,.png,.jpg,.jpeg"
+                                className="hidden"
+                                onChange={e => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    if (file.size > 10 * 1024 * 1024) {
+                                      toast({ title: "Arquivo muito grande", description: "Máximo 10MB", variant: "destructive" });
+                                      return;
+                                    }
+                                    setPassengerFiles(prev => ({ ...prev, [pax.id]: file }));
+                                  }
+                                  e.target.value = "";
+                                }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Notes */}
+                  <div className="space-y-2">
+                    <Label className="text-xs">Observações</Label>
+                    <Textarea placeholder="Notas sobre o check-in..." value={completeNotes} onChange={e => setCompleteNotes(e.target.value)} rows={2} />
+                  </div>
+                </>
               );
             })()}
-            <div className="space-y-2">
-              <Label className="text-xs">Assentos (opcional)</Label>
-              <Input placeholder="Ex: 12A, 12B" value={seatInfo} onChange={e => setSeatInfo(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Observações</Label>
-              <Textarea placeholder="Notas sobre o check-in..." value={completeNotes} onChange={e => setCompleteNotes(e.target.value)} rows={3} />
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCompleteDialog(null)}>Cancelar</Button>
-            <Button onClick={handleComplete} className="gap-1">
-              <CheckCircle2 className="w-4 h-4" /> Confirmar Concluído
+            <Button onClick={handleComplete} disabled={savingCheckin} className="gap-1">
+              {savingCheckin ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+              Confirmar Concluído
             </Button>
           </DialogFooter>
         </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
       </Dialog>
     </div>
   );
