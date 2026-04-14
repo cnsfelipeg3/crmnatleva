@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Search, ZoomIn, ZoomOut, Maximize2, LocateFixed, Download } from "lucide-react";
+import { MapPin, Search, Download } from "lucide-react";
 
 const CITY_COORDS: Record<string, [number, number]> = {
   "São Paulo": [-23.5505, -46.6333], "Rio de Janeiro": [-22.9068, -43.1729],
@@ -56,63 +58,13 @@ interface CityData {
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-const DARK_STYLE: google.maps.MapTypeStyle[] = [
-  { elementType: "geometry", stylers: [{ color: "#1d2c4d" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#8ec3b9" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#1a3646" }] },
-  { featureType: "administrative.country", elementType: "geometry.stroke", stylers: [{ color: "#4b6878" }] },
-  { featureType: "water", elementType: "geometry.fill", stylers: [{ color: "#0e1626" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#4e6d70" }] },
-  { featureType: "road", stylers: [{ visibility: "off" }] },
-  { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "transit", stylers: [{ visibility: "off" }] },
-];
-
-// Inline Google Maps loader — no external dependency
-function loadGoogleMaps(): Promise<typeof google.maps> {
-  const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string;
-  if (!API_KEY) return Promise.reject(new Error("Google Maps API key missing"));
-
-  if (window.google?.maps) return Promise.resolve(window.google.maps);
-
-  return new Promise((resolve, reject) => {
-    // Check if script already exists
-    const existing = document.querySelector('script[src*="maps.googleapis.com"]');
-    if (existing) {
-      const poll = setInterval(() => {
-        if (window.google?.maps) { clearInterval(poll); resolve(window.google.maps); }
-      }, 100);
-      setTimeout(() => { clearInterval(poll); reject(new Error("Timeout")); }, 10000);
-      return;
-    }
-
-    const callbackName = "__gmCallback_" + Date.now();
-    (window as any)[callbackName] = () => {
-      delete (window as any)[callbackName];
-      if (window.google?.maps) resolve(window.google.maps);
-      else reject(new Error("Google Maps not available after load"));
-    };
-
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&language=pt-BR&callback=${callbackName}`;
-    script.async = true;
-    script.defer = true;
-    script.onerror = () => reject(new Error("Failed to load Google Maps script"));
-    document.head.appendChild(script);
-  });
-}
-
 export default function ClientDistributionMap() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
-  const circlesRef = useRef<google.maps.Circle[]>([]);
-  const infoRef = useRef<google.maps.InfoWindow | null>(null);
+  const mapRef = useRef<L.Map | null>(null);
+  const layerRef = useRef<L.LayerGroup | null>(null);
 
   const [cityData, setCityData] = useState<CityData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [mapReady, setMapReady] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [stateFilter, setStateFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"clients" | "revenue" | "sales">("clients");
@@ -153,7 +105,7 @@ export default function ClientDistributionMap() {
     fetchData();
   }, []);
 
-  // Lazy init Google Map only when container is visible
+  // Lazy init Leaflet when container visible
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -166,34 +118,28 @@ export default function ClientDistributionMap() {
     return () => observer.disconnect();
   }, []);
 
-  // Init Google Map only after visible
   useEffect(() => {
-    if (!isVisible || !containerRef.current) return;
-    let cancelled = false;
+    if (!isVisible || !containerRef.current || mapRef.current) return;
 
-    loadGoogleMaps()
-      .then((maps) => {
-        if (cancelled || !containerRef.current) return;
+    const map = L.map(containerRef.current, {
+      scrollWheelZoom: true,
+      zoomControl: true,
+      dragging: true,
+    }).setView([-14, -51], 4);
 
-        const map = new maps.Map(containerRef.current, {
-          center: { lat: -14, lng: -51 },
-          zoom: 4,
-          disableDefaultUI: true,
-          zoomControl: false,
-          styles: DARK_STYLE,
-          backgroundColor: "#0e1626",
-          gestureHandling: "greedy",
-        });
-        mapRef.current = map;
-        infoRef.current = new maps.InfoWindow();
-        setMapReady(true);
-      })
-      .catch((err) => {
-        console.error("Google Maps error:", err);
-        if (!cancelled) setMapError(err.message);
-      });
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; <a href="https://carto.com">CARTO</a>',
+      maxZoom: 18,
+    }).addTo(map);
 
-    return () => { cancelled = true; };
+    mapRef.current = map;
+    layerRef.current = L.layerGroup().addTo(map);
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      layerRef.current = null;
+    };
   }, [isVisible]);
 
   // Filtered data
@@ -211,123 +157,75 @@ export default function ClientDistributionMap() {
   const totalClients = filtered.reduce((s, c) => s + c.clients, 0);
   const totalRevenue = filtered.reduce((s, c) => s + c.revenue, 0);
 
-  // Update markers whenever filtered data or map changes
+  // Draw markers on Leaflet
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !mapReady || cityData.length === 0) return;
+    const layer = layerRef.current;
+    if (!map || !layer || cityData.length === 0) return;
 
-    // Clear old markers
-    markersRef.current.forEach(m => m.setMap(null));
-    markersRef.current = [];
-    circlesRef.current.forEach(c => c.setMap(null));
-    circlesRef.current = [];
+    layer.clearLayers();
 
     const maxClients = Math.max(...filtered.map(c => c.clients), 1);
     const maxRevenue = Math.max(...filtered.map(c => c.revenue), 1);
-    const bounds = new google.maps.LatLngBounds();
-    let hasPoints = false;
+    const bounds: L.LatLngTuple[] = [];
 
     filtered.forEach(c => {
       const coords = CITY_COORDS[c.city];
       if (!coords) return;
-      const pos = { lat: coords[0], lng: coords[1] };
-      bounds.extend(pos);
-      hasPoints = true;
+      bounds.push(coords);
 
-      const scale = 8 + (c.clients / maxClients) * 18;
+      const radius = 6 + (c.clients / maxClients) * 14;
       const intensity = c.revenue / maxRevenue;
       const hue = 160 + (1 - intensity) * 60;
 
-      const marker = new google.maps.Marker({
-        position: pos,
-        map,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale,
-          fillColor: `hsl(${hue}, 70%, 50%)`,
-          fillOpacity: 0.7,
-          strokeColor: `hsl(${hue}, 80%, 40%)`,
-          strokeWeight: 2,
-        },
-        zIndex: c.clients,
-      });
+      const marker = L.circleMarker(coords, {
+        radius,
+        fillColor: `hsl(${hue}, 70%, 50%)`,
+        fillOpacity: 0.7,
+        color: `hsl(${hue}, 80%, 40%)`,
+        weight: 2,
+      }).addTo(layer);
 
-      marker.addListener("click", () => {
-        infoRef.current?.setContent(`
-          <div style="font-family:system-ui;font-size:12px;min-width:180px;line-height:1.6;color:#e5e7eb;">
-            <div style="font-weight:700;font-size:14px;margin-bottom:4px;color:hsl(${hue},70%,55%);">📍 ${c.city}</div>
-            <div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">${STATE_NAMES[c.state] || c.state}</div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
-              <div style="background:rgba(255,255,255,0.05);padding:6px 8px;border-radius:6px;">
-                <div style="font-size:10px;color:#9ca3af;">Clientes</div>
-                <div style="font-weight:700;font-size:16px;">${c.clients}</div>
-              </div>
-              <div style="background:rgba(255,255,255,0.05);padding:6px 8px;border-radius:6px;">
-                <div style="font-size:10px;color:#9ca3af;">Vendas</div>
-                <div style="font-weight:700;font-size:16px;">${c.sales}</div>
-              </div>
+      marker.bindPopup(`
+        <div style="font-family:system-ui;font-size:12px;min-width:180px;line-height:1.6;color:#e5e7eb;">
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px;color:hsl(${hue},70%,55%);">📍 ${c.city}</div>
+          <div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">${STATE_NAMES[c.state] || c.state}</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+            <div style="background:rgba(255,255,255,0.05);padding:6px 8px;border-radius:6px;">
+              <div style="font-size:10px;color:#9ca3af;">Clientes</div>
+              <div style="font-weight:700;font-size:16px;">${c.clients}</div>
             </div>
-            <div style="margin-top:8px;padding:6px 8px;background:rgba(52,211,153,0.1);border-radius:6px;">
-              <div style="font-size:10px;color:#9ca3af;">Receita Total</div>
-              <div style="font-weight:700;font-size:14px;color:#34d399;">${fmt(c.revenue)}</div>
+            <div style="background:rgba(255,255,255,0.05);padding:6px 8px;border-radius:6px;">
+              <div style="font-size:10px;color:#9ca3af;">Vendas</div>
+              <div style="font-weight:700;font-size:16px;">${c.sales}</div>
             </div>
           </div>
-        `);
-        infoRef.current?.open(map, marker);
-      });
-
-      markersRef.current.push(marker);
-
-      // Pulse ring for top city
-      if (c.clients === maxClients) {
-        const ring = new google.maps.Circle({
-          center: pos,
-          radius: 80000,
-          strokeColor: `hsl(${hue}, 70%, 50%)`,
-          strokeWeight: 1,
-          strokeOpacity: 0.3,
-          fillColor: `hsl(${hue}, 70%, 50%)`,
-          fillOpacity: 0.08,
-          map,
-        });
-        circlesRef.current.push(ring);
-      }
+          <div style="margin-top:8px;padding:6px 8px;background:rgba(52,211,153,0.1);border-radius:6px;">
+            <div style="font-size:10px;color:#9ca3af;">Receita Total</div>
+            <div style="font-weight:700;font-size:14px;color:#34d399;">${fmt(c.revenue)}</div>
+          </div>
+        </div>
+      `, { className: "city-photo-popup", maxWidth: 260, minWidth: 200 });
     });
 
-    if (hasPoints && filtered.length >= 2) {
-      map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
-    } else if (filtered.length === 1) {
-      const c = CITY_COORDS[filtered[0].city];
-      if (c) { map.setCenter({ lat: c[0], lng: c[1] }); map.setZoom(8); }
+    if (bounds.length >= 2) {
+      map.fitBounds(bounds, { padding: [40, 40] });
     }
-  }, [mapReady, filtered, cityData]);
-
-  const handleZoomIn = () => { const z = mapRef.current?.getZoom(); if (z != null) mapRef.current?.setZoom(z + 1); };
-  const handleZoomOut = () => { const z = mapRef.current?.getZoom(); if (z != null) mapRef.current?.setZoom(z - 1); };
-  const handleResetView = () => { mapRef.current?.setCenter({ lat: -14, lng: -51 }); mapRef.current?.setZoom(4); };
-
-  const handleLocate = useCallback(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const points = filtered.map(c => CITY_COORDS[c.city]).filter(Boolean);
-    if (points.length < 2) return;
-    const bounds = new google.maps.LatLngBounds();
-    points.forEach(p => bounds.extend({ lat: p[0], lng: p[1] }));
-    map.fitBounds(bounds, { top: 40, right: 40, bottom: 40, left: 40 });
-  }, [filtered]);
+  }, [filtered, cityData]);
 
   const handleCityClick = useCallback((city: string) => {
     const coords = CITY_COORDS[city];
     if (!coords || !mapRef.current) return;
-    mapRef.current.panTo({ lat: coords[0], lng: coords[1] });
-    mapRef.current.setZoom(10);
-
-    // Find and click the marker
-    const marker = markersRef.current.find(m => {
-      const pos = m.getPosition();
-      return pos && Math.abs(pos.lat() - coords[0]) < 0.01 && Math.abs(pos.lng() - coords[1]) < 0.01;
+    mapRef.current.setView(coords, 10);
+    // Find and open the marker popup
+    layerRef.current?.eachLayer((l) => {
+      if (l instanceof L.CircleMarker) {
+        const pos = l.getLatLng();
+        if (Math.abs(pos.lat - coords[0]) < 0.01 && Math.abs(pos.lng - coords[1]) < 0.01) {
+          l.openPopup();
+        }
+      }
     });
-    if (marker) google.maps.event.trigger(marker, "click");
   }, []);
 
   const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
@@ -382,47 +280,7 @@ export default function ClientDistributionMap() {
 
       {/* Map */}
       <div className={`relative rounded-xl overflow-hidden border border-border/50 transition-all duration-300 ${isFullscreen ? 'fixed inset-4 z-50' : ''}`}>
-        <div ref={containerRef} style={{ height: isFullscreen ? "100%" : "420px", background: "#0e1626" }} className="w-full" />
-
-        {mapError && (
-          <div className="absolute inset-0 flex items-center justify-center bg-card/95 z-20">
-            <div className="text-center p-6 max-w-sm">
-              <MapPin className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm font-medium text-foreground mb-1">Mapa indisponível</p>
-              <p className="text-xs text-muted-foreground">{mapError}</p>
-            </div>
-          </div>
-        )}
-
-        {!mapError && !mapReady && (
-          <div className="absolute inset-0 flex items-center justify-center z-20">
-            <div className="text-center">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-xs text-muted-foreground">Carregando mapa...</p>
-            </div>
-          </div>
-        )}
-
-        {/* Controls */}
-        {mapReady && (
-          <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-[1000]">
-            <Button size="sm" variant="secondary" className="w-8 h-8 p-0 shadow-lg backdrop-blur-md bg-card/80" onClick={handleZoomIn}>
-              <ZoomIn className="w-4 h-4" />
-            </Button>
-            <Button size="sm" variant="secondary" className="w-8 h-8 p-0 shadow-lg backdrop-blur-md bg-card/80" onClick={handleZoomOut}>
-              <ZoomOut className="w-4 h-4" />
-            </Button>
-            <Button size="sm" variant="secondary" className="w-8 h-8 p-0 shadow-lg backdrop-blur-md bg-card/80" onClick={handleLocate}>
-              <LocateFixed className="w-4 h-4" />
-            </Button>
-            <Button size="sm" variant="secondary" className="w-8 h-8 p-0 shadow-lg backdrop-blur-md bg-card/80" onClick={handleResetView}>
-              <Maximize2 className="w-4 h-4" />
-            </Button>
-            <Button size="sm" variant="secondary" className="w-8 h-8 p-0 shadow-lg backdrop-blur-md bg-card/80" onClick={toggleFullscreen}>
-              <Maximize2 className="w-4 h-4" />
-            </Button>
-          </div>
-        )}
+        <div ref={containerRef} style={{ height: isFullscreen ? "100%" : "420px", background: "#0e1626" }} className="w-full rounded-lg" />
 
         {/* Stats overlay */}
         <div className="absolute top-3 left-3 z-[1000]">
