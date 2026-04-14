@@ -85,7 +85,7 @@ export default function FinancialSection({ filtered, sellerNames }: Props) {
   const handleBarClick = (data: any, chart: string) => {
     if (!data?.activePayload?.[0]?.payload) return;
     const payload = data.activePayload[0].payload;
-    if (payload.sales) setDrilldown({ label: `${chart} — ${payload.month || payload.name || ''}`, sales: payload.sales });
+    if (payload.sales) setDrilldown({ label: `${chart} — ${payload.monthLabel || payload.month || payload.name || ''}`, sales: payload.sales });
   };
 
   return (
