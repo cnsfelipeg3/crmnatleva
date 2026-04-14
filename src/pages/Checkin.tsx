@@ -975,8 +975,8 @@ export default function Checkin() {
                           <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Cartão de Embarque</span>
                         </div>
                         {passengers.map((pax: any, idx: number) => (
-                          <div key={pax.id} className={`grid grid-cols-[1fr_120px_1fr] gap-3 px-4 py-3 items-center ${idx < passengers.length - 1 ? "border-b border-border/20" : ""}`}>
-                            <p className="text-sm font-medium text-foreground flex items-center gap-1.5 truncate">
+                          <div key={pax.id} className={`grid grid-cols-[minmax(0,1.5fr)_100px_minmax(0,1fr)] gap-3 px-4 py-3 items-center ${idx < passengers.length - 1 ? "border-b border-border/20" : ""}`}>
+                            <p className="text-sm font-medium text-foreground flex items-center gap-1.5 break-words">
                               <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> {pax.full_name}
                             </p>
                             <Input
