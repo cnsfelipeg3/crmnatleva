@@ -238,15 +238,35 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
         },
       });
 
-      const infoWindow = new google.maps.InfoWindow({
-        content: `<div style="font-family:system-ui;min-width:180px;"><strong>${iataToLabel(iata)}</strong><br/>${data.count} rota(s) · ${fmt(data.revenue)}</div>`,
-      });
+      const cityImg = getCityImageUrl(iata);
+      const cityLabel = iataToLabel(iata);
+      const popupContent = `
+        <div data-dest-iata="${iata}" style="font-family:system-ui;min-width:220px;cursor:pointer;border-radius:10px;overflow:hidden;background:#1a1f2e;">
+          <img src="${cityImg}" alt="${cityLabel}" style="width:100%;height:110px;object-fit:cover;" onerror="this.style.display='none'" />
+          <div style="padding:10px 12px;">
+            <strong style="color:#fff;font-size:14px;">${cityLabel}</strong>
+            <div style="color:#94a3b8;font-size:12px;margin-top:4px;">${data.count} rota(s) · ${fmt(data.revenue)}</div>
+            <div style="color:#34d399;font-size:11px;margin-top:6px;display:flex;align-items:center;gap:4px;">
+              <span>Ver detalhes →</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const infoWindow = new google.maps.InfoWindow({ content: popupContent });
 
       marker.addListener("click", () => {
         googleOverlaysRef.current.forEach((o) => {
           if (o instanceof google.maps.InfoWindow) o.close();
         });
         infoWindow.open(map, marker);
+      });
+
+      google.maps.event.addListener(infoWindow, "domready", () => {
+        const iwOuter = document.querySelector(`[data-dest-iata="${iata}"]`);
+        if (iwOuter && onDestinationClick) {
+          iwOuter.addEventListener("click", () => onDestinationClick(iata));
+        }
       });
 
       googleOverlaysRef.current.push(marker, infoWindow);
