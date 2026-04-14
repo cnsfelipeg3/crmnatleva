@@ -61,6 +61,9 @@ interface Route {
   destination: string;
   count: number;
   revenue: number;
+  profit?: number;
+  avgMargin?: number;
+  topMonths?: string[];
 }
 
 interface RoutesMapProps {
