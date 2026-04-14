@@ -379,11 +379,6 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
         style={{ height }}
         className="rounded-lg overflow-hidden border border-border"
       />
-      {fallbackMode && (
-        <div className="absolute left-3 top-3 text-[10px] rounded-md border border-border bg-background/90 px-2 py-1 text-muted-foreground">
-          Modo compatível ativo
-        </div>
-      )}
     </div>
   );
 }
