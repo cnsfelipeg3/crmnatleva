@@ -339,15 +339,22 @@ export default function Sales() {
                         <td className="px-3 py-3">{renderRoute(sale)}</td>
                         <td className="px-2 py-3 text-center">{(sale.adults || 0) + (sale.children || 0)}</td>
                         <td className="px-2 py-3">
-                          <div className="flex gap-1 items-center">
+                          <div className="flex gap-1 items-center flex-wrap">
                             {sale.airline && <AirlineLogo iata={sale.airline} size={18} />}
-                            {sale.products?.includes("Aéreo") && !sale.airline && <Plane className="w-3.5 h-3.5 text-primary" />}
-                            {sale.products?.includes("Hotel") && (
-                              <Tooltip>
-                                <TooltipTrigger asChild><span><Hotel className="w-3.5 h-3.5 text-accent" /></span></TooltipTrigger>
-                                <TooltipContent>{sale.hotel_name || "Hotel"}</TooltipContent>
-                              </Tooltip>
-                            )}
+                            {(sale.products || []).map((p) => {
+                              const cfg = PRODUCT_ICON_MAP[p];
+                              if (!cfg) return null;
+                              // Skip showing Plane icon if we already have AirlineLogo
+                              if ((p === "Passagem Aérea" || p === "Passagem Aérea e Hospedagem" || p === "Remarcação Passagem Aérea") && sale.airline) return null;
+                              const Icon = cfg.icon;
+                              const tooltipLabel = p === "Hospedagem" && sale.hotel_name ? sale.hotel_name : cfg.label;
+                              return (
+                                <Tooltip key={p}>
+                                  <TooltipTrigger asChild><span><Icon className={cn("w-3.5 h-3.5", cfg.className)} /></span></TooltipTrigger>
+                                  <TooltipContent>{tooltipLabel}</TooltipContent>
+                                </Tooltip>
+                              );
+                            })}
                           </div>
                         </td>
                         <td className="px-3 py-3 text-right font-medium">{fmt(sale.received_value || 0)}</td>
