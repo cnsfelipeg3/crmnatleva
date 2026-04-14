@@ -1684,6 +1684,54 @@ export type Database = {
           },
         ]
       }
+      checkin_passenger_details: {
+        Row: {
+          boarding_pass_file_name: string | null
+          boarding_pass_url: string | null
+          checkin_task_id: string
+          created_at: string | null
+          id: string
+          passenger_id: string
+          seat: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          boarding_pass_file_name?: string | null
+          boarding_pass_url?: string | null
+          checkin_task_id: string
+          created_at?: string | null
+          id?: string
+          passenger_id: string
+          seat?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          boarding_pass_file_name?: string | null
+          boarding_pass_url?: string | null
+          checkin_task_id?: string
+          created_at?: string | null
+          id?: string
+          passenger_id?: string
+          seat?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checkin_passenger_details_checkin_task_id_fkey"
+            columns: ["checkin_task_id"]
+            isOneToOne: false
+            referencedRelation: "checkin_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "checkin_passenger_details_passenger_id_fkey"
+            columns: ["passenger_id"]
+            isOneToOne: false
+            referencedRelation: "passengers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checkin_tasks: {
         Row: {
           assigned_to_user_id: string | null
