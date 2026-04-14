@@ -39,7 +39,11 @@ export default function FinancialSection({ filtered, sellerNames }: Props) {
     return Object.values(map).sort((a, b) => a.month.localeCompare(b.month)).map(m => ({
       ...m,
       margem: m.receita > 0 ? (m.lucro / m.receita) * 100 : 0,
-      monthLabel: m.month.split('-').reverse().join('/'),
+      monthLabel: (() => {
+        const [yr, mo] = m.month.split('-');
+        const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+        return `${monthNames[parseInt(mo, 10) - 1]} ${yr}`;
+      })(),
     }));
   }, [filtered]);
 
@@ -81,7 +85,7 @@ export default function FinancialSection({ filtered, sellerNames }: Props) {
   const handleBarClick = (data: any, chart: string) => {
     if (!data?.activePayload?.[0]?.payload) return;
     const payload = data.activePayload[0].payload;
-    if (payload.sales) setDrilldown({ label: `${chart} — ${payload.month || payload.name || ''}`, sales: payload.sales });
+    if (payload.sales) setDrilldown({ label: `${chart} — ${payload.monthLabel || payload.month || payload.name || ''}`, sales: payload.sales });
   };
 
   return (

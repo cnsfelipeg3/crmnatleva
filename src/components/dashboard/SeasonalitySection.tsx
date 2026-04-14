@@ -27,7 +27,11 @@ export default function SeasonalitySection({ filtered, allSales }: Props) {
       map[key].vendas++;
       map[key].sales.push(s);
     });
-    return Object.values(map).sort((a, b) => a.month.localeCompare(b.month));
+    const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    return Object.values(map).sort((a, b) => a.month.localeCompare(b.month)).map(m => {
+      const [yr, mo] = m.month.split('-');
+      return { ...m, monthLabel: `${monthNames[parseInt(mo, 10) - 1]} ${yr}` };
+    });
   }, [filtered]);
 
   const weeklyData = useMemo(() => {
@@ -74,7 +78,7 @@ export default function SeasonalitySection({ filtered, allSales }: Props) {
   const handleChartClick = (e: any, dataSource: any[]) => {
     if (e?.activePayload?.[0]?.payload?.sales) {
       const p = e.activePayload[0].payload;
-      setDrilldown({ label: `Período: ${p.month || p.week}`, sales: p.sales });
+      setDrilldown({ label: `Período: ${p.monthLabel || p.month || p.week}`, sales: p.sales });
     }
   };
 
@@ -101,7 +105,7 @@ export default function SeasonalitySection({ filtered, allSales }: Props) {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
-                  <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
+                  <XAxis dataKey="monthLabel" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                   <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                   <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
                   <Area type="monotone" dataKey="receita" stroke="hsl(var(--chart-1))" fill="url(#receitaGrad)" strokeWidth={2} name="Receita" cursor="pointer" />
