@@ -60,6 +60,7 @@ export default function TripDetail() {
   const [costItems, setCostItems] = useState<any[]>([]);
   const [passengers, setPassengers] = useState<any[]>([]);
   const [checkinTasks, setCheckinTasks] = useState<any[]>([]);
+  const [checkinPassengerDetails, setCheckinPassengerDetails] = useState<Record<string, any[]>>({});
   const [lodgingTasks, setLodgingTasks] = useState<any[]>([]);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [sellerName, setSellerName] = useState("");
