@@ -113,53 +113,9 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
   const leafletMapRef = useRef<L.Map | null>(null);
   const leafletLayerRef = useRef<L.LayerGroup | null>(null);
 
-  const [fallbackMode, setFallbackMode] = useState(false);
+  const [fallbackMode, setFallbackMode] = useState(true); // Start with Leaflet (instant render)
 
   const validRoutes = routes.filter((r) => AIRPORT_COORDS[r.origin] && AIRPORT_COORDS[r.destination]);
-
-  // Init Google map (primary)
-  useEffect(() => {
-    if (fallbackMode || !containerRef.current) return;
-
-    let cancelled = false;
-    let authTimer: number | undefined;
-
-    loadGoogleMapsCore()
-      .then(({ Map }) => {
-        if (cancelled || !containerRef.current) return;
-        if (hasGoogleMapsAuthFailure()) throw new Error("Google Maps auth failure");
-
-        const map = new Map(containerRef.current, {
-          center: { lat: -5, lng: -30 },
-          zoom: 3,
-          disableDefaultUI: true,
-          zoomControl: true,
-          styles: DARK_STYLE,
-          backgroundColor: "#0e1626",
-        });
-
-        googleMapRef.current = map;
-
-        // Detect delayed auth failures and auto-fallback
-        authTimer = window.setTimeout(() => {
-          const hasDomError = !!containerRef.current?.querySelector(".gm-err-container");
-          if ((hasGoogleMapsAuthFailure() || hasDomError) && !cancelled) {
-            googleMapRef.current = null;
-            if (containerRef.current) containerRef.current.innerHTML = "";
-            setFallbackMode(true);
-          }
-        }, 1200);
-      })
-      .catch((err) => {
-        console.error("Google Maps init error:", err);
-        if (!cancelled) setFallbackMode(true);
-      });
-
-    return () => {
-      cancelled = true;
-      if (authTimer) window.clearTimeout(authTimer);
-    };
-  }, [fallbackMode]);
 
   // Draw on Google map
   useEffect(() => {
