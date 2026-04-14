@@ -117,36 +117,18 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
       if (p.id !== id) return p;
       const updated = { ...p, [field]: value };
 
-      // Auto-calculate fees when gateway, installments, or gross_value change
-      if (field === "gateway" || field === "installments" || field === "gross_value" || field === "payment_method") {
-        const isCard = CARD_METHODS.includes(updated.payment_method);
-        if (isCard && updated.gateway && updated.gross_value > 0) {
-          const rule = feeRules.find((r: any) =>
-            r.acquirer === updated.gateway &&
-            r.installments === updated.installments
-          );
-          if (rule) {
-            updated.fee_percent = (rule as any).fee_percent || 0;
-            updated.fee_fixed = (rule as any).fee_fixed || 0;
-            updated.fee_total = (updated.gross_value * updated.fee_percent / 100) + updated.fee_fixed;
-            updated.net_value = updated.gross_value - updated.fee_total;
-          } else {
-            updated.fee_percent = 0;
-            updated.fee_fixed = 0;
-            updated.fee_total = 0;
-            updated.net_value = updated.gross_value;
-          }
-        } else {
-          updated.fee_percent = 0;
-          updated.fee_fixed = 0;
-          updated.fee_total = 0;
-          updated.net_value = updated.gross_value;
-        }
+      // When gross_value changes and net_value hasn't been manually set, default net_value to gross_value
+      if (field === "gross_value" && p.net_value === 0) {
+        updated.net_value = parseFloat(value) || 0;
       }
 
-      // Reset gateway fields when switching away from card
+      // Auto-calculate fee_total from the difference
+      if (field === "gross_value" || field === "net_value") {
+        updated.fee_total = Math.max(0, updated.gross_value - updated.net_value);
+      }
+
+      // Reset installments when switching away from card
       if (field === "payment_method" && !CARD_METHODS.includes(value)) {
-        updated.gateway = "";
         updated.installments = 1;
       }
 
@@ -249,7 +231,7 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Valor (R$)</Label>
+                <Label className="text-xs">Valor pago pelo cliente (R$)</Label>
                 <Input
                   type="number" step="0.01" className="h-9"
                   value={payment.gross_value || ""}
@@ -268,54 +250,57 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
               </div>
             </div>
 
-            {/* Card-specific: Gateway + Installments */}
-            {isCard && (
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Gateway de pagamento</Label>
-                  <Select value={payment.gateway} onValueChange={v => updatePayment(payment.id, "gateway", v)}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Selecionar gateway" /></SelectTrigger>
-                    <SelectContent>
-                      {gateways.map(g => (
-                        <SelectItem key={g} value={g}>{g}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+            {/* Gateway + Installments + Valor Recebido */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Gateway de pagamento</Label>
+                <Input
+                  className="h-9"
+                  placeholder="Ex: Mercado Pago, PagBank..."
+                  value={payment.gateway || ""}
+                  onChange={e => updatePayment(payment.id, "gateway", e.target.value)}
+                />
+              </div>
+              {isCard && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">Parcelas</Label>
                   <Select value={String(payment.installments)} onValueChange={v => updatePayment(payment.id, "installments", Number(v))}>
                     <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {Array.from({ length: payment.gateway ? getMaxInstallments(payment.gateway) : 18 }, (_, i) => i + 1).map(n => (
+                      {Array.from({ length: 18 }, (_, i) => i + 1).map(n => (
                         <SelectItem key={n} value={String(n)}>{n}x</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
+              )}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Valor recebido (R$)</Label>
+                <Input
+                  type="number" step="0.01" className="h-9"
+                  value={payment.net_value || ""}
+                  onChange={e => updatePayment(payment.id, "net_value", parseFloat(e.target.value) || 0)}
+                  placeholder="Descontando taxas"
+                />
               </div>
-            )}
+            </div>
 
-            {/* Card fee result */}
-            {isCard && payment.gateway && payment.gross_value > 0 && (
+            {/* Fee summary when there's a difference */}
+            {payment.gross_value > 0 && payment.net_value > 0 && payment.gross_value !== payment.net_value && (
               <div className="bg-muted/30 rounded-lg p-3 space-y-1.5">
                 <div className="flex justify-between text-xs">
                   <span className="text-muted-foreground">Valor pago pelo cliente</span>
                   <span className="font-medium">{fmt(payment.gross_value)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted-foreground">
-                    Taxa {payment.fee_percent > 0 ? `(${payment.fee_percent.toFixed(2)}%` : ""}
-                    {payment.fee_fixed > 0 ? ` + ${fmt(payment.fee_fixed)}` : ""}
-                    {payment.fee_percent > 0 ? ")" : ""}
-                  </span>
-                  <span className="font-medium text-destructive">- {fmt(payment.fee_total)}</span>
+                  <span className="text-muted-foreground">Taxa retida</span>
+                  <span className="font-medium text-destructive">- {fmt(payment.gross_value - payment.net_value)}</span>
                 </div>
                 <div className="border-t border-border pt-1.5 flex justify-between text-xs">
                   <span className="font-semibold text-muted-foreground">Valor líquido recebido</span>
                   <span className="font-bold text-primary">{fmt(payment.net_value)}</span>
                 </div>
-                {payment.installments > 1 && (
+                {isCard && payment.installments > 1 && (
                   <div className="flex justify-between text-[10px] text-muted-foreground">
                     <span>Parcela cliente</span>
                     <span>{payment.installments}x de {fmt(payment.gross_value / payment.installments)}</span>
@@ -323,25 +308,6 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
                 )}
               </div>
             )}
-
-            {/* Non-card: receiving account */}
-            {!isCard && (
-              <div className="space-y-1.5">
-                <Label className="text-xs">Conta de recebimento</Label>
-                <Select value={payment.receiving_account_id || "none"} onValueChange={v => updatePayment(payment.id, "receiving_account_id", v === "none" ? "" : v)}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Selecionar conta..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Não informar</SelectItem>
-                    {accounts.map((a: any) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name} {a.bank_name ? `• ${a.bank_name}` : ""} {a.pix_key ? `• ${a.pix_key}` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
             {/* Date fields */}
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
