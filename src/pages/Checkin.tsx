@@ -968,24 +968,31 @@ export default function Checkin() {
                         Nenhum passageiro cadastrado para esta venda. Cadastre os passageiros primeiro.
                       </div>
                     ) : (
-                      <div className="border border-border/30 rounded-lg overflow-hidden">
-                        <div className="grid grid-cols-[minmax(0,1.5fr)_100px_minmax(0,1fr)] gap-3 px-4 py-2 bg-muted/40 border-b border-border/30">
-                          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Passageiro</span>
-                          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Assento</span>
-                          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Cartão de Embarque</span>
-                        </div>
+                      <table className="w-full border border-border/30 rounded-lg overflow-hidden">
+                        <thead>
+                          <tr className="bg-muted/40 border-b border-border/30">
+                            <th className="text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-4 py-2">Passageiro</th>
+                            <th className="text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-3 py-2 w-[100px]">Assento</th>
+                            <th className="text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground px-3 py-2">Cartão de Embarque</th>
+                          </tr>
+                        </thead>
+                        <tbody>
                         {passengers.map((pax: any, idx: number) => (
-                          <div key={pax.id} className={`grid grid-cols-[minmax(0,1.5fr)_100px_minmax(0,1fr)] gap-3 px-4 py-3 items-center ${idx < passengers.length - 1 ? "border-b border-border/20" : ""}`}>
-                            <p className="text-sm font-medium text-foreground flex items-center gap-1.5 break-words">
-                              <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> {pax.full_name}
-                            </p>
-                            <Input
-                              placeholder="Ex: 12A"
-                              className="h-8 text-xs"
-                              value={passengerSeats[pax.id] || ""}
-                              onChange={e => setPassengerSeats(prev => ({ ...prev, [pax.id]: e.target.value }))}
-                            />
-                            <div className="min-w-0">
+                          <tr key={pax.id} className={idx < passengers.length - 1 ? "border-b border-border/20" : ""}>
+                            <td className="px-4 py-3 align-middle">
+                              <p className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                                <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> {pax.full_name}
+                              </p>
+                            </td>
+                            <td className="px-3 py-3 align-middle w-[100px]">
+                              <Input
+                                placeholder="Ex: 12A"
+                                className="h-8 text-xs"
+                                value={passengerSeats[pax.id] || ""}
+                                onChange={e => setPassengerSeats(prev => ({ ...prev, [pax.id]: e.target.value }))}
+                              />
+                            </td>
+                            <td className="px-3 py-3 align-middle">
                               {passengerFiles[pax.id] ? (
                                 <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
                                   <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
@@ -1035,10 +1042,11 @@ export default function Checkin() {
                                   e.target.value = "";
                                 }}
                               />
-                            </div>
-                          </div>
+                            </td>
+                          </tr>
                         ))}
-                      </div>
+                        </tbody>
+                      </table>
                     )}
                   </div>
 
