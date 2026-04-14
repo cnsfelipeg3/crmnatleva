@@ -253,14 +253,21 @@ export default function Sales() {
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">{(sale.adults || 0) + (sale.children || 0)} pax</span>
-                      <div className="flex gap-1 items-center">
+                      <div className="flex gap-1 items-center flex-wrap">
                         {sale.airline && <AirlineLogo iata={sale.airline} size={16} />}
-                        {sale.products?.includes("Hotel") && (
-                          <Tooltip>
-                            <TooltipTrigger asChild><span><Hotel className="w-3.5 h-3.5 text-accent" /></span></TooltipTrigger>
-                            <TooltipContent>{sale.hotel_name || "Hotel"}</TooltipContent>
-                          </Tooltip>
-                        )}
+                        {(sale.products || []).map((p) => {
+                          const cfg = PRODUCT_ICON_MAP[p];
+                          if (!cfg) return null;
+                          if ((p === "Passagem Aérea" || p === "Passagem Aérea e Hospedagem" || p === "Remarcação Passagem Aérea") && sale.airline) return null;
+                          const Icon = cfg.icon;
+                          const tooltipLabel = p === "Hospedagem" && sale.hotel_name ? sale.hotel_name : cfg.label;
+                          return (
+                            <Tooltip key={p}>
+                              <TooltipTrigger asChild><span><Icon className={cn("w-3.5 h-3.5", cfg.className)} /></span></TooltipTrigger>
+                              <TooltipContent>{tooltipLabel}</TooltipContent>
+                            </Tooltip>
+                          );
+                        })}
                       </div>
                     </div>
                     <div className="text-right">
