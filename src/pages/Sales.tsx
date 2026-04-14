@@ -284,23 +284,39 @@ export default function Sales() {
             {/* Desktop table view */}
             <Card className="glass-card overflow-hidden hidden sm:block">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full text-sm table-fixed">
+                  <colgroup>
+                    <col style={{ width: "14%" }} />
+                    <col style={{ width: "8%" }} />
+                    <col style={{ width: "7%" }} />
+                    <col style={{ width: "7%" }} />
+                    <col style={{ width: "9%" }} />
+                    <col style={{ width: "4%" }} />
+                    <col style={{ width: "6%" }} />
+                    <col style={{ width: "9%" }} />
+                    <col style={{ width: "9%" }} />
+                    <col style={{ width: "9%" }} />
+                    <col style={{ width: "5.5%" }} />
+                    <col style={{ width: "6%" }} />
+                    <col style={{ width: "6%" }} />
+                    <col style={{ width: "2.5%" }} />
+                  </colgroup>
                   <thead>
                     <tr className="border-b border-border bg-muted/50">
                       {([
                         { key: "name", label: "Venda", align: "text-left", px: "px-3" },
-                        { key: "close_date", label: "Data da Venda", align: "text-left", px: "px-3" },
-                        { key: "departure_date", label: "Ida", align: "text-left", px: "px-3" },
-                        { key: "return_date", label: "Volta", align: "text-left", px: "px-3" },
-                        { key: null, label: "Rota", align: "text-left", px: "px-3" },
-                        { key: null, label: "PAX", align: "text-center", px: "px-2" },
-                        { key: null, label: "Produtos", align: "text-left", px: "px-2" },
-                        { key: "received_value", label: "Valor", align: "text-right", px: "px-3" },
-                        { key: "total_cost", label: "Custo", align: "text-right", px: "px-3" },
-                        { key: "profit", label: "Lucro", align: "text-right", px: "px-3" },
-                        { key: "margin", label: "Margem", align: "text-right", px: "px-2" },
-                        { key: null, label: "Lead", align: "text-center", px: "px-2" },
-                        { key: "status", label: "Status", align: "text-left", px: "px-2" },
+                        { key: "close_date", label: "Data da Venda", align: "text-left", px: "px-2" },
+                        { key: "departure_date", label: "Ida", align: "text-left", px: "px-2" },
+                        { key: "return_date", label: "Volta", align: "text-left", px: "px-2" },
+                        { key: null, label: "Rota", align: "text-left", px: "px-2" },
+                        { key: null, label: "PAX", align: "text-center", px: "px-1" },
+                        { key: null, label: "Produtos", align: "text-left", px: "px-1" },
+                        { key: "received_value", label: "Valor", align: "text-right", px: "px-2" },
+                        { key: "total_cost", label: "Custo", align: "text-right", px: "px-2" },
+                        { key: "profit", label: "Lucro", align: "text-right", px: "px-2" },
+                        { key: "margin", label: "Margem", align: "text-right", px: "px-1" },
+                        { key: null, label: "Lead", align: "text-center", px: "px-1" },
+                        { key: "status", label: "Status", align: "text-left", px: "px-1" },
                       ] as { key: ColSortKey | null; label: string; align: string; px: string }[]).map((col) => (
                         <th
                           key={col.label}
