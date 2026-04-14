@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   ClipboardCheck, Clock, AlertTriangle, CheckCircle2, Copy,
-  ExternalLink, Eye, Plane, User,
+  ExternalLink, Eye, Plane, User, Upload, X, FileText,
   RefreshCw, Loader2, Shield, Calendar, List, LayoutGrid, Columns3,
   ArrowRight, Timer, Zap,
 } from "lucide-react";
