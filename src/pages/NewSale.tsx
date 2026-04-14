@@ -708,7 +708,7 @@ export default function NewSale() {
                     </div>
                     <div>
                       <p className={cn("text-sm font-medium", form.lead_type === "organico" ? "text-foreground" : "text-muted-foreground")}>Lead Orgânico</p>
-                      <p className="text-[11px] text-muted-foreground">Comissão 40% sobre lucro</p>
+                      <p className="text-[11px] text-muted-foreground">Comissão 30% sobre lucro</p>
                     </div>
                   </button>
                 </div>
