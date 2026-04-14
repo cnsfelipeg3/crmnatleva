@@ -59,7 +59,7 @@ export default function GeographicSection({ filtered }: Props) {
               Mapa de Rotas Aéreas
             </h3>
             <Suspense fallback={<MapFallback />}>
-              <RoutesMap routes={routes} height="300px" />
+              <RoutesMap routes={routes} height="300px" onDestinationClick={handleDestinationClick} />
             </Suspense>
             <div className="mt-3 flex flex-wrap gap-2">
               {routes.slice(0, 5).map((r, i) => (
