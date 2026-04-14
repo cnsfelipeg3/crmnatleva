@@ -233,9 +233,21 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
     }
   }, [fallbackMode, validRoutes, sales]);
 
-  // Init Leaflet fallback
+  // Init Leaflet only when visible (IntersectionObserver)
+  const [isVisible, setIsVisible] = useState(false);
+
   useEffect(() => {
-    if (!fallbackMode || !containerRef.current || leafletMapRef.current) return;
+    if (!containerRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setIsVisible(true); observer.disconnect(); } },
+      { rootMargin: "200px" }
+    );
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!fallbackMode || !isVisible || !containerRef.current || leafletMapRef.current) return;
     containerRef.current.innerHTML = "";
 
     const map = L.map(containerRef.current, {
@@ -257,7 +269,7 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
       leafletMapRef.current = null;
       leafletLayerRef.current = null;
     };
-  }, [fallbackMode]);
+  }, [fallbackMode, isVisible]);
 
   // Draw on Leaflet fallback
   useEffect(() => {
