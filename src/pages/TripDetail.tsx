@@ -86,6 +86,21 @@ export default function TripDetail() {
       setLodgingTasks(lodgingRes.data || []);
       setAttachments(attachRes.data || []);
 
+      // Fetch per-passenger checkin details
+      const taskIds = (checkinRes.data || []).map((t: any) => t.id);
+      if (taskIds.length > 0) {
+        const { data: paxDetails } = await supabase
+          .from("checkin_passenger_details")
+          .select("*, passengers(full_name)")
+          .in("checkin_task_id", taskIds);
+        const grouped: Record<string, any[]> = {};
+        (paxDetails || []).forEach((d: any) => {
+          if (!grouped[d.checkin_task_id]) grouped[d.checkin_task_id] = [];
+          grouped[d.checkin_task_id].push(d);
+        });
+        setCheckinPassengerDetails(grouped);
+      }
+
       if (s?.seller_id) {
         const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", s.seller_id).single();
         if (profile) setSellerName(profile.full_name);
