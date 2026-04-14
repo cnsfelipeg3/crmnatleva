@@ -153,9 +153,22 @@ export default function ClientDistributionMap() {
     fetchData();
   }, []);
 
-  // Init Google Map
+  // Lazy init Google Map only when container is visible
+  const [isVisible, setIsVisible] = useState(false);
+
   useEffect(() => {
     if (!containerRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setIsVisible(true); observer.disconnect(); } },
+      { rootMargin: "300px" }
+    );
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Init Google Map only after visible
+  useEffect(() => {
+    if (!isVisible || !containerRef.current) return;
     let cancelled = false;
 
     loadGoogleMaps()
@@ -181,7 +194,7 @@ export default function ClientDistributionMap() {
       });
 
     return () => { cancelled = true; };
-  }, []);
+  }, [isVisible]);
 
   // Filtered data
   const filtered = useMemo(() => {
