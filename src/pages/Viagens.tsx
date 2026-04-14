@@ -325,6 +325,7 @@ export default function Viagens() {
               received_value: t.received_value,
             }))}
             onSaleClick={(saleId) => navigate(`/sales/${saleId}`)}
+            onDestinationClick={(iata) => navigate(`/vendas?destino=${iata}`)}
           />
         </Card>
       </div>
