@@ -97,7 +97,23 @@ export default function FinancialSection({ filtered, sellerNames }: Props) {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} />
                   <XAxis dataKey="monthLabel" tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
                   <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} />
-                  <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: 12 }} />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null;
+                      const d = payload[0]?.payload;
+                      return (
+                        <div style={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 8, padding: '10px 14px', fontSize: 12 }}>
+                          <p style={{ fontWeight: 600, marginBottom: 6 }}>{label}</p>
+                          {payload.map((p: any) => (
+                            <p key={p.dataKey} style={{ color: p.color, margin: '2px 0' }}>{p.name} : {fmt(p.value)}</p>
+                          ))}
+                          {d?.margem != null && (
+                            <p style={{ color: 'hsl(var(--primary))', marginTop: 4, fontWeight: 600 }}>Margem : {d.margem.toFixed(1)}%</p>
+                          )}
+                        </div>
+                      );
+                    }}
+                  />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="receita" fill="hsl(var(--chart-1))" name="Receita" radius={[4, 4, 0, 0]} cursor="pointer" />
                   <Bar dataKey="custo" fill="hsl(var(--chart-2))" name="Custo" radius={[4, 4, 0, 0]} cursor="pointer" />
