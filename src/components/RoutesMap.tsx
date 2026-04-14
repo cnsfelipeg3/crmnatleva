@@ -3,6 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { iataToLabel } from "@/lib/iataUtils";
 import { loadGoogleMapsCore, hasGoogleMapsAuthFailure } from "@/lib/googleMaps";
+import { getCityImageUrl } from "@/lib/cityImages";
 
 const AIRPORT_COORDS: Record<string, [number, number]> = {
   GRU: [-23.4356, -46.4731], CGH: [-23.6261, -46.6564], GIG: [-22.8090, -43.2506],
@@ -67,6 +68,7 @@ interface RoutesMapProps {
   height?: string;
   sales?: RouteSale[];
   onSaleClick?: (saleId: string) => void;
+  onDestinationClick?: (iata: string) => void;
 }
 
 const DARK_STYLE: google.maps.MapTypeStyle[] = [
@@ -102,7 +104,7 @@ function getCurvedPath(from: google.maps.LatLngLiteral, to: google.maps.LatLngLi
   return points;
 }
 
-export default function RoutesMap({ routes, height = "400px", sales = [], onSaleClick }: RoutesMapProps) {
+export default function RoutesMap({ routes, height = "400px", sales = [], onSaleClick, onDestinationClick }: RoutesMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const googleMapRef = useRef<google.maps.Map | null>(null);
@@ -236,15 +238,35 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
         },
       });
 
-      const infoWindow = new google.maps.InfoWindow({
-        content: `<div style="font-family:system-ui;min-width:180px;"><strong>${iataToLabel(iata)}</strong><br/>${data.count} rota(s) · ${fmt(data.revenue)}</div>`,
-      });
+      const cityImg = getCityImageUrl(iata);
+      const cityLabel = iataToLabel(iata);
+      const popupContent = `
+        <div data-dest-iata="${iata}" style="font-family:system-ui;min-width:220px;cursor:pointer;border-radius:10px;overflow:hidden;background:#1a1f2e;">
+          <img src="${cityImg}" alt="${cityLabel}" style="width:100%;height:110px;object-fit:cover;" onerror="this.style.display='none'" />
+          <div style="padding:10px 12px;">
+            <strong style="color:#fff;font-size:14px;">${cityLabel}</strong>
+            <div style="color:#94a3b8;font-size:12px;margin-top:4px;">${data.count} rota(s) · ${fmt(data.revenue)}</div>
+            <div style="color:#34d399;font-size:11px;margin-top:6px;display:flex;align-items:center;gap:4px;">
+              <span>Ver detalhes →</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const infoWindow = new google.maps.InfoWindow({ content: popupContent });
 
       marker.addListener("click", () => {
         googleOverlaysRef.current.forEach((o) => {
           if (o instanceof google.maps.InfoWindow) o.close();
         });
         infoWindow.open(map, marker);
+      });
+
+      google.maps.event.addListener(infoWindow, "domready", () => {
+        const iwOuter = document.querySelector(`[data-dest-iata="${iata}"]`);
+        if (iwOuter && onDestinationClick) {
+          iwOuter.addEventListener("click", () => onDestinationClick(iata));
+        }
       });
 
       googleOverlaysRef.current.push(marker, infoWindow);
@@ -333,10 +355,8 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
       if (!coords) return;
 
       const radius = 7 + (data.count / maxAirport) * 8;
-      const salesHtml = data.salesList
-        .slice(0, 6)
-        .map((s) => `<div data-sale-id="${s.id}" style="cursor:pointer;color:#60a5fa;text-decoration:underline;margin-top:4px;">${s.display_id || s.id.slice(0, 8)} · ${fmt(s.received_value || 0)}</div>`)
-        .join("");
+      const cityImg = getCityImageUrl(iata);
+      const cityLabel = iataToLabel(iata);
 
       const marker = L.circleMarker(coords, {
         radius,
@@ -346,19 +366,36 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
         weight: 2,
       }).addTo(layer);
 
-      marker.bindPopup(`<div style="font-family:system-ui;min-width:180px;"><strong>${iataToLabel(iata)}</strong><br/>${data.count} rota(s) · ${fmt(data.revenue)}${salesHtml ? `<div style=\"margin-top:8px\">${salesHtml}</div>` : ""}</div>`);
+      const popupHtml = `
+        <div data-dest-iata="${iata}" style="font-family:system-ui;min-width:220px;cursor:pointer;border-radius:10px;overflow:hidden;background:#1a1f2e;">
+          <img src="${cityImg}" alt="${cityLabel}" style="width:100%;height:110px;object-fit:cover;" onerror="this.style.display='none'" />
+          <div style="padding:10px 12px;">
+            <strong style="color:#fff;font-size:14px;">${cityLabel}</strong>
+            <div style="color:#94a3b8;font-size:12px;margin-top:4px;">${data.count} rota(s) · ${fmt(data.revenue)}</div>
+            <div style="color:#34d399;font-size:11px;margin-top:6px;">Ver detalhes →</div>
+          </div>
+        </div>
+      `;
+
+      marker.bindPopup(popupHtml, { className: "city-photo-popup", maxWidth: 260, minWidth: 220 });
 
       marker.on("popupopen", (event) => {
-        if (!onSaleClick) return;
         const popupEl = event.popup.getElement();
         if (!popupEl) return;
 
-        popupEl.querySelectorAll("[data-sale-id]").forEach((el) => {
-          el.addEventListener("click", () => {
-            const saleId = (el as HTMLElement).dataset.saleId;
-            if (saleId) onSaleClick(saleId);
+        const destCard = popupEl.querySelector(`[data-dest-iata="${iata}"]`);
+        if (destCard && onDestinationClick) {
+          destCard.addEventListener("click", () => onDestinationClick(iata));
+        }
+
+        if (onSaleClick) {
+          popupEl.querySelectorAll("[data-sale-id]").forEach((el) => {
+            el.addEventListener("click", () => {
+              const saleId = (el as HTMLElement).dataset.saleId;
+              if (saleId) onSaleClick(saleId);
+            });
           });
-        });
+        }
       });
     });
 

@@ -1,4 +1,5 @@
 import { Suspense, lazy, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Map, Globe } from "lucide-react";
@@ -17,7 +18,12 @@ interface Props {
 }
 
 export default function GeographicSection({ filtered }: Props) {
+  const navigate = useNavigate();
   const [showDistMap, setShowDistMap] = useState(true);
+
+  const handleDestinationClick = (iata: string) => {
+    navigate(`/vendas?destino=${iata}`);
+  };
 
   const routes = useMemo(() => {
     const c: Record<string, { count: number; revenue: number }> = {};
@@ -53,7 +59,7 @@ export default function GeographicSection({ filtered }: Props) {
               Mapa de Rotas Aéreas
             </h3>
             <Suspense fallback={<MapFallback />}>
-              <RoutesMap routes={routes} height="300px" />
+              <RoutesMap routes={routes} height="300px" onDestinationClick={handleDestinationClick} />
             </Suspense>
             <div className="mt-3 flex flex-wrap gap-2">
               {routes.slice(0, 5).map((r, i) => (
