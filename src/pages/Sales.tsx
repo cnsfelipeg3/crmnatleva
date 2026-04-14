@@ -17,6 +17,24 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/comp
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+const PRODUCT_ICON_MAP: Record<string, { icon: React.ElementType; label: string; className: string }> = {
+  "Passagem Aérea": { icon: Plane, label: "Passagem Aérea", className: "text-primary" },
+  "Passagem Aérea e Hospedagem": { icon: Package, label: "Pacote Aéreo + Hotel", className: "text-primary" },
+  "Remarcação Passagem Aérea": { icon: Plane, label: "Remarcação Aérea", className: "text-warning-foreground" },
+  "Hospedagem": { icon: Hotel, label: "Hospedagem", className: "text-accent" },
+  "Aluguel de Carro": { icon: Car, label: "Aluguel de Carro", className: "text-chart-3" },
+  "Passagem de Trem": { icon: Train, label: "Passagem de Trem", className: "text-chart-4" },
+  "Passagem de Ônibus": { icon: Bus, label: "Passagem de Ônibus", className: "text-chart-5" },
+  "Seguro Viagem": { icon: Shield, label: "Seguro Viagem", className: "text-info" },
+  "Ingressos": { icon: Ticket, label: "Ingressos", className: "text-chart-2" },
+  "Cruzeiro": { icon: Ship, label: "Cruzeiro", className: "text-chart-1" },
+  "Bagagem": { icon: Luggage, label: "Bagagem", className: "text-muted-foreground" },
+  "Transfer": { icon: MapPin, label: "Transfer", className: "text-chart-3" },
+  "Passeios e Tours": { icon: MapPin, label: "Passeios e Tours", className: "text-chart-4" },
+  "Assento Conforto": { icon: Armchair, label: "Assento Conforto", className: "text-chart-5" },
+  "Serviços Extras": { icon: Package, label: "Serviços Extras", className: "text-muted-foreground" },
+};
+
 const statusColor: Record<string, string> = {
   Fechado: "bg-success/15 text-success border-success/20",
   "Em andamento": "bg-warning/15 text-warning-foreground border-warning/20",
