@@ -40,9 +40,9 @@ export default function FinancialSection({ filtered, sellerNames }: Props) {
       ...m,
       margem: m.receita > 0 ? (m.lucro / m.receita) * 100 : 0,
       monthLabel: (() => {
-        const [y, m] = m.month.split('-');
+        const [yr, mo] = m.month.split('-');
         const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-        return `${monthNames[parseInt(m, 10) - 1]} ${y}`;
+        return `${monthNames[parseInt(mo, 10) - 1]} ${yr}`;
       })(),
     }));
   }, [filtered]);
