@@ -61,6 +61,9 @@ interface Route {
   destination: string;
   count: number;
   revenue: number;
+  profit?: number;
+  avgMargin?: number;
+  topMonths?: string[];
 }
 
 interface RoutesMapProps {
@@ -133,14 +136,17 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
     const maxCount = Math.max(...validRoutes.map((r) => r.count), 1);
     const bounds = new google.maps.LatLngBounds();
 
-    const airportData: Record<string, { count: number; revenue: number; salesList: RouteSale[] }> = {};
+    const airportData: Record<string, { count: number; revenue: number; profit: number; margins: number[]; months: string[]; salesList: RouteSale[] }> = {};
 
     validRoutes.forEach((r) => {
-      if (!airportData[r.origin]) airportData[r.origin] = { count: 0, revenue: 0, salesList: [] };
-      if (!airportData[r.destination]) airportData[r.destination] = { count: 0, revenue: 0, salesList: [] };
+      if (!airportData[r.origin]) airportData[r.origin] = { count: 0, revenue: 0, profit: 0, margins: [], months: [], salesList: [] };
+      if (!airportData[r.destination]) airportData[r.destination] = { count: 0, revenue: 0, profit: 0, margins: [], months: [], salesList: [] };
       airportData[r.origin].count += r.count;
       airportData[r.destination].count += r.count;
       airportData[r.destination].revenue += r.revenue;
+      airportData[r.destination].profit += r.profit || 0;
+      if (r.avgMargin != null) airportData[r.destination].margins.push(r.avgMargin);
+      if (r.topMonths) airportData[r.destination].months.push(...r.topMonths);
     });
 
     sales.forEach((sale) => {
@@ -196,13 +202,28 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
 
       const cityImg = getCityImageUrl(iata);
       const cityLabel = iataToLabel(iata);
+      const avgMargin = data.margins.length ? (data.margins.reduce((a, b) => a + b, 0) / data.margins.length) : 0;
+      const monthFreq: Record<string, number> = {};
+      data.months.forEach(m => { monthFreq[m] = (monthFreq[m] || 0) + 1; });
+      const topMonths = Object.entries(monthFreq).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([m]) => m);
+      const topMonthsLabel = topMonths.length > 0 ? topMonths.join(", ") : "—";
+
       const popupContent = `
-        <div data-dest-iata="${iata}" style="font-family:system-ui;min-width:220px;cursor:pointer;border-radius:10px;overflow:hidden;background:#1a1f2e;">
+        <div data-dest-iata="${iata}" style="font-family:system-ui;min-width:240px;max-width:280px;cursor:pointer;border-radius:10px;overflow:hidden;background:#1a1f2e;">
           <img src="${cityImg}" alt="${cityLabel}" style="width:100%;height:110px;object-fit:cover;" onerror="this.style.display='none'" />
           <div style="padding:10px 12px;">
             <strong style="color:#fff;font-size:14px;">${cityLabel}</strong>
-            <div style="color:#94a3b8;font-size:12px;margin-top:4px;">${data.count} rota(s) · ${fmt(data.revenue)}</div>
-            <div style="color:#34d399;font-size:11px;margin-top:6px;display:flex;align-items:center;gap:4px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:8px;">
+              <div><span style="color:#64748b;font-size:10px;display:block;">Vendas</span><span style="color:#e2e8f0;font-size:12px;font-weight:600;">${data.count}</span></div>
+              <div><span style="color:#64748b;font-size:10px;display:block;">Faturamento</span><span style="color:#e2e8f0;font-size:12px;font-weight:600;">${fmt(data.revenue)}</span></div>
+              <div><span style="color:#64748b;font-size:10px;display:block;">Lucro</span><span style="color:#34d399;font-size:12px;font-weight:600;">${fmt(data.profit)}</span></div>
+              <div><span style="color:#64748b;font-size:10px;display:block;">Margem Média</span><span style="color:#f59e0b;font-size:12px;font-weight:600;">${avgMargin.toFixed(1)}%</span></div>
+            </div>
+            <div style="margin-top:8px;border-top:1px solid #334155;padding-top:6px;">
+              <span style="color:#64748b;font-size:10px;">Melhores meses:</span>
+              <span style="color:#e2e8f0;font-size:11px;margin-left:4px;">${topMonthsLabel}</span>
+            </div>
+            <div style="color:#34d399;font-size:11px;margin-top:8px;display:flex;align-items:center;gap:4px;">
               <span>Ver detalhes →</span>
             </div>
           </div>
@@ -284,14 +305,17 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
     const maxCount = Math.max(...validRoutes.map((r) => r.count), 1);
     const bounds: L.LatLngTuple[] = [];
 
-    const airportData: Record<string, { count: number; revenue: number; salesList: RouteSale[] }> = {};
+    const airportData: Record<string, { count: number; revenue: number; profit: number; margins: number[]; months: string[]; salesList: RouteSale[] }> = {};
 
     validRoutes.forEach((r) => {
-      if (!airportData[r.origin]) airportData[r.origin] = { count: 0, revenue: 0, salesList: [] };
-      if (!airportData[r.destination]) airportData[r.destination] = { count: 0, revenue: 0, salesList: [] };
+      if (!airportData[r.origin]) airportData[r.origin] = { count: 0, revenue: 0, profit: 0, margins: [], months: [], salesList: [] };
+      if (!airportData[r.destination]) airportData[r.destination] = { count: 0, revenue: 0, profit: 0, margins: [], months: [], salesList: [] };
       airportData[r.origin].count += r.count;
       airportData[r.destination].count += r.count;
       airportData[r.destination].revenue += r.revenue;
+      airportData[r.destination].profit += r.profit || 0;
+      if (r.avgMargin != null) airportData[r.destination].margins.push(r.avgMargin);
+      if (r.topMonths) airportData[r.destination].months.push(...r.topMonths);
 
       const o = AIRPORT_COORDS[r.origin];
       const d = AIRPORT_COORDS[r.destination];
@@ -334,13 +358,31 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
         weight: 2,
       }).addTo(layer);
 
+      const avgMargin = data.margins.length ? (data.margins.reduce((a, b) => a + b, 0) / data.margins.length) : 0;
+      // Deduplicate months and get top 3
+      const monthFreq: Record<string, number> = {};
+      data.months.forEach(m => { monthFreq[m] = (monthFreq[m] || 0) + 1; });
+      const topMonths = Object.entries(monthFreq).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([m]) => m);
+      const topMonthsLabel = topMonths.length > 0 ? topMonths.join(", ") : "—";
+
       const popupHtml = `
-        <div data-dest-iata="${iata}" style="font-family:system-ui;min-width:220px;cursor:pointer;border-radius:10px;overflow:hidden;background:#1a1f2e;">
+        <div data-dest-iata="${iata}" style="font-family:system-ui;min-width:240px;max-width:280px;cursor:pointer;border-radius:10px;overflow:hidden;background:#1a1f2e;">
           <img src="${cityImg}" alt="${cityLabel}" style="width:100%;height:110px;object-fit:cover;" onerror="this.style.display='none'" />
           <div style="padding:10px 12px;">
             <strong style="color:#fff;font-size:14px;">${cityLabel}</strong>
-            <div style="color:#94a3b8;font-size:12px;margin-top:4px;">${data.count} rota(s) · ${fmt(data.revenue)}</div>
-            <div style="color:#34d399;font-size:11px;margin-top:6px;">Ver detalhes →</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:8px;">
+              <div><span style="color:#64748b;font-size:10px;display:block;">Vendas</span><span style="color:#e2e8f0;font-size:12px;font-weight:600;">${data.count}</span></div>
+              <div><span style="color:#64748b;font-size:10px;display:block;">Faturamento</span><span style="color:#e2e8f0;font-size:12px;font-weight:600;">${fmt(data.revenue)}</span></div>
+              <div><span style="color:#64748b;font-size:10px;display:block;">Lucro</span><span style="color:#34d399;font-size:12px;font-weight:600;">${fmt(data.profit)}</span></div>
+              <div><span style="color:#64748b;font-size:10px;display:block;">Margem Média</span><span style="color:#f59e0b;font-size:12px;font-weight:600;">${avgMargin.toFixed(1)}%</span></div>
+            </div>
+            <div style="margin-top:8px;border-top:1px solid #334155;padding-top:6px;">
+              <span style="color:#64748b;font-size:10px;">Melhores meses:</span>
+              <span style="color:#e2e8f0;font-size:11px;margin-left:4px;">${topMonthsLabel}</span>
+            </div>
+            <div style="color:#34d399;font-size:11px;margin-top:8px;display:flex;align-items:center;gap:4px;">
+              <span>Ver detalhes →</span>
+            </div>
           </div>
         </div>
       `;

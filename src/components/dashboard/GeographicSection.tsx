@@ -11,6 +11,10 @@ interface Sale {
   origin_iata: string | null;
   destination_iata: string | null;
   received_value: number;
+  total_cost: number;
+  margin: number;
+  close_date: string | null;
+  created_at: string;
 }
 
 interface Props {
@@ -26,18 +30,31 @@ export default function GeographicSection({ filtered }: Props) {
   };
 
   const routes = useMemo(() => {
-    const c: Record<string, { count: number; revenue: number }> = {};
+    const c: Record<string, { count: number; revenue: number; profit: number; margins: number[]; months: string[] }> = {};
     filtered.forEach(s => {
       if (s.origin_iata && s.destination_iata) {
         const k = `${s.origin_iata}-${s.destination_iata}`;
-        if (!c[k]) c[k] = { count: 0, revenue: 0 };
+        if (!c[k]) c[k] = { count: 0, revenue: 0, profit: 0, margins: [], months: [] };
         c[k].count++;
         c[k].revenue += s.received_value || 0;
+        c[k].profit += (s.received_value || 0) - (s.total_cost || 0);
+        c[k].margins.push(s.margin || 0);
+        const dt = s.close_date || s.created_at;
+        if (dt) {
+          const d = new Date(dt);
+          const m = d.toLocaleString("pt-BR", { month: "short" }).replace(".", "");
+          c[k].months.push(m);
+        }
       }
     });
     return Object.entries(c).map(([k, v]) => {
       const [origin, destination] = k.split("-");
-      return { origin, destination, ...v };
+      const avgMargin = v.margins.length ? v.margins.reduce((a, b) => a + b, 0) / v.margins.length : 0;
+      // top 3 months by frequency
+      const freq: Record<string, number> = {};
+      v.months.forEach(m => { freq[m] = (freq[m] || 0) + 1; });
+      const topMonths = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([m]) => m);
+      return { origin, destination, count: v.count, revenue: v.revenue, profit: v.profit, avgMargin, topMonths };
     }).sort((a, b) => b.count - a.count);
   }, [filtered]);
 
