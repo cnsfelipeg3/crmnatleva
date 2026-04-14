@@ -113,7 +113,7 @@ export default function Sales() {
   const { filtered: smartFiltered, state: filterState, setState: setFilterState, activeFilterCount, clearAll: clearFilters } = useSmartFilters(sales, SALES_FILTER_CONFIG);
 
   // Local table column sorting
-  type ColSortKey = "name" | "departure_date" | "return_date" | "received_value" | "total_cost" | "profit" | "margin" | "status";
+  type ColSortKey = "name" | "close_date" | "departure_date" | "return_date" | "received_value" | "total_cost" | "profit" | "margin" | "status";
   const [colSort, setColSort] = useState<{ key: ColSortKey; dir: "asc" | "desc" } | null>(null);
 
   const toggleColSort = (key: ColSortKey) => {
@@ -289,6 +289,7 @@ export default function Sales() {
                     <tr className="border-b border-border bg-muted/50">
                       {([
                         { key: "name", label: "Venda", align: "text-left", px: "px-3" },
+                        { key: "close_date", label: "Data da Venda", align: "text-left", px: "px-3" },
                         { key: "departure_date", label: "Ida", align: "text-left", px: "px-3" },
                         { key: "return_date", label: "Volta", align: "text-left", px: "px-3" },
                         { key: null, label: "Rota", align: "text-left", px: "px-3" },
@@ -341,6 +342,7 @@ export default function Sales() {
                             )}
                           </div>
                         </td>
+                        <td className="px-3 py-3 text-left"><span className="text-xs text-muted-foreground whitespace-nowrap">{formatDateBR(sale.close_date)}</span></td>
                         <td className="px-3 py-3"><span className="text-xs font-mono">{fmtShortDate(sale.departure_date) || <span className="text-muted-foreground/40">—</span>}</span></td>
                         <td className="px-3 py-3"><span className="text-xs font-mono">{fmtShortDate(sale.return_date) || <span className="text-muted-foreground/40 italic text-[11px]">Somente ida</span>}</span></td>
                         <td className="px-3 py-3">{renderRoute(sale)}</td>
