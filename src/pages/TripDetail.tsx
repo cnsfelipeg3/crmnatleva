@@ -603,23 +603,47 @@ export default function TripDetail() {
           {checkinTasks.length === 0 ? (
             <p className="text-xs text-muted-foreground">Nenhum check-in pendente</p>
           ) : (
-            <div className="space-y-2">
-              {checkinTasks.map(t => (
-                <div key={t.id} className="flex items-center justify-between bg-muted/30 rounded-lg p-3">
-                  <div>
-                    <p className="text-xs font-medium capitalize">{t.direction}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {t.departure_datetime_utc ? formatDateBR(t.departure_datetime_utc.slice(0, 10)) : "—"}
-                    </p>
+             <div className="space-y-2">
+              {checkinTasks.map(t => {
+                const details = checkinPassengerDetails[t.id] || [];
+                return (
+                  <div key={t.id} className="bg-muted/30 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium capitalize">{t.direction}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {t.departure_datetime_utc ? formatDateBR(t.departure_datetime_utc.slice(0, 10)) : "—"}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className={`text-[9px] ${
+                        t.status === "CONCLUIDO" ? "bg-green-500/15 text-green-400" :
+                        t.status === "CRITICO" ? "bg-red-500/15 text-red-400" :
+                        t.status === "URGENTE" ? "bg-yellow-500/15 text-yellow-400" :
+                        "bg-muted text-muted-foreground"
+                      }`}>{t.status}</Badge>
+                    </div>
+                    {details.length > 0 && (
+                      <div className="border-t border-border/30 pt-2 space-y-1.5">
+                        {details.map((d: any) => (
+                          <div key={d.id} className="flex items-center gap-2 text-[11px]">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                            <span className="text-foreground font-medium">{d.passengers?.full_name || "—"}</span>
+                            {d.seat && <span className="text-muted-foreground">— Assento {d.seat}</span>}
+                            {d.boarding_pass_url && (
+                              <a href={d.boarding_pass_url} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-0.5 ml-auto shrink-0">
+                                <FileText className="w-3 h-3" /> Cartão
+                              </a>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {t.seat_info && details.length === 0 && (
+                      <p className="text-[10px] text-muted-foreground">💺 {t.seat_info}</p>
+                    )}
                   </div>
-                  <Badge variant="outline" className={`text-[9px] ${
-                    t.status === "CONCLUIDO" ? "bg-green-500/15 text-green-400" :
-                    t.status === "CRITICO" ? "bg-red-500/15 text-red-400" :
-                    t.status === "URGENTE" ? "bg-yellow-500/15 text-yellow-400" :
-                    "bg-muted text-muted-foreground"
-                  }`}>{t.status}</Badge>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>
