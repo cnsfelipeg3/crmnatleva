@@ -18,7 +18,12 @@ interface Props {
 }
 
 export default function GeographicSection({ filtered }: Props) {
+  const navigate = useNavigate();
   const [showDistMap, setShowDistMap] = useState(true);
+
+  const handleDestinationClick = (iata: string) => {
+    navigate(`/vendas?destino=${iata}`);
+  };
 
   const routes = useMemo(() => {
     const c: Record<string, { count: number; revenue: number }> = {};
