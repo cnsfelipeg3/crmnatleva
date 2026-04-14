@@ -937,7 +937,7 @@ export default function Checkin() {
 
       {/* Complete Dialog */}
       <Dialog open={!!completeDialog} onOpenChange={() => setCompleteDialog(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-emerald-500" /> Confirmar Check-in
@@ -969,14 +969,14 @@ export default function Checkin() {
                       </div>
                     ) : (
                       <div className="border border-border/30 rounded-lg overflow-hidden">
-                        <div className="grid grid-cols-[1fr_120px_1fr] gap-3 px-4 py-2 bg-muted/40 border-b border-border/30">
+                        <div className="grid grid-cols-[minmax(0,1.5fr)_100px_minmax(0,1fr)] gap-3 px-4 py-2 bg-muted/40 border-b border-border/30">
                           <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Passageiro</span>
                           <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Assento</span>
                           <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Cartão de Embarque</span>
                         </div>
                         {passengers.map((pax: any, idx: number) => (
-                          <div key={pax.id} className={`grid grid-cols-[1fr_120px_1fr] gap-3 px-4 py-3 items-center ${idx < passengers.length - 1 ? "border-b border-border/20" : ""}`}>
-                            <p className="text-sm font-medium text-foreground flex items-center gap-1.5 truncate">
+                          <div key={pax.id} className={`grid grid-cols-[minmax(0,1.5fr)_100px_minmax(0,1fr)] gap-3 px-4 py-3 items-center ${idx < passengers.length - 1 ? "border-b border-border/20" : ""}`}>
+                            <p className="text-sm font-medium text-foreground flex items-center gap-1.5 break-words">
                               <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> {pax.full_name}
                             </p>
                             <Input
