@@ -19,7 +19,7 @@ import {
   ClipboardCheck, Clock, AlertTriangle, CheckCircle2, Copy,
   ExternalLink, Eye, Plane, User, Upload, X, FileText,
   RefreshCw, Loader2, Shield, Calendar, List, LayoutGrid, Columns3,
-  ArrowRight, Timer, Zap,
+  ArrowRight, Timer, Zap, Bell, AlertCircle, Lock,
 } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
 import TaskCalendarView from "@/components/TaskCalendarView";
@@ -47,37 +47,113 @@ interface CheckinTask {
   airline_rule?: any;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any; dot: string; bg: string }> = {
-  PENDENTE: { label: "Pendente", color: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200", icon: Clock, dot: "bg-blue-500", bg: "from-blue-500/5 to-transparent" },
-  URGENTE: { label: "Urgente", color: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200", icon: AlertTriangle, dot: "bg-amber-500", bg: "from-amber-500/5 to-transparent" },
-  CRITICO: { label: "Crítico", color: "bg-destructive/10 text-destructive border-destructive/20", icon: AlertTriangle, dot: "bg-destructive", bg: "from-destructive/5 to-transparent" },
-  CONCLUIDO: { label: "Concluído", color: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200", icon: CheckCircle2, dot: "bg-emerald-500", bg: "from-emerald-500/5 to-transparent" },
-  BLOQUEADO: { label: "Bloqueado", color: "bg-muted text-muted-foreground border-border", icon: Shield, dot: "bg-muted-foreground/50", bg: "from-muted/50 to-transparent" },
+// ─── Status config with 6 levels (FAZER_CHECKIN added) ───
+const STATUS_CONFIG: Record<string, { label: string; color: string; icon: any; dot: string; bg: string; description: string }> = {
+  CRITICO: {
+    label: "Crítico",
+    color: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-200",
+    icon: AlertTriangle,
+    dot: "bg-red-500",
+    bg: "from-red-500/5 to-transparent",
+    description: "Menos de 6h para o voo!",
+  },
+  URGENTE: {
+    label: "Urgente",
+    color: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-200",
+    icon: Clock,
+    dot: "bg-orange-500",
+    bg: "from-orange-500/5 to-transparent",
+    description: "Menos de 24h — faça o check-in agora!",
+  },
+  FAZER_CHECKIN: {
+    label: "Fazer Check-in",
+    color: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-200",
+    icon: AlertCircle,
+    dot: "bg-amber-500",
+    bg: "from-amber-500/5 to-transparent",
+    description: "Check-in disponível — faltam menos de 2 dias",
+  },
+  PENDENTE: {
+    label: "Pendente",
+    color: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-200",
+    icon: Clock,
+    dot: "bg-blue-500",
+    bg: "from-blue-500/5 to-transparent",
+    description: "Aguardando — voo em mais de 2 dias",
+  },
+  BLOQUEADO: {
+    label: "Bloqueado",
+    color: "bg-muted text-muted-foreground border-border",
+    icon: Lock,
+    dot: "bg-muted-foreground/50",
+    bg: "from-muted/50 to-transparent",
+    description: "Aguardando trecho anterior",
+  },
+  CONCLUIDO: {
+    label: "Concluído",
+    color: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200",
+    icon: CheckCircle2,
+    dot: "bg-emerald-500",
+    bg: "from-emerald-500/5 to-transparent",
+    description: "Check-in realizado",
+  },
 };
 
-function getTimeRemaining(departure: string | null): string {
-  if (!departure) return "—";
-  const depTime = new Date(departure).getTime();
-  // Guard against invalid dates
-  if (isNaN(depTime)) return "—";
-  const diff = depTime - Date.now();
-  if (diff <= 0) return "Já partiu";
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  // Guard against absurd values (>10 years)
-  if (hours > 87600) return "Data inválida";
-  if (hours >= 24) return `${Math.floor(hours / 24)}d ${hours % 24}h`;
-  return `${hours}h ${mins}m`;
-}
-
+// ─── New 4-level dynamic status calculation ───
 function computeStatus(departure: string | null): string {
   if (!departure) return "BLOQUEADO";
-  const diff = new Date(departure).getTime() - Date.now();
-  if (diff <= 0) return "CRITICO";
-  const hours = diff / (1000 * 60 * 60);
+  const diffMs = new Date(departure).getTime() - Date.now();
+  if (diffMs <= 0) return "CRITICO";
+  const hours = diffMs / (1000 * 60 * 60);
   if (hours <= 6) return "CRITICO";
   if (hours <= 24) return "URGENTE";
+  if (hours <= 48) return "FAZER_CHECKIN";
   return "PENDENTE";
+}
+
+// ─── Countdown in natural language ───
+function formatCountdown(departureDateUtc: string | null): string {
+  if (!departureDateUtc) return "—";
+  const dep = new Date(departureDateUtc).getTime();
+  if (isNaN(dep)) return "—";
+  const diff = dep - Date.now();
+  if (diff <= 0) return "Já partiu";
+
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const days = Math.floor(hours / 24);
+
+  if (days === 0) {
+    if (hours === 0) return `Faltam ${minutes}min`;
+    return `Faltam ${hours}h ${minutes}min`;
+  }
+  if (days === 1) return "Amanhã";
+  if (days === 2) return "Faltam 2 dias ⚠️";
+  return `Faltam ${days} dias`;
+}
+
+// ─── Flight date with weekday ───
+function formatFlightDate(departureDateUtc: string | null): string {
+  if (!departureDateUtc) return "Sem data";
+  const date = new Date(departureDateUtc);
+  if (isNaN(date.getTime())) return "Sem data";
+  const diasSemana = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+  const dia = date.getDate().toString().padStart(2, "0");
+  const mes = (date.getMonth() + 1).toString().padStart(2, "0");
+  const ano = date.getFullYear();
+  const diaSemana = diasSemana[date.getDay()];
+  return `${dia}/${mes}/${ano} (${diaSemana})`;
+}
+
+// ─── Short flight date for list view ───
+function formatFlightDateShort(departureDateUtc: string | null): string {
+  if (!departureDateUtc) return "—";
+  const date = new Date(departureDateUtc);
+  if (isNaN(date.getTime())) return "—";
+  const diasSemana = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+  const dia = date.getDate().toString().padStart(2, "0");
+  const mes = (date.getMonth() + 1).toString().padStart(2, "0");
+  return `${dia}/${mes} (${diasSemana[date.getDay()]})`;
 }
 
 function getDateLabel(dateStr: string | null): string {
@@ -109,7 +185,6 @@ function getDaysUntil(dateStr: string | null): number {
 }
 
 type ViewMode = "agenda" | "cards" | "pipeline" | "calendar";
-type TimeFilter = "all" | "today" | "tomorrow" | "3days" | "7days";
 
 const CHECKIN_FILTER_CONFIG: SmartFilterConfig = {
   sortOptions: [
@@ -123,7 +198,7 @@ const CHECKIN_FILTER_CONFIG: SmartFilterConfig = {
   searchPlaceholder: "Buscar passageiro, PNR, destino...",
   searchFields: ["sale.name", "sale.display_id", "sale.origin_iata", "sale.destination_iata", "sale.locators", "segment.flight_number"],
   selectFilters: [
-    { key: "status", label: "Status", options: ["PENDENTE", "URGENTE", "CRITICO", "BLOQUEADO", "CONCLUIDO"] },
+    { key: "status", label: "Status", options: ["PENDENTE", "FAZER_CHECKIN", "URGENTE", "CRITICO", "BLOQUEADO", "CONCLUIDO"] },
     { key: "direction", label: "Direção", options: ["ida", "volta"] },
   ],
   pillPresets: ["today", "tomorrow", "next_7_days", "next_30_days", "this_month", "all"],
@@ -210,7 +285,6 @@ export default function Checkin() {
       seats[p.id] = "";
       files[p.id] = null;
     });
-    // Load existing details
     const { data: details } = await supabase
       .from("checkin_passenger_details")
       .select("*")
@@ -233,7 +307,6 @@ export default function Checkin() {
       const task = completeDialog;
       const passengers = task.passengers || [];
 
-      // Upload boarding passes and save per-passenger details
       for (const pax of passengers) {
         const file = passengerFiles[pax.id];
         let boardingPassUrl: string | null = passengerExisting[pax.id]?.boarding_pass_url || null;
@@ -263,7 +336,6 @@ export default function Checkin() {
         }, { onConflict: "checkin_task_id,passenger_id" });
       }
 
-      // Build seat summary
       const allSeats = passengers
         .map((p: any) => passengerSeats[p.id])
         .filter(Boolean);
@@ -314,7 +386,6 @@ export default function Checkin() {
     else toast({ title: `${urls.size} aba(s) de check-in aberta(s)` });
   };
 
-  // Unique airlines for dynamic options
   const airlines = useMemo(() => {
     const set = new Set<string>();
     tasks.forEach(t => {
@@ -324,7 +395,6 @@ export default function Checkin() {
     return [...set].sort();
   }, [tasks]);
 
-  // Pre-filter by mainTab before passing to SmartFilters
   const tabData = useMemo(() => {
     if (mainTab === "active") return tasks.filter(t => t.status !== "CONCLUIDO");
     return tasks.filter(t => t.status === "CONCLUIDO");
@@ -332,7 +402,6 @@ export default function Checkin() {
 
   const { filtered, state: filterState, setState: setFilterState, activeFilterCount, clearAll: clearFilters } = useSmartFilters(tabData, CHECKIN_FILTER_CONFIG);
 
-  // Group by date
   const groupedByDate = useMemo(() => {
     const groups = new Map<string, { label: string; tasks: CheckinTask[] }>();
     filtered.forEach(t => {
@@ -346,22 +415,22 @@ export default function Checkin() {
     return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [filtered]);
 
-  // Pipeline columns
   const pipelineCols = useMemo(() => {
     const cols = {
       CRITICO: [] as CheckinTask[],
       URGENTE: [] as CheckinTask[],
+      FAZER_CHECKIN: [] as CheckinTask[],
       PENDENTE: [] as CheckinTask[],
       CONCLUIDO: [] as CheckinTask[],
     };
     filtered.forEach(t => {
-      const status = t.status === "CONCLUIDO" ? "CONCLUIDO" : computeStatus(t.departure_datetime_utc);
+      const status = t.status === "CONCLUIDO" ? "CONCLUIDO" : (t.status === "BLOQUEADO" ? "PENDENTE" : computeStatus(t.departure_datetime_utc));
       if (cols[status as keyof typeof cols]) cols[status as keyof typeof cols].push(t);
     });
     return cols;
   }, [filtered]);
 
-  // KPIs
+  // ─── KPIs ───
   const activeTasks = tasks.filter(t => t.status !== "CONCLUIDO");
   const todayTasks = activeTasks.filter(t => {
     const isVolta = t.direction === "volta";
@@ -379,13 +448,21 @@ export default function Checkin() {
     return dep && getDateLabel(dep) === "Atrasado";
   });
 
+  // ─── Tasks needing action (≤48h) ───
+  const tasksNeedingAction = useMemo(() => {
+    return activeTasks.filter(t => {
+      if (t.status === "BLOQUEADO") return false;
+      const status = computeStatus(t.departure_datetime_utc);
+      return ["FAZER_CHECKIN", "URGENTE", "CRITICO"].includes(status);
+    });
+  }, [activeTasks]);
+
   const getTaskDetails = (task: CheckinTask) => {
     const sale = task.sale;
     const segment = task.segment;
     const isVolta = task.direction === "volta";
     const airline = segment?.airline || sale?.airline || "";
     const flightNum = segment?.flight_number || "";
-    // For volta without segment, swap origin/destination and use return_date
     const origin = segment?.origin_iata || (isVolta ? sale?.destination_iata : sale?.origin_iata) || "N/D";
     const dest = segment?.destination_iata || (isVolta ? sale?.origin_iata : sale?.destination_iata) || "N/D";
     const depDate = segment?.departure_date || (isVolta ? sale?.return_date : sale?.departure_date) || "";
@@ -394,39 +471,45 @@ export default function Checkin() {
     const checkinUrl = task.airline_rule?.checkin_url;
     const cabinType = segment?.cabin_type || segment?.flight_class || "";
     const paxNames = task.passengers?.map((p: any) => p.full_name) || [];
-    const statusKey = task.status === "CONCLUIDO" ? "CONCLUIDO" : computeStatus(task.departure_datetime_utc);
+    // Dynamic status: only for PENDENTE in DB; CONCLUIDO and BLOQUEADO stay as-is
+    const statusKey = task.status === "CONCLUIDO" ? "CONCLUIDO" : (task.status === "BLOQUEADO" ? "BLOQUEADO" : computeStatus(task.departure_datetime_utc));
     const statusCfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG.PENDENTE;
     return { sale, segment, airline, flightNum, origin, dest, depDate, depTime, locators, checkinUrl, cabinType, paxNames, statusKey, statusCfg };
   };
 
+  // ─── Agenda Row (List View) ───
   const renderAgendaRow = (task: CheckinTask) => {
     const { airline, flightNum, origin, dest, depDate, depTime, locators, checkinUrl, paxNames, statusCfg, statusKey } = getTaskDetails(task);
     const StatusIcon = statusCfg.icon;
     const isSelected = selected.has(task.id);
+    const isFazerCheckin = statusKey === "FAZER_CHECKIN";
+    const isCritical = statusKey === "CRITICO";
+    const isUrgent = statusKey === "URGENTE";
 
     return (
       <div
         key={task.id}
-        className={`flex items-center gap-3 px-4 py-3 border-b border-border/40 last:border-b-0 hover:bg-muted/30 transition-colors group ${statusKey === "CRITICO" ? "bg-gradient-to-r " + statusCfg.bg : ""}`}
+        className={`flex items-center gap-3 px-4 py-3 border-b border-border/40 last:border-b-0 hover:bg-muted/30 transition-colors group ${
+          isCritical ? "bg-gradient-to-r from-red-500/5 to-transparent" :
+          isUrgent ? "bg-gradient-to-r from-orange-500/5 to-transparent" :
+          isFazerCheckin ? "bg-gradient-to-r from-amber-500/5 to-transparent" : ""
+        }`}
       >
         {mainTab === "active" && (
           <Checkbox checked={isSelected} onCheckedChange={() => toggleSelected(task.id)} className="shrink-0" />
         )}
 
-        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusCfg.dot} ${statusKey === "CRITICO" ? "animate-pulse" : ""}`} />
+        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusCfg.dot} ${isCritical ? "animate-pulse" : ""}`} />
 
-        <div className="w-24 shrink-0 text-center">
-          {depDate ? (
-            <div className="flex flex-col items-center">
-              <span className="text-sm font-bold text-foreground leading-tight">{formatDateBR(depDate)}</span>
-              {depTime && <span className="text-[11px] font-mono text-muted-foreground">{depTime.slice(0, 5)}</span>}
-            </div>
-          ) : (
-            <span className="text-xs text-muted-foreground">—</span>
-          )}
+        {/* Status badge */}
+        <div className="w-28 shrink-0">
+          <Badge variant="outline" className={`${statusCfg.color} text-[9px] gap-0.5 whitespace-nowrap`}>
+            <StatusIcon className="w-3 h-3" /> {statusCfg.label}
+          </Badge>
         </div>
 
-        <div className="flex items-center gap-2 w-44 shrink-0">
+        {/* Route + Airline */}
+        <div className="flex items-center gap-2 w-40 shrink-0">
           {airline ? <AirlineLogo iata={airline} size={22} /> : <Plane className="w-4 h-4 text-muted-foreground" />}
           <div className="min-w-0">
             <p className="text-sm font-semibold text-foreground truncate flex items-center gap-1">
@@ -436,14 +519,35 @@ export default function Checkin() {
           </div>
         </div>
 
+        {/* Flight date */}
+        <div className="w-28 shrink-0 text-center">
+          <span className="text-xs font-medium text-foreground flex items-center gap-1 justify-center">
+            <Calendar className="w-3 h-3 text-muted-foreground" />
+            {formatFlightDateShort(task.departure_datetime_utc || depDate)}
+          </span>
+          {depTime && <span className="text-[10px] font-mono text-muted-foreground">{depTime.slice(0, 5)}</span>}
+        </div>
+
+        {/* Countdown */}
+        <div className="w-28 shrink-0 text-center">
+          <span className={`text-xs font-bold whitespace-nowrap flex items-center gap-1 justify-center ${
+            isCritical ? "text-red-600" : isUrgent ? "text-orange-600" : isFazerCheckin ? "text-amber-600" : "text-muted-foreground"
+          }`}>
+            <Timer className="w-3 h-3" />
+            {task.status !== "CONCLUIDO" ? formatCountdown(task.departure_datetime_utc) : "✓"}
+          </span>
+        </div>
+
         <Badge variant="outline" className="text-[9px] uppercase shrink-0 h-5">{task.direction}</Badge>
 
+        {/* Passengers */}
         <div className="flex-1 min-w-0 hidden md:block">
           <p className="text-xs text-muted-foreground truncate" title={paxNames.join(", ")}>
             <User className="w-3 h-3 inline mr-1" />{paxNames.join(", ") || "—"}
           </p>
         </div>
 
+        {/* Locator */}
         <div className="w-24 shrink-0 hidden lg:block">
           {locators.length > 0 ? (
             <button onClick={() => copyToClipboard(locators[0])} className="flex items-center gap-1 text-xs font-mono text-foreground hover:text-primary transition-colors">
@@ -454,20 +558,14 @@ export default function Checkin() {
           )}
         </div>
 
-        <div className="w-20 shrink-0 text-right">
-          <Badge variant="outline" className={`${statusCfg.color} text-[9px] gap-0.5`}>
-            <StatusIcon className="w-3 h-3" />
-            {getTimeRemaining(task.departure_datetime_utc)}
-          </Badge>
-        </div>
-
+        {/* Actions */}
         <div className="flex gap-1 shrink-0 opacity-60 group-hover:opacity-100 transition-opacity">
           {task.status !== "CONCLUIDO" && (
             <Button size="sm" variant="default" className="text-[10px] h-6 px-2" onClick={() => openCompleteDialog(task)}>
               <CheckCircle2 className="w-3 h-3" />
             </Button>
           )}
-          {checkinUrl && (
+          {checkinUrl && task.status !== "CONCLUIDO" && (
             <Button size="sm" variant="outline" className="text-[10px] h-6 px-2 gap-1" onClick={() => window.open(checkinUrl, "_blank")}>
               <ExternalLink className="w-3 h-3" /> Check-in
             </Button>
@@ -480,18 +578,28 @@ export default function Checkin() {
     );
   };
 
+  // ─── Card View ───
   const renderCard = (task: CheckinTask) => {
     const { airline, flightNum, origin, dest, depDate, depTime, locators, checkinUrl, cabinType, paxNames, statusCfg, statusKey } = getTaskDetails(task);
     const StatusIcon = statusCfg.icon;
     const isSelected = selected.has(task.id);
+    const isFazerCheckin = statusKey === "FAZER_CHECKIN";
+    const isCritical = statusKey === "CRITICO";
+    const isUrgent = statusKey === "URGENTE";
+
+    const barColor = isCritical ? "bg-red-500" : isUrgent ? "bg-orange-500" : isFazerCheckin ? "bg-amber-500" : statusKey === "CONCLUIDO" ? "bg-emerald-500" : "bg-blue-500";
 
     return (
-      <Card key={task.id} className={`p-0 overflow-hidden hover:shadow-lg transition-all ${statusKey === "CRITICO" ? "ring-1 ring-destructive/30" : ""}`}>
-        {/* Top gradient bar */}
-        <div className={`h-1.5 bg-gradient-to-r ${statusCfg.bg.replace("to-transparent", statusKey === "CRITICO" ? "to-destructive/20" : statusKey === "URGENTE" ? "to-amber-500/20" : "to-primary/10")}`} />
+      <Card key={task.id} className={`p-0 overflow-hidden hover:shadow-lg transition-all ${
+        isCritical ? "ring-1 ring-red-500/30" :
+        isUrgent ? "ring-1 ring-orange-500/30" :
+        isFazerCheckin ? "ring-1 ring-amber-500/30" : ""
+      }`}>
+        {/* Top color bar */}
+        <div className={`h-1.5 ${barColor}`} />
 
         <div className="p-4 space-y-3">
-          {/* Header */}
+          {/* Header: Status + Countdown */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-center gap-2">
               {mainTab === "active" && <Checkbox checked={isSelected} onCheckedChange={() => toggleSelected(task.id)} />}
@@ -501,9 +609,11 @@ export default function Checkin() {
               <Badge variant="outline" className="text-[10px] uppercase">{task.direction}</Badge>
             </div>
             <div className="text-right">
-              <span className="text-xs font-bold text-foreground whitespace-nowrap flex items-center gap-1">
-                <Timer className="w-3 h-3 text-muted-foreground" />
-                {task.status !== "CONCLUIDO" ? getTimeRemaining(task.departure_datetime_utc) : "✓"}
+              <span className={`text-xs font-bold whitespace-nowrap flex items-center gap-1 ${
+                isCritical ? "text-red-600" : isUrgent ? "text-orange-600" : isFazerCheckin ? "text-amber-600" : "text-muted-foreground"
+              }`}>
+                <Timer className="w-3 h-3" />
+                {task.status !== "CONCLUIDO" ? formatCountdown(task.departure_datetime_utc) : "✓"}
               </span>
             </div>
           </div>
@@ -523,15 +633,13 @@ export default function Checkin() {
             </div>
           </div>
 
-          {/* Date + Time */}
-          <div className="flex gap-4 text-xs text-muted-foreground">
-            {depDate && (
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" /> {formatDateBR(depDate)}
-              </span>
-            )}
+          {/* Flight date — ALWAYS visible and prominent */}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <span className="flex items-center gap-1 font-medium text-foreground">
+              📅 Voo em {formatFlightDate(task.departure_datetime_utc || depDate)}
+            </span>
             {depTime && (
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1 text-muted-foreground">
                 <Clock className="w-3 h-3" /> {depTime.slice(0, 5)}
               </span>
             )}
@@ -540,7 +648,7 @@ export default function Checkin() {
           {/* Locators */}
           {locators.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase text-muted-foreground font-semibold">PNR</span>
+              <span className="text-[10px] uppercase text-muted-foreground font-semibold">🔖 PNR</span>
               {locators.map((l: string, i: number) => (
                 <button key={i} onClick={() => copyToClipboard(l)} className="text-xs font-mono font-bold text-primary bg-primary/5 px-2 py-0.5 rounded hover:bg-primary/10 transition-colors flex items-center gap-1">
                   {l} <Copy className="w-2.5 h-2.5" />
@@ -566,7 +674,6 @@ export default function Checkin() {
 
           {task.seat_info && <p className="text-xs text-muted-foreground">💺 {task.seat_info}</p>}
 
-          {/* Sale reference */}
           {task.sale?.display_id && (
             <p className="text-[10px] text-muted-foreground">Venda: <span className="font-mono font-bold">{task.sale.display_id}</span> — {task.sale.name}</p>
           )}
@@ -588,7 +695,6 @@ export default function Checkin() {
             </Button>
           </div>
 
-          {/* Completed info */}
           {task.status === "CONCLUIDO" && task.completed_at && (
             <p className="text-[10px] text-muted-foreground italic">
               ✓ Concluído em {formatDateBR(task.completed_at)} {task.seat_info ? `• Assento: ${task.seat_info}` : ""}
@@ -648,6 +754,21 @@ export default function Checkin() {
           </Button>
         </div>
       </div>
+
+      {/* ─── Alert Banner ─── */}
+      {tasksNeedingAction.length > 0 && mainTab === "active" && (
+        <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-lg p-3 flex items-center gap-3">
+          <Bell className="w-5 h-5 text-amber-600 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+              ⚠️ {tasksNeedingAction.length} check-in(s) precisam de atenção!
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Faça o check-in dos seus clientes com antecedência de 1-2 dias antes do voo.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -765,7 +886,9 @@ export default function Checkin() {
         </Card>
       ) : viewMode === "pipeline" ? (
         <div className="flex gap-4 overflow-x-auto pb-4">
-          {renderPipelineCol("Crítico / Urgente", "CRITICO", [...pipelineCols.CRITICO, ...pipelineCols.URGENTE])}
+          {renderPipelineCol("Crítico", "CRITICO", pipelineCols.CRITICO)}
+          {renderPipelineCol("Urgente", "URGENTE", pipelineCols.URGENTE)}
+          {renderPipelineCol("Fazer Check-in", "FAZER_CHECKIN", pipelineCols.FAZER_CHECKIN)}
           {renderPipelineCol("Pendente", "PENDENTE", pipelineCols.PENDENTE)}
           {renderPipelineCol("Concluído", "CONCLUIDO", pipelineCols.CONCLUIDO)}
         </div>
@@ -826,7 +949,6 @@ export default function Checkin() {
               const passengers = completeDialog.passengers || [];
               return (
                 <>
-                  {/* Flight header */}
                   <div className="bg-muted/50 rounded-lg p-4 space-y-1">
                     <div className="flex items-center gap-3">
                       {d.airline && <AirlineLogo iata={d.airline} size={28} />}
@@ -839,7 +961,6 @@ export default function Checkin() {
                     </div>
                   </div>
 
-                  {/* Per-passenger table layout */}
                   <div className="space-y-2">
                     <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Passageiros</Label>
                     {passengers.length === 0 ? (
@@ -848,27 +969,22 @@ export default function Checkin() {
                       </div>
                     ) : (
                       <div className="border border-border/30 rounded-lg overflow-hidden">
-                        {/* Table header */}
                         <div className="grid grid-cols-[1fr_120px_1fr] gap-3 px-4 py-2 bg-muted/40 border-b border-border/30">
                           <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Passageiro</span>
                           <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Assento</span>
                           <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Cartão de Embarque</span>
                         </div>
-                        {/* Rows */}
                         {passengers.map((pax: any, idx: number) => (
                           <div key={pax.id} className={`grid grid-cols-[1fr_120px_1fr] gap-3 px-4 py-3 items-center ${idx < passengers.length - 1 ? "border-b border-border/20" : ""}`}>
-                            {/* Name */}
                             <p className="text-sm font-medium text-foreground flex items-center gap-1.5 truncate">
                               <User className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> {pax.full_name}
                             </p>
-                            {/* Seat */}
                             <Input
                               placeholder="Ex: 12A"
                               className="h-8 text-xs"
                               value={passengerSeats[pax.id] || ""}
                               onChange={e => setPassengerSeats(prev => ({ ...prev, [pax.id]: e.target.value }))}
                             />
-                            {/* Boarding pass */}
                             <div className="min-w-0">
                               {passengerFiles[pax.id] ? (
                                 <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
@@ -926,7 +1042,6 @@ export default function Checkin() {
                     )}
                   </div>
 
-                  {/* Notes */}
                   <div className="space-y-2">
                     <Label className="text-xs">Observações</Label>
                     <Textarea placeholder="Notas sobre o check-in..." value={completeNotes} onChange={e => setCompleteNotes(e.target.value)} rows={2} />
