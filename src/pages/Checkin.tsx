@@ -136,9 +136,13 @@ export default function Checkin() {
   const [mainTab, setMainTab] = useState<"active" | "history">("active");
   const [viewMode, setViewMode] = useState<ViewMode>("agenda");
   const [completeDialog, setCompleteDialog] = useState<CheckinTask | null>(null);
-  const [seatInfo, setSeatInfo] = useState("");
   const [completeNotes, setCompleteNotes] = useState("");
+  const [passengerSeats, setPassengerSeats] = useState<Record<string, string>>({});
+  const [passengerFiles, setPassengerFiles] = useState<Record<string, File | null>>({});
+  const [passengerExisting, setPassengerExisting] = useState<Record<string, { boarding_pass_url?: string; boarding_pass_file_name?: string }>>({});
+  const [savingCheckin, setSavingCheckin] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
