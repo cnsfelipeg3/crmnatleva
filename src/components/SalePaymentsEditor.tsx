@@ -117,36 +117,18 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
       if (p.id !== id) return p;
       const updated = { ...p, [field]: value };
 
-      // Auto-calculate fees when gateway, installments, or gross_value change
-      if (field === "gateway" || field === "installments" || field === "gross_value" || field === "payment_method") {
-        const isCard = CARD_METHODS.includes(updated.payment_method);
-        if (isCard && updated.gateway && updated.gross_value > 0) {
-          const rule = feeRules.find((r: any) =>
-            r.acquirer === updated.gateway &&
-            r.installments === updated.installments
-          );
-          if (rule) {
-            updated.fee_percent = (rule as any).fee_percent || 0;
-            updated.fee_fixed = (rule as any).fee_fixed || 0;
-            updated.fee_total = (updated.gross_value * updated.fee_percent / 100) + updated.fee_fixed;
-            updated.net_value = updated.gross_value - updated.fee_total;
-          } else {
-            updated.fee_percent = 0;
-            updated.fee_fixed = 0;
-            updated.fee_total = 0;
-            updated.net_value = updated.gross_value;
-          }
-        } else {
-          updated.fee_percent = 0;
-          updated.fee_fixed = 0;
-          updated.fee_total = 0;
-          updated.net_value = updated.gross_value;
-        }
+      // When gross_value changes and net_value hasn't been manually set, default net_value to gross_value
+      if (field === "gross_value" && p.net_value === 0) {
+        updated.net_value = parseFloat(value) || 0;
       }
 
-      // Reset gateway fields when switching away from card
+      // Auto-calculate fee_total from the difference
+      if (field === "gross_value" || field === "net_value") {
+        updated.fee_total = Math.max(0, updated.gross_value - updated.net_value);
+      }
+
+      // Reset installments when switching away from card
       if (field === "payment_method" && !CARD_METHODS.includes(value)) {
-        updated.gateway = "";
         updated.installments = 1;
       }
 
