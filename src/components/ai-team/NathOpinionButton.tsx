@@ -195,6 +195,10 @@ export default function NathOpinionButton({ messages, context, variant = "header
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
+          rawMode: true,
+          rawSystemPrompt: "Você é um arquiteto de sistemas de agentes IA de uma agência de viagens premium (NatLeva). Retorne APENAS um JSON array válido, sem markdown, sem texto adicional. Gere 10-14 itens incluindo 1-2 sugestões de novos agentes. Seja criativo e realista.",
+          provider: "lovable",
+          model: "google/gemini-2.5-flash",
           question: `Com base na seguinte opinião da CEO Nath sobre uma conversa de atendimento, extraia melhorias acionáveis para o ecossistema de agentes IA.
 
 OPINIÃO DA NATH:
@@ -209,7 +213,7 @@ ETAPAS DO FUNIL: Primeiro Contato → Qualificação → Proposta → Negociaç�
 IMPORTANTE:
 1. Gere entre 10 e 14 ações no total.
 2. Pelo menos 4 devem ser para agentes ESPECÍFICOS.
-3. Inclua pelo menos 1-2 sugestões de NOVOS AGENTES (type: "new_agent") que ainda não existem e que melhorariam a operação. Para cada novo agente, detalhe: nome sugerido, emoji, função, squad, etapa do funil em que atuaria, skills e justificativa completa.
+3. Inclua pelo menos 1-2 sugestões de NOVOS AGENTES (type: "new_agent") que ainda não existem e que melhorariam a operação.
 
 Retorne EXATAMENTE um JSON array. Cada item DEVE ter:
 - "type": "knowledge_base", "skill", "global_rule" ou "new_agent"
@@ -222,17 +226,17 @@ Retorne EXATAMENTE um JSON array. Cada item DEVE ter:
 - "estimated_impact": frase curta do impacto esperado
 
 Para itens type="new_agent", inclua TAMBÉM:
-- "new_agent_name": nome do agente sugerido (ex: "KEEPER", "COMPASS")
+- "new_agent_name": nome do agente sugerido
 - "new_agent_emoji": emoji representativo
-- "new_agent_role": função detalhada do agente (1-2 frases)
-- "new_agent_squad": squad ideal (orquestracao, comercial, atendimento, financeiro, operacional, demanda, retencao)
+- "new_agent_role": função detalhada do agente
+- "new_agent_squad": squad ideal
 - "new_agent_stage": etapa do funil onde atuaria
 - "new_agent_skills": array com 3-5 habilidades-chave
-- "new_agent_justification": parágrafo explicando por que este agente é necessário, qual gap ele preenche e como melhora a operação
+- "new_agent_justification": parágrafo explicando por que este agente é necessário
 
 Retorne SOMENTE o JSON array, sem texto adicional.`,
           agentName: "SISTEMA",
-          agentRole: "Você é um arquiteto de sistemas de agentes IA de uma agência de viagens premium (NatLeva). Retorne APENAS um JSON array válido, sem markdown. Gere 10-14 itens incluindo 1-2 sugestões de novos agentes. Seja criativo e realista nas sugestões de novos agentes — eles devem preencher gaps reais na operação.",
+          agentRole: "extrator de ações",
         }),
       });
 
