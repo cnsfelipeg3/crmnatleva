@@ -436,12 +436,12 @@ export default function ConversationIntelligencePanel({ messages, className }: P
                   <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#3B82F6" }}>Voo</p>
                 </div>
                 <div className="space-y-0.5 pl-1">
-                  {airline && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>{airline}</p>}
-                  {flightClass && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>{flightClass}</p>}
-                  {airport && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>🛫 {airport}</p>}
-                  {flightTime && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>{flightTime}</p>}
-                  {baggage && <p className="text-[11px] font-medium" style={{ color: "#E2E8F0" }}>{baggage}</p>}
-                </div>
+                   {airline && <p className="text-[11px] font-medium text-foreground/80">{airline}</p>}
+                   {flightClass && <p className="text-[11px] font-medium text-foreground/80">{flightClass}</p>}
+                   {airport && <p className="text-[11px] font-medium text-foreground/80">🛫 {airport}</p>}
+                   {flightTime && <p className="text-[11px] font-medium text-foreground/80">{flightTime}</p>}
+                   {baggage && <p className="text-[11px] font-medium text-foreground/80">{baggage}</p>}
+                 </div>
               </div>
             )}
 
@@ -449,15 +449,14 @@ export default function ConversationIntelligencePanel({ messages, className }: P
             {documentation.length > 0 && (
               <div className="px-3 py-2">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <Shield className="w-3.5 h-3.5" style={{ color: "#64748B" }} />
-                  <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#64748B" }}>Documentação</p>
+                  <Shield className="w-3.5 h-3.5 text-muted-foreground" />
+                   <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Documentação</p>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {documentation.map(d => (
-                    <span key={d} className="text-[10px] px-2 py-0.5 rounded-md font-medium"
-                      style={{ background: "rgba(16,185,129,0.1)", color: "#6EE7B7", border: "1px solid rgba(16,185,129,0.15)" }}>
-                      {d}
-                    </span>
+                    <span key={d} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                       {d}
+                     </span>
                   ))}
                 </div>
               </div>
@@ -467,15 +466,14 @@ export default function ConversationIntelligencePanel({ messages, className }: P
             {preferences.length > 0 && (
               <div className="px-3 py-2">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <Tag className="w-3.5 h-3.5" style={{ color: "#64748B" }} />
-                  <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#64748B" }}>Preferências</p>
+                  <Tag className="w-3.5 h-3.5 text-muted-foreground" />
+                   <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Preferências</p>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {preferences.map(p => (
-                    <span key={p} className="text-[10px] px-2 py-0.5 rounded-md font-medium"
-                      style={{ background: "rgba(139,92,246,0.1)", color: "#C4B5FD", border: "1px solid rgba(139,92,246,0.15)" }}>
-                      {p}
-                    </span>
+                    <span key={p} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/20">
+                       {p}
+                     </span>
                   ))}
                 </div>
               </div>
@@ -485,16 +483,15 @@ export default function ConversationIntelligencePanel({ messages, className }: P
             {signals.length > 0 && (
               <div className="px-3 py-2">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <TrendingUp className="w-3.5 h-3.5" style={{ color: "#64748B" }} />
-                  <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#64748B" }}>Sinais</p>
+                  <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
+                   <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Sinais</p>
                 </div>
                 <div className="space-y-1">
                   {signals.map(s => (
-                    <div key={s.signal} className="flex items-center gap-2 px-2 py-1 rounded-md"
-                      style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.1)" }}>
-                      <span className="text-sm">{s.emoji}</span>
-                      <span className="text-[10px] font-medium" style={{ color: "#FCD34D" }}>{s.signal}</span>
-                    </div>
+                    <div key={s.signal} className="flex items-center gap-2 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/15">
+                       <span className="text-sm">{s.emoji}</span>
+                       <span className="text-[10px] font-medium text-amber-700 dark:text-amber-400">{s.signal}</span>
+                     </div>
                   ))}
                 </div>
               </div>
