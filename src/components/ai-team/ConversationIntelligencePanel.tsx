@@ -435,135 +435,134 @@ export default function ConversationIntelligencePanel({ messages, className }: P
     return parts.join(", ") || null;
   }, [passengers, kidsCount]);
 
+  const cardCls = "rounded-xl border border-border bg-card overflow-hidden";
+
   return (
-    <div className={cn("rounded-2xl overflow-hidden bg-card border border-border", className)}>
-      {/* Header with completeness bar */}
-      <div className="px-4 py-3 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-500" />
-            <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Inteligência</p>
+    <div className={cn("space-y-3", className)}>
+      {/* ═══ CARD: INTELIGÊNCIA (barra de completude) ═══ */}
+      <div className={cardCls}>
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              <p className="text-[11px] font-bold uppercase tracking-wider text-foreground">Inteligência</p>
+            </div>
+            <span className={cn(
+              "text-[11px] font-extrabold tabular-nums",
+              completeness >= 70 ? "text-emerald-600" : completeness >= 40 ? "text-amber-600" : "text-muted-foreground"
+            )}>{completeness}%</span>
           </div>
-          <span className={cn(
-            "text-[11px] font-extrabold tabular-nums",
-            completeness >= 70 ? "text-emerald-600" : completeness >= 40 ? "text-amber-600" : "text-muted-foreground"
-          )}>{completeness}%</span>
-        </div>
-        <div className="w-full h-1.5 rounded-full overflow-hidden mt-2 bg-muted/50">
-          <div
-            className="h-full rounded-full transition-all duration-700 ease-out"
-            style={{
-              width: `${completeness}%`,
-              background: completeness >= 70
-                ? "linear-gradient(90deg, #10B981, #34D399)"
-                : completeness >= 40
-                ? "linear-gradient(90deg, #F59E0B, #FBBF24)"
-                : "linear-gradient(90deg, hsl(var(--muted-foreground)), hsl(var(--muted-foreground)))",
-            }}
-          />
+          <div className="w-full h-1.5 rounded-full overflow-hidden mt-2 bg-muted/50">
+            <div
+              className="h-full rounded-full transition-all duration-700 ease-out"
+              style={{
+                width: `${completeness}%`,
+                background: completeness >= 70
+                  ? "linear-gradient(90deg, #10B981, #34D399)"
+                  : completeness >= 40
+                  ? "linear-gradient(90deg, #F59E0B, #FBBF24)"
+                  : "linear-gradient(90deg, hsl(var(--muted-foreground)), hsl(var(--muted-foreground)))",
+              }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
-        {!hasAnyData ? (
-          <div className="text-center py-8 space-y-2">
-            <Compass className="w-8 h-8 mx-auto text-muted-foreground/20" />
-            <p className="text-[11px] text-muted-foreground">Aguardando conversa...</p>
-            <p className="text-[9px] text-muted-foreground/70">Os campos serão preenchidos automaticamente</p>
-          </div>
-        ) : (
-          <>
-            {/* ═══ SEÇÃO 1: PERFIL DO LEAD ═══ */}
-            <div className="border-b border-border/40">
-              <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">
-                <Users className="w-3.5 h-3.5 text-primary" />
-                <p className="text-[10px] uppercase tracking-widest font-bold text-primary">Perfil do Lead</p>
-              </div>
-              <table className="w-full border-collapse text-[11px]">
-                <tbody>
-                  <FieldRow icon={Users} label="Nome" value={name || ""} />
-                  <FieldRow icon={MapPin} label="Cidade" value={origin || ""} />
-                  <FieldRow icon={Wallet} label="Orçamento" value={budgetProfile || ""} />
-                  <FieldRow icon={Users} label="Composição" value={leadProfileDesc || ""} />
-                  <FieldRow icon={Heart} label="Tipo" value={tripType || ""} />
-                </tbody>
-              </table>
-
-              {/* Sentiment signals inline */}
-              {signals.length > 0 && (
-                <div className="px-3 pb-2.5">
-                  <div className="flex flex-wrap gap-1">
-                    {signals.map(s => (
-                      <span key={s.signal} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/15">
-                        {s.emoji} {s.signal}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+      {!hasAnyData ? (
+        <div className={cn(cardCls, "text-center py-8 space-y-2")}>
+          <Compass className="w-8 h-8 mx-auto text-muted-foreground/20" />
+          <p className="text-[11px] text-muted-foreground">Aguardando conversa...</p>
+          <p className="text-[9px] text-muted-foreground/70">Os campos serão preenchidos automaticamente</p>
+        </div>
+      ) : (
+        <>
+          {/* ═══ CARD: PERFIL DO LEAD ═══ */}
+          <div className={cardCls}>
+            <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">
+              <Users className="w-3.5 h-3.5 text-primary" />
+              <p className="text-[10px] uppercase tracking-widest font-bold text-primary">Perfil do Lead</p>
             </div>
-
-            {/* ═══ SEÇÃO 2: INFORMAÇÕES DA VIAGEM ═══ */}
-            <div className="border-b border-border/40">
-              <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">
-                <Plane className="w-3.5 h-3.5 text-blue-500" />
-                <p className="text-[10px] uppercase tracking-widest font-bold text-blue-500">Informações da Viagem</p>
-              </div>
-              <table className="w-full border-collapse text-[11px]">
-                <tbody>
-                  <FieldRow icon={Globe} label="Destino" value={destinations} />
-                  <FieldRow icon={MapPin} label="Origem" value={origin || ""} />
-                  <FieldRow icon={Calendar} label="Datas" value={dates} />
-                  <FieldRow icon={Clock} label="Duração" value={duration || ""} />
-                  <FieldRow icon={Users} label="Adultos" value={adultsCount || (passengers.count && !kidsCount ? passengers.count : "") || ""} />
-                  <FieldRow icon={Baby} label="Crianças" value={
-                    kidsCount
-                      ? `${kidsCount}${childrenAges ? ` (${childrenAges})` : ""}`
-                      : passengers.details || ""
-                  } />
-                  <FieldRow icon={Hotel} label="Hospedagem" value={needsHotel || ""} />
-                  <FieldRow icon={Plane} label="Classe" value={flightClass || ""} />
-                  <FieldRow icon={Plane} label="Cia Aérea" value={airline || ""} />
-                  <FieldRow icon={Plane} label="Aeroporto" value={airport || ""} />
-                  <FieldRow icon={Clock} label="Pref. Horário" value={flightTime || ""} />
-                  <FieldRow icon={Compass} label="Bagagem" value={baggage || ""} />
-                </tbody>
-              </table>
-            </div>
-
-            {/* ═══ SEÇÃO 3: PREFERÊNCIAS & DOCUMENTAÇÃO ═══ */}
-            {(preferences.length > 0 || documentation.length > 0) && (
-              <div className="border-b border-border/40">
-                <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">
-                  <Tag className="w-3.5 h-3.5 text-purple-500" />
-                  <p className="text-[10px] uppercase tracking-widest font-bold text-purple-500">Preferências & Docs</p>
-                </div>
-                <div className="px-3 pb-3 space-y-2">
-                  {preferences.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {preferences.map(p => (
-                        <span key={p} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/20">
-                          {p}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {documentation.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {documentation.map(d => (
-                        <span key={d} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-                          {d}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+            <table className="w-full border-collapse text-[11px]">
+              <tbody>
+                <FieldRow icon={Users} label="Nome" value={name || ""} />
+                <FieldRow icon={MapPin} label="Cidade" value={origin || ""} />
+                <FieldRow icon={Wallet} label="Orçamento" value={budgetProfile || ""} />
+                <FieldRow icon={Users} label="Composição" value={leadProfileDesc || ""} />
+                <FieldRow icon={Heart} label="Tipo" value={tripType || ""} />
+              </tbody>
+            </table>
+            {signals.length > 0 && (
+              <div className="px-3 pb-2.5 pt-1">
+                <div className="flex flex-wrap gap-1">
+                  {signals.map(s => (
+                    <span key={s.signal} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/15">
+                      {s.emoji} {s.signal}
+                    </span>
+                  ))}
                 </div>
               </div>
             )}
-          </>
-        )}
-      </div>
+          </div>
+
+          {/* ═══ CARD: INFORMAÇÕES DA VIAGEM ═══ */}
+          <div className={cardCls}>
+            <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">
+              <Plane className="w-3.5 h-3.5 text-blue-500" />
+              <p className="text-[10px] uppercase tracking-widest font-bold text-blue-500">Informações da Viagem</p>
+            </div>
+            <table className="w-full border-collapse text-[11px]">
+              <tbody>
+                <FieldRow icon={Globe} label="Destino" value={destinations} />
+                <FieldRow icon={MapPin} label="Origem" value={origin || ""} />
+                <FieldRow icon={Calendar} label="Datas" value={dates} />
+                <FieldRow icon={Clock} label="Duração" value={duration || ""} />
+                <FieldRow icon={Users} label="Adultos" value={adultsCount || (passengers.count && !kidsCount ? passengers.count : "") || ""} />
+                <FieldRow icon={Baby} label="Crianças" value={
+                  kidsCount
+                    ? `${kidsCount}${childrenAges ? ` (${childrenAges})` : ""}`
+                    : passengers.details || ""
+                } />
+                <FieldRow icon={Hotel} label="Hospedagem" value={needsHotel || ""} />
+                <FieldRow icon={Plane} label="Classe" value={flightClass || ""} />
+                <FieldRow icon={Plane} label="Cia Aérea" value={airline || ""} />
+                <FieldRow icon={Plane} label="Aeroporto" value={airport || ""} />
+                <FieldRow icon={Clock} label="Pref. Horário" value={flightTime || ""} />
+                <FieldRow icon={Compass} label="Bagagem" value={baggage || ""} />
+              </tbody>
+            </table>
+          </div>
+
+          {/* ═══ CARD: PREFERÊNCIAS & DOCUMENTAÇÃO ═══ */}
+          {(preferences.length > 0 || documentation.length > 0) && (
+            <div className={cardCls}>
+              <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">
+                <Tag className="w-3.5 h-3.5 text-purple-500" />
+                <p className="text-[10px] uppercase tracking-widest font-bold text-purple-500">Preferências & Docs</p>
+              </div>
+              <div className="px-3 pb-3 space-y-2">
+                {preferences.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {preferences.map(p => (
+                      <span key={p} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/20">
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {documentation.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {documentation.map(d => (
+                      <span key={d} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                        {d}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
