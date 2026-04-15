@@ -394,9 +394,37 @@ export function enforceHardRules(
   lastLeadMessage?: string,
   agentMessageCount?: number,
   conversationContext?: string,
+  knownClientName?: string,
 ): string {
   // Remove em-dashes (—) and en-dashes (–)
   let cleaned = text.replace(/\s*[—–]\s*/g, ", ");
+
+  // ── DETERMINISTIC: Strip "como posso te chamar?" when client name is already known ──
+  if (knownClientName && knownClientName.trim().length > 1) {
+    const nameAskPatterns = [
+      /[^.!?\n]*como\s+(?:posso\s+)?te\s+chamar[^.!?\n]*[?.]?\s*/gi,
+      /[^.!?\n]*qual\s+(?:[ée]\s+)?(?:o\s+)?seu\s+nome[^.!?\n]*[?.]?\s*/gi,
+      /[^.!?\n]*me\s+diz\s+(?:o\s+)?seu\s+nome[^.!?\n]*[?.]?\s*/gi,
+      /[^.!?\n]*antes\s+de\s+tudo[,.]?\s*como\s+(?:posso\s+)?te\s+chamar[^.!?\n]*[?.]?\s*/gi,
+    ];
+    for (const p of nameAskPatterns) {
+      cleaned = cleaned.replace(p, "").trim();
+    }
+    // If stripping left the message empty or too short, reconstruct with name
+    if (cleaned.length < 10 && agentId === "maya") {
+      cleaned = `Oii, ${knownClientName.split(" ")[0]}! Tudo bem?`;
+    }
+  }
+
+  // ── MAYA FIRST-MESSAGE: prevent fragmented greeting that ignores lead content ──
+  if (agentId === "maya" && (agentMessageCount ?? 0) === 0 && lastLeadMessage) {
+    const hasDestination = /\b(viagem|viajar|destino|buenos\s*aires|t[oó]quio|orlando|dubai|europa|paris|nova\s*york|maldivas|caribe|cancun|punta\s*cana|marrocos|egito|grécia|turquia|tailândia|japão|méxico|chile|argentina|col[oô]mbia|peru|portugal|espanha|itália|frança|londres|roma|veneza|miami|las\s*vegas|hawaii|bali|tailandia)\b/i.test(lastLeadMessage);
+    const greetingOnly = /^(oi+[,!.\s]*|ol[aá]+[,!.\s]*|hey[,!.\s]*)?(boa\s+(?:tarde|noite|dia)[,!.\s]*)?(tudo\s+(?:bem|bom|ótimo|[oó]timo)\??[,!.\s]*)?$/i.test(cleaned.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "").trim());
+    if (hasDestination && greetingOnly) {
+      // The model gave just "Oii, boa tarde! Tudo bem?" ignoring the destination — flag for logging
+      console.warn(`🛡️ Maya greeting fragmentation detected — response was just greeting, lead mentioned destination`);
+    }
+  }
   // Collapse double commas
   cleaned = cleaned.replace(/,\s*,/g, ",");
   // Remove comma before period
@@ -612,7 +640,7 @@ export async function fullCompliancePipeline(
   // The AI compliance validator was causing messages to lose paragraphs and content.
   
   // Step 2: Deterministic hard rules (code-level, 100% guaranteed)
-  const finalText = enforceHardRules(agentResponse, agentId, lastLeadMessage, agentMessageCount, conversationContext);
+  const finalText = enforceHardRules(agentResponse, agentId, lastLeadMessage, agentMessageCount, conversationContext, knownClientName);
 
   // Step 3: Unified name-frequency sanitization (deterministic, uses known name + aliases)
   const nameInfo = extractClientNames(conversationContext, knownClientName);
