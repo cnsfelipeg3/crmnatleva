@@ -340,9 +340,14 @@ export default function CotacoesPropostasPipeline() {
             </span>
           </p>
         </div>
-        <Button size="sm" onClick={() => navigate("/propostas/nova")} className="gap-1.5">
-          <Plus className="w-3.5 h-3.5" /> Nova Proposta
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => navigate("/propostas")} className="gap-1.5">
+            <FileText className="w-3.5 h-3.5" /> Propostas
+          </Button>
+          <Button size="sm" onClick={() => navigate("/propostas/nova")} className="gap-1.5">
+            <Plus className="w-3.5 h-3.5" /> Nova Proposta
+          </Button>
+        </div>
       </div>
 
       {/* Stage KPI Bar — Pipeline visual */}
