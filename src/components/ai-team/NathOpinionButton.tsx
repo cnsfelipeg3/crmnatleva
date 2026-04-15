@@ -428,6 +428,10 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
+          rawMode: true,
+          rawSystemPrompt: "Você é um consultor de processos de IA de uma agência de viagens premium. Gere relatórios detalhados e realistas com dados plausíveis. Retorne APENAS JSON válido, sem markdown.",
+          provider: "lovable",
+          model: "google/gemini-2.5-flash",
           question: `Gere um relatório detalhado sobre a seguinte melhoria proposta para o ecossistema de agentes IA de uma agência de viagens premium (NatLeva):
 
 MELHORIA: "${action.title}"
@@ -450,7 +454,7 @@ Retorne EXATAMENTE um JSON com:
 
 Retorne SOMENTE o JSON, sem markdown.`,
           agentName: "SISTEMA",
-          agentRole: "Você é um consultor de processos de IA de uma agência de viagens premium. Gere relatórios detalhados e realistas com dados plausíveis. Retorne APENAS JSON válido.",
+          agentRole: "consultor de processos",
         }),
       });
 
