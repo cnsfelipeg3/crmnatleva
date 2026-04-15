@@ -195,6 +195,10 @@ export default function NathOpinionButton({ messages, context, variant = "header
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
+          rawMode: true,
+          rawSystemPrompt: "Você é um arquiteto de sistemas de agentes IA de uma agência de viagens premium (NatLeva). Retorne APENAS um JSON array válido, sem markdown, sem texto adicional. Gere 10-14 itens incluindo 1-2 sugestões de novos agentes. Seja criativo e realista.",
+          provider: "lovable",
+          model: "google/gemini-2.5-flash",
           question: `Com base na seguinte opinião da CEO Nath sobre uma conversa de atendimento, extraia melhorias acionáveis para o ecossistema de agentes IA.
 
 OPINIÃO DA NATH:
@@ -209,7 +213,7 @@ ETAPAS DO FUNIL: Primeiro Contato → Qualificação → Proposta → Negociaç�
 IMPORTANTE:
 1. Gere entre 10 e 14 ações no total.
 2. Pelo menos 4 devem ser para agentes ESPECÍFICOS.
-3. Inclua pelo menos 1-2 sugestões de NOVOS AGENTES (type: "new_agent") que ainda não existem e que melhorariam a operação. Para cada novo agente, detalhe: nome sugerido, emoji, função, squad, etapa do funil em que atuaria, skills e justificativa completa.
+3. Inclua pelo menos 1-2 sugestões de NOVOS AGENTES (type: "new_agent") que ainda não existem e que melhorariam a operação.
 
 Retorne EXATAMENTE um JSON array. Cada item DEVE ter:
 - "type": "knowledge_base", "skill", "global_rule" ou "new_agent"
@@ -222,17 +226,17 @@ Retorne EXATAMENTE um JSON array. Cada item DEVE ter:
 - "estimated_impact": frase curta do impacto esperado
 
 Para itens type="new_agent", inclua TAMBÉM:
-- "new_agent_name": nome do agente sugerido (ex: "KEEPER", "COMPASS")
+- "new_agent_name": nome do agente sugerido
 - "new_agent_emoji": emoji representativo
-- "new_agent_role": função detalhada do agente (1-2 frases)
-- "new_agent_squad": squad ideal (orquestracao, comercial, atendimento, financeiro, operacional, demanda, retencao)
+- "new_agent_role": função detalhada do agente
+- "new_agent_squad": squad ideal
 - "new_agent_stage": etapa do funil onde atuaria
 - "new_agent_skills": array com 3-5 habilidades-chave
-- "new_agent_justification": parágrafo explicando por que este agente é necessário, qual gap ele preenche e como melhora a operação
+- "new_agent_justification": parágrafo explicando por que este agente é necessário
 
 Retorne SOMENTE o JSON array, sem texto adicional.`,
           agentName: "SISTEMA",
-          agentRole: "Você é um arquiteto de sistemas de agentes IA de uma agência de viagens premium (NatLeva). Retorne APENAS um JSON array válido, sem markdown. Gere 10-14 itens incluindo 1-2 sugestões de novos agentes. Seja criativo e realista nas sugestões de novos agentes — eles devem preencher gaps reais na operação.",
+          agentRole: "extrator de ações",
         }),
       });
 
@@ -266,12 +270,27 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
         }
       }
 
-      // Parse JSON from response (might be wrapped in markdown code blocks)
+      // Parse JSON from response (might be wrapped in markdown code blocks or mixed text)
       let cleaned = fullText.trim();
-      cleaned = cleaned.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+      console.log("[NathActions] Raw AI response length:", cleaned.length, "Preview:", cleaned.slice(0, 200));
+      
+      // Remove markdown code blocks
+      cleaned = cleaned.replace(/^```json?\s*/im, "").replace(/```\s*$/m, "").trim();
+      
+      // Try to find JSON array in the response if it's mixed with text
+      if (!cleaned.startsWith("[")) {
+        const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+        if (arrayMatch) {
+          cleaned = arrayMatch[0];
+        }
+      }
       
       try {
         const parsed: any[] = JSON.parse(cleaned);
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          throw new Error("Empty or invalid array");
+        }
+        console.log("[NathActions] Parsed", parsed.length, "actions successfully");
         const mapped: ImprovementAction[] = parsed.map((item, i) => ({
           id: `action-${Date.now()}-${i}`,
           type: item.type || "knowledge_base",
@@ -292,8 +311,9 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
           newAgentJustification: item.new_agent_justification || undefined,
         }));
         setActions(mapped);
-      } catch {
-        toast({ title: "Erro ao processar ações", description: "A IA retornou um formato inesperado.", variant: "destructive" });
+      } catch (parseErr) {
+        console.error("[NathActions] JSON parse failed:", parseErr, "\nCleaned text:", cleaned.slice(0, 500));
+        toast({ title: "Erro ao processar ações", description: "A IA retornou um formato inesperado. Tente novamente.", variant: "destructive" });
       }
     } catch {
       toast({ title: "Erro de conexão", variant: "destructive" });
@@ -408,6 +428,10 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
         body: JSON.stringify({
+          rawMode: true,
+          rawSystemPrompt: "Você é um consultor de processos de IA de uma agência de viagens premium. Gere relatórios detalhados e realistas com dados plausíveis. Retorne APENAS JSON válido, sem markdown.",
+          provider: "lovable",
+          model: "google/gemini-2.5-flash",
           question: `Gere um relatório detalhado sobre a seguinte melhoria proposta para o ecossistema de agentes IA de uma agência de viagens premium (NatLeva):
 
 MELHORIA: "${action.title}"
@@ -430,7 +454,7 @@ Retorne EXATAMENTE um JSON com:
 
 Retorne SOMENTE o JSON, sem markdown.`,
           agentName: "SISTEMA",
-          agentRole: "Você é um consultor de processos de IA de uma agência de viagens premium. Gere relatórios detalhados e realistas com dados plausíveis. Retorne APENAS JSON válido.",
+          agentRole: "consultor de processos",
         }),
       });
 
@@ -463,7 +487,12 @@ Retorne SOMENTE o JSON, sem markdown.`,
         }
       }
 
-      let cleaned = fullText.trim().replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+      let cleaned = fullText.trim().replace(/^```json?\s*/im, "").replace(/```\s*$/m, "").trim();
+      // Try to find JSON object in response
+      if (!cleaned.startsWith("{")) {
+        const objMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (objMatch) cleaned = objMatch[0];
+      }
       try {
         const parsed = JSON.parse(cleaned);
         setDetailReport({
@@ -478,8 +507,8 @@ Retorne SOMENTE o JSON, sem markdown.`,
           estimatedTimeframe: parsed.estimated_timeframe || "",
           kpisAffected: parsed.kpis_affected || [],
         });
-      } catch {
-        console.warn("[NathDetail] Failed to parse report");
+      } catch (parseErr) {
+        console.error("[NathDetail] Failed to parse report:", parseErr, "\nCleaned:", cleaned.slice(0, 300));
       }
     } catch {
       console.warn("[NathDetail] Connection error");
