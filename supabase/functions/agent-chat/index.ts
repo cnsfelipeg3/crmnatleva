@@ -131,15 +131,23 @@ serve(async (req) => {
       agentBehaviorPrompt,
       agentId,
       teamContext,
+      rawMode,
+      rawSystemPrompt,
     } = await req.json();
 
-    // ─── Time-aware greeting (Brasília UTC-3) ───
-    const nowUtc = new Date();
-    const brasilFormatter = new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: "America/Sao_Paulo" });
-    const brasilHour = parseInt(brasilFormatter.format(nowUtc), 10);
-    const saudacao = brasilHour < 12 ? "bom dia" : brasilHour < 18 ? "boa tarde" : "boa noite";
+    let systemPrompt: string;
 
-    const behaviorCore = `REGRA DE SAUDACAO — HORARIO ATUAL:
+    if (rawMode && rawSystemPrompt) {
+      // Raw mode: use the provided system prompt directly (for JSON extraction, analysis, etc.)
+      systemPrompt = rawSystemPrompt;
+    } else {
+      // ─── Time-aware greeting (Brasília UTC-3) ───
+      const nowUtc = new Date();
+      const brasilFormatter = new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: "America/Sao_Paulo" });
+      const brasilHour = parseInt(brasilFormatter.format(nowUtc), 10);
+      const saudacao = brasilHour < 12 ? "bom dia" : brasilHour < 18 ? "boa tarde" : "boa noite";
+
+      const behaviorCore = `REGRA DE SAUDACAO — HORARIO ATUAL:
 Agora sao ${String(brasilHour).padStart(2, "0")}h no horario de Brasilia. A saudacao correta e "${saudacao}".
 - Se o cliente disser "bom dia", "boa tarde", "boa noite" ou qualquer cumprimento, RESPONDA COM A SAUDACAO CORRETA para o horario atual ("${saudacao}").
 - Se o cliente NAO usar saudacao de periodo, voce tambem NAO precisa usar.
@@ -169,14 +177,15 @@ REGRAS DE COMUNICAÇÃO NATLEVA (OBRIGATÓRIAS):
 - Sempre termine com elemento que convide resposta.
 - Celebre conquistas do lead (aniversário, casamento, viagem dos sonhos).`;
 
-    const agentDirectives = agentBehaviorPrompt ? `\n\nDIRETIVAS ESPECÍFICAS:\n${agentBehaviorPrompt}` : "";
-    const teamBlock = teamContext ? `\n\n${teamContext}` : "";
+      const agentDirectives = agentBehaviorPrompt ? `\n\nDIRETIVAS ESPECÍFICAS:\n${agentBehaviorPrompt}` : "";
+      const teamBlock = teamContext ? `\n\n${teamContext}` : "";
 
-    const systemPrompt = `${behaviorCore}${agentDirectives}${teamBlock}
+      systemPrompt = `${behaviorCore}${agentDirectives}${teamBlock}
 
 Você é o ${agentName}, um agente de IA da agência de viagens NatLeva, responsável por: ${agentRole}.
 Responda com humanidade, conexão emocional e inteligência consultiva.
 Responda sempre em português brasileiro.`;
+    }
 
     const userMessages: Array<{ role: string; content: string }> = [];
     if (history && history.length > 0) {
