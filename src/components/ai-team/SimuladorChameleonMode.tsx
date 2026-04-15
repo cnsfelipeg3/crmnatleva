@@ -687,6 +687,17 @@ export default function SimuladorChameleonMode() {
           </div>
         </div>
 
+        {/* Nath Opinion */}
+        {messages.length >= 2 && phase !== "debrief" && (
+          <div className="px-3 md:px-4 py-2 border-b border-border shrink-0">
+            <NathOpinionButton
+              messages={messages.map(m => ({ role: m.role === "lead" ? "user" : "agent", content: m.content, agentName: m.agentName, timestamp: String(m.timestamp) }))}
+              context={`Simulador Camaleão · Perfil: ${profile?.nome} · Destino: ${profile?.destino} · Agente atual: ${currentAgent?.name} (${currentAgent?.role}) · Troca ${exchangeCount}/${maxExchanges}`}
+              variant="floating"
+            />
+          </div>
+        )}
+
         {/* Messages or Debrief */}
         <div className="flex-1 overflow-y-auto p-3 md:p-4 space-y-3">
           {phase === "debrief" && debrief ? (
