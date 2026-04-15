@@ -232,6 +232,10 @@ export async function callSimulatorAI(sysPrompt: string, history: { role: string
     return callSimulatorAI(sysPrompt, history, type, agentBehaviorPrompt, _retryCount + 1, providerOverride);
   }
 
+  if (resp.status === 402) {
+    throw new Error("CREDITS_EXHAUSTED");
+  }
+
   if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
   if (type === "evaluate" || type === "debrief" || type === "deep" || type === "price_image") {
