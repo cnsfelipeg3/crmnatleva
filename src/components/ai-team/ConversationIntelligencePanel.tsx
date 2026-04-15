@@ -315,7 +315,7 @@ function calcCompleteness(fields: Record<string, any>): number {
   return score;
 }
 
-// ── Field row component ──
+// ── Table row component ──
 function FieldRow({ icon: Icon, label, value, isNew }: {
   icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   label: string;
@@ -325,19 +325,25 @@ function FieldRow({ icon: Icon, label, value, isNew }: {
   if (!value || (Array.isArray(value) && value.length === 0)) return null;
   const display = Array.isArray(value) ? value.join(", ") : value;
   return (
-    <div className={cn(
-      "flex items-start gap-2.5 px-3 py-2 rounded-lg transition-all duration-500",
-      isNew ? "bg-primary/10 border border-primary/20" : "bg-transparent"
+    <tr className={cn(
+      "border-b border-border/30 last:border-b-0 transition-colors",
+      isNew && "bg-primary/5"
     )}>
-      <Icon className={cn("w-3.5 h-3.5 mt-0.5 shrink-0", isNew ? "text-emerald-500" : "text-muted-foreground")} />
-      <div className="min-w-0 flex-1">
-        <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">{label}</p>
-        <p className="text-[12px] font-medium mt-0.5 text-foreground">{display}</p>
-      </div>
-      {isNew && (
-        <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-md animate-pulse bg-emerald-500/15 text-emerald-500">NEW</span>
-      )}
-    </div>
+      <td className="py-2 px-3 w-[110px] align-top">
+        <div className="flex items-center gap-1.5">
+          <Icon className={cn("w-3.5 h-3.5 shrink-0", isNew ? "text-emerald-500" : "text-muted-foreground")} />
+          <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground whitespace-nowrap">{label}</span>
+        </div>
+      </td>
+      <td className="py-2 px-3 align-top">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[12px] font-medium text-foreground">{display}</span>
+          {isNew && (
+            <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-md animate-pulse bg-emerald-500/15 text-emerald-500">NEW</span>
+          )}
+        </div>
+      </td>
+    </tr>
   );
 }
 
