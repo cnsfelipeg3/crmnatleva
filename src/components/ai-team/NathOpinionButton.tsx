@@ -266,12 +266,27 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
         }
       }
 
-      // Parse JSON from response (might be wrapped in markdown code blocks)
+      // Parse JSON from response (might be wrapped in markdown code blocks or mixed text)
       let cleaned = fullText.trim();
-      cleaned = cleaned.replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+      console.log("[NathActions] Raw AI response length:", cleaned.length, "Preview:", cleaned.slice(0, 200));
+      
+      // Remove markdown code blocks
+      cleaned = cleaned.replace(/^```json?\s*/im, "").replace(/```\s*$/m, "").trim();
+      
+      // Try to find JSON array in the response if it's mixed with text
+      if (!cleaned.startsWith("[")) {
+        const arrayMatch = cleaned.match(/\[[\s\S]*\]/);
+        if (arrayMatch) {
+          cleaned = arrayMatch[0];
+        }
+      }
       
       try {
         const parsed: any[] = JSON.parse(cleaned);
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          throw new Error("Empty or invalid array");
+        }
+        console.log("[NathActions] Parsed", parsed.length, "actions successfully");
         const mapped: ImprovementAction[] = parsed.map((item, i) => ({
           id: `action-${Date.now()}-${i}`,
           type: item.type || "knowledge_base",
@@ -292,8 +307,9 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
           newAgentJustification: item.new_agent_justification || undefined,
         }));
         setActions(mapped);
-      } catch {
-        toast({ title: "Erro ao processar ações", description: "A IA retornou um formato inesperado.", variant: "destructive" });
+      } catch (parseErr) {
+        console.error("[NathActions] JSON parse failed:", parseErr, "\nCleaned text:", cleaned.slice(0, 500));
+        toast({ title: "Erro ao processar ações", description: "A IA retornou um formato inesperado. Tente novamente.", variant: "destructive" });
       }
     } catch {
       toast({ title: "Erro de conexão", variant: "destructive" });
