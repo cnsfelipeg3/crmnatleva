@@ -416,12 +416,39 @@ export function enforceHardRules(
     }
   }
 
-  // ── MAYA FIRST-MESSAGE: prevent fragmented greeting that ignores lead content ──
+  // ── MAYA FIRST-MESSAGE: prevent lazy "destino, que legal!" responses ──
   if (agentId === "maya" && (agentMessageCount ?? 0) === 0 && lastLeadMessage) {
-    const hasDestination = /\b(viagem|viajar|destino|buenos\s*aires|t[oó]quio|orlando|dubai|europa|paris|nova\s*york|maldivas|caribe|cancun|punta\s*cana|marrocos|egito|grécia|turquia|tailândia|japão|méxico|chile|argentina|col[oô]mbia|peru|portugal|espanha|itália|frança|londres|roma|veneza|miami|las\s*vegas|hawaii|bali|tailandia)\b/i.test(lastLeadMessage);
-    const greetingOnly = /^(oi+[,!.\s]*|ol[aá]+[,!.\s]*|hey[,!.\s]*)?(boa\s+(?:tarde|noite|dia)[,!.\s]*)?(tudo\s+(?:bem|bom|ótimo|[oó]timo)\??[,!.\s]*)?$/i.test(cleaned.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "").trim());
+    const hasDestination = /\b(viagem|viajar|destino|buenos\s*aires|t[oó]quio|orlando|dubai|europa|paris|nova\s*york|maldivas|caribe|cancun|punta\s*cana|marrocos|egito|grécia|turquia|tailândia|japão|méxico|chile|argentina|col[oô]mbia|peru|portugal|espanha|itália|frança|londres|roma|veneza|miami|las\s*vegas|hawaii|bali|tailandia|seychelles|zanzibar|croácia|noruega|islândia|nova\s*zelândia)\b/i.test(lastLeadMessage);
+    
+    // Detect lazy "[destino], que legal/demais/show/incrível" pattern
+    const lazyDestinoPattern = /\b\w+,?\s+que\s+(legal|demais|show|incr[ií]vel|massa|top|bacana|maravilh\w+)[.!]?\s*/gi;
+    if (hasDestination && lazyDestinoPattern.test(cleaned)) {
+      // Check if the response is ONLY the lazy pattern (no real content after)
+      const withoutLazy = cleaned.replace(lazyDestinoPattern, "").trim();
+      const withoutGreeting = withoutLazy.replace(/^(oi+[,!.\s]*|ol[aá]+[,!.\s]*)?(boa\s+(?:tarde|noite|dia)[,!.\s]*)?(tudo\s+(?:bem|bom)\??[,!.\s]*)?/i, "").trim();
+      if (withoutGreeting.length < 30) {
+        // The AI gave a lazy response — rebuild it
+        const leadAskedQuestion = lastLeadMessage.includes("?");
+        const destinoMatch = lastLeadMessage.match(/\b(Dubai|Orlando|T[oó]quio|Europa|Paris|Maldivas|Caribe|Cancún?|Marrocos|Egito|Grécia|Turquia|Tailândia|Japão|México|Chile|Argentina|Col[oô]mbia|Peru|Portugal|Espanha|Itália|França|Londres|Roma|Miami|Bali|Nova\s*York|Nova\s*Zelândia|Seychelles|Zanzibar|Croácia|Noruega|Islândia)/i);
+        const destName = destinoMatch ? destinoMatch[1] : "esse destino";
+        const brasilHour = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getHours();
+        const saudacao = brasilHour < 12 ? "bom dia" : brasilHour < 18 ? "boa tarde" : "boa noite";
+        
+        if (leadAskedQuestion) {
+          cleaned = `Oii, ${saudacao}!! Tudo bem? Trabalhamos sim com ${destName}! 😍 É um dos destinos que a gente mais monta roteiro. Me conta, como posso te chamar?`;
+        } else {
+          cleaned = `Oii, ${saudacao}!! Tudo bem? Que destino incrível, ${destName}! A gente adora montar roteiro pra lá. É a primeira vez de vocês? Como posso te chamar?`;
+        }
+        if (knownClientName) {
+          cleaned = cleaned.replace(/como posso te chamar\?/i, `${knownClientName.split(" ")[0]}! 😊`);
+        }
+        console.warn(`🛡️ Maya lazy-destino response rebuilt — was generic "que legal" pattern`);
+      }
+    }
+
+    // Also detect greeting-only (no content at all)
+    const greetingOnly = /^(oi+[,!.\s]*|ol[aá]+[,!.\s]*)?(boa\s+(?:tarde|noite|dia)[,!.\s]*)?(tudo\s+(?:bem|bom|ótimo|[oó]timo)\??[,!.\s]*)?$/i.test(cleaned.replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, "").trim());
     if (hasDestination && greetingOnly) {
-      // The model gave just "Oii, boa tarde! Tudo bem?" ignoring the destination — flag for logging
       console.warn(`🛡️ Maya greeting fragmentation detected — response was just greeting, lead mentioned destination`);
     }
   }
