@@ -411,6 +411,8 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
       title: `✅ ${applied} melhoria${applied > 1 ? "s" : ""} aplicada${applied > 1 ? "s" : ""}!`,
       description: desc,
     });
+    // Invalidate improvements cache so next prompt build picks up new improvements
+    invalidateImprovementsCache();
     setApplying(false);
     setActions(prev => prev.map(a => a.selected ? { ...a, selected: false } : a));
   }, [actions, toast]);
