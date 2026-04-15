@@ -1,6 +1,7 @@
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining } from "@/components/ai-team/agentTrainingStore";
 import { buildUnifiedAgentPrompt } from "@/utils/buildAgentPrompt";
+import { supabase } from "@/integrations/supabase/client";
 import {
   type LeadInteligente, type MensagemLead,
   ETAPAS_FUNIL,
@@ -706,24 +707,38 @@ export function saveJson(key: string, data: any) {
 }
 
 export async function implementImprovement(m: Improvement) {
-  const entry = { id: m.id, titulo: m.titulo, agente: m.agente, conteudo: m.editedContent || m.conteudoSugerido, data: new Date().toISOString(), tipo: m.tipo };
-  if (m.tipo === "conhecimento_kb") {
-    const kb = loadJson(STORAGE_KEYS.kb);
-    kb.unshift(entry);
-    saveJson(STORAGE_KEYS.kb, kb);
-  } else if (m.tipo === "nova_skill") {
-    const skills = loadJson(STORAGE_KEYS.skills);
-    skills.unshift(entry);
-    saveJson(STORAGE_KEYS.skills, skills);
-  } else if (m.tipo === "instrucao_prompt") {
-    const prompts = loadJson(STORAGE_KEYS.prompts);
-    prompts.unshift(entry);
-    saveJson(STORAGE_KEYS.prompts, prompts);
-  } else if (m.tipo === "workflow") {
-    const wfs = loadJson(STORAGE_KEYS.workflows);
-    wfs.unshift(entry);
-    saveJson(STORAGE_KEYS.workflows, wfs);
+  // Map tipo to category
+  const categoryMap: Record<string, string> = {
+    conhecimento_kb: "knowledge_base",
+    nova_skill: "skill",
+    instrucao_prompt: "prompt_instruction",
+    workflow: "workflow",
+  };
+
+  // Save to Supabase ai_team_improvements
+  const { error } = await supabase
+    .from('ai_team_improvements')
+    .insert({
+      title: m.titulo,
+      description: m.editedContent || m.conteudoSugerido,
+      category: categoryMap[m.tipo] || m.tipo,
+      agent_id: m.agente || null,
+      status: 'approved',
+      impact_score: m.prioridade === "alta" ? 90 : m.prioridade === "media" ? 60 : 30,
+      approved_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error('[implementImprovement] Supabase error:', error);
+    // Fallback to localStorage if DB fails
+    const entry = { id: m.id, titulo: m.titulo, agente: m.agente, conteudo: m.editedContent || m.conteudoSugerido, data: new Date().toISOString(), tipo: m.tipo };
+    if (m.tipo === "conhecimento_kb") { const kb = loadJson(STORAGE_KEYS.kb); kb.unshift(entry); saveJson(STORAGE_KEYS.kb, kb); }
+    else if (m.tipo === "nova_skill") { const skills = loadJson(STORAGE_KEYS.skills); skills.unshift(entry); saveJson(STORAGE_KEYS.skills, skills); }
+    else if (m.tipo === "instrucao_prompt") { const prompts = loadJson(STORAGE_KEYS.prompts); prompts.unshift(entry); saveJson(STORAGE_KEYS.prompts, prompts); }
+    else if (m.tipo === "workflow") { const wfs = loadJson(STORAGE_KEYS.workflows); wfs.unshift(entry); saveJson(STORAGE_KEYS.workflows, wfs); }
   }
+
+  // Also save to evolution timeline (localStorage — for UI history)
   const timeline = loadJson(STORAGE_KEYS.evolution);
   timeline.unshift({
     id: "ev_" + Date.now(), tipo: m.tipo, agenteId: m.agente,
