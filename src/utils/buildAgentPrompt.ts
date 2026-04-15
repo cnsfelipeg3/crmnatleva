@@ -290,6 +290,8 @@ export interface UnifiedPromptOptions {
   agencyName?: string;
   agencyTone?: string;
   knowledgeBlock?: string;
+  /** Pre-fetched improvements block (from fetchApprovedImprovements) */
+  improvementsBlock?: string;
   /** DB overrides (behavior_prompt, persona, skills) — used by auto mode */
   dbOverride?: {
     behavior_prompt?: string | null;
