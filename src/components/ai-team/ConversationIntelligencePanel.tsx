@@ -449,8 +449,8 @@ export default function ConversationIntelligencePanel({ messages, className }: P
             {documentation.length > 0 && (
               <div className="px-3 py-2">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <Shield className="w-3.5 h-3.5" style={{ color: "#64748B" }} />
-                  <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#64748B" }}>Documentação</p>
+                  <Shield className="w-3.5 h-3.5 text-muted-foreground" />
+                   <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Documentação</p>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {documentation.map(d => (
@@ -466,8 +466,8 @@ export default function ConversationIntelligencePanel({ messages, className }: P
             {preferences.length > 0 && (
               <div className="px-3 py-2">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <Tag className="w-3.5 h-3.5" style={{ color: "#64748B" }} />
-                  <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#64748B" }}>Preferências</p>
+                  <Tag className="w-3.5 h-3.5 text-muted-foreground" />
+                   <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Preferências</p>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {preferences.map(p => (
@@ -483,8 +483,8 @@ export default function ConversationIntelligencePanel({ messages, className }: P
             {signals.length > 0 && (
               <div className="px-3 py-2">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <TrendingUp className="w-3.5 h-3.5" style={{ color: "#64748B" }} />
-                  <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#64748B" }}>Sinais</p>
+                  <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
+                   <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Sinais</p>
                 </div>
                 <div className="space-y-1">
                   {signals.map(s => (
