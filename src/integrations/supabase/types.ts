@@ -1018,7 +1018,7 @@ export type Database = {
       }
       ai_team_improvements: {
         Row: {
-          agent_id: string
+          agent_id: string | null
           approved_at: string | null
           approved_by: string | null
           category: string
@@ -1030,7 +1030,7 @@ export type Database = {
           title: string
         }
         Insert: {
-          agent_id: string
+          agent_id?: string | null
           approved_at?: string | null
           approved_by?: string | null
           category?: string
@@ -1042,7 +1042,7 @@ export type Database = {
           title: string
         }
         Update: {
-          agent_id?: string
+          agent_id?: string | null
           approved_at?: string | null
           approved_by?: string | null
           category?: string
