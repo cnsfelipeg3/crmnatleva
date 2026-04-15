@@ -414,6 +414,21 @@ export default function SimuladorAutoMode() {
           const leadChunks = chunksRef.current.get(lead.id) || [];
           const compressedHistory = leadChunks.length > 0 ? buildActiveContext(lead, leadChunks) : compressConversation(lead.mensagens);
           let agentSysPrompt = buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id], improvementsBlockRef.current);
+
+          // ═══ INJECT LEAD CONTEXT — so agent knows who they're talking to ═══
+          const leadContextBlock = `\n\n=== CONTEXTO DO LEAD (dados já conhecidos — NÃO pergunte o que já sabe) ===
+Nome do cliente: ${lead.nome}
+Destino de interesse: ${lead.destino}
+Grupo: ${lead.paxLabel} (${lead.pax} pax)
+Orçamento declarado: ${lead.orcamento}
+Ocasião: ${lead.ocasiao}
+Canal de origem: ${lead.origem}
+Etapa atual: ${lead.etapaAtual}
+REGRA: Você JÁ SABE o nome do cliente ("${lead.nome.split(" ")[0]}"). NÃO pergunte "como posso te chamar?" — use o nome diretamente desde a primeira resposta.
+REGRA: Você JÁ SABE o destino ("${lead.destino}"). NÃO pergunte "qual destino?" — reaja ao destino diretamente.
+`;
+          agentSysPrompt += leadContextBlock;
+
           if ((lead as any)._lengthWarning) {
             agentSysPrompt += "\n\nAVISO CRITICO: sua ultima resposta foi LONGA DEMAIS e foi truncada. Respostas devem ter no maximo 60 palavras. Seja MUITO mais breve. UMA ideia por mensagem. ZERO listas.";
             (lead as any)._lengthWarning = false;
@@ -564,8 +579,10 @@ export default function SimuladorAutoMode() {
             }
 
             const objCompressed = compressConversation(lead.mensagens);
+            let objSysPrompt = buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id], improvementsBlockRef.current);
+            objSysPrompt += `\n\n=== CONTEXTO DO LEAD ===\nNome: ${lead.nome}\nDestino: ${lead.destino}\nGrupo: ${lead.paxLabel}\nOrçamento: ${lead.orcamento}\nOcasião: ${lead.ocasiao}\n`;
             let objResp = await callSimulatorAI(
-              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id], improvementsBlockRef.current),
+              objSysPrompt,
               objCompressed, "agent"
             );
             if (!simAtivaRef.current) return;
