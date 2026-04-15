@@ -579,8 +579,10 @@ REGRA: Você JÁ SABE o destino ("${lead.destino}"). NÃO pergunte "qual destino
             }
 
             const objCompressed = compressConversation(lead.mensagens);
+            let objSysPrompt = buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id], improvementsBlockRef.current);
+            objSysPrompt += `\n\n=== CONTEXTO DO LEAD ===\nNome: ${lead.nome}\nDestino: ${lead.destino}\nGrupo: ${lead.paxLabel}\nOrçamento: ${lead.orcamento}\nOcasião: ${lead.ocasiao}\n`;
             let objResp = await callSimulatorAI(
-              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id], improvementsBlockRef.current),
+              objSysPrompt,
               objCompressed, "agent"
             );
             if (!simAtivaRef.current) return;
