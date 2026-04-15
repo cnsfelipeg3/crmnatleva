@@ -487,7 +487,12 @@ Retorne SOMENTE o JSON, sem markdown.`,
         }
       }
 
-      let cleaned = fullText.trim().replace(/^```json?\s*/i, "").replace(/```\s*$/, "").trim();
+      let cleaned = fullText.trim().replace(/^```json?\s*/im, "").replace(/```\s*$/m, "").trim();
+      // Try to find JSON object in response
+      if (!cleaned.startsWith("{")) {
+        const objMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (objMatch) cleaned = objMatch[0];
+      }
       try {
         const parsed = JSON.parse(cleaned);
         setDetailReport({
@@ -502,8 +507,8 @@ Retorne SOMENTE o JSON, sem markdown.`,
           estimatedTimeframe: parsed.estimated_timeframe || "",
           kpisAffected: parsed.kpis_affected || [],
         });
-      } catch {
-        console.warn("[NathDetail] Failed to parse report");
+      } catch (parseErr) {
+        console.error("[NathDetail] Failed to parse report:", parseErr, "\nCleaned:", cleaned.slice(0, 300));
       }
     } catch {
       console.warn("[NathDetail] Connection error");
