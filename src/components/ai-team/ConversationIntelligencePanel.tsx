@@ -315,7 +315,7 @@ function calcCompleteness(fields: Record<string, any>): number {
   return score;
 }
 
-// ── Field row component ──
+// ── Table row component ──
 function FieldRow({ icon: Icon, label, value, isNew }: {
   icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   label: string;
@@ -325,19 +325,25 @@ function FieldRow({ icon: Icon, label, value, isNew }: {
   if (!value || (Array.isArray(value) && value.length === 0)) return null;
   const display = Array.isArray(value) ? value.join(", ") : value;
   return (
-    <div className={cn(
-      "flex items-start gap-2.5 px-3 py-2 rounded-lg transition-all duration-500",
-      isNew ? "bg-primary/10 border border-primary/20" : "bg-transparent"
+    <tr className={cn(
+      "border-b border-border/30 last:border-b-0 transition-colors",
+      isNew && "bg-primary/5"
     )}>
-      <Icon className={cn("w-3.5 h-3.5 mt-0.5 shrink-0", isNew ? "text-emerald-500" : "text-muted-foreground")} />
-      <div className="min-w-0 flex-1">
-        <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">{label}</p>
-        <p className="text-[12px] font-medium mt-0.5 text-foreground">{display}</p>
-      </div>
-      {isNew && (
-        <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-md animate-pulse bg-emerald-500/15 text-emerald-500">NEW</span>
-      )}
-    </div>
+      <td className="py-2 px-3 w-[110px] align-top">
+        <div className="flex items-center gap-1.5">
+          <Icon className={cn("w-3.5 h-3.5 shrink-0", isNew ? "text-emerald-500" : "text-muted-foreground")} />
+          <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground whitespace-nowrap">{label}</span>
+        </div>
+      </td>
+      <td className="py-2 px-3 align-top">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[12px] font-medium text-foreground">{display}</span>
+          {isNew && (
+            <span className="shrink-0 text-[8px] font-bold px-1.5 py-0.5 rounded-md animate-pulse bg-emerald-500/15 text-emerald-500">NEW</span>
+          )}
+        </div>
+      </td>
+    </tr>
   );
 }
 
@@ -405,7 +411,7 @@ export default function ConversationIntelligencePanel({ messages, className }: P
       </div>
 
       {/* Fields */}
-      <div className="p-2 space-y-0.5 max-h-[500px] overflow-y-auto custom-scrollbar">
+      <div className="max-h-[500px] overflow-y-auto custom-scrollbar">
         {!hasAnyData ? (
           <div className="text-center py-8 space-y-2">
             <Compass className="w-8 h-8 mx-auto text-muted-foreground/20" />
@@ -414,49 +420,79 @@ export default function ConversationIntelligencePanel({ messages, className }: P
           </div>
         ) : (
           <>
-            {/* Core info */}
-            <FieldRow icon={Users} label="Cliente" value={name || ""} />
-            <FieldRow icon={MapPin} label="Origem" value={origin || ""} />
-            <FieldRow icon={Globe} label="Destino" value={destinations} />
-            <FieldRow icon={Calendar} label="Datas" value={dates} />
-            <FieldRow icon={Clock} label="Duração" value={duration || ""} />
-            <FieldRow icon={Users} label="Passageiros" value={
-              passengers.count
-                ? `${passengers.count} pessoa${parseInt(passengers.count) > 1 ? "s" : ""}${passengers.details ? ` (${passengers.details})` : ""}`
-                : ""
-            } />
-            <FieldRow icon={Wallet} label="Orçamento" value={budget || ""} />
-            <FieldRow icon={Heart} label="Tipo de Viagem" value={tripType || ""} />
+            <table className="w-full border-collapse">
+              <tbody>
+                <FieldRow icon={Users} label="Cliente" value={name || ""} />
+                <FieldRow icon={MapPin} label="Origem" value={origin || ""} />
+                <FieldRow icon={Globe} label="Destino" value={destinations} />
+                <FieldRow icon={Calendar} label="Datas" value={dates} />
+                <FieldRow icon={Clock} label="Duração" value={duration || ""} />
+                <FieldRow icon={Users} label="Passageiros" value={
+                  passengers.count
+                    ? `${passengers.count} pessoa${parseInt(passengers.count) > 1 ? "s" : ""}${passengers.details ? ` (${passengers.details})` : ""}`
+                    : ""
+                } />
+                <FieldRow icon={Wallet} label="Orçamento" value={budget || ""} />
+                <FieldRow icon={Heart} label="Tipo de Viagem" value={tripType || ""} />
+              </tbody>
+            </table>
 
             {/* Flight details section */}
             {(airline || flightClass || airport || flightTime || baggage) && (
-              <div className="px-3 pt-2 pb-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Plane className="w-3.5 h-3.5" style={{ color: "#3B82F6" }} />
-                  <p className="text-[9px] uppercase tracking-wider font-bold" style={{ color: "#3B82F6" }}>Voo</p>
+              <div className="border-t border-border/30">
+                <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
+                  <Plane className="w-3.5 h-3.5 text-blue-500" />
+                  <p className="text-[9px] uppercase tracking-wider font-bold text-blue-500">Voo</p>
                 </div>
-                <div className="space-y-0.5 pl-1">
-                   {airline && <p className="text-[11px] font-medium text-foreground/80">{airline}</p>}
-                   {flightClass && <p className="text-[11px] font-medium text-foreground/80">{flightClass}</p>}
-                   {airport && <p className="text-[11px] font-medium text-foreground/80">🛫 {airport}</p>}
-                   {flightTime && <p className="text-[11px] font-medium text-foreground/80">{flightTime}</p>}
-                   {baggage && <p className="text-[11px] font-medium text-foreground/80">{baggage}</p>}
-                 </div>
+                <table className="w-full border-collapse">
+                  <tbody>
+                    {flightClass && (
+                      <tr className="border-b border-border/30 last:border-b-0">
+                        <td className="py-1.5 px-3 w-[110px]"><span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Classe</span></td>
+                        <td className="py-1.5 px-3"><span className="text-[11px] font-medium text-foreground">{flightClass}</span></td>
+                      </tr>
+                    )}
+                    {airport && (
+                      <tr className="border-b border-border/30 last:border-b-0">
+                        <td className="py-1.5 px-3 w-[110px]"><span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Aeroporto</span></td>
+                        <td className="py-1.5 px-3"><span className="text-[11px] font-medium text-foreground">🛫 {airport}</span></td>
+                      </tr>
+                    )}
+                    {flightTime && (
+                      <tr className="border-b border-border/30 last:border-b-0">
+                        <td className="py-1.5 px-3 w-[110px]"><span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Preferência</span></td>
+                        <td className="py-1.5 px-3"><span className="text-[11px] font-medium text-foreground">{flightTime}</span></td>
+                      </tr>
+                    )}
+                    {baggage && (
+                      <tr className="border-b border-border/30 last:border-b-0">
+                        <td className="py-1.5 px-3 w-[110px]"><span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Bagagem</span></td>
+                        <td className="py-1.5 px-3"><span className="text-[11px] font-medium text-foreground">{baggage}</span></td>
+                      </tr>
+                    )}
+                    {airline && (
+                      <tr className="border-b border-border/30 last:border-b-0">
+                        <td className="py-1.5 px-3 w-[110px]"><span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Cia Aérea</span></td>
+                        <td className="py-1.5 px-3"><span className="text-[11px] font-medium text-foreground">{airline}</span></td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             )}
 
             {/* Documentation */}
             {documentation.length > 0 && (
-              <div className="px-3 py-2">
+              <div className="px-3 py-2 border-t border-border/30">
                 <div className="flex items-center gap-2 mb-1.5">
                   <Shield className="w-3.5 h-3.5 text-muted-foreground" />
-                   <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Documentação</p>
+                  <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Documentação</p>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {documentation.map(d => (
                     <span key={d} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-                       {d}
-                     </span>
+                      {d}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -464,16 +500,16 @@ export default function ConversationIntelligencePanel({ messages, className }: P
 
             {/* Preferences */}
             {preferences.length > 0 && (
-              <div className="px-3 py-2">
+              <div className="px-3 py-2 border-t border-border/30">
                 <div className="flex items-center gap-2 mb-1.5">
                   <Tag className="w-3.5 h-3.5 text-muted-foreground" />
-                   <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Preferências</p>
+                  <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Preferências</p>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {preferences.map(p => (
                     <span key={p} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/20">
-                       {p}
-                     </span>
+                      {p}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -481,17 +517,17 @@ export default function ConversationIntelligencePanel({ messages, className }: P
 
             {/* Sentiment signals */}
             {signals.length > 0 && (
-              <div className="px-3 py-2">
+              <div className="px-3 py-2 border-t border-border/30">
                 <div className="flex items-center gap-2 mb-1.5">
                   <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
-                   <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Sinais</p>
+                  <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Sinais</p>
                 </div>
                 <div className="space-y-1">
                   {signals.map(s => (
                     <div key={s.signal} className="flex items-center gap-2 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/15">
-                       <span className="text-sm">{s.emoji}</span>
-                       <span className="text-[10px] font-medium text-amber-700 dark:text-amber-400">{s.signal}</span>
-                     </div>
+                      <span className="text-sm">{s.emoji}</span>
+                      <span className="text-[10px] font-medium text-amber-700 dark:text-amber-400">{s.signal}</span>
+                    </div>
                   ))}
                 </div>
               </div>
