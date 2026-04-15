@@ -612,11 +612,13 @@ export function buildAgentSysPrompt(
   responseLength: "curta" | "media" | "longa",
   globalRulesBlock: string = "",
   dbOverride?: DbAgentOverride,
+  improvementsBlock?: string,
 ) {
   return buildUnifiedAgentPrompt({
     agent,
     globalRulesBlock,
     dbOverride,
+    improvementsBlock,
     enableTransfers,
     hasNextAgent: hasNext,
   });
