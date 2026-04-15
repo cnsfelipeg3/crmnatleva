@@ -138,9 +138,33 @@ serve(async (req) => {
     let systemPrompt: string;
 
     if (rawMode && rawSystemPrompt) {
-      // Raw mode: use the provided system prompt directly (for JSON extraction, analysis, etc.)
       systemPrompt = rawSystemPrompt;
     } else {
+      // ─── Fetch approved improvements from DB ───
+      let improvementsBlock = "";
+      try {
+        const sbUrl = Deno.env.get("SUPABASE_URL");
+        const sbKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY");
+        if (sbUrl && sbKey) {
+          const impResp = await fetch(`${sbUrl}/rest/v1/ai_team_improvements?status=eq.approved&order=created_at.desc&limit=20`, {
+            headers: { apikey: sbKey, Authorization: `Bearer ${sbKey}` },
+          });
+          if (impResp.ok) {
+            const improvements = await impResp.json();
+            const relevant = (improvements || []).filter((imp: any) => !imp.agent_id || imp.agent_id === agentId);
+            if (relevant.length > 0) {
+              const lines = relevant.map((imp: any) => {
+                const prefix = imp.category === "global_rule" || imp.category === "regra_global" ? "[REGRA]" : "[MELHORIA]";
+                return `${prefix} ${imp.title}: ${imp.description}`;
+              });
+              improvementsBlock = `\n\nMELHORIAS APRENDIDAS (aplique sempre):\n${lines.join("\n")}\n`;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to fetch improvements:", e);
+      }
+
       // ─── Time-aware greeting (Brasília UTC-3) ───
       const nowUtc = new Date();
       const brasilFormatter = new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: false, timeZone: "America/Sao_Paulo" });
@@ -180,7 +204,7 @@ REGRAS DE COMUNICAÇÃO NATLEVA (OBRIGATÓRIAS):
       const agentDirectives = agentBehaviorPrompt ? `\n\nDIRETIVAS ESPECÍFICAS:\n${agentBehaviorPrompt}` : "";
       const teamBlock = teamContext ? `\n\n${teamContext}` : "";
 
-      systemPrompt = `${behaviorCore}${agentDirectives}${teamBlock}
+      systemPrompt = `${behaviorCore}${agentDirectives}${teamBlock}${improvementsBlock}
 
 Você é o ${agentName}, um agente de IA da agência de viagens NatLeva, responsável por: ${agentRole}.
 Responda com humanidade, conexão emocional e inteligência consultiva.

@@ -10,7 +10,7 @@ import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Da
 import { getAgentTraining, type AgentTrainingConfig } from "@/components/ai-team/agentTrainingStore";
 import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
 import { buildTeamContextBlock, NATH_UNIVERSAL_RULES, getTransferTargets } from "@/components/ai-team/agentTeamContext";
-import { buildUnifiedAgentPrompt } from "@/utils/buildAgentPrompt";
+import { buildUnifiedAgentPrompt, fetchApprovedImprovements } from "@/utils/buildAgentPrompt";
 import { useAgencyConfig } from "@/hooks/useAgencyConfig";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -143,6 +143,7 @@ export default function SimuladorManualMode() {
   // Load behavior_prompt from DB for all agents
   const [agentBehaviors, setAgentBehaviors] = useState<Record<string, string>>({});
   const [kbContent, setKbContent] = useState<Record<string, string>>({});
+  const [improvementsBlock, setImprovementsBlock] = useState("");
   useEffect(() => {
     supabase.from("ai_team_agents").select("id, behavior_prompt").then(({ data }) => {
       if (data) {
@@ -157,6 +158,8 @@ export default function SimuladorManualMode() {
         setKbContent(buildKnowledgeBlocksByAgent(data));
       }
     });
+    // Load approved improvements
+    fetchApprovedImprovements().then(setImprovementsBlock).catch(console.error);
   }, []);
 
   useEffect(() => {
@@ -193,11 +196,12 @@ export default function SimuladorManualMode() {
       agencyName: agencyConfig.agency_name,
       agencyTone: agencyConfig.tom_comunicacao,
       knowledgeBlock: kbContent[selectedAgent.id] || "",
+      improvementsBlock,
       dbOverride: {
         behavior_prompt: agentBehaviors[selectedAgent.id] || null,
       },
     }),
-    [selectedAgent, globalRulesBlock, agencyConfig.agency_name, agencyConfig.tom_comunicacao, kbContent, agentBehaviors],
+    [selectedAgent, globalRulesBlock, agencyConfig.agency_name, agencyConfig.tom_comunicacao, kbContent, agentBehaviors, improvementsBlock],
   );
 
   // ═══ DEBOUNCE CHAT — Input livre, fila de mensagens, resposta em lote ═══

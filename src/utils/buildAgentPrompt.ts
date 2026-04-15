@@ -12,6 +12,49 @@
 import { AGENTS_V4 } from "@/components/ai-team/agentsV4Data";
 import { getAgentTraining } from "@/components/ai-team/agentTrainingStore";
 import { buildTeamContextBlock, NATH_UNIVERSAL_RULES } from "@/components/ai-team/agentTeamContext";
+import { supabase } from "@/integrations/supabase/client";
+
+// ─── Improvements cache ───
+let _improvementsCache: { data: any[]; fetchedAt: number } | null = null;
+const IMPROVEMENTS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Fetch approved improvements from Supabase (cached for 5 min).
+ * Call this BEFORE buildUnifiedAgentPrompt and pass the result via improvementsBlock.
+ */
+export async function fetchApprovedImprovements(agentId?: string): Promise<string> {
+  const now = Date.now();
+  if (!_improvementsCache || now - _improvementsCache.fetchedAt > IMPROVEMENTS_CACHE_TTL) {
+    const { data, error } = await supabase
+      .from('ai_team_improvements')
+      .select('title, description, category, agent_id')
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    if (error) {
+      console.warn('[fetchApprovedImprovements] Error:', error.message);
+      return '';
+    }
+    _improvementsCache = { data: data || [], fetchedAt: now };
+  }
+
+  const all = _improvementsCache.data;
+  const relevant = all.filter((imp: any) => !imp.agent_id || imp.agent_id === agentId);
+  if (relevant.length === 0) return '';
+
+  const lines = relevant.map((imp: any) => {
+    const prefix = imp.category === 'global_rule' || imp.category === 'regra_global' ? '[REGRA GLOBAL]' : '[MELHORIA]';
+    return `${prefix} ${imp.title}: ${imp.description}`;
+  });
+
+  return `\n\n## MELHORIAS APROVADAS (aplique sempre)\n${lines.join('\n')}\n`;
+}
+
+/** Invalidate the improvements cache (call after approving new improvements) */
+export function invalidateImprovementsCache() {
+  _improvementsCache = null;
+}
 
 // ─── Role-specific instructions (merged from manual + auto, manual takes precedence) ───
 const AGENT_ROLE_INSTRUCTIONS: Record<string, string> = {
@@ -247,6 +290,8 @@ export interface UnifiedPromptOptions {
   agencyName?: string;
   agencyTone?: string;
   knowledgeBlock?: string;
+  /** Pre-fetched improvements block (from fetchApprovedImprovements) */
+  improvementsBlock?: string;
   /** DB overrides (behavior_prompt, persona, skills) — used by auto mode */
   dbOverride?: {
     behavior_prompt?: string | null;
@@ -285,10 +330,12 @@ export function buildUnifiedAgentPrompt(options: UnifiedPromptOptions): string {
     agencyName,
     agencyTone,
     knowledgeBlock: rawKnowledgeBlock,
+    improvementsBlock: rawImprovementsBlock,
     dbOverride,
     enableTransfers = true,
     hasNextAgent = true,
   } = options;
+  const improvementsBlock = rawImprovementsBlock?.trim() || "";
 
   const name = agencyName || "NatLeva";
   const toneBlock = agencyTone ? `\nTOM DE VOZ DA AGÊNCIA: ${agencyTone}` : "";
@@ -445,7 +492,8 @@ REFORCOS ABSOLUTOS:
 - A BASE DE CONHECIMENTO acima governa fatos e datas de eventos.
 - Maximo 1 pergunta por mensagem. Sem listas, markdown ou nomes internos.
 - NUNCA use travessao (— ou –), hifen (-) como bullet point. Use pontos medios (·) se precisar estruturar.
-- NUNCA peca numero de WhatsApp do cliente. Voce JA esta conversando no WhatsApp.`;
+- NUNCA peca numero de WhatsApp do cliente. Voce JA esta conversando no WhatsApp.
+${improvementsBlock}`;
   }
 
   const filosofiaBlock = `
@@ -516,6 +564,7 @@ ${NATH_UNIVERSAL_RULES}
 ${knowledgeBlock}
 ${skillsBlock}${trainingBlock}
 ${globalRulesBlock}
+${improvementsBlock}
 ${transferInstr}
 ${priceInstr}`;
 }
