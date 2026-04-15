@@ -381,6 +381,60 @@ export default function ConversationIntelligencePanel({ messages, className }: P
     budget || tripType || origin || duration || preferences.length > 0 || signals.length > 0 ||
     airline || flightClass || airport || flightTime || baggage || documentation.length > 0;
 
+  // Detect needs hotel/accommodation
+  const needsHotel = useMemo(() => {
+    const allText = messages.map(m => m.content).join(" ");
+    if (/hotel|hospedagem|resort|pousada|airbnb|all\s*inclusive/i.test(allText)) return "Sim";
+    if (/só\s*aéreo|apenas\s*passagem|sem\s*hotel/i.test(allText)) return "Apenas Aéreo";
+    return null;
+  }, [messages]);
+
+  // Extract children ages
+  const childrenAges = useMemo(() => {
+    const allText = messages.filter(m => m.role === "user" || m.role === "lead" || m.role === "client").map(m => m.content).join(" ");
+    const ageMatch = allText.match(/(\d+)\s*(?:e\s*(\d+))?\s*anos/i);
+    if (ageMatch) return ageMatch[2] ? `${ageMatch[1]} e ${ageMatch[2]} anos` : `${ageMatch[1]} anos`;
+    return null;
+  }, [messages]);
+
+  // Adults count
+  const adultsCount = useMemo(() => {
+    const allText = messages.filter(m => m.role === "user" || m.role === "lead" || m.role === "client").map(m => m.content).join(" ");
+    const m = allText.match(/(\d+)\s*adultos?/i);
+    if (m) return m[1];
+    if (/casal/i.test(allText)) return "2";
+    if (/eu\s*e\s*(?:meu|minha)\s*(?:marido|esposa|namorad)/i.test(allText)) return "2";
+    return null;
+  }, [messages]);
+
+  // Kids count
+  const kidsCount = useMemo(() => {
+    const allText = messages.filter(m => m.role === "user" || m.role === "lead" || m.role === "client").map(m => m.content).join(" ");
+    const m = allText.match(/(\d+)\s*(?:filhos?|crianças?|kids?)/i);
+    return m ? m[1] : null;
+  }, [messages]);
+
+  // Budget profile label
+  const budgetProfile = useMemo(() => {
+    if (!budget) return null;
+    if (/premium|luxo/i.test(budget)) return "alto (R$15k-40k)";
+    if (/econôm/i.test(budget)) return "econômico";
+    return budget;
+  }, [budget]);
+
+  // Lead profile description
+  const leadProfileDesc = useMemo(() => {
+    const parts: string[] = [];
+    if (passengers.count) {
+      const count = parseInt(passengers.count);
+      if (kidsCount) parts.push(`família com filhos pequenos (${kidsCount} criança${parseInt(kidsCount) > 1 ? "s" : ""})`);
+      else if (count === 2) parts.push("casal");
+      else if (count > 2) parts.push(`grupo de ${count} pessoas`);
+      else parts.push("viajante solo");
+    }
+    return parts.join(", ") || null;
+  }, [passengers, kidsCount]);
+
   return (
     <div className={cn("rounded-2xl overflow-hidden bg-card border border-border", className)}>
       {/* Header with completeness bar */}
@@ -410,8 +464,8 @@ export default function ConversationIntelligencePanel({ messages, className }: P
         </div>
       </div>
 
-      {/* Fields */}
-      <div className="max-h-[500px] overflow-y-auto custom-scrollbar">
+      {/* Content */}
+      <div className="max-h-[600px] overflow-y-auto custom-scrollbar">
         {!hasAnyData ? (
           <div className="text-center py-8 space-y-2">
             <Compass className="w-8 h-8 mx-auto text-muted-foreground/20" />
@@ -420,115 +474,90 @@ export default function ConversationIntelligencePanel({ messages, className }: P
           </div>
         ) : (
           <>
-            <table className="w-full border-collapse">
-              <tbody>
-                <FieldRow icon={Users} label="Cliente" value={name || ""} />
-                <FieldRow icon={MapPin} label="Origem" value={origin || ""} />
-                <FieldRow icon={Globe} label="Destino" value={destinations} />
-                <FieldRow icon={Calendar} label="Datas" value={dates} />
-                <FieldRow icon={Clock} label="Duração" value={duration || ""} />
-                <FieldRow icon={Users} label="Passageiros" value={
-                  passengers.count
-                    ? `${passengers.count} pessoa${parseInt(passengers.count) > 1 ? "s" : ""}${passengers.details ? ` (${passengers.details})` : ""}`
-                    : ""
-                } />
-                <FieldRow icon={Wallet} label="Orçamento" value={budget || ""} />
-                <FieldRow icon={Heart} label="Tipo de Viagem" value={tripType || ""} />
-              </tbody>
-            </table>
-
-            {/* Flight details section */}
-            {(airline || flightClass || airport || flightTime || baggage) && (
-              <div className="border-t border-border/30">
-                <div className="flex items-center gap-2 px-3 pt-2.5 pb-1">
-                  <Plane className="w-3.5 h-3.5 text-blue-500" />
-                  <p className="text-[9px] uppercase tracking-wider font-bold text-blue-500">Voo</p>
-                </div>
-                <table className="w-full border-collapse">
-                  <tbody>
-                    {flightClass && (
-                      <tr className="border-b border-border/30 last:border-b-0">
-                        <td className="py-1.5 px-3 w-[110px]"><span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Classe</span></td>
-                        <td className="py-1.5 px-3"><span className="text-[11px] font-medium text-foreground">{flightClass}</span></td>
-                      </tr>
-                    )}
-                    {airport && (
-                      <tr className="border-b border-border/30 last:border-b-0">
-                        <td className="py-1.5 px-3 w-[110px]"><span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Aeroporto</span></td>
-                        <td className="py-1.5 px-3"><span className="text-[11px] font-medium text-foreground">🛫 {airport}</span></td>
-                      </tr>
-                    )}
-                    {flightTime && (
-                      <tr className="border-b border-border/30 last:border-b-0">
-                        <td className="py-1.5 px-3 w-[110px]"><span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Preferência</span></td>
-                        <td className="py-1.5 px-3"><span className="text-[11px] font-medium text-foreground">{flightTime}</span></td>
-                      </tr>
-                    )}
-                    {baggage && (
-                      <tr className="border-b border-border/30 last:border-b-0">
-                        <td className="py-1.5 px-3 w-[110px]"><span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Bagagem</span></td>
-                        <td className="py-1.5 px-3"><span className="text-[11px] font-medium text-foreground">{baggage}</span></td>
-                      </tr>
-                    )}
-                    {airline && (
-                      <tr className="border-b border-border/30 last:border-b-0">
-                        <td className="py-1.5 px-3 w-[110px]"><span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Cia Aérea</span></td>
-                        <td className="py-1.5 px-3"><span className="text-[11px] font-medium text-foreground">{airline}</span></td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+            {/* ═══ SEÇÃO 1: PERFIL DO LEAD ═══ */}
+            <div className="border-b border-border/40">
+              <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">
+                <Users className="w-3.5 h-3.5 text-primary" />
+                <p className="text-[10px] uppercase tracking-widest font-bold text-primary">Perfil do Lead</p>
               </div>
-            )}
+              <table className="w-full border-collapse text-[11px]">
+                <tbody>
+                  <FieldRow icon={Users} label="Nome" value={name || ""} />
+                  <FieldRow icon={MapPin} label="Cidade" value={origin || ""} />
+                  <FieldRow icon={Wallet} label="Orçamento" value={budgetProfile || ""} />
+                  <FieldRow icon={Users} label="Composição" value={leadProfileDesc || ""} />
+                  <FieldRow icon={Heart} label="Tipo" value={tripType || ""} />
+                </tbody>
+              </table>
 
-            {/* Documentation */}
-            {documentation.length > 0 && (
-              <div className="px-3 py-2 border-t border-border/30">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Shield className="w-3.5 h-3.5 text-muted-foreground" />
-                  <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Documentação</p>
+              {/* Sentiment signals inline */}
+              {signals.length > 0 && (
+                <div className="px-3 pb-2.5">
+                  <div className="flex flex-wrap gap-1">
+                    {signals.map(s => (
+                      <span key={s.signal} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/15">
+                        {s.emoji} {s.signal}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {documentation.map(d => (
-                    <span key={d} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-                      {d}
-                    </span>
-                  ))}
-                </div>
+              )}
+            </div>
+
+            {/* ═══ SEÇÃO 2: INFORMAÇÕES DA VIAGEM ═══ */}
+            <div className="border-b border-border/40">
+              <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">
+                <Plane className="w-3.5 h-3.5 text-blue-500" />
+                <p className="text-[10px] uppercase tracking-widest font-bold text-blue-500">Informações da Viagem</p>
               </div>
-            )}
+              <table className="w-full border-collapse text-[11px]">
+                <tbody>
+                  <FieldRow icon={Globe} label="Destino" value={destinations} />
+                  <FieldRow icon={MapPin} label="Origem" value={origin || ""} />
+                  <FieldRow icon={Calendar} label="Datas" value={dates} />
+                  <FieldRow icon={Clock} label="Duração" value={duration || ""} />
+                  <FieldRow icon={Users} label="Adultos" value={adultsCount || (passengers.count && !kidsCount ? passengers.count : "") || ""} />
+                  <FieldRow icon={Baby} label="Crianças" value={
+                    kidsCount
+                      ? `${kidsCount}${childrenAges ? ` (${childrenAges})` : ""}`
+                      : passengers.details || ""
+                  } />
+                  <FieldRow icon={Hotel} label="Hospedagem" value={needsHotel || ""} />
+                  <FieldRow icon={Plane} label="Classe" value={flightClass || ""} />
+                  <FieldRow icon={Plane} label="Cia Aérea" value={airline || ""} />
+                  <FieldRow icon={Plane} label="Aeroporto" value={airport || ""} />
+                  <FieldRow icon={Clock} label="Pref. Horário" value={flightTime || ""} />
+                  <FieldRow icon={Compass} label="Bagagem" value={baggage || ""} />
+                </tbody>
+              </table>
+            </div>
 
-            {/* Preferences */}
-            {preferences.length > 0 && (
-              <div className="px-3 py-2 border-t border-border/30">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <Tag className="w-3.5 h-3.5 text-muted-foreground" />
-                  <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Preferências</p>
+            {/* ═══ SEÇÃO 3: PREFERÊNCIAS & DOCUMENTAÇÃO ═══ */}
+            {(preferences.length > 0 || documentation.length > 0) && (
+              <div className="border-b border-border/40">
+                <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">
+                  <Tag className="w-3.5 h-3.5 text-purple-500" />
+                  <p className="text-[10px] uppercase tracking-widest font-bold text-purple-500">Preferências & Docs</p>
                 </div>
-                <div className="flex flex-wrap gap-1">
-                  {preferences.map(p => (
-                    <span key={p} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/20">
-                      {p}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Sentiment signals */}
-            {signals.length > 0 && (
-              <div className="px-3 py-2 border-t border-border/30">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <TrendingUp className="w-3.5 h-3.5 text-muted-foreground" />
-                  <p className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">Sinais</p>
-                </div>
-                <div className="space-y-1">
-                  {signals.map(s => (
-                    <div key={s.signal} className="flex items-center gap-2 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/15">
-                      <span className="text-sm">{s.emoji}</span>
-                      <span className="text-[10px] font-medium text-amber-700 dark:text-amber-400">{s.signal}</span>
+                <div className="px-3 pb-3 space-y-2">
+                  {preferences.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {preferences.map(p => (
+                        <span key={p} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/20">
+                          {p}
+                        </span>
+                      ))}
                     </div>
-                  ))}
+                  )}
+                  {documentation.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {documentation.map(d => (
+                        <span key={d} className="text-[10px] px-2 py-0.5 rounded-md font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                          {d}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
