@@ -335,6 +335,7 @@ export function buildUnifiedAgentPrompt(options: UnifiedPromptOptions): string {
     enableTransfers = true,
     hasNextAgent = true,
   } = options;
+  const improvementsBlock = rawImprovementsBlock?.trim() || "";
 
   const name = agencyName || "NatLeva";
   const toneBlock = agencyTone ? `\nTOM DE VOZ DA AGÊNCIA: ${agencyTone}` : "";
@@ -562,6 +563,7 @@ ${NATH_UNIVERSAL_RULES}
 ${knowledgeBlock}
 ${skillsBlock}${trainingBlock}
 ${globalRulesBlock}
+${improvementsBlock}
 ${transferInstr}
 ${priceInstr}`;
 }
