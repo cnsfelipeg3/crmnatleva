@@ -663,7 +663,16 @@ export default function SimuladorAutoMode() {
             completeMonitorBriefing(mBid).catch(() => {});
           }
         }
-      } catch (err) {
+      } catch (err: any) {
+        if (err?.message === "CREDITS_EXHAUSTED") {
+          console.error("Credits exhausted — stopping simulation");
+          toast({ title: "Créditos insuficientes", description: "Adicione créditos em Settings → Workspace → Usage para continuar.", variant: "destructive" });
+          simAtivaRef.current = false;
+          abortRef.current = true;
+          lead.status = "perdeu"; lead.motivoPerda = "Créditos insuficientes";
+          setLeads(prev => [...prev]);
+          return;
+        }
         console.error("Lead sim error:", err);
         lead.status = "perdeu"; lead.motivoPerda = "Erro de sistema";
         setLeads(prev => [...prev]);
