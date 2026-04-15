@@ -492,7 +492,8 @@ REFORCOS ABSOLUTOS:
 - A BASE DE CONHECIMENTO acima governa fatos e datas de eventos.
 - Maximo 1 pergunta por mensagem. Sem listas, markdown ou nomes internos.
 - NUNCA use travessao (— ou –), hifen (-) como bullet point. Use pontos medios (·) se precisar estruturar.
-- NUNCA peca numero de WhatsApp do cliente. Voce JA esta conversando no WhatsApp.`;
+- NUNCA peca numero de WhatsApp do cliente. Voce JA esta conversando no WhatsApp.
+${improvementsBlock}`;
   }
 
   const filosofiaBlock = `
