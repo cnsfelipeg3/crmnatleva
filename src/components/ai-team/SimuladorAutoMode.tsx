@@ -61,7 +61,13 @@ export default function SimuladorAutoMode() {
   const isMobile = useIsMobile();
   const { data: globalRules = [] } = useGlobalRules();
   const globalRulesBlockRef = useRef("");
+  const improvementsBlockRef = useRef("");
   useEffect(() => { globalRulesBlockRef.current = buildGlobalRulesBlock(globalRules); }, [globalRules]);
+  useEffect(() => {
+    import("@/utils/buildAgentPrompt").then(({ fetchApprovedImprovements }) => {
+      fetchApprovedImprovements().then(block => { improvementsBlockRef.current = block; }).catch(console.error);
+    });
+  }, []);
   // Config — Volume
   const [numLeads, setNumLeads] = useState(8);
   const [msgsPerLead, setMsgsPerLead] = useState(14);
@@ -407,7 +413,7 @@ export default function SimuladorAutoMode() {
           }
           const leadChunks = chunksRef.current.get(lead.id) || [];
           const compressedHistory = leadChunks.length > 0 ? buildActiveContext(lead, leadChunks) : compressConversation(lead.mensagens);
-          let agentSysPrompt = buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]);
+          let agentSysPrompt = buildAgentSysPrompt(agent, hasNext, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id], improvementsBlockRef.current);
           if ((lead as any)._lengthWarning) {
             agentSysPrompt += "\n\nAVISO CRITICO: sua ultima resposta foi LONGA DEMAIS e foi truncada. Respostas devem ter no maximo 60 palavras. Seja MUITO mais breve. UMA ideia por mensagem. ZERO listas.";
             (lead as any)._lengthWarning = false;
@@ -559,7 +565,7 @@ export default function SimuladorAutoMode() {
 
             const objCompressed = compressConversation(lead.mensagens);
             let objResp = await callSimulatorAI(
-              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id]),
+              buildAgentSysPrompt(agent, false, enableTransfers, agentResponseLength, globalRulesBlockRef.current, dbAgentOverridesRef.current[agent.id], improvementsBlockRef.current),
               objCompressed, "agent"
             );
             if (!simAtivaRef.current) return;
