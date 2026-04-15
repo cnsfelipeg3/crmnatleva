@@ -330,6 +330,7 @@ export function buildUnifiedAgentPrompt(options: UnifiedPromptOptions): string {
     agencyName,
     agencyTone,
     knowledgeBlock: rawKnowledgeBlock,
+    improvementsBlock: rawImprovementsBlock,
     dbOverride,
     enableTransfers = true,
     hasNextAgent = true,
