@@ -5,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { logAITeamAudit, AUDIT_ACTIONS, AUDIT_ENTITIES } from "@/lib/aiTeamAudit";
+import { invalidateImprovementsCache } from "@/utils/buildAgentPrompt";
 
 const NATH_SYSTEM_PROMPT = `Você é NATH — Natália, CEO, fundadora, idealizadora e coração da NatLeva, agência de viagens premium que carrega o SEU nome. Você trata a NatLeva como um cristal precioso.
 
@@ -410,6 +411,8 @@ Retorne SOMENTE o JSON array, sem texto adicional.`,
       title: `✅ ${applied} melhoria${applied > 1 ? "s" : ""} aplicada${applied > 1 ? "s" : ""}!`,
       description: desc,
     });
+    // Invalidate improvements cache so next prompt build picks up new improvements
+    invalidateImprovementsCache();
     setApplying(false);
     setActions(prev => prev.map(a => a.selected ? { ...a, selected: false } : a));
   }, [actions, toast]);
