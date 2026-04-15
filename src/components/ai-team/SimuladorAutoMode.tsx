@@ -668,7 +668,7 @@ export default function SimuladorAutoMode() {
           console.error("Credits exhausted — stopping simulation");
           toast({ title: "Créditos insuficientes", description: "Adicione créditos em Settings → Workspace → Usage para continuar.", variant: "destructive" });
           simAtivaRef.current = false;
-          setSimAtiva(false);
+          abortRef.current = true;
           lead.status = "perdeu"; lead.motivoPerda = "Créditos insuficientes";
           setLeads(prev => [...prev]);
           return;
