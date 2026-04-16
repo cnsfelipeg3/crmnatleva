@@ -231,6 +231,10 @@ export default function NewSale() {
             full_name: l.passengers.full_name,
             cpf: l.passengers.cpf || "",
             birth_date: l.passengers.birth_date || "",
+            passport_number: l.passengers.passport_number || "",
+            passport_expiry: l.passengers.passport_expiry || "",
+            phone: l.passengers.phone || "",
+            incomplete: false,
           })));
         }
 
@@ -256,7 +260,7 @@ export default function NewSale() {
         }
 
         // Load hotel data from sale itself for first hotel entry
-        if (sale.hotel_name && hotels.length === 0) {
+        if (sale.hotel_name && hotelEntries.length === 0) {
           const h = createEmptyHotelEntry();
           h.hotel_name = sale.hotel_name || "";
           h.hotel_room = sale.hotel_room || "";
