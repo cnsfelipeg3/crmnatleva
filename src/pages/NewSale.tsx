@@ -497,6 +497,12 @@ export default function NewSale() {
       // Use first hotel for legacy fields
       const firstHotel = hotelEntries[0];
 
+      // Auto-derive origin/destination from segments if not set manually
+      const validSegs = segments.filter(s => s.origin_iata && s.destination_iata);
+      const idaSegs = validSegs.filter(s => s.direction === "ida");
+      const derivedOrigin = form.origin_iata || (idaSegs.length > 0 ? idaSegs[0].origin_iata : validSegs[0]?.origin_iata) || null;
+      const derivedDestination = form.destination_iata || (idaSegs.length > 0 ? idaSegs[idaSegs.length - 1].destination_iata : validSegs[validSegs.length - 1]?.destination_iata) || null;
+
       const salePayload = {
         name: smartCapitalizeName(form.name),
         seller_id: user?.id,
@@ -504,8 +510,8 @@ export default function NewSale() {
         payment_method: salePayments.length > 0 ? salePayments.map(p => p.payment_method).join(", ") : form.payment_method || null,
         products, observations: form.observations || null,
         link_chat: form.link_chat || null,
-        origin_iata: form.origin_iata || null, origin_city: null,
-        destination_iata: form.destination_iata || null, destination_city: null,
+        origin_iata: derivedOrigin, origin_city: null,
+        destination_iata: derivedDestination, destination_city: null,
         departure_date: form.departure_date || null, return_date: form.return_date || null,
         airline: form.airline || null, flight_class: form.flight_class || null,
         locators: groupLocators.length > 0 ? groupLocators : (form.locator ? [form.locator] : []),
@@ -1334,11 +1340,11 @@ export default function NewSale() {
               </div>
 
               {/* Air */}
-              {(form.origin_iata || form.airline || airCostBlocks.length > 0) && (
+              {(form.origin_iata || form.airline || airCostBlocks.length > 0 || segments.some(s => s.origin_iata)) && (
                 <div className="bg-muted/30 rounded-xl p-4">
                   <h3 className="text-sm font-semibold flex items-center gap-2 mb-3"><Plane className="w-4 h-4 text-primary" /> Aéreo</h3>
                   <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                    <span className="text-muted-foreground">Rota</span><span className="font-mono">{form.origin_iata || "?"} → {form.destination_iata || "?"}</span>
+                    <span className="text-muted-foreground">Rota</span><span className="font-mono">{form.origin_iata || segments.find(s => s.direction === "ida" && s.origin_iata)?.origin_iata || segments[0]?.origin_iata || "?"} → {form.destination_iata || segments.filter(s => s.direction === "ida" && s.destination_iata).slice(-1)[0]?.destination_iata || segments.slice(-1)[0]?.destination_iata || "?"}</span>
                     <span className="text-muted-foreground">Datas</span><span>{form.departure_date || "?"} — {form.return_date || "?"}</span>
                     <span className="text-muted-foreground">Companhia</span><span>{form.airline || "—"}</span>
                     <span className="text-muted-foreground">Segmentos</span><span>{segments.filter(s => s.origin_iata).length} trecho(s)</span>
