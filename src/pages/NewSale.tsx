@@ -1340,11 +1340,11 @@ export default function NewSale() {
               </div>
 
               {/* Air */}
-              {(form.origin_iata || form.airline || airCostBlocks.length > 0) && (
+              {(form.origin_iata || form.airline || airCostBlocks.length > 0 || segments.some(s => s.origin_iata)) && (
                 <div className="bg-muted/30 rounded-xl p-4">
                   <h3 className="text-sm font-semibold flex items-center gap-2 mb-3"><Plane className="w-4 h-4 text-primary" /> Aéreo</h3>
                   <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                    <span className="text-muted-foreground">Rota</span><span className="font-mono">{form.origin_iata || "?"} → {form.destination_iata || "?"}</span>
+                    <span className="text-muted-foreground">Rota</span><span className="font-mono">{form.origin_iata || segments.find(s => s.direction === "ida" && s.origin_iata)?.origin_iata || segments[0]?.origin_iata || "?"} → {form.destination_iata || segments.filter(s => s.direction === "ida" && s.destination_iata).slice(-1)[0]?.destination_iata || segments.slice(-1)[0]?.destination_iata || "?"}</span>
                     <span className="text-muted-foreground">Datas</span><span>{form.departure_date || "?"} — {form.return_date || "?"}</span>
                     <span className="text-muted-foreground">Companhia</span><span>{form.airline || "—"}</span>
                     <span className="text-muted-foreground">Segmentos</span><span>{segments.filter(s => s.origin_iata).length} trecho(s)</span>
