@@ -146,9 +146,9 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
   const totalGross = payments.reduce((s, p) => s + p.gross_value, 0);
   const totalFees = payments.reduce((s, p) => s + p.fee_total, 0);
   const totalNet = payments.reduce((s, p) => s + p.net_value, 0);
-  const totalPaid = payments.filter(p => resolveStatus(p) === "pago").reduce((s, p) => s + p.gross_value, 0);
-  const totalPending = payments.filter(p => resolveStatus(p) !== "pago").reduce((s, p) => s + p.gross_value, 0);
-  const totalOverdue = payments.filter(p => resolveStatus(p) === "vencido").reduce((s, p) => s + p.gross_value, 0);
+  const totalPaid = payments.filter(p => resolveStatus(p) === "pago").reduce((s, p) => s + p.net_value, 0);
+  const totalPending = payments.filter(p => resolveStatus(p) !== "pago").reduce((s, p) => s + p.net_value, 0);
+  const totalOverdue = payments.filter(p => resolveStatus(p) === "vencido").reduce((s, p) => s + p.net_value, 0);
   const remaining = totalSaleValue - totalGross;
 
   const getMaxInstallments = (gateway: string) => {
