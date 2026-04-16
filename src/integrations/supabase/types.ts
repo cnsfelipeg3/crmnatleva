@@ -6459,57 +6459,84 @@ export type Database = {
       }
       suppliers: {
         Row: {
+          bairro: string | null
           bank_account: string | null
           bank_agency: string | null
           bank_name: string | null
           bank_pix_key: string | null
           category: string | null
+          cep: string | null
+          cidade: string | null
           cnpj: string | null
           contact_name: string | null
           created_at: string
           created_by: string | null
           email: string | null
+          endereco: string | null
+          estado: string | null
           id: string
           name: string
           notes: string | null
           payment_conditions: string | null
           phone: string | null
+          razao_social: string | null
+          registration_token: string | null
+          responsavel_name: string | null
+          responsavel_phone: string | null
           updated_at: string
         }
         Insert: {
+          bairro?: string | null
           bank_account?: string | null
           bank_agency?: string | null
           bank_name?: string | null
           bank_pix_key?: string | null
           category?: string | null
+          cep?: string | null
+          cidade?: string | null
           cnpj?: string | null
           contact_name?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
+          endereco?: string | null
+          estado?: string | null
           id?: string
           name: string
           notes?: string | null
           payment_conditions?: string | null
           phone?: string | null
+          razao_social?: string | null
+          registration_token?: string | null
+          responsavel_name?: string | null
+          responsavel_phone?: string | null
           updated_at?: string
         }
         Update: {
+          bairro?: string | null
           bank_account?: string | null
           bank_agency?: string | null
           bank_name?: string | null
           bank_pix_key?: string | null
           category?: string | null
+          cep?: string | null
+          cidade?: string | null
           cnpj?: string | null
           contact_name?: string | null
           created_at?: string
           created_by?: string | null
           email?: string | null
+          endereco?: string | null
+          estado?: string | null
           id?: string
           name?: string
           notes?: string | null
           payment_conditions?: string | null
           phone?: string | null
+          razao_social?: string | null
+          registration_token?: string | null
+          responsavel_name?: string | null
+          responsavel_phone?: string | null
           updated_at?: string
         }
         Relationships: []

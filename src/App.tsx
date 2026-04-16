@@ -51,6 +51,7 @@ const ApresentacaoGeral = lazy(() => import("@/pages/ApresentacaoGeral"));
 const TripDetail = lazy(() => import("@/pages/TripDetail"));
 const TripAlterations = lazy(() => import("@/pages/TripAlterations"));
 const Itinerary = lazy(() => import("@/pages/Itinerary"));
+const SupplierRegistration = lazy(() => import("@/pages/SupplierRegistration"));
 
 // RH
 const RHIndex = lazy(() => import("@/pages/rh/RHIndex"));
@@ -182,6 +183,7 @@ function AppRoutes() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/sales" element={<Sales />} />
           <Route path="/sales/new" element={<NewSale />} />
+          <Route path="/sales/:id/edit" element={<NewSale />} />
           <Route path="/sales/:id" element={<SaleDetail />} />
           <Route path="/itinerario" element={<Itinerary />} />
           <Route path="/viagens" element={<TorreDeControle />} />
@@ -319,6 +321,9 @@ function AppRoutes() {
         <Route path="/portal/financeiro" element={<Suspense fallback={<MinimalLoader />}><PortalFinance /></Suspense>} />
         <Route path="/portal/nova-cotacao" element={<Suspense fallback={<MinimalLoader />}><PortalNewQuote /></Suspense>} />
         <Route path="/portal/perfil" element={<Suspense fallback={<MinimalLoader />}><PortalProfile /></Suspense>} />
+
+        {/* Cadastro público de fornecedor */}
+        <Route path="/cadastro-fornecedor" element={<Suspense fallback={<MinimalLoader />}><SupplierRegistration /></Suspense>} />
 
         {/* Proposta pública */}
         <Route path="/proposta/:slug" element={<Suspense fallback={<MinimalLoader />}><ProposalPublicView /></Suspense>} />
