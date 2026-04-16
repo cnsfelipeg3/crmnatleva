@@ -430,8 +430,8 @@ export default function NewSale() {
   }, 0);
 
   const totalCost = airCost + hotelCost + productsCost;
-  const paymentsGross = salePayments.reduce((s, p) => s + p.gross_value, 0);
-  const receivedValue = paymentsGross > 0 ? paymentsGross : parseFloat(form.received_value) || 0;
+  const paymentsNet = salePayments.reduce((s, p) => s + p.net_value, 0);
+  const receivedValue = paymentsNet > 0 ? paymentsNet : parseFloat(form.received_value) || 0;
   const profit = receivedValue - totalCost;
   const margin = receivedValue > 0 ? (profit / receivedValue) * 100 : 0;
 
