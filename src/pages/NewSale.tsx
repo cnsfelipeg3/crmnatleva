@@ -78,6 +78,8 @@ export default function NewSale() {
   const { user } = useAuth();
   const { toast } = useToast();
   const location = useLocation();
+  const { id: editId } = useParams<{ id: string }>();
+  const isEditMode = !!editId;
 
   // Upload & extraction
   const [dragOver, setDragOver] = useState(false);
