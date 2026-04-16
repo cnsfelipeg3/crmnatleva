@@ -177,7 +177,23 @@ export default function Fornecedores() {
           <h1 className="text-2xl font-bold tracking-tight font-display">Fornecedores</h1>
           <p className="text-sm text-muted-foreground">{suppliers.length} cadastrados</p>
         </div>
-        <Button size="sm" onClick={() => { resetForm(); setEditingSupplier(null); setShowForm(true); }}><Plus className="w-4 h-4 mr-1" /> Novo</Button>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => {
+            // Create a new supplier with just a name placeholder to get a token
+            const createAndCopy = async () => {
+              const { data, error } = await supabase.from("suppliers").insert({ name: "Novo Fornecedor (pendente)" }).select("registration_token").single();
+              if (error || !data) { toast.error("Erro ao gerar link"); return; }
+              const url = `${window.location.origin}/cadastro-fornecedor?token=${(data as any).registration_token}`;
+              await navigator.clipboard.writeText(url);
+              toast.success("Link copiado! Envie ao fornecedor.");
+              qc.invalidateQueries({ queryKey: ["suppliers"] });
+            };
+            createAndCopy();
+          }}>
+            <Link2 className="w-4 h-4 mr-1" /> Gerar Link
+          </Button>
+          <Button size="sm" onClick={() => { resetForm(); setEditingSupplier(null); setShowForm(true); }}><Plus className="w-4 h-4 mr-1" /> Novo</Button>
+        </div>
       </div>
 
       <div className="relative">
