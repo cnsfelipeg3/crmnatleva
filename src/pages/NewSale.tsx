@@ -768,9 +768,9 @@ export default function NewSale() {
         }
       }
 
-      toast({ title: "Venda salva com sucesso!" });
+      toast({ title: isEditMode ? "Venda atualizada com sucesso!" : "Venda salva com sucesso!" });
       try { await Promise.all([supabase.functions.invoke("checkin-generate"), supabase.functions.invoke("lodging-generate")]); } catch {}
-      navigate("/sales");
+      navigate(isEditMode ? `/sales/${editId}` : "/sales");
     } catch (err: any) {
       console.error(err);
       toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
@@ -801,8 +801,8 @@ export default function NewSale() {
   return (
     <div className="p-4 md:p-6 space-y-5 animate-fade-in max-w-5xl mx-auto">
       <div>
-        <h1 className="text-2xl font-serif text-foreground">Nova Venda</h1>
-        <p className="text-sm text-muted-foreground">Registre todos os detalhes da viagem de forma organizada</p>
+        <h1 className="text-2xl font-serif text-foreground">{isEditMode ? "Editar Venda" : "Nova Venda"}</h1>
+        <p className="text-sm text-muted-foreground">{isEditMode ? "Edite os detalhes desta venda" : "Registre todos os detalhes da viagem de forma organizada"}</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
