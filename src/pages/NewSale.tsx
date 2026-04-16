@@ -497,6 +497,12 @@ export default function NewSale() {
       // Use first hotel for legacy fields
       const firstHotel = hotelEntries[0];
 
+      // Auto-derive origin/destination from segments if not set manually
+      const validSegs = segments.filter(s => s.origin_iata && s.destination_iata);
+      const idaSegs = validSegs.filter(s => s.direction === "ida");
+      const derivedOrigin = form.origin_iata || (idaSegs.length > 0 ? idaSegs[0].origin_iata : validSegs[0]?.origin_iata) || null;
+      const derivedDestination = form.destination_iata || (idaSegs.length > 0 ? idaSegs[idaSegs.length - 1].destination_iata : validSegs[validSegs.length - 1]?.destination_iata) || null;
+
       const salePayload = {
         name: smartCapitalizeName(form.name),
         seller_id: user?.id,
@@ -504,8 +510,8 @@ export default function NewSale() {
         payment_method: salePayments.length > 0 ? salePayments.map(p => p.payment_method).join(", ") : form.payment_method || null,
         products, observations: form.observations || null,
         link_chat: form.link_chat || null,
-        origin_iata: form.origin_iata || null, origin_city: null,
-        destination_iata: form.destination_iata || null, destination_city: null,
+        origin_iata: derivedOrigin, origin_city: null,
+        destination_iata: derivedDestination, destination_city: null,
         departure_date: form.departure_date || null, return_date: form.return_date || null,
         airline: form.airline || null, flight_class: form.flight_class || null,
         locators: groupLocators.length > 0 ? groupLocators : (form.locator ? [form.locator] : []),
