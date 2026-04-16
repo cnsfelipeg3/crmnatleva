@@ -277,6 +277,7 @@ export default function NewSale() {
     })();
   }, [editId]);
 
+  const getSupplierPrograms = (supplierId: string) => {
     const programs = allMilesPrograms.filter((p: any) => p.supplier_id === supplierId);
     return [...new Set(programs.map((p: any) => p.program_name))];
   };
