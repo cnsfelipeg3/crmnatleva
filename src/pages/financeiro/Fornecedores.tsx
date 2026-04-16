@@ -242,11 +242,19 @@ export default function Fornecedores() {
           <div className="space-y-3">
             {[
               { key: "name", label: "Nome *" },
+              { key: "razao_social", label: "Razão Social" },
               { key: "cnpj", label: "CNPJ" },
               { key: "contact_name", label: "Contato" },
               { key: "phone", label: "Telefone" },
               { key: "email", label: "Email" },
               { key: "category", label: "Categoria" },
+              { key: "responsavel_name", label: "Responsável" },
+              { key: "responsavel_phone", label: "Tel. Responsável" },
+              { key: "cep", label: "CEP" },
+              { key: "endereco", label: "Endereço" },
+              { key: "bairro", label: "Bairro" },
+              { key: "cidade", label: "Cidade" },
+              { key: "estado", label: "Estado" },
               { key: "payment_conditions", label: "Condições de Pagamento" },
               { key: "bank_pix_key", label: "Chave Pix" },
             ].map(({ key, label }) => (
@@ -275,9 +283,18 @@ export default function Fornecedores() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold">Dados Cadastrais</h3>
-                  <Button variant="ghost" size="sm" onClick={() => openEdit(selectedSupplier)}>
-                    <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
-                  </Button>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(selectedSupplier)}>
+                      <Pencil className="w-3.5 h-3.5 mr-1" /> Editar
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={async () => {
+                      const url = `${window.location.origin}/cadastro-fornecedor?token=${selectedSupplier.registration_token}`;
+                      await navigator.clipboard.writeText(url);
+                      toast.success("Link copiado!");
+                    }}>
+                      <Copy className="w-3.5 h-3.5 mr-1" /> Link
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   {[
