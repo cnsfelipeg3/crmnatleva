@@ -1424,7 +1424,7 @@ export default function NewSale() {
                   <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
                 </Button>
                 <Button data-testid="btn-save-sale" className="flex-1" size="lg" onClick={handleSave} disabled={saving}>
-                  {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...</> : <><Check className="w-4 h-4 mr-2" /> Confirmar e Salvar Venda</>}
+                  {saving ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...</> : <><Check className="w-4 h-4 mr-2" /> {isEditMode ? "Atualizar Venda" : "Confirmar e Salvar Venda"}</>}
                 </Button>
               </div>
             </div>
