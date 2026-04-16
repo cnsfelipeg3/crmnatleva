@@ -165,7 +165,11 @@ export default function NewSale() {
 
         // Load flight segments
         const { data: segs } = await supabase.from("flight_segments").select("*").eq("sale_id", editId).order("segment_order");
-        if (segs && segs.length > 0) setSegments(segs as FlightSegment[]);
+        const loadedSegs = (segs && segs.length > 0) ? segs as FlightSegment[] : [];
+        if (loadedSegs.length > 0) setSegments(loadedSegs);
+
+        // Build a lookup of valid segments for index matching
+        const validSegs = loadedSegs.filter(s => s.origin_iata && s.destination_iata);
 
         // Load cost items and reconstruct blocks
         const { data: costs } = await supabase.from("cost_items").select("*").eq("sale_id", editId);
@@ -176,6 +180,20 @@ export default function NewSale() {
 
           for (const c of costs) {
             if (c.category === "aereo") {
+              // Reconstruct segment_indices from description parenthetical
+              let reconstructedIndices: number[] = [];
+              const parenMatch = (c.description || "").match(/\(([^)]+)\)$/);
+              if (parenMatch) {
+                const segLabels = parenMatch[1].split(",").map(s => s.trim());
+                for (const label of segLabels) {
+                  const [orig, dest] = label.split("→").map(s => s.trim());
+                  if (orig && dest) {
+                    const idx = validSegs.findIndex(s => s.origin_iata === orig && s.destination_iata === dest);
+                    if (idx >= 0 && !reconstructedIndices.includes(idx)) reconstructedIndices.push(idx);
+                  }
+                }
+              }
+
               airBlocks.push({
                 ...createEmptyAirCostBlock(),
                 id: c.id,
@@ -189,7 +207,7 @@ export default function NewSale() {
                 cash_value: c.cash_value ? String(c.cash_value) : "",
                 emission_source: c.emission_source || "",
                 reservation_code: c.reservation_code || "",
-                segment_indices: [],
+                segment_indices: reconstructedIndices,
               });
             } else if (c.category === "hotel") {
               const h = createEmptyHotelEntry();
