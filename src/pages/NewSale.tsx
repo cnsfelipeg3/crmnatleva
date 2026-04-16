@@ -136,7 +136,147 @@ export default function NewSale() {
     },
   });
 
-  const getSupplierPrograms = (supplierId: string) => {
+  const [editLoading, setEditLoading] = useState(false);
+
+  // Load existing sale data in edit mode
+  useEffect(() => {
+    if (!editId) return;
+    setEditLoading(true);
+    (async () => {
+      try {
+        const { data: sale } = await supabase.from("sales").select("*").eq("id", editId).single();
+        if (!sale) { toast({ title: "Venda não encontrada", variant: "destructive" }); navigate("/sales"); return; }
+
+        setForm({
+          name: sale.name || "", close_date: sale.close_date || "", payment_method: sale.payment_method || "",
+          observations: sale.observations || "", link_chat: sale.link_chat || "",
+          adults: sale.adults || 1, children: sale.children || 0,
+          children_ages: sale.children_ages ? (sale.children_ages as number[]).join(", ") : "",
+          origin_iata: sale.origin_iata || "", destination_iata: sale.destination_iata || "",
+          departure_date: sale.departure_date || "", return_date: sale.return_date || "",
+          airline: sale.airline || "", flight_class: sale.flight_class || "",
+          locator: (sale.locators as string[])?.join(", ") || "", connections: (sale.connections as string[])?.join(", ") || "",
+          miles_program: sale.miles_program || "", emission_source: sale.emission_source || "",
+          lead_type: (sale.lead_type as "agencia" | "organico") || "agencia",
+          received_value: sale.received_value ? String(sale.received_value) : "",
+          paid_value: "", payment_gateway: "", payment_installments: "1",
+        });
+        setGroupLocators((sale.locators as string[]) || []);
+
+        // Load flight segments
+        const { data: segs } = await supabase.from("flight_segments").select("*").eq("sale_id", editId).order("segment_order");
+        if (segs && segs.length > 0) setSegments(segs as FlightSegment[]);
+
+        // Load cost items and reconstruct blocks
+        const { data: costs } = await supabase.from("cost_items").select("*").eq("sale_id", editId);
+        if (costs) {
+          const airBlocks: AirCostBlock[] = [];
+          const hotels: HotelEntry[] = [];
+          const prods: OtherProduct[] = [];
+
+          for (const c of costs) {
+            if (c.category === "aereo") {
+              airBlocks.push({
+                ...createEmptyAirCostBlock(),
+                id: c.id,
+                label: (c.description || "").replace("Aéreo: ", "").split(" (")[0],
+                emission_type: (c.miles_quantity && c.miles_quantity > 0) ? "milhas" : "pagante",
+                supplier_id: c.supplier_id || "",
+                miles_program: c.miles_program || "",
+                miles_qty: c.miles_quantity ? String(c.miles_quantity) : "",
+                miles_price: c.miles_price_per_thousand ? String(c.miles_price_per_thousand) : "",
+                taxes: c.taxes ? String(c.taxes) : "",
+                cash_value: c.cash_value ? String(c.cash_value) : "",
+                emission_source: c.emission_source || "",
+                reservation_code: c.reservation_code || "",
+                segment_indices: [],
+              });
+            } else if (c.category === "hotel") {
+              const h = createEmptyHotelEntry();
+              h.id = c.id;
+              h.hotel_name = (c.description || "").replace("Hotel: ", "").split(" (")[0];
+              h.emission_type = (c.miles_quantity && c.miles_quantity > 0) ? "milhas" : "pagante";
+              h.supplier_id = c.supplier_id || "";
+              h.miles_program = c.miles_program || "";
+              h.miles_qty = c.miles_quantity ? String(c.miles_quantity) : "";
+              h.miles_price = c.miles_price_per_thousand ? String(c.miles_price_per_thousand) : "";
+              h.taxes = c.taxes ? String(c.taxes) : "";
+              h.cash_value = c.cash_value ? String(c.cash_value) : "";
+              h.hotel_reservation_code = c.reservation_code || "";
+              hotels.push(h);
+            } else {
+              prods.push({
+                id: c.id, type: c.product_type || "outros",
+                description: (c.description || "").split(" - ").slice(1).join(" - "),
+                supplier_id: c.supplier_id || "", date: "",
+                emission_type: (c.miles_quantity && c.miles_quantity > 0) ? "milhas" : "pagante",
+                miles_program: "", miles_qty: c.miles_quantity ? String(c.miles_quantity) : "",
+                miles_tax: c.taxes ? String(c.taxes) : "",
+                cash_value: c.cash_value ? String(c.cash_value) : "",
+                reservation_code: c.reservation_code || "",
+                tariff: { ...EMPTY_TARIFF },
+              });
+            }
+          }
+          if (airBlocks.length > 0) setAirCostBlocks(airBlocks);
+          if (hotels.length > 0) setHotelEntries(hotels);
+          if (prods.length > 0) setOtherProducts(prods);
+        }
+
+        // Load passengers
+        const { data: paxLinks } = await supabase.from("sale_passengers").select("passenger_id, passengers(id, full_name, cpf, birth_date)").eq("sale_id", editId);
+        if (paxLinks) {
+          setSelectedPassengers(paxLinks.map((l: any) => ({
+            id: l.passengers.id,
+            full_name: l.passengers.full_name,
+            cpf: l.passengers.cpf || "",
+            birth_date: l.passengers.birth_date || "",
+          })));
+        }
+
+        // Load sale payments
+        const { data: payments } = await supabase.from("sale_payments").select("*").eq("sale_id", editId);
+        if (payments && payments.length > 0) {
+          setSalePayments(payments.map((p: any) => ({
+            id: p.id,
+            payment_method: p.payment_method || "",
+            gateway: p.gateway || "",
+            installments: p.installments || 1,
+            gross_value: p.gross_value || 0,
+            fee_percent: p.fee_percent || 0,
+            fee_fixed: p.fee_fixed || 0,
+            fee_total: p.fee_total || 0,
+            net_value: p.net_value || 0,
+            receiving_account_id: p.receiving_account_id || "",
+            payment_date: p.payment_date || "",
+            due_date: p.due_date || "",
+            status: p.status || "pago",
+            notes: p.notes || "",
+          })));
+        }
+
+        // Load hotel data from sale itself for first hotel entry
+        if (sale.hotel_name && hotels.length === 0) {
+          const h = createEmptyHotelEntry();
+          h.hotel_name = sale.hotel_name || "";
+          h.hotel_room = sale.hotel_room || "";
+          h.hotel_meal_plan = sale.hotel_meal_plan || "";
+          h.hotel_reservation_code = sale.hotel_reservation_code || "";
+          h.hotel_checkin_date = sale.hotel_checkin_date || "";
+          h.hotel_checkout_date = sale.hotel_checkout_date || "";
+          h.hotel_city = sale.hotel_city || "";
+          h.hotel_country = sale.hotel_country || "";
+          h.hotel_address = sale.hotel_address || "";
+          setHotelEntries([h]);
+        }
+      } catch (err) {
+        console.error("Error loading sale for edit:", err);
+      } finally {
+        setEditLoading(false);
+      }
+    })();
+  }, [editId]);
+
     const programs = allMilesPrograms.filter((p: any) => p.supplier_id === supplierId);
     return [...new Set(programs.map((p: any) => p.program_name))];
   };
