@@ -497,7 +497,7 @@ export default function NewSale() {
       // Use first hotel for legacy fields
       const firstHotel = hotelEntries[0];
 
-      const { data: saleData, error: saleError } = await supabase.from("sales").insert({
+      const salePayload = {
         name: smartCapitalizeName(form.name),
         seller_id: user?.id,
         close_date: form.close_date || null,
@@ -529,11 +529,33 @@ export default function NewSale() {
         received_value: receivedValue, total_cost: totalCost,
         profit, margin: parseFloat(margin.toFixed(2)),
         lead_type: form.lead_type,
-        status: "Rascunho", created_by: user?.id,
-      }).select("id").single();
+      };
 
-      if (saleError) throw saleError;
-      const saleId = (saleData as any).id;
+      let saleId: string;
+
+      if (isEditMode && editId) {
+        // UPDATE existing sale
+        const { error: updateError } = await supabase.from("sales").update(salePayload).eq("id", editId);
+        if (updateError) throw updateError;
+        saleId = editId;
+
+        // Delete old related data to re-insert
+        await Promise.all([
+          supabase.from("cost_items").delete().eq("sale_id", saleId),
+          supabase.from("flight_segments").delete().eq("sale_id", saleId),
+          supabase.from("sale_passengers").delete().eq("sale_id", saleId),
+          supabase.from("sale_payments").delete().eq("sale_id", saleId),
+          supabase.from("tariff_conditions").delete().eq("sale_id", saleId),
+        ]);
+      } else {
+        // INSERT new sale
+        const { data: saleData, error: saleError } = await supabase.from("sales").insert({
+          ...salePayload,
+          status: "Rascunho", created_by: user?.id,
+        }).select("id").single();
+        if (saleError) throw saleError;
+        saleId = (saleData as any).id;
+      }
 
       // Cost items — one per air cost block + one per hotel + others
       const costItems: any[] = [];
