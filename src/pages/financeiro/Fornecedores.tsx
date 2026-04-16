@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Search, Building2, Trash2, Pencil, ChevronDown, ChevronRight, Check, X, Gavel } from "lucide-react";
+import { Plus, Search, Building2, Trash2, Pencil, ChevronDown, ChevronRight, Check, X, Gavel, Link2, Copy } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 interface MilesProgram {
@@ -35,7 +35,7 @@ export default function Fornecedores() {
   const [showForm, setShowForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
-  const [form, setForm] = useState({ name: "", cnpj: "", contact_name: "", phone: "", email: "", category: "", payment_conditions: "", bank_pix_key: "" });
+  const [form, setForm] = useState({ name: "", cnpj: "", contact_name: "", phone: "", email: "", category: "", payment_conditions: "", bank_pix_key: "", razao_social: "", endereco: "", bairro: "", cidade: "", estado: "", cep: "", responsavel_name: "", responsavel_phone: "" });
   const [mpForm, setMpForm] = useState({ program_name: "", price_per_thousand: "", min_miles: "", max_miles: "", is_liminar: false });
   const [expandedPrograms, setExpandedPrograms] = useState<Record<string, boolean>>({});
   const [editingTier, setEditingTier] = useState<string | null>(null);
@@ -74,7 +74,7 @@ export default function Fornecedores() {
     !search || (s.name || "").toLowerCase().includes(search.toLowerCase()) || (s.cnpj || "").includes(search)
   );
 
-  const resetForm = () => setForm({ name: "", cnpj: "", contact_name: "", phone: "", email: "", category: "", payment_conditions: "", bank_pix_key: "" });
+  const resetForm = () => setForm({ name: "", cnpj: "", contact_name: "", phone: "", email: "", category: "", payment_conditions: "", bank_pix_key: "", razao_social: "", endereco: "", bairro: "", cidade: "", estado: "", cep: "", responsavel_name: "", responsavel_phone: "" });
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Nome obrigatório"); return; }
@@ -96,7 +96,7 @@ export default function Fornecedores() {
 
   const openEdit = (s: any) => {
     setEditingSupplier(s);
-    setForm({ name: s.name || "", cnpj: s.cnpj || "", contact_name: s.contact_name || "", phone: s.phone || "", email: s.email || "", category: s.category || "", payment_conditions: s.payment_conditions || "", bank_pix_key: s.bank_pix_key || "" });
+    setForm({ name: s.name || "", cnpj: s.cnpj || "", contact_name: s.contact_name || "", phone: s.phone || "", email: s.email || "", category: s.category || "", payment_conditions: s.payment_conditions || "", bank_pix_key: s.bank_pix_key || "", razao_social: s.razao_social || "", endereco: s.endereco || "", bairro: s.bairro || "", cidade: s.cidade || "", estado: s.estado || "", cep: s.cep || "", responsavel_name: s.responsavel_name || "", responsavel_phone: s.responsavel_phone || "" });
     setShowForm(true);
   };
 
