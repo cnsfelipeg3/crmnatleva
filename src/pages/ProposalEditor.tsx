@@ -19,6 +19,7 @@ import HotelMediaBrowser from "@/components/hotel-media/HotelMediaBrowser";
 import ProposalFlightSearch, { type FlightSegmentData } from "@/components/proposal/ProposalFlightSearch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
+import { AIBookingExtractor, type ExtractItemType } from "@/components/proposal/AIBookingExtractor";
 
 const itemTypeIcons: Record<string, any> = {
   destination: MapPin,
@@ -394,6 +395,23 @@ export default function ProposalEditor() {
     );
   };
 
+  const applyExtractedItem = (idx: number, extracted: { title?: string; description?: string; data?: Record<string, any> }) => {
+    setItems((prev) =>
+      prev.map((item, i) => {
+        if (i !== idx) return item;
+        const cleanData = extracted.data
+          ? Object.fromEntries(Object.entries(extracted.data).filter(([, v]) => v !== null && v !== undefined && v !== ""))
+          : {};
+        return {
+          ...item,
+          title: extracted.title || item.title,
+          description: extracted.description || item.description,
+          data: { ...(item.data || {}), ...cleanData },
+        };
+      })
+    );
+  };
+
   const removeItem = (idx: number) => {
     setItems((prev) => prev.filter((_, i) => i !== idx));
   };
@@ -722,6 +740,14 @@ export default function ProposalEditor() {
                               </div>
                             </div>
                           </div>
+                        )}
+
+                        {/* AI extractor — voo, hotel e experiência */}
+                        {(item.item_type === "flight" || item.item_type === "hotel" || item.item_type === "experience") && (
+                          <AIBookingExtractor
+                            itemType={item.item_type as ExtractItemType}
+                            onExtracted={(data) => applyExtractedItem(idx, data)}
+                          />
                         )}
 
                         {/* Standard form fields */}
