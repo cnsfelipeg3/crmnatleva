@@ -24,6 +24,7 @@ import ProposalFlightSearch, { type FlightSegmentData } from "@/components/propo
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
 import { AIBookingExtractor, type ExtractItemType } from "@/components/proposal/AIBookingExtractor";
+import CoverImageSuggestDialog from "@/components/proposal/CoverImageSuggestDialog";
 import { classifyItinerary, assignDirections, getItineraryLabel, type ItineraryType } from "@/lib/itineraryClassifier";
 import { buildFlightTitle, buildHotelTitle } from "@/lib/airportCities";
 
@@ -99,6 +100,7 @@ export default function ProposalEditor() {
   const [placesSearchIdx, setPlacesSearchIdx] = useState<number | null>(null);
   const [collapsedItems, setCollapsedItems] = useState<Set<number>>(new Set());
   const [savingItemIdx, setSavingItemIdx] = useState<number | null>(null);
+  const [coverDialogOpen, setCoverDialogOpen] = useState(false);
 
   const { data: templates } = useQuery({
     queryKey: ["proposal_templates_active"],
@@ -755,8 +757,24 @@ export default function ProposalEditor() {
                 </Select>
               </div>
               <div className="md:col-span-2 space-y-1.5">
-                <Label>URL da imagem de capa</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label>URL da imagem de capa</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCoverDialogOpen(true)}
+                    className="h-7 text-xs text-accent hover:text-accent hover:bg-accent/10"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 mr-1" /> Sugerir capa
+                  </Button>
+                </div>
                 <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="https://images.unsplash.com/..." />
+                {form.cover_image_url && (
+                  <div className="mt-2 rounded-lg overflow-hidden border border-border/30 aspect-[16/6]">
+                    <img src={form.cover_image_url} alt="Pré-visualização da capa" className="w-full h-full object-cover" />
+                  </div>
+                )}
               </div>
 
               <div className="md:col-span-2 space-y-1.5">
@@ -1126,6 +1144,12 @@ export default function ProposalEditor() {
           </TabsContent>
         )}
       </Tabs>
+      <CoverImageSuggestDialog
+        open={coverDialogOpen}
+        onOpenChange={setCoverDialogOpen}
+        initialDestination={form.title || ""}
+        onSelect={(url) => setForm((f) => ({ ...f, cover_image_url: url }))}
+      />
     </div>
   );
 }
