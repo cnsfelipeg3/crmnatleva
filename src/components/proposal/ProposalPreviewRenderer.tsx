@@ -121,36 +121,89 @@ function ExpandableCard({ children, expandedContent, defaultExpanded = false }: 
   );
 }
 
-/* ═══ Photo Gallery Lightbox ═══ */
+/* ═══ Photo Gallery (hero + thumbnails) ═══ */
 function PhotoGallery({ photos, name }: { photos: string[]; name: string }) {
-  const [lightbox, setLightbox] = useState<number | null>(null);
+  const [active, setActive] = useState(0);
+  const [lightbox, setLightbox] = useState(false);
   if (photos.length === 0) return null;
+  const go = (dir: 1 | -1) => setActive((i) => (i + dir + photos.length) % photos.length);
   return (
     <>
-      <div className="grid grid-cols-4 gap-1.5">
-        {photos.slice(0, 8).map((url, i) => (
-          <button key={i} onClick={(e) => { e.stopPropagation(); setLightbox(i); }} className="aspect-square rounded-lg overflow-hidden hover:opacity-80 transition-opacity relative group">
-            <img src={url} alt={`${name} - ${i + 1}`} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-              <Camera className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-            </div>
-          </button>
-        ))}
+      <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+        {/* Hero */}
+        <div className="relative aspect-[16/10] sm:aspect-[16/9] rounded-xl overflow-hidden bg-muted group/hero">
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={active}
+              src={photos[active]}
+              alt={`${name} - ${active + 1}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="absolute inset-0 w-full h-full object-cover cursor-zoom-in"
+              onClick={() => setLightbox(true)}
+            />
+          </AnimatePresence>
+          {photos.length > 1 && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); go(-1); }}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white flex items-center justify-center opacity-0 group-hover/hero:opacity-100 transition-opacity"
+                aria-label="Foto anterior"
+              >
+                <ChevronRight className="w-4 h-4 rotate-180" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); go(1); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm text-white flex items-center justify-center opacity-0 group-hover/hero:opacity-100 transition-opacity"
+                aria-label="Próxima foto"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-sm text-white text-[11px] font-medium flex items-center gap-1.5">
+                <Camera className="w-3 h-3" /> {active + 1} / {photos.length}
+              </div>
+            </>
+          )}
+        </div>
+        {/* Thumbnails */}
+        {photos.length > 1 && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+            {photos.map((url, i) => (
+              <button
+                key={i}
+                onClick={(e) => { e.stopPropagation(); setActive(i); }}
+                className={`relative flex-shrink-0 w-20 h-14 sm:w-24 sm:h-16 rounded-md overflow-hidden transition-all ${
+                  i === active ? "ring-2 ring-accent ring-offset-1 ring-offset-background" : "opacity-60 hover:opacity-100"
+                }`}
+                aria-label={`Foto ${i + 1}`}
+              >
+                <img src={url} alt={`${name} miniatura ${i + 1}`} className="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <AnimatePresence>
-        {lightbox !== null && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={() => setLightbox(null)}>
-            <button className="absolute top-6 right-6 text-white/60 hover:text-white z-10" onClick={() => setLightbox(null)}><X className="w-6 h-6" /></button>
-            <motion.img key={lightbox} initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} src={photos[lightbox]} alt="" className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg" />
-            {lightbox > 0 && <button className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); setLightbox(lightbox - 1); }}><ChevronRight className="w-5 h-5 rotate-180" /></button>}
-            {lightbox < photos.length - 1 && <button className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); setLightbox(lightbox + 1); }}><ChevronRight className="w-5 h-5" /></button>}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/50 text-sm">{lightbox + 1} / {photos.length}</div>
+        {lightbox && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={() => setLightbox(false)}>
+            <button className="absolute top-6 right-6 text-white/60 hover:text-white z-10" onClick={() => setLightbox(false)}><X className="w-6 h-6" /></button>
+            <motion.img key={active} initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} src={photos[active]} alt="" className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg" />
+            {photos.length > 1 && (
+              <>
+                <button className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); go(-1); }}><ChevronRight className="w-5 h-5 rotate-180" /></button>
+                <button className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); go(1); }}><ChevronRight className="w-5 h-5" /></button>
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/50 text-sm">{active + 1} / {photos.length}</div>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
     </>
   );
 }
+
 
 /* ═══ Detail Pill ═══ */
 function DetailPill({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
