@@ -223,14 +223,52 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
     onSegmentsChange(segments.map((s, i) => (i === idx ? updated : s)));
   };
 
-  // Group segments into legs (a leg = first segment + its connections)
+  // Group segments into legs (a leg = first segment + its connections).
+  // First, classify the full itinerary to detect IDA / VOLTA / MULTI_CITY automatically.
+  const classification: ItineraryClassification = classifyItinerary(
+    segments.map((s) => ({
+      origin_iata: s.origin_iata,
+      destination_iata: s.destination_iata,
+      departure_date: s.departure_date || null,
+      departure_time: s.departure_time || null,
+    }))
+  );
+
+  // Build legs respecting both manual `is_connection` flag AND auto-classification.
+  // Auto rule: if previous segment's destination == current's origin AND date diff <= 1 day, treat as connection.
   const legs: { startIdx: number; segments: { seg: FlightSegmentData; idx: number }[] }[] = [];
   segments.forEach((seg, idx) => {
-    if (!seg.is_connection || legs.length === 0) {
+    const prev = idx > 0 ? segments[idx - 1] : null;
+    let isAutoConnection = false;
+    if (prev && prev.destination_iata && seg.origin_iata &&
+        prev.destination_iata.toUpperCase() === seg.origin_iata.toUpperCase()) {
+      // chain by IATA — check date proximity (same day or next day with short time gap)
+      if (prev.departure_date && seg.departure_date) {
+        const diffMs = new Date(seg.departure_date + "T00:00:00").getTime() -
+                       new Date(prev.departure_date + "T00:00:00").getTime();
+        const diffDays = Math.round(diffMs / 86400000);
+        // ≤1 day apart counts as natural connection
+        if (diffDays >= 0 && diffDays <= 1) isAutoConnection = true;
+      } else {
+        isAutoConnection = true;
+      }
+    }
+    const isConnection = seg.is_connection === true || isAutoConnection;
+
+    if (!isConnection || legs.length === 0) {
       legs.push({ startIdx: idx, segments: [{ seg, idx }] });
     } else {
       legs[legs.length - 1].segments.push({ seg, idx });
     }
+  });
+
+  // Map each leg to its direction label based on the global classification.
+  const legLabels: string[] = legs.map((_, i) => {
+    if (classification.type === "ROUND_TRIP" || classification.type === "OPEN_JAW") {
+      return i === 0 ? "Ida" : i === legs.length - 1 ? "Volta" : `Trecho ${i + 1}`;
+    }
+    if (classification.type === "ONE_WAY") return "Ida";
+    return `Trecho ${i + 1}`;
   });
 
   if (segments.length === 0) {
@@ -248,16 +286,22 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
     <div className="space-y-5">
       {legs.map((leg, legIdx) => {
         const isMultiSeg = leg.segments.length > 1;
-        const firstSeg = leg.segments[0].seg;
-        const lastSeg = leg.segments[leg.segments.length - 1].seg;
+        const directionLabel = legLabels[legIdx];
+        const isReturn = directionLabel === "Volta";
+        const isOutbound = directionLabel === "Ida";
 
         return (
           <div key={leg.startIdx} className="space-y-0">
             {/* Leg header */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Trecho {legIdx + 1}
+                <span className={`text-xs font-semibold uppercase tracking-wider ${
+                  isOutbound ? "text-primary" : isReturn ? "text-info" : "text-muted-foreground"
+                }`}>
+                  {directionLabel}
+                </span>
+                <span className="text-[10px] text-muted-foreground/70">
+                  {leg.segments[0].seg.origin_iata || "?"} → {leg.segments[leg.segments.length - 1].seg.destination_iata || "?"}
                 </span>
                 {isMultiSeg ? (
                   <Badge variant="outline" className="text-[10px] gap-1 h-5 border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:bg-amber-950/30">
@@ -272,6 +316,7 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                 )}
               </div>
             </div>
+
 
             {/* Segments within leg */}
             <div className={isMultiSeg ? "border border-border/60 rounded-lg overflow-hidden" : ""}>
