@@ -1144,6 +1144,12 @@ export default function ProposalEditor() {
           </TabsContent>
         )}
       </Tabs>
+      <CoverImageSuggestDialog
+        open={coverDialogOpen}
+        onOpenChange={setCoverDialogOpen}
+        initialDestination={form.title || ""}
+        onSelect={(url) => setForm((f) => ({ ...f, cover_image_url: url }))}
+      />
     </div>
   );
 }
