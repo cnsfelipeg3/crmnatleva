@@ -542,6 +542,7 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.1 }}>
       <ExpandableCard
+        defaultExpanded
         expandedContent={
           <div className="px-6 pb-4 space-y-4">
             <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
