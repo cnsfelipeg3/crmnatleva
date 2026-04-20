@@ -22,12 +22,14 @@ export interface FlightSegmentData {
   destination_iata: string;
   departure_date: string;
   departure_time: string;
+  arrival_date?: string;
   arrival_time: string;
   duration_minutes: number;
   terminal: string;
   arrival_terminal: string;
   aircraft_type: string;
   notes: string;
+  direction?: "ida" | "volta" | "trecho";
   is_connection?: boolean;
   // Baggage fields
   personal_item_included?: boolean;
@@ -62,8 +64,9 @@ interface SearchFormData {
 
 const emptySegment = (isConnection = false): FlightSegmentData => ({
   airline: "", airline_name: "", flight_number: "", origin_iata: "", destination_iata: "",
-  departure_date: "", departure_time: "", arrival_time: "", duration_minutes: 0,
+  departure_date: "", departure_time: "", arrival_date: "", arrival_time: "", duration_minutes: 0,
   terminal: "", arrival_terminal: "", aircraft_type: "", notes: "", is_connection: isConnection,
+  direction: "ida",
   personal_item_included: true, personal_item_weight_kg: 10,
   carry_on_included: true, carry_on_weight_kg: 10, checked_bags_included: 0, checked_bag_weight_kg: 23, baggage_notes: "",
 });

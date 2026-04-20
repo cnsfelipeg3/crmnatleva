@@ -1,3 +1,5 @@
+import { calcLayoverMinutes } from "@/lib/flightTiming";
+
 /**
  * Itinerary classification utility.
  * Classifies flight segments as ROUND_TRIP, OPEN_JAW, MULTI_CITY, or ONE_WAY.
@@ -102,10 +104,11 @@ function groupIntoLegs(segments: FlightSegmentInput[]): ItineraryLeg[] {
     const prev = sorted[i - 1];
     const curr = sorted[i];
 
-    // If destination of previous matches origin of current AND same date → same leg (connection)
-    const isContinuation =
-      prev.destination_iata?.toUpperCase() === curr.origin_iata?.toUpperCase() &&
-      prev.departure_date === curr.departure_date;
+    const sameAirport = prev.destination_iata?.toUpperCase() === curr.origin_iata?.toUpperCase();
+    const layoverMinutes = sameAirport ? calcLayoverMinutes(prev, curr) : null;
+    const isValidConnection = layoverMinutes !== null && layoverMinutes >= 0 && layoverMinutes <= 24 * 60;
+    const sameDayFallback = sameAirport && prev.departure_date === curr.departure_date;
+    const isContinuation = isValidConnection || (layoverMinutes === null && sameDayFallback);
 
     if (isContinuation) {
       currentLeg.push(curr);
