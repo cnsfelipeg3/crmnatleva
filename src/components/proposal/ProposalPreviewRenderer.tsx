@@ -640,14 +640,63 @@ interface ProposalPreviewRendererProps {
   items: any[];
   embedded?: boolean;
   tracking?: ProposalTrackingAPI;
+  template?: any;
 }
 
-export default function ProposalPreviewRenderer({ proposal, items, embedded = false, tracking }: ProposalPreviewRendererProps) {
+/* ═══ Convert hex (#rrggbb) to "h s% l%" string for CSS HSL variables ═══ */
+function hexToHsl(hex?: string | null): string | null {
+  if (!hex || typeof hex !== "string") return null;
+  const m = hex.replace("#", "").match(/^([0-9a-f]{6})$/i);
+  if (!m) return null;
+  const r = parseInt(m[1].slice(0, 2), 16) / 255;
+  const g = parseInt(m[1].slice(2, 4), 16) / 255;
+  const b = parseInt(m[1].slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0; const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h *= 60;
+  }
+  return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+export default function ProposalPreviewRenderer({ proposal, items, embedded = false, tracking, template }: ProposalPreviewRendererProps) {
   const destinations = items.filter((i) => i.item_type === "destination");
   const flights = items.filter((i) => i.item_type === "flight");
   const hotels = items.filter((i) => i.item_type === "hotel");
   const experiences = items.filter((i) => i.item_type === "experience");
   const paymentConditions = (proposal.payment_conditions as any[]) || [];
+
+  // Resolve template-driven theme (instant preview when user picks a model)
+  const headingFont = template?.font_heading ? `'${template.font_heading}', 'Space Grotesk', sans-serif` : "'Space Grotesk', sans-serif";
+  const bodyFont = template?.font_body ? `'${template.font_body}', sans-serif` : undefined;
+  const accentHsl = hexToHsl(template?.accent_color);
+  const primaryHsl = hexToHsl(template?.primary_color);
+  const themeStyle: React.CSSProperties = {
+    ...(accentHsl ? ({ ["--accent" as any]: accentHsl, ["--ring" as any]: accentHsl }) : {}),
+    ...(primaryHsl ? ({ ["--primary" as any]: primaryHsl }) : {}),
+    ...(bodyFont ? { fontFamily: bodyFont } : {}),
+  };
+
+  // Section enable/disable map from template.sections
+  const tplSections: Array<{ type: string; enabled?: boolean }> = Array.isArray(template?.sections) ? template.sections : [];
+  const isSecOn = (key: string) => {
+    if (!tplSections.length) return true;
+    const s = tplSections.find((x) => x.type === key);
+    return s ? s.enabled !== false : true;
+  };
+  const showHero = isSecOn("hero");
+  const showDestinations = isSecOn("destinations");
+  const showFlights = isSecOn("flights");
+  const showHotels = isSecOn("hotels");
+  const showExperiences = isSecOn("experiences");
+  const showPricing = isSecOn("pricing");
 
   const startDate = parseLocalDate(proposal.travel_start_date);
   const endDate = parseLocalDate(proposal.travel_end_date);
