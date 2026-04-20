@@ -1021,23 +1021,10 @@ export default function SimuladorManualMode() {
             <div className="px-4 py-3">
               <div className="flex items-center justify-between mb-2.5">
                 <p className="text-[10px] uppercase tracking-[0.12em] font-bold text-foreground">Agentes</p>
-                <span className="text-[10px] font-bold tabular-nums text-muted-foreground">{filteredAgents.length}</span>
+                <span className="text-[10px] font-bold tabular-nums text-muted-foreground">{AGENTS_V4.length}</span>
               </div>
-              <div className="flex gap-1 flex-wrap mb-2.5">
-                <button onClick={() => setActiveSquad("all")} className={cn(
-                  "text-[10px] px-2 py-1 rounded-md font-semibold transition-all",
-                  activeSquad === "all" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                )}>Todos</button>
-                {SQUADS.map(s => (
-                  <button key={s.id} onClick={() => setActiveSquad(s.id)} className={cn(
-                    "text-[10px] px-2 py-1 rounded-md font-semibold transition-all",
-                    activeSquad === s.id ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                  )}>{s.emoji} {s.name.replace("Squad ", "")}</button>
-                ))}
-              </div>
-              <div className="space-y-0.5 max-h-[200px] overflow-y-auto custom-scrollbar">
-                {filteredAgents.map(a => {
-                  const c = getAgentColor(a);
+              <div className="space-y-0.5 max-h-[480px] overflow-y-auto custom-scrollbar">
+                {AGENTS_V4.map(a => {
                   const active = selectedAgent.id === a.id;
                   return (
                     <button key={a.id} onClick={() => setSelectedAgent(a)}
@@ -1045,36 +1032,10 @@ export default function SimuladorManualMode() {
                         "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all",
                         active ? "bg-primary/5" : "hover:bg-muted/30"
                       )}>
-                      <div className="w-7 h-7 rounded-md flex items-center justify-center text-sm shrink-0"
-                        style={{ background: `${c}10` }}>{a.emoji}</div>
                       <div className="flex-1 min-w-0">
-                        <p className={cn("text-[11px] font-semibold truncate", active ? "text-primary" : "text-foreground")}>{a.name}</p>
+                        <p className={cn("text-[12px] font-semibold truncate", active ? "text-primary" : "text-foreground")}>{a.name}</p>
                       </div>
-                      <span className="text-[10px] font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{a.successRate}%</span>
                     </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="h-px bg-border mx-4" />
-
-            {/* Destinations section */}
-            <div className="px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.12em] font-bold text-foreground mb-2.5">Destino</p>
-              <div className="flex flex-wrap gap-1.5">
-                {DESTINOS.map(d => {
-                  const isRandom = d === "🎲 Aleatório";
-                  const isLivre = d === "💬 Livre";
-                  const isActive = isLivre ? selectedDestino === "💬 Livre" : isRandom ? (!DESTINOS.slice(2).includes(selectedDestino) && selectedDestino !== "💬 Livre") : selectedDestino === d;
-                  return (
-                    <button key={d} onClick={() => setSelectedDestino(d)}
-                      className={cn(
-                        "text-[10px] px-3 py-1.5 rounded-full font-medium transition-all border",
-                        isActive
-                          ? "bg-primary/10 border-primary/30 text-primary font-bold shadow-sm"
-                          : "bg-muted/20 border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/40 hover:border-border"
-                      )}>{isRandom && isActive ? `🎲 ${selectedDestino}` : d}</button>
                   );
                 })}
               </div>
