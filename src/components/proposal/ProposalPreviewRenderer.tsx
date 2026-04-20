@@ -743,9 +743,9 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="absolute top-8 left-1/2 -translate-x-1/2 z-10"
+          className="absolute top-8 left-0 right-0 z-10 flex justify-center pointer-events-none"
         >
-          <img src={logoNatleva} alt="NatLeva Viagens" className="h-10 sm:h-12 drop-shadow-lg" />
+          <img src={logoNatleva} alt="NatLeva Viagens" className="h-10 sm:h-12 drop-shadow-lg mx-auto" />
         </motion.div>
 
         <motion.div
