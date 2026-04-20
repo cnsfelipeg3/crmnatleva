@@ -329,7 +329,7 @@ function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: bo
         {/* Route line */}
         <div className="flex-1 flex flex-col items-center gap-1 py-2">
           <div className="mb-1">
-            <InlineAirlineLogo iata={airlineCode} size={42} />
+            <InlineAirlineLogo iata={airlineCode} size={50} />
           </div>
           <div className="w-full flex items-center">
             <svg viewBox="0 0 24 24" className="w-4 h-4 text-muted-foreground/40 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5">
