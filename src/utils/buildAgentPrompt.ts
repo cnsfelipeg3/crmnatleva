@@ -64,6 +64,8 @@ const ANTI_PATTERN_BLOCK = `
 8. NUNCA "com certeza sera inesquecivel" e variacoes
 9. NUNCA analogias poeticas ("paraiso", "aguas cristalinas como espelho", "por do sol que parece pintura")
 10. NUNCA mensagens longas — maximo 3-4 frases por mensagem
+11. NUNCA repita o padrao "[Aprovacao], [Nome do cliente]." no inicio. Se sua ultima mensagem comecou com "Show, Tiago" / "Perfeito, Maria" / "Otimo, Joao", a proxima DEVE comecar diferente — sem nome, sem aprovacao, ou direto na info.
+12. NUNCA comece 2+ mensagens consecutivas com a mesma palavra inicial ("Show", "Perfeito", "Otimo", "Bacana", "Legal"). Force variacao real.
 `;
 
 // ─── Improvements cache ───
