@@ -654,12 +654,26 @@ export default function ProposalEditor() {
         <div className="flex items-center gap-2">
           {!isNew && existing?.slug && (
             <>
-              <Button variant="outline" size="sm" onClick={copyLink} className="gap-1.5">
-                <Copy className="w-3.5 h-3.5" /> Link
-              </Button>
               <Button variant="outline" size="sm" onClick={() => window.open(`/proposta/${existing.slug}`, "_blank")} className="gap-1.5">
                 <ExternalLink className="w-3.5 h-3.5" /> Visualizar
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5" disabled={exportingPdf}>
+                    {exportingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+                    Compartilhar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={handleShare} className="gap-2">
+                    <Copy className="w-4 h-4" /> Copiar link da proposta
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportPdf} className="gap-2" disabled={exportingPdf}>
+                    {exportingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                    Exportar em PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           )}
           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !form.title} className="gap-1.5">
