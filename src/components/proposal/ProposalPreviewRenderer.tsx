@@ -593,92 +593,115 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
     transfer: <Car className="w-3.5 h-3.5" />, spa: <Bath className="w-3.5 h-3.5" />, vista: <Mountain className="w-3.5 h-3.5" />,
   };
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.1 }}>
-      <ExpandableCard
-        defaultExpanded
-        expandedContent={
-          <div className="px-6 pb-4 space-y-4">
-            <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
-            {photos.length > 0 && <PhotoGallery photos={photos} name={hotel.title || "Hotel"} />}
-            <div className="grid grid-cols-2 gap-3">
-              {d.room_type && <DetailPill icon={<BedDouble className="w-3.5 h-3.5" />} label="Quarto" value={d.room_type} />}
-              {d.meal_plan && <DetailPill icon={<UtensilsCrossed className="w-3.5 h-3.5" />} label="Refeições" value={d.meal_plan} />}
-              {d.check_in && <DetailPill icon={<Calendar className="w-3.5 h-3.5" />} label="Check-in" value={d.check_in} />}
-              {d.check_out && <DetailPill icon={<Calendar className="w-3.5 h-3.5" />} label="Check-out" value={d.check_out} />}
-              {d.nights && <DetailPill icon={<Clock className="w-3.5 h-3.5" />} label="Diárias" value={`${d.nights} noite${d.nights > 1 ? "s" : ""}`} />}
-              {/* Website do hotel é informação interna — não exibir ao cliente */}
-            </div>
-            {amenities.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Comodidades</p>
-                <div className="flex flex-wrap gap-2">
-                  {amenities.map((a, i) => {
-                    const iconKey = Object.keys(amenityIcons).find(k => a.toLowerCase().includes(k));
-                    return <span key={i} className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-accent/5 border border-accent/10 px-2.5 py-1.5 rounded-full">{iconKey ? amenityIcons[iconKey] : <CheckCircle className="w-3 h-3 text-accent" />}{a}</span>;
-                  })}
-                </div>
-              </div>
-            )}
-            {d.reviews && Array.isArray(d.reviews) && d.reviews.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Avaliações</p>
-                <div className="space-y-2">
-                  {d.reviews.slice(0, 3).map((r: any, i: number) => (
-                    <div key={i} className="bg-accent/5 rounded-xl p-3 border border-accent/5">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="flex gap-0.5">{Array.from({ length: r.rating || 0 }).map((_, j) => <Star key={j} className="w-3 h-3 text-amber-400 fill-amber-400" />)}</div>
-                        <span className="text-[10px] text-muted-foreground">{r.author || r.time}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{r.text}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {hotel.description && <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-accent/30 pl-3">{hotel.description}</p>}
-            {d.editorial_summary && <p className="text-sm text-muted-foreground/80 italic leading-relaxed">"{d.editorial_summary}"</p>}
-          </div>
-        }
-      >
-        <div className="h-52 overflow-hidden relative">
-          <img src={hotel.image_url || photos[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&h=400&fit=crop&q=80"} alt={hotel.title} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-          {photos.length > 1 && <span className="absolute bottom-3 right-3 bg-black/50 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1"><Camera className="w-3 h-3" /> {photos.length} fotos</span>}
-        </div>
-        <div className="p-6">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="font-semibold text-lg text-foreground">{hotel.title || "Hotel"}</h3>
-            {d.stars && <div className="flex gap-0.5 shrink-0">{Array.from({ length: parseInt(d.stars) || 0 }).map((_, i) => <Star key={i} className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />)}</div>}
-          </div>
-          {d.rating && <div className="flex items-center gap-1.5 mt-1"><span className="bg-accent text-accent-foreground text-xs font-bold px-1.5 py-0.5 rounded">{Number(d.rating).toFixed(1)}</span>{d.user_ratings_total && <span className="text-xs text-muted-foreground">({d.user_ratings_total} avaliações)</span>}</div>}
-          {d.location && <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1.5"><MapPin className="w-3.5 h-3.5 text-accent/60" /> {d.location}</p>}
-          <div className="flex flex-wrap gap-2 mt-3">
-            {d.room_type && <span className="text-xs bg-accent/8 text-accent border border-accent/15 px-2.5 py-1 rounded-full">{d.room_type}</span>}
-            {d.meal_plan && <span className="text-xs bg-accent/8 text-accent border border-accent/15 px-2.5 py-1 rounded-full">{d.meal_plan}</span>}
-            {d.nights && <span className="text-xs bg-accent/8 text-accent border border-accent/15 px-2.5 py-1 rounded-full">{d.nights} noite{d.nights > 1 ? "s" : ""}</span>}
-          </div>
-          {(d.check_in || d.check_out) && (
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 text-xs text-muted-foreground">
-              {d.check_in && (
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-accent/70" />
-                  <span className="uppercase tracking-wide text-[10px] text-muted-foreground/70">Check-in</span>
-                  <span className="font-medium text-foreground">{formatHotelDateBR(d.check_in)}</span>
-                </div>
-              )}
-              {d.check_in && d.check_out && <span className="text-muted-foreground/40">→</span>}
-              {d.check_out && (
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-accent/70" />
-                  <span className="uppercase tracking-wide text-[10px] text-muted-foreground/70">Check-out</span>
-                  <span className="font-medium text-foreground">{formatHotelDateBR(d.check_out)}</span>
-                </div>
-              )}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: idx * 0.1 }}
+      className="rounded-2xl border border-border/30 bg-card overflow-hidden shadow-sm"
+    >
+      {/* Header centralizado */}
+      <div className="px-6 pt-7 pb-5 text-center border-b border-border/20">
+        <div className="flex items-center justify-center gap-2 flex-wrap">
+          <h3 className="font-serif text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
+            {hotel.title || "Hotel"}
+          </h3>
+          {d.stars && (
+            <div className="flex gap-0.5">
+              {Array.from({ length: parseInt(d.stars) || 0 }).map((_, i) => (
+                <Star key={i} className="w-4 h-4 text-amber-400 fill-amber-400" />
+              ))}
             </div>
           )}
-          <p className="text-xs text-accent flex items-center gap-1 mt-3 font-medium">Ver detalhes e fotos <ChevronRight className="w-3 h-3" /></p>
         </div>
-      </ExpandableCard>
+
+        {d.rating && (
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <span className="bg-accent text-accent-foreground text-xs font-bold px-2 py-0.5 rounded">
+              {Number(d.rating).toFixed(1)}
+            </span>
+            {d.user_ratings_total && (
+              <span className="text-xs text-muted-foreground">({d.user_ratings_total} avaliações)</span>
+            )}
+          </div>
+        )}
+
+        {d.location && (
+          <p className="mt-3 text-sm text-muted-foreground flex items-center justify-center gap-1.5 max-w-2xl mx-auto">
+            <MapPin className="w-3.5 h-3.5 text-accent/70 shrink-0" />
+            <span>{d.location}</span>
+          </p>
+        )}
+
+        {(hotel.description || d.editorial_summary) && (
+          <p className="mt-3 text-sm text-muted-foreground/90 leading-relaxed max-w-2xl mx-auto italic">
+            {hotel.description || `"${d.editorial_summary}"`}
+          </p>
+        )}
+      </div>
+
+      {/* Galeria */}
+      {photos.length > 0 && (
+        <div className="px-6 pt-5">
+          <PhotoGallery photos={photos} name={hotel.title || "Hotel"} />
+        </div>
+      )}
+
+      {/* Infos principais (quarto, refeições, datas) */}
+      <div className="px-6 py-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {d.room_type && <DetailPill icon={<BedDouble className="w-3.5 h-3.5" />} label="Quarto" value={d.room_type} />}
+        {d.meal_plan && <DetailPill icon={<UtensilsCrossed className="w-3.5 h-3.5" />} label="Refeições" value={d.meal_plan} />}
+        {d.nights && <DetailPill icon={<Clock className="w-3.5 h-3.5" />} label="Diárias" value={`${d.nights} noite${d.nights > 1 ? "s" : ""}`} />}
+        {d.check_in && <DetailPill icon={<Calendar className="w-3.5 h-3.5" />} label="Check-in" value={formatHotelDateBR(d.check_in) || d.check_in} />}
+        {d.check_out && <DetailPill icon={<Calendar className="w-3.5 h-3.5" />} label="Check-out" value={formatHotelDateBR(d.check_out) || d.check_out} />}
+      </div>
+
+      {/* Comodidades */}
+      {amenities.length > 0 && (
+        <div className="px-6 pb-5">
+          <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/60 font-medium mb-2.5 text-center">
+            Comodidades
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {amenities.map((a, i) => {
+              const iconKey = Object.keys(amenityIcons).find((k) => a.toLowerCase().includes(k));
+              return (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground bg-accent/5 border border-accent/10 px-3 py-1.5 rounded-full"
+                >
+                  {iconKey ? amenityIcons[iconKey] : <CheckCircle className="w-3 h-3 text-accent" />}
+                  {a}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Avaliações */}
+      {d.reviews && Array.isArray(d.reviews) && d.reviews.length > 0 && (
+        <div className="px-6 pb-6 border-t border-border/20 pt-5">
+          <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/60 font-medium mb-3 text-center">
+            O que dizem os hóspedes
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {d.reviews.slice(0, 3).map((r: any, i: number) => (
+              <div key={i} className="bg-accent/5 rounded-xl p-3 border border-accent/5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: r.rating || 0 }).map((_, j) => (
+                      <Star key={j} className="w-3 h-3 text-amber-400 fill-amber-400" />
+                    ))}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">{r.author || r.time}</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-4">{r.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
