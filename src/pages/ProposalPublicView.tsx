@@ -14,6 +14,9 @@ export default function ProposalPublicView() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
+  // Print mode bypasses the email gate (used by PDF export)
+  const isPrintMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("print") === "1";
+
   // Email gate state
   const [viewerEmail, setViewerEmail] = useState<string | null>(() => {
     try { return sessionStorage.getItem(`proposal_viewer_${slug}`); } catch { return null; }
@@ -22,7 +25,7 @@ export default function ProposalPublicView() {
     try { return sessionStorage.getItem(`proposal_viewer_id_${slug}`); } catch { return null; }
   });
   const [gateLoading, setGateLoading] = useState(false);
-  const [unlocked, setUnlocked] = useState(!!viewerEmail);
+  const [unlocked, setUnlocked] = useState(!!viewerEmail || isPrintMode);
 
   // Tracking hook
   const tracking = useProposalTracking({
@@ -183,8 +186,8 @@ export default function ProposalPublicView() {
     );
   }
 
-  // Show email gate if not unlocked
-  if (!unlocked) {
+  // Show email gate if not unlocked (skipped in print mode)
+  if (!unlocked && !isPrintMode) {
     return (
       <ProposalEmailGate
         proposalTitle={proposal?.title}
@@ -197,10 +200,26 @@ export default function ProposalPublicView() {
   }
 
   return (
-    <ProposalPreviewRenderer
-      proposal={proposal}
-      items={items}
-      tracking={tracking}
-    />
+    <>
+      <ProposalPreviewRenderer
+        proposal={proposal}
+        items={items}
+        tracking={tracking}
+      />
+      {/* Ready signal for the PDF exporter */}
+      <PrintReadyMarker />
+    </>
   );
+}
+
+function PrintReadyMarker() {
+  useEffect(() => {
+    // Wait a tick to allow images/fonts to layout, then mark ready
+    const t = setTimeout(() => {
+      (window as any).__PROPOSAL_READY__ = true;
+      document.documentElement.setAttribute("data-proposal-ready", "1");
+    }, 600);
+    return () => clearTimeout(t);
+  }, []);
+  return null;
 }
