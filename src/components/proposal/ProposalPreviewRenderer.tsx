@@ -724,7 +724,10 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   }
 
   return (
-    <div className={`bg-background text-foreground ${embedded ? "rounded-xl border border-border overflow-hidden" : "min-h-screen"}`}>
+    <div
+      className={`bg-background text-foreground ${embedded ? "rounded-xl border border-border overflow-hidden" : "min-h-screen"}`}
+      style={themeStyle}
+    >
       {/* ──── HERO COVER ──── */}
       <section data-track-section="hero" className={`relative ${embedded ? "h-[50vh] min-h-[320px]" : "h-screen"} flex items-end justify-center overflow-hidden`}>
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${proposal.cover_image_url || fallbackCover})` }} />
