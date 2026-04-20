@@ -6,7 +6,9 @@ import {
   ChevronDown, Play, Award, Globe, Lock, Cpu, PieChart, FileText, Eye,
   MousePointer, Mic, Search, Image as ImageIcon, Layers, Database,
   RefreshCw, LineChart, Workflow, BotMessageSquare, CalendarCheck,
-  ArrowUpRight, CircleDot, Gauge, HeartPulse, ShieldCheck, Activity
+  ArrowUpRight, CircleDot, Gauge, HeartPulse, ShieldCheck, Activity,
+  Bot, Compass, Briefcase, Cake, AlertTriangle, Map, FileSignature,
+  Headphones, Smartphone, Layers3, Network, Wand2, BookMarked
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoNatleva from "@/assets/logo-natleva.png";
