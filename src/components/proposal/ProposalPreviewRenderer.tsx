@@ -584,6 +584,25 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
             {d.meal_plan && <span className="text-xs bg-accent/8 text-accent border border-accent/15 px-2.5 py-1 rounded-full">{d.meal_plan}</span>}
             {d.nights && <span className="text-xs bg-accent/8 text-accent border border-accent/15 px-2.5 py-1 rounded-full">{d.nights} noite{d.nights > 1 ? "s" : ""}</span>}
           </div>
+          {(d.check_in || d.check_out) && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 text-xs text-muted-foreground">
+              {d.check_in && (
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-accent/70" />
+                  <span className="uppercase tracking-wide text-[10px] text-muted-foreground/70">Check-in</span>
+                  <span className="font-medium text-foreground">{formatHotelDateBR(d.check_in)}</span>
+                </div>
+              )}
+              {d.check_in && d.check_out && <span className="text-muted-foreground/40">→</span>}
+              {d.check_out && (
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-accent/70" />
+                  <span className="uppercase tracking-wide text-[10px] text-muted-foreground/70">Check-out</span>
+                  <span className="font-medium text-foreground">{formatHotelDateBR(d.check_out)}</span>
+                </div>
+              )}
+            </div>
+          )}
           <p className="text-xs text-accent flex items-center gap-1 mt-3 font-medium">Ver detalhes e fotos <ChevronRight className="w-3 h-3" /></p>
         </div>
       </ExpandableCard>
