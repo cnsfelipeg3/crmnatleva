@@ -46,10 +46,21 @@ const FLIGHT_SCHEMA = {
           locator: { type: "string", description: "Código localizador / PNR" },
           price: { type: "number", description: "Preço total se visível" },
           currency: { type: "string", description: "Moeda (BRL, USD, EUR...)" },
+          itinerary_type: {
+            type: "string",
+            enum: ["ROUND_TRIP", "ONE_WAY", "OPEN_JAW", "MULTI_CITY"],
+            description:
+              "Classificação do itinerário: ROUND_TRIP (ida e volta no mesmo par origem-destino), ONE_WAY (somente ida, sem retorno), OPEN_JAW (volta parte ou chega em cidade diferente), MULTI_CITY (3+ trechos em cidades distintas).",
+          },
+          trip_direction_summary: {
+            type: "string",
+            description:
+              "Resumo curto e humano do tipo de itinerário detectado. Ex.: 'Ida e Volta', 'Somente Ida', 'Open-Jaw GRU→FCO / VCE→GRU', 'Multi-trecho 4 cidades'.",
+          },
           flight_segments: {
             type: "array",
             description:
-              "Lista ORDENADA de TODOS os trechos. Conexões viram segmentos separados. NUNCA agrupe trechos em um só.",
+              "Lista ORDENADA de TODOS os trechos. Conexões viram segmentos separados. NUNCA agrupe trechos em um só. Inclua TANTO os trechos de IDA quanto os de VOLTA quando houver retorno.",
             items: {
               type: "object",
               properties: {
