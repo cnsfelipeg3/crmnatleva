@@ -900,7 +900,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
             transition={{ duration: 0.8, delay: 0.6 }}
             src={logoNatlevaChampagne}
             alt="NatLeva Viagens"
-            className="h-7 sm:h-8 mx-auto mt-5"
+            className="h-5 sm:h-6 mx-auto mt-5"
             style={{
               filter: "drop-shadow(0 2px 4px hsla(0,0%,0%,0.95)) drop-shadow(0 8px 24px hsla(0,0%,0%,0.7))",
             }}
