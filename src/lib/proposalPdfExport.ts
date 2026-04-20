@@ -21,17 +21,48 @@ export async function exportProposalPdf(slug: string, title: string) {
   await new Promise<void>((resolve, reject) => {
     iframe.onload = () => resolve();
     iframe.onerror = () => reject(new Error("Falha ao carregar proposta"));
-    setTimeout(() => resolve(), 8000); // safety
+    setTimeout(() => resolve(), 15000); // safety
   });
 
-  // Wait for fonts/images to settle
-  await new Promise((r) => setTimeout(r, 2500));
-
   const doc = iframe.contentDocument;
-  if (!doc || !doc.body) {
+  const win = iframe.contentWindow as any;
+  if (!doc || !doc.body || !win) {
     document.body.removeChild(iframe);
     throw new Error("Não foi possível acessar o conteúdo da proposta");
   }
+
+  // Wait for the proposal to signal it's ready (data fetched + rendered)
+  await new Promise<void>((resolve) => {
+    const start = Date.now();
+    const check = () => {
+      if (win.__PROPOSAL_READY__ || doc.documentElement.getAttribute("data-proposal-ready") === "1") {
+        return resolve();
+      }
+      if (Date.now() - start > 20000) return resolve(); // safety
+      setTimeout(check, 200);
+    };
+    check();
+  });
+
+  // Wait for fonts
+  try { await (doc as any).fonts?.ready; } catch {}
+
+  // Wait for all images inside the iframe to finish loading
+  const imgs = Array.from(doc.images);
+  await Promise.all(
+    imgs.map((img) =>
+      img.complete && img.naturalHeight > 0
+        ? Promise.resolve()
+        : new Promise<void>((res) => {
+            img.addEventListener("load", () => res(), { once: true });
+            img.addEventListener("error", () => res(), { once: true });
+            setTimeout(() => res(), 5000);
+          })
+    )
+  );
+
+  // Settle layout
+  await new Promise((r) => setTimeout(r, 600));
 
   // Clone the body so we don't mutate the iframe
   const clone = doc.body.cloneNode(true) as HTMLElement;
