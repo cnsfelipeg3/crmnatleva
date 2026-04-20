@@ -24,6 +24,7 @@ import ProposalFlightSearch, { type FlightSegmentData } from "@/components/propo
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
 import { AIBookingExtractor, type ExtractItemType } from "@/components/proposal/AIBookingExtractor";
+import CoverImageSuggestDialog from "@/components/proposal/CoverImageSuggestDialog";
 import { classifyItinerary, assignDirections, getItineraryLabel, type ItineraryType } from "@/lib/itineraryClassifier";
 import { buildFlightTitle, buildHotelTitle } from "@/lib/airportCities";
 
