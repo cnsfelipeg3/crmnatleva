@@ -289,10 +289,15 @@ Deno.serve(async (req) => {
     const dataUrl = `data:${mime};base64,${image_base64}`;
     const schema = SCHEMAS[item_type];
 
+    const today = new Date();
+    const currentYear = today.getUTCFullYear();
+    const todayISO = today.toISOString().slice(0, 10);
+    const dateContext = `\n\nCONTEXTO TEMPORAL CRÍTICO: Hoje é ${todayISO}. O ano corrente é ${currentYear}. Quando a imagem mostrar apenas dia/mês sem ano explícito, ASSUMA SEMPRE o ano ${currentYear} (ou ${currentYear + 1} se a data já tiver passado neste ano). NUNCA use anos passados como ${currentYear - 1} ou anteriores — viagens são sempre futuras. Se enxergar um ano explícito na imagem (ex.: '2026', '/26'), use exatamente esse ano.`;
+
     const userText =
       item_type === "flight"
-        ? "Extraia TODOS os trechos do voo desta imagem/PDF como segmentos separados em flight_segments. Inclua conexões. Use a função fornecida e respeite o schema (IATA 3 letras, HH:MM 24h, YYYY-MM-DD, duration_minutes em minutos, is_connection true para trechos após o primeiro de cada itinerário)."
-        : "Extraia os dados desta reserva/cotação no formato estruturado da função. Se um campo não estiver claramente presente, omita-o.";
+        ? `Extraia TODOS os trechos do voo desta imagem/PDF como segmentos separados em flight_segments. Inclua conexões. Use a função fornecida e respeite o schema (IATA 3 letras, HH:MM 24h, YYYY-MM-DD, duration_minutes em minutos, is_connection true para trechos após o primeiro de cada itinerário).${dateContext}`
+        : `Extraia os dados desta reserva/cotação no formato estruturado da função. Se um campo não estiver claramente presente, omita-o.${dateContext}`;
 
     const aiResp = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
