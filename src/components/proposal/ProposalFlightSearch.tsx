@@ -12,6 +12,7 @@ import AirportAutocomplete from "@/components/AirportAutocomplete";
 import FlightSegmentCard from "./FlightSegmentCard";
 import FlightSegmentForm from "./FlightSegmentForm";
 import ConnectionLayoverBadge from "./ConnectionLayoverBadge";
+import { classifyItinerary, type ItineraryClassification } from "@/lib/itineraryClassifier";
 
 export interface FlightSegmentData {
   airline: string;
