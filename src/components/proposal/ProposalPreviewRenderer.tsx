@@ -294,29 +294,30 @@ function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: bo
       {/* Top row: airline + flight number + date */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <InlineAirlineLogo iata={airlineCode} size={40} />
+          <InlineAirlineLogo iata={airlineCode} size={42} />
+        </div>
+        <div className="flex items-center gap-3">
+          {showDate && depDate && (
+            <span className="text-sm text-muted-foreground">
+              {(() => { try { return format(new Date(depDate.length <= 10 ? depDate + "T00:00:00" : depDate), "dd 'de' MMM. 'de' yyyy", { locale: ptBR }); } catch { return depDate; } })()}
+            </span>
+          )}
           {flightNum && (
-            <span className="text-[11px] bg-muted text-muted-foreground font-mono px-2 py-0.5 rounded-md border border-border/50">
-              <span className="text-muted-foreground/70 mr-1">Número do voo:</span>
-              {airlineCode ? `${airlineCode}${flightNum}` : flightNum}
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono">
+              Voo <span className="text-foreground font-semibold normal-case tracking-normal">{airlineCode ? `${airlineCode}${flightNum}` : flightNum}</span>
             </span>
           )}
         </div>
-        {showDate && depDate && (
-          <span className="text-sm text-muted-foreground">
-            {(() => { try { return format(new Date(depDate.length <= 10 ? depDate + "T00:00:00" : depDate), "dd 'de' MMM. 'de' yyyy", { locale: ptBR }); } catch { return depDate; } })()}
-          </span>
-        )}
       </div>
 
       {/* Main route row */}
       <div className="flex items-center gap-4">
         {/* Departure */}
         <div className="text-left min-w-[70px]">
-          <p className="text-xl sm:text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <p className="text-lg sm:text-xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {seg.departure_time || "—"}
           </p>
-          <p className="text-base sm:text-lg font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <p className="text-sm sm:text-base font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {seg.origin_iata || "—"}
           </p>
           {seg.terminal && (
@@ -349,10 +350,10 @@ function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: bo
 
         {/* Arrival */}
         <div className="text-right min-w-[70px]">
-          <p className="text-xl sm:text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <p className="text-lg sm:text-xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {seg.arrival_time || "—"}
           </p>
-          <p className="text-base sm:text-lg font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <p className="text-sm sm:text-base font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {seg.destination_iata || "—"}
           </p>
           {seg.arrival_terminal && (
