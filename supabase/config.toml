@@ -131,3 +131,6 @@ verify_jwt = false
 
 [functions.smart-upload-process]
 verify_jwt = false
+
+[functions.generate-hotel-description]
+verify_jwt = false

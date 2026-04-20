@@ -1,5 +1,6 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Plane, MapPin, Hotel, Sparkles, Star, CheckCircle, ChevronDown,
   Clock, Luggage, Users, Wifi, Coffee, UtensilsCrossed, Waves,
@@ -602,6 +603,54 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
     restaurante: <UtensilsCrossed className="w-3.5 h-3.5" />, restaurant: <UtensilsCrossed className="w-3.5 h-3.5" />,
     transfer: <Car className="w-3.5 h-3.5" />, spa: <Bath className="w-3.5 h-3.5" />, vista: <Mountain className="w-3.5 h-3.5" />,
   };
+
+  // Detecta o fallback genérico tipo "Hotel 5★ em Roma · ..." pra esconder e gerar uma melhor.
+  const isGenericDescription = (txt?: string | null) =>
+    !!txt && /^Hotel\s+\d.*★.*em\s+/i.test(txt.trim());
+  const rawDescription = hotel.description && !isGenericDescription(hotel.description) ? hotel.description : null;
+  const editorial = d.editorial_summary || null;
+  const baseDescription = editorial || rawDescription;
+
+  const cacheKey = `hotel-desc:${(hotel.title || "").toLowerCase()}|${(d.location || d.city || "").toLowerCase()}|${d.stars || ""}`;
+  const [aiDescription, setAiDescription] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try { return window.localStorage.getItem(cacheKey); } catch { return null; }
+  });
+
+  useEffect(() => {
+    if (baseDescription || aiDescription) return;
+    if (!hotel.title) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-hotel-description", {
+          body: {
+            hotel_name: hotel.title,
+            city: d.city || (d.location ? String(d.location).split(",").slice(-3, -2)[0]?.trim() : null),
+            country: d.country || null,
+            stars: d.stars || null,
+            rating: d.rating || null,
+            amenities,
+            room_type: d.room_type || null,
+            meal_plan: d.meal_plan || null,
+            address: d.location || null,
+          },
+        });
+        if (cancelled) return;
+        if (!error && data?.description) {
+          setAiDescription(data.description);
+          try { window.localStorage.setItem(cacheKey, data.description); } catch { /* ignore */ }
+        }
+      } catch (e) {
+        console.warn("[HotelCard] descrição IA falhou:", e);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hotel.title, baseDescription]);
+
+  const finalDescription = baseDescription || aiDescription;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -625,6 +674,17 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
           )}
         </div>
 
+        {d.rating && (
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <span className="bg-accent text-accent-foreground text-xs font-bold px-2 py-0.5 rounded">
+              {Number(d.rating).toFixed(1)}
+            </span>
+            {d.user_ratings_total && (
+              <span className="text-xs text-muted-foreground">({d.user_ratings_total} avaliações)</span>
+            )}
+          </div>
+        )}
+
       </div>
 
       {/* Galeria */}
@@ -634,28 +694,18 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
         </div>
       )}
 
-      {/* Avaliação + Endereço + descrição (abaixo da galeria) */}
-      {(d.rating || d.location || hotel.description || d.editorial_summary) && (
+      {/* Endereço + descrição (abaixo da galeria) */}
+      {(d.location || finalDescription) && (
         <div className="px-6 pt-5 text-center">
-          {d.rating && (
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <span className="bg-accent text-accent-foreground text-xs font-bold px-2 py-0.5 rounded">
-                {Number(d.rating).toFixed(1)}
-              </span>
-              {d.user_ratings_total && (
-                <span className="text-xs text-muted-foreground">({d.user_ratings_total} avaliações)</span>
-              )}
-            </div>
-          )}
           {d.location && (
             <p className="text-sm text-muted-foreground flex items-center justify-center gap-1.5 max-w-2xl mx-auto">
               <MapPin className="w-3.5 h-3.5 text-accent/70 shrink-0" />
               <span>{d.location}</span>
             </p>
           )}
-          {(hotel.description || d.editorial_summary) && (
+          {finalDescription && (
             <p className="mt-2 text-sm text-muted-foreground/90 leading-relaxed max-w-2xl mx-auto italic">
-              {hotel.description || `"${d.editorial_summary}"`}
+              {finalDescription}
             </p>
           )}
         </div>
