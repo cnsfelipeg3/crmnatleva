@@ -1,5 +1,6 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Plane, MapPin, Hotel, Sparkles, Star, CheckCircle, ChevronDown,
   Clock, Luggage, Users, Wifi, Coffee, UtensilsCrossed, Waves,
@@ -646,7 +647,7 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
       )}
 
       {/* Endereço + descrição (abaixo da galeria) */}
-      {(d.location || hotel.description || d.editorial_summary) && (
+      {(d.location || finalDescription) && (
         <div className="px-6 pt-5 text-center">
           {d.location && (
             <p className="text-sm text-muted-foreground flex items-center justify-center gap-1.5 max-w-2xl mx-auto">
@@ -654,9 +655,9 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
               <span>{d.location}</span>
             </p>
           )}
-          {(hotel.description || d.editorial_summary) && (
+          {finalDescription && (
             <p className="mt-2 text-sm text-muted-foreground/90 leading-relaxed max-w-2xl mx-auto italic">
-              {hotel.description || `"${d.editorial_summary}"`}
+              {finalDescription}
             </p>
           )}
         </div>
