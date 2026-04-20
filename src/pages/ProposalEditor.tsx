@@ -435,6 +435,8 @@ export default function ProposalEditor() {
                 notes: s.notes || "",
                 direction: s.direction || "ida",
                 is_connection: segIdx === 0 ? false : Boolean(s.is_connection ?? true),
+                personal_item_included: s.personal_item_included !== false,
+                personal_item_weight_kg: Number.isFinite(s.personal_item_weight_kg) ? Number(s.personal_item_weight_kg) : 10,
                 carry_on_included: s.carry_on_included !== false,
                 carry_on_weight_kg: Number.isFinite(s.carry_on_weight_kg) ? Number(s.carry_on_weight_kg) : 10,
                 checked_bags_included: Number.isFinite(s.checked_bags_included) ? Number(s.checked_bags_included) : 0,
