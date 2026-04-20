@@ -5391,7 +5391,10 @@ export type Database = {
           proposal_strategy: string | null
           quote_request_id: string | null
           sale_id: string | null
+          simulator_mode: string | null
+          simulator_session_id: string | null
           slug: string
+          source: string | null
           source_briefing_id: string | null
           status: string
           template_id: string | null
@@ -5421,7 +5424,10 @@ export type Database = {
           proposal_strategy?: string | null
           quote_request_id?: string | null
           sale_id?: string | null
+          simulator_mode?: string | null
+          simulator_session_id?: string | null
           slug: string
+          source?: string | null
           source_briefing_id?: string | null
           status?: string
           template_id?: string | null
@@ -5451,7 +5457,10 @@ export type Database = {
           proposal_strategy?: string | null
           quote_request_id?: string | null
           sale_id?: string | null
+          simulator_mode?: string | null
+          simulator_session_id?: string | null
           slug?: string
+          source?: string | null
           source_briefing_id?: string | null
           status?: string
           template_id?: string | null
