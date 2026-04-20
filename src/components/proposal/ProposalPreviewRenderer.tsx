@@ -328,6 +328,19 @@ function BoardingPassSegment({ seg, showDate = true, flightTypeBadge, stopsCount
 
         {/* Route line */}
         <div className="flex-1 flex flex-col items-center gap-1 py-2">
+          {flightTypeBadge && (
+            <span
+              className={`text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full mb-1 inline-flex items-center gap-1 ${
+                flightTypeBadge === "direct"
+                  ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400"
+                  : "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400"
+              }`}
+            >
+              {flightTypeBadge === "direct"
+                ? <><Plane className="w-2.5 h-2.5" /> Direto</>
+                : <>{stopsCount} {stopsCount === 1 ? "conexão" : "conexões"}</>}
+            </span>
+          )}
           <div className="mb-1">
             <InlineAirlineLogo iata={airlineCode} size={50} />
           </div>
