@@ -627,24 +627,29 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
           </div>
         )}
 
-        {d.location && (
-          <p className="mt-3 text-sm text-muted-foreground flex items-center justify-center gap-1.5 max-w-2xl mx-auto">
-            <MapPin className="w-3.5 h-3.5 text-accent/70 shrink-0" />
-            <span>{d.location}</span>
-          </p>
-        )}
-
-        {(hotel.description || d.editorial_summary) && (
-          <p className="mt-3 text-sm text-muted-foreground/90 leading-relaxed max-w-2xl mx-auto italic">
-            {hotel.description || `"${d.editorial_summary}"`}
-          </p>
-        )}
       </div>
 
       {/* Galeria */}
       {photos.length > 0 && (
         <div className="px-6 pt-5">
           <PhotoGallery photos={photos} name={hotel.title || "Hotel"} />
+        </div>
+      )}
+
+      {/* Endereço + descrição (abaixo da galeria) */}
+      {(d.location || hotel.description || d.editorial_summary) && (
+        <div className="px-6 pt-5 text-center">
+          {d.location && (
+            <p className="text-sm text-muted-foreground flex items-center justify-center gap-1.5 max-w-2xl mx-auto">
+              <MapPin className="w-3.5 h-3.5 text-accent/70 shrink-0" />
+              <span>{d.location}</span>
+            </p>
+          )}
+          {(hotel.description || d.editorial_summary) && (
+            <p className="mt-2 text-sm text-muted-foreground/90 leading-relaxed max-w-2xl mx-auto italic">
+              {hotel.description || `"${d.editorial_summary}"`}
+            </p>
+          )}
         </div>
       )}
 
