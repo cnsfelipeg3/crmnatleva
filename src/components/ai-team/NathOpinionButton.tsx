@@ -542,44 +542,48 @@ Retorne SOMENTE o JSON, sem markdown.`,
   // Button variants
   const buttonEl = variant === "floating" ? (
     <button onClick={askNath} disabled={disabled || messages.length < 2}
-      className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[11px] font-bold transition-all duration-300 hover:scale-[1.04] active:scale-[0.97] group relative overflow-hidden"
+      className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[12px] font-bold transition-all duration-300 hover:scale-[1.04] active:scale-[0.97] group relative overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, rgba(168,85,247,0.12), rgba(236,72,153,0.08))",
-        border: "1px solid rgba(168,85,247,0.25)",
-        color: "#C084FC",
-        boxShadow: "0 4px 20px rgba(168,85,247,0.1)",
-        opacity: disabled || messages.length < 2 ? 0.4 : 1,
+        background: "linear-gradient(135deg, rgba(168,85,247,0.95), rgba(236,72,153,0.85))",
+        border: "1px solid rgba(168,85,247,0.6)",
+        color: "#FFFFFF",
+        boxShadow: "0 4px 16px rgba(168,85,247,0.35)",
+        opacity: disabled || messages.length < 2 ? 0.5 : 1,
+        textShadow: "0 1px 2px rgba(0,0,0,0.15)",
       }}>
-      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-      <Crown className="w-4 h-4 relative z-10" style={{ color: "#E9D5FF" }} />
+      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/15 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <Crown className="w-4 h-4 relative z-10 text-white" />
       <span className="relative z-10">Pedir opinião da Nath</span>
-      <Sparkles className="w-3 h-3 relative z-10 opacity-60" />
+      <Sparkles className="w-3.5 h-3.5 relative z-10 text-white/90" />
     </button>
   ) : variant === "inline" ? (
     <button onClick={askNath} disabled={disabled || messages.length < 2}
-      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-bold transition-all duration-300 hover:scale-[1.03]"
+      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 hover:scale-[1.03]"
       style={{
-        background: "rgba(168,85,247,0.08)",
-        border: "1px solid rgba(168,85,247,0.2)",
-        color: "#C084FC",
-        opacity: disabled || messages.length < 2 ? 0.4 : 1,
+        background: "linear-gradient(135deg, rgba(168,85,247,0.9), rgba(236,72,153,0.8))",
+        border: "1px solid rgba(168,85,247,0.55)",
+        color: "#FFFFFF",
+        boxShadow: "0 2px 10px rgba(168,85,247,0.3)",
+        opacity: disabled || messages.length < 2 ? 0.5 : 1,
       }}>
       <Crown className="w-3.5 h-3.5" />
       Opinião da Nath
     </button>
   ) : (
     <button onClick={askNath} disabled={disabled || messages.length < 2}
-      className="flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 hover:scale-[1.03] group relative overflow-hidden"
+      className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold transition-all duration-300 hover:scale-[1.03] group relative overflow-hidden"
       style={{
-        background: "linear-gradient(135deg, rgba(168,85,247,0.1), rgba(236,72,153,0.06))",
-        border: "1px solid rgba(168,85,247,0.2)",
-        color: "#C084FC",
-        opacity: disabled || messages.length < 2 ? 0.4 : 1,
+        background: "linear-gradient(135deg, rgba(168,85,247,0.92), rgba(236,72,153,0.82))",
+        border: "1px solid rgba(168,85,247,0.55)",
+        color: "#FFFFFF",
+        boxShadow: "0 2px 10px rgba(168,85,247,0.3)",
+        opacity: disabled || messages.length < 2 ? 0.5 : 1,
       }}>
       <Crown className="w-3.5 h-3.5" />
       <span>Pedir opinião da Nath</span>
     </button>
   );
+
 
   const selectedCount = actions.filter(a => a.selected).length;
 
