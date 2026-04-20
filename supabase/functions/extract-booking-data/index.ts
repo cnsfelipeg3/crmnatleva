@@ -357,6 +357,27 @@ Deno.serve(async (req) => {
       return json({ error: "Resposta da IA inválida." }, 422);
     }
 
+    // Defensive post-processing: bump past dates to current/next year for flights
+    if (item_type === "flight" && extracted?.data?.flight_segments) {
+      const today = new Date();
+      const todayISO = today.toISOString().slice(0, 10);
+      const curYear = today.getUTCFullYear();
+      const bumpYear = (iso: string | undefined): string | undefined => {
+        if (!iso || typeof iso !== "string") return iso;
+        const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return iso;
+        if (iso >= todayISO) return iso;
+        // Date is in the past — try current year, then next
+        const candidate = `${curYear}-${m[2]}-${m[3]}`;
+        if (candidate >= todayISO) return candidate;
+        return `${curYear + 1}-${m[2]}-${m[3]}`;
+      };
+      for (const seg of extracted.data.flight_segments) {
+        seg.departure_date = bumpYear(seg.departure_date);
+        if (seg.arrival_date) seg.arrival_date = bumpYear(seg.arrival_date);
+      }
+    }
+
     return json({ success: true, extracted });
   } catch (err) {
     console.error("extract-booking-data fatal", err);
