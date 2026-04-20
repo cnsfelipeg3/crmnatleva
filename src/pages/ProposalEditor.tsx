@@ -145,6 +145,7 @@ export default function ProposalEditor() {
         payment_conditions: (existing.payment_conditions as any[]) || [],
         proposal_strategy: (existing as any).proposal_strategy || "",
         proposal_outcome: (existing as any).proposal_outcome || "pending",
+        template_id: (existing as any).template_id || "",
       });
     }
   }, [existing]);
@@ -305,6 +306,7 @@ export default function ProposalEditor() {
         payment_conditions: form.payment_conditions,
         proposal_strategy: form.proposal_strategy || null,
         proposal_outcome: form.proposal_outcome || "pending",
+        template_id: form.template_id || null,
         slug,
         created_by: user?.id,
         updated_at: new Date().toISOString(),
