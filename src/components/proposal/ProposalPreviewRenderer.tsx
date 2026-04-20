@@ -10,6 +10,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
 import { calcLayoverMinutes as calcPreciseLayoverMinutes } from "@/lib/flightTiming";
+import { assignDirections, classifyItinerary } from "@/lib/itineraryClassifier";
+import { buildFlightTitle } from "@/lib/airportCities";
 
 const fallbackCover = "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1920&h=1080&fit=crop&q=80";
 
@@ -305,6 +307,91 @@ function ConnectionBadge({ fromIata, layoverMinutes }: { fromIata: string; layov
   );
 }
 
+function buildPreviewFlightGrouping(displaySegments: any[]) {
+  const fallbackLegs = displaySegments.reduce((acc: { label: string; direction: string; segments: any[] }[], seg, index) => {
+    const direction = String(seg.direction || (index === 0 ? "ida" : "trecho")).toLowerCase();
+    const last = acc[acc.length - 1];
+    const label = direction === "volta" ? "Volta" : direction === "ida" ? "Ida" : `Trecho ${acc.length + 1}`;
+
+    if (last && last.direction === direction) {
+      last.segments.push(seg);
+      return acc;
+    }
+
+    acc.push({ label, direction, segments: [seg] });
+    return acc;
+  }, []);
+
+  if (displaySegments.length === 0) {
+    return { legs: fallbackLegs, itineraryType: "ONE_WAY", title: "" };
+  }
+
+  const classification = classifyItinerary(
+    displaySegments.map((seg, index) => ({
+      ...seg,
+      departure_date: seg.departure_date || null,
+      departure_time: seg.departure_time || null,
+      arrival_date: seg.arrival_date || null,
+      arrival_time: seg.arrival_time || null,
+      duration_minutes: Number.isFinite(seg.duration_minutes) ? Number(seg.duration_minutes) : null,
+      segment_order: Number.isFinite(seg.segment_order) ? Number(seg.segment_order) : index,
+    })),
+  );
+
+  const directedSegments = assignDirections(displaySegments as any, classification) as any[];
+  const usedIndices = new Set<number>();
+  const resolvedLegs = classification.legs
+    .map((leg, legIndex) => {
+      const segments = leg.segments
+        .map((legSeg) => {
+          const matchedIndex = directedSegments.findIndex((seg, index) => (
+            !usedIndices.has(index) &&
+            seg.origin_iata === legSeg.origin_iata &&
+            seg.destination_iata === legSeg.destination_iata &&
+            seg.departure_date === legSeg.departure_date &&
+            (seg.departure_time || "") === (legSeg.departure_time || "")
+          ));
+
+          if (matchedIndex === -1) return null;
+          usedIndices.add(matchedIndex);
+          return directedSegments[matchedIndex];
+        })
+        .filter(Boolean);
+
+      if (segments.length === 0) return null;
+
+      const direction = String(
+        segments[0]?.direction ||
+        ((classification.type === "ROUND_TRIP" || classification.type === "OPEN_JAW")
+          ? (legIndex === 0 ? "ida" : "volta")
+          : "trecho"),
+      ).toLowerCase();
+
+      const label = direction === "volta"
+        ? "Volta"
+        : direction === "ida"
+          ? "Ida"
+          : classification.type === "ONE_WAY"
+            ? "Ida"
+            : `Trecho ${legIndex + 1}`;
+
+      return { label, direction, segments };
+    })
+    .filter(Boolean) as { label: string; direction: string; segments: any[] }[];
+
+  const legs = resolvedLegs.length > 0 ? resolvedLegs : fallbackLegs;
+  const outboundLeg = legs.find((leg) => leg.direction === "ida") || legs[0];
+  const title = outboundLeg?.segments?.length
+    ? buildFlightTitle(
+        outboundLeg.segments[0].origin_iata,
+        outboundLeg.segments[outboundLeg.segments.length - 1].destination_iata,
+        classification.type,
+      )
+    : "";
+
+  return { legs, itineraryType: classification.type, title };
+}
+
 /* ═══ Flight Card (Boarding Pass Style) ═══ */
 function FlightCard({ flight, idx }: { flight: any; idx: number }) {
   const d = normalizeFlightData(flight.data);
@@ -320,18 +407,7 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
     direction: "ida",
   }];
 
-  // Agrupa segmentos por direção (ida/volta/trecho) preservando ordem
-  const legs: { label: string; direction: string; segments: any[] }[] = [];
-  for (const seg of displaySegments) {
-    const dir = (seg.direction || "ida").toLowerCase();
-    const last = legs[legs.length - 1];
-    if (last && last.direction === dir) {
-      last.segments.push(seg);
-    } else {
-      const labelMap: Record<string, string> = { ida: "Ida", volta: "Volta", trecho: "Trecho" };
-      legs.push({ label: labelMap[dir] || `Trecho ${legs.length + 1}`, direction: dir, segments: [seg] });
-    }
-  }
+  const { legs, title: computedTitle } = buildPreviewFlightGrouping(displaySegments);
 
   const getBaggageInfo = () => {
     const segs = d.segments.length > 0 ? d.segments : [flight.data];
@@ -352,10 +428,10 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
       viewport={{ once: true }}
       transition={{ delay: idx * 0.1 }}
     >
-      {flight.title && (
+      {(computedTitle || flight.title) && (
         <div className="flex items-center gap-3 mb-3">
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 font-medium" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            {flight.title}
+            {computedTitle || flight.title}
           </p>
         </div>
       )}
