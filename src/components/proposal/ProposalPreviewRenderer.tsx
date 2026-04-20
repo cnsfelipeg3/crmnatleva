@@ -294,10 +294,11 @@ function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: bo
       {/* Top row: airline + flight number + date */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <InlineAirlineLogo iata={airlineCode} size={36} />
+          <InlineAirlineLogo iata={airlineCode} size={40} />
           {flightNum && (
             <span className="text-[11px] bg-muted text-muted-foreground font-mono px-2 py-0.5 rounded-md border border-border/50">
-              {flightNum}
+              <span className="text-muted-foreground/70 mr-1">Número do voo:</span>
+              {airlineCode ? `${airlineCode}${flightNum}` : flightNum}
             </span>
           )}
         </div>
@@ -312,10 +313,10 @@ function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: bo
       <div className="flex items-center gap-4">
         {/* Departure */}
         <div className="text-left min-w-[70px]">
-          <p className="text-2xl sm:text-3xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <p className="text-xl sm:text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {seg.departure_time || "—"}
           </p>
-          <p className="text-lg sm:text-xl font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <p className="text-base sm:text-lg font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {seg.origin_iata || "—"}
           </p>
           {seg.terminal && (
@@ -348,10 +349,10 @@ function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: bo
 
         {/* Arrival */}
         <div className="text-right min-w-[70px]">
-          <p className="text-2xl sm:text-3xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <p className="text-xl sm:text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {seg.arrival_time || "—"}
           </p>
-          <p className="text-lg sm:text-xl font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <p className="text-base sm:text-lg font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {seg.destination_iata || "—"}
           </p>
           {seg.arrival_terminal && (
@@ -507,17 +508,6 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
       viewport={{ once: true }}
       transition={{ delay: idx * 0.1 }}
     >
-      {(computedTitle || flight.title) && (
-        <div className="mb-5 text-center">
-          <h3
-            className="text-lg sm:text-xl font-semibold text-foreground leading-snug"
-            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-          >
-            {computedTitle || flight.title}
-          </h3>
-        </div>
-      )}
-
       {/* Legs (Ida / Volta / Trecho) */}
       <div className="space-y-8">
         {legs.map((leg, li) => {
@@ -527,7 +517,7 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
           const routeLabel = firstSeg && lastSeg ? `${firstSeg.origin_iata} → ${lastSeg.destination_iata}` : "";
           return (
             <div key={li}>
-              <div className="flex items-center gap-3 mb-3">
+              <div className="flex items-center justify-center gap-3 mb-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   {leg.label}{routeLabel ? ` · ${routeLabel}` : ""}
                 </p>
