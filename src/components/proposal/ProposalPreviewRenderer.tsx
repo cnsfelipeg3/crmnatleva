@@ -625,17 +625,6 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
           )}
         </div>
 
-        {d.rating && (
-          <div className="flex items-center justify-center gap-2 mt-2">
-            <span className="bg-accent text-accent-foreground text-xs font-bold px-2 py-0.5 rounded">
-              {Number(d.rating).toFixed(1)}
-            </span>
-            {d.user_ratings_total && (
-              <span className="text-xs text-muted-foreground">({d.user_ratings_total} avaliações)</span>
-            )}
-          </div>
-        )}
-
       </div>
 
       {/* Galeria */}
@@ -645,9 +634,19 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
         </div>
       )}
 
-      {/* Endereço + descrição (abaixo da galeria) */}
-      {(d.location || hotel.description || d.editorial_summary) && (
+      {/* Avaliação + Endereço + descrição (abaixo da galeria) */}
+      {(d.rating || d.location || hotel.description || d.editorial_summary) && (
         <div className="px-6 pt-5 text-center">
+          {d.rating && (
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <span className="bg-accent text-accent-foreground text-xs font-bold px-2 py-0.5 rounded">
+                {Number(d.rating).toFixed(1)}
+              </span>
+              {d.user_ratings_total && (
+                <span className="text-xs text-muted-foreground">({d.user_ratings_total} avaliações)</span>
+              )}
+            </div>
+          )}
           {d.location && (
             <p className="text-sm text-muted-foreground flex items-center justify-center gap-1.5 max-w-2xl mx-auto">
               <MapPin className="w-3.5 h-3.5 text-accent/70 shrink-0" />
