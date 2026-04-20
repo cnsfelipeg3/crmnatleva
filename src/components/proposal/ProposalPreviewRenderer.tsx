@@ -603,6 +603,54 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
     restaurante: <UtensilsCrossed className="w-3.5 h-3.5" />, restaurant: <UtensilsCrossed className="w-3.5 h-3.5" />,
     transfer: <Car className="w-3.5 h-3.5" />, spa: <Bath className="w-3.5 h-3.5" />, vista: <Mountain className="w-3.5 h-3.5" />,
   };
+
+  // Detecta o fallback genérico tipo "Hotel 5★ em Roma · ..." pra esconder e gerar uma melhor.
+  const isGenericDescription = (txt?: string | null) =>
+    !!txt && /^Hotel\s+\d.*★.*em\s+/i.test(txt.trim());
+  const rawDescription = hotel.description && !isGenericDescription(hotel.description) ? hotel.description : null;
+  const editorial = d.editorial_summary || null;
+  const baseDescription = editorial || rawDescription;
+
+  const cacheKey = `hotel-desc:${(hotel.title || "").toLowerCase()}|${(d.location || d.city || "").toLowerCase()}|${d.stars || ""}`;
+  const [aiDescription, setAiDescription] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try { return window.localStorage.getItem(cacheKey); } catch { return null; }
+  });
+
+  useEffect(() => {
+    if (baseDescription || aiDescription) return;
+    if (!hotel.title) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("generate-hotel-description", {
+          body: {
+            hotel_name: hotel.title,
+            city: d.city || (d.location ? String(d.location).split(",").slice(-3, -2)[0]?.trim() : null),
+            country: d.country || null,
+            stars: d.stars || null,
+            rating: d.rating || null,
+            amenities,
+            room_type: d.room_type || null,
+            meal_plan: d.meal_plan || null,
+            address: d.location || null,
+          },
+        });
+        if (cancelled) return;
+        if (!error && data?.description) {
+          setAiDescription(data.description);
+          try { window.localStorage.setItem(cacheKey, data.description); } catch { /* ignore */ }
+        }
+      } catch (e) {
+        console.warn("[HotelCard] descrição IA falhou:", e);
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hotel.title, baseDescription]);
+
+  const finalDescription = baseDescription || aiDescription;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
