@@ -930,7 +930,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── DESTINATIONS ──── */}
       {showDestinations && (destinations.length > 0 || (proposal.destinations?.length > 0 && destinations.length === 0)) && (
-        <section data-track-section="destinations" className="py-12 sm:py-20 px-6">
+        <section data-track-section="destinations" className="py-10 sm:py-14 px-5 sm:px-6">
           <SectionTitle subtitle="Os lugares que você vai explorar">Seus Destinos</SectionTitle>
           <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {(destinations.length > 0 ? destinations : proposal.destinations.map((d: string, i: number) => ({ title: d, image_url: null, description: null, id: i }))).map((dest: any, idx: number) => (
@@ -949,7 +949,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── FLIGHTS ──── */}
       {showFlights && flights.length > 0 && (
-        <section data-track-section="flights" className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
+        <section data-track-section="flights" className="py-10 sm:py-14 px-5 sm:px-6 bg-accent/[0.03]">
           <SectionTitle subtitle="Seus voos com todos os detalhes">Voos</SectionTitle>
           <div className="max-w-3xl mx-auto space-y-8">
             {flights.map((f, idx) => <FlightCard key={f.id || idx} flight={f} idx={idx} />)}
@@ -959,7 +959,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── HOTELS ──── */}
       {showHotels && hotels.length > 0 && (
-        <section data-track-section="hotels" className="py-12 sm:py-20 px-6">
+        <section data-track-section="hotels" className="py-10 sm:py-14 px-5 sm:px-6">
           <SectionTitle subtitle="Clique para explorar fotos, quartos e avaliações">Hospedagens</SectionTitle>
           <div
             className={
@@ -975,7 +975,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── EXPERIENCES ──── */}
       {showExperiences && experiences.length > 0 && (
-        <section data-track-section="experiences" className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
+        <section data-track-section="experiences" className="py-10 sm:py-14 px-5 sm:px-6 bg-accent/[0.03]">
           <SectionTitle subtitle="Momentos que farão sua viagem inesquecível">Experiências</SectionTitle>
           <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {experiences.map((exp, idx) => <ExperienceCard key={exp.id || idx} exp={exp} idx={idx} />)}
@@ -985,7 +985,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── FINANCIAL ──── */}
       {showPricing && (proposal.total_value || proposal.value_per_person) && (
-        <section data-track-section="pricing" className="py-12 sm:py-20 px-6">
+        <section data-track-section="pricing" className="py-10 sm:py-14 px-5 sm:px-6">
           <SectionTitle>Investimento</SectionTitle>
           <div className="max-w-2xl mx-auto">
             <div className="rounded-2xl border border-accent/15 bg-gradient-to-b from-card to-accent/[0.03] p-8 sm:p-10 text-center space-y-6 shadow-xl shadow-accent/5">
@@ -1014,7 +1014,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── PAYMENT ──── */}
       {paymentConditions.length > 0 && (
-        <section data-track-section="payment" className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
+        <section data-track-section="payment" className="py-10 sm:py-14 px-5 sm:px-6 bg-accent/[0.03]">
           <SectionTitle>Condições de Pagamento</SectionTitle>
           <div className="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
             {paymentConditions.map((pc: any, idx: number) => (
