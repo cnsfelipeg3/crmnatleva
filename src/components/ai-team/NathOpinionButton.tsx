@@ -542,7 +542,7 @@ Retorne SOMENTE o JSON, sem markdown.`,
   // Button variants
   const buttonEl = variant === "floating" ? (
     <button onClick={askNath} disabled={disabled || messages.length < 2}
-      className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[12px] font-bold transition-all duration-300 hover:scale-[1.04] active:scale-[0.97] group relative overflow-hidden"
+      className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-2xl text-[12px] font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] group relative overflow-hidden"
       style={{
         background: "linear-gradient(135deg, rgba(168,85,247,0.95), rgba(236,72,153,0.85))",
         border: "1px solid rgba(168,85,247,0.6)",
