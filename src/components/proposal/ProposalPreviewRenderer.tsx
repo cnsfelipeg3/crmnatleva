@@ -490,17 +490,15 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
 
   const { legs, title: computedTitle } = buildPreviewFlightGrouping(displaySegments);
 
-  const getBaggageInfo = () => {
-    const segs = d.segments.length > 0 ? d.segments : [flight.data];
-    const seg = segs[0];
+  const getBaggageBadgesForLeg = (legSegments: any[]): string[] => {
+    const seg = legSegments?.[0];
     const badges: string[] = [];
     if (seg?.personal_item_included) badges.push(`Item pessoal ${seg.personal_item_weight_kg || 10}kg`);
     if (seg?.carry_on_included) badges.push(`Mão ${seg.carry_on_weight_kg || 10}kg`);
     if (seg?.checked_bags_included > 0) badges.push(`${seg.checked_bags_included}x ${seg.checked_bag_weight_kg || 23}kg`);
-    if (d.baggage && badges.length === 0) badges.push(d.baggage);
+    if (badges.length === 0 && d.baggage) badges.push(d.baggage);
     return badges;
   };
-  const baggageBadges = getBaggageInfo();
 
   return (
     <motion.div
@@ -546,26 +544,30 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
                   </div>
                 ))}
             </div>
+
+            {/* Bagagem por leg (ida/volta separadamente) */}
+            {(() => {
+              const legBadges = getBaggageBadgesForLeg(leg.segments);
+              if (!d.cabin && legBadges.length === 0) return null;
+              return (
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+                  {d.cabin && (
+                    <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full">
+                      <BedDouble className="w-3 h-3 text-accent" /> {d.cabin}
+                    </span>
+                  )}
+                  {legBadges.map((b, i) => (
+                    <span key={i} className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full">
+                      <Luggage className="w-3 h-3 text-accent" /> {b}
+                    </span>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
           );
         })}
       </div>
-
-      {/* Bottom badges */}
-      {(d.cabin || baggageBadges.length > 0) && (
-        <div className="flex flex-wrap gap-2 mt-3 pl-1">
-          {d.cabin && (
-            <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full">
-              <BedDouble className="w-3 h-3 text-accent" /> {d.cabin}
-            </span>
-          )}
-          {baggageBadges.map((b, i) => (
-            <span key={i} className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full">
-              <Luggage className="w-3 h-3 text-accent" /> {b}
-            </span>
-          ))}
-        </div>
-      )}
 
       {/* Notes */}
       {(d.notes || flight.description) && (
