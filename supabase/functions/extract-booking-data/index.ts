@@ -110,7 +110,13 @@ const FLIGHT_SCHEMA = {
                 is_connection: {
                   type: "boolean",
                   description:
-                    "true para TODOS os trechos depois do primeiro de cada itinerário (ida ou volta). Primeiro trecho é false.",
+                    "true para TODOS os trechos depois do primeiro de cada itinerário (ida ou volta). Primeiro trecho de cada perna é false.",
+                },
+                direction: {
+                  type: "string",
+                  enum: ["ida", "volta", "trecho"],
+                  description:
+                    "Marque 'ida' para trechos do itinerário de ida, 'volta' para os de retorno, 'trecho' para multi-city sem ida/volta clara.",
                 },
                 carry_on_included: { type: "boolean" },
                 carry_on_weight_kg: { type: "number" },
