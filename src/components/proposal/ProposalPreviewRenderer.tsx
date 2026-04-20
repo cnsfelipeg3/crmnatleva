@@ -552,11 +552,7 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
               {d.check_in && <DetailPill icon={<Calendar className="w-3.5 h-3.5" />} label="Check-in" value={d.check_in} />}
               {d.check_out && <DetailPill icon={<Calendar className="w-3.5 h-3.5" />} label="Check-out" value={d.check_out} />}
               {d.nights && <DetailPill icon={<Clock className="w-3.5 h-3.5" />} label="Diárias" value={`${d.nights} noite${d.nights > 1 ? "s" : ""}`} />}
-              {d.website && (
-                <a href={d.website} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-2 rounded-xl bg-accent/5 border border-accent/10 px-3 py-2.5 hover:bg-accent/10 transition-colors">
-                  <Globe className="w-3.5 h-3.5 text-accent" /><div><p className="text-[9px] uppercase tracking-wider text-muted-foreground/50">Website</p><p className="text-xs font-medium text-accent truncate">Visitar</p></div>
-                </a>
-              )}
+              {/* Website do hotel é informação interna — não exibir ao cliente */}
             </div>
             {amenities.length > 0 && (
               <div>
