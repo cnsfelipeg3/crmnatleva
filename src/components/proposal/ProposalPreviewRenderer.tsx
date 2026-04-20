@@ -9,6 +9,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
+import { calcLayoverMinutes as calcPreciseLayoverMinutes } from "@/lib/flightTiming";
 
 const fallbackCover = "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1920&h=1080&fit=crop&q=80";
 
@@ -285,7 +286,7 @@ function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: bo
 
 /* ═══ Connection Badge ═══ */
 function ConnectionBadge({ fromIata, layoverMinutes }: { fromIata: string; layoverMinutes?: number }) {
-  const dur = layoverMinutes ? fmtDuration(layoverMinutes) : "";
+  const dur = typeof layoverMinutes === "number" && layoverMinutes >= 0 ? fmtDuration(layoverMinutes) : "";
   return (
     <div className="flex justify-center -my-1.5 relative z-10">
       <span className="inline-flex items-center gap-2 rounded-full border border-amber-300/50 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/40 px-4 py-1.5 text-sm">
@@ -332,22 +333,6 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
     }
   }
 
-  // Cálculo de layover preciso com timezone (mesmo algoritmo do editor)
-  function getLayoverMinutes(segA: any, segB: any): number | undefined {
-    if (!segA?.arrival_time || !segB?.departure_time) return undefined;
-    try {
-      // tenta usar o util com timezone se disponível
-      const arrDate = segA.arrival_date || segA.departure_date;
-      const depDate = segB.departure_date || arrDate;
-      if (!arrDate || !depDate) return undefined;
-      const arr = new Date(`${arrDate}T${segA.arrival_time.slice(0, 5)}:00`);
-      const dep = new Date(`${depDate}T${segB.departure_time.slice(0, 5)}:00`);
-      let diff = Math.round((dep.getTime() - arr.getTime()) / 60000);
-      if (diff < 0) diff += 24 * 60;
-      return diff;
-    } catch { return undefined; }
-  }
-
   const getBaggageInfo = () => {
     const segs = d.segments.length > 0 ? d.segments : [flight.data];
     const seg = segs[0];
@@ -367,8 +352,7 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
       viewport={{ once: true }}
       transition={{ delay: idx * 0.1 }}
     >
-      {/* Optional outer title (only when explicit and a single leg) */}
-      {flight.title && legs.length === 1 && (
+      {flight.title && (
         <div className="flex items-center gap-3 mb-3">
           <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 font-medium" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {flight.title}
@@ -380,11 +364,14 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
       <div className="space-y-8">
         {legs.map((leg, li) => {
           const stops = leg.segments.length - 1;
+          const firstSeg = leg.segments[0];
+          const lastSeg = leg.segments[leg.segments.length - 1];
+          const routeLabel = firstSeg && lastSeg ? `${firstSeg.origin_iata} → ${lastSeg.destination_iata}` : "";
           return (
             <div key={li}>
               <div className="flex items-center gap-3 mb-3">
                 <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  {leg.label}
+                  {leg.label}{routeLabel ? ` · ${routeLabel}` : ""}
                 </p>
                 {stops === 0 ? (
                   <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
@@ -403,7 +390,7 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
                     {i > 0 && (
                       <ConnectionBadge
                         fromIata={leg.segments[i - 1]?.destination_iata || ""}
-                        layoverMinutes={getLayoverMinutes(leg.segments[i - 1], seg)}
+                        layoverMinutes={calcPreciseLayoverMinutes(leg.segments[i - 1], seg) ?? undefined}
                       />
                     )}
                     <BoardingPassSegment seg={seg} showDate={true} />
