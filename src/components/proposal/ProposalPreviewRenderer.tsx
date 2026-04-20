@@ -917,13 +917,13 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── INTRO ──── */}
       {proposal.intro_text && (
-        <section data-track-section="intro" className="max-w-3xl mx-auto py-16 sm:py-24 px-6">
+        <section data-track-section="intro" className="max-w-3xl mx-auto py-10 sm:py-14 px-5 sm:px-6">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center">
-            <div className="w-12 h-px bg-accent/40 mx-auto mb-8" />
-            <p className="text-lg sm:text-xl leading-relaxed text-muted-foreground font-light italic">
+            <div className="w-10 h-px bg-accent/40 mx-auto mb-5 sm:mb-6" />
+            <p className="text-base sm:text-lg leading-relaxed text-muted-foreground font-light italic">
               "{proposal.intro_text}"
             </p>
-            <div className="w-12 h-px bg-accent/40 mx-auto mt-8" />
+            <div className="w-10 h-px bg-accent/40 mx-auto mt-5 sm:mt-6" />
           </motion.div>
         </section>
       )}
