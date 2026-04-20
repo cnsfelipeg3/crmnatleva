@@ -291,17 +291,19 @@ function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: bo
 
   return (
     <div className="rounded-2xl bg-card border border-border/40 p-5 sm:p-6 shadow-sm">
-      {/* Top row: airline + flight number + date */}
-      <div className="flex items-center justify-end mb-4">
-        <div className="flex items-center gap-3">
-          {showDate && depDate && (
-            <span className="text-sm text-muted-foreground">
-              {(() => { try { return format(new Date(depDate.length <= 10 ? depDate + "T00:00:00" : depDate), "dd 'de' MMM. 'de' yyyy", { locale: ptBR }); } catch { return depDate; } })()}
-            </span>
-          )}
+      {/* Top row: flight number (left) + date (right) */}
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <div className="flex items-center">
           {flightNum && (
             <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono">
               Voo <span className="text-foreground font-semibold normal-case tracking-normal">{airlineCode ? `${airlineCode}${flightNum}` : flightNum}</span>
+            </span>
+          )}
+        </div>
+        <div className="flex items-center">
+          {showDate && depDate && (
+            <span className="text-sm text-muted-foreground">
+              {(() => { try { return format(new Date(depDate.length <= 10 ? depDate + "T00:00:00" : depDate), "dd 'de' MMM. 'de' yyyy", { locale: ptBR }); } catch { return depDate; } })()}
             </span>
           )}
         </div>
