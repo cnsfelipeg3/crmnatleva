@@ -895,6 +895,36 @@ export default function ProposalEditor() {
                                 <Label className="text-xs">Regime</Label>
                                 <Input value={item.data?.meal_plan || ""} onChange={(e) => updateItemData(idx, "meal_plan", e.target.value)} placeholder="Café da manhã incluso" />
                               </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Check-in</Label>
+                                <Input type="date" value={item.data?.checkin_date || ""} onChange={(e) => updateItemData(idx, "checkin_date", e.target.value)} />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Check-out</Label>
+                                <Input type="date" value={item.data?.checkout_date || ""} onChange={(e) => updateItemData(idx, "checkout_date", e.target.value)} />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Horário check-in</Label>
+                                <Input type="time" value={item.data?.checkin_time || ""} onChange={(e) => updateItemData(idx, "checkin_time", e.target.value)} placeholder="15:00" />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Horário check-out</Label>
+                                <Input type="time" value={item.data?.checkout_time || ""} onChange={(e) => updateItemData(idx, "checkout_time", e.target.value)} placeholder="11:00" />
+                              </div>
+                              <div className="space-y-1 md:col-span-2">
+                                <Label className="text-xs">Noites <span className="text-muted-foreground/60">(calculadas automaticamente)</span></Label>
+                                <Input
+                                  type="number"
+                                  value={
+                                    item.data?.nights ||
+                                    (item.data?.checkin_date && item.data?.checkout_date
+                                      ? Math.max(0, Math.round((new Date(item.data.checkout_date).getTime() - new Date(item.data.checkin_date).getTime()) / 86400000))
+                                      : "")
+                                  }
+                                  onChange={(e) => updateItemData(idx, "nights", e.target.value)}
+                                  placeholder="0"
+                                />
+                              </div>
                             </>
                           )}
 
