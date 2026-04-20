@@ -46,10 +46,21 @@ const FLIGHT_SCHEMA = {
           locator: { type: "string", description: "Código localizador / PNR" },
           price: { type: "number", description: "Preço total se visível" },
           currency: { type: "string", description: "Moeda (BRL, USD, EUR...)" },
+          itinerary_type: {
+            type: "string",
+            enum: ["ROUND_TRIP", "ONE_WAY", "OPEN_JAW", "MULTI_CITY"],
+            description:
+              "Classificação do itinerário: ROUND_TRIP (ida e volta no mesmo par origem-destino), ONE_WAY (somente ida, sem retorno), OPEN_JAW (volta parte ou chega em cidade diferente), MULTI_CITY (3+ trechos em cidades distintas).",
+          },
+          trip_direction_summary: {
+            type: "string",
+            description:
+              "Resumo curto e humano do tipo de itinerário detectado. Ex.: 'Ida e Volta', 'Somente Ida', 'Open-Jaw GRU→FCO / VCE→GRU', 'Multi-trecho 4 cidades'.",
+          },
           flight_segments: {
             type: "array",
             description:
-              "Lista ORDENADA de TODOS os trechos. Conexões viram segmentos separados. NUNCA agrupe trechos em um só.",
+              "Lista ORDENADA de TODOS os trechos. Conexões viram segmentos separados. NUNCA agrupe trechos em um só. Inclua TANTO os trechos de IDA quanto os de VOLTA quando houver retorno.",
             items: {
               type: "object",
               properties: {
@@ -99,7 +110,13 @@ const FLIGHT_SCHEMA = {
                 is_connection: {
                   type: "boolean",
                   description:
-                    "true para TODOS os trechos depois do primeiro de cada itinerário (ida ou volta). Primeiro trecho é false.",
+                    "true para TODOS os trechos depois do primeiro de cada itinerário (ida ou volta). Primeiro trecho de cada perna é false.",
+                },
+                direction: {
+                  type: "string",
+                  enum: ["ida", "volta", "trecho"],
+                  description:
+                    "Marque 'ida' para trechos do itinerário de ida, 'volta' para os de retorno, 'trecho' para multi-city sem ida/volta clara.",
                 },
                 carry_on_included: { type: "boolean" },
                 carry_on_weight_kg: { type: "number" },
@@ -127,34 +144,67 @@ const FLIGHT_SCHEMA = {
 
 const HOTEL_SCHEMA = {
   name: "extract_hotel",
-  description: "Extrai dados de uma reserva ou cotação de HOTEL.",
+  description: "Extrai dados de uma reserva ou cotação de HOTEL com inteligência de regime, política e categoria.",
   parameters: {
     type: "object",
     properties: {
-      title: { type: "string", description: "Nome do hotel" },
+      title: { type: "string", description: "Nome oficial do hotel (ex.: 'Belmond Hotel Splendido')." },
       description: {
         type: "string",
-        description: "Descrição curta (localização, categoria, regime, tipo de quarto)",
+        description:
+          "Descrição curta humana com cidade, categoria e regime. Ex.: 'Hotel 5★ em Roma · Café da manhã · Quarto Deluxe Vista Cidade'.",
       },
       data: {
         type: "object",
         properties: {
           location: { type: "string", description: "Cidade, país ou endereço completo" },
-          stars: { type: "number" },
-          room_type: { type: "string" },
-          meal_plan: { type: "string" },
+          address: { type: "string", description: "Endereço completo se visível" },
+          city: { type: "string" },
+          country: { type: "string" },
+          stars: { type: "number", description: "Categoria oficial em estrelas (1-5)" },
+          rating: { type: "number", description: "Nota de avaliação dos hóspedes (0-10)" },
+          rating_source: { type: "string", description: "Fonte da nota (Booking, Google, TripAdvisor, etc.)" },
+          reviews_count: { type: "number" },
+          room_type: { type: "string", description: "Tipo de quarto (ex.: Deluxe Double, Suite Vista Mar)" },
+          bed_configuration: { type: "string", description: "Configuração de camas (1 King, 2 Twin, etc.)" },
+          view: { type: "string", description: "Vista do quarto (mar, cidade, jardim, etc.)" },
+          meal_plan: {
+            type: "string",
+            description:
+              "Regime de refeição NORMALIZADO: 'Sem refeição', 'Café da manhã', 'Meia pensão', 'Pensão completa', 'All inclusive'.",
+          },
+          meal_plan_code: {
+            type: "string",
+            enum: ["RO", "BB", "HB", "FB", "AI"],
+            description: "Código do regime: RO=Room Only, BB=Bed&Breakfast, HB=Half Board, FB=Full Board, AI=All Inclusive.",
+          },
           phone: { type: "string" },
+          email: { type: "string" },
           website: { type: "string" },
-          rating: { type: "number" },
           checkin_date: { type: "string", description: "YYYY-MM-DD" },
           checkout_date: { type: "string", description: "YYYY-MM-DD" },
-          nights: { type: "number" },
-          guests: { type: "number" },
+          checkin_time: { type: "string", description: "HH:MM" },
+          checkout_time: { type: "string", description: "HH:MM" },
+          nights: { type: "number", description: "Calcule a partir das datas se não vier explícito" },
+          guests: { type: "number", description: "Total de hóspedes" },
+          adults: { type: "number" },
+          children: { type: "number" },
+          rooms: { type: "number", description: "Quantidade de quartos reservados" },
           price_per_night: { type: "number" },
           total_price: { type: "number" },
+          taxes_included: { type: "boolean" },
           currency: { type: "string" },
-          cancellation_policy: { type: "string" },
-          locator: { type: "string" },
+          cancellation_policy: { type: "string", description: "Política completa de cancelamento" },
+          is_refundable: { type: "boolean", description: "true se a tarifa for reembolsável" },
+          free_cancellation_until: { type: "string", description: "YYYY-MM-DD até quando o cancelamento é gratuito" },
+          payment_policy: { type: "string", description: "Pagar agora, pagar no hotel, etc." },
+          locator: { type: "string", description: "Localizador / código de reserva" },
+          provider: { type: "string", description: "Booking, Decolar, Expedia, hotel direto, etc." },
+          amenities: {
+            type: "array",
+            items: { type: "string" },
+            description: "Lista de comodidades visíveis (Wi-Fi, piscina, spa, academia, etc.)",
+          },
         },
       },
     },
@@ -198,11 +248,11 @@ const SCHEMAS: Record<ItemType, any> = {
 
 const SYSTEM_PROMPTS: Record<ItemType, string> = {
   flight:
-    "Você é um extrator preciso de dados de voos para um sistema de propostas de viagem. Sua MISSÃO é destrinchar a imagem/PDF e listar TODOS os trechos (ida + volta + conexões) como segmentos separados em flight_segments, na ordem cronológica. Regras: (1) Cada conexão é um segmento próprio; nunca agrupe origem-destino final ignorando paradas. (2) Sempre normalize horários para HH:MM 24h e datas para YYYY-MM-DD no fuso LOCAL de cada aeroporto exibido. (3) Para cada trecho posterior ao primeiro (ou ao primeiro do retorno) marque is_connection=true. (4) Se a duração estiver em '12h 01m', converta para minutos (721). (5) Códigos IATA SEMPRE em 3 letras maiúsculas. (6) flight_number sem o prefixo IATA (ex.: para 'LA8084' devolva '8084' e airline='LA'). (7) Se a bagagem despachada estiver inclusa, preencha checked_bags_included e checked_bag_weight_kg; se não, deixe 0. (8) Construa um title humano e descritivo (ex.: 'GRU → FCO via LIS · LATAM/TAP · Ida e Volta'), nunca apenas 'GRU FCO'. Omita campos sem evidência clara em vez de inventar.",
+    "Você é um extrator preciso de dados de voos para um sistema de propostas de viagem. Sua MISSÃO é destrinchar a imagem/PDF e listar TODOS os trechos (ida + volta + conexões) como segmentos separados em flight_segments, na ordem cronológica. Regras: (1) Cada conexão é um segmento próprio; nunca agrupe origem-destino final ignorando paradas. (2) Sempre normalize horários para HH:MM 24h e datas para YYYY-MM-DD no fuso LOCAL de cada aeroporto exibido. (3) Para cada trecho posterior ao primeiro de cada perna marque is_connection=true. (4) Converta durações como '12h 01m' para minutos (721). (5) Códigos IATA SEMPRE em 3 letras maiúsculas. (6) flight_number sem o prefixo IATA (ex.: para 'LA8084' devolva '8084' e airline='LA'). (7) Se houver bagagem despachada, preencha checked_bags_included e checked_bag_weight_kg; se não, 0. (8) CLASSIFIQUE o itinerary_type: ROUND_TRIP se há ida E volta entre o mesmo par de cidades; ONE_WAY se só ida sem retorno; OPEN_JAW se a volta sai/chega em cidade diferente; MULTI_CITY se forem 3+ cidades distintas em sequência. (9) Marque cada segmento com direction='ida' ou 'volta' (ou 'trecho' em multi-city). (10) Construa title humano (ex.: 'GRU → FCO · LATAM · Ida e Volta' ou 'GRU → CDG · Air France · Somente Ida'). Omita campos sem evidência clara em vez de inventar.",
   hotel:
-    "Você extrai dados estruturados de imagens/PDFs de hotéis (Booking, Decolar, sites de hotéis, e-mails de confirmação). Normalize datas para YYYY-MM-DD. Use null/omita quando não houver evidência clara. Construa um description curto e útil mencionando localização e regime quando possível.",
+    "Você é um extrator preciso de reservas e cotações de HOTEL (Booking, Decolar, Expedia, sites de hotéis, e-mails de confirmação). MISSÃO: extrair TODOS os dados visíveis com normalização rigorosa. Regras: (1) Datas SEMPRE em YYYY-MM-DD; horários em HH:MM 24h. (2) Calcule nights a partir de checkin/checkout se não vier explícito. (3) NORMALIZE meal_plan para um destes valores: 'Sem refeição', 'Café da manhã', 'Meia pensão', 'Pensão completa', 'All inclusive'. Preencha também meal_plan_code (RO/BB/HB/FB/AI). (4) Detecte stars (categoria 1-5) e rating separadamente (nota dos hóspedes 0-10). (5) Identifique se a tarifa é reembolsável (is_refundable) e até quando o cancelamento é gratuito (free_cancellation_until em YYYY-MM-DD). (6) Liste amenities visíveis como array. (7) Construa um description curto e útil: 'Hotel 5★ em Roma · Café da manhã · Quarto Deluxe Vista Cidade'. (8) Identifique adults/children/rooms separadamente quando possível. Omita campos sem evidência em vez de inventar.",
   experience:
-    "Você extrai dados estruturados de imagens/PDFs de experiências, passeios e ingressos turísticos. Normalize datas/horas. Use null/omita quando não houver evidência.",
+    "Você extrai dados estruturados de imagens/PDFs de experiências, passeios e ingressos turísticos. Normalize datas/horas (YYYY-MM-DD, HH:MM). Use null/omita quando não houver evidência clara.",
 };
 
 Deno.serve(async (req) => {

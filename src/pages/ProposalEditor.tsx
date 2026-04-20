@@ -20,6 +20,7 @@ import ProposalFlightSearch, { type FlightSegmentData } from "@/components/propo
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
 import { AIBookingExtractor, type ExtractItemType } from "@/components/proposal/AIBookingExtractor";
+import { classifyItinerary, assignDirections, getItineraryLabel, type ItineraryType } from "@/lib/itineraryClassifier";
 
 const itemTypeIcons: Record<string, any> = {
   destination: MapPin,
@@ -431,6 +432,7 @@ export default function ProposalEditor() {
                 arrival_terminal: s.arrival_terminal || "",
                 aircraft_type: s.aircraft_type || "",
                 notes: s.notes || "",
+                direction: s.direction || "ida",
                 is_connection: segIdx === 0 ? false : Boolean(s.is_connection ?? true),
                 carry_on_included: s.carry_on_included !== false,
                 carry_on_weight_kg: Number.isFinite(s.carry_on_weight_kg) ? Number(s.carry_on_weight_kg) : 10,
@@ -439,21 +441,66 @@ export default function ProposalEditor() {
                 baggage_notes: s.baggage_notes || "",
               };
             });
-          cleanData.flight_segments = normalized;
+
+          // Camada determinística: classifica o itinerário via lógica local
+          // (evita confiar 100% no que a IA disse e corrige is_connection/direction)
+          const classification = classifyItinerary(normalized as any);
+          const withDirections = assignDirections(normalized as any, classification) as FlightSegmentData[];
+
+          // Re-marca is_connection com base nas legs (primeiro de cada perna = false)
+          const segsByLeg = classification.legs.map((leg) => leg.segments);
+          const fixedSegments = withDirections.map((seg) => {
+            const legIdx = segsByLeg.findIndex((segs) =>
+              segs.some(
+                (s: any) =>
+                  s.origin_iata === seg.origin_iata &&
+                  s.destination_iata === seg.destination_iata &&
+                  s.departure_date === seg.departure_date,
+              ),
+            );
+            const leg = legIdx >= 0 ? segsByLeg[legIdx] : null;
+            const isFirstOfLeg =
+              leg && leg[0]?.origin_iata === seg.origin_iata && leg[0]?.departure_date === seg.departure_date;
+            return { ...seg, is_connection: !isFirstOfLeg };
+          });
+
+          cleanData.flight_segments = fixedSegments;
+          cleanData.itinerary_type = classification.type;
+          cleanData.itinerary_open_jaw_type = classification.openJawType;
         }
 
-        // Título descritivo para voo
+        // Título descritivo para voo (usando classificação determinística)
         let nextTitle = extracted.title || item.title;
         if (item.item_type === "flight" && Array.isArray(cleanData.flight_segments) && cleanData.flight_segments.length > 0) {
           const segs: FlightSegmentData[] = cleanData.flight_segments;
-          const origin = segs[0].origin_iata;
-          const finalDest = segs[segs.length - 1].destination_iata;
-          const vias = segs.slice(0, -1).map((s) => s.destination_iata).filter(Boolean);
+          const itineraryType: ItineraryType = (cleanData.itinerary_type as ItineraryType) || "ONE_WAY";
+          const typeLabel = getItineraryLabel(itineraryType);
+
+          // Para round-trip / open-jaw, mostra apenas a perna de ida no título principal
+          const idaSegs = segs.filter((s: any) => s.direction === "ida");
+          const refSegs = idaSegs.length > 0 ? idaSegs : segs;
+          const origin = refSegs[0].origin_iata;
+          const finalDest = refSegs[refSegs.length - 1].destination_iata;
+          const vias = refSegs.slice(0, -1).map((s) => s.destination_iata).filter(Boolean);
           const airlines = Array.from(new Set(segs.map((s) => s.airline_name || s.airline).filter(Boolean)));
           const route = vias.length > 0 ? `${origin} → ${finalDest} via ${vias.join(", ")}` : `${origin} → ${finalDest}`;
           const carrier = airlines.length > 0 ? ` · ${airlines.join("/")}` : "";
-          if (!extracted.title || extracted.title.length < route.length) {
-            nextTitle = `${route}${carrier}`;
+          const smartTitle = `${route}${carrier} · ${typeLabel}`;
+          // Sobrescreve se a IA não classificou ou deu título pobre
+          if (!extracted.title || extracted.title.length < smartTitle.length || !/Ida|Volta|Way/i.test(extracted.title)) {
+            nextTitle = smartTitle;
+          }
+        }
+
+        // Título inteligente para hotel
+        if (item.item_type === "hotel" && cleanData) {
+          const hotelName = extracted.title || cleanData.name || item.title;
+          const stars = cleanData.stars ? `${cleanData.stars}★` : "";
+          const city = cleanData.city || (cleanData.location ? String(cleanData.location).split(",")[0] : "");
+          const meal = cleanData.meal_plan || "";
+          const parts = [hotelName, stars, city].filter(Boolean);
+          if (parts.length > 1 && (!extracted.title || extracted.title === hotelName)) {
+            nextTitle = `${hotelName}${stars ? ` · ${stars}` : ""}${city ? ` · ${city}` : ""}${meal ? ` · ${meal}` : ""}`;
           }
         }
 
