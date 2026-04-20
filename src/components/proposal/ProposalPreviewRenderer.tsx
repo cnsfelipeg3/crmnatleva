@@ -307,7 +307,6 @@ function ConnectionBadge({ fromIata, layoverMinutes }: { fromIata: string; layov
 /* ═══ Flight Card (Boarding Pass Style) ═══ */
 function FlightCard({ flight, idx }: { flight: any; idx: number }) {
   const d = normalizeFlightData(flight.data);
-  const hasSegments = d.segments.length > 1;
 
   const displaySegments = d.segments.length > 0 ? d.segments : [{
     airline: d.airline, airline_name: d.airline_name, airline_iata: d.airline?.substring(0, 2),
@@ -317,14 +316,33 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
     departure_date: d.departure,
     terminal: d.terminal, arrival_terminal: d.arrival_terminal,
     duration_minutes: null,
+    direction: "ida",
   }];
 
+  // Agrupa segmentos por direção (ida/volta/trecho) preservando ordem
+  const legs: { label: string; direction: string; segments: any[] }[] = [];
+  for (const seg of displaySegments) {
+    const dir = (seg.direction || "ida").toLowerCase();
+    const last = legs[legs.length - 1];
+    if (last && last.direction === dir) {
+      last.segments.push(seg);
+    } else {
+      const labelMap: Record<string, string> = { ida: "Ida", volta: "Volta", trecho: "Trecho" };
+      legs.push({ label: labelMap[dir] || `Trecho ${legs.length + 1}`, direction: dir, segments: [seg] });
+    }
+  }
+
+  // Cálculo de layover preciso com timezone (mesmo algoritmo do editor)
   function getLayoverMinutes(segA: any, segB: any): number | undefined {
-    if (!segA.arrival_time || !segB.departure_time) return undefined;
+    if (!segA?.arrival_time || !segB?.departure_time) return undefined;
     try {
-      const [hA, mA] = segA.arrival_time.split(":").map(Number);
-      const [hB, mB] = segB.departure_time.split(":").map(Number);
-      let diff = (hB * 60 + mB) - (hA * 60 + mA);
+      // tenta usar o util com timezone se disponível
+      const arrDate = segA.arrival_date || segA.departure_date;
+      const depDate = segB.departure_date || arrDate;
+      if (!arrDate || !depDate) return undefined;
+      const arr = new Date(`${arrDate}T${segA.arrival_time.slice(0, 5)}:00`);
+      const dep = new Date(`${depDate}T${segB.departure_time.slice(0, 5)}:00`);
+      let diff = Math.round((dep.getTime() - arr.getTime()) / 60000);
       if (diff < 0) diff += 24 * 60;
       return diff;
     } catch { return undefined; }
