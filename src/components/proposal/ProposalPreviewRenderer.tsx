@@ -648,13 +648,19 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
       )}
 
       {/* Infos principais (quarto, refeições, datas) */}
-      <div className="px-6 py-5 grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {d.room_type && <DetailPill icon={<BedDouble className="w-3.5 h-3.5" />} label="Quarto" value={d.room_type} />}
-        {d.meal_plan && <DetailPill icon={<UtensilsCrossed className="w-3.5 h-3.5" />} label="Refeições" value={d.meal_plan} />}
-        {d.nights && <DetailPill icon={<Clock className="w-3.5 h-3.5" />} label="Diárias" value={`${d.nights} noite${d.nights > 1 ? "s" : ""}`} />}
-        {d.check_in && <DetailPill icon={<Calendar className="w-3.5 h-3.5" />} label="Check-in" value={formatHotelDateBR(d.check_in) || d.check_in} />}
-        {d.check_out && <DetailPill icon={<Calendar className="w-3.5 h-3.5" />} label="Check-out" value={formatHotelDateBR(d.check_out) || d.check_out} />}
-      </div>
+      {(() => {
+        const checkIn = d.check_in || d.checkin || d.checkIn || d.start_date || d.startDate || d.from;
+        const checkOut = d.check_out || d.checkout || d.checkOut || d.end_date || d.endDate || d.to;
+        return (
+          <div className="px-6 py-5 flex flex-wrap justify-center gap-3">
+            {d.room_type && <DetailPill icon={<BedDouble className="w-3.5 h-3.5" />} label="Quarto" value={d.room_type} />}
+            {d.meal_plan && <DetailPill icon={<UtensilsCrossed className="w-3.5 h-3.5" />} label="Refeições" value={d.meal_plan} />}
+            {checkIn && <DetailPill icon={<Calendar className="w-3.5 h-3.5" />} label="Check-in" value={formatHotelDateBR(checkIn) || checkIn} />}
+            {checkOut && <DetailPill icon={<Calendar className="w-3.5 h-3.5" />} label="Check-out" value={formatHotelDateBR(checkOut) || checkOut} />}
+            {d.nights && <DetailPill icon={<Clock className="w-3.5 h-3.5" />} label="Diárias" value={`${d.nights} noite${d.nights > 1 ? "s" : ""}`} />}
+          </div>
+        );
+      })()}
 
       {/* Comodidades */}
       {amenities.length > 0 && (
