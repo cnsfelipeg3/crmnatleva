@@ -15,6 +15,29 @@ import { buildFlightTitle } from "@/lib/airportCities";
 
 const fallbackCover = "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1920&h=1080&fit=crop&q=80";
 
+/** Format hotel check-in/out dates (accepts ISO YYYY-MM-DD or BR dd/mm/yyyy) into "dd 'de' MMM" pt-BR. */
+function formatHotelDateBR(raw: any): string {
+  if (!raw) return "";
+  const s = String(raw).trim();
+  // dd/mm/yyyy
+  const br = s.match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);
+  let date: Date | null = null;
+  if (br) {
+    const yyyy = br[3].length === 2 ? `20${br[3]}` : br[3];
+    date = new Date(`${yyyy}-${br[2]}-${br[1]}T12:00:00`);
+  } else {
+    // ISO or other parseable
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) date = new Date(`${iso[1]}-${iso[2]}-${iso[3]}T12:00:00`);
+    else {
+      const tryParse = new Date(s);
+      if (!isNaN(tryParse.getTime())) date = tryParse;
+    }
+  }
+  if (!date || isNaN(date.getTime())) return s;
+  try { return format(date, "dd 'de' MMM", { locale: ptBR }); } catch { return s; }
+}
+
 const destinationImages: Record<string, string> = {
   roma: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&h=600&fit=crop&q=80",
   florença: "https://images.unsplash.com/photo-1543429776-2782fc8e117a?w=800&h=600&fit=crop&q=80",
