@@ -305,10 +305,10 @@ export default function ApresentacaoGeral() {
 
           <FadeIn delay={200}>
             <p className="text-xl sm:text-2xl text-muted-foreground max-w-3xl mx-auto mb-12 leading-relaxed">
-              CRM, Financeiro, RH, Inteligência Artificial e Automação —
+              CRM, Financeiro, RH, 21 agentes de IA (Nath), Portal do Viajante e Automação —
               <br className="hidden sm:block" />
               tudo numa plataforma que{" "}
-              <strong className="text-foreground">pensa junto com você</strong>.
+              <strong className="text-foreground">pensa, vende e opera junto com você</strong>.
             </p>
           </FadeIn>
 
@@ -348,16 +348,18 @@ export default function ApresentacaoGeral() {
 
       {/* ═══════════ LOGO BAR ═══════════ */}
       <section className="py-8 border-y border-border/30 bg-card/20">
-        <div className="max-w-5xl mx-auto px-6 flex items-center justify-center gap-8 text-muted-foreground/40 text-xs font-mono uppercase tracking-[0.25em]">
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-center flex-wrap gap-x-8 gap-y-2 text-muted-foreground/40 text-xs font-mono uppercase tracking-[0.25em]">
           <span>Amadeus</span>
           <span className="w-1 h-1 rounded-full bg-muted-foreground/20" />
-          <span>WhatsApp Business</span>
+          <span>WhatsApp · Z-API</span>
           <span className="w-1 h-1 rounded-full bg-muted-foreground/20" />
-          <span>Google AI</span>
+          <span>Gemini 2.5 / 3</span>
+          <span className="w-1 h-1 rounded-full bg-muted-foreground/20" />
+          <span>GPT-5</span>
           <span className="w-1 h-1 rounded-full bg-muted-foreground/20 hidden sm:block" />
-          <span className="hidden sm:inline">OpenAI</span>
+          <span className="hidden sm:inline">Claude Sonnet</span>
           <span className="w-1 h-1 rounded-full bg-muted-foreground/20 hidden md:block" />
-          <span className="hidden md:inline">DuckDuckGo</span>
+          <span className="hidden md:inline">Wikimedia</span>
         </div>
       </section>
 
@@ -392,12 +394,12 @@ export default function ApresentacaoGeral() {
         <div className="max-w-7xl mx-auto">
           <FadeIn>
             <div className="text-center mb-20">
-              <span className="text-sm font-bold text-accent uppercase tracking-[0.2em]">Fluxo inteligente</span>
+              <span className="text-sm font-bold text-accent uppercase tracking-[0.2em]">Jornada inteligente</span>
               <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mt-4 mb-5">
-                Do lead à recompra<br />em 6 passos
+                Do primeiro "oi" no WhatsApp<br />à viagem dos sonhos
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Cada etapa do ciclo de vendas é automatizada, monitorada e otimizada pela IA.
+                Cada etapa é orquestrada por agentes de IA, monitorada em tempo real e otimizada para fechar mais e operar melhor.
               </p>
             </div>
           </FadeIn>
@@ -438,14 +440,14 @@ export default function ApresentacaoGeral() {
 
           <ScreenshotShowcase
             image={printDashboard}
-            title="Dashboard Estratégico"
-            badge="Torre de Controle"
-            description="Todas as métricas que importam, num único painel. Faturamento, lucro, margem, vendas por destino, ranking de vendedores e projeção de metas — tudo atualizado em tempo real."
+            title="Dashboard Master & Torre de Controle"
+            badge="BI + Operação"
+            description="Todas as métricas que importam num único painel: faturamento, lucro, margem, sazonalidade, mapa de rotas em Leaflet, ranking de vendedores e Score de Saúde Empresarial."
             features={[
-              "KPIs com variação percentual e tendência automática",
-              "Gráficos de receita × custo × lucro mensal",
-              "Heatmap de vendas por dia da semana e horário",
-              "Modo CEO com visão simplificada para diretoria",
+              "KPIs com variação % e tendência automática",
+              "Mapa de rotas com IATA → cidade real",
+              "Heatmap geográfico e nuvem de destinos",
+              "Modo CEO simplificado para diretoria",
             ]}
           />
 
@@ -457,14 +459,14 @@ export default function ApresentacaoGeral() {
 
           <ScreenshotShowcase
             image={printIntelligence}
-            title="NatLeva Intelligence"
-            badge="Consultor com IA"
-            description="Pergunte qualquer coisa sobre seu negócio. A IA acessa 31 tabelas do banco, faz pesquisa web em tempo real e gera planos de ação personalizados."
+            title="NatLeva Intelligence + Batalhão da Nath"
+            badge="21 agentes IA"
+            description="A Nath atende, qualifica, cota e fecha — 24/7. Orquestração multi-modelo (Gemini 2.5/3, GPT-5, Claude Sonnet) com acesso ao banco, pesquisa web ao vivo e geração de imagens."
             features={[
-              "Multi-modelo: Flash, Pro, Imagem, Speech-to-Text",
-              "Busca web ao vivo (DuckDuckGo, Google, Wikipedia)",
-              "Geração de imagens promocionais direto no chat",
-              "Comando por voz — fale e ela responde",
+              "Maya recepciona · Atlas qualifica · Habibi cota",
+              "ÓRION extrai conhecimento de YouTube e PDFs",
+              "Comando por voz e geração de capas por IA",
+              "Simulador Camaleão para testes 360°",
             ]}
             reverse
           />
@@ -479,12 +481,12 @@ export default function ApresentacaoGeral() {
             image={printFinanceiro}
             title="Financeiro Completo"
             badge="Controle Total"
-            description="Contas a pagar e receber, fluxo de caixa visual, cartões de crédito, DRE automática, fornecedores e simulador de taxas. Zero planilha."
+            description="Contas a pagar e receber, fluxo de caixa visual, cartões, parcelas, DRE automática, plano de contas e comissionamento por origem do lead (15% agência / 30% indicação)."
             features={[
-              "DRE (Demonstração de Resultado) 100% automática",
-              "Fluxo de caixa com previsão inteligente de saldo",
-              "Gestão de cartões, parcelas e taxas",
-              "Comissões calculadas por regra personalizada",
+              "DRE 100% automática",
+              "Fluxo de caixa com previsão de saldo",
+              "Comissão por origem (agência vs. indicação)",
+              "Fornecedores e simulador de taxas",
             ]}
           />
 
@@ -496,14 +498,14 @@ export default function ApresentacaoGeral() {
 
           <ScreenshotShowcase
             image={printClientes}
-            title="Inteligência de Clientes"
-            badge="Conheça cada um"
-            description="Score de fidelidade, risco de churn, LTV calculado e recomendações personalizadas. Saiba exatamente quem precisa de atenção e quem está pronto para comprar."
+            title="Cérebro NatLeva — Inteligência de Clientes"
+            badge="Score 0–100"
+            description="Probabilidade de fechamento, Score NatLeva (5 pilares), risco de churn, LTV e ciclos de viagem. Saiba exatamente quem priorizar hoje e quem está pronto para a próxima."
             features={[
-              "Scoring automático com algoritmo proprietário",
+              "5 pilares: Valor, Lucro, Frequência, Engajamento, Indicação",
+              "Memória de viagens por ciclo (client_trip_memory)",
               "Predição de churn baseada em comportamento real",
-              "Histórico completo de viagens e padrão de gastos",
-              "Recomendações de destinos e pacotes por IA",
+              "Recomendações de destinos personalizadas pela IA",
             ]}
             reverse
           />
@@ -517,10 +519,10 @@ export default function ApresentacaoGeral() {
             <div className="text-center mb-16">
               <span className="text-sm font-bold text-accent uppercase tracking-[0.2em]">Super-poderes da IA</span>
               <h2 className="text-4xl sm:text-5xl font-bold text-foreground mt-4 mb-5">
-                Tudo o que a NatLeva<br />Intelligence faz por você
+                Tudo que a Nath e o<br />Batalhão fazem por você
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Uma IA que não é genérica — ela <strong className="text-foreground">entende seu negócio</strong> porque tem acesso aos seus dados reais.
+                Não é uma IA genérica — é um <strong className="text-foreground">batalhão treinado no seu negócio</strong>, com acesso aos seus dados reais e à internet ao vivo.
               </p>
             </div>
           </FadeIn>
@@ -592,10 +594,10 @@ export default function ApresentacaoGeral() {
             <div className="text-center mb-16">
               <span className="text-sm font-bold text-accent uppercase tracking-[0.2em]">Ecossistema Completo</span>
               <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mt-4 mb-5">
-                8 módulos integrados,<br />uma plataforma
+                13 módulos integrados,<br />uma plataforma viva
               </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Cada módulo elimina retrabalho, automatiza processos e gera insights que aumentam sua receita.
+                Comercial, operacional, financeiro, IA e pós-venda — tudo conectado. Cada módulo elimina retrabalho e gera insights que aumentam sua receita.
               </p>
             </div>
           </FadeIn>
@@ -688,18 +690,18 @@ export default function ApresentacaoGeral() {
                 </div>
 
                 <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-6">
-                  IA que entende<br />o seu negócio
+                  IA que vende, opera<br />e nunca dorme
                 </h2>
                 <p className="text-xl text-muted-foreground max-w-2xl leading-relaxed mb-12">
-                  Não é uma IA genérica. A NatLeva Intelligence tem acesso completo ao seu banco de dados,
-                  entende seu contexto operacional e entrega <strong className="text-foreground">recomendações que realmente funcionam</strong>.
+                  A Nath é o batalhão de 21 agentes da NatLeva. Recepciona pelo WhatsApp, qualifica, monta proposta com capa cinematográfica do destino,
+                  detecta o momento de compra e <strong className="text-foreground">cuida do cliente até o pós-viagem</strong>.
                 </p>
 
                 <div className="grid sm:grid-cols-3 gap-5">
                   {[
-                    { icon: BarChart3, label: "Análise preditiva", sub: "Antecipe tendências antes dos concorrentes" },
-                    { icon: Activity, label: "Monitoramento 24/7", sub: "Alertas automáticos sobre anomalias nos dados" },
-                    { icon: PieChart, label: "Insights acionáveis", sub: "Cada dado vira uma decisão de lucro" },
+                    { icon: HeartPulse, label: "Detecção de momento de compra", sub: "Alertas em tempo real quando o cliente está pronto para fechar" },
+                    { icon: Wand2, label: "Capa inteligente do destino", sub: "Fotos reais do Wikimedia ou geração cinematográfica por IA" },
+                    { icon: Compass, label: "Portal do Viajante imersivo", sub: "Cliente vive a viagem em landing page editorial dedicada" },
                   ].map((item, i) => (
                     <div key={i} className="group p-6 rounded-xl bg-background/40 border border-border/40 hover:border-accent/30 transition-all duration-300 backdrop-blur-sm">
                       <item.icon className="w-9 h-9 text-accent mb-4 group-hover:scale-110 transition-transform" />
@@ -819,7 +821,7 @@ export default function ApresentacaoGeral() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <img src={logoNatleva} alt="NatLeva" className="h-7 opacity-50" />
-            <span className="text-xs text-muted-foreground/50 font-mono">v2.0</span>
+            <span className="text-xs text-muted-foreground/50 font-mono">v3.0 · Abr 2026</span>
           </div>
           <p className="text-sm text-muted-foreground/60">© {new Date().getFullYear()} NatLeva Viagens — Plataforma de Gestão Inteligente</p>
         </div>
