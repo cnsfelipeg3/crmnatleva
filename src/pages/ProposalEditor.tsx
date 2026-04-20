@@ -87,6 +87,7 @@ export default function ProposalEditor() {
     payment_conditions: [] as { method: string; details: string }[],
     proposal_strategy: prefillStrategy,
     proposal_outcome: "pending",
+    template_id: "" as string,
   });
 
   const [items, setItems] = useState<any[]>([]);
