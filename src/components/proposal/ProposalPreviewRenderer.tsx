@@ -858,37 +858,21 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
         {/* Emerald-tinted gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[hsl(158,50%,4%)] via-[hsl(158,30%,8%,0.5)] to-[hsl(160,20%,10%,0.15)]" />
 
-        <div
-          className="absolute top-0 left-1/2 z-[9] h-40 w-[min(28rem,88vw)] -translate-x-1/2 pointer-events-none"
-          style={{
-            background: "radial-gradient(circle at center, hsla(0,0%,0%,0.68) 0%, hsla(0,0%,0%,0.46) 42%, hsla(0,0%,0%,0) 78%)",
-          }}
-        />
-
-        {/* NatLeva Logo - top center */}
+        {/* NatLeva Logo - bottom center, over dark fade for visibility */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="absolute top-8 left-0 right-0 z-10 flex justify-center pointer-events-none"
+          className="absolute bottom-6 left-0 right-0 z-10 flex justify-center pointer-events-none"
         >
-          <div
-            className="mx-auto flex items-center justify-center rounded-full border px-5 py-3 backdrop-blur-md"
+          <img
+            src={logoNatlevaChampagne}
+            alt="NatLeva Viagens"
+            className="h-10 sm:h-12"
             style={{
-              backgroundColor: "hsla(0,0%,0%,0.34)",
-              borderColor: "hsla(43,35%,68%,0.34)",
-              boxShadow: "0 18px 48px hsla(0,0%,0%,0.34), inset 0 1px 0 hsla(43,45%,82%,0.14)",
+              filter: "drop-shadow(0 2px 4px hsla(0,0%,0%,0.95)) drop-shadow(0 8px 24px hsla(0,0%,0%,0.7))",
             }}
-          >
-            <img
-              src={logoNatlevaChampagne}
-              alt="NatLeva Viagens"
-              className="h-10 sm:h-12 mx-auto"
-              style={{
-                filter: "drop-shadow(0 2px 2px hsla(0,0%,0%,0.9)) drop-shadow(0 10px 28px hsla(0,0%,0%,0.65))",
-              }}
-            />
-          </div>
+          />
         </motion.div>
 
         <motion.div
