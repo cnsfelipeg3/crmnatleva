@@ -518,19 +518,10 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
           const routeLabel = firstSeg && lastSeg ? `${firstSeg.origin_iata} → ${lastSeg.destination_iata}` : "";
           return (
             <div key={li}>
-              <div className="flex items-center justify-center gap-3 mb-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  {leg.label}{routeLabel ? ` · ${routeLabel}` : ""}
+              <div className="flex items-center justify-center mb-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-foreground/80 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  {leg.label}
                 </p>
-                {stops === 0 ? (
-                  <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
-                    <Plane className="w-2.5 h-2.5" /> Voo direto
-                  </span>
-                ) : (
-                  <span className="text-[10px] bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">
-                    {stops} {stops === 1 ? "conexão" : "conexões"}
-                  </span>
-                )}
               </div>
 
               <div className="space-y-0">
@@ -542,7 +533,12 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
                         layoverMinutes={calcPreciseLayoverMinutes(leg.segments[i - 1], seg) ?? undefined}
                       />
                     )}
-                    <BoardingPassSegment seg={seg} showDate={true} />
+                    <BoardingPassSegment
+                      seg={seg}
+                      showDate={true}
+                      flightTypeBadge={i === 0 ? (stops === 0 ? "direct" : `${stops}-stop`) : undefined}
+                      stopsCount={stops}
+                    />
                   </div>
                 ))}
             </div>
