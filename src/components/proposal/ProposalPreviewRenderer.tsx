@@ -865,23 +865,6 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
         {/* Emerald-tinted gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[hsl(158,50%,4%)] via-[hsl(158,30%,8%,0.5)] to-[hsl(160,20%,10%,0.15)]" />
 
-        {/* NatLeva Logo - bottom center, over dark fade for visibility */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-          className="absolute bottom-6 left-0 right-0 z-10 flex justify-center pointer-events-none"
-        >
-          <img
-            src={logoNatlevaChampagne}
-            alt="NatLeva Viagens"
-            className="h-10 sm:h-12"
-            style={{
-              filter: "drop-shadow(0 2px 4px hsla(0,0%,0%,0.95)) drop-shadow(0 8px 24px hsla(0,0%,0%,0.7))",
-            }}
-          />
-        </motion.div>
-
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
@@ -889,12 +872,12 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           className="relative z-10 text-center text-white pb-12 sm:pb-20 px-6 max-w-3xl"
         >
           {proposal.client_name && (
-            <p className="text-sm tracking-[0.35em] uppercase opacity-60 mb-5" style={{ fontFamily: headingFont }}>
+            <p className="text-xs tracking-[0.35em] uppercase opacity-60 mb-4" style={{ fontFamily: headingFont }}>
               {proposal.client_name}
             </p>
           )}
           <h1
-            className={`${embedded ? "text-3xl sm:text-4xl" : "text-4xl sm:text-5xl md:text-6xl"} font-bold leading-tight mb-5`}
+            className={`${embedded ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl md:text-5xl"} font-bold leading-tight mb-4`}
             style={{ fontFamily: headingFont, letterSpacing: "-0.02em" }}
           >
             {proposal.title || "Sua Viagem"}
@@ -902,17 +885,30 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           {dateRange && (
             <p className="text-base sm:text-lg opacity-70 font-light tracking-wide">{dateRange}</p>
           )}
-          <div className="flex items-center justify-center gap-3 mt-8 opacity-40">
+          <div className="flex items-center justify-center gap-3 mt-7 opacity-40">
             <div className="h-px w-8 bg-white/50" />
             <span className="text-[10px] tracking-[0.3em] uppercase" style={{ fontFamily: headingFont }}>
               Proposta exclusiva
             </span>
             <div className="h-px w-8 bg-white/50" />
           </div>
+
+          {/* NatLeva Logo - centered below "Proposta exclusiva" */}
+          <motion.img
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
+            src={logoNatlevaChampagne}
+            alt="NatLeva Viagens"
+            className="h-7 sm:h-8 mx-auto mt-5"
+            style={{
+              filter: "drop-shadow(0 2px 4px hsla(0,0%,0%,0.95)) drop-shadow(0 8px 24px hsla(0,0%,0%,0.7))",
+            }}
+          />
         </motion.div>
 
         {!embedded && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }} className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }} className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
             <ChevronDown className="w-6 h-6 text-white/40 animate-bounce" />
           </motion.div>
         )}
