@@ -399,16 +399,71 @@ export default function ProposalEditor() {
     setItems((prev) =>
       prev.map((item, i) => {
         if (i !== idx) return item;
-        const cleanData = extracted.data
-          ? Object.fromEntries(Object.entries(extracted.data).filter(([, v]) => v !== null && v !== undefined && v !== ""))
-          : {};
+
+        const rawData = extracted.data ?? {};
+        const cleanData: Record<string, any> = Object.fromEntries(
+          Object.entries(rawData).filter(([, v]) => v !== null && v !== undefined && v !== ""),
+        );
+
+        // Normaliza flight_segments para o shape exato do FlightSegmentData
+        if (item.item_type === "flight" && Array.isArray(rawData.flight_segments)) {
+          const normalized: FlightSegmentData[] = rawData.flight_segments
+            .filter((s: any) => s && (s.origin_iata || s.destination_iata))
+            .map((s: any, segIdx: number) => {
+              const airline = String(s.airline || "").toUpperCase().slice(0, 3);
+              const flightNumberRaw = String(s.flight_number || "");
+              // Remove prefixo IATA se vier embutido (ex.: "LA8084" -> "8084")
+              const flightNumber = flightNumberRaw.replace(/^[A-Z]{2,3}\s*/i, "").trim();
+              const dep = String(s.departure_time || "").slice(0, 5);
+              const arr = String(s.arrival_time || "").slice(0, 5);
+              const date = String(s.departure_date || "").slice(0, 10);
+              return {
+                airline,
+                airline_name: s.airline_name || "",
+                flight_number: flightNumber,
+                origin_iata: String(s.origin_iata || "").toUpperCase().slice(0, 3),
+                destination_iata: String(s.destination_iata || "").toUpperCase().slice(0, 3),
+                departure_date: date,
+                departure_time: dep,
+                arrival_time: arr,
+                duration_minutes: Number.isFinite(s.duration_minutes) ? Number(s.duration_minutes) : 0,
+                terminal: s.terminal || "",
+                arrival_terminal: s.arrival_terminal || "",
+                aircraft_type: s.aircraft_type || "",
+                notes: s.notes || "",
+                is_connection: segIdx === 0 ? false : Boolean(s.is_connection ?? true),
+                carry_on_included: s.carry_on_included !== false,
+                carry_on_weight_kg: Number.isFinite(s.carry_on_weight_kg) ? Number(s.carry_on_weight_kg) : 10,
+                checked_bags_included: Number.isFinite(s.checked_bags_included) ? Number(s.checked_bags_included) : 0,
+                checked_bag_weight_kg: Number.isFinite(s.checked_bag_weight_kg) ? Number(s.checked_bag_weight_kg) : 23,
+                baggage_notes: s.baggage_notes || "",
+              };
+            });
+          cleanData.flight_segments = normalized;
+        }
+
+        // Título descritivo para voo
+        let nextTitle = extracted.title || item.title;
+        if (item.item_type === "flight" && Array.isArray(cleanData.flight_segments) && cleanData.flight_segments.length > 0) {
+          const segs: FlightSegmentData[] = cleanData.flight_segments;
+          const origin = segs[0].origin_iata;
+          const finalDest = segs[segs.length - 1].destination_iata;
+          const vias = segs.slice(0, -1).map((s) => s.destination_iata).filter(Boolean);
+          const airlines = Array.from(new Set(segs.map((s) => s.airline_name || s.airline).filter(Boolean)));
+          const route = vias.length > 0 ? `${origin} → ${finalDest} via ${vias.join(", ")}` : `${origin} → ${finalDest}`;
+          const carrier = airlines.length > 0 ? ` · ${airlines.join("/")}` : "";
+          if (!extracted.title || extracted.title.length < route.length) {
+            nextTitle = `${route}${carrier}`;
+          }
+        }
+
         return {
           ...item,
-          title: extracted.title || item.title,
+          title: nextTitle,
           description: extracted.description || item.description,
           data: { ...(item.data || {}), ...cleanData },
         };
-      })
+      }),
     );
   };
 

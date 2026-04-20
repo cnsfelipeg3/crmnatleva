@@ -1,6 +1,11 @@
 // Edge function: extract-booking-data
-// Extrai dados de voos / hotéis / experiências a partir de imagem ou PDF
-// usando Lovable AI Gateway (Gemini Flash com visão).
+// Extrai dados estruturados de voos / hotéis / experiências a partir de
+// imagem ou PDF usando Lovable AI Gateway (Gemini 2.5 Flash com visão).
+//
+// IMPORTANTE: o schema de voo segue EXATAMENTE o shape esperado pelo
+// componente ProposalFlightSearch (FlightSegmentData) para que o
+// preenchimento no frontend seja 1-para-1, sem necessidade de
+// transformações pesadas no cliente.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,116 +15,194 @@ const corsHeaders = {
 
 type ItemType = "flight" | "hotel" | "experience";
 
-const SCHEMAS: Record<ItemType, any> = {
-  flight: {
-    name: "extract_flight",
-    description:
-      "Extrai dados de uma reserva ou cotação de VOO AÉREO a partir de uma imagem/PDF.",
-    parameters: {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "Resumo do voo, ex: 'GRU → FCO - LATAM'" },
-        description: { type: "string", description: "Detalhes adicionais (classe, conexões, observações)" },
-        data: {
-          type: "object",
-          properties: {
-            origin: { type: "string", description: "Código IATA do aeroporto de origem (ex: GRU)" },
-            destination: { type: "string", description: "Código IATA do aeroporto de destino final" },
-            airline: { type: "string" },
-            flight_number: { type: "string" },
-            departure: { type: "string", description: "Data e hora de partida em formato ISO YYYY-MM-DDTHH:mm" },
-            arrival: { type: "string", description: "Data e hora de chegada em formato ISO YYYY-MM-DDTHH:mm" },
-            baggage: { type: "string" },
-            class: { type: "string", description: "Econômica, Executiva, Primeira" },
-            duration: { type: "string" },
-            stops: { type: "number" },
-            price: { type: "number" },
-            currency: { type: "string" },
-            locator: { type: "string" },
-            flight_segments: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  origin: { type: "string" },
-                  destination: { type: "string" },
-                  departure: { type: "string" },
-                  arrival: { type: "string" },
-                  flight_number: { type: "string" },
-                  airline: { type: "string" },
-                  duration: { type: "string" },
+const FLIGHT_SCHEMA = {
+  name: "extract_flight",
+  description:
+    "Extrai TODOS os trechos de uma reserva ou cotação de VOO AÉREO. Cada conexão é um segmento separado em flight_segments.",
+  parameters: {
+    type: "object",
+    properties: {
+      title: {
+        type: "string",
+        description:
+          "Título descritivo curto. Ex.: 'GRU → FCO via LIS · LATAM/TAP' ou 'Ida GRU → CDG · Air France direto'. Se for ida e volta, indique 'Ida e Volta'. Não use só códigos isolados.",
+      },
+      description: {
+        type: "string",
+        description:
+          "Frase opcional com observações úteis: classe tarifária, programa, política de bagagem ou tipo de tarifa.",
+      },
+      data: {
+        type: "object",
+        properties: {
+          cabin_class: {
+            type: "string",
+            description: "Econômica, Premium Economy, Executiva, Primeira",
+          },
+          fare_type: {
+            type: "string",
+            description: "Tipo da tarifa (ex.: Light, Plus, Top, Flex, Saver)",
+          },
+          locator: { type: "string", description: "Código localizador / PNR" },
+          price: { type: "number", description: "Preço total se visível" },
+          currency: { type: "string", description: "Moeda (BRL, USD, EUR...)" },
+          flight_segments: {
+            type: "array",
+            description:
+              "Lista ORDENADA de TODOS os trechos. Conexões viram segmentos separados. NUNCA agrupe trechos em um só.",
+            items: {
+              type: "object",
+              properties: {
+                airline: {
+                  type: "string",
+                  description: "Código IATA da companhia (ex.: LA, AF, TP, AD)",
                 },
+                airline_name: {
+                  type: "string",
+                  description: "Nome completo da companhia (ex.: 'LATAM Airlines')",
+                },
+                flight_number: {
+                  type: "string",
+                  description: "Número do voo SEM o código IATA (ex.: '8084')",
+                },
+                origin_iata: {
+                  type: "string",
+                  description: "Código IATA do aeroporto de origem (3 letras)",
+                },
+                destination_iata: {
+                  type: "string",
+                  description: "Código IATA do aeroporto de destino (3 letras)",
+                },
+                departure_date: {
+                  type: "string",
+                  description: "Data de partida em YYYY-MM-DD",
+                },
+                departure_time: {
+                  type: "string",
+                  description: "Hora de partida em HH:MM (24h, fuso local da origem)",
+                },
+                arrival_time: {
+                  type: "string",
+                  description: "Hora de chegada em HH:MM (24h, fuso local do destino)",
+                },
+                arrival_date: {
+                  type: "string",
+                  description: "Data de chegada YYYY-MM-DD (preencher se diferente da partida)",
+                },
+                duration_minutes: {
+                  type: "number",
+                  description: "Duração total do trecho em minutos. Se ver '12h 01m', informe 721.",
+                },
+                terminal: { type: "string", description: "Terminal de embarque" },
+                arrival_terminal: { type: "string", description: "Terminal de desembarque" },
+                aircraft_type: { type: "string", description: "Modelo da aeronave" },
+                is_connection: {
+                  type: "boolean",
+                  description:
+                    "true para TODOS os trechos depois do primeiro de cada itinerário (ida ou volta). Primeiro trecho é false.",
+                },
+                carry_on_included: { type: "boolean" },
+                carry_on_weight_kg: { type: "number" },
+                checked_bags_included: {
+                  type: "number",
+                  description: "Quantidade de malas despachadas inclusas (0 se não incluso)",
+                },
+                checked_bag_weight_kg: {
+                  type: "number",
+                  description: "Peso por mala despachada (geralmente 23 ou 32)",
+                },
+                baggage_notes: { type: "string", description: "Notas livres sobre bagagem" },
+                notes: { type: "string", description: "Outras notas relevantes" },
               },
+              required: ["origin_iata", "destination_iata"],
             },
           },
         },
+        required: ["flight_segments"],
       },
-      required: ["title", "data"],
     },
+    required: ["title", "data"],
   },
-  hotel: {
-    name: "extract_hotel",
-    description: "Extrai dados de uma reserva ou cotação de HOTEL.",
-    parameters: {
-      type: "object",
-      properties: {
-        title: { type: "string", description: "Nome do hotel" },
-        description: { type: "string", description: "Descrição curta (localização, categoria)" },
-        data: {
-          type: "object",
-          properties: {
-            location: { type: "string" },
-            stars: { type: "number" },
-            room_type: { type: "string" },
-            meal_plan: { type: "string" },
-            phone: { type: "string" },
-            website: { type: "string" },
-            rating: { type: "number" },
-            checkin_date: { type: "string", description: "YYYY-MM-DD" },
-            checkout_date: { type: "string", description: "YYYY-MM-DD" },
-            nights: { type: "number" },
-            price_per_night: { type: "number" },
-            total_price: { type: "number" },
-            currency: { type: "string" },
-          },
+};
+
+const HOTEL_SCHEMA = {
+  name: "extract_hotel",
+  description: "Extrai dados de uma reserva ou cotação de HOTEL.",
+  parameters: {
+    type: "object",
+    properties: {
+      title: { type: "string", description: "Nome do hotel" },
+      description: {
+        type: "string",
+        description: "Descrição curta (localização, categoria, regime, tipo de quarto)",
+      },
+      data: {
+        type: "object",
+        properties: {
+          location: { type: "string", description: "Cidade, país ou endereço completo" },
+          stars: { type: "number" },
+          room_type: { type: "string" },
+          meal_plan: { type: "string" },
+          phone: { type: "string" },
+          website: { type: "string" },
+          rating: { type: "number" },
+          checkin_date: { type: "string", description: "YYYY-MM-DD" },
+          checkout_date: { type: "string", description: "YYYY-MM-DD" },
+          nights: { type: "number" },
+          guests: { type: "number" },
+          price_per_night: { type: "number" },
+          total_price: { type: "number" },
+          currency: { type: "string" },
+          cancellation_policy: { type: "string" },
+          locator: { type: "string" },
         },
       },
-      required: ["title", "data"],
     },
+    required: ["title", "data"],
   },
-  experience: {
-    name: "extract_experience",
-    description: "Extrai dados de uma EXPERIÊNCIA / passeio / ingresso.",
-    parameters: {
-      type: "object",
-      properties: {
-        title: { type: "string" },
-        description: { type: "string" },
-        data: {
-          type: "object",
-          properties: {
-            location: { type: "string" },
-            duration: { type: "string" },
-            date: { type: "string", description: "YYYY-MM-DD se houver" },
-            includes: { type: "string" },
-            provider: { type: "string" },
-            price: { type: "number" },
-            currency: { type: "string" },
-          },
+};
+
+const EXPERIENCE_SCHEMA = {
+  name: "extract_experience",
+  description: "Extrai dados de uma EXPERIÊNCIA / passeio / ingresso.",
+  parameters: {
+    type: "object",
+    properties: {
+      title: { type: "string" },
+      description: { type: "string" },
+      data: {
+        type: "object",
+        properties: {
+          location: { type: "string" },
+          duration: { type: "string" },
+          date: { type: "string", description: "YYYY-MM-DD se houver" },
+          start_time: { type: "string", description: "HH:MM" },
+          includes: { type: "string" },
+          provider: { type: "string" },
+          price: { type: "number" },
+          currency: { type: "string" },
+          guests: { type: "number" },
+          locator: { type: "string" },
         },
       },
-      required: ["title", "data"],
     },
+    required: ["title", "data"],
   },
+};
+
+const SCHEMAS: Record<ItemType, any> = {
+  flight: FLIGHT_SCHEMA,
+  hotel: HOTEL_SCHEMA,
+  experience: EXPERIENCE_SCHEMA,
 };
 
 const SYSTEM_PROMPTS: Record<ItemType, string> = {
   flight:
-    "Você extrai dados estruturados de imagens/PDFs de cotações ou reservas aéreas. Use null/omita quando não houver evidência. Preserve códigos IATA exatos. Use horários no fuso da imagem se visível.",
+    "Você é um extrator preciso de dados de voos para um sistema de propostas de viagem. Sua MISSÃO é destrinchar a imagem/PDF e listar TODOS os trechos (ida + volta + conexões) como segmentos separados em flight_segments, na ordem cronológica. Regras: (1) Cada conexão é um segmento próprio; nunca agrupe origem-destino final ignorando paradas. (2) Sempre normalize horários para HH:MM 24h e datas para YYYY-MM-DD no fuso LOCAL de cada aeroporto exibido. (3) Para cada trecho posterior ao primeiro (ou ao primeiro do retorno) marque is_connection=true. (4) Se a duração estiver em '12h 01m', converta para minutos (721). (5) Códigos IATA SEMPRE em 3 letras maiúsculas. (6) flight_number sem o prefixo IATA (ex.: para 'LA8084' devolva '8084' e airline='LA'). (7) Se a bagagem despachada estiver inclusa, preencha checked_bags_included e checked_bag_weight_kg; se não, deixe 0. (8) Construa um title humano e descritivo (ex.: 'GRU → FCO via LIS · LATAM/TAP · Ida e Volta'), nunca apenas 'GRU FCO'. Omita campos sem evidência clara em vez de inventar.",
   hotel:
-    "Você extrai dados estruturados de imagens/PDFs de hotéis (Booking, Decolar, sites de hotéis, e-mails de confirmação). Use null/omita quando não houver evidência clara.",
+    "Você extrai dados estruturados de imagens/PDFs de hotéis (Booking, Decolar, sites de hotéis, e-mails de confirmação). Normalize datas para YYYY-MM-DD. Use null/omita quando não houver evidência clara. Construa um description curto e útil mencionando localização e regime quando possível.",
   experience:
-    "Você extrai dados estruturados de imagens/PDFs de experiências, passeios e ingressos turísticos. Use null/omita quando não houver evidência.",
+    "Você extrai dados estruturados de imagens/PDFs de experiências, passeios e ingressos turísticos. Normalize datas/horas. Use null/omita quando não houver evidência.",
 };
 
 Deno.serve(async (req) => {
@@ -139,8 +222,6 @@ Deno.serve(async (req) => {
     if (!SCHEMAS[item_type]) {
       return json({ error: `item_type inválido: ${item_type}` }, 400);
     }
-
-    // Tamanho aproximado do payload base64 — bloqueia >15MB
     if (image_base64.length > 15 * 1024 * 1024 * 1.4) {
       return json({ error: "Arquivo muito grande (máx ~15MB)." }, 413);
     }
@@ -158,6 +239,11 @@ Deno.serve(async (req) => {
     const dataUrl = `data:${mime};base64,${image_base64}`;
     const schema = SCHEMAS[item_type];
 
+    const userText =
+      item_type === "flight"
+        ? "Extraia TODOS os trechos do voo desta imagem/PDF como segmentos separados em flight_segments. Inclua conexões. Use a função fornecida e respeite o schema (IATA 3 letras, HH:MM 24h, YYYY-MM-DD, duration_minutes em minutos, is_connection true para trechos após o primeiro de cada itinerário)."
+        : "Extraia os dados desta reserva/cotação no formato estruturado da função. Se um campo não estiver claramente presente, omita-o.";
+
     const aiResp = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
@@ -173,11 +259,7 @@ Deno.serve(async (req) => {
             {
               role: "user",
               content: [
-                {
-                  type: "text",
-                  text:
-                    "Extraia os dados desta reserva/cotação no formato estruturado da função. Se um campo não estiver claramente presente, omita-o.",
-                },
+                { type: "text", text: userText },
                 { type: "image_url", image_url: { url: dataUrl } },
               ],
             },
@@ -206,9 +288,10 @@ Deno.serve(async (req) => {
 
     if (!argsRaw) {
       console.error("No tool call in response", JSON.stringify(result).slice(0, 500));
-      return json({
-        error: "A IA não conseguiu extrair dados desta imagem. Tente uma imagem mais nítida.",
-      }, 422);
+      return json(
+        { error: "A IA não conseguiu extrair dados desta imagem. Tente uma imagem mais nítida." },
+        422,
+      );
     }
 
     let extracted: any;
