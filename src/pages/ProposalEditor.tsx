@@ -757,8 +757,24 @@ export default function ProposalEditor() {
                 </Select>
               </div>
               <div className="md:col-span-2 space-y-1.5">
-                <Label>URL da imagem de capa</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label>URL da imagem de capa</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setCoverDialogOpen(true)}
+                    className="h-7 text-xs text-accent hover:text-accent hover:bg-accent/10"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 mr-1" /> Sugerir capa
+                  </Button>
+                </div>
                 <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="https://images.unsplash.com/..." />
+                {form.cover_image_url && (
+                  <div className="mt-2 rounded-lg overflow-hidden border border-border/30 aspect-[16/6]">
+                    <img src={form.cover_image_url} alt="Pré-visualização da capa" className="w-full h-full object-cover" />
+                  </div>
+                )}
               </div>
 
               <div className="md:col-span-2 space-y-1.5">
