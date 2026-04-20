@@ -100,6 +100,7 @@ export default function ProposalEditor() {
   const [placesSearchIdx, setPlacesSearchIdx] = useState<number | null>(null);
   const [collapsedItems, setCollapsedItems] = useState<Set<number>>(new Set());
   const [savingItemIdx, setSavingItemIdx] = useState<number | null>(null);
+  const [coverDialogOpen, setCoverDialogOpen] = useState(false);
 
   const { data: templates } = useQuery({
     queryKey: ["proposal_templates_active"],
