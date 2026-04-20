@@ -796,7 +796,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       )}
 
       {/* ──── DESTINATIONS ──── */}
-      {(destinations.length > 0 || (proposal.destinations?.length > 0 && destinations.length === 0)) && (
+      {showDestinations && (destinations.length > 0 || (proposal.destinations?.length > 0 && destinations.length === 0)) && (
         <section data-track-section="destinations" className="py-12 sm:py-20 px-6">
           <SectionTitle subtitle="Os lugares que você vai explorar">Seus Destinos</SectionTitle>
           <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -805,7 +805,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
                 <img src={dest.image_url || getDestImage(dest.title || "")} alt={dest.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[hsl(158,50%,4%,0.8)] via-transparent to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-xl font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{dest.title}</h3>
+                  <h3 className="text-xl font-bold text-white" style={{ fontFamily: headingFont }}>{dest.title}</h3>
                   {dest.description && <p className="text-sm text-white/60 mt-1">{dest.description}</p>}
                 </div>
               </motion.div>
@@ -815,7 +815,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       )}
 
       {/* ──── FLIGHTS ──── */}
-      {flights.length > 0 && (
+      {showFlights && flights.length > 0 && (
         <section data-track-section="flights" className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
           <SectionTitle subtitle="Seus voos com todos os detalhes">Voos</SectionTitle>
           <div className="max-w-3xl mx-auto space-y-8">
@@ -825,7 +825,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       )}
 
       {/* ──── HOTELS ──── */}
-      {hotels.length > 0 && (
+      {showHotels && hotels.length > 0 && (
         <section data-track-section="hotels" className="py-12 sm:py-20 px-6">
           <SectionTitle subtitle="Clique para explorar fotos, quartos e avaliações">Hospedagens</SectionTitle>
           <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -835,7 +835,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       )}
 
       {/* ──── EXPERIENCES ──── */}
-      {experiences.length > 0 && (
+      {showExperiences && experiences.length > 0 && (
         <section data-track-section="experiences" className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
           <SectionTitle subtitle="Momentos que farão sua viagem inesquecível">Experiências</SectionTitle>
           <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -845,21 +845,21 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       )}
 
       {/* ──── FINANCIAL ──── */}
-      {(proposal.total_value || proposal.value_per_person) && (
+      {showPricing && (proposal.total_value || proposal.value_per_person) && (
         <section data-track-section="pricing" className="py-12 sm:py-20 px-6">
           <SectionTitle>Investimento</SectionTitle>
           <div className="max-w-2xl mx-auto">
             <div className="rounded-2xl border border-accent/15 bg-gradient-to-b from-card to-accent/[0.03] p-8 sm:p-10 text-center space-y-6 shadow-xl shadow-accent/5">
               {proposal.value_per_person && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-1.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Valor por pessoa</p>
-                  <p className="text-3xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{fmtCurrency(proposal.value_per_person)}</p>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-1.5" style={{ fontFamily: headingFont }}>Valor por pessoa</p>
+                  <p className="text-3xl font-bold text-foreground" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.value_per_person)}</p>
                 </div>
               )}
               {proposal.total_value && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-1.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Valor total da viagem</p>
-                  <p className="text-4xl sm:text-5xl font-bold text-accent" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{fmtCurrency(proposal.total_value)}</p>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-1.5" style={{ fontFamily: headingFont }}>Valor total da viagem</p>
+                  <p className="text-4xl sm:text-5xl font-bold text-accent" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.total_value)}</p>
                 </div>
               )}
               {proposal.includes_text && (
