@@ -1005,11 +1005,11 @@ export default function SimuladorManualMode() {
               />
               <div className="flex gap-2">
                 <button onClick={generateSummary} disabled={messages.length < 2}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all bg-muted/50 text-muted-foreground hover:bg-muted disabled:opacity-30">
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl text-[12px] font-semibold transition-all bg-muted/50 text-muted-foreground hover:bg-muted disabled:opacity-30">
                   <FileText className="w-3.5 h-3.5" /> Resumo IA
                 </button>
                 <button onClick={resetChat}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-semibold transition-all bg-primary/10 text-primary hover:bg-primary/15">
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl text-[12px] font-semibold transition-all bg-primary/10 text-primary hover:bg-primary/15">
                   <RotateCcw className="w-3.5 h-3.5" /> Nova
                 </button>
               </div>
