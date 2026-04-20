@@ -4,6 +4,7 @@ import { clearComplianceCache } from "./complianceEngine";
 import { enforceAgentFormatting } from "./agentFormatting";
 import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X, Mic } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
+import ViewProposalButton from "./ViewProposalButton";
 import SimulatorChatLayout, { type SimChatMessage } from "./SimulatorChatLayout";
 import SimulatorObservationsPanel, { type SelectedMessage } from "./SimulatorObservationsPanel";
 import { AGENTS_V4, SQUADS, type AgentV4 } from "@/components/ai-team/agentsV4Data";
@@ -993,6 +994,14 @@ export default function SimuladorManualMode() {
                 messages={messages.map(m => ({ role: m.role === "user" ? "user" : "agent", content: m.content, agentName: m.agentName, timestamp: m.timestamp }))}
                 context={`${isLivreMode ? "Modo Livre (destino aberto)" : `Destino: ${selectedDestino}`} · Agente: ${selectedAgent.name} (${selectedAgent.role})`}
                 variant="floating"
+              />
+              <ViewProposalButton
+                sessionId={currentSessionId}
+                mode="manual"
+                messages={messages.map(m => ({ role: m.role, content: m.content, agentName: m.agentName }))}
+                agentName={selectedAgent.name}
+                destinoHint={isLivreMode ? undefined : selectedDestino}
+                simulatorContext={`Simulador Manual · Agente: ${selectedAgent.name} (${selectedAgent.role})`}
               />
               <div className="flex gap-2">
                 <button onClick={generateSummary} disabled={messages.length < 2}

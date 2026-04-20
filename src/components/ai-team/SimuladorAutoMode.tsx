@@ -5,6 +5,7 @@ import { Play, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronUp, Check, X,
 import SimulatorObservationsPanel, { type SelectedMessage } from "./SimulatorObservationsPanel";
 import { useIsMobile } from "@/hooks/use-mobile";
 import NathOpinionButton from "./NathOpinionButton";
+import ViewProposalButton from "./ViewProposalButton";
 import SimConfigInput from "./SimConfigInput";
 import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { useGlobalRules, buildGlobalRulesBlock, type GlobalRule } from "@/hooks/useGlobalRules";
@@ -1722,6 +1723,14 @@ Retorne JSON:
                       messages={selectedLead.mensagens.map(m => ({ role: m.role, content: m.content, agentName: m.agentName, timestamp: String(m.timestamp) }))}
                       context={`Destino: ${selectedLead.destino} · Perfil: ${selectedLead.perfil.label} · Sentimento: ${selectedLead.sentimentoScore}/100 · Paciência: ${selectedLead.pacienciaRestante}% · Etapa: ${selectedLead.etapaAtual} · Ocasião: ${selectedLead.ocasiao}`}
                       variant="inline"
+                    />
+                    <ViewProposalButton
+                      sessionId={selectedLead.id}
+                      mode="auto"
+                      messages={selectedLead.mensagens.map(m => ({ role: m.role, content: m.content, agentName: m.agentName }))}
+                      destinoHint={selectedLead.destino}
+                      simulatorContext={`Simulador Automático · Perfil: ${selectedLead.perfil.label} · Ocasião: ${selectedLead.ocasiao} · Etapa: ${selectedLead.etapaAtual}`}
+                      variant="compact"
                     />
                   </div>
                 </div>

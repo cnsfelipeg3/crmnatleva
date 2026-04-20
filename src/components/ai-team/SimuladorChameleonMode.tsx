@@ -8,6 +8,7 @@
 import { useState, useRef, useCallback, useEffect, lazy, Suspense } from "react";
 import { Pause, SkipForward, RotateCcw, User, Bot, Loader2, ChevronUp, ChevronDown } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
+import ViewProposalButton from "./ViewProposalButton";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,6 +72,8 @@ export default function SimuladorChameleonMode() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef(false);
   const monitorBriefingIdRef = useRef<string | null>(null);
+  // Stable id for this chameleon session — used to dedupe proposal generation.
+  const sessionIdRef = useRef<string>(crypto.randomUUID());
   const { data: globalRules = [] } = useGlobalRules();
   const globalRulesBlock = buildGlobalRulesBlock(globalRules);
   const { config: agencyConfig } = useAgencyConfig();
@@ -502,6 +505,8 @@ export default function SimuladorChameleonMode() {
     setDebrief(null);
     setExchangeCount(0);
     setStatusText("");
+    // New session = new proposal namespace
+    sessionIdRef.current = crypto.randomUUID();
   };
 
   const currentAgent = AGENTS_V4.find(a => a.id === currentAgentId);
@@ -689,11 +694,19 @@ export default function SimuladorChameleonMode() {
 
         {/* Nath Opinion */}
         {messages.length >= 2 && phase !== "debrief" && (
-          <div className="px-3 md:px-4 py-2 border-b border-border shrink-0">
+          <div className="px-3 md:px-4 py-2 border-b border-border shrink-0 space-y-2">
             <NathOpinionButton
               messages={messages.map(m => ({ role: m.role === "lead" ? "user" : "agent", content: m.content, agentName: m.agentName, timestamp: String(m.timestamp) }))}
               context={`Simulador Camaleão · Perfil: ${profile?.nome} · Destino: ${profile?.destino} · Agente atual: ${currentAgent?.name} (${currentAgent?.role}) · Troca ${exchangeCount}/${maxExchanges}`}
               variant="floating"
+            />
+            <ViewProposalButton
+              sessionId={sessionIdRef.current}
+              mode="chameleon"
+              messages={messages.map(m => ({ role: m.role, content: m.content, agentName: m.agentName }))}
+              agentName={currentAgent?.name}
+              destinoHint={profile?.destino}
+              simulatorContext={`Simulador Camaleão · Perfil sintético: ${profile?.nome} (${profile?.idade}a, ${profile?.profissao}) · Motivação: ${profile?.motivacao} · Composição: ${profile?.composicaoLabel} · Orçamento: ${profile?.orcamentoLabel}`}
             />
           </div>
         )}
