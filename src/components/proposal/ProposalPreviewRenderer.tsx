@@ -15,6 +15,29 @@ import { buildFlightTitle } from "@/lib/airportCities";
 
 const fallbackCover = "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1920&h=1080&fit=crop&q=80";
 
+/** Format hotel check-in/out dates (accepts ISO YYYY-MM-DD or BR dd/mm/yyyy) into "dd 'de' MMM" pt-BR. */
+function formatHotelDateBR(raw: any): string {
+  if (!raw) return "";
+  const s = String(raw).trim();
+  // dd/mm/yyyy
+  const br = s.match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);
+  let date: Date | null = null;
+  if (br) {
+    const yyyy = br[3].length === 2 ? `20${br[3]}` : br[3];
+    date = new Date(`${yyyy}-${br[2]}-${br[1]}T12:00:00`);
+  } else {
+    // ISO or other parseable
+    const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) date = new Date(`${iso[1]}-${iso[2]}-${iso[3]}T12:00:00`);
+    else {
+      const tryParse = new Date(s);
+      if (!isNaN(tryParse.getTime())) date = tryParse;
+    }
+  }
+  if (!date || isNaN(date.getTime())) return s;
+  try { return format(date, "dd 'de' MMM", { locale: ptBR }); } catch { return s; }
+}
+
 const destinationImages: Record<string, string> = {
   roma: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=800&h=600&fit=crop&q=80",
   florença: "https://images.unsplash.com/photo-1543429776-2782fc8e117a?w=800&h=600&fit=crop&q=80",
@@ -584,6 +607,25 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
             {d.meal_plan && <span className="text-xs bg-accent/8 text-accent border border-accent/15 px-2.5 py-1 rounded-full">{d.meal_plan}</span>}
             {d.nights && <span className="text-xs bg-accent/8 text-accent border border-accent/15 px-2.5 py-1 rounded-full">{d.nights} noite{d.nights > 1 ? "s" : ""}</span>}
           </div>
+          {(d.check_in || d.check_out) && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mt-3 text-xs text-muted-foreground">
+              {d.check_in && (
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-accent/70" />
+                  <span className="uppercase tracking-wide text-[10px] text-muted-foreground/70">Check-in</span>
+                  <span className="font-medium text-foreground">{formatHotelDateBR(d.check_in)}</span>
+                </div>
+              )}
+              {d.check_in && d.check_out && <span className="text-muted-foreground/40">→</span>}
+              {d.check_out && (
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-accent/70" />
+                  <span className="uppercase tracking-wide text-[10px] text-muted-foreground/70">Check-out</span>
+                  <span className="font-medium text-foreground">{formatHotelDateBR(d.check_out)}</span>
+                </div>
+              )}
+            </div>
+          )}
           <p className="text-xs text-accent flex items-center gap-1 mt-3 font-medium">Ver detalhes e fotos <ChevronRight className="w-3 h-3" /></p>
         </div>
       </ExpandableCard>
