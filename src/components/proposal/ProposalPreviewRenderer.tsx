@@ -84,15 +84,15 @@ function fmtDate(d: string) {
 /* ═══ Section Title ═══ */
 function SectionTitle({ children, subtitle }: { children: React.ReactNode; subtitle?: string }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
-      <div className="flex items-center justify-center gap-4 mb-3">
-        <div className="h-px w-12 bg-gradient-to-r from-transparent to-accent/40" />
-        <h2 className="text-3xl sm:text-4xl font-bold tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-8 sm:mb-10">
+      <div className="flex items-center justify-center gap-3 sm:gap-4 mb-2 sm:mb-3">
+        <div className="h-px w-8 sm:w-12 bg-gradient-to-r from-transparent to-accent/40" />
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
           {children}
         </h2>
-        <div className="h-px w-12 bg-gradient-to-l from-transparent to-accent/40" />
+        <div className="h-px w-8 sm:w-12 bg-gradient-to-l from-transparent to-accent/40" />
       </div>
-      {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+      {subtitle && <p className="text-xs sm:text-sm text-muted-foreground px-4">{subtitle}</p>}
     </motion.div>
   );
 }
