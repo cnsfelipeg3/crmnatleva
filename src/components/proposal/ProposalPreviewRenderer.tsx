@@ -366,31 +366,52 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
       viewport={{ once: true }}
       transition={{ delay: idx * 0.1 }}
     >
-      {/* Title label */}
-      <div className="flex items-center gap-3 mb-3">
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 font-medium" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-          {flight.title || (idx === 0 ? "Ida" : "Volta")}
-        </p>
-        {hasSegments && (
-          <span className="text-[10px] bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">
-            {d.stops} conexão{d.stops > 1 ? "ões" : ""}
-          </span>
-        )}
-      </div>
+      {/* Optional outer title (only when explicit and a single leg) */}
+      {flight.title && legs.length === 1 && (
+        <div className="flex items-center gap-3 mb-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 font-medium" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {flight.title}
+          </p>
+        </div>
+      )}
 
-      {/* Segments */}
-      <div className="space-y-0">
-        {displaySegments.map((seg: any, i: number) => (
-          <div key={i}>
-            {i > 0 && (
-              <ConnectionBadge
-                fromIata={displaySegments[i - 1]?.destination_iata || ""}
-                layoverMinutes={getLayoverMinutes(displaySegments[i - 1], seg)}
-              />
-            )}
-            <BoardingPassSegment seg={seg} showDate={true} />
+      {/* Legs (Ida / Volta / Trecho) */}
+      <div className="space-y-8">
+        {legs.map((leg, li) => {
+          const stops = leg.segments.length - 1;
+          return (
+            <div key={li}>
+              <div className="flex items-center gap-3 mb-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  {leg.label}
+                </p>
+                {stops === 0 ? (
+                  <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
+                    <Plane className="w-2.5 h-2.5" /> Voo direto
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">
+                    {stops} {stops === 1 ? "conexão" : "conexões"}
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-0">
+                {leg.segments.map((seg: any, i: number) => (
+                  <div key={i}>
+                    {i > 0 && (
+                      <ConnectionBadge
+                        fromIata={leg.segments[i - 1]?.destination_iata || ""}
+                        layoverMinutes={getLayoverMinutes(leg.segments[i - 1], seg)}
+                      />
+                    )}
+                    <BoardingPassSegment seg={seg} showDate={true} />
+                  </div>
+                ))}
+            </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Bottom badges */}
