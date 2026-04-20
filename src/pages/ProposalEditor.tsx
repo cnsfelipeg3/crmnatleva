@@ -11,7 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3 } from "lucide-react";
+import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3, Share2, FileDown, Loader2 } from "lucide-react";
+import { exportProposalPdf, shareProposalLink } from "@/lib/proposalPdfExport";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { emitLearningEvent, emitProposalOutcome } from "@/lib/learningEvents";
 import ProposalPreviewRenderer from "@/components/proposal/ProposalPreviewRenderer";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
@@ -597,6 +601,37 @@ export default function ProposalEditor() {
     }
   };
 
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  const handleShare = async () => {
+    const slug = existing?.slug;
+    if (!slug) return;
+    try {
+      const result = await shareProposalLink(slug, form.title || "Proposta");
+      toast.success(result === "shared" ? "Proposta compartilhada!" : "Link copiado para a área de transferência!");
+    } catch (err: any) {
+      toast.error(err.message || "Falha ao compartilhar");
+    }
+  };
+
+  const handleExportPdf = async () => {
+    const slug = existing?.slug;
+    if (!slug) {
+      toast.error("Salve a proposta antes de exportar");
+      return;
+    }
+    setExportingPdf(true);
+    toast.info("Gerando PDF... isso pode levar alguns segundos");
+    try {
+      await exportProposalPdf(slug, form.title || "proposta");
+      toast.success("PDF gerado com sucesso!");
+    } catch (err: any) {
+      toast.error(err.message || "Falha ao gerar PDF");
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-5 animate-fade-in max-w-5xl mx-auto">
       <div className="flex items-center justify-between gap-3">
@@ -619,12 +654,26 @@ export default function ProposalEditor() {
         <div className="flex items-center gap-2">
           {!isNew && existing?.slug && (
             <>
-              <Button variant="outline" size="sm" onClick={copyLink} className="gap-1.5">
-                <Copy className="w-3.5 h-3.5" /> Link
-              </Button>
               <Button variant="outline" size="sm" onClick={() => window.open(`/proposta/${existing.slug}`, "_blank")} className="gap-1.5">
                 <ExternalLink className="w-3.5 h-3.5" /> Visualizar
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5" disabled={exportingPdf}>
+                    {exportingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Share2 className="w-3.5 h-3.5" />}
+                    Compartilhar
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={handleShare} className="gap-2">
+                    <Copy className="w-4 h-4" /> Copiar link da proposta
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleExportPdf} className="gap-2" disabled={exportingPdf}>
+                    {exportingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileDown className="w-4 h-4" />}
+                    Exportar em PDF
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           )}
           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !form.title} className="gap-1.5">
