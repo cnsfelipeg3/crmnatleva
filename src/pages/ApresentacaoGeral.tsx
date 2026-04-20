@@ -6,9 +6,7 @@ import {
   ChevronDown, Play, Award, Globe, Lock, Cpu, PieChart, FileText, Eye,
   MousePointer, Mic, Search, Image as ImageIcon, Layers, Database,
   RefreshCw, LineChart, Workflow, BotMessageSquare, CalendarCheck,
-  ArrowUpRight, CircleDot, Gauge, HeartPulse, ShieldCheck, Activity,
-  Bot, Compass, Briefcase, Cake, AlertTriangle, Map, FileSignature,
-  Headphones, Smartphone, Layers3, Network, Wand2, BookMarked
+  ArrowUpRight, CircleDot, Gauge, HeartPulse, ShieldCheck, Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logoNatleva from "@/assets/logo-natleva.png";
@@ -117,139 +115,101 @@ function ScreenshotShowcase({ image, title, description, features, reverse = fal
 
 /* ── Data ── */
 const stats = [
-  { value: "60+", label: "Módulos integrados", icon: Layers3 },
-  { value: "21", label: "Agentes de IA (Nath)", icon: Bot },
+  { value: "31+", label: "Tabelas integradas", icon: Database },
+  { value: "100%", label: "Automação inteligente", icon: Zap },
   { value: "360°", label: "Visão do cliente", icon: Eye },
-  { value: "24/7", label: "Operação inteligente", icon: BotMessageSquare },
+  { value: "24/7", label: "IA sempre ativa", icon: BotMessageSquare },
 ];
 
 const modules = [
   {
-    icon: LayoutDashboard, title: "Dashboard Master & Torre de Controle", color: "from-emerald-500/20 to-emerald-600/5",
-    desc: "BI completo com KPIs financeiros, sazonalidade, projeção de metas, heatmap geográfico e a Torre de Controle operacional para gerir viagens em tempo real.",
-    features: ["KPIs em tempo real", "Mapa de rotas Leaflet", "Score de Saúde Empresarial", "Modo CEO"],
+    icon: LayoutDashboard, title: "Dashboard Estratégico", color: "from-emerald-500/20 to-emerald-600/5",
+    desc: "Visão completa em tempo real: KPIs, funil de vendas, sazonalidade, análise de margem, ranking de vendedores e projeção de metas.",
+    features: ["KPIs em tempo real", "Funil de conversão", "Heatmap de vendas", "Projeção de metas"],
   },
   {
-    icon: MessageSquare, title: "LiveChat WhatsApp + IA", color: "from-green-500/20 to-green-600/5",
-    desc: "Atendimento omnichannel com Z-API, sugestões inteligentes em tempo real, auto-tagging de leads e detecção de momento de compra.",
-    features: ["WhatsApp Z-API", "Auto-tagging por regex", "Análise de Atendimento", "Painel de Inteligência ao vivo"],
+    icon: Plane, title: "Gestão de Viagens", color: "from-blue-500/20 to-blue-600/5",
+    desc: "Centro de operações com timeline visual de voos, check-in automatizado, hospedagens e gestão completa de passageiros.",
+    features: ["Timeline de voos", "Check-in automático", "Gestão de hospedagem", "Perfil de passageiros"],
   },
   {
-    icon: Bot, title: "AI Team — O Batalhão da Nath", color: "from-violet-500/20 to-violet-600/5",
-    desc: "21 agentes especializados em 7 squads (Comercial, Operações, Financeiro, Pós-venda, Inteligência, Conteúdo, RH) — todos se identificam como Nath, com prompts versionados e Skills atribuíveis.",
-    features: ["Maya · Atlas · Habibi · ÓRION", "Squads especializados", "Skills System v2", "Simulador Camaleão"],
+    icon: Brain, title: "Inteligência de Clientes", color: "from-purple-500/20 to-purple-600/5",
+    desc: "Scoring avançado com LTV, risco de churn e fidelidade. Recomendações estratégicas personalizadas.",
+    features: ["Score de fidelidade", "Predição de churn", "LTV calculado", "Recomendações IA"],
   },
   {
-    icon: FileSignature, title: "Pipeline de Cotações & Propostas", color: "from-cyan-500/20 to-cyan-600/5",
-    desc: "Briefing → Pipeline 13 etapas → Proposta IA com landing page imersiva, capa inteligente (Wikimedia + Gemini), analytics de engajamento e ponte com o Portal de Cotações.",
-    features: ["Funil de 13 etapas", "Proposta IA journey-aware", "Capa inteligente por destino", "Analytics de engajamento"],
+    icon: Sparkles, title: "NatLeva Intelligence", color: "from-amber-500/20 to-amber-600/5",
+    desc: "Consultor estratégico com IA que acessa 31 tabelas, pesquisa na web em tempo real e gera insights acionáveis.",
+    features: ["Acesso total ao banco", "Pesquisa web ao vivo", "Insights estratégicos", "Consultor 24/7"],
   },
   {
-    icon: Plane, title: "Operações Aéreas & Check-in", color: "from-blue-500/20 to-blue-600/5",
-    desc: "Integração Amadeus, voos em estilo boarding pass, logos das companhias, classificação de itinerário (round-trip / open-jaw / multi-city) e Centro de Check-in com monitoramento proativo.",
-    features: ["Integração Amadeus", "Check-in individual por PAX", "Alertas de proximidade", "Alterações de viagem"],
-  },
-  {
-    icon: Compass, title: "Portal do Viajante — Minhas Viagens", color: "from-sky-500/20 to-sky-600/5",
-    desc: "Experiência editorial e imersiva para o passageiro, centralizando itinerário, voos, hospedagem, experiências, contagem regressiva e documentos de embarque.",
-    features: ["Hero por destino", "Timeline da viagem", "Portal pública para o cliente", "Apresentação cinematográfica"],
-  },
-  {
-    icon: Brain, title: "Cérebro NatLeva & Inteligência de Clientes", color: "from-purple-500/20 to-purple-600/5",
-    desc: "Hub de inteligência que calcula probabilidade de fechamento, Score NatLeva (0-100) com 5 pilares, predição de churn, LTV, recomendações personalizadas e ciclos de viagem.",
-    features: ["Score NatLeva (5 pilares)", "Probabilidade de fechamento", "Memória de viagens por ciclo", "Predição de churn"],
-  },
-  {
-    icon: Sparkles, title: "NatLeva Intelligence (Consultor IA)", color: "from-amber-500/20 to-amber-600/5",
-    desc: "Orquestração multi-modelo (Gemini 2.5/3, GPT-5, Claude Sonnet) que acessa o banco completo, faz pesquisa web ao vivo e devolve insights acionáveis com voz, imagem e texto.",
-    features: ["AI Routing automático", "Pesquisa web em tempo real", "Comando por voz (STT)", "Geração de imagens"],
-  },
-  {
-    icon: BookMarked, title: "ÓRION — Base de Conhecimento", color: "from-orange-500/20 to-orange-600/5",
-    desc: "Pipeline híbrido de extração (PDF, áudio, vídeo, YouTube) que neutraliza pacotes de terceiros, organiza por taxonomia e roteia conhecimento para os agentes via Precision Routing.",
-    features: ["Extração YouTube + áudio", "Taxonomia ÓRION", "RAG com integridade factual", "Roteamento por especialista"],
-  },
-  {
-    icon: GitBranch, title: "Flow Builder Visual", color: "from-pink-500/20 to-pink-600/5",
-    desc: "Plataforma de automação visual (ReactFlow) que serve como blueprint estratégico da jornada do cliente, com Funil Vivo 3D em tempo real e templates operacionais.",
-    features: ["ReactFlow drag-and-drop", "Template New Flow NatLeva", "Funil Vivo 3D", "Auto-sync com agentes"],
+    icon: MessageSquare, title: "LiveChat WhatsApp", color: "from-green-500/20 to-green-600/5",
+    desc: "Atendimento omnichannel com integração WhatsApp, automações inteligentes e análise de atendimento.",
+    features: ["WhatsApp integrado", "Agentes de IA", "Base de conhecimento", "Análise de atendimento"],
   },
   {
     icon: DollarSign, title: "Financeiro Completo", color: "from-yellow-500/20 to-yellow-600/5",
-    desc: "Contas a pagar/receber, fluxo de caixa, DRE automática, plano de contas, comissionamento por origem do lead (15% agência / 30% indicação) e simulador de taxas.",
-    features: ["DRE automática", "Comissão por origem", "Cartões e parcelas", "Fornecedores"],
+    desc: "Contas a pagar/receber, fluxo de caixa, DRE automática, comissões e simulador de taxas.",
+    features: ["Fluxo de caixa", "DRE automática", "Comissões", "Simulador de taxas"],
   },
   {
     icon: Users2, title: "RH & Pessoas", color: "from-rose-500/20 to-rose-600/5",
-    desc: "Gestão completa do time: ponto eletrônico, folha, metas, desempenho, feedbacks 1:1, clima e aniversariantes integrados ao CRM.",
-    features: ["Ponto eletrônico", "Metas & bônus", "Feedbacks 1:1", "Aniversários"],
+    desc: "Gestão completa de colaboradores: ponto, folha, metas, desempenho, feedbacks e clima do time.",
+    features: ["Ponto eletrônico", "Metas & bônus", "Feedbacks 1:1", "Clima do time"],
   },
   {
-    icon: Shield, title: "Admin, Segurança & Auditoria", color: "from-slate-500/20 to-slate-600/5",
-    desc: "Hierarquia de permissões (Admin > Gestor > Vendedor > Operacional > Financeiro), RLS em todas as tabelas, auditoria completa e governança da IA.",
-    features: ["RLS granular", "6 níveis de acesso", "Audit log da IA", "Estratégia IA"],
+    icon: Shield, title: "Admin & Segurança", color: "from-slate-500/20 to-slate-600/5",
+    desc: "Controle granular de permissões, gestão de usuários, auditoria completa e configurações avançadas.",
+    features: ["Controle de acesso", "Auditoria completa", "Roles granulares", "Configurações"],
   },
 ];
 
 const differentials = [
-  { icon: Bot, title: "Batalhão de 21 agentes IA", desc: "Squads especializados que se identificam como 'Nath' — atendem, cotam, fecham e fazem pós-venda 24/7 com personalidade unificada." },
-  { icon: Wand2, title: "Capa inteligente em propostas", desc: "Sugestão automática de fotos reais (Wikimedia Commons) ou imagens cinematográficas geradas por Gemini, baseadas no destino do cliente." },
-  { icon: Compass, title: "Portal do Viajante imersivo", desc: "Cada cliente recebe uma landing page editorial da própria viagem, com voos, hospedagem, contagem regressiva e documentos." },
-  { icon: HeartPulse, title: "Detecção de momento de compra", desc: "A IA monitora conversas em tempo real e dispara alertas quando sinais de compra aparecem — você nunca perde o timing." },
-  { icon: Target, title: "Score NatLeva (0–100)", desc: "Avalia clientes por Valor, Lucratividade, Frequência, Engajamento e Recomendação. Saiba quem priorizar hoje." },
-  { icon: Network, title: "Funil Vivo em 3D", desc: "Flow Builder com visualização 3D em tempo real do estágio em que cada lead está dentro da jornada." },
-  { icon: BookMarked, title: "ÓRION — extrai tudo", desc: "Sobe um vídeo do YouTube, PDF ou áudio e a IA destila o conhecimento factual, sem alucinação, e distribui para os agentes certos." },
-  { icon: ClipboardCheck, title: "Check-in proativo por PAX", desc: "Centro de check-in com 4 níveis de alerta por proximidade do voo e upload de cartão de embarque por passageiro." },
-  { icon: Globe, title: "Pesquisa web ao vivo", desc: "A IA consulta DuckDuckGo, Google, Wikipedia e Google News em tempo real para enriquecer recomendações." },
+  { icon: Cpu, title: "IA em cada página", desc: "Botão 'Resumo IA' gera análise executiva com plano de ação em qualquer tela do sistema." },
+  { icon: Globe, title: "Pesquisa web em tempo real", desc: "NatLeva Intelligence busca eventos, tendências e informações atualizadas para suas recomendações." },
+  { icon: Target, title: "Score de Saúde Empresarial", desc: "Indicador 0-100 que avalia margem, fluxo de caixa e pendências em tempo real." },
+  { icon: TrendingUp, title: "Modo CEO", desc: "Interface simplificada com indicadores de crescimento, margem real e metas anuais." },
+  { icon: Lock, title: "Segurança bancária", desc: "RLS em todas as tabelas, roles separadas, autenticação robusta e auditoria completa." },
+  { icon: Zap, title: "Automação total", desc: "Fluxos visuais, agentes de IA, check-in automático e alertas inteligentes." },
 ];
 
 const iaCapabilities = [
-  { icon: Bot, label: "Batalhão de 21 agentes", desc: "7 squads especializados — Maya recepciona, Atlas qualifica, Habibi cota destinos premium, ÓRION estuda, e todos atendem como Nath." },
-  { icon: Mic, label: "Comando por voz", desc: "Fale com a Nath usando o microfone — speech-to-text integrado, ela entende e responde em tempo real." },
-  { icon: Search, label: "Busca web ao vivo", desc: "DuckDuckGo, Google, Wikipedia e Google News integrados ao motor de raciocínio dos agentes." },
-  { icon: ImageIcon, label: "Geração de imagens", desc: "Crie capas de proposta, banners e materiais promocionais cinematográficos com Gemini direto no chat." },
-  { icon: Eye, label: "Resumo IA em toda página", desc: "Botão flutuante em qualquer tela gera um relatório executivo com plano de ação em segundos." },
-  { icon: HeartPulse, label: "Detecção de momento de compra", desc: "Monitora conversas WhatsApp e gera alertas dinâmicos quando o cliente está pronto para fechar." },
-  { icon: BookMarked, label: "ÓRION — extração de conhecimento", desc: "Pipeline híbrido para YouTube, PDF e áudio com Gemini 2.5 Pro. Vira conteúdo estruturado e auditável." },
-  { icon: Wand2, label: "Capa inteligente por destino", desc: "Busca fotos reais no Wikimedia ou gera imagens cinematográficas — sem marca d'água, alta qualidade." },
-  { icon: Layers3, label: "Simulador Camaleão", desc: "Testa a IA contra perfis de desafio (Fantasma, Pechinchador, Indeciso) e devolve framework de avaliação 360°." },
+  { icon: Mic, label: "Comando por voz", desc: "Fale com a IA usando microfone — ela entende e responde em tempo real" },
+  { icon: Search, label: "Busca web ao vivo", desc: "Pesquisa DuckDuckGo, Google, Wikipedia e Google News integrados" },
+  { icon: ImageIcon, label: "Geração de imagens", desc: "Crie banners e materiais promocionais direto no chat com IA" },
+  { icon: FileText, label: "PDF e Planilhas", desc: "Exporte análises completas em PDF ou Excel com formatação profissional" },
+  { icon: Eye, label: "Resumo IA em toda página", desc: "Gere relatórios executivos com 1 clique em qualquer tela do sistema" },
+  { icon: MousePointer, label: "Sugestões inteligentes", desc: "A IA sugere ações baseadas no contexto dos seus dados reais" },
 ];
 
 const testimonialPhrases = [
-  { text: "A Nath responde meus leads no WhatsApp como se fosse minha melhor vendedora. E nunca dorme.", author: "Diretora Comercial", role: "NatLeva Viagens" },
-  { text: "Mando uma proposta com capa do destino gerada por IA e o cliente responde 'uau' antes mesmo de ler o preço.", author: "Consultora Sênior", role: "Premium Travel" },
-  { text: "O Cérebro NatLeva me diz qual lead tem 80% de chance de fechar essa semana. Foco total.", author: "Gerente de Vendas", role: "Top Travel" },
-  { text: "Subo um vídeo do YouTube de hotel em Maldivas e o ÓRION ensina meus agentes em 2 minutos.", author: "Head de Conhecimento", role: "Dream Trips" },
-  { text: "O Centro de Check-in me avisa 48h antes — zero passageiro perdido em 2026.", author: "Coordenadora de Operações", role: "Fly Experience" },
-  { text: "O DRE automático e a comissão por origem de lead me economizam 3 dias de fechamento por mês.", author: "Controller", role: "Viagens Premium" },
+  { text: "Antes eu perdia horas cruzando planilhas. Agora tenho tudo num clique.", author: "Gerente Comercial", role: "Agência Top Travel" },
+  { text: "A IA me avisa quando um cliente está em risco de churn. Isso mudou meu jogo.", author: "Diretor de Vendas", role: "TravelMax Brasil" },
+  { text: "O DRE automático me economiza 2 dias por mês de trabalho manual.", author: "Controller Financeiro", role: "Viagens Premium" },
+  { text: "O check-in automático eliminou completamente os atrasos. Zero reclamação de cliente.", author: "Gerente de Operações", role: "Fly Experience" },
+  { text: "Consigo ver em 10 segundos quais clientes preciso ligar hoje. Antes levava 1 hora.", author: "Consultora de Viagens", role: "Dream Trips" },
 ];
 
 const processSteps = [
-  { icon: MessageSquare, title: "Entrada do Lead", desc: "WhatsApp, portal de cotações, indicação ou site — a Nath (Maya) recepciona com saudação temporal e qualifica.", num: "01" },
-  { icon: Brain, title: "Diagnóstico & Briefing", desc: "Atlas qualifica em profundidade. Briefing estruturado é gerado e a IA detecta destino, datas e composição do grupo.", num: "02" },
-  { icon: FileSignature, title: "Proposta IA", desc: "Habibi monta a proposta com voos Amadeus, hospedagem, capa inteligente do destino e landing page imersiva.", num: "03" },
-  { icon: HeartPulse, title: "Inteligência ao Vivo", desc: "Cérebro NatLeva calcula probabilidade de fechamento e dispara alertas no momento de compra do cliente.", num: "04" },
-  { icon: Plane, title: "Operação", desc: "Emissão, check-in proativo por PAX, controle de alterações de viagem e envio de documentos pelo Portal do Viajante.", num: "05" },
-  { icon: DollarSign, title: "Financeiro", desc: "Custos, recebíveis, comissão por origem e DRE calculados automaticamente. Plano de contas integrado.", num: "06" },
-  { icon: Compass, title: "Pós-venda & Portal", desc: "Cliente vive a viagem pelo portal 'Minhas Viagens' com itinerário, contagem regressiva e contato direto.", num: "07" },
-  { icon: RefreshCw, title: "Recompra Inteligente", desc: "Score NatLeva, predição de churn e ciclos de viagem garantem recorrência e crescimento orgânico.", num: "08" },
+  { icon: Users, title: "Captura", desc: "Leads chegam por WhatsApp, site ou indicação e entram direto no funil do CRM", num: "01" },
+  { icon: MessageSquare, title: "Atendimento", desc: "Chat integrado com IA sugere destinos, calcula preços e qualifica automaticamente", num: "02" },
+  { icon: Plane, title: "Operação", desc: "Emissão de aéreos, hospedagens e serviços com controle financeiro por item", num: "03" },
+  { icon: DollarSign, title: "Financeiro", desc: "Custos, receitas, comissões e DRE calculados automaticamente em tempo real", num: "04" },
+  { icon: Brain, title: "Inteligência", desc: "IA analisa dados, identifica padrões e entrega recomendações acionáveis", num: "05" },
+  { icon: RefreshCw, title: "Recompra", desc: "Score de fidelidade e alertas de churn garantem recorrência e crescimento", num: "06" },
 ];
 
 const comparisonItems = [
   { feature: "CRM de viagens completo", natleva: true, others: "Parcial" },
-  { feature: "21 agentes de IA especializados (Nath)", natleva: true, others: false },
-  { feature: "Proposta IA com capa inteligente do destino", natleva: true, others: false },
-  { feature: "Portal do viajante imersivo (Minhas Viagens)", natleva: true, others: false },
-  { feature: "Cérebro NatLeva (probabilidade de fechamento)", natleva: true, others: false },
-  { feature: "Detecção de momento de compra em tempo real", natleva: true, others: false },
-  { feature: "Centro de Check-in proativo por PAX", natleva: true, others: false },
-  { feature: "Financeiro integrado (DRE, Fluxo, Comissão)", natleva: true, others: false },
-  { feature: "Flow Builder visual com Funil Vivo 3D", natleva: true, others: false },
-  { feature: "ÓRION — base de conhecimento auditável", natleva: true, others: false },
+  { feature: "IA com acesso a dados reais", natleva: true, others: false },
+  { feature: "Financeiro integrado (DRE, Fluxo)", natleva: true, others: false },
+  { feature: "Check-in automatizado", natleva: true, others: false },
   { feature: "Pesquisa web ao vivo na IA", natleva: true, others: false },
-  { feature: "Comando por voz e geração de imagens", natleva: true, others: false },
-  { feature: "Score de clientes (5 pilares) e churn", natleva: true, others: false },
   { feature: "Gestão de RH e ponto", natleva: true, others: false },
+  { feature: "Geração de imagens por IA", natleva: true, others: false },
+  { feature: "Comando por voz", natleva: true, others: false },
+  { feature: "Automação de fluxos visuais", natleva: true, others: "Parcial" },
+  { feature: "Score de clientes e churn", natleva: true, others: false },
 ];
 
 export default function ApresentacaoGeral() {
@@ -305,10 +265,10 @@ export default function ApresentacaoGeral() {
 
           <FadeIn delay={200}>
             <p className="text-xl sm:text-2xl text-muted-foreground max-w-3xl mx-auto mb-12 leading-relaxed">
-              CRM, Financeiro, RH, 21 agentes de IA (Nath), Portal do Viajante e Automação —
+              CRM, Financeiro, RH, Inteligência Artificial e Automação —
               <br className="hidden sm:block" />
               tudo numa plataforma que{" "}
-              <strong className="text-foreground">pensa, vende e opera junto com você</strong>.
+              <strong className="text-foreground">pensa junto com você</strong>.
             </p>
           </FadeIn>
 
@@ -348,18 +308,16 @@ export default function ApresentacaoGeral() {
 
       {/* ═══════════ LOGO BAR ═══════════ */}
       <section className="py-8 border-y border-border/30 bg-card/20">
-        <div className="max-w-5xl mx-auto px-6 flex items-center justify-center flex-wrap gap-x-8 gap-y-2 text-muted-foreground/40 text-xs font-mono uppercase tracking-[0.25em]">
+        <div className="max-w-5xl mx-auto px-6 flex items-center justify-center gap-8 text-muted-foreground/40 text-xs font-mono uppercase tracking-[0.25em]">
           <span>Amadeus</span>
           <span className="w-1 h-1 rounded-full bg-muted-foreground/20" />
-          <span>WhatsApp · Z-API</span>
+          <span>WhatsApp Business</span>
           <span className="w-1 h-1 rounded-full bg-muted-foreground/20" />
-          <span>Gemini 2.5 / 3</span>
-          <span className="w-1 h-1 rounded-full bg-muted-foreground/20" />
-          <span>GPT-5</span>
+          <span>Google AI</span>
           <span className="w-1 h-1 rounded-full bg-muted-foreground/20 hidden sm:block" />
-          <span className="hidden sm:inline">Claude Sonnet</span>
+          <span className="hidden sm:inline">OpenAI</span>
           <span className="w-1 h-1 rounded-full bg-muted-foreground/20 hidden md:block" />
-          <span className="hidden md:inline">Wikimedia</span>
+          <span className="hidden md:inline">DuckDuckGo</span>
         </div>
       </section>
 
@@ -394,12 +352,12 @@ export default function ApresentacaoGeral() {
         <div className="max-w-7xl mx-auto">
           <FadeIn>
             <div className="text-center mb-20">
-              <span className="text-sm font-bold text-accent uppercase tracking-[0.2em]">Jornada inteligente</span>
+              <span className="text-sm font-bold text-accent uppercase tracking-[0.2em]">Fluxo inteligente</span>
               <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mt-4 mb-5">
-                Do primeiro "oi" no WhatsApp<br />à viagem dos sonhos
+                Do lead à recompra<br />em 6 passos
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Cada etapa é orquestrada por agentes de IA, monitorada em tempo real e otimizada para fechar mais e operar melhor.
+                Cada etapa do ciclo de vendas é automatizada, monitorada e otimizada pela IA.
               </p>
             </div>
           </FadeIn>
@@ -440,14 +398,14 @@ export default function ApresentacaoGeral() {
 
           <ScreenshotShowcase
             image={printDashboard}
-            title="Dashboard Master & Torre de Controle"
-            badge="BI + Operação"
-            description="Todas as métricas que importam num único painel: faturamento, lucro, margem, sazonalidade, mapa de rotas em Leaflet, ranking de vendedores e Score de Saúde Empresarial."
+            title="Dashboard Estratégico"
+            badge="Torre de Controle"
+            description="Todas as métricas que importam, num único painel. Faturamento, lucro, margem, vendas por destino, ranking de vendedores e projeção de metas — tudo atualizado em tempo real."
             features={[
-              "KPIs com variação % e tendência automática",
-              "Mapa de rotas com IATA → cidade real",
-              "Heatmap geográfico e nuvem de destinos",
-              "Modo CEO simplificado para diretoria",
+              "KPIs com variação percentual e tendência automática",
+              "Gráficos de receita × custo × lucro mensal",
+              "Heatmap de vendas por dia da semana e horário",
+              "Modo CEO com visão simplificada para diretoria",
             ]}
           />
 
@@ -459,14 +417,14 @@ export default function ApresentacaoGeral() {
 
           <ScreenshotShowcase
             image={printIntelligence}
-            title="NatLeva Intelligence + Batalhão da Nath"
-            badge="21 agentes IA"
-            description="A Nath atende, qualifica, cota e fecha — 24/7. Orquestração multi-modelo (Gemini 2.5/3, GPT-5, Claude Sonnet) com acesso ao banco, pesquisa web ao vivo e geração de imagens."
+            title="NatLeva Intelligence"
+            badge="Consultor com IA"
+            description="Pergunte qualquer coisa sobre seu negócio. A IA acessa 31 tabelas do banco, faz pesquisa web em tempo real e gera planos de ação personalizados."
             features={[
-              "Maya recepciona · Atlas qualifica · Habibi cota",
-              "ÓRION extrai conhecimento de YouTube e PDFs",
-              "Comando por voz e geração de capas por IA",
-              "Simulador Camaleão para testes 360°",
+              "Multi-modelo: Flash, Pro, Imagem, Speech-to-Text",
+              "Busca web ao vivo (DuckDuckGo, Google, Wikipedia)",
+              "Geração de imagens promocionais direto no chat",
+              "Comando por voz — fale e ela responde",
             ]}
             reverse
           />
@@ -481,12 +439,12 @@ export default function ApresentacaoGeral() {
             image={printFinanceiro}
             title="Financeiro Completo"
             badge="Controle Total"
-            description="Contas a pagar e receber, fluxo de caixa visual, cartões, parcelas, DRE automática, plano de contas e comissionamento por origem do lead (15% agência / 30% indicação)."
+            description="Contas a pagar e receber, fluxo de caixa visual, cartões de crédito, DRE automática, fornecedores e simulador de taxas. Zero planilha."
             features={[
-              "DRE 100% automática",
-              "Fluxo de caixa com previsão de saldo",
-              "Comissão por origem (agência vs. indicação)",
-              "Fornecedores e simulador de taxas",
+              "DRE (Demonstração de Resultado) 100% automática",
+              "Fluxo de caixa com previsão inteligente de saldo",
+              "Gestão de cartões, parcelas e taxas",
+              "Comissões calculadas por regra personalizada",
             ]}
           />
 
@@ -498,14 +456,14 @@ export default function ApresentacaoGeral() {
 
           <ScreenshotShowcase
             image={printClientes}
-            title="Cérebro NatLeva — Inteligência de Clientes"
-            badge="Score 0–100"
-            description="Probabilidade de fechamento, Score NatLeva (5 pilares), risco de churn, LTV e ciclos de viagem. Saiba exatamente quem priorizar hoje e quem está pronto para a próxima."
+            title="Inteligência de Clientes"
+            badge="Conheça cada um"
+            description="Score de fidelidade, risco de churn, LTV calculado e recomendações personalizadas. Saiba exatamente quem precisa de atenção e quem está pronto para comprar."
             features={[
-              "5 pilares: Valor, Lucro, Frequência, Engajamento, Indicação",
-              "Memória de viagens por ciclo (client_trip_memory)",
+              "Scoring automático com algoritmo proprietário",
               "Predição de churn baseada em comportamento real",
-              "Recomendações de destinos personalizadas pela IA",
+              "Histórico completo de viagens e padrão de gastos",
+              "Recomendações de destinos e pacotes por IA",
             ]}
             reverse
           />
@@ -519,10 +477,10 @@ export default function ApresentacaoGeral() {
             <div className="text-center mb-16">
               <span className="text-sm font-bold text-accent uppercase tracking-[0.2em]">Super-poderes da IA</span>
               <h2 className="text-4xl sm:text-5xl font-bold text-foreground mt-4 mb-5">
-                Tudo que a Nath e o<br />Batalhão fazem por você
+                Tudo o que a NatLeva<br />Intelligence faz por você
               </h2>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Não é uma IA genérica — é um <strong className="text-foreground">batalhão treinado no seu negócio</strong>, com acesso aos seus dados reais e à internet ao vivo.
+                Uma IA que não é genérica — ela <strong className="text-foreground">entende seu negócio</strong> porque tem acesso aos seus dados reais.
               </p>
             </div>
           </FadeIn>
@@ -594,10 +552,10 @@ export default function ApresentacaoGeral() {
             <div className="text-center mb-16">
               <span className="text-sm font-bold text-accent uppercase tracking-[0.2em]">Ecossistema Completo</span>
               <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-foreground mt-4 mb-5">
-                13 módulos integrados,<br />uma plataforma viva
+                8 módulos integrados,<br />uma plataforma
               </h2>
               <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-                Comercial, operacional, financeiro, IA e pós-venda — tudo conectado. Cada módulo elimina retrabalho e gera insights que aumentam sua receita.
+                Cada módulo elimina retrabalho, automatiza processos e gera insights que aumentam sua receita.
               </p>
             </div>
           </FadeIn>
@@ -690,18 +648,18 @@ export default function ApresentacaoGeral() {
                 </div>
 
                 <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-6">
-                  IA que vende, opera<br />e nunca dorme
+                  IA que entende<br />o seu negócio
                 </h2>
                 <p className="text-xl text-muted-foreground max-w-2xl leading-relaxed mb-12">
-                  A Nath é o batalhão de 21 agentes da NatLeva. Recepciona pelo WhatsApp, qualifica, monta proposta com capa cinematográfica do destino,
-                  detecta o momento de compra e <strong className="text-foreground">cuida do cliente até o pós-viagem</strong>.
+                  Não é uma IA genérica. A NatLeva Intelligence tem acesso completo ao seu banco de dados,
+                  entende seu contexto operacional e entrega <strong className="text-foreground">recomendações que realmente funcionam</strong>.
                 </p>
 
                 <div className="grid sm:grid-cols-3 gap-5">
                   {[
-                    { icon: HeartPulse, label: "Detecção de momento de compra", sub: "Alertas em tempo real quando o cliente está pronto para fechar" },
-                    { icon: Wand2, label: "Capa inteligente do destino", sub: "Fotos reais do Wikimedia ou geração cinematográfica por IA" },
-                    { icon: Compass, label: "Portal do Viajante imersivo", sub: "Cliente vive a viagem em landing page editorial dedicada" },
+                    { icon: BarChart3, label: "Análise preditiva", sub: "Antecipe tendências antes dos concorrentes" },
+                    { icon: Activity, label: "Monitoramento 24/7", sub: "Alertas automáticos sobre anomalias nos dados" },
+                    { icon: PieChart, label: "Insights acionáveis", sub: "Cada dado vira uma decisão de lucro" },
                   ].map((item, i) => (
                     <div key={i} className="group p-6 rounded-xl bg-background/40 border border-border/40 hover:border-accent/30 transition-all duration-300 backdrop-blur-sm">
                       <item.icon className="w-9 h-9 text-accent mb-4 group-hover:scale-110 transition-transform" />
@@ -821,7 +779,7 @@ export default function ApresentacaoGeral() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <img src={logoNatleva} alt="NatLeva" className="h-7 opacity-50" />
-            <span className="text-xs text-muted-foreground/50 font-mono">v3.0 · Abr 2026</span>
+            <span className="text-xs text-muted-foreground/50 font-mono">v2.0</span>
           </div>
           <p className="text-sm text-muted-foreground/60">© {new Date().getFullYear()} NatLeva Viagens — Plataforma de Gestão Inteligente</p>
         </div>
