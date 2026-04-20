@@ -681,7 +681,10 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   const themeStyle: React.CSSProperties = {
     ...(accentHsl ? ({ ["--accent" as any]: accentHsl, ["--ring" as any]: accentHsl }) : {}),
     ...(primaryHsl ? ({ ["--primary" as any]: primaryHsl }) : {}),
+    ["--proposal-heading-font" as any]: headingFont,
     ...(bodyFont ? { fontFamily: bodyFont } : {}),
+    ...(template?.bg_color ? { backgroundColor: template.bg_color } : {}),
+    ...(template?.text_color ? { color: template.text_color } : {}),
   };
 
   // Section enable/disable map from template.sections
