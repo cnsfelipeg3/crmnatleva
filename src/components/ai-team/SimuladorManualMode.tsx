@@ -1018,23 +1018,39 @@ export default function SimuladorManualMode() {
             <div className="h-px bg-border mx-4" />
 
             {/* Agents section */}
-            <div className="px-4 py-3">
-              <div className="flex items-center justify-between mb-2.5">
-                <p className="text-[10px] uppercase tracking-[0.12em] font-bold text-foreground">Agentes</p>
-                <span className="text-[10px] font-bold tabular-nums text-muted-foreground">{AGENTS_V4.length}</span>
+            <div className="px-3 py-3">
+              <div className="flex items-center justify-between mb-2 px-1">
+                <p className="text-[10px] uppercase tracking-[0.14em] font-bold text-muted-foreground">Agentes</p>
+                <span className="text-[10px] font-semibold tabular-nums text-muted-foreground/70">{AGENTS_V4.length}</span>
               </div>
-              <div className="space-y-0.5 max-h-[480px] overflow-y-auto custom-scrollbar">
+              <div className="max-h-[480px] overflow-y-auto custom-scrollbar pr-1">
                 {AGENTS_V4.map(a => {
                   const active = selectedAgent.id === a.id;
                   return (
-                    <button key={a.id} onClick={() => setSelectedAgent(a)}
+                    <button
+                      key={a.id}
+                      onClick={() => setSelectedAgent(a)}
                       className={cn(
-                        "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all",
-                        active ? "bg-primary/5" : "hover:bg-muted/30"
-                      )}>
-                      <div className="flex-1 min-w-0">
-                        <p className={cn("text-[12px] font-semibold truncate", active ? "text-primary" : "text-foreground")}>{a.name}</p>
-                      </div>
+                        "w-full flex items-center gap-2 px-2.5 h-8 rounded-md text-left transition-colors",
+                        active
+                          ? "bg-primary/10 text-primary"
+                          : "text-foreground/80 hover:bg-muted/50 hover:text-foreground"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "w-1 h-1 rounded-full shrink-0 transition-colors",
+                          active ? "bg-primary" : "bg-muted-foreground/30"
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "text-[12px] truncate flex-1",
+                          active ? "font-semibold" : "font-medium"
+                        )}
+                      >
+                        {a.name}
+                      </span>
                     </button>
                   );
                 })}
