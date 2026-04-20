@@ -279,7 +279,12 @@ function fmtDuration(minutes: number): string {
 function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: boolean }) {
   const airlineCode = seg.airline || seg.airline_iata || "";
   const airlineName = seg.airline_name || seg.airline || "";
-  const flightNum = `${airlineCode}${seg.flight_number || ""}`;
+  // Strip leading IATA code if user accidentally typed it inside flight_number (e.g. "JA761")
+  const rawFlightNum = String(seg.flight_number || "").trim();
+  const cleanFlightNum = airlineCode && rawFlightNum.toUpperCase().startsWith(airlineCode.toUpperCase())
+    ? rawFlightNum.slice(airlineCode.length).trim()
+    : rawFlightNum;
+  const flightNum = cleanFlightNum;
   const dur = seg.duration_minutes ? fmtDuration(seg.duration_minutes) : "";
   const depDate = seg.departure_date;
 
@@ -289,9 +294,6 @@ function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: bo
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <InlineAirlineLogo iata={airlineCode} size={36} />
-          <span className="font-bold text-foreground text-sm sm:text-base uppercase tracking-wide" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            {airlineName}
-          </span>
           {flightNum && (
             <span className="text-[11px] bg-muted text-muted-foreground font-mono px-2 py-0.5 rounded-md border border-border/50">
               {flightNum}
@@ -505,10 +507,13 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
       transition={{ delay: idx * 0.1 }}
     >
       {(computedTitle || flight.title) && (
-        <div className="flex items-center gap-3 mb-3">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 font-medium" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+        <div className="mb-5 text-center">
+          <h3
+            className="text-lg sm:text-xl font-semibold text-foreground leading-snug"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
             {computedTitle || flight.title}
-          </p>
+          </h3>
         </div>
       )}
 
