@@ -878,7 +878,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.3 }}
-          className="relative z-10 text-center text-white pb-12 sm:pb-20 px-6 max-w-3xl"
+          className="relative z-10 text-center text-white pb-6 sm:pb-10 px-6 max-w-3xl"
         >
           {proposal.client_name && (
             <p className="text-xs tracking-[0.35em] uppercase opacity-60 mb-4" style={{ fontFamily: headingFont }}>
@@ -909,7 +909,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
             transition={{ duration: 0.8, delay: 0.6 }}
             src={logoNatlevaChampagne}
             alt="NatLeva Viagens"
-            className="h-5 sm:h-6 mx-auto mt-5"
+            className="h-6 sm:h-7 mx-auto mt-10 sm:mt-14"
             style={{
               filter: "drop-shadow(0 2px 4px hsla(0,0%,0%,0.95)) drop-shadow(0 8px 24px hsla(0,0%,0%,0.7))",
             }}
