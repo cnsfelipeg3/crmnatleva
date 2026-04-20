@@ -201,7 +201,40 @@ export default function FlightSegmentForm({ seg, onUpdate, onUpdateMulti }: Flig
           <Luggage className="w-3.5 h-3.5" />
           Bagagem
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs flex items-center gap-1.5">
+              <Briefcase className="w-3 h-3" /> Item pessoal
+            </Label>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={seg.personal_item_included ?? true}
+                onCheckedChange={(v) => onUpdate("personal_item_included", v)}
+              />
+              <span className="text-xs text-muted-foreground">
+                {seg.personal_item_included ? "Incluso" : "Não incluso"}
+              </span>
+            </div>
+          </div>
+          {seg.personal_item_included && (
+            <div className="space-y-1">
+              <Label className="text-xs">Peso item (kg)</Label>
+              <Select
+                value={String(seg.personal_item_weight_kg || 10)}
+                onValueChange={(v) => onUpdate("personal_item_weight_kg", parseInt(v))}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 kg</SelectItem>
+                  <SelectItem value="7">7 kg</SelectItem>
+                  <SelectItem value="8">8 kg</SelectItem>
+                  <SelectItem value="10">10 kg</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label className="text-xs flex items-center gap-1.5">
               <Briefcase className="w-3 h-3" /> Bagagem de mão

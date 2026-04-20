@@ -352,6 +352,7 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
     const segs = d.segments.length > 0 ? d.segments : [flight.data];
     const seg = segs[0];
     const badges: string[] = [];
+    if (seg?.personal_item_included) badges.push(`Item pessoal ${seg.personal_item_weight_kg || 10}kg`);
     if (seg?.carry_on_included) badges.push(`Mão ${seg.carry_on_weight_kg || 10}kg`);
     if (seg?.checked_bags_included > 0) badges.push(`${seg.checked_bags_included}x ${seg.checked_bag_weight_kg || 23}kg`);
     if (d.baggage && badges.length === 0) badges.push(d.baggage);

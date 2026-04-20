@@ -25,7 +25,7 @@ interface FlightSegmentCardProps {
 }
 
 export default function FlightSegmentCard({ seg, compact }: FlightSegmentCardProps) {
-  const hasBaggage = seg.carry_on_included || (seg.checked_bags_included ?? 0) > 0;
+  const hasBaggage = seg.personal_item_included || seg.carry_on_included || (seg.checked_bags_included ?? 0) > 0;
 
   return (
     <Card className={`overflow-hidden border-border/60 ${compact ? "border-l-0 border-r-0 rounded-none shadow-none" : ""}`}>
@@ -95,6 +95,12 @@ export default function FlightSegmentCard({ seg, compact }: FlightSegmentCardPro
             {/* Baggage + notes footer */}
             {(hasBaggage || seg.notes) && (
               <div className="mt-2 pt-2 border-t border-border/40 flex flex-wrap gap-2 items-center">
+                {seg.personal_item_included && (
+                  <Badge variant="secondary" className="text-[10px] gap-1 h-5 font-normal">
+                    <Briefcase className="w-2.5 h-2.5" />
+                    Item pessoal {seg.personal_item_weight_kg || 10}kg
+                  </Badge>
+                )}
                 {seg.carry_on_included && (
                   <Badge variant="secondary" className="text-[10px] gap-1 h-5 font-normal">
                     <Briefcase className="w-2.5 h-2.5" />
@@ -107,7 +113,7 @@ export default function FlightSegmentCard({ seg, compact }: FlightSegmentCardPro
                     {seg.checked_bags_included}x {seg.checked_bag_weight_kg || 23}kg
                   </Badge>
                 )}
-                {!seg.carry_on_included && (seg.checked_bags_included ?? 0) === 0 && (
+                {!seg.personal_item_included && !seg.carry_on_included && (seg.checked_bags_included ?? 0) === 0 && (
                   <Badge variant="outline" className="text-[10px] gap-1 h-5 font-normal text-muted-foreground border-destructive/30">
                     Sem bagagem inclusa
                   </Badge>

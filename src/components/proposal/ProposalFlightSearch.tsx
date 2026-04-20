@@ -30,6 +30,8 @@ export interface FlightSegmentData {
   notes: string;
   is_connection?: boolean;
   // Baggage fields
+  personal_item_included?: boolean;
+  personal_item_weight_kg?: number;
   carry_on_included: boolean;
   carry_on_weight_kg: number;
   checked_bags_included: number;
@@ -62,6 +64,7 @@ const emptySegment = (isConnection = false): FlightSegmentData => ({
   airline: "", airline_name: "", flight_number: "", origin_iata: "", destination_iata: "",
   departure_date: "", departure_time: "", arrival_time: "", duration_minutes: 0,
   terminal: "", arrival_terminal: "", aircraft_type: "", notes: "", is_connection: isConnection,
+  personal_item_included: true, personal_item_weight_kg: 10,
   carry_on_included: true, carry_on_weight_kg: 10, checked_bags_included: 0, checked_bag_weight_kg: 23, baggage_notes: "",
 });
 
@@ -214,6 +217,8 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
       aircraft_type: seg.aircraft_type || "",
       notes: prev?.notes || "",
       is_connection: prev?.is_connection || false,
+      personal_item_included: prev?.personal_item_included ?? true,
+      personal_item_weight_kg: prev?.personal_item_weight_kg ?? 10,
       carry_on_included: prev?.carry_on_included ?? true,
       carry_on_weight_kg: prev?.carry_on_weight_kg ?? 10,
       checked_bags_included: prev?.checked_bags_included ?? 0,
