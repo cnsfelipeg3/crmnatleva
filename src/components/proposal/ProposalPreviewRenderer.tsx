@@ -861,8 +861,16 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       {showHero && (
       <section data-track-section="hero" className={`relative ${embedded ? "h-[50vh] min-h-[320px]" : "h-screen"} flex items-end justify-center overflow-hidden`}>
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${proposal.cover_image_url || fallbackCover})` }} />
-        {/* Emerald-tinted gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[hsl(158,50%,4%)] via-[hsl(158,30%,8%,0.5)] to-[hsl(160,20%,10%,0.15)]" />
+
+        {/* Legibility layers — guarantee contrast over ANY image */}
+        {/* 1. Uniform base darken so every photo becomes readable */}
+        <div className="absolute inset-0 bg-black/35" />
+        {/* 2. Top gradient — protects the logo */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-transparent to-transparent" />
+        {/* 3. Bottom gradient (emerald-tinted) — protects client name / title / date */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[hsl(158,55%,4%)] via-[hsl(158,40%,6%,0.85)] via-30% to-transparent" />
+        {/* 4. Soft cinematic vignette */}
+        <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.45) 100%)" }} />
 
         {/* NatLeva Logo - top center */}
         <motion.div
@@ -871,7 +879,12 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           transition={{ duration: 0.8, delay: 0.2 }}
           className="absolute top-8 left-0 right-0 z-10 flex justify-center pointer-events-none"
         >
-          <img src={logoNatleva} alt="NatLeva Viagens" className="h-10 sm:h-12 drop-shadow-lg mx-auto" />
+          <img
+            src={logoNatleva}
+            alt="NatLeva Viagens"
+            className="h-10 sm:h-12 mx-auto"
+            style={{ filter: "drop-shadow(0 2px 12px rgba(0,0,0,0.6)) drop-shadow(0 0 24px rgba(0,0,0,0.4))" }}
+          />
         </motion.div>
 
         <motion.div
@@ -879,33 +892,34 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.3 }}
           className="relative z-10 text-center text-white pb-12 sm:pb-20 px-6 max-w-3xl"
+          style={{ textShadow: "0 2px 16px rgba(0,0,0,0.7), 0 1px 4px rgba(0,0,0,0.5)" }}
         >
           {proposal.client_name && (
-            <p className="text-sm tracking-[0.35em] uppercase opacity-60 mb-5" style={{ fontFamily: headingFont }}>
+            <p className="text-sm tracking-[0.35em] uppercase text-white/85 mb-5 font-medium" style={{ fontFamily: headingFont }}>
               {proposal.client_name}
             </p>
           )}
           <h1
-            className={`${embedded ? "text-3xl sm:text-4xl" : "text-4xl sm:text-5xl md:text-6xl"} font-bold leading-tight mb-5`}
+            className={`${embedded ? "text-3xl sm:text-4xl" : "text-4xl sm:text-5xl md:text-6xl"} font-bold leading-tight mb-5 text-white`}
             style={{ fontFamily: headingFont, letterSpacing: "-0.02em" }}
           >
             {proposal.title || "Sua Viagem"}
           </h1>
           {dateRange && (
-            <p className="text-base sm:text-lg opacity-70 font-light tracking-wide">{dateRange}</p>
+            <p className="text-base sm:text-lg text-white/90 font-light tracking-wide">{dateRange}</p>
           )}
-          <div className="flex items-center justify-center gap-3 mt-8 opacity-40">
-            <div className="h-px w-8 bg-white/50" />
-            <span className="text-[10px] tracking-[0.3em] uppercase" style={{ fontFamily: headingFont }}>
+          <div className="flex items-center justify-center gap-3 mt-8 text-white/75">
+            <div className="h-px w-8 bg-white/60" />
+            <span className="text-[10px] tracking-[0.3em] uppercase font-medium" style={{ fontFamily: headingFont }}>
               Proposta exclusiva
             </span>
-            <div className="h-px w-8 bg-white/50" />
+            <div className="h-px w-8 bg-white/60" />
           </div>
         </motion.div>
 
         {!embedded && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }} className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
-            <ChevronDown className="w-6 h-6 text-white/40 animate-bounce" />
+            <ChevronDown className="w-6 h-6 text-white/60 animate-bounce" style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.5))" }} />
           </motion.div>
         )}
       </section>
