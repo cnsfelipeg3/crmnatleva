@@ -152,9 +152,10 @@ export default function ViewProposalButton({
         disabled={!enabled || loading}
         title={tooltip}
         className={cn(
-          "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all",
-          "bg-accent/10 text-accent hover:bg-accent/20 border border-accent/20",
-          "disabled:opacity-30 disabled:cursor-not-allowed",
+          "flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold transition-all",
+          "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border border-emerald-700",
+          "hover:from-emerald-700 hover:to-teal-700 hover:shadow-md shadow-sm shadow-emerald-500/30",
+          "disabled:opacity-40 disabled:cursor-not-allowed",
           className,
         )}
       >
@@ -171,26 +172,27 @@ export default function ViewProposalButton({
       disabled={!enabled || loading}
       title={tooltip}
       className={cn(
-        "w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-[12px] font-bold transition-all",
-        "bg-gradient-to-r from-accent/15 to-accent/10 text-accent border border-accent/25",
-        "hover:from-accent/25 hover:to-accent/15 hover:border-accent/40 hover:shadow-sm",
-        "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:from-accent/15 disabled:hover:to-accent/10",
+        "w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-2xl text-[12px] font-bold transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]",
+        "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border border-emerald-700/60",
+        "hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-500/30 hover:shadow-emerald-500/40",
+        "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100",
         className,
       )}
+      style={{ textShadow: "0 1px 2px rgba(0,0,0,0.15)" }}
     >
       {loading ? (
         <>
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <Loader2 className="w-4 h-4 animate-spin" />
           Gerando proposta...
         </>
       ) : cached ? (
         <>
-          <ExternalLink className="w-3.5 h-3.5" />
+          <ExternalLink className="w-4 h-4" />
           Abrir Proposta
         </>
       ) : (
         <>
-          <FileText className="w-3.5 h-3.5" />
+          <FileText className="w-4 h-4" />
           Visualizar Proposta
         </>
       )}
