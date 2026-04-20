@@ -105,21 +105,9 @@ export default function ClientDistributionMap() {
     fetchData();
   }, []);
 
-  // Lazy init Leaflet when container visible
-  const [isVisible, setIsVisible] = useState(false);
-
+  // Initialize Leaflet map as soon as container is mounted (after loading finishes)
   useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setIsVisible(true); observer.disconnect(); } },
-      { rootMargin: "300px" }
-    );
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!isVisible || !containerRef.current || mapRef.current) return;
+    if (!containerRef.current || mapRef.current || loading) return;
 
     const map = L.map(containerRef.current, {
       scrollWheelZoom: true,
@@ -135,12 +123,16 @@ export default function ClientDistributionMap() {
     mapRef.current = map;
     layerRef.current = L.layerGroup().addTo(map);
 
+    // Force size recalculation after mount (fixes blank/black tile bug)
+    requestAnimationFrame(() => map.invalidateSize());
+    setTimeout(() => map.invalidateSize(), 300);
+
     return () => {
       map.remove();
       mapRef.current = null;
       layerRef.current = null;
     };
-  }, [isVisible]);
+  }, [loading]);
 
   // Filtered data
   const filtered = useMemo(() => {
