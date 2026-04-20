@@ -640,14 +640,63 @@ interface ProposalPreviewRendererProps {
   items: any[];
   embedded?: boolean;
   tracking?: ProposalTrackingAPI;
+  template?: any;
 }
 
-export default function ProposalPreviewRenderer({ proposal, items, embedded = false, tracking }: ProposalPreviewRendererProps) {
+/* ═══ Convert hex (#rrggbb) to "h s% l%" string for CSS HSL variables ═══ */
+function hexToHsl(hex?: string | null): string | null {
+  if (!hex || typeof hex !== "string") return null;
+  const m = hex.replace("#", "").match(/^([0-9a-f]{6})$/i);
+  if (!m) return null;
+  const r = parseInt(m[1].slice(0, 2), 16) / 255;
+  const g = parseInt(m[1].slice(2, 4), 16) / 255;
+  const b = parseInt(m[1].slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0; const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h *= 60;
+  }
+  return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+export default function ProposalPreviewRenderer({ proposal, items, embedded = false, tracking, template }: ProposalPreviewRendererProps) {
   const destinations = items.filter((i) => i.item_type === "destination");
   const flights = items.filter((i) => i.item_type === "flight");
   const hotels = items.filter((i) => i.item_type === "hotel");
   const experiences = items.filter((i) => i.item_type === "experience");
   const paymentConditions = (proposal.payment_conditions as any[]) || [];
+
+  // Resolve template-driven theme (instant preview when user picks a model)
+  const headingFont = template?.font_heading ? `'${template.font_heading}', 'Space Grotesk', sans-serif` : "'Space Grotesk', sans-serif";
+  const bodyFont = template?.font_body ? `'${template.font_body}', sans-serif` : undefined;
+  const accentHsl = hexToHsl(template?.accent_color);
+  const primaryHsl = hexToHsl(template?.primary_color);
+  const themeStyle: React.CSSProperties = {
+    ...(accentHsl ? ({ ["--accent" as any]: accentHsl, ["--ring" as any]: accentHsl }) : {}),
+    ...(primaryHsl ? ({ ["--primary" as any]: primaryHsl }) : {}),
+    ...(bodyFont ? { fontFamily: bodyFont } : {}),
+  };
+
+  // Section enable/disable map from template.sections
+  const tplSections: Array<{ type: string; enabled?: boolean }> = Array.isArray(template?.sections) ? template.sections : [];
+  const isSecOn = (key: string) => {
+    if (!tplSections.length) return true;
+    const s = tplSections.find((x) => x.type === key);
+    return s ? s.enabled !== false : true;
+  };
+  const showHero = isSecOn("hero");
+  const showDestinations = isSecOn("destinations");
+  const showFlights = isSecOn("flights");
+  const showHotels = isSecOn("hotels");
+  const showExperiences = isSecOn("experiences");
+  const showPricing = isSecOn("pricing");
 
   const startDate = parseLocalDate(proposal.travel_start_date);
   const endDate = parseLocalDate(proposal.travel_end_date);
@@ -675,8 +724,12 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   }
 
   return (
-    <div className={`bg-background text-foreground ${embedded ? "rounded-xl border border-border overflow-hidden" : "min-h-screen"}`}>
+    <div
+      className={`bg-background text-foreground ${embedded ? "rounded-xl border border-border overflow-hidden" : "min-h-screen"}`}
+      style={themeStyle}
+    >
       {/* ──── HERO COVER ──── */}
+      {showHero && (
       <section data-track-section="hero" className={`relative ${embedded ? "h-[50vh] min-h-[320px]" : "h-screen"} flex items-end justify-center overflow-hidden`}>
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${proposal.cover_image_url || fallbackCover})` }} />
         {/* Emerald-tinted gradient overlay */}
@@ -699,13 +752,13 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           className="relative z-10 text-center text-white pb-12 sm:pb-20 px-6 max-w-3xl"
         >
           {proposal.client_name && (
-            <p className="text-sm tracking-[0.35em] uppercase opacity-60 mb-5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <p className="text-sm tracking-[0.35em] uppercase opacity-60 mb-5" style={{ fontFamily: headingFont }}>
               {proposal.client_name}
             </p>
           )}
           <h1
             className={`${embedded ? "text-3xl sm:text-4xl" : "text-4xl sm:text-5xl md:text-6xl"} font-bold leading-tight mb-5`}
-            style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "-0.02em" }}
+            style={{ fontFamily: headingFont, letterSpacing: "-0.02em" }}
           >
             {proposal.title || "Sua Viagem"}
           </h1>
@@ -714,7 +767,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           )}
           <div className="flex items-center justify-center gap-3 mt-8 opacity-40">
             <div className="h-px w-8 bg-white/50" />
-            <span className="text-[10px] tracking-[0.3em] uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <span className="text-[10px] tracking-[0.3em] uppercase" style={{ fontFamily: headingFont }}>
               Proposta exclusiva
             </span>
             <div className="h-px w-8 bg-white/50" />
@@ -727,6 +780,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           </motion.div>
         )}
       </section>
+      )}
 
       {/* ──── INTRO ──── */}
       {proposal.intro_text && (
@@ -742,7 +796,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       )}
 
       {/* ──── DESTINATIONS ──── */}
-      {(destinations.length > 0 || (proposal.destinations?.length > 0 && destinations.length === 0)) && (
+      {showDestinations && (destinations.length > 0 || (proposal.destinations?.length > 0 && destinations.length === 0)) && (
         <section data-track-section="destinations" className="py-12 sm:py-20 px-6">
           <SectionTitle subtitle="Os lugares que você vai explorar">Seus Destinos</SectionTitle>
           <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -751,7 +805,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
                 <img src={dest.image_url || getDestImage(dest.title || "")} alt={dest.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[hsl(158,50%,4%,0.8)] via-transparent to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-xl font-bold text-white" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{dest.title}</h3>
+                  <h3 className="text-xl font-bold text-white" style={{ fontFamily: headingFont }}>{dest.title}</h3>
                   {dest.description && <p className="text-sm text-white/60 mt-1">{dest.description}</p>}
                 </div>
               </motion.div>
@@ -761,7 +815,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       )}
 
       {/* ──── FLIGHTS ──── */}
-      {flights.length > 0 && (
+      {showFlights && flights.length > 0 && (
         <section data-track-section="flights" className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
           <SectionTitle subtitle="Seus voos com todos os detalhes">Voos</SectionTitle>
           <div className="max-w-3xl mx-auto space-y-8">
@@ -771,7 +825,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       )}
 
       {/* ──── HOTELS ──── */}
-      {hotels.length > 0 && (
+      {showHotels && hotels.length > 0 && (
         <section data-track-section="hotels" className="py-12 sm:py-20 px-6">
           <SectionTitle subtitle="Clique para explorar fotos, quartos e avaliações">Hospedagens</SectionTitle>
           <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -781,7 +835,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       )}
 
       {/* ──── EXPERIENCES ──── */}
-      {experiences.length > 0 && (
+      {showExperiences && experiences.length > 0 && (
         <section data-track-section="experiences" className="py-12 sm:py-20 px-6 bg-accent/[0.03]">
           <SectionTitle subtitle="Momentos que farão sua viagem inesquecível">Experiências</SectionTitle>
           <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -791,21 +845,21 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       )}
 
       {/* ──── FINANCIAL ──── */}
-      {(proposal.total_value || proposal.value_per_person) && (
+      {showPricing && (proposal.total_value || proposal.value_per_person) && (
         <section data-track-section="pricing" className="py-12 sm:py-20 px-6">
           <SectionTitle>Investimento</SectionTitle>
           <div className="max-w-2xl mx-auto">
             <div className="rounded-2xl border border-accent/15 bg-gradient-to-b from-card to-accent/[0.03] p-8 sm:p-10 text-center space-y-6 shadow-xl shadow-accent/5">
               {proposal.value_per_person && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-1.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Valor por pessoa</p>
-                  <p className="text-3xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{fmtCurrency(proposal.value_per_person)}</p>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-1.5" style={{ fontFamily: headingFont }}>Valor por pessoa</p>
+                  <p className="text-3xl font-bold text-foreground" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.value_per_person)}</p>
                 </div>
               )}
               {proposal.total_value && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-1.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Valor total da viagem</p>
-                  <p className="text-4xl sm:text-5xl font-bold text-accent" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{fmtCurrency(proposal.total_value)}</p>
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-1.5" style={{ fontFamily: headingFont }}>Valor total da viagem</p>
+                  <p className="text-4xl sm:text-5xl font-bold text-accent" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.total_value)}</p>
                 </div>
               )}
               {proposal.includes_text && (

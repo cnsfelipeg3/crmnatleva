@@ -101,7 +101,7 @@ export default function ProposalEditor() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proposal_templates")
-        .select("id, name, description, is_default, thumbnail_url")
+        .select("id, name, description, is_default, thumbnail_url, primary_color, accent_color, font_heading, font_body, theme_config, sections")
         .eq("is_active", true)
         .order("is_default", { ascending: false })
         .order("name");
@@ -109,6 +109,8 @@ export default function ProposalEditor() {
       return data || [];
     },
   });
+
+  const selectedTemplate = (templates || []).find((t: any) => t.id === form.template_id) || null;
 
   const { data: existing } = useQuery({
     queryKey: ["proposal", id],
@@ -1064,6 +1066,7 @@ export default function ProposalEditor() {
               value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
             }}
             items={items}
+            template={selectedTemplate}
             embedded
           />
         </TabsContent>
