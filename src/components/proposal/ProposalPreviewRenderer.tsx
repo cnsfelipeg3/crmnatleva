@@ -307,7 +307,6 @@ function ConnectionBadge({ fromIata, layoverMinutes }: { fromIata: string; layov
 /* ═══ Flight Card (Boarding Pass Style) ═══ */
 function FlightCard({ flight, idx }: { flight: any; idx: number }) {
   const d = normalizeFlightData(flight.data);
-  const hasSegments = d.segments.length > 1;
 
   const displaySegments = d.segments.length > 0 ? d.segments : [{
     airline: d.airline, airline_name: d.airline_name, airline_iata: d.airline?.substring(0, 2),
@@ -317,14 +316,33 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
     departure_date: d.departure,
     terminal: d.terminal, arrival_terminal: d.arrival_terminal,
     duration_minutes: null,
+    direction: "ida",
   }];
 
+  // Agrupa segmentos por direção (ida/volta/trecho) preservando ordem
+  const legs: { label: string; direction: string; segments: any[] }[] = [];
+  for (const seg of displaySegments) {
+    const dir = (seg.direction || "ida").toLowerCase();
+    const last = legs[legs.length - 1];
+    if (last && last.direction === dir) {
+      last.segments.push(seg);
+    } else {
+      const labelMap: Record<string, string> = { ida: "Ida", volta: "Volta", trecho: "Trecho" };
+      legs.push({ label: labelMap[dir] || `Trecho ${legs.length + 1}`, direction: dir, segments: [seg] });
+    }
+  }
+
+  // Cálculo de layover preciso com timezone (mesmo algoritmo do editor)
   function getLayoverMinutes(segA: any, segB: any): number | undefined {
-    if (!segA.arrival_time || !segB.departure_time) return undefined;
+    if (!segA?.arrival_time || !segB?.departure_time) return undefined;
     try {
-      const [hA, mA] = segA.arrival_time.split(":").map(Number);
-      const [hB, mB] = segB.departure_time.split(":").map(Number);
-      let diff = (hB * 60 + mB) - (hA * 60 + mA);
+      // tenta usar o util com timezone se disponível
+      const arrDate = segA.arrival_date || segA.departure_date;
+      const depDate = segB.departure_date || arrDate;
+      if (!arrDate || !depDate) return undefined;
+      const arr = new Date(`${arrDate}T${segA.arrival_time.slice(0, 5)}:00`);
+      const dep = new Date(`${depDate}T${segB.departure_time.slice(0, 5)}:00`);
+      let diff = Math.round((dep.getTime() - arr.getTime()) / 60000);
       if (diff < 0) diff += 24 * 60;
       return diff;
     } catch { return undefined; }
@@ -348,31 +366,52 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
       viewport={{ once: true }}
       transition={{ delay: idx * 0.1 }}
     >
-      {/* Title label */}
-      <div className="flex items-center gap-3 mb-3">
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 font-medium" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-          {flight.title || (idx === 0 ? "Ida" : "Volta")}
-        </p>
-        {hasSegments && (
-          <span className="text-[10px] bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">
-            {d.stops} conexão{d.stops > 1 ? "ões" : ""}
-          </span>
-        )}
-      </div>
+      {/* Optional outer title (only when explicit and a single leg) */}
+      {flight.title && legs.length === 1 && (
+        <div className="flex items-center gap-3 mb-3">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 font-medium" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {flight.title}
+          </p>
+        </div>
+      )}
 
-      {/* Segments */}
-      <div className="space-y-0">
-        {displaySegments.map((seg: any, i: number) => (
-          <div key={i}>
-            {i > 0 && (
-              <ConnectionBadge
-                fromIata={displaySegments[i - 1]?.destination_iata || ""}
-                layoverMinutes={getLayoverMinutes(displaySegments[i - 1], seg)}
-              />
-            )}
-            <BoardingPassSegment seg={seg} showDate={true} />
+      {/* Legs (Ida / Volta / Trecho) */}
+      <div className="space-y-8">
+        {legs.map((leg, li) => {
+          const stops = leg.segments.length - 1;
+          return (
+            <div key={li}>
+              <div className="flex items-center gap-3 mb-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground/60 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  {leg.label}
+                </p>
+                {stops === 0 ? (
+                  <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
+                    <Plane className="w-2.5 h-2.5" /> Voo direto
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full font-medium">
+                    {stops} {stops === 1 ? "conexão" : "conexões"}
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-0">
+                {leg.segments.map((seg: any, i: number) => (
+                  <div key={i}>
+                    {i > 0 && (
+                      <ConnectionBadge
+                        fromIata={leg.segments[i - 1]?.destination_iata || ""}
+                        layoverMinutes={getLayoverMinutes(leg.segments[i - 1], seg)}
+                      />
+                    )}
+                    <BoardingPassSegment seg={seg} showDate={true} />
+                  </div>
+                ))}
+            </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Bottom badges */}
