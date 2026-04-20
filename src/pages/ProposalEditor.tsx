@@ -21,6 +21,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
 import { AIBookingExtractor, type ExtractItemType } from "@/components/proposal/AIBookingExtractor";
 import { classifyItinerary, assignDirections, getItineraryLabel, type ItineraryType } from "@/lib/itineraryClassifier";
+import { buildFlightTitle, buildHotelTitle } from "@/lib/airportCities";
 
 const itemTypeIcons: Record<string, any> = {
   destination: MapPin,
@@ -469,39 +470,41 @@ export default function ProposalEditor() {
           cleanData.itinerary_open_jaw_type = classification.openJawType;
         }
 
-        // Título descritivo para voo (usando classificação determinística)
+        // Título descritivo para voo (padrão NatLeva)
         let nextTitle = extracted.title || item.title;
         if (item.item_type === "flight" && Array.isArray(cleanData.flight_segments) && cleanData.flight_segments.length > 0) {
           const segs: FlightSegmentData[] = cleanData.flight_segments;
           const itineraryType: ItineraryType = (cleanData.itinerary_type as ItineraryType) || "ONE_WAY";
-          const typeLabel = getItineraryLabel(itineraryType);
 
-          // Para round-trip / open-jaw, mostra apenas a perna de ida no título principal
+          // Para round-trip / open-jaw, usa apenas a perna de ida como referência
           const idaSegs = segs.filter((s: any) => s.direction === "ida");
           const refSegs = idaSegs.length > 0 ? idaSegs : segs;
           const origin = refSegs[0].origin_iata;
           const finalDest = refSegs[refSegs.length - 1].destination_iata;
-          const vias = refSegs.slice(0, -1).map((s) => s.destination_iata).filter(Boolean);
-          const airlines = Array.from(new Set(segs.map((s) => s.airline_name || s.airline).filter(Boolean)));
-          const route = vias.length > 0 ? `${origin} → ${finalDest} via ${vias.join(", ")}` : `${origin} → ${finalDest}`;
-          const carrier = airlines.length > 0 ? ` · ${airlines.join("/")}` : "";
-          const smartTitle = `${route}${carrier} · ${typeLabel}`;
-          // Sobrescreve se a IA não classificou ou deu título pobre
-          if (!extracted.title || extracted.title.length < smartTitle.length || !/Ida|Volta|Way/i.test(extracted.title)) {
-            nextTitle = smartTitle;
+          if (origin && finalDest) {
+            nextTitle = buildFlightTitle(origin, finalDest, itineraryType);
           }
         }
 
-        // Título inteligente para hotel
+        // Título inteligente para hotel (padrão NatLeva)
         if (item.item_type === "hotel" && cleanData) {
-          const hotelName = extracted.title || cleanData.name || item.title;
-          const stars = cleanData.stars ? `${cleanData.stars}★` : "";
-          const city = cleanData.city || (cleanData.location ? String(cleanData.location).split(",")[0] : "");
+          const hotelName = (extracted.title || cleanData.name || item.title || "").trim();
+          const stars = cleanData.stars ? String(cleanData.stars) : "";
           const meal = cleanData.meal_plan || "";
-          const parts = [hotelName, stars, city].filter(Boolean);
-          if (parts.length > 1 && (!extracted.title || extracted.title === hotelName)) {
-            nextTitle = `${hotelName}${stars ? ` · ${stars}` : ""}${city ? ` · ${city}` : ""}${meal ? ` · ${meal}` : ""}`;
+          let city = cleanData.city || "";
+          let country = cleanData.country || "";
+          if (!city && cleanData.location) {
+            const locParts = String(cleanData.location).split(",").map((p) => p.trim());
+            city = locParts[0] || "";
+            if (locParts.length > 1) country = locParts[locParts.length - 1];
           }
+          nextTitle = buildHotelTitle({
+            hotelName: hotelName && !hotelName.toLowerCase().startsWith("hospedagem") ? hotelName : undefined,
+            city,
+            country,
+            stars,
+            mealPlan: meal,
+          });
         }
 
         return {
