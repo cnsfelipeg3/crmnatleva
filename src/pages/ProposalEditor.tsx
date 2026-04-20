@@ -96,6 +96,20 @@ export default function ProposalEditor() {
   const [collapsedItems, setCollapsedItems] = useState<Set<number>>(new Set());
   const [savingItemIdx, setSavingItemIdx] = useState<number | null>(null);
 
+  const { data: templates } = useQuery({
+    queryKey: ["proposal_templates_active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("proposal_templates")
+        .select("id, name, description, is_default, thumbnail_url")
+        .eq("is_active", true)
+        .order("is_default", { ascending: false })
+        .order("name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const { data: existing } = useQuery({
     queryKey: ["proposal", id],
     queryFn: async () => {
@@ -692,6 +706,41 @@ export default function ProposalEditor() {
               <div className="md:col-span-2 space-y-1.5">
                 <Label>URL da imagem de capa</Label>
                 <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="https://images.unsplash.com/..." />
+              </div>
+
+              <div className="md:col-span-2 space-y-1.5">
+                <Label className="flex items-center gap-2">
+                  Modelo de proposta
+                  <span className="text-xs text-muted-foreground font-normal">(define o tema visual e seções)</span>
+                </Label>
+                <Select
+                  value={form.template_id || "none"}
+                  onValueChange={(v) => setForm((f) => ({ ...f, template_id: v === "none" ? "" : v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sem modelo (padrão NatLeva)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem modelo (padrão NatLeva)</SelectItem>
+                    {(templates || []).map((t: any) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}{t.is_default ? " · padrão" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {(templates || []).length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Nenhum modelo cadastrado.{" "}
+                    <button
+                      type="button"
+                      onClick={() => navigate("/propostas/modelos")}
+                      className="text-accent underline"
+                    >
+                      Criar modelo
+                    </button>
+                  </p>
+                )}
               </div>
 
               <div className="md:col-span-2 space-y-1.5">
