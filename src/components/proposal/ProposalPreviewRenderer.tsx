@@ -729,6 +729,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       style={themeStyle}
     >
       {/* ──── HERO COVER ──── */}
+      {showHero && (
       <section data-track-section="hero" className={`relative ${embedded ? "h-[50vh] min-h-[320px]" : "h-screen"} flex items-end justify-center overflow-hidden`}>
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${proposal.cover_image_url || fallbackCover})` }} />
         {/* Emerald-tinted gradient overlay */}
@@ -751,13 +752,13 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           className="relative z-10 text-center text-white pb-12 sm:pb-20 px-6 max-w-3xl"
         >
           {proposal.client_name && (
-            <p className="text-sm tracking-[0.35em] uppercase opacity-60 mb-5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <p className="text-sm tracking-[0.35em] uppercase opacity-60 mb-5" style={{ fontFamily: headingFont }}>
               {proposal.client_name}
             </p>
           )}
           <h1
             className={`${embedded ? "text-3xl sm:text-4xl" : "text-4xl sm:text-5xl md:text-6xl"} font-bold leading-tight mb-5`}
-            style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: "-0.02em" }}
+            style={{ fontFamily: headingFont, letterSpacing: "-0.02em" }}
           >
             {proposal.title || "Sua Viagem"}
           </h1>
@@ -766,7 +767,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           )}
           <div className="flex items-center justify-center gap-3 mt-8 opacity-40">
             <div className="h-px w-8 bg-white/50" />
-            <span className="text-[10px] tracking-[0.3em] uppercase" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <span className="text-[10px] tracking-[0.3em] uppercase" style={{ fontFamily: headingFont }}>
               Proposta exclusiva
             </span>
             <div className="h-px w-8 bg-white/50" />
@@ -779,6 +780,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           </motion.div>
         )}
       </section>
+      )}
 
       {/* ──── INTRO ──── */}
       {proposal.intro_text && (
