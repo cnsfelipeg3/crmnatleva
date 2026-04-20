@@ -292,10 +292,7 @@ function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: bo
   return (
     <div className="rounded-2xl bg-card border border-border/40 p-5 sm:p-6 shadow-sm">
       {/* Top row: airline + flight number + date */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <InlineAirlineLogo iata={airlineCode} size={42} />
-        </div>
+      <div className="flex items-center justify-end mb-4">
         <div className="flex items-center gap-3">
           {showDate && depDate && (
             <span className="text-sm text-muted-foreground">
@@ -329,6 +326,9 @@ function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: bo
 
         {/* Route line */}
         <div className="flex-1 flex flex-col items-center gap-1 py-2">
+          <div className="mb-1">
+            <InlineAirlineLogo iata={airlineCode} size={42} />
+          </div>
           <div className="w-full flex items-center">
             <svg viewBox="0 0 24 24" className="w-4 h-4 text-muted-foreground/40 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M2 17h20M6 12l3-7 2 3h4l3 4H6z" />
