@@ -1066,6 +1066,7 @@ export default function ProposalEditor() {
               value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
             }}
             items={items}
+            template={selectedTemplate}
             embedded
           />
         </TabsContent>
