@@ -277,7 +277,7 @@ function fmtDuration(minutes: number): string {
 }
 
 /* ═══ Boarding Pass Segment ═══ */
-function BoardingPassSegment({ seg, showDate = true }: { seg: any; showDate?: boolean }) {
+function BoardingPassSegment({ seg, showDate = true, flightTypeBadge, stopsCount = 0 }: { seg: any; showDate?: boolean; flightTypeBadge?: "direct" | string; stopsCount?: number }) {
   const airlineCode = seg.airline || seg.airline_iata || "";
   const airlineName = seg.airline_name || seg.airline || "";
   // Strip leading IATA code if user accidentally typed it inside flight_number (e.g. "JA761")
