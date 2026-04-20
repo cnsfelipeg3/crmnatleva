@@ -448,12 +448,15 @@ async function cleanTranscript(rawText: string): Promise<string> {
     start = end;
   }
 
-  console.log(`cleanTranscript: splitting into ${chunks.length} chunks`);
-  const results: string[] = [];
-  for (let i = 0; i < chunks.length; i++) {
-    console.log(`Cleaning chunk ${i + 1}/${chunks.length} (${chunks[i].length} chars)...`);
-    results.push(await callCleanAI(ANTHROPIC_API_KEY, chunks[i]));
-  }
+  console.log(`cleanTranscript: splitting into ${chunks.length} chunks (parallel)`);
+  // Parallelize chunk cleaning to stay under the 150s edge function timeout.
+  // Sequential calls were summing ~30s per chunk and breaching the limit on long videos.
+  const results = await Promise.all(
+    chunks.map((chunk, i) => {
+      console.log(`Cleaning chunk ${i + 1}/${chunks.length} (${chunk.length} chars)...`);
+      return callCleanAI(ANTHROPIC_API_KEY, chunk);
+    })
+  );
   return results.join("\n\n");
 }
 
