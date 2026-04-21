@@ -15,7 +15,7 @@ type ContentPart =
 
 type AudioMeta = { dataUrl: string; mimeType: string; durationSec: number; waveform: number[] };
 
-type GeneratedAudio = { dataUrl: string; lang: string; status: "loading" | "ready" | "error" };
+type GeneratedAudio = { text: string; lang: string; status: "ready" | "speaking" | "error" };
 
 type Message = {
   role: "user" | "assistant";
@@ -27,9 +27,48 @@ type Message = {
 };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-concierge-ai`;
-const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-concierge-tts`;
 
 const AUDIO_TAG_RE = /\[AUDIO_REPLY(?:\s+lang="([^"]+)")?\]([\s\S]*?)\[\/AUDIO_REPLY\]/i;
+
+// Pick the best available system voice for a given BCP-47 language code
+function pickVoice(lang: string): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return null;
+  const target = lang.toLowerCase();
+  const base = target.split("-")[0];
+  // Prefer high-quality voices when present (Apple/Google premium ones contain these keywords)
+  const score = (v: SpeechSynthesisVoice) => {
+    let s = 0;
+    const n = (v.name || "").toLowerCase();
+    if (v.lang?.toLowerCase() === target) s += 100;
+    else if (v.lang?.toLowerCase().startsWith(base)) s += 50;
+    if (/google|natural|premium|enhanced|neural|siri|samantha|luciana|joana|paulina/.test(n)) s += 20;
+    if (v.localService) s += 5;
+    return s;
+  };
+  return [...voices].sort((a, b) => score(b) - score(a))[0] || null;
+}
+
+// Speak text using the browser's native TTS. Returns a Promise that resolves when speech ends.
+function speakText(text: string, lang: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      reject(new Error("Seu navegador não suporta síntese de voz."));
+      return;
+    }
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = lang;
+    utter.rate = 1;
+    utter.pitch = 1;
+    const voice = pickVoice(lang);
+    if (voice) utter.voice = voice;
+    utter.onend = () => resolve();
+    utter.onerror = (e) => reject(new Error(e.error || "Falha ao falar"));
+    synth.speak(utter);
+  });
+}
 
 // Convert a Blob/dataUrl to RAW base64 (no data URL prefix, no whitespace)
 async function dataUrlToRawBase64(dataUrl: string): Promise<string> {
@@ -122,6 +161,36 @@ export default function PortalConcierge() {
     setIsRecording(false);
     sendCore({ audio });
   };
+
+  const playGeneratedAudio = async (text: string, lang: string) => {
+    setMessages((prev) => {
+      const copy = [...prev];
+      const last = copy[copy.length - 1];
+      if (last?.role === "assistant" && last.generatedAudio) {
+        copy[copy.length - 1] = { ...last, generatedAudio: { ...last.generatedAudio, status: "speaking" } };
+      }
+      return copy;
+    });
+    try {
+      await speakText(text, lang);
+    } catch (err: any) {
+      toast({
+        title: "Áudio indisponível",
+        description: err?.message || "Seu navegador não conseguiu tocar o áudio.",
+        variant: "destructive",
+      });
+    } finally {
+      setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (last?.role === "assistant" && last.generatedAudio) {
+          copy[copy.length - 1] = { ...last, generatedAudio: { ...last.generatedAudio, status: "ready" } };
+        }
+        return copy;
+      });
+    }
+  };
+
 
   const send = async (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
@@ -247,13 +316,12 @@ export default function PortalConcierge() {
         }
       }
 
-      // Detect [AUDIO_REPLY lang="..."]...[/AUDIO_REPLY] tag and synthesize audio
+      // Detect [AUDIO_REPLY lang="..."]...[/AUDIO_REPLY] tag and speak natively
       const match = acc.match(AUDIO_TAG_RE);
       if (match) {
         const lang = match[1] || "pt-BR";
         const speech = match[2].trim();
         const cleanedText = acc.replace(AUDIO_TAG_RE, "").trim();
-        // Update message: hide tag from text, mark audio as loading
         setMessages((prev) => {
           const copy = [...prev];
           const last = copy[copy.length - 1];
@@ -262,59 +330,13 @@ export default function PortalConcierge() {
               ...last,
               content: cleanedText,
               displayText: cleanedText,
-              generatedAudio: { dataUrl: "", lang, status: "loading" },
+              generatedAudio: { text: speech, lang, status: "ready" },
             };
           }
           return copy;
         });
-
-        // Fire TTS request (non-blocking for UI)
-        (async () => {
-          try {
-            const ttsResp = await fetch(TTS_URL, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-              },
-              body: JSON.stringify({ text: speech, lang }),
-            });
-            const j = await ttsResp.json();
-            if (!ttsResp.ok || !j.audioBase64) {
-              throw new Error(j.error || "Falha ao gerar áudio");
-            }
-            const audioDataUrl = `data:${j.mimeType || "audio/wav"};base64,${j.audioBase64}`;
-            setMessages((prev) => {
-              const copy = [...prev];
-              const last = copy[copy.length - 1];
-              if (last?.role === "assistant" && last.generatedAudio) {
-                copy[copy.length - 1] = {
-                  ...last,
-                  generatedAudio: { dataUrl: audioDataUrl, lang, status: "ready" },
-                };
-              }
-              return copy;
-            });
-          } catch (err: any) {
-            console.error("TTS error:", err);
-            toast({
-              title: "Áudio indisponível",
-              description: err?.message || "Não consegui gerar o áudio agora.",
-              variant: "destructive",
-            });
-            setMessages((prev) => {
-              const copy = [...prev];
-              const last = copy[copy.length - 1];
-              if (last?.role === "assistant" && last.generatedAudio) {
-                copy[copy.length - 1] = {
-                  ...last,
-                  generatedAudio: { dataUrl: "", lang, status: "error" },
-                };
-              }
-              return copy;
-            });
-          }
-        })();
+        // Auto-play once when ready
+        playGeneratedAudio(speech, lang);
       }
     } catch (e) {
       console.error(e);
@@ -434,30 +456,28 @@ export default function PortalConcierge() {
                       )}
                       {msg.generatedAudio && (
                         <div className="mt-3 not-prose">
-                          {msg.generatedAudio.status === "loading" && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-2xl px-3 py-2 border border-border/40">
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                              Gerando áudio...
-                            </div>
-                          )}
-                          {msg.generatedAudio.status === "ready" && (
-                            <div className="flex items-center gap-2 bg-background/60 rounded-2xl p-2 border border-border/40">
-                              <span className="text-[10px] uppercase tracking-wider font-bold text-accent px-1.5">
-                                {msg.generatedAudio.lang}
-                              </span>
-                              <audio
-                                controls
-                                src={msg.generatedAudio.dataUrl}
-                                className="flex-1 h-9"
-                                style={{ maxWidth: "100%" }}
-                              />
-                            </div>
-                          )}
-                          {msg.generatedAudio.status === "error" && (
-                            <div className="text-xs text-destructive bg-destructive/10 rounded-2xl px-3 py-2 border border-destructive/30">
-                              Não consegui gerar o áudio. O texto da frase está acima.
-                            </div>
-                          )}
+                          <div className="flex items-center gap-2 bg-background/60 rounded-2xl p-2 border border-border/40">
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-accent px-1.5">
+                              {msg.generatedAudio.lang}
+                            </span>
+                            <button
+                              onClick={() => playGeneratedAudio(msg.generatedAudio!.text, msg.generatedAudio!.lang)}
+                              disabled={msg.generatedAudio.status === "speaking"}
+                              className="flex items-center gap-2 flex-1 px-3 py-1.5 rounded-xl bg-accent/10 hover:bg-accent/20 text-accent text-xs font-semibold transition-all disabled:opacity-60"
+                            >
+                              {msg.generatedAudio.status === "speaking" ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  Falando...
+                                </>
+                              ) : (
+                                <>
+                                  <Mic className="w-3.5 h-3.5" />
+                                  Ouvir novamente
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
                       )}
                     </div>
