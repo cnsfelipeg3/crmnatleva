@@ -126,6 +126,7 @@ const PortalMyTrips = lazy(() => import("@/pages/portal/PortalMyTrips"));
 const PortalFinance = lazy(() => import("@/pages/portal/PortalFinance"));
 const PortalNewQuote = lazy(() => import("@/pages/portal/PortalNewQuote"));
 const PortalProfile = lazy(() => import("@/pages/portal/PortalProfile"));
+const PortalConcierge = lazy(() => import("@/pages/portal/PortalConcierge"));
 
 // CRM
 const CotacoesPropostasPipeline = lazy(() => import("@/pages/CotacoesPropostasPipeline"));
@@ -321,6 +322,7 @@ function AppRoutes() {
         <Route path="/portal/financeiro" element={<Suspense fallback={<MinimalLoader />}><PortalFinance /></Suspense>} />
         <Route path="/portal/nova-cotacao" element={<Suspense fallback={<MinimalLoader />}><PortalNewQuote /></Suspense>} />
         <Route path="/portal/perfil" element={<Suspense fallback={<MinimalLoader />}><PortalProfile /></Suspense>} />
+        <Route path="/portal/concierge" element={<Suspense fallback={<MinimalLoader />}><PortalConcierge /></Suspense>} />
 
         {/* Cadastro público de fornecedor */}
         <Route path="/cadastro-fornecedor" element={<Suspense fallback={<MinimalLoader />}><SupplierRegistration /></Suspense>} />
