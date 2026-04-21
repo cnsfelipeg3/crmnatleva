@@ -33,19 +33,26 @@ const SUGGESTIONS = [
 ];
 
 // Strip "data:audio/xxx;base64," prefix and return the format hint
-function parseDataUrl(dataUrl: string): { base64: string; format: string } {
-  const match = dataUrl.match(/^data:([^;]+);base64,(.*)$/);
-  if (!match) return { base64: dataUrl, format: "webm" };
-  const mime = match[1];
-  const base64 = match[2];
-  // Gemini accepts: webm, mp3, wav, ogg, flac, m4a/aac
+function parseDataUrl(dataUrl: string): { base64: string; mime: string; format: string } {
+  // Robust split: ignore optional codec params; only require ;base64, marker
+  const commaIdx = dataUrl.indexOf("base64,");
+  let mime = "audio/webm";
+  let base64 = dataUrl;
+  if (dataUrl.startsWith("data:") && commaIdx !== -1) {
+    const header = dataUrl.slice(5, commaIdx); // "audio/webm;codecs=opus;"
+    const cleanHeader = header.replace(/;$/, "");
+    mime = cleanHeader.split(";")[0] || "audio/webm";
+    base64 = dataUrl.slice(commaIdx + "base64,".length);
+  }
+  // Gemini-compatible format hints
   let format = "webm";
-  if (mime.includes("mp3") || mime.includes("mpeg")) format = "mp3";
-  else if (mime.includes("wav")) format = "wav";
-  else if (mime.includes("ogg")) format = "ogg";
-  else if (mime.includes("mp4") || mime.includes("aac")) format = "mp4";
-  else if (mime.includes("webm")) format = "webm";
-  return { base64, format };
+  const m = mime.toLowerCase();
+  if (m.includes("mp3") || m.includes("mpeg")) format = "mp3";
+  else if (m.includes("wav")) format = "wav";
+  else if (m.includes("ogg")) format = "ogg";
+  else if (m.includes("mp4") || m.includes("aac") || m.includes("m4a")) format = "mp4";
+  else if (m.includes("webm")) format = "webm";
+  return { base64, mime, format };
 }
 
 export default function PortalConcierge() {
